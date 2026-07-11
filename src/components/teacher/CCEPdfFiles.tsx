@@ -4,6 +4,7 @@ import { toast } from "sonner";
 // Green PDF file icon SVG
 function PdfIcon({ className }: { className?: string }) {
   return (
+<<<<<<< HEAD
     <svg className={className} viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M4 0h18l10 10v26a4 4 0 01-4 4H4a4 4 0 01-4-4V4a4 4 0 014-4z" fill="#f1f5f9" />
       <path d="M22 0l10 10H26a4 4 0 01-4-4V0z" fill="#cbd5e1" />
@@ -11,6 +12,39 @@ function PdfIcon({ className }: { className?: string }) {
       <path d="M14 22h2.5c1.9 0 3.5 1.6 3.5 3.5S18.4 29 16.5 29H14v-7zm2 5h.5c.8 0 1.5-.7 1.5-1.5S17.3 24 16.5 24H16v3z" fill="#ef4444" />
       <path d="M21 22h4v2h-2v1h2v1h-2v2h-2v-6z" fill="#ef4444" />
       <text x="16" y="14" textAnchor="middle" fill="#ef4444" fontSize="7" fontWeight="bold" fontFamily="sans-serif">PDF</text>
+=======
+    <svg
+      className={className}
+      viewBox="0 0 32 40"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M4 0h18l10 10v26a4 4 0 01-4 4H4a4 4 0 01-4-4V4a4 4 0 014-4z"
+        fill="#f1f5f9"
+      />
+      <path d="M22 0l10 10H26a4 4 0 01-4-4V0z" fill="#cbd5e1" />
+      <path
+        d="M7 22h3.5c1.1 0 2 .9 2 2s-.9 2-2 2H9v2H7v-6zm2 3h1.5c.3 0 .5-.2.5-.5s-.2-.5-.5-.5H9v1z"
+        fill="#ef4444"
+      />
+      <path
+        d="M14 22h2.5c1.9 0 3.5 1.6 3.5 3.5S18.4 29 16.5 29H14v-7zm2 5h.5c.8 0 1.5-.7 1.5-1.5S17.3 24 16.5 24H16v3z"
+        fill="#ef4444"
+      />
+      <path d="M21 22h4v2h-2v1h2v1h-2v2h-2v-6z" fill="#ef4444" />
+      <text
+        x="16"
+        y="14"
+        textAnchor="middle"
+        fill="#ef4444"
+        fontSize="7"
+        fontWeight="bold"
+        fontFamily="sans-serif"
+      >
+        PDF
+      </text>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     </svg>
   );
 }
@@ -20,7 +54,19 @@ interface PdfEntry {
   name: string;
 }
 
+<<<<<<< HEAD
 export function CCEPdfFiles({ selectedClass, academicYear, onBack }: { selectedClass: string; academicYear: string; onBack: () => void }) {
+=======
+export function CCEPdfFiles({
+  selectedClass,
+  academicYear,
+  onBack,
+}: {
+  selectedClass: string;
+  academicYear: string;
+  onBack: () => void;
+}) {
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   // Generate PDF file names dynamically based on class
   const pdfFiles: PdfEntry[] = [
     {

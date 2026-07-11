@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 const fs = require('fs');
 const path = require('path');
 
@@ -32,6 +33,44 @@ fs.readdirSync(dir).forEach(file => {
         const fetchAddedRegex = /const fetchAddedSubjects = async \(\) => \{[\s\S]*?finally \{\s*setLoading\(false\);\s*\}\s*\};/g;
         
         const newFetchAdded = `const fetchAddedSubjects = async () => {
+=======
+const fs = require("fs");
+const path = require("path");
+
+const dir =
+  "c:/Users/sahil khade/Documents/Smart_Learn_With_AI-main/Smart_Learn_With_AI-main/src/result";
+
+fs.readdirSync(dir).forEach((file) => {
+  if (file.endsWith(".jsx")) {
+    const filePath = path.join(dir, file);
+    let content = fs.readFileSync(filePath, "utf-8");
+    let modified = false;
+
+    // Add cursor: pointer to modal buttons
+    const buttonReplacements = [
+      {
+        from: "style={{ fontSize: '14px', padding: '5px 15px', borderRadius: '5px', backgroundColor: '#0d6efd', color: 'white', border: 'none' }}",
+        to: "style={{ fontSize: '14px', padding: '5px 15px', borderRadius: '5px', backgroundColor: '#0d6efd', color: 'white', border: 'none', cursor: 'pointer' }}",
+      },
+      {
+        from: "style={{ fontSize: '14px', padding: '8px 15px', borderRadius: '5px', backgroundColor: '#0d6efd', color: 'white', border: 'none' }}",
+        to: "style={{ fontSize: '14px', padding: '8px 15px', borderRadius: '5px', backgroundColor: '#0d6efd', color: 'white', border: 'none', cursor: 'pointer' }}",
+      },
+    ];
+
+    buttonReplacements.forEach((rep) => {
+      if (content.includes(rep.from)) {
+        content = content.split(rep.from).join(rep.to);
+        modified = true;
+      }
+    });
+
+    // Fix fetchAddedSubjects
+    const fetchAddedRegex =
+      /const fetchAddedSubjects = async \(\) => \{[\s\S]*?finally \{\s*setLoading\(false\);\s*\}\s*\};/g;
+
+    const newFetchAdded = `const fetchAddedSubjects = async () => {
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     try {
       setLoading(true);
       const url = \`\${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/\${udiseNumber}/subjectSequence/\${academicYear}/\${classValue}.json\`;
@@ -52,6 +91,7 @@ fs.readdirSync(dir).forEach(file => {
     }
   };`;
 
+<<<<<<< HEAD
         if (fetchAddedRegex.test(content)) {
             content = content.replace(fetchAddedRegex, newFetchAdded);
             modified = true;
@@ -62,4 +102,16 @@ fs.readdirSync(dir).forEach(file => {
             console.log('Updated ' + file);
         }
     }
+=======
+    if (fetchAddedRegex.test(content)) {
+      content = content.replace(fetchAddedRegex, newFetchAdded);
+      modified = true;
+    }
+
+    if (modified) {
+      fs.writeFileSync(filePath, content, "utf-8");
+      console.log("Updated " + file);
+    }
+  }
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 });

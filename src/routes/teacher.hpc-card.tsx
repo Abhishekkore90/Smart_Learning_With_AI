@@ -27,6 +27,7 @@ function TeacherHpcCardPage() {
 
             <div className="space-y-4">
               <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+<<<<<<< HEAD
                 समग्र प्रगती पत्रक / <span className="text-blue-600">HPC Card</span>
               </h1>
               <p className="text-slate-500 font-medium leading-relaxed">
@@ -34,6 +35,18 @@ function TeacherHpcCardPage() {
               </p>
               <p className="text-slate-400 text-xs font-bold leading-relaxed italic">
                 Holistic Progress Card (HPC) multidimensional student assessment and report generation will be coming soon.
+=======
+                समग्र प्रगती पत्रक /{" "}
+                <span className="text-blue-600">HPC Card</span>
+              </h1>
+              <p className="text-slate-500 font-medium leading-relaxed">
+                विद्यार्थ्यांचे समग्र प्रगती पत्रक (Holistic Progress Card)
+                मूल्यमापन प्रणाली येथे लवकरच उपलब्ध होईल.
+              </p>
+              <p className="text-slate-400 text-xs font-bold leading-relaxed italic">
+                Holistic Progress Card (HPC) multidimensional student assessment
+                and report generation will be coming soon.
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               </p>
             </div>
 

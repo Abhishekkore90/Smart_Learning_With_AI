@@ -10,9 +10,13 @@
         "firebase-debug.*.log",
         "*.local"
       ],
+<<<<<<< HEAD
       "predeploy": [
         "npm --prefix \"$RESOURCE_DIR\" run build"
       ]
+=======
+      "predeploy": ["npm --prefix \"$RESOURCE_DIR\" run build"]
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     }
   ]
 }

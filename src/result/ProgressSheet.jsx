@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+<<<<<<< HEAD
 import { 
   ChevronLeft, 
   ArrowLeft,
@@ -13,6 +14,29 @@ import "../result/result.css";
 const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
   const [academicYear, setAcademicYear] = useState(initialYear || localStorage.getItem("cce_academic_year") || "");
   const [classValue, setClassValue] = useState(initialClass || localStorage.getItem("cce_selected_class") || "");
+=======
+import {
+  ChevronLeft,
+  ArrowLeft,
+  Check,
+  AlertTriangle,
+  Loader2,
+} from "lucide-react";
+import AlertMessage from "../../AlertMessage";
+import {
+  fetchFirestoreMarks,
+  matchAndMergeMarks,
+} from "./firestoreMarksHelper";
+import "../result/result.css";
+
+const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
+  const [academicYear, setAcademicYear] = useState(
+    initialYear || localStorage.getItem("cce_academic_year") || "",
+  );
+  const [classValue, setClassValue] = useState(
+    initialClass || localStorage.getItem("cce_selected_class") || "",
+  );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   const [activeSemester, setActiveSemester] = useState("first"); // "first", "second", or "extra"
   const [division, setDivision] = useState("");
   const [divisions, setDivisions] = useState(["A", "B", "C", "D"]);
@@ -23,7 +47,13 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
   const [schoolLogo, setSchoolLogo] = useState("");
   const [schoolData, setSchoolData] = useState(null);
   const [subjectSequence, setSubjectSequence] = useState([]);
+<<<<<<< HEAD
   const [language, setLanguage] = useState(localStorage.getItem("language") || "English");
+=======
+  const [language, setLanguage] = useState(
+    localStorage.getItem("language") || "English",
+  );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
   const [alertMessage, setAlertMessage] = useState("");
   const [showAlert, setShowAlert] = useState(false);
@@ -113,7 +143,12 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
   useEffect(() => {
     if (classValue && studentData.length > 0) {
       const filtered = studentData.filter(
+<<<<<<< HEAD
         (student) => student.currentClass === classValue && student.division === division
+=======
+        (student) =>
+          student.currentClass === classValue && student.division === division,
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       );
       setSelectedStudents(filtered);
     }
@@ -172,18 +207,34 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
 
       try {
         const response = await fetch(
+<<<<<<< HEAD
           `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData.json`
+=======
+          `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData.json`,
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         );
         if (response.ok) {
           const data = await response.json();
           if (data) {
             fetchedStudents = Object.keys(data)
+<<<<<<< HEAD
               .filter(key => data[key] !== null)
               .map(key => ({ srNo: key, ...data[key] }));
           }
         }
       } catch (firebaseError) {
         console.warn("Firebase fetch student data failed, using IndexedDB:", firebaseError);
+=======
+              .filter((key) => data[key] !== null)
+              .map((key) => ({ srNo: key, ...data[key] }));
+          }
+        }
+      } catch (firebaseError) {
+        console.warn(
+          "Firebase fetch student data failed, using IndexedDB:",
+          firebaseError,
+        );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       }
 
       if (fetchedStudents.length === 0) {
@@ -206,22 +257,40 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
             ...student,
             currentClass: student.currentClass || className,
             division: student.division || division,
+<<<<<<< HEAD
             srNo: student.srNo || srNo
+=======
+            srNo: student.srNo || srNo,
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           };
         });
       }
 
+<<<<<<< HEAD
       const activeStudents = fetchedStudents.filter(student => student.isActive !== false);
+=======
+      const activeStudents = fetchedStudents.filter(
+        (student) => student.isActive !== false,
+      );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       const updatedStudents = activeStudents.map((student) => {
         const keyParts = student.id ? student.id.split("-") : [];
         const className = keyParts[0] || student.currentClass || "";
         const division = keyParts[1] || student.division || "";
         const srNo = keyParts[keyParts.length - 1] || student.srNo || "";
+<<<<<<< HEAD
         return { 
           ...student, 
           className: student.currentClass || className, 
           division: student.division || division, 
           srNo: student.srNo || srNo 
+=======
+        return {
+          ...student,
+          className: student.currentClass || className,
+          division: student.division || division,
+          srNo: student.srNo || srNo,
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         };
       });
 
@@ -234,7 +303,11 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
   const fetchSubjectSequence = async () => {
     try {
       const response = await fetch(
+<<<<<<< HEAD
         `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/subjectSequence/${academicYear}/${classValue}.json`
+=======
+        `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/subjectSequence/${academicYear}/${classValue}.json`,
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       );
       if (response.ok) {
         const data = await response.json();
@@ -260,9 +333,16 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
         keysRequest.onerror = (event) => reject(event.target.error);
       });
 
+<<<<<<< HEAD
       const matchingKey = allKeys.find(storeKey =>
         typeof storeKey === "string" &&
         (storeKey.endsWith(`-${key}`) || storeKey === key)
+=======
+      const matchingKey = allKeys.find(
+        (storeKey) =>
+          typeof storeKey === "string" &&
+          (storeKey.endsWith(`-${key}`) || storeKey === key),
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       );
 
       if (!matchingKey) return null;
@@ -271,7 +351,15 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
       return new Promise((resolve) => {
         request.onsuccess = (event) => {
           const studentData = event.target.result;
+<<<<<<< HEAD
           if (!studentData || !studentData.result || !studentData.result[academicYear]) {
+=======
+          if (
+            !studentData ||
+            !studentData.result ||
+            !studentData.result[academicYear]
+          ) {
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
             resolve(null);
             return;
           }
@@ -321,7 +409,13 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
         keysRequest.onerror = (event) => reject(event.target.error);
       });
 
+<<<<<<< HEAD
       const matchingKey = allKeys.find(storeKey => String(storeKey).trim() === String(srNo).trim());
+=======
+      const matchingKey = allKeys.find(
+        (storeKey) => String(storeKey).trim() === String(srNo).trim(),
+      );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       if (!matchingKey) return null;
 
       const request = store.get(matchingKey);
@@ -338,17 +432,35 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
           const fetchedAttendance = { Present: {}, Absent: {}, Leave: {} };
 
           const allMonths = [...firstSemesterMonths, ...secondSemesterMonths];
+<<<<<<< HEAD
           allMonths.forEach(month => {
             const yearForMonth = firstSemesterMonths.includes(month) ? startYear : endYear;
             const monthData = attendanceData.Presenty?.Presenty?.[yearForMonth]?.[month] || {};
+=======
+          allMonths.forEach((month) => {
+            const yearForMonth = firstSemesterMonths.includes(month)
+              ? startYear
+              : endYear;
+            const monthData =
+              attendanceData.Presenty?.Presenty?.[yearForMonth]?.[month] || {};
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
             let presentCount = 0;
             let absentCount = 0;
             let leaveCount = 0;
 
+<<<<<<< HEAD
             Object.keys(monthData).forEach(day => {
               const statusObj = monthData[day];
               let status = (statusObj && typeof statusObj === "object") ? (statusObj.present || statusObj.status) : statusObj;
+=======
+            Object.keys(monthData).forEach((day) => {
+              const statusObj = monthData[day];
+              let status =
+                statusObj && typeof statusObj === "object"
+                  ? statusObj.present || statusObj.status
+                  : statusObj;
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
               if (status === "present" || status === true) presentCount++;
               else if (status === "absent" || status === false) absentCount++;
@@ -392,15 +504,36 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
 
   const getMonthName = (month) => {
     const marathiMonths = {
+<<<<<<< HEAD
       Jun: "जून", Jul: "जुलै", Aug: "ऑगस्ट", Sep: "सप्टेंबर", Oct: "ऑक्टोबर", Nov: "नोव्हेंबर",
       Dec: "डिसेंबर", Jan: "जानेवारी", Feb: "फेब्रुवारी", Mar: "मार्च", Apr: "एप्रिल", May: "मे"
+=======
+      Jun: "जून",
+      Jul: "जुलै",
+      Aug: "ऑगस्ट",
+      Sep: "सप्टेंबर",
+      Oct: "ऑक्टोबर",
+      Nov: "नोव्हेंबर",
+      Dec: "डिसेंबर",
+      Jan: "जानेवारी",
+      Feb: "फेब्रुवारी",
+      Mar: "मार्च",
+      Apr: "एप्रिल",
+      May: "मे",
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     };
     return language === "English" ? month : marathiMonths[month];
   };
 
   const getAttendanceType = (type) => {
     const marathiTypes = {
+<<<<<<< HEAD
       Present: "उपस्थित", Absent: "गैरहजर", Leave: "रजा"
+=======
+      Present: "उपस्थित",
+      Absent: "गैरहजर",
+      Leave: "रजा",
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     };
     return language === "English" ? type : marathiTypes[type];
   };
@@ -413,6 +546,7 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
 
     setIsCompiling(true);
 
+<<<<<<< HEAD
     const examName = activeSemester === "first" 
       ? "First Semester" 
       : activeSemester === "second" 
@@ -423,6 +557,20 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
       : activeSemester === "second" 
         ? "द्वितीय सत्र" 
         : "अतिरिक्त टेम्पलेट";
+=======
+    const examName =
+      activeSemester === "first"
+        ? "First Semester"
+        : activeSemester === "second"
+          ? "Second Semester"
+          : "Second Semester"; // For extra templates, query second semester data
+    const termLabel =
+      activeSemester === "first"
+        ? "प्रथम सत्र"
+        : activeSemester === "second"
+          ? "द्वितीय सत्र"
+          : "अतिरिक्त टेम्पलेट";
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
     const printWindow = window.open("", "", "height=700,width=1000");
     if (!printWindow) {
@@ -433,12 +581,27 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
 
     // Load detailed data for all students in parallel
     const studentDataPromises = selectedStudents.map(async (student) => {
+<<<<<<< HEAD
       const studentId = student.id || `${classValue}-${division}-${student.srNo}`;
       const [firstSemesterData, secondSemesterData, heightWeightData, attendanceData] = await Promise.all([
         fetchMarksData(studentId, academicYear, "First Semester"),
         fetchMarksData(studentId, academicYear, "Second Semester"),
         fetchHeightWeightData(studentId, academicYear),
         fetchAttendanceFromIndexedDB(student.srNo, academicYear)
+=======
+      const studentId =
+        student.id || `${classValue}-${division}-${student.srNo}`;
+      const [
+        firstSemesterData,
+        secondSemesterData,
+        heightWeightData,
+        attendanceData,
+      ] = await Promise.all([
+        fetchMarksData(studentId, academicYear, "First Semester"),
+        fetchMarksData(studentId, academicYear, "Second Semester"),
+        fetchHeightWeightData(studentId, academicYear),
+        fetchAttendanceFromIndexedDB(student.srNo, academicYear),
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       ]);
 
       const firstSemesterResults = firstSemesterData || {};
@@ -460,7 +623,11 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
           firstSemesterGrade: firstSemGrade,
           secondSemesterMarks: secondSemMarks,
           secondSemesterTotal: secondSemTotal,
+<<<<<<< HEAD
           secondSemesterGrade: secondSemGrade
+=======
+          secondSemesterGrade: secondSemGrade,
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         };
       });
 
@@ -470,7 +637,11 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
         secondSemesterData,
         heightWeightData,
         attendanceData,
+<<<<<<< HEAD
         resultsWithTotal
+=======
+        resultsWithTotal,
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       };
     });
 
@@ -480,7 +651,11 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
     try {
       const [fsMarksFirst, fsMarksSecond] = await Promise.all([
         fetchFirestoreMarks(classValue, academicYear, "first"),
+<<<<<<< HEAD
         fetchFirestoreMarks(classValue, academicYear, "second")
+=======
+        fetchFirestoreMarks(classValue, academicYear, "second"),
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       ]);
 
       if (fsMarksFirst.length > 0 || fsMarksSecond.length > 0) {
@@ -493,21 +668,52 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
 
           // Merge with Firestore data
           if (fsMarksFirst.length > 0) {
+<<<<<<< HEAD
             const mergedFirst = matchAndMergeMarks([record.student], tempFirst, fsMarksFirst, subjectSequence);
             record.firstSemesterData = mergedFirst[record.student.srNo] || record.firstSemesterData;
           }
           if (fsMarksSecond.length > 0) {
             const mergedSecond = matchAndMergeMarks([record.student], tempSecond, fsMarksSecond, subjectSequence);
             record.secondSemesterData = mergedSecond[record.student.srNo] || record.secondSemesterData;
+=======
+            const mergedFirst = matchAndMergeMarks(
+              [record.student],
+              tempFirst,
+              fsMarksFirst,
+              subjectSequence,
+            );
+            record.firstSemesterData =
+              mergedFirst[record.student.srNo] || record.firstSemesterData;
+          }
+          if (fsMarksSecond.length > 0) {
+            const mergedSecond = matchAndMergeMarks(
+              [record.student],
+              tempSecond,
+              fsMarksSecond,
+              subjectSequence,
+            );
+            record.secondSemesterData =
+              mergedSecond[record.student.srNo] || record.secondSemesterData;
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           }
 
           // Recalculate resultsWithTotal with merged data
           subjectSequence.forEach((subject) => {
+<<<<<<< HEAD
             const firstSemMarks = (record.firstSemesterData || {})[subject] || {};
             const firstSemTotal = calculateSubjectTotal(firstSemMarks);
             const firstSemGrade = calculateGrade(firstSemTotal);
 
             const secondSemMarks = (record.secondSemesterData || {})[subject] || {};
+=======
+            const firstSemMarks =
+              (record.firstSemesterData || {})[subject] || {};
+            const firstSemTotal = calculateSubjectTotal(firstSemMarks);
+            const firstSemGrade = calculateGrade(firstSemTotal);
+
+            const secondSemMarks =
+              (record.secondSemesterData || {})[subject] || {};
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
             const secondSemTotal = calculateSubjectTotal(secondSemMarks);
             const secondSemGrade = calculateGrade(secondSemTotal);
 
@@ -517,13 +723,24 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
               firstSemesterGrade: firstSemGrade,
               secondSemesterMarks: secondSemMarks,
               secondSemesterTotal: secondSemTotal,
+<<<<<<< HEAD
               secondSemesterGrade: secondSemGrade
+=======
+              secondSemesterGrade: secondSemGrade,
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
             };
           });
         });
       }
     } catch (fsError) {
+<<<<<<< HEAD
       console.warn("Firestore marks merge failed for ProgressSheet, using IndexedDB data:", fsError);
+=======
+      console.warn(
+        "Firestore marks merge failed for ProgressSheet, using IndexedDB data:",
+        fsError,
+      );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     }
 
     let htmlContent = `
@@ -679,6 +896,7 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
     `;
 
     // Loop through records
+<<<<<<< HEAD
     studentRecords.forEach(({ student, firstSemesterData, secondSemesterData, heightWeightData, attendanceData, resultsWithTotal }) => {
       const hwData = heightWeightData || {};
       const attData = attendanceData || { Present: {}, Absent: {}, Leave: {} };
@@ -688,6 +906,29 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
       if (activeSemester === "first") {
         // First Semester Layout (Landscape - 2 Containers)
         htmlContent += `
+=======
+    studentRecords.forEach(
+      ({
+        student,
+        firstSemesterData,
+        secondSemesterData,
+        heightWeightData,
+        attendanceData,
+        resultsWithTotal,
+      }) => {
+        const hwData = heightWeightData || {};
+        const attData = attendanceData || {
+          Present: {},
+          Absent: {},
+          Leave: {},
+        };
+        const firstSemesterNondi = firstSemesterData?.nondi || {};
+        const secondSemesterNondi = secondSemesterData?.nondi || {};
+
+        if (activeSemester === "first") {
+          // First Semester Layout (Landscape - 2 Containers)
+          htmlContent += `
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           <div class="page-break">
             <!-- First Semester: Container 1 -->
             <div class="container">
@@ -742,6 +983,7 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
                   <thead>
                     <tr>
                       <th>${language === "English" ? "Type:" : "प्रकार"}</th>
+<<<<<<< HEAD
                       ${firstSemesterMonths.map(m => `<th>${getMonthName(m)}</th>`).join("")}
                     </tr>
                   </thead>
@@ -752,6 +994,22 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
                         ${firstSemesterMonths.map(m => `<td>${(type === "Leave" && attData[type]?.[m] < 0) ? "" : (attData[type]?.[m] || 0)}</td>`).join("")}
                       </tr>
                     `).join("")}
+=======
+                      ${firstSemesterMonths.map((m) => `<th>${getMonthName(m)}</th>`).join("")}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${["Present", "Absent", "Leave"]
+                      .map(
+                        (type) => `
+                      <tr>
+                        <td>${getAttendanceType(type)}</td>
+                        ${firstSemesterMonths.map((m) => `<td>${type === "Leave" && attData[type]?.[m] < 0 ? "" : attData[type]?.[m] || 0}</td>`).join("")}
+                      </tr>
+                    `,
+                      )
+                      .join("")}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   </tbody>
                 </table>
                 <p style="margin-top: 15px;">${language === "English" ? "After the winter vacation the school will start from." : "हिवाळी सुटीनंतर शाळा दि. पासून सुरू होईल."}</p>
@@ -791,15 +1049,28 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
                     </tr>
                   </thead>
                   <tbody>
+<<<<<<< HEAD
                     ${subjectSequence.map(sub => {
                       const { firstSemesterGrade } = resultsWithTotal[sub] || {};
                       return `
+=======
+                    ${subjectSequence
+                      .map((sub) => {
+                        const { firstSemesterGrade } =
+                          resultsWithTotal[sub] || {};
+                        return `
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                         <tr>
                           <td><b>${sub}</b></td>
                           <td><b>${firstSemesterGrade || "-"}</b></td>
                         </tr>
                       `;
+<<<<<<< HEAD
                     }).join("")}
+=======
+                      })
+                      .join("")}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   </tbody>
                 </table>
                 <div style="display: flex; justify-content: space-between; align-items: flex-end; width: 90%; position: absolute; bottom: 20px; font-weight: bold; left: 15px;">
@@ -868,9 +1139,15 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
             </div>
           </div>
         `;
+<<<<<<< HEAD
       } else if (activeSemester === "second") {
         // Second Semester Layout (Landscape - 2 Containers)
         htmlContent += `
+=======
+        } else if (activeSemester === "second") {
+          // Second Semester Layout (Landscape - 2 Containers)
+          htmlContent += `
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           <div class="page-break">
             <!-- Second Semester: Container 1 -->
             <div class="container">
@@ -925,6 +1202,7 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
                   <thead>
                     <tr>
                       <th>${language === "English" ? "Type:" : "प्रकार"}</th>
+<<<<<<< HEAD
                       ${firstSemesterMonths.map(m => `<th>${getMonthName(m)}</th>`).join("")}
                     </tr>
                   </thead>
@@ -935,6 +1213,22 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
                         ${firstSemesterMonths.map(m => `<td>${(type === "Leave" && attData[type]?.[m] < 0) ? "" : (attData[type]?.[m] || 0)}</td>`).join("")}
                       </tr>
                     `).join("")}
+=======
+                      ${firstSemesterMonths.map((m) => `<th>${getMonthName(m)}</th>`).join("")}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${["Present", "Absent", "Leave"]
+                      .map(
+                        (type) => `
+                      <tr>
+                        <td>${getAttendanceType(type)}</td>
+                        ${firstSemesterMonths.map((m) => `<td>${type === "Leave" && attData[type]?.[m] < 0 ? "" : attData[type]?.[m] || 0}</td>`).join("")}
+                      </tr>
+                    `,
+                      )
+                      .join("")}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   </tbody>
                 </table>
                 <h5 style="margin-top: 5px; margin-bottom: 5px;">${language === "English" ? "Second Semester Attendance:" : "द्वितीय सत्राची हजेरी:"}</h5>
@@ -942,6 +1236,7 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
                   <thead>
                     <tr>
                       <th>${language === "English" ? "Type:" : "प्रकार"}</th>
+<<<<<<< HEAD
                       ${secondSemesterMonths.map(m => `<th>${getMonthName(m)}</th>`).join("")}
                     </tr>
                   </thead>
@@ -952,6 +1247,22 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
                         ${secondSemesterMonths.map(m => `<td>${(type === "Leave" && attData[type]?.[m] < 0) ? "" : (attData[type]?.[m] || 0)}</td>`).join("")}
                       </tr>
                     `).join("")}
+=======
+                      ${secondSemesterMonths.map((m) => `<th>${getMonthName(m)}</th>`).join("")}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${["Present", "Absent", "Leave"]
+                      .map(
+                        (type) => `
+                      <tr>
+                        <td>${getAttendanceType(type)}</td>
+                        ${secondSemesterMonths.map((m) => `<td>${type === "Leave" && attData[type]?.[m] < 0 ? "" : attData[type]?.[m] || 0}</td>`).join("")}
+                      </tr>
+                    `,
+                      )
+                      .join("")}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   </tbody>
                 </table>
                 <p style="margin-top: 5px;">${language === "English" ? "After the summer vacation school will start from." : "उन्हाळी सुटीनंतर शाळा दि. पासून सुरू होईल."}</p>
@@ -1000,6 +1311,7 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
                     </tr>
                   </thead>
                   <tbody>
+<<<<<<< HEAD
                     ${subjectSequence.map(sub => {
                       const rowData = resultsWithTotal[sub] || {};
                       const firstTotal = rowData.firstSemesterTotal || 0;
@@ -1007,6 +1319,16 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
                       const combTotal = firstTotal + secondTotal;
                       const combGrade = calculateGrade(combTotal);
                       return `
+=======
+                    ${subjectSequence
+                      .map((sub) => {
+                        const rowData = resultsWithTotal[sub] || {};
+                        const firstTotal = rowData.firstSemesterTotal || 0;
+                        const secondTotal = rowData.secondSemesterTotal || 0;
+                        const combTotal = firstTotal + secondTotal;
+                        const combGrade = calculateGrade(combTotal);
+                        return `
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                         <tr>
                           <td><b>${sub}</b></td>
                           <td><b>${rowData.firstSemesterTotal ?? "-"}</b></td>
@@ -1017,7 +1339,12 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
                           <td><b>${combGrade || "-"}</b></td>
                         </tr>
                       `;
+<<<<<<< HEAD
                     }).join("")}
+=======
+                      })
+                      .join("")}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   </tbody>
                 </table>
                 <div style="display: flex; justify-content: space-between; align-items: flex-end; width: 90%; position: absolute; bottom: 20px; font-weight: bold; left: 15px;">
@@ -1086,9 +1413,15 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
             </div>
           </div>
         `;
+<<<<<<< HEAD
       } else if (activeSemester === "extra") {
         // Extra Template Layout (Portrait - 1 Page)
         htmlContent += `
+=======
+        } else if (activeSemester === "extra") {
+          // Extra Template Layout (Portrait - 1 Page)
+          htmlContent += `
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           <div class="page-break">
             <div class="extra-template-container">
               <div style="display: flex; justify-content: space-between; mb: 10px;">
@@ -1198,8 +1531,14 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
             </div>
           </div>
         `;
+<<<<<<< HEAD
       }
     });
+=======
+        }
+      },
+    );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
     htmlContent += `
         </body>
@@ -1244,14 +1583,22 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
 
       {/* Settings Options Card */}
       <div className="flex-1 max-w-2xl mx-auto w-full space-y-6">
+<<<<<<< HEAD
         
+=======
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         {/* Semester Tab Selection */}
         <div className="flex bg-[#121c16] rounded-full p-1 border border-emerald-950/60 max-w-md mx-auto shadow-inner">
           <button
             onClick={() => setActiveSemester("first")}
             className={`flex-1 py-2.5 rounded-full font-bold text-xs transition-all cursor-pointer ${
+<<<<<<< HEAD
               activeSemester === "first" 
                 ? "bg-[#223d2e] text-[#a2d8b4] shadow-md border border-emerald-900/30" 
+=======
+              activeSemester === "first"
+                ? "bg-[#223d2e] text-[#a2d8b4] shadow-md border border-emerald-900/30"
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 : "text-emerald-600/70 hover:text-emerald-500"
             }`}
           >
@@ -1260,8 +1607,13 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
           <button
             onClick={() => setActiveSemester("second")}
             className={`flex-1 py-2.5 rounded-full font-bold text-xs transition-all cursor-pointer ${
+<<<<<<< HEAD
               activeSemester === "second" 
                 ? "bg-[#223d2e] text-[#a2d8b4] shadow-md border border-emerald-900/30" 
+=======
+              activeSemester === "second"
+                ? "bg-[#223d2e] text-[#a2d8b4] shadow-md border border-emerald-900/30"
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 : "text-emerald-600/70 hover:text-emerald-500"
             }`}
           >
@@ -1270,8 +1622,13 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
           <button
             onClick={() => setActiveSemester("extra")}
             className={`flex-1 py-2.5 rounded-full font-bold text-xs transition-all cursor-pointer ${
+<<<<<<< HEAD
               activeSemester === "extra" 
                 ? "bg-[#223d2e] text-[#a2d8b4] shadow-md border border-emerald-900/30" 
+=======
+              activeSemester === "extra"
+                ? "bg-[#223d2e] text-[#a2d8b4] shadow-md border border-emerald-900/30"
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 : "text-emerald-600/70 hover:text-emerald-500"
             }`}
           >
@@ -1283,7 +1640,13 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
         {divisions.length > 1 && (
           <div className="space-y-3">
             <h3 className="text-sm font-bold text-[#a2d8b4]/90 text-center">
+<<<<<<< HEAD
               {language === "English" ? "Select Division" : "तुकडी निवडा (Select Division)"}
+=======
+              {language === "English"
+                ? "Select Division"
+                : "तुकडी निवडा (Select Division)"}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
             </h3>
             <div className="flex flex-wrap justify-center gap-3">
               {divisions.map((div) => (
@@ -1308,7 +1671,13 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
           {activeSemester === "first" && (
             <div className="flex items-center justify-between gap-4">
               <label className="text-xs font-bold text-emerald-100/90">
+<<<<<<< HEAD
                 {language === "English" ? "School reopening date after winter vacation:" : "हिवाळी सुटीनंतर शाळा सुरू दिनांक:"}
+=======
+                {language === "English"
+                  ? "School reopening date after winter vacation:"
+                  : "हिवाळी सुटीनंतर शाळा सुरू दिनांक:"}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               </label>
               <input
                 type="date"
@@ -1321,7 +1690,13 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
           {activeSemester === "second" && (
             <div className="flex items-center justify-between gap-4">
               <label className="text-xs font-bold text-emerald-100/90">
+<<<<<<< HEAD
                 {language === "English" ? "School reopening date after summer vacation:" : "उन्हाळी सुटीनंतर शाळा सुरू दिनांक:"}
+=======
+                {language === "English"
+                  ? "School reopening date after summer vacation:"
+                  : "उन्हाळी सुटीनंतर शाळा सुरू दिनांक:"}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               </label>
               <input
                 type="date"
@@ -1336,6 +1711,7 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
         {/* Info Text */}
         <div className="space-y-2 pt-4 text-center">
           <p className="text-sm text-emerald-100/95 leading-relaxed max-w-md mx-auto">
+<<<<<<< HEAD
             {language === "English" ? "Hello, report cards / progress sheets have been loaded." : "नमस्कार, प्रगती पत्रक जोडला आहे."}
           </p>
           <p className="text-xs text-emerald-400/80 leading-relaxed max-w-md mx-auto">
@@ -1343,6 +1719,21 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
           </p>
           <p className="text-[11px] text-emerald-500/70 italic leading-relaxed max-w-md mx-auto">
             {language === "English" ? "School logo, slogan, and signatures are loaded dynamically from settings." : "शाळेचा लोगो, स्लोगन, सही सेटिंग्जमधून लोड केली जातात."}
+=======
+            {language === "English"
+              ? "Hello, report cards / progress sheets have been loaded."
+              : "नमस्कार, प्रगती पत्रक जोडला आहे."}
+          </p>
+          <p className="text-xs text-emerald-400/80 leading-relaxed max-w-md mx-auto">
+            {language === "English"
+              ? "It may take 2-3 minutes to compile PDFs. Please wait."
+              : "PDF तयार होण्यासाठी दोन, तीन मिनिटे लागू शकतात. वाट पहावे."}
+          </p>
+          <p className="text-[11px] text-emerald-500/70 italic leading-relaxed max-w-md mx-auto">
+            {language === "English"
+              ? "School logo, slogan, and signatures are loaded dynamically from settings."
+              : "शाळेचा लोगो, स्लोगन, सही सेटिंग्जमधून लोड केली जातात."}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           </p>
         </div>
 
@@ -1361,7 +1752,14 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
               </>
             ) : (
               <>
+<<<<<<< HEAD
                 <AlertTriangle size={15} className="shrink-0 mt-0.5 text-[#ff9800]" />
+=======
+                <AlertTriangle
+                  size={15}
+                  className="shrink-0 mt-0.5 text-[#ff9800]"
+                />
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 <span className="text-[#ff9800]/90">
                   {language === "English"
                     ? "School Name is missing in School Info."
@@ -1374,11 +1772,28 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
           {/* Headmaster Name Check */}
           <div className="flex items-start gap-2.5">
             {(() => {
+<<<<<<< HEAD
               const hmName = schoolData?.headmasterName || schoolData?.hmName || schoolData?.headmaster || cceSettings?.headmasterName || cceSettings?.principalName || "";
               if (hmName.trim()) {
                 return (
                   <>
                     <Check size={15} className="shrink-0 mt-0.5 text-emerald-400" />
+=======
+              const hmName =
+                schoolData?.headmasterName ||
+                schoolData?.hmName ||
+                schoolData?.headmaster ||
+                cceSettings?.headmasterName ||
+                cceSettings?.principalName ||
+                "";
+              if (hmName.trim()) {
+                return (
+                  <>
+                    <Check
+                      size={15}
+                      className="shrink-0 mt-0.5 text-emerald-400"
+                    />
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     <span>
                       {language === "English"
                         ? `Headmaster: ${hmName}`
@@ -1389,7 +1804,14 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
               } else {
                 return (
                   <>
+<<<<<<< HEAD
                     <AlertTriangle size={15} className="shrink-0 mt-0.5 text-[#ff9800]" />
+=======
+                    <AlertTriangle
+                      size={15}
+                      className="shrink-0 mt-0.5 text-[#ff9800]"
+                    />
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     <span className="text-[#ff9800]/90">
                       {language === "English"
                         ? "Headmaster name is missing in School Info."
@@ -1404,11 +1826,24 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
           {/* Caste Configured Check */}
           <div className="flex items-start gap-2.5">
             {(() => {
+<<<<<<< HEAD
               const missing = selectedStudents.filter(s => !s.caste || !s.caste.trim());
               if (selectedStudents.length === 0) {
                 return (
                   <>
                     <AlertTriangle size={15} className="shrink-0 mt-0.5 text-[#ff9800]" />
+=======
+              const missing = selectedStudents.filter(
+                (s) => !s.caste || !s.caste.trim(),
+              );
+              if (selectedStudents.length === 0) {
+                return (
+                  <>
+                    <AlertTriangle
+                      size={15}
+                      className="shrink-0 mt-0.5 text-[#ff9800]"
+                    />
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     <span className="text-[#ff9800]/90">
                       {language === "English"
                         ? "No student data available to check castes."
@@ -1417,6 +1852,7 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
                   </>
                 );
               } else if (missing.length > 0) {
+<<<<<<< HEAD
                 const sampleNames = missing.slice(0, 2).map(s => s.fullName || s.studentName || s.name || `Roll ${s.rollNo || s.srNo}`).join(", ");
                 const remaining = missing.length - 2;
                 const sampleText = remaining > 0 
@@ -1425,6 +1861,29 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
                 return (
                   <>
                     <AlertTriangle size={15} className="shrink-0 mt-0.5 text-[#ff9800]" />
+=======
+                const sampleNames = missing
+                  .slice(0, 2)
+                  .map(
+                    (s) =>
+                      s.fullName ||
+                      s.studentName ||
+                      s.name ||
+                      `Roll ${s.rollNo || s.srNo}`,
+                  )
+                  .join(", ");
+                const remaining = missing.length - 2;
+                const sampleText =
+                  remaining > 0
+                    ? `${sampleNames} + ${remaining} ${language === "English" ? "more" : "इतर"}`
+                    : sampleNames;
+                return (
+                  <>
+                    <AlertTriangle
+                      size={15}
+                      className="shrink-0 mt-0.5 text-[#ff9800]"
+                    />
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     <span className="text-[#ff9800]/90">
                       {language === "English"
                         ? `Caste missing for ${missing.length} student(s) (${sampleText}). Select it in Student Info.`
@@ -1435,7 +1894,14 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
               } else {
                 return (
                   <>
+<<<<<<< HEAD
                     <Check size={15} className="shrink-0 mt-0.5 text-emerald-400" />
+=======
+                    <Check
+                      size={15}
+                      className="shrink-0 mt-0.5 text-emerald-400"
+                    />
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     <span>
                       {language === "English"
                         ? "Castes configured for all students."
@@ -1449,10 +1915,20 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
 
           {/* Print Layout Disclaimer */}
           <div className="flex items-start gap-2.5">
+<<<<<<< HEAD
             <AlertTriangle size={15} className="shrink-0 mt-0.5 text-emerald-500" />
             <span>
               {language === "English" 
                 ? "This table will be printed on A4 pages containing the summative progress grade for all subjects." 
+=======
+            <AlertTriangle
+              size={15}
+              className="shrink-0 mt-0.5 text-emerald-500"
+            />
+            <span>
+              {language === "English"
+                ? "This table will be printed on A4 pages containing the summative progress grade for all subjects."
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 : "हा तक्ता सर्व विषयांच्या संकलित प्रगती श्रेणीसह A4 पानांवर प्रिंट केला जाईल."}
             </span>
           </div>
@@ -1468,6 +1944,7 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
             <>
               <Loader2 className="size-4 animate-spin" />
               <span>
+<<<<<<< HEAD
                 {language === "English" ? "Compiling progress sheets..." : "प्रगती पत्रके संकलित करत आहे..."}
               </span>
             </>
@@ -1476,6 +1953,19 @@ const ProgressSheet = ({ initialClass, initialYear, onBack }) => {
           )}
         </button>
 
+=======
+                {language === "English"
+                  ? "Compiling progress sheets..."
+                  : "प्रगती पत्रके संकलित करत आहे..."}
+              </span>
+            </>
+          ) : (
+            <span>
+              {language === "English" ? "Generate / Print" : "तयार करा"}
+            </span>
+          )}
+        </button>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       </div>
     </div>
   );

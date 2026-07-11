@@ -14,15 +14,38 @@ import {
   Layers,
   Loader2,
 } from "lucide-react";
+<<<<<<< HEAD
 import { collection, addDoc, getDocs, deleteDoc, doc } from "firebase/firestore";
+=======
+import {
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+  doc,
+} from "firebase/firestore";
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 import { db } from "@/lib/firebase";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { showToast as toast } from "@/lib/custom-toast";
 import { format } from "date-fns";
+<<<<<<< HEAD
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { parseDiaryFile, type ParsedDiaryContent } from "@/lib/parse-diary-file";
+=======
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import {
+  parseDiaryFile,
+  type ParsedDiaryContent,
+} from "@/lib/parse-diary-file";
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
 export const Route = createFileRoute("/admin/teacher-diary")({
   head: () => ({ meta: [{ title: "Teacher Diary Uploader — Super Admin" }] }),
@@ -50,7 +73,11 @@ function TeacherDiaryAdmin() {
   const [selectedClass, setSelectedClass] = useState<string>("Class 1");
   const [selectedMonth, setSelectedMonth] = useState<string>("June");
   const [selectedDate, setSelectedDate] = useState<string>(
+<<<<<<< HEAD
     new Date().toISOString().split("T")[0]
+=======
+    new Date().toISOString().split("T")[0],
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   );
   const [isDateFocus, setIsDateFocus] = useState(false);
   const [previewDiaryId, setPreviewDiaryId] = useState<string | null>(null);
@@ -126,9 +153,16 @@ function TeacherDiaryAdmin() {
     setUploading(true);
     try {
       const parts = selectedDate.split("-");
+<<<<<<< HEAD
       const formattedDate = parts.length === 3 
         ? `${parts[2].padStart(2, "0")}/${parts[1].padStart(2, "0")}/${parts[0]}` 
         : format(new Date(), "dd/MM/yyyy");
+=======
+      const formattedDate =
+        parts.length === 3
+          ? `${parts[2].padStart(2, "0")}/${parts[1].padStart(2, "0")}/${parts[0]}`
+          : format(new Date(), "dd/MM/yyyy");
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
       const timestamp = new Date().getTime();
 
@@ -164,8 +198,18 @@ function TeacherDiaryAdmin() {
       toast.success(`"${file.name}" uploaded successfully!`);
     } catch (err: any) {
       console.error("Upload error:", err);
+<<<<<<< HEAD
       if (err?.code === "resource-exhausted" || err?.message?.includes("too large")) {
         toast.error("File too large for Firestore. Please use a file under 500KB or contact admin.");
+=======
+      if (
+        err?.code === "resource-exhausted" ||
+        err?.message?.includes("too large")
+      ) {
+        toast.error(
+          "File too large for Firestore. Please use a file under 500KB or contact admin.",
+        );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       } else {
         toast.error("Upload failed. Please try again.");
       }
@@ -215,8 +259,13 @@ function TeacherDiaryAdmin() {
               </h1>
               <p className="text-[#6B7280] font-medium max-w-xl">
                 Upload official teaching diaries and lesson plan guidelines
+<<<<<<< HEAD
                 categorized by class and month. These will sync instantly to
                 the educator workspace panels.
+=======
+                categorized by class and month. These will sync instantly to the
+                educator workspace panels.
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               </p>
             </div>
           </div>
@@ -271,14 +320,28 @@ function TeacherDiaryAdmin() {
                 <Popover>
                   <PopoverTrigger asChild>
                     <div className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus-within:border-[#6C63FF] outline-none flex items-center justify-between cursor-pointer">
+<<<<<<< HEAD
                       <span>{selectedDate ? format(new Date(selectedDate), "dd/MM/yyyy") : "DD/MM/YYYY"}</span>
+=======
+                      <span>
+                        {selectedDate
+                          ? format(new Date(selectedDate), "dd/MM/yyyy")
+                          : "DD/MM/YYYY"}
+                      </span>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                       <Calendar className="size-4 text-slate-500" />
                     </div>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0 z-50">
                     <CalendarComponent
                       mode="single"
+<<<<<<< HEAD
                       selected={selectedDate ? new Date(selectedDate) : undefined}
+=======
+                      selected={
+                        selectedDate ? new Date(selectedDate) : undefined
+                      }
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                       onSelect={(date) => {
                         if (date) {
                           // Standardize internal date as YYYY-MM-DD
@@ -333,7 +396,12 @@ function TeacherDiaryAdmin() {
           <div className="lg:col-span-2 bg-white border border-black/5 rounded-[3rem] p-8 shadow-sm space-y-6">
             <div className="flex items-center justify-between border-b border-stone-100 pb-3">
               <h3 className="text-xl font-black tracking-tight text-stone-900 flex items-center gap-2">
+<<<<<<< HEAD
                 <BookOpen className="size-5 text-[#6C63FF]" /> Uploaded Diaries Catalog
+=======
+                <BookOpen className="size-5 text-[#6C63FF]" /> Uploaded Diaries
+                Catalog
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               </h3>
               <span className="px-3.5 py-1 bg-violet-100 text-[#6C63FF] rounded-full text-[10px] font-black uppercase tracking-wider">
                 {diaries.length} Files
@@ -353,7 +421,13 @@ function TeacherDiaryAdmin() {
                   <BookOpen className="size-8" />
                 </div>
                 <div>
+<<<<<<< HEAD
                   <h4 className="text-slate-700 font-bold">No teaching diaries uploaded yet</h4>
+=======
+                  <h4 className="text-slate-700 font-bold">
+                    No teaching diaries uploaded yet
+                  </h4>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   <p className="text-slate-400 text-xs mt-1">
                     Select a class and month on the left to start uploading.
                   </p>
@@ -376,7 +450,14 @@ function TeacherDiaryAdmin() {
                             <FileText className="size-6" />
                           </div>
                           <div className="overflow-hidden">
+<<<<<<< HEAD
                             <div className="font-bold text-slate-800 text-sm truncate max-w-[250px] sm:max-w-md" title={diary.name}>
+=======
+                            <div
+                              className="font-bold text-slate-800 text-sm truncate max-w-[250px] sm:max-w-md"
+                              title={diary.name}
+                            >
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                               {diary.name}
                             </div>
                             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[10px] font-black text-slate-400 uppercase tracking-widest">
@@ -400,10 +481,21 @@ function TeacherDiaryAdmin() {
                         <div className="flex items-center gap-2 flex-shrink-0 ml-4">
                           {diary.parsedContent && (
                             <button
+<<<<<<< HEAD
                               onClick={() => setPreviewDiaryId(previewDiaryId === diary.id ? null : diary.id)}
                               className={`size-9 rounded-xl border flex items-center justify-center transition-all cursor-pointer shadow-sm ${
                                 previewDiaryId === diary.id 
                                   ? "bg-[#6C63FF] border-[#6C63FF] text-white" 
+=======
+                              onClick={() =>
+                                setPreviewDiaryId(
+                                  previewDiaryId === diary.id ? null : diary.id,
+                                )
+                              }
+                              className={`size-9 rounded-xl border flex items-center justify-center transition-all cursor-pointer shadow-sm ${
+                                previewDiaryId === diary.id
+                                  ? "bg-[#6C63FF] border-[#6C63FF] text-white"
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                   : "bg-white border-slate-100 text-slate-400 hover:text-[#6C63FF] hover:border-[#6C63FF]/20"
                               }`}
                               title="Preview Parsed Content"
@@ -412,7 +504,15 @@ function TeacherDiaryAdmin() {
                             </button>
                           )}
                           <button
+<<<<<<< HEAD
                             onClick={() => setViewingDiaryId(viewingDiaryId === diary.id ? null : diary.id)}
+=======
+                            onClick={() =>
+                              setViewingDiaryId(
+                                viewingDiaryId === diary.id ? null : diary.id,
+                              )
+                            }
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                             className={`size-9 rounded-xl border flex items-center justify-center transition-all cursor-pointer shadow-sm ${
                               viewingDiaryId === diary.id
                                 ? "bg-indigo-600 border-indigo-600 text-white"
@@ -461,9 +561,22 @@ function TeacherDiaryAdmin() {
                                   Close Preview / प्रिव्ह्यू बंद करा
                                 </button>
                               </div>
+<<<<<<< HEAD
                               {diary.url?.startsWith("data:image/") || /\.(jpg|jpeg|png|gif|webp)$/i.test(diary.name || "") ? (
                                 <div className="w-full flex justify-center bg-slate-50 rounded-xl p-2 border border-slate-100 overflow-auto max-h-[500px]">
                                   <img src={diary.url} alt={diary.name} className="max-w-full h-auto rounded-lg object-contain shadow-sm" />
+=======
+                              {diary.url?.startsWith("data:image/") ||
+                              /\.(jpg|jpeg|png|gif|webp)$/i.test(
+                                diary.name || "",
+                              ) ? (
+                                <div className="w-full flex justify-center bg-slate-50 rounded-xl p-2 border border-slate-100 overflow-auto max-h-[500px]">
+                                  <img
+                                    src={diary.url}
+                                    alt={diary.name}
+                                    className="max-w-full h-auto rounded-lg object-contain shadow-sm"
+                                  />
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                 </div>
                               ) : (
                                 <iframe
@@ -491,7 +604,12 @@ function TeacherDiaryAdmin() {
                               {/* Header */}
                               <div className="flex flex-wrap items-center justify-between gap-4 px-2">
                                 <div className="text-[#0056b3] text-[16px] font-bold">
+<<<<<<< HEAD
                                   तारीख : {diary.parsedContent.date || diary.date}
+=======
+                                  तारीख :{" "}
+                                  {diary.parsedContent.date || diary.date}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                 </div>
                                 <div className="bg-black text-white text-base font-bold px-6 py-1 border-[2px] border-double border-white outline outline-2 outline-black">
                                   टाचन बुक
@@ -504,10 +622,22 @@ function TeacherDiaryAdmin() {
                               {/* Thought & Dinvishesh */}
                               <div className="space-y-1 px-2 text-[#0056b3] text-[14px] font-bold">
                                 {diary.parsedContent.thought && (
+<<<<<<< HEAD
                                   <div>आजचा सुविचार : {diary.parsedContent.thought}</div>
                                 )}
                                 {diary.parsedContent.dinvishesh && (
                                   <div>आजचा दिनविशेष : {diary.parsedContent.dinvishesh}</div>
+=======
+                                  <div>
+                                    आजचा सुविचार : {diary.parsedContent.thought}
+                                  </div>
+                                )}
+                                {diary.parsedContent.dinvishesh && (
+                                  <div>
+                                    आजचा दिनविशेष :{" "}
+                                    {diary.parsedContent.dinvishesh}
+                                  </div>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                 )}
                               </div>
 
@@ -517,6 +647,7 @@ function TeacherDiaryAdmin() {
                                   <table className="min-w-full border-collapse text-[12px]">
                                     <thead className="bg-white text-[#0056b3]">
                                       <tr className="border-b-[2px] border-black">
+<<<<<<< HEAD
                                         <th className="px-2 py-1.5 text-center font-bold border-r-[2px] border-black w-[40px]">तास</th>
                                         <th className="px-2 py-1.5 text-center font-bold border-r-[2px] border-black w-[100px]">वर्ग / विषय</th>
                                         <th className="px-2 py-1.5 text-center font-bold border-r-[2px] border-black">अध्याय / धडा</th>
@@ -540,6 +671,65 @@ function TeacherDiaryAdmin() {
                                           <td className="px-2 py-1.5 text-left text-[#0056b3]">{p.outcome}</td>
                                         </tr>
                                       ))}
+=======
+                                        <th className="px-2 py-1.5 text-center font-bold border-r-[2px] border-black w-[40px]">
+                                          तास
+                                        </th>
+                                        <th className="px-2 py-1.5 text-center font-bold border-r-[2px] border-black w-[100px]">
+                                          वर्ग / विषय
+                                        </th>
+                                        <th className="px-2 py-1.5 text-center font-bold border-r-[2px] border-black">
+                                          अध्याय / धडा
+                                        </th>
+                                        <th className="px-2 py-1.5 text-center font-bold border-r-[2px] border-black">
+                                          अनुभव
+                                        </th>
+                                        <th className="px-2 py-1.5 text-center font-bold border-r-[2px] border-black w-[80px]">
+                                          साधन तंत्र
+                                        </th>
+                                        <th className="px-2 py-1.5 text-center font-bold border-r-[2px] border-black w-[80px]">
+                                          साहित्य
+                                        </th>
+                                        <th className="px-2 py-1.5 text-center font-bold">
+                                          परिणाम
+                                        </th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {diary.parsedContent.periods.map(
+                                        (p, idx) => (
+                                          <tr
+                                            key={idx}
+                                            className="border-b border-black last:border-b-0"
+                                          >
+                                            <td className="px-2 py-1.5 text-center font-bold border-r-[2px] border-black text-[#0056b3]">
+                                              {p.period}
+                                            </td>
+                                            <td className="px-2 py-1.5 text-left font-bold border-r-[2px] border-black text-[#0056b3]">
+                                              {p.class && (
+                                                <span>{p.class} / </span>
+                                              )}
+                                              {p.subject}
+                                            </td>
+                                            <td className="px-2 py-1.5 text-left border-r-[2px] border-black text-[#0056b3]">
+                                              {p.topic}
+                                            </td>
+                                            <td className="px-2 py-1.5 text-left border-r-[2px] border-black text-[#0056b3]">
+                                              {p.experience}
+                                            </td>
+                                            <td className="px-2 py-1.5 text-left border-r-[2px] border-black text-[#0056b3]">
+                                              {p.tools}
+                                            </td>
+                                            <td className="px-2 py-1.5 text-left border-r-[2px] border-black text-[#0056b3]">
+                                              {p.materials}
+                                            </td>
+                                            <td className="px-2 py-1.5 text-left text-[#0056b3]">
+                                              {p.outcome}
+                                            </td>
+                                          </tr>
+                                        ),
+                                      )}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                     </tbody>
                                   </table>
                                 </div>
@@ -557,11 +747,21 @@ function TeacherDiaryAdmin() {
                                 </div>
                               )}
 
+<<<<<<< HEAD
                               {diary.parsedContent.periods.length === 0 && !diary.parsedContent.thought && !diary.parsedContent.highlights && (
                                 <div className="text-center py-6 text-sm text-slate-400 font-bold">
                                   या फाईल मधून content extract करता आले नाही.
                                 </div>
                               )}
+=======
+                              {diary.parsedContent.periods.length === 0 &&
+                                !diary.parsedContent.thought &&
+                                !diary.parsedContent.highlights && (
+                                  <div className="text-center py-6 text-sm text-slate-400 font-bold">
+                                    या फाईल मधून content extract करता आले नाही.
+                                  </div>
+                                )}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                             </div>
                           </motion.div>
                         )}

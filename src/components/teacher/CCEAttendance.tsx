@@ -29,6 +29,7 @@ const MONTHS = [
   { key: "may", label: "मे", days: 31 },
 ];
 
+<<<<<<< HEAD
 
 type ViewTab = "student" | "month";
 type MainView = "attendance" | "working-days";
@@ -46,6 +47,39 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
   const [mainView, setMainView] = useState<MainView>("attendance");
   const [workingDays, setWorkingDays] = useState<Record<string, number>>(
     Object.fromEntries(MONTHS.map(m => [m.key, 0]))
+=======
+type ViewTab = "student" | "month";
+type MainView = "attendance" | "working-days";
+
+export function CCEAttendance({
+  selectedClass,
+  academicYear,
+  onBack,
+}: {
+  selectedClass: string;
+  academicYear: string;
+  onBack: () => void;
+}) {
+  const [students, setStudents] = useState<Student[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState(MONTHS[0]);
+  const [attendance, setAttendance] = useState<
+    Record<string, Record<number, "P" | "A" | "">>
+  >({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<ViewTab>("student");
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(
+    null,
+  );
+  const [selectedStudentForEdit, setSelectedStudentForEdit] =
+    useState<Student | null>(null);
+  const [selectedMonthForEdit, setSelectedMonthForEdit] = useState<
+    (typeof MONTHS)[0] | null
+  >(null);
+  const [mainView, setMainView] = useState<MainView>("attendance");
+  const [workingDays, setWorkingDays] = useState<Record<string, number>>(
+    Object.fromEntries(MONTHS.map((m) => [m.key, 0])),
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   );
   const [savingWorkingDays, setSavingWorkingDays] = useState(false);
 
@@ -58,11 +92,26 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
     const q = query(
       collection(db, "users"),
       where("role", "==", "student"),
+<<<<<<< HEAD
       where("class", "==", selectedClass)
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as Student[];
       setStudents(data.sort((a, b) => (parseInt(a.rollNo || "999") - parseInt(b.rollNo || "999"))));
+=======
+      where("class", "==", selectedClass),
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      })) as Student[];
+      setStudents(
+        data.sort(
+          (a, b) => parseInt(a.rollNo || "999") - parseInt(b.rollNo || "999"),
+        ),
+      );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     });
     return () => unsubscribe();
   }, [selectedClass]);
@@ -72,7 +121,15 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
     const loadAttendance = async () => {
       setLoading(true);
       try {
+<<<<<<< HEAD
         const docRef = doc(db, "cce_attendance", `${selectedClass}_${academicYear}_${selectedMonth.key}`);
+=======
+        const docRef = doc(
+          db,
+          "cce_attendance",
+          `${selectedClass}_${academicYear}_${selectedMonth.key}`,
+        );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         const snap = await getDoc(docRef);
         if (snap.exists()) {
           setAttendance(snap.data().records || {});
@@ -88,13 +145,21 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
   }, [selectedClass, academicYear, selectedMonth]);
 
   const toggleAttendance = (studentId: string, day: number) => {
+<<<<<<< HEAD
     setAttendance(prev => {
+=======
+    setAttendance((prev) => {
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       const studentRecord = prev[studentId] || {};
       const current = studentRecord[day] || "";
       const next = current === "" ? "P" : current === "P" ? "A" : "";
       return {
         ...prev,
+<<<<<<< HEAD
         [studentId]: { ...studentRecord, [day]: next }
+=======
+        [studentId]: { ...studentRecord, [day]: next },
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       };
     });
   };
@@ -107,6 +172,7 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
   const saveAttendance = async () => {
     setSaving(true);
     try {
+<<<<<<< HEAD
       const docRef = doc(db, "cce_attendance", `${selectedClass}_${academicYear}_${selectedMonth.key}`);
       await setDoc(docRef, {
         class: selectedClass,
@@ -115,6 +181,24 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
         records: attendance,
         updatedAt: new Date().toISOString(),
       }, { merge: true });
+=======
+      const docRef = doc(
+        db,
+        "cce_attendance",
+        `${selectedClass}_${academicYear}_${selectedMonth.key}`,
+      );
+      await setDoc(
+        docRef,
+        {
+          class: selectedClass,
+          academicYear,
+          month: selectedMonth.key,
+          records: attendance,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true },
+      );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       toast.success("उपस्थिती जतन झाली!");
     } catch (err: any) {
       console.error(err);
@@ -125,8 +209,17 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
 
   const getStats = (studentId: string) => {
     const rec = attendance[studentId] || {};
+<<<<<<< HEAD
     let present = 0, absent = 0;
     Object.values(rec).forEach(v => { if (v === "P") present++; else if (v === "A") absent++; });
+=======
+    let present = 0,
+      absent = 0;
+    Object.values(rec).forEach((v) => {
+      if (v === "P") present++;
+      else if (v === "A") absent++;
+    });
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     return { present, absent };
   };
 
@@ -144,7 +237,11 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
       );
     }
 
+<<<<<<< HEAD
     const student = students.find(s => s.id === selectedStudentId);
+=======
+    const student = students.find((s) => s.id === selectedStudentId);
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     if (!student) return null;
 
     const stats = getStats(selectedStudentId);
@@ -154,8 +251,17 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
         {/* Student info header */}
         <div className="bg-blue-50 rounded-2xl p-4 flex items-center justify-between border border-blue-100">
           <div>
+<<<<<<< HEAD
             <p className="text-slate-800 font-bold text-base">{student.fullName || student.name || "-"}</p>
             <p className="text-slate-500 text-xs mt-0.5">उपस्थित: {stats.present} | अनुपस्थित: {stats.absent}</p>
+=======
+            <p className="text-slate-800 font-bold text-base">
+              {student.fullName || student.name || "-"}
+            </p>
+            <p className="text-slate-500 text-xs mt-0.5">
+              उपस्थित: {stats.present} | अनुपस्थित: {stats.absent}
+            </p>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           </div>
           <button
             onClick={() => setSelectedStudentId(null)}
@@ -185,6 +291,7 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
                   </span>
                 </div>
                 {/* Status circle */}
+<<<<<<< HEAD
                 <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
                   val === "P"
                     ? "border-emerald-500 bg-emerald-500"
@@ -200,6 +307,45 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
                   {val === "A" && (
                     <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+=======
+                <div
+                  className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
+                    val === "P"
+                      ? "border-emerald-500 bg-emerald-500"
+                      : val === "A"
+                        ? "border-red-500 bg-red-500"
+                        : "border-slate-300 bg-transparent"
+                  }`}
+                >
+                  {val === "P" && (
+                    <svg
+                      className="w-4 h-4 text-white"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={3}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  )}
+                  {val === "A" && (
+                    <svg
+                      className="w-4 h-4 text-white"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={3}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     </svg>
                   )}
                 </div>
@@ -215,10 +361,21 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
   useEffect(() => {
     const loadWorkingDays = async () => {
       try {
+<<<<<<< HEAD
         const ref = doc(db, "cce_working_days", `${selectedClass}_${academicYear}`);
         const snap = await getDoc(ref);
         if (snap.exists() && snap.data().days) {
           setWorkingDays(prev => ({ ...prev, ...snap.data().days }));
+=======
+        const ref = doc(
+          db,
+          "cce_working_days",
+          `${selectedClass}_${academicYear}`,
+        );
+        const snap = await getDoc(ref);
+        if (snap.exists() && snap.data().days) {
+          setWorkingDays((prev) => ({ ...prev, ...snap.data().days }));
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         }
       } catch (err) {
         console.error("Error loading working days:", err);
@@ -230,6 +387,7 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
   const saveWorkingDays = async () => {
     setSavingWorkingDays(true);
     try {
+<<<<<<< HEAD
       const ref = doc(db, "cce_working_days", `${selectedClass}_${academicYear}`);
       await setDoc(ref, {
         class: selectedClass,
@@ -237,6 +395,23 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
         days: workingDays,
         updatedAt: new Date().toISOString(),
       }, { merge: true });
+=======
+      const ref = doc(
+        db,
+        "cce_working_days",
+        `${selectedClass}_${academicYear}`,
+      );
+      await setDoc(
+        ref,
+        {
+          class: selectedClass,
+          academicYear,
+          days: workingDays,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true },
+      );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       toast.success("कामाचे दिवस जतन झाले!");
       setMainView("attendance");
     } catch (err: any) {
@@ -257,18 +432,27 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
     };
 
     const setMonthAttended = (monthKey: string, val: number) => {
+<<<<<<< HEAD
       setAttendance(prev => ({
+=======
+      setAttendance((prev) => ({
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         ...prev,
         [student.id]: {
           ...(prev[student.id] || {}),
           [`m_${monthKey}`]: val as any,
+<<<<<<< HEAD
         }
+=======
+        },
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       }));
     };
 
     const saveMonthAttendance = async () => {
       setSaving(true);
       try {
+<<<<<<< HEAD
         const ref = doc(db, "cce_attendance", `${selectedClass}_${academicYear}_monthly`);
         await setDoc(ref, {
           class: selectedClass,
@@ -284,6 +468,33 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
           },
           updatedAt: new Date().toISOString(),
         }, { merge: true });
+=======
+        const ref = doc(
+          db,
+          "cce_attendance",
+          `${selectedClass}_${academicYear}_monthly`,
+        );
+        await setDoc(
+          ref,
+          {
+            class: selectedClass,
+            academicYear,
+            records: {
+              ...(await (async () => {
+                const snap = await (
+                  await import("firebase/firestore")
+                ).getDoc(ref);
+                return snap.exists() ? snap.data().records : {};
+              })()),
+              [student.id]: Object.fromEntries(
+                MONTHS.map((m) => [m.key, getMonthAttended(m.key)]),
+              ),
+            },
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true },
+        );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         toast.success("उपस्थिती जतन झाली!");
         setSelectedStudentForEdit(null);
       } catch (err: any) {
@@ -293,6 +504,7 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
     };
 
     return (
+<<<<<<< HEAD
       <div className="bg-white text-slate-800 rounded-[2rem] border border-slate-200 shadow-xl overflow-hidden min-h-[80vh] relative flex flex-col" style={{ fontFamily: "'Inter', 'Noto Sans Devanagari', sans-serif" }}>
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 flex-shrink-0">
@@ -301,6 +513,24 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
               <ArrowLeft className="size-5" />
             </button>
             <h2 className="text-slate-850 text-base font-bold">विद्यार्थी उपस्थिती</h2>
+=======
+      <div
+        className="bg-white text-slate-800 rounded-[2rem] border border-slate-200 shadow-xl overflow-hidden min-h-[80vh] relative flex flex-col"
+        style={{ fontFamily: "'Inter', 'Noto Sans Devanagari', sans-serif" }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSelectedStudentForEdit(null)}
+              className="text-slate-800 hover:text-slate-600 transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="size-5" />
+            </button>
+            <h2 className="text-slate-850 text-base font-bold">
+              विद्यार्थी उपस्थिती
+            </h2>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           </div>
         </div>
 
@@ -318,7 +548,12 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
 
           {/* Instruction */}
           <p className="px-5 py-3 text-slate-500 text-[13px] leading-relaxed border-b border-slate-100">
+<<<<<<< HEAD
             प्रत्येक महिन्यासाठी विद्यार्थ्याने उपस्थित राहिलेल्या दिवसांची संख्या प्रविष्ट करा.
+=======
+            प्रत्येक महिन्यासाठी विद्यार्थ्याने उपस्थित राहिलेल्या दिवसांची
+            संख्या प्रविष्ट करा.
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           </p>
 
           {/* Month-wise 2-column grid */}
@@ -328,7 +563,13 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
               const attended = getMonthAttended(month.key);
               return (
                 <div key={month.key}>
+<<<<<<< HEAD
                   <p className="text-slate-700 text-sm font-medium mb-1.5">{month.label}</p>
+=======
+                  <p className="text-slate-700 text-sm font-medium mb-1.5">
+                    {month.label}
+                  </p>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl overflow-hidden focus-within:border-blue-500 transition-colors">
                     <input
                       type="number"
@@ -338,13 +579,21 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
                       onChange={(e) => {
                         const val = Math.min(
                           totalDays || month.days,
+<<<<<<< HEAD
                           Math.max(0, parseInt(e.target.value) || 0)
+=======
+                          Math.max(0, parseInt(e.target.value) || 0),
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                         );
                         setMonthAttended(month.key, val);
                       }}
                       placeholder="0"
                       className="flex-1 px-3 py-3.5 bg-transparent text-slate-800 text-base font-bold outline-none w-0"
+<<<<<<< HEAD
                       style={{ width: '100%', minWidth: '0' }}
+=======
+                      style={{ width: "100%", minWidth: "0" }}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     />
                     <span className="pr-3 text-slate-500 text-base font-medium whitespace-nowrap">
                       / {totalDays || month.days}
@@ -370,11 +619,21 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
     );
   }
 
+<<<<<<< HEAD
 
   // Working Days View
   if (mainView === "working-days") {
     return (
       <div className="bg-white text-slate-800 rounded-[2rem] border border-slate-200 shadow-xl overflow-hidden min-h-[80vh]" style={{ fontFamily: "'Inter', 'Noto Sans Devanagari', sans-serif" }}>
+=======
+  // Working Days View
+  if (mainView === "working-days") {
+    return (
+      <div
+        className="bg-white text-slate-800 rounded-[2rem] border border-slate-200 shadow-xl overflow-hidden min-h-[80vh]"
+        style={{ fontFamily: "'Inter', 'Noto Sans Devanagari', sans-serif" }}
+      >
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
           <div className="flex items-center gap-3">
@@ -402,10 +661,24 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
               key={month.key}
               className="flex items-center justify-between px-3 py-3.5 rounded-xl hover:bg-slate-50 transition-colors"
             >
+<<<<<<< HEAD
               <span className="text-slate-800 text-[15px] font-medium">{month.label}</span>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setWorkingDays(prev => ({ ...prev, [month.key]: Math.max(0, (prev[month.key] || 0) - 1) }))}
+=======
+              <span className="text-slate-800 text-[15px] font-medium">
+                {month.label}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() =>
+                    setWorkingDays((prev) => ({
+                      ...prev,
+                      [month.key]: Math.max(0, (prev[month.key] || 0) - 1),
+                    }))
+                  }
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 text-blue-600 font-bold flex items-center justify-center hover:bg-slate-200 transition-colors cursor-pointer active:scale-90"
                 >
                   −
@@ -415,11 +688,35 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
                   min="0"
                   max={month.days}
                   value={workingDays[month.key] || 0}
+<<<<<<< HEAD
                   onChange={(e) => setWorkingDays(prev => ({ ...prev, [month.key]: Math.min(month.days, Math.max(0, parseInt(e.target.value) || 0)) }))}
                   className="w-14 text-center py-1.5 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-lg text-sm text-blue-600 font-bold outline-none transition-colors"
                 />
                 <button
                   onClick={() => setWorkingDays(prev => ({ ...prev, [month.key]: Math.min(month.days, (prev[month.key] || 0) + 1) }))}
+=======
+                  onChange={(e) =>
+                    setWorkingDays((prev) => ({
+                      ...prev,
+                      [month.key]: Math.min(
+                        month.days,
+                        Math.max(0, parseInt(e.target.value) || 0),
+                      ),
+                    }))
+                  }
+                  className="w-14 text-center py-1.5 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-lg text-sm text-blue-600 font-bold outline-none transition-colors"
+                />
+                <button
+                  onClick={() =>
+                    setWorkingDays((prev) => ({
+                      ...prev,
+                      [month.key]: Math.min(
+                        month.days,
+                        (prev[month.key] || 0) + 1,
+                      ),
+                    }))
+                  }
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 text-blue-600 font-bold flex items-center justify-center hover:bg-slate-200 transition-colors cursor-pointer active:scale-90"
                 >
                   +
@@ -432,7 +729,13 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
         {/* Total working days info */}
         <div className="px-5 py-4 border-t border-slate-100 mt-2">
           <div className="bg-slate-50 rounded-2xl p-4 flex items-center justify-between border border-slate-100">
+<<<<<<< HEAD
             <span className="text-slate-500 text-sm font-medium">एकूण कामाचे दिवस</span>
+=======
+            <span className="text-slate-500 text-sm font-medium">
+              एकूण कामाचे दिवस
+            </span>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
             <span className="text-blue-600 text-lg font-bold">
               {Object.values(workingDays).reduce((sum, v) => sum + (v || 0), 0)}
             </span>
@@ -453,23 +756,50 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
     };
 
     const setAttended = (studentId: string, val: number) => {
+<<<<<<< HEAD
       setAttendance(prev => ({
+=======
+      setAttendance((prev) => ({
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         ...prev,
         [studentId]: {
           ...(prev[studentId] || {}),
           [`m_${month.key}`]: val as any,
+<<<<<<< HEAD
         }
       }));
     };
 
     const totalAttended = students.reduce((sum, s) => sum + getAttended(s.id), 0);
+=======
+        },
+      }));
+    };
+
+    const totalAttended = students.reduce(
+      (sum, s) => sum + getAttended(s.id),
+      0,
+    );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
     const saveMonthData = async () => {
       setSaving(true);
       try {
+<<<<<<< HEAD
         const ref = doc(db, "cce_attendance", `${selectedClass}_${academicYear}_monthly`);
         const existing = await getDoc(ref);
         const existingRecords = existing.exists() ? existing.data().records || {} : {};
+=======
+        const ref = doc(
+          db,
+          "cce_attendance",
+          `${selectedClass}_${academicYear}_monthly`,
+        );
+        const existing = await getDoc(ref);
+        const existingRecords = existing.exists()
+          ? existing.data().records || {}
+          : {};
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         const updatedRecords = { ...existingRecords };
         for (const student of students) {
           updatedRecords[student.id] = {
@@ -477,11 +807,24 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
             [month.key]: getAttended(student.id),
           };
         }
+<<<<<<< HEAD
         await setDoc(ref, {
           class: selectedClass, academicYear,
           records: updatedRecords,
           updatedAt: new Date().toISOString(),
         }, { merge: true });
+=======
+        await setDoc(
+          ref,
+          {
+            class: selectedClass,
+            academicYear,
+            records: updatedRecords,
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true },
+        );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         toast.success(`${month.label} उपस्थिती जतन झाली!`);
         setSelectedMonthForEdit(null);
       } catch (err: any) {
@@ -491,6 +834,7 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
     };
 
     return (
+<<<<<<< HEAD
       <div className="bg-white text-slate-800 rounded-[2rem] border border-slate-200 shadow-xl overflow-hidden min-h-[80vh] relative flex flex-col" style={{ fontFamily: "'Inter', 'Noto Sans Devanagari', sans-serif" }}>
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 flex-shrink-0">
@@ -501,6 +845,28 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
             <h2 className="text-slate-850 text-base font-bold">{month.label} - उपस्थिती</h2>
           </div>
           <span className="text-blue-600 font-bold text-lg">{totalAttended}</span>
+=======
+      <div
+        className="bg-white text-slate-800 rounded-[2rem] border border-slate-200 shadow-xl overflow-hidden min-h-[80vh] relative flex flex-col"
+        style={{ fontFamily: "'Inter', 'Noto Sans Devanagari', sans-serif" }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSelectedMonthForEdit(null)}
+              className="text-slate-800 hover:text-slate-600 transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="size-5" />
+            </button>
+            <h2 className="text-slate-850 text-base font-bold">
+              {month.label} - उपस्थिती
+            </h2>
+          </div>
+          <span className="text-blue-600 font-bold text-lg">
+            {totalAttended}
+          </span>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         </div>
 
         {/* Students list */}
@@ -520,7 +886,11 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
                     {student.fullName || student.name || "-"}
                   </span>
                 </div>
+<<<<<<< HEAD
                 
+=======
+
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 <div className="flex items-center bg-white border border-slate-200 rounded-xl overflow-hidden w-28 h-12 flex-shrink-0 focus-within:border-blue-500 transition-colors ml-3">
                   <input
                     type="number"
@@ -528,12 +898,23 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
                     max={totalDays}
                     value={attended === 0 ? "" : attended}
                     onChange={(e) => {
+<<<<<<< HEAD
                       const val = Math.min(totalDays, Math.max(0, parseInt(e.target.value) || 0));
+=======
+                      const val = Math.min(
+                        totalDays,
+                        Math.max(0, parseInt(e.target.value) || 0),
+                      );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                       setAttended(student.id, val);
                     }}
                     placeholder="0"
                     className="flex-1 w-0 h-full text-center bg-transparent text-slate-850 text-base font-bold outline-none"
+<<<<<<< HEAD
                     style={{ width: '100%', minWidth: '0' }}
+=======
+                    style={{ width: "100%", minWidth: "0" }}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   />
                   <span className="pr-3 text-slate-500 text-[13px] font-semibold whitespace-nowrap">
                     / {totalDays}
@@ -558,9 +939,17 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
     );
   }
 
+<<<<<<< HEAD
 
   return (
     <div className="bg-white text-slate-800 rounded-[2rem] border border-slate-200 shadow-xl overflow-hidden min-h-[80vh]" style={{ fontFamily: "'Inter', 'Noto Sans Devanagari', sans-serif" }}>
+=======
+  return (
+    <div
+      className="bg-white text-slate-800 rounded-[2rem] border border-slate-200 shadow-xl overflow-hidden min-h-[80vh]"
+      style={{ fontFamily: "'Inter', 'Noto Sans Devanagari', sans-serif" }}
+    >
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
         <div className="flex items-center gap-3">
@@ -658,6 +1047,7 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
                       }`}
                     >
                       {todayStatus === "P" && (
+<<<<<<< HEAD
                         <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                         </svg>
@@ -665,6 +1055,35 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
                       {todayStatus === "A" && (
                         <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+=======
+                        <svg
+                          className="w-4 h-4 text-white"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={3}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      )}
+                      {todayStatus === "A" && (
+                        <svg
+                          className="w-4 h-4 text-white"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={3}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                         </svg>
                       )}
                     </div>
@@ -679,6 +1098,7 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
             {MONTHS.map((month) => (
               <button
                 key={month.key}
+<<<<<<< HEAD
                 onClick={() => { setSelectedMonthForEdit(month); setSelectedMonth(month); }}
                 className="w-full flex items-center justify-between px-4 py-4 rounded-xl hover:bg-slate-50 active:scale-[0.995] transition-all border border-transparent hover:border-slate-100 cursor-pointer text-left group"
               >
@@ -686,6 +1106,18 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
                 <div
                   className="w-9 h-9 rounded-full border-2 border-slate-300 bg-transparent flex items-center justify-center transition-all group-hover:border-blue-600"
                 />
+=======
+                onClick={() => {
+                  setSelectedMonthForEdit(month);
+                  setSelectedMonth(month);
+                }}
+                className="w-full flex items-center justify-between px-4 py-4 rounded-xl hover:bg-slate-50 active:scale-[0.995] transition-all border border-transparent hover:border-slate-100 cursor-pointer text-left group"
+              >
+                <span className="text-slate-800 text-[15px] font-medium group-hover:text-blue-600 transition-colors">
+                  {month.label}
+                </span>
+                <div className="w-9 h-9 rounded-full border-2 border-slate-300 bg-transparent flex items-center justify-center transition-all group-hover:border-blue-600" />
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               </button>
             ))}
           </div>
@@ -694,4 +1126,7 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
     </div>
   );
 }
+<<<<<<< HEAD
 
+=======
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557

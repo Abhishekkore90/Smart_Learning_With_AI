@@ -3,16 +3,28 @@
   width: 100%; /* Ensures the table takes up the full container width */
 }
 
+<<<<<<< HEAD
 .nonditable th, td {
+=======
+.nonditable th,
+td {
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   width: 100px; /* Example: Sets each column to 100px wide */
   text-align: center; /* Center-aligns text within cells (optional) */
 }
 
 /* Optional: Adjust for better visual appearance */
+<<<<<<< HEAD
 .nonditable th, td {
   padding: 10px; 
   border: 1px solid #000;
 
+=======
+.nonditable th,
+td {
+  padding: 10px;
+  border: 1px solid #000;
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 }
 
 .nonditable thead th {
@@ -24,8 +36,12 @@
   font-weight: 800; /* make the text bold */
 }
 
+<<<<<<< HEAD
 
  /* 
+=======
+/* 
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "Arial, sans-serif" }}>
   <thead>
     <tr style={{ color: "black", textAlign: "center" }}>

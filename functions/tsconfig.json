@@ -9,7 +9,11 @@
     "target": "es2017"
   },
   "compileOnSave": true,
+<<<<<<< HEAD
   "include": [
     "src"
   ]
+=======
+  "include": ["src"]
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 }

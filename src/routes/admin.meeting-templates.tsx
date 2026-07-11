@@ -18,7 +18,19 @@ import {
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { db } from "@/lib/firebase";
+<<<<<<< HEAD
 import { doc, getDoc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
+=======
+import {
+  doc,
+  getDoc,
+  setDoc,
+  collection,
+  query,
+  where,
+  getDocs,
+} from "firebase/firestore";
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 import { showToast as toast } from "@/lib/custom-toast";
 
 export const Route = createFileRoute("/admin/meeting-templates")({
@@ -82,6 +94,7 @@ function AdminMeetingTemplates() {
   const [selectedCommittee, setSelectedCommittee] = useState<string>("smc");
   const [selectedMonth, setSelectedMonth] = useState<string>("06");
   const [subjects, setSubjects] = useState<TemplateSubject[]>([]);
+<<<<<<< HEAD
   const [allTemplates, setAllTemplates] = useState<Record<string, TemplateSubject[]>>({});
   const [loading, setLoading] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
@@ -93,6 +106,40 @@ function AdminMeetingTemplates() {
   const getStartResolutionNo = (month: string, templates: Record<string, TemplateSubject[]>) => {
     let start = 1;
     const currentList = selectedCommittee === "alumni" ? ALUMNI_MONTHS : ACADEMIC_MONTHS;
+=======
+  const [allTemplates, setAllTemplates] = useState<
+    Record<string, TemplateSubject[]>
+  >({});
+  const [loading, setLoading] = useState<boolean>(false);
+  const [saving, setSaving] = useState<boolean>(false);
+  const [outroText, setOutroText] = useState<string>(
+    "ऐन वेळेस उपस्थित होणाऱ्या विषयांवर चर्चा करून समितीचे सचिव यांनी सभेत उपस्थित सर्व सदस्यांचे आभार व्यक्त केले व अध्यक्ष यांच्या संमतीने सभा संपन्न झाली असे घोषीत केले.",
+  );
+
+  const ACADEMIC_MONTHS = [
+    "06",
+    "07",
+    "08",
+    "09",
+    "10",
+    "11",
+    "12",
+    "01",
+    "02",
+    "03",
+    "04",
+    "05",
+  ];
+  const ALUMNI_MONTHS = ["sem1", "sem2"];
+
+  const getStartResolutionNo = (
+    month: string,
+    templates: Record<string, TemplateSubject[]>,
+  ) => {
+    let start = 1;
+    const currentList =
+      selectedCommittee === "alumni" ? ALUMNI_MONTHS : ACADEMIC_MONTHS;
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     const selectedMonthIdx = currentList.indexOf(month);
     if (selectedMonthIdx === -1) return 1;
     for (let i = 0; i < selectedMonthIdx; i++) {
@@ -104,9 +151,21 @@ function AdminMeetingTemplates() {
   };
 
   useEffect(() => {
+<<<<<<< HEAD
     if (selectedCommittee === "alumni" && !ALUMNI_MONTHS.includes(selectedMonth)) {
       setSelectedMonth("sem1");
     } else if (selectedCommittee !== "alumni" && !ACADEMIC_MONTHS.includes(selectedMonth)) {
+=======
+    if (
+      selectedCommittee === "alumni" &&
+      !ALUMNI_MONTHS.includes(selectedMonth)
+    ) {
+      setSelectedMonth("sem1");
+    } else if (
+      selectedCommittee !== "alumni" &&
+      !ACADEMIC_MONTHS.includes(selectedMonth)
+    ) {
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       setSelectedMonth("06");
     }
   }, [selectedCommittee]);
@@ -128,7 +187,11 @@ function AdminMeetingTemplates() {
       try {
         const q = query(
           collection(db, "meeting_templates"),
+<<<<<<< HEAD
           where("committeeId", "==", selectedCommittee)
+=======
+          where("committeeId", "==", selectedCommittee),
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         );
         const snapshot = await getDocs(q);
         const templatesMap: Record<string, TemplateSubject[]> = {};
@@ -140,7 +203,12 @@ function AdminMeetingTemplates() {
         setAllTemplates(templatesMap);
 
         let start = 1;
+<<<<<<< HEAD
         const currentList = selectedCommittee === "alumni" ? ALUMNI_MONTHS : ACADEMIC_MONTHS;
+=======
+        const currentList =
+          selectedCommittee === "alumni" ? ALUMNI_MONTHS : ACADEMIC_MONTHS;
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         const selectedMonthIdx = currentList.indexOf(selectedMonth);
         if (selectedMonthIdx !== -1) {
           for (let i = 0; i < selectedMonthIdx; i++) {
@@ -159,11 +227,23 @@ function AdminMeetingTemplates() {
 
         setSubjects(adjustedSubjects);
 
+<<<<<<< HEAD
         const matchedDoc = snapshot.docs.find(d => d.id === `${selectedCommittee}_${selectedMonth}`);
         if (matchedDoc && matchedDoc.data().outroText) {
           setOutroText(matchedDoc.data().outroText);
         } else {
           setOutroText("ऐन वेळेस उपस्थित होणाऱ्या विषयांवर चर्चा करून समितीचे सचिव यांनी सभेत उपस्थित सर्व सदस्यांचे आभार व्यक्त केले व अध्यक्ष यांच्या संमतीने सभा संपन्न झाली असे घोषीत केले.");
+=======
+        const matchedDoc = snapshot.docs.find(
+          (d) => d.id === `${selectedCommittee}_${selectedMonth}`,
+        );
+        if (matchedDoc && matchedDoc.data().outroText) {
+          setOutroText(matchedDoc.data().outroText);
+        } else {
+          setOutroText(
+            "ऐन वेळेस उपस्थित होणाऱ्या विषयांवर चर्चा करून समितीचे सचिव यांनी सभेत उपस्थित सर्व सदस्यांचे आभार व्यक्त केले व अध्यक्ष यांच्या संमतीने सभा संपन्न झाली असे घोषीत केले.",
+          );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         }
       } catch (err: any) {
         console.error("Error fetching templates: ", err);
@@ -207,7 +287,15 @@ function AdminMeetingTemplates() {
     setSubjects(updated);
   };
 
+<<<<<<< HEAD
   const handleUpdateField = (index: number, field: keyof TemplateSubject, value: any) => {
+=======
+  const handleUpdateField = (
+    index: number,
+    field: keyof TemplateSubject,
+    value: any,
+  ) => {
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     const updated = [...subjects];
     updated[index] = { ...updated[index], [field]: value };
     setSubjects(updated);
@@ -216,7 +304,15 @@ function AdminMeetingTemplates() {
   const handleSave = async () => {
     setSaving(true);
     try {
+<<<<<<< HEAD
       const docRef = doc(db, "meeting_templates", `${selectedCommittee}_${selectedMonth}`);
+=======
+      const docRef = doc(
+        db,
+        "meeting_templates",
+        `${selectedCommittee}_${selectedMonth}`,
+      );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       await setDoc(docRef, {
         committeeId: selectedCommittee,
         month: selectedMonth,
@@ -240,9 +336,18 @@ function AdminMeetingTemplates() {
     }
   };
 
+<<<<<<< HEAD
   const selectedCommitteeName = COMMITTEES.find(c => c.id === selectedCommittee)?.name || "";
   const currentOptions = selectedCommittee === "alumni" ? ALUMNI_MEETINGS : MONTHS;
   const selectedMonthName = currentOptions.find(m => m.id === selectedMonth)?.name || "";
+=======
+  const selectedCommitteeName =
+    COMMITTEES.find((c) => c.id === selectedCommittee)?.name || "";
+  const currentOptions =
+    selectedCommittee === "alumni" ? ALUMNI_MEETINGS : MONTHS;
+  const selectedMonthName =
+    currentOptions.find((m) => m.id === selectedMonth)?.name || "";
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 selection:bg-violet-500/10 font-sans antialiased">
@@ -274,7 +379,13 @@ function AdminMeetingTemplates() {
                 </span>
               </h1>
               <p className="text-[#6B7280] max-w-2xl text-base font-medium leading-relaxed">
+<<<<<<< HEAD
                 शिक्षकांना मासिक सभा इतिवृत्त तयार करताना प्रत्येक महिन्यासाठी पूर्व-निर्धारित (Fixed) विषय आणि ठराव लोड होण्यासाठी इथून सेटिंग करा.
+=======
+                शिक्षकांना मासिक सभा इतिवृत्त तयार करताना प्रत्येक महिन्यासाठी
+                पूर्व-निर्धारित (Fixed) विषय आणि ठराव लोड होण्यासाठी इथून सेटिंग
+                करा.
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               </p>
             </div>
 
@@ -361,9 +472,18 @@ function AdminMeetingTemplates() {
                   <div className="size-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300 shadow-sm">
                     <FileText size={30} />
                   </div>
+<<<<<<< HEAD
                   <h4 className="text-slate-500 font-black text-sm">या महिन्यासाठी कोणतेही विषय व ठराव सेट केलेले नाहीत</h4>
                   <p className="text-slate-400 text-xs mt-1 font-semibold">
                     नवीन विषय जोडण्यासाठी वरील '+ विषय व ठराव जोडा' बटणावर क्लिक करा.
+=======
+                  <h4 className="text-slate-500 font-black text-sm">
+                    या महिन्यासाठी कोणतेही विषय व ठराव सेट केलेले नाहीत
+                  </h4>
+                  <p className="text-slate-400 text-xs mt-1 font-semibold">
+                    नवीन विषय जोडण्यासाठी वरील '+ विषय व ठराव जोडा' बटणावर क्लिक
+                    करा.
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   </p>
                 </div>
               ) : (
@@ -429,7 +549,15 @@ function AdminMeetingTemplates() {
                         <textarea
                           value={res.resolution || ""}
                           onChange={(e) =>
+<<<<<<< HEAD
                             handleUpdateField(index, "resolution", e.target.value)
+=======
+                            handleUpdateField(
+                              index,
+                              "resolution",
+                              e.target.value,
+                            )
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                           }
                           placeholder="उदा. सविस्तर विचारविनिमय करून मागील सभेचे इतिवृत्त सर्वानुमते मंजूर करण्यात आले..."
                           className="w-full h-32 px-5 py-3 border border-slate-300 rounded-xl outline-none focus:border-violet-600 font-bold text-stone-900 bg-white text-base placeholder-slate-400 resize-y leading-relaxed"
@@ -475,7 +603,12 @@ function AdminMeetingTemplates() {
                     disabled={saving}
                     className="flex items-center gap-2 px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white rounded-full text-sm font-black uppercase tracking-wider transition-all shadow-md cursor-pointer"
                   >
+<<<<<<< HEAD
                     <Save className="size-5" /> {saving ? "टेम्पलेट जतन होत आहे..." : "टेम्पलेट जतन करा"}
+=======
+                    <Save className="size-5" />{" "}
+                    {saving ? "टेम्पलेट जतन होत आहे..." : "टेम्पलेट जतन करा"}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   </button>
                 </div>
               )}

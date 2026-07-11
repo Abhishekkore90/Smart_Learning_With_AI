@@ -41,6 +41,10 @@ import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import { showToast as toast } from "@/lib/custom-toast";
 import { useLanguage } from "@/hooks/use-language";
+<<<<<<< HEAD
+=======
+import html2canvas from "html2canvas-pro";
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
 export const Route = createFileRoute("/teacher/templates/edit/$templateId")({
   component: TemplateEditorPage,
@@ -339,6 +343,10 @@ function TemplateEditorPage() {
   const [studentName, setStudentName] = useState("ADITYA SHINDE");
   const [studentClass, setStudentClass] = useState("CLASS 5-A");
   const [isSaving, setIsSaving] = useState(false);
+<<<<<<< HEAD
+=======
+  const [studentPhoto, setStudentPhoto] = useState<string | null>(null);
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   const templateRef = useRef<HTMLDivElement>(null);
 
   const config = useMemo(() => {
@@ -404,7 +412,12 @@ function TemplateEditorPage() {
         return "वाढदिवसाच्या हार्दिक शुभेच्छा!";
       }
       if (templateId?.startsWith("admission")) {
+<<<<<<< HEAD
         if (templateId === "admission-2") return " स्वागत आहे प्रिय विद्यार्थ्या!";
+=======
+        if (templateId === "admission-2")
+          return " स्वागत आहे प्रिय विद्यार्थ्या!";
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         if (templateId === "admission-4") return "सहर्ष स्वागत!";
         if (templateId === "admission-5") return "स्वागत विजेत्याचे!";
         if (templateId === "admission-6") return "स्वागत यशाचे!";
@@ -449,7 +462,12 @@ function TemplateEditorPage() {
         if (templateId === "admission-2") return "प्रिय छात्र, आपका स्वागत है!";
         if (templateId === "admission-4") return "बोर्ड पर आपका स्वागत है!";
         if (templateId === "admission-5") return "अचीवर का स्वागत है!";
+<<<<<<< HEAD
         if (templateId === "admission-6") return "उत्कृष्टता में आपका स्वागत है!";
+=======
+        if (templateId === "admission-6")
+          return "उत्कृष्टता में आपका स्वागत है!";
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         return "स्कूल में आपका स्वागत है!";
       }
       if (templateId?.startsWith("sports")) {
@@ -485,6 +503,7 @@ function TemplateEditorPage() {
   const translatedQuote = useMemo(() => {
     if (lang === "mr") {
       if (templateId?.startsWith("birthday")) {
+<<<<<<< HEAD
         if (templateId === "birthday-1") return "तुमचे आयुष्य तुमच्या भविष्यासारखेच शाही आणि सुवर्णमयी असो.";
         if (templateId === "birthday-2") return "तुमच्या या विशेष दिवशी यशाची उंच शिखरे गाठा. सदैव चमकत राहा!";
         if (templateId === "birthday-3") return "तुम्हाला नैसर्गिक आनंद आणि शाश्वत प्रगतीने समृद्ध आयुष्य लाभो.";
@@ -552,6 +571,115 @@ function TemplateEditorPage() {
         if (templateId === "achievement-1") return "उत्कृष्टता कोई कौशल नहीं, बल्कि एक दृष्टिकोण है। बहुत-बहुत बधाई!";
         if (templateId === "achievement-2") return "आपकी निरंतरता ही आपकी सफलता की नींव है। बहुत बढ़िया!";
         if (templateId === "achievement-3") return "आपको बढ़ते और सफल होते देखना हमारा सबसे बड़ा पुरस्कार है।";
+=======
+        if (templateId === "birthday-1")
+          return "तुमचे आयुष्य तुमच्या भविष्यासारखेच शाही आणि सुवर्णमयी असो.";
+        if (templateId === "birthday-2")
+          return "तुमच्या या विशेष दिवशी यशाची उंच शिखरे गाठा. सदैव चमकत राहा!";
+        if (templateId === "birthday-3")
+          return "तुम्हाला नैसर्गिक आनंद आणि शाश्वत प्रगतीने समृद्ध आयुष्य लाभो.";
+        if (templateId === "birthday-4")
+          return "तुमची क्षमता ओळखा. आजचा दिवस तुमच्या सर्वोत्तम वर्षाची सुरुवात करो.";
+        if (templateId === "birthday-5")
+          return "तुमची उर्जा संपूर्ण जगाला प्रकाशमय करो. वाढदिवसाच्या हार्दिक शुभेच्छा!";
+        return "तुम्ही एक मौल्यवान रत्न आहात. तुमची चमक प्रत्येक मार्गाला सुकर करो.";
+      }
+      if (templateId?.startsWith("admission")) {
+        if (templateId === "admission-1")
+          return "हार्दिक अभिनंदन! आमच्या शालेय परिवारात स्वागत करताना आम्हाला आनंद होत आहे.";
+        if (templateId === "admission-2")
+          return "नवीन प्रवेशाबद्दल अभिनंदन! तुमचे उज्ज्वल भविष्य आजपासून येथे सुरू होत आहे.";
+        if (templateId === "admission-3")
+          return "शाळेत आपले स्वागत आहे. तुमची कौशल्ये विकसित करण्यासाठी आम्ही कटिबद्ध आहोत.";
+        if (templateId === "admission-4")
+          return "शाळेत प्रवेश घेतल्याबद्दल अभिनंदन. चला यशाच्या दिशेने एकत्र वाटचाल करूया.";
+        if (templateId === "admission-5")
+          return "अभिनंदन! तुम्ही आता आमच्या विजयी शालेय समुदायाचा एक भाग आहात.";
+        return "प्रवेशाबद्दल अभिनंदन. ज्ञानाचे एक मोठे दालन आता तुमच्यासाठी खुले आहे.";
+      }
+      if (templateId?.startsWith("sports")) {
+        if (templateId === "sports-1")
+          return "वेग, ताकद आणि शालेय उत्साहाच्या सोहळ्यात सहभागी व्हा!";
+        if (templateId === "sports-2")
+          return "आमच्या क्रीडापटूंच्या अविश्वसनीय प्रवासाचे आणि यशाचे कौतुक सोहळा.";
+        if (templateId === "sports-3")
+          return "कष्ट फळले! तुमच्या ऐतिहासिक विजयाबद्दल तुमचे खूप अभिनंदन!";
+        return "तुम्ही एक नवा आदर्श प्रस्थापित केला आहे. संपूर्ण शाळेसाठी एक खरी प्रेरणा.";
+      }
+      if (templateId?.startsWith("annual")) {
+        if (templateId === "annual-1")
+          return "अद्भूत आणि उत्साहाच्या संध्याकाळमध्ये सामील व्हा. जादूचे साक्षीदार व्हा!";
+        if (templateId === "annual-2")
+          return "आमच्या ताऱ्यांच्या कठोर परिश्रम, प्रतिभा आणि यशाचा गौरव सोहळा.";
+        if (templateId === "annual-3")
+          return "आमच्या कलाकारांनी जिवंत केलेल्या अजरामर कथांचा अनुभव घ्या.";
+        if (templateId === "annual-4")
+          return "जिथे परंपरांचा आणि भविष्याचा मेळ होतो. एक उर्जावान सोहळा!";
+        return "आनंद आणि विकासाने समृद्ध असलेल्या वर्षाची सांगता.";
+      }
+      if (templateId?.startsWith("cultural")) {
+        if (templateId === "cultural-1")
+          return "तुमच्या रंगांना एक कथा सांगू द्या. तुमची कला व्यक्त करा!";
+        if (templateId === "cultural-2")
+          return "ताल अनुभवा, मंचावर अधिराज्य गाजवा. जगाला तुमची कला दाखवा!";
+        if (templateId === "cultural-3")
+          return "आपल्याला समृद्ध करणाऱ्या सळसळत्या परंपरांचा उत्सव साजरा करा.";
+        if (templateId === "cultural-4")
+          return "तुमच्यातील लपलेला तारा शोधा. चमकण्याची वेळ आता आली आहे!";
+        return "तुमच्या अद्भुत कथांनी आम्हाला मंत्रमुग्ध करा आणि एका वेगळ्या जगात घेऊन जा.";
+      }
+      if (templateId?.startsWith("admission")) {
+        if (templateId === "admission-1")
+          return "बधाई हो! हमारे स्कूल परिवार में आपका स्वागत करते हुए हमें बेहद खुशी है।";
+        if (templateId === "admission-2")
+          return "प्रवेश मिलने पर बधाई! आपका उज्ज्वल भविष्य आज से हमारे साथ शुरू हो रहा है।";
+        if (templateId === "admission-3")
+          return "स्कूल में आपका स्वागत है। आपकी पूरी क्षमता को उजागर करने में मदद करने के लिए हम उत्सुक हैं।";
+        if (templateId === "admission-4")
+          return "अकादमी में शामिल होने पर बधाई। आइए मिलकर सफलता की ओर कदम बढ़ाएं।";
+        if (templateId === "admission-5")
+          return "बधाई हो! अब आप हमारे विजयी स्कूल समुदाय का हिस्सा हैं।";
+        return "प्रवेश पर बधाई। यहाँ ज्ञान का एक अनूठा संसार आपका इंतजार कर रहा है।";
+      }
+      if (templateId?.startsWith("sports")) {
+        if (templateId === "sports-1")
+          return "रफ़्तार, ताक़त और स्कूल भावना से भरे इस दिन में हमारे साथ शामिल हों!";
+        if (templateId === "sports-2")
+          return "हमारे एथलीटों की अविश्वसनीय यात्रा और उपलब्धियों का जश्न मनाते हुए।";
+        if (templateId === "sports-3")
+          return "कड़ी मेहनत रंग लाती है। आपकी ऐतिहासिक जीत पर बधाई!";
+        return "आपने एक ऊँचा मानदंड स्थापित किया है। पूरे स्कूल के लिए एक सच्ची प्रेरणा।";
+      }
+      if (templateId?.startsWith("annual")) {
+        if (templateId === "annual-1")
+          return "अद्भुत और उत्सव की रात में शामिल हों। जादू के साक्षी बनें!";
+        if (templateId === "annual-2")
+          return "हमारे सितारों की कड़ी मेहनत, प्रतिभा और उपलब्धियों का उत्सव।";
+        if (templateId === "annual-3")
+          return "हमारे कलाकारों द्वारा जीवंत की गई कालजयी कहानियों का अनुभव करें।";
+        if (templateId === "annual-4")
+          return "जहां परंपरा का भविष्य से मेल होता है। एक उच्च ऊर्जा वाला शो!";
+        return "विकास और खुशियों से भरे एक शानदार वर्ष का अंतिम सोपान।";
+      }
+      if (templateId?.startsWith("cultural")) {
+        if (templateId === "cultural-1")
+          return "अपने रंगों को एक कहानी बयां करने दें। अपनी कलात्मक आत्मा को व्यक्त करें!";
+        if (templateId === "cultural-2")
+          return "ताल महसूस करें, मंच पर राज करें। दुनिया को अपनी कला दिखाएं!";
+        if (templateId === "cultural-3")
+          return "उन जीवंत परंपराओं का जश्न मनाएं जो हमें अद्वितीय बनाती हैं।";
+        if (templateId === "cultural-4")
+          return "अपने भीतर छिपे सितारे को खोजें। आपके चमकने का समय आ गया है!";
+        return "अपनी कहानियों से हमें मंत्रमुग्ध करें और दूरदराज के देशों की सैर कराएं।";
+      }
+      if (templateId?.startsWith("achievement")) {
+        if (templateId === "achievement-1")
+          return "उत्कृष्टता कोई कौशल नहीं, बल्कि एक दृष्टिकोण है। बहुत-बहुत बधाई!";
+        if (templateId === "achievement-2")
+          return "आपकी निरंतरता ही आपकी सफलता की नींव है। बहुत बढ़िया!";
+        if (templateId === "achievement-3")
+          return "आपको बढ़ते और सफल होते देखना हमारा सबसे बड़ा पुरस्कार है।";
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         return "ईमानदारी और चरित्र एक सच्चे नेता की पहचान हैं। हमें आप पर गर्व है!";
       }
     }
@@ -611,6 +739,64 @@ function TemplateEditorPage() {
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
   };
 
+<<<<<<< HEAD
+=======
+  const handleDownloadTemplate = async () => {
+    if (!templateRef.current) return;
+    try {
+      toast.success(
+        lang === "mr"
+          ? "डाउनलोड सुरू होत आहे, कृपया थांबा..."
+          : lang === "hi"
+            ? "डाउनलोड शुरू हो रहा है, कृपया प्रतीक्षा करें..."
+            : "Starting download, please wait..."
+      );
+      
+      const canvas = await html2canvas(templateRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: true,
+        backgroundColor: "transparent",
+        ignoreElements: (element) => {
+          if (
+            element.classList.contains("blur-[120px]") ||
+            element.classList.contains("blur-[1px]") ||
+            element.classList.contains("pointer-events-none")
+          ) {
+            return true;
+          }
+          return false;
+        }
+      });
+      
+      const imgData = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.href = imgData;
+      link.download = `${studentName || "Template"}_${templateId || "Card"}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success(
+        lang === "mr"
+          ? "कार्ड यशस्वीरित्या डाउनलोड झाले!"
+          : lang === "hi"
+            ? "कार्ड सफलतापूर्वक डाउनलोड हो गया!"
+            : "Card downloaded successfully!"
+      );
+    } catch (e) {
+      console.error("Capture error:", e);
+      toast.error(
+        lang === "mr"
+          ? "डाउनलोड करताना त्रुटी आली!"
+          : lang === "hi"
+            ? "डाउनलोड करते समय त्रुटि हुई!"
+            : "Failed to download card!"
+      );
+    }
+  };
+
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
       <TeacherHeader />
@@ -678,6 +864,7 @@ function TemplateEditorPage() {
 
                 <div className="space-y-2 group">
                   <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">
+<<<<<<< HEAD
                     {isAnnual ? (
                       lang === "mr" ? "कामगिरीची भूमिका" : lang === "hi" ? "प्रदर्शन की भूमिका" : "Performance Role"
                     ) : isCultural ? (
@@ -687,6 +874,31 @@ function TemplateEditorPage() {
                     ) : (
                       lang === "mr" ? "इयत्ता आणि तुकडी" : lang === "hi" ? "कक्षा और अनुभाग" : "Class & Section"
                     )}
+=======
+                    {isAnnual
+                      ? lang === "mr"
+                        ? "कामगिरीची भूमिका"
+                        : lang === "hi"
+                          ? "प्रदर्शन की भूमिका"
+                          : "Performance Role"
+                      : isCultural
+                        ? lang === "mr"
+                          ? "उपक्रम श्रेणी"
+                          : lang === "hi"
+                            ? "गतिविधि श्रेणी"
+                            : "Activity Category"
+                        : isAchievement
+                          ? lang === "mr"
+                            ? "यशाचे नाव"
+                            : lang === "hi"
+                              ? "उपलब्धि का नाम"
+                              : "Achievement Title"
+                          : lang === "mr"
+                            ? "इयत्ता आणि तुकडी"
+                            : lang === "hi"
+                              ? "कक्षा और अनुभाग"
+                              : "Class & Section"}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   </label>
                   <div className="bg-slate-50 rounded-[2rem] flex items-center gap-4 px-8 border-2 border-transparent focus-within:bg-white focus-within:border-blue-500/20 transition-all shadow-inner">
                     {isAnnual ? (
@@ -707,17 +919,99 @@ function TemplateEditorPage() {
                       className="bg-transparent outline-none w-full py-6 text-sm font-black text-slate-900"
                       placeholder={
                         isAnnual
+<<<<<<< HEAD
                           ? (lang === "mr" ? "उदा. स्वागत नृत्य" : lang === "hi" ? "उदा. स्वागत नृत्य" : "E.G. WELCOME DANCE")
                           : isCultural
                             ? (lang === "mr" ? "उदा. चित्रकला स्पर्धा" : lang === "hi" ? "उदा. चित्रकला प्रतियोगिता" : "E.G. PAINTING CONTEST")
                             : isAchievement
                               ? (lang === "mr" ? "उदा. प्रथम क्रमांक" : lang === "hi" ? "उदा. प्रथम स्थान" : "E.G. CLASS TOPPER")
+=======
+                          ? lang === "mr"
+                            ? "उदा. स्वागत नृत्य"
+                            : lang === "hi"
+                              ? "उदा. स्वागत नृत्य"
+                              : "E.G. WELCOME DANCE"
+                          : isCultural
+                            ? lang === "mr"
+                              ? "उदा. चित्रकला स्पर्धा"
+                              : lang === "hi"
+                                ? "उदा. चित्रकला प्रतियोगिता"
+                                : "E.G. PAINTING CONTEST"
+                            : isAchievement
+                              ? lang === "mr"
+                                ? "उदा. प्रथम क्रमांक"
+                                : lang === "hi"
+                                  ? "उदा. प्रथम स्थान"
+                                  : "E.G. CLASS TOPPER"
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                               : "CLASS 5-A"
                       }
                     />
                   </div>
                 </div>
 
+<<<<<<< HEAD
+=======
+                <div className="space-y-2 group">
+                  <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">
+                    {lang === "mr"
+                      ? "विद्यार्थ्याचा फोटो अपलोड करा"
+                      : lang === "hi"
+                        ? "छात्र की फोटो अपलोड करें"
+                        : "Upload Student Photo"}
+                  </label>
+                  <div className="bg-slate-50 rounded-[2rem] flex items-center justify-between px-8 py-5 border-2 border-transparent hover:bg-slate-100/50 transition-all shadow-inner relative cursor-pointer group">
+                    <div className="flex items-center gap-4">
+                      <ImageIcon className="size-5 text-slate-300 group-hover:text-emerald-500 transition-colors" />
+                      <span className="text-sm font-black text-slate-500">
+                        {studentPhoto
+                          ? lang === "mr"
+                            ? "फोटो यशस्वीरित्या अपलोड केला"
+                            : lang === "hi"
+                              ? "फोटो सफलतापूर्वक अपलोड किया"
+                              : "PHOTO UPLOADED"
+                          : lang === "mr"
+                            ? "फोटो निवडा..."
+                            : lang === "hi"
+                              ? "फोटो चुनें..."
+                              : "SELECT PHOTO..."}
+                      </span>
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setStudentPhoto(reader.result as string);
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                    />
+                    {studentPhoto && (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setStudentPhoto(null);
+                        }}
+                        className="text-xs font-black text-rose-500 hover:text-rose-700 uppercase tracking-widest relative z-10"
+                      >
+                        {lang === "mr"
+                          ? "काढून टाका"
+                          : lang === "hi"
+                            ? "हटाएं"
+                            : "Remove"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 <div className="pt-6 space-y-4">
                   <button
                     onClick={handleShareToStudent}
@@ -729,13 +1023,41 @@ function TemplateEditorPage() {
                     ) : (
                       <Send className="size-5" />
                     )}{" "}
+<<<<<<< HEAD
                     {lang === "mr" ? "डॅशबोर्डवर शेअर करा" : lang === "hi" ? "डैशबोर्ड पर साझा करें" : "Share to Dashboard"}
+=======
+                    {lang === "mr"
+                      ? "डॅशबोर्डवर शेअर करा"
+                      : lang === "hi"
+                        ? "डैशबोर्ड पर साझा करें"
+                        : "Share to Dashboard"}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   </button>
                   <button
                     onClick={handleWhatsAppShare}
                     className="w-full bg-emerald-600 text-white py-6 rounded-[2rem] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-500/20"
                   >
+<<<<<<< HEAD
                     <MessageCircle className="size-5" /> {lang === "mr" ? "व्हॉट्सॲपवर पाठवा" : lang === "hi" ? "व्हाट्सएप पर भेजें" : "Send to WhatsApp"}
+=======
+                    <MessageCircle className="size-5" />{" "}
+                    {lang === "mr"
+                      ? "व्हॉट्सॲपवर पाठवा"
+                      : lang === "hi"
+                        ? "व्हाट्सएप पर भेजें"
+                        : "Send to WhatsApp"}
+                  </button>
+                  <button
+                    onClick={handleDownloadTemplate}
+                    className="w-full bg-blue-600 text-white py-6 rounded-[2rem] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20"
+                  >
+                    <Download className="size-5" />{" "}
+                    {lang === "mr"
+                      ? "गॅलरीमध्ये सेव्ह करा / डाउनलोड करा"
+                      : lang === "hi"
+                        ? "गैलरी में सहेजें / डाउनलोड करें"
+                        : "Save to Gallery / Download"}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   </button>
                 </div>
               </div>
@@ -788,11 +1110,16 @@ function TemplateEditorPage() {
               <div className="absolute -bottom-32 -left-32 size-96 bg-black/40 rounded-full blur-[120px]" />
 
               {/* Card Content */}
+<<<<<<< HEAD
               <div className="relative h-full flex flex-col items-center justify-center p-16 text-center">
+=======
+              <div className="relative h-full flex flex-col items-center justify-center pt-16 pb-8 px-10 text-center">
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: "spring", damping: 12 }}
+<<<<<<< HEAD
                   className="size-28 bg-white/10 backdrop-blur-2xl rounded-[2.5rem] flex items-center justify-center mb-10 border border-white/20 shadow-2xl relative"
                 >
                   <configToUse.icon className="size-14 text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]" />
@@ -802,6 +1129,27 @@ function TemplateEditorPage() {
                     className="absolute -top-4 -right-4 size-10 bg-pink-500 rounded-2xl flex items-center justify-center shadow-lg rotate-12"
                   >
                     <Heart className="size-5 text-white" fill="white" />
+=======
+                  className="size-24 bg-white/10 backdrop-blur-2xl rounded-[2.1rem] flex items-center justify-center mb-7 border border-white/20 shadow-2xl relative"
+                >
+                  {studentPhoto ? (
+                    <div className="size-full overflow-hidden rounded-[1.9rem]">
+                      <img
+                        src={studentPhoto}
+                        alt="Student"
+                        className="size-full object-cover rounded-[1.9rem]"
+                      />
+                    </div>
+                  ) : (
+                    <configToUse.icon className="size-12 text-white" />
+                  )}
+                  <motion.div
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ repeat: Infinity, duration: 2 }}
+                    className="absolute -top-3 -right-3 size-9 bg-pink-500 rounded-2xl flex items-center justify-center shadow-lg rotate-12"
+                  >
+                    <Heart className="size-4.5 text-white" fill="white" />
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   </motion.div>
                 </motion.div>
 
@@ -809,13 +1157,18 @@ function TemplateEditorPage() {
                   key={configToUse.title}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
+<<<<<<< HEAD
                   className="text-5xl font-black text-white tracking-tighter mb-4 italic drop-shadow-2xl"
+=======
+                  className="text-4xl font-black text-white tracking-tighter mb-4 italic"
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 >
                   {configToUse.title}
                 </motion.h1>
 
                 <motion.div
                   initial={{ width: 0 }}
+<<<<<<< HEAD
                   animate={{ width: "80px" }}
                   className="h-1.5 bg-white/30 rounded-full mb-10 shadow-glow"
                   style={{ background: configToUse.accent }}
@@ -824,29 +1177,58 @@ function TemplateEditorPage() {
                 <div className="space-y-4 mb-10">
                   <p className="text-white/40 font-black uppercase tracking-[0.8em] text-[10px]">
                     {lang === "mr" ? "नाव" : lang === "hi" ? "नाम" : "Presented To"}
+=======
+                  animate={{ width: "70px" }}
+                  className="h-1.5 bg-white/30 rounded-full mb-7 shadow-glow"
+                  style={{ background: configToUse.accent }}
+                />
+
+                <div className="space-y-3 mb-7">
+                  <p className="text-white/40 font-black uppercase tracking-[0.8em] text-[10px]">
+                    {lang === "mr"
+                      ? "नाव"
+                      : lang === "hi"
+                        ? "नाम"
+                        : "Presented To"}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   </p>
                   <motion.h2
                     key={studentName}
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
+<<<<<<< HEAD
                     className="text-5xl md:text-6xl font-black tracking-tighter leading-none"
+=======
+                    className="text-4xl md:text-5xl font-black tracking-tighter leading-none"
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     style={{
                       backgroundImage: configToUse.accent,
                       WebkitBackgroundClip: "text",
                       WebkitTextFillColor: "transparent",
+<<<<<<< HEAD
                       filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.4))",
+=======
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     }}
                   >
                     {studentName}
                   </motion.h2>
                 </div>
 
+<<<<<<< HEAD
                 <div className="max-w-[90%] mx-auto mb-12">
+=======
+                <div className="max-w-[92%] mx-auto mb-7">
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   <motion.p
                     key={configToUse.quote}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
+<<<<<<< HEAD
                     className="text-white/90 font-bold text-lg italic leading-relaxed"
+=======
+                    className="text-white/90 font-bold text-sm md:text-base italic leading-relaxed"
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   >
                     "{configToUse.quote}"
                   </motion.p>
@@ -855,7 +1237,11 @@ function TemplateEditorPage() {
                 <motion.div
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
+<<<<<<< HEAD
                   className="bg-black/30 backdrop-blur-xl px-10 py-4 rounded-[1.5rem] border border-white/10 shadow-2xl flex items-center gap-3"
+=======
+                  className="bg-black/30 backdrop-blur-xl px-8 py-3 rounded-[1.4rem] border border-white/10 shadow-2xl flex items-center gap-3"
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 >
                   {isAnnual ? (
                     <Theater className="size-5 text-white/70" />
@@ -872,10 +1258,21 @@ function TemplateEditorPage() {
                 </motion.div>
 
                 {/* Footer Branding */}
+<<<<<<< HEAD
                 <div className="absolute bottom-16 left-0 right-0 px-16 flex justify-between items-end opacity-50">
                   <div className="text-left">
                     <p className="text-[10px] font-black text-white uppercase tracking-widest">
                       {lang === "mr" ? "प्रीमियम कार्ड" : lang === "hi" ? "प्रीमियम कार्ड" : "Premium Card"}
+=======
+                <div className="absolute bottom-10 left-0 right-0 px-12 flex justify-between items-end opacity-50">
+                  <div className="text-left">
+                    <p className="text-[9px] font-black text-white uppercase tracking-widest">
+                      {lang === "mr"
+                        ? "प्रीमियम कार्ड"
+                        : lang === "hi"
+                          ? "प्रीमियम कार्ड"
+                          : "Premium Card"}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     </p>
                     <p className="text-[8px] font-bold text-white/60">
                       ID: {templateId?.toUpperCase()}
@@ -894,7 +1291,16 @@ function TemplateEditorPage() {
             </motion.div>
 
             <p className="mt-8 text-slate-400 text-[10px] font-black uppercase tracking-[0.4em] flex items-center justify-center gap-3">
+<<<<<<< HEAD
               <PartyPopper className="size-4 text-pink-500" /> {lang === "mr" ? "अल्ट्रा-प्रीमियम डिजिटल कार्ड" : lang === "hi" ? "अल्ट्रा-प्रीमियम डिजिटल एसेट" : "Ultra-Premium Digital Asset"}
+=======
+              <PartyPopper className="size-4 text-pink-500" />{" "}
+              {lang === "mr"
+                ? "अल्ट्रा-प्रीमियम डिजिटल कार्ड"
+                : lang === "hi"
+                  ? "अल्ट्रा-प्रीमियम डिजिटल एसेट"
+                  : "Ultra-Premium Digital Asset"}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
             </p>
           </div>
         </div>

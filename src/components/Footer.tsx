@@ -79,7 +79,14 @@ export function Footer() {
             <ul className="space-y-4">
               <li className="flex items-start gap-3 text-sm text-slate-400">
                 <MapPin className="size-5 text-primary shrink-0" />
+<<<<<<< HEAD
                 <span>145/A, 194/A/2, PL NO 100, SHREE CAPITAL-2, WARNALI, WILLINGDON COLLEGE SANGLI, MIRAJ, SANGLI, MAHARASHTRA - 416415</span>
+=======
+                <span>
+                  145/A, 194/A/2, PL NO 100, SHREE CAPITAL-2, WARNALI,
+                  WILLINGDON COLLEGE SANGLI, MIRAJ, SANGLI, MAHARASHTRA - 416415
+                </span>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               </li>
               <li className="flex items-center gap-3 text-sm text-slate-400">
                 <Phone className="size-5 text-primary shrink-0" />

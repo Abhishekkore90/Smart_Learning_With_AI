@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React, { useState, useEffect } from 'react';
 import { Modal, Button } from 'react-bootstrap';
 import "../result/result.css";
@@ -10,18 +11,40 @@ function ResultSSC() {
   const [academicYear, setAcademicYear] = useState('');
   const [classValue, setClassValue] = useState('');
   const [selectedExamName, setSelectedExamName] = useState('');
+=======
+import React, { useState, useEffect } from "react";
+import { Modal, Button } from "react-bootstrap";
+import "../result/result.css";
+import { Link } from "react-router-dom";
+import printJS from "print-js"; // If using npm
+import AlertMessage from "../../AlertMessage";
+
+function ResultSSC() {
+  const [academicYear, setAcademicYear] = useState("");
+  const [classValue, setClassValue] = useState("");
+  const [selectedExamName, setSelectedExamName] = useState("");
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   const [studentData, setStudentData] = useState([]);
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [marksData, setMarksData] = useState({});
   const [classes, setClasses] = useState([]);
   const [selectedStudentResults, setSelectedStudentResults] = useState(null);
   const [showModal, setShowModal] = useState(false);
+<<<<<<< HEAD
   const [schoolName, setSchoolName] = useState('');
   const [schoolLogo, setSchoolLogo] = useState('');
   const [division, setDivision] = useState("");
   const [divisions, setDivisions] = useState(["A", "B", "C", "D"]);
   const [divisionSubjects, setDivisionSubjects] = useState({}); // Store subjects by class and division
   const [previousYearClass, setPreviousYearClass] = useState('');
+=======
+  const [schoolName, setSchoolName] = useState("");
+  const [schoolLogo, setSchoolLogo] = useState("");
+  const [division, setDivision] = useState("");
+  const [divisions, setDivisions] = useState(["A", "B", "C", "D"]);
+  const [divisionSubjects, setDivisionSubjects] = useState({}); // Store subjects by class and division
+  const [previousYearClass, setPreviousYearClass] = useState("");
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
   const udiseNumber = localStorage.getItem("udiseNumber");
   const [examNames, setExamNames] = useState([
@@ -45,10 +68,21 @@ function ResultSSC() {
   useEffect(() => {
     if (classValue) {
       const divisionsForClass = studentData
+<<<<<<< HEAD
         .filter(student => student.currentClass === classValue)
         .map(student => student.division)
         .filter((value, index, self) => value && self.indexOf(value) === index);
       if (divisionsForClass.length === 0) { setDivisions(["A", "B", "C", "D"]); } else { setDivisions(divisionsForClass); }
+=======
+        .filter((student) => student.currentClass === classValue)
+        .map((student) => student.division)
+        .filter((value, index, self) => value && self.indexOf(value) === index);
+      if (divisionsForClass.length === 0) {
+        setDivisions(["A", "B", "C", "D"]);
+      } else {
+        setDivisions(divisionsForClass);
+      }
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     } else {
       setDivisions(["A", "B", "C", "D"]);
     }
@@ -57,7 +91,13 @@ function ResultSSC() {
   useEffect(() => {
     const fetchDefaultSettings = async () => {
       try {
+<<<<<<< HEAD
         const response = await fetch(`${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/defaultSettings.json`);
+=======
+        const response = await fetch(
+          `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/defaultSettings.json`,
+        );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         if (response.ok) {
           const data = await response.json();
 
@@ -74,7 +114,13 @@ function ResultSSC() {
 
     fetchDefaultSettings();
   }, [udiseNumber]);
+<<<<<<< HEAD
   const [language, setLanguage] = useState(localStorage.getItem('language') || 'English');
+=======
+  const [language, setLanguage] = useState(
+    localStorage.getItem("language") || "English",
+  );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
   const [alertMessage, setAlertMessage] = useState("");
   const [showAlert, setShowAlert] = useState(false);
@@ -89,7 +135,10 @@ function ResultSSC() {
     }
   }, [alertMessage]);
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   const [subjectSequence, setSubjectSequence] = useState([]); // New state for subject sequence
   useEffect(() => {
     if (academicYear && (classValue || previousYearClass)) {
@@ -102,11 +151,19 @@ function ResultSSC() {
     try {
       const classToUse = previousYearClass || classValue;
       const response = await fetch(
+<<<<<<< HEAD
         `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/subjectSequence/ssc/${academicYear}/${classToUse}/${division}.json`
       );
 
       if (!response.ok) {
         throw new Error('Failed to fetch subject sequence');
+=======
+        `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/subjectSequence/ssc/${academicYear}/${classToUse}/${division}.json`,
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch subject sequence");
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       }
 
       const data = await response.json();
@@ -115,8 +172,13 @@ function ResultSSC() {
         .map((key) => data[key]);
 
       const mergedSubjectSequence = [];
+<<<<<<< HEAD
       orderedSubjects.forEach(subject => {
         if (!subject || typeof subject !== 'string') return;
+=======
+      orderedSubjects.forEach((subject) => {
+        if (!subject || typeof subject !== "string") return;
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         let finalSubjectName = subject;
         const match = subject.match(/^(.*?)\s*([12१२])\s*$/);
         if (match) {
@@ -129,11 +191,16 @@ function ResultSSC() {
 
       setSubjectSequence(mergedSubjectSequence);
     } catch (error) {
+<<<<<<< HEAD
       console.error('Error fetching subject sequence:', error);
+=======
+      console.error("Error fetching subject sequence:", error);
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       setSubjectSequence([]);
     }
   };
 
+<<<<<<< HEAD
 
   useEffect(() => {
     const storedLanguage = localStorage.getItem('language') || 'English';
@@ -145,6 +212,17 @@ function ResultSSC() {
     try {
       const db = await openDB();
       const transaction = db.transaction(SCHOOL_STORE, 'readonly');
+=======
+  useEffect(() => {
+    const storedLanguage = localStorage.getItem("language") || "English";
+    setLanguage(storedLanguage);
+  }, []);
+
+  const fetchSchoolName = async () => {
+    try {
+      const db = await openDB();
+      const transaction = db.transaction(SCHOOL_STORE, "readonly");
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       const store = transaction.objectStore(SCHOOL_STORE);
 
       // Get the school data using the udiseNumber as key
@@ -154,12 +232,18 @@ function ResultSSC() {
         const schoolData = event.target.result;
         if (schoolData) {
           // Set school name and logo from IndexedDB
+<<<<<<< HEAD
           setSchoolName(schoolData.schoolName || '-');
           setSchoolLogo(schoolData.schoolLogo || '');
+=======
+          setSchoolName(schoolData.schoolName || "-");
+          setSchoolLogo(schoolData.schoolLogo || "");
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
           // Update language if available in school data
           if (schoolData.language) {
             setLanguage(schoolData.language);
+<<<<<<< HEAD
             localStorage.setItem('language', schoolData.language);
           }
         } else {
@@ -167,10 +251,20 @@ function ResultSSC() {
           // Fallback to empty values if no data found
           setSchoolName('-');
           setSchoolLogo('');
+=======
+            localStorage.setItem("language", schoolData.language);
+          }
+        } else {
+          console.log("No school data found in IndexedDB");
+          // Fallback to empty values if no data found
+          setSchoolName("-");
+          setSchoolLogo("");
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         }
       };
 
       request.onerror = (event) => {
+<<<<<<< HEAD
         console.error('Error fetching school data from IndexedDB:', event.target.error);
         // Fallback to empty values on error
         setSchoolName('-');
@@ -181,6 +275,21 @@ function ResultSSC() {
       // Fallback to empty values on error
       setSchoolName('-');
       setSchoolLogo('');
+=======
+        console.error(
+          "Error fetching school data from IndexedDB:",
+          event.target.error,
+        );
+        // Fallback to empty values on error
+        setSchoolName("-");
+        setSchoolLogo("");
+      };
+    } catch (error) {
+      console.error("Error accessing IndexedDB:", error);
+      // Fallback to empty values on error
+      setSchoolName("-");
+      setSchoolLogo("");
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     }
   };
 
@@ -189,7 +298,10 @@ function ResultSSC() {
     fetchStudentData();
   }, [udiseNumber]); // Add udiseNumber as dependency
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   useEffect(() => {
     if (selectedExamName && classValue && academicYear) {
       fetchMarksForSelectedSubject();
@@ -198,7 +310,10 @@ function ResultSSC() {
 
   const handleAcademicYearChange = (e) => setAcademicYear(e.target.value);
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   // const handleClassChange = (e) => {
   //   setClassValue(e.target.value); // Update the class value
   //   setDivision(""); // Reset division when class changes
@@ -207,6 +322,7 @@ function ResultSSC() {
     setSelectedExamName(e.target.value);
   };
 
+<<<<<<< HEAD
   const filteredExamNames = examNames.filter((examName) => examName === "Semester Second ");
 
 
@@ -218,6 +334,17 @@ function ResultSSC() {
   const DB_VERSION = 1;
   const SCHOOL_STORE = 'schoolData';
 
+=======
+  const filteredExamNames = examNames.filter(
+    (examName) => examName === "Semester Second ",
+  );
+
+  // IndexedDB constants
+  const DB_NAME = "SchoolManagementDB";
+  const STUDENT_STORE = "studentData";
+  const DB_VERSION = 1;
+  const SCHOOL_STORE = "schoolData";
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
   // Function to open IndexedDB
   const openDB = () => {
@@ -266,8 +393,13 @@ function ResultSSC() {
       request.onsuccess = (event) => {
         const students = event.target.result;
 
+<<<<<<< HEAD
         const activeStudents = students.filter(student =>
           student.isActive !== false
+=======
+        const activeStudents = students.filter(
+          (student) => student.isActive !== false,
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         );
         setStudentData(activeStudents);
 
@@ -284,7 +416,13 @@ function ResultSSC() {
             }
 
             // Use the ID as the serial number equivalent
+<<<<<<< HEAD
             classesAndDivisions[student.currentClass][division].push(student.id);
+=======
+            classesAndDivisions[student.currentClass][division].push(
+              student.id,
+            );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           }
         });
 
@@ -302,7 +440,14 @@ function ResultSSC() {
       };
 
       request.onerror = (event) => {
+<<<<<<< HEAD
         console.error("Error fetching student data from IndexedDB:", event.target.error);
+=======
+        console.error(
+          "Error fetching student data from IndexedDB:",
+          event.target.error,
+        );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       };
     } catch (error) {
       console.error("Error fetching student data:", error);
@@ -334,7 +479,14 @@ function ResultSSC() {
       };
 
       request.onerror = (event) => {
+<<<<<<< HEAD
         console.error("Error fetching divisions from IndexedDB:", event.target.error);
+=======
+        console.error(
+          "Error fetching divisions from IndexedDB:",
+          event.target.error,
+        );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       };
     } catch (error) {
       console.error("Error opening IndexedDB:", error);
@@ -362,14 +514,23 @@ function ResultSSC() {
 
     if (selectedClass) {
       await fetchDivisionsForClass(selectedClass);
+<<<<<<< HEAD
       const filteredStudents = studentData.filter((student) => student.currentClass === selectedClass);
+=======
+      const filteredStudents = studentData.filter(
+        (student) => student.currentClass === selectedClass,
+      );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       setSelectedStudents(filteredStudents);
     } else {
       setSelectedStudents([]);
     }
   };
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   // Fetch marks data from IndexedDB when exam name changes
   useEffect(() => {
     if (selectedExamName && classValue && academicYear) {
@@ -377,11 +538,24 @@ function ResultSSC() {
         try {
           const db = await openDB();
           const selectedStudents = studentData.filter(
+<<<<<<< HEAD
             (student) => student.currentClass === classValue
           );
           setSelectedStudents(selectedStudents);
           const marksDataPromises = selectedStudents.map(async (student) => {
             const studentMarks = await fetchMarksData(db, student.srNo, academicYear, selectedExamName);
+=======
+            (student) => student.currentClass === classValue,
+          );
+          setSelectedStudents(selectedStudents);
+          const marksDataPromises = selectedStudents.map(async (student) => {
+            const studentMarks = await fetchMarksData(
+              db,
+              student.srNo,
+              academicYear,
+              selectedExamName,
+            );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
             return { srNo: student.srNo, marks: studentMarks };
           });
 
@@ -393,7 +567,11 @@ function ResultSSC() {
 
           setMarksData(marksData);
         } catch (error) {
+<<<<<<< HEAD
           console.error('Error fetching marks data:', error);
+=======
+          console.error("Error fetching marks data:", error);
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         }
       };
 
@@ -401,9 +579,12 @@ function ResultSSC() {
     }
   }, [selectedExamName, classValue, academicYear]);
 
+<<<<<<< HEAD
 
 
 
+=======
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   const fetchSubjectsForClassAndDivision = async (classValue, division) => {
     try {
       if (!classValue || !division || !academicYear) {
@@ -414,7 +595,13 @@ function ResultSSC() {
       const url = `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/subjectSequence/ssc/${academicYear}/${classValue}/${division}.json`;
       const response = await fetch(url);
       if (!response.ok) {
+<<<<<<< HEAD
         throw new Error(`Failed to fetch subjects for class ${classValue} and division ${division}`);
+=======
+        throw new Error(
+          `Failed to fetch subjects for class ${classValue} and division ${division}`,
+        );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       }
       const subjectsData = await response.json();
       if (subjectsData) {
@@ -422,7 +609,11 @@ function ResultSSC() {
           .filter(([_, value]) => value !== null && value !== undefined)
           .map(([_, subject]) => subject);
 
+<<<<<<< HEAD
         setDivisionSubjects(prev => ({
+=======
+        setDivisionSubjects((prev) => ({
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           ...prev,
           [classValue]: {
             ...prev[classValue],
@@ -430,7 +621,11 @@ function ResultSSC() {
           },
         }));
       } else {
+<<<<<<< HEAD
         setDivisionSubjects(prev => ({
+=======
+        setDivisionSubjects((prev) => ({
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           ...prev,
           [classValue]: {
             ...prev[classValue],
@@ -452,14 +647,22 @@ function ResultSSC() {
   const fetchMarksForSelectedSubject = async () => {
     try {
       const selectedStudents = studentData.filter(
+<<<<<<< HEAD
         (student) => student.currentClass === classValue
+=======
+        (student) => student.currentClass === classValue,
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       );
       setSelectedStudents(selectedStudents);
       const marksDataPromises = selectedStudents.map(async (student) => {
         const studentMarks = await fetchMarksData(
           student.srNo,
           academicYear,
+<<<<<<< HEAD
           selectedExamName
+=======
+          selectedExamName,
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         );
         return { srNo: student.srNo, marks: studentMarks };
       });
@@ -470,12 +673,20 @@ function ResultSSC() {
       }, {});
       setMarksData(marksData);
     } catch (error) {
+<<<<<<< HEAD
       console.error('Error fetching marks data:', error);
     }
   };
 
   const [selectedStudentForSr, setSelectedStudentForSr] = useState('');
 
+=======
+      console.error("Error fetching marks data:", error);
+    }
+  };
+
+  const [selectedStudentForSr, setSelectedStudentForSr] = useState("");
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
   const fetchMarksData = async (key, academicYear, examName) => {
     try {
@@ -490,6 +701,7 @@ function ResultSSC() {
         keysRequest.onerror = (event) => reject(event.target.error);
       });
 
+<<<<<<< HEAD
       const matchingKey = allKeys.find(storeKey =>
         typeof storeKey === 'string' &&
         storeKey.endsWith(`-${key}`)
@@ -497,6 +709,15 @@ function ResultSSC() {
 
       if (!matchingKey) {
         console.error('No matching key found for:', key);
+=======
+      const matchingKey = allKeys.find(
+        (storeKey) =>
+          typeof storeKey === "string" && storeKey.endsWith(`-${key}`),
+      );
+
+      if (!matchingKey) {
+        console.error("No matching key found for:", key);
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         return {};
       }
 
@@ -506,8 +727,17 @@ function ResultSSC() {
         request.onsuccess = (event) => {
           const studentData = event.target.result;
 
+<<<<<<< HEAD
           if (!studentData || !studentData.result || !studentData.result[academicYear]) {
             console.warn('No academic year data found');
+=======
+          if (
+            !studentData ||
+            !studentData.result ||
+            !studentData.result[academicYear]
+          ) {
+            console.warn("No academic year data found");
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
             resolve({});
             return;
           }
@@ -521,7 +751,11 @@ function ResultSSC() {
             // Get all available exams for this academic year
             const availableExams = Object.keys(yearData);
 
+<<<<<<< HEAD
             availableExams.forEach(exam => {
+=======
+            availableExams.forEach((exam) => {
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               allExamsData[exam] = yearData[exam];
             });
 
@@ -538,12 +772,23 @@ function ResultSSC() {
         };
 
         request.onerror = (event) => {
+<<<<<<< HEAD
           console.error("Error fetching marks from IndexedDB:", event.target.error);
+=======
+          console.error(
+            "Error fetching marks from IndexedDB:",
+            event.target.error,
+          );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           reject(event.target.error);
         };
       });
     } catch (error) {
+<<<<<<< HEAD
       console.error('Error in fetchMarksData:', error);
+=======
+      console.error("Error in fetchMarksData:", error);
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       return {};
     }
   };
@@ -571,14 +816,26 @@ function ResultSSC() {
           keysRequest.onerror = (event) => reject(event.target.error);
         });
 
+<<<<<<< HEAD
         const matchingKey = allKeys.find(storeKey =>
           typeof storeKey === 'string' &&
           storeKey.endsWith(`-${srNo}`)
+=======
+        const matchingKey = allKeys.find(
+          (storeKey) =>
+            typeof storeKey === "string" && storeKey.endsWith(`-${srNo}`),
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         );
 
         if (!matchingKey) {
           console.error("Student not found for key:", srNo);
+<<<<<<< HEAD
           setAlertMessage("Student not found. Please check the student details.");
+=======
+          setAlertMessage(
+            "Student not found. Please check the student details.",
+          );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           return;
         }
 
@@ -588,20 +845,42 @@ function ResultSSC() {
           request.onerror = (event) => reject(event.target.error);
         });
 
+<<<<<<< HEAD
         if (!studentData || !studentData.result || !studentData.result[academicYear]) {
           console.warn('No academic year data found');
+=======
+        if (
+          !studentData ||
+          !studentData.result ||
+          !studentData.result[academicYear]
+        ) {
+          console.warn("No academic year data found");
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           setAlertMessage("No marks found for this student.");
           return;
         }
 
         const yearData = studentData.result[academicYear];
+<<<<<<< HEAD
         const exams = ["Unit Test I", "Unit Test II", "Semester First ", "Semester Second "];
+=======
+        const exams = [
+          "Unit Test I",
+          "Unit Test II",
+          "Semester First ",
+          "Semester Second ",
+        ];
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
         // Combine the data into a single object
         const combinedResults = {};
         for (const exam of exams) {
           if (yearData[exam]) {
+<<<<<<< HEAD
             Object.keys(yearData[exam]).forEach(subject => {
+=======
+            Object.keys(yearData[exam]).forEach((subject) => {
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               if (!combinedResults[subject]) {
                 combinedResults[subject] = {};
               }
@@ -621,12 +900,27 @@ function ResultSSC() {
       }
 
       let mergedResults = {};
+<<<<<<< HEAD
       const examsToMerge = selectedExamName === "All Exams"
         ? ["Unit Test I", "Unit Test II", "Semester First ", "Semester Second "]
         : [];
 
       Object.keys(results || {}).forEach((subject) => {
         if (!subject || typeof subject !== 'string') return;
+=======
+      const examsToMerge =
+        selectedExamName === "All Exams"
+          ? [
+              "Unit Test I",
+              "Unit Test II",
+              "Semester First ",
+              "Semester Second ",
+            ]
+          : [];
+
+      Object.keys(results || {}).forEach((subject) => {
+        if (!subject || typeof subject !== "string") return;
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         let finalSubjectName = subject;
         const match = subject.match(/^(.*?)\s*([12१२])\s*$/);
         if (match) {
@@ -643,6 +937,7 @@ function ResultSSC() {
           examsToMerge.forEach((exam) => {
             if (originalData[exam]) {
               if (!mergedResults[finalSubjectName][exam]) {
+<<<<<<< HEAD
                 mergedResults[finalSubjectName][exam] = { ...originalData[exam] };
               } else {
                 ["outOf", "obtainMarks", "minMarks"].forEach((field) => {
@@ -653,6 +948,27 @@ function ResultSSC() {
                   }
                 });
                 if (mergedResults[finalSubjectName][exam].obtainMarks !== undefined) {
+=======
+                mergedResults[finalSubjectName][exam] = {
+                  ...originalData[exam],
+                };
+              } else {
+                ["outOf", "obtainMarks", "minMarks"].forEach((field) => {
+                  const val1 =
+                    Number(mergedResults[finalSubjectName][exam][field]) || 0;
+                  const val2 = Number(originalData[exam][field]) || 0;
+                  if (
+                    originalData[exam][field] !== undefined ||
+                    mergedResults[finalSubjectName][exam][field] !== undefined
+                  ) {
+                    mergedResults[finalSubjectName][exam][field] = val1 + val2;
+                  }
+                });
+                if (
+                  mergedResults[finalSubjectName][exam].obtainMarks !==
+                  undefined
+                ) {
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   delete mergedResults[finalSubjectName][exam].grade;
                 }
               }
@@ -665,7 +981,14 @@ function ResultSSC() {
             ["outOf", "obtainMarks", "minMarks"].forEach((field) => {
               const val1 = Number(mergedResults[finalSubjectName][field]) || 0;
               const val2 = Number(originalData[field]) || 0;
+<<<<<<< HEAD
               if (originalData[field] !== undefined || mergedResults[finalSubjectName][field] !== undefined) {
+=======
+              if (
+                originalData[field] !== undefined ||
+                mergedResults[finalSubjectName][field] !== undefined
+              ) {
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 mergedResults[finalSubjectName][field] = val1 + val2;
               }
             });
@@ -703,6 +1026,7 @@ function ResultSSC() {
     }
   };
 
+<<<<<<< HEAD
 
 
 
@@ -757,6 +1081,46 @@ function ResultSSC() {
 
       if (!printContent) {
         console.error('Print content not found');
+=======
+  const calculateGradeEnglish = (total) => {
+    if (total >= 90) return "A+";
+    if (total >= 80) return "A";
+    if (total >= 70) return "B+";
+    if (total >= 60) return "B";
+    if (total >= 50) return "C+";
+    if (total >= 40) return "C";
+    if (total >= 30) return "D+";
+    if (total >= 20) return "D";
+    return "Fail";
+  };
+
+  const calculateGradeMarathi = (total) => {
+    if (total >= 90) return "अ-1";
+    if (total >= 80) return "अ-2";
+    if (total >= 70) return "ब-1";
+    if (total >= 60) return "ब-2";
+    if (total >= 50) return "क-1";
+    if (total >= 40) return "क-2";
+    if (total >= 30) return "ड-1";
+    if (total >= 20) return "ड-2";
+    return "नापास";
+  };
+  // Function to calculate grade based on the current language
+  const calculateGrade = (total) => {
+    return language === "English"
+      ? calculateGradeEnglish(total)
+      : calculateGradeMarathi(total);
+  };
+  const handleCloseModal = () => setShowModal(false);
+  //  setting marks to pass
+
+  const handlePrint = async () => {
+    try {
+      const printContent = document.querySelector(".modal-body"); // Select the modal body content
+
+      if (!printContent) {
+        console.error("Print content not found");
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         return;
       }
 
@@ -771,7 +1135,11 @@ function ResultSSC() {
       clone.style.width = "fit-content"; // Ensure it doesn't overflow horizontally
 
       // Reset unnecessary styles to avoid blank space
+<<<<<<< HEAD
       clone.querySelectorAll('p').forEach(p => {
+=======
+      clone.querySelectorAll("p").forEach((p) => {
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         p.style.margin = "0";
         p.style.padding = "0";
         p.style.lineHeight = "1.4";
@@ -785,7 +1153,11 @@ function ResultSSC() {
       // Use printJS to print the content
       printJS({
         printable: printContainer.innerHTML,
+<<<<<<< HEAD
         type: 'raw-html',
+=======
+        type: "raw-html",
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         style: `
                     @media print {
                         body { margin: 0; padding: 0; }
@@ -841,10 +1213,17 @@ function ResultSSC() {
                             margin: 0; /* Remove default page margins */
                         }
                     }
+<<<<<<< HEAD
                 `
       });
     } catch (error) {
       console.error('Error in handlePrint:', error);
+=======
+                `,
+      });
+    } catch (error) {
+      console.error("Error in handlePrint:", error);
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     }
   };
 
@@ -852,6 +1231,7 @@ function ResultSSC() {
     <div>
       <AlertMessage message={alertMessage} show={showAlert} />
 
+<<<<<<< HEAD
 
       <div className=' main-content-of-page'>
         <h3 style={{ color: 'rgb(3, 54, 94)', textAlign: 'center' }}> {language === "English" ? "SSC Exam Result " : " परीक्षेचा निकाल"}</h3>
@@ -859,6 +1239,20 @@ function ResultSSC() {
           <tbody>
             <tr>
               <th style={{ width: 'calc(100% / 7)' }}> {language === "English" ? "Year " : "शैक्षणिक वर्ष  "}</th>
+=======
+      <div className=" main-content-of-page">
+        <h3 style={{ color: "rgb(3, 54, 94)", textAlign: "center" }}>
+          {" "}
+          {language === "English" ? "SSC Exam Result " : " परीक्षेचा निकाल"}
+        </h3>
+        <table className="table table-striped table-bordered">
+          <tbody>
+            <tr>
+              <th style={{ width: "calc(100% / 7)" }}>
+                {" "}
+                {language === "English" ? "Year " : "शैक्षणिक वर्ष  "}
+              </th>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               <td>
                 <select
                   id="academicYear"
@@ -867,9 +1261,19 @@ function ResultSSC() {
                   onChange={handleAcademicYearChange}
                   className="form-control custom-select"
                 >
+<<<<<<< HEAD
                   <option >{language === "English" ? "Select Year " : "वर्ष निवडा "}</option>
                   <option value="2023-2024" >2023-2024</option>
                   <option value="2024-2025" selected>2024-2025</option>
+=======
+                  <option>
+                    {language === "English" ? "Select Year " : "वर्ष निवडा "}
+                  </option>
+                  <option value="2023-2024">2023-2024</option>
+                  <option value="2024-2025" selected>
+                    2024-2025
+                  </option>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   <option value="2025-2026">2025-2026</option>
                   <option value="2026-2027">2026-2027</option>
                 </select>
@@ -884,12 +1288,37 @@ function ResultSSC() {
                   onChange={handleClassChange}
                   className="form-control custom-select"
                 >
+<<<<<<< HEAD
                   <option value="">{language === "English" ? "Select Class " : "वर्ग निवडा"}</option>
                   {classes.filter(cls => cls === "Class IX" || cls === "Class X" || cls === "9th" || cls === "Class 10th" || cls === "इयत्ता नववी" || cls === "इयत्ता दहावी" || cls === "नववी" || cls === "दहावी" || cls === "इयत्ता ९ वी" || cls === "इयत्ता १० वी").map((cls, index) => (
                     <option key={index} value={cls}>
                       {cls}
                     </option>
                   ))}
+=======
+                  <option value="">
+                    {language === "English" ? "Select Class " : "वर्ग निवडा"}
+                  </option>
+                  {classes
+                    .filter(
+                      (cls) =>
+                        cls === "Class IX" ||
+                        cls === "Class X" ||
+                        cls === "9th" ||
+                        cls === "Class 10th" ||
+                        cls === "इयत्ता नववी" ||
+                        cls === "इयत्ता दहावी" ||
+                        cls === "नववी" ||
+                        cls === "दहावी" ||
+                        cls === "इयत्ता ९ वी" ||
+                        cls === "इयत्ता १० वी",
+                    )
+                    .map((cls, index) => (
+                      <option key={index} value={cls}>
+                        {cls}
+                      </option>
+                    ))}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 </select>
               </td>
             </tr>
@@ -902,7 +1331,15 @@ function ResultSSC() {
                   onChange={(e) => setDivision(e.target.value)}
                   className="form-control custom-select"
                 >
+<<<<<<< HEAD
                   <option value="">{language === "English" ? "Select Division " : "तुकडी निवडा"}</option>
+=======
+                  <option value="">
+                    {language === "English"
+                      ? "Select Division "
+                      : "तुकडी निवडा"}
+                  </option>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   {divisions.map((div, index) => (
                     <option key={index} value={div}>
                       {div}
@@ -920,10 +1357,21 @@ function ResultSSC() {
                   onChange={handleExamNameChange}
                   className="form-control custom-select"
                 >
+<<<<<<< HEAD
                   <option value="">{language === "English" ? "Select Exam" : "परीक्षा निवडा"}</option>
                   {examNames.map((examName, index) => (
                     <option key={index} value={examName}>
                       {language === "English" ? examName : examNameTranslations[examName]}
+=======
+                  <option value="">
+                    {language === "English" ? "Select Exam" : "परीक्षा निवडा"}
+                  </option>
+                  {examNames.map((examName, index) => (
+                    <option key={index} value={examName}>
+                      {language === "English"
+                        ? examName
+                        : examNameTranslations[examName]}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     </option>
                   ))}
                 </select>
@@ -932,13 +1380,22 @@ function ResultSSC() {
 
             {academicYear && academicYear !== "2025-2026" && (
               <tr>
+<<<<<<< HEAD
                 <th>{language === "English" ? "Previous Year Class" : "मागील वर्षाचा वर्ग"}</th>
+=======
+                <th>
+                  {language === "English"
+                    ? "Previous Year Class"
+                    : "मागील वर्षाचा वर्ग"}
+                </th>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 <td>
                   <select
                     value={previousYearClass}
                     onChange={(e) => setPreviousYearClass(e.target.value)}
                     className="form-control custom-select"
                   >
+<<<<<<< HEAD
                     <option value="">{language === "English" ? "Select Previous Year Class" : "मागील वर्षाचा वर्ग निवडा"}</option>
                     {classes.filter(cls =>
                       cls === "Class IX" || cls === "Class X" ||
@@ -951,6 +1408,32 @@ function ResultSSC() {
                         {cls}
                       </option>
                     ))}
+=======
+                    <option value="">
+                      {language === "English"
+                        ? "Select Previous Year Class"
+                        : "मागील वर्षाचा वर्ग निवडा"}
+                    </option>
+                    {classes
+                      .filter(
+                        (cls) =>
+                          cls === "Class IX" ||
+                          cls === "Class X" ||
+                          cls === "9th" ||
+                          cls === "Class 10th" ||
+                          cls === "इयत्ता नववी" ||
+                          cls === "इयत्ता दहावी" ||
+                          cls === "नववी" ||
+                          cls === "दहावी" ||
+                          cls === "इयत्ता ९ वी" ||
+                          cls === "इयत्ता १० वी",
+                      )
+                      .map((cls, index) => (
+                        <option key={index} value={cls}>
+                          {cls}
+                        </option>
+                      ))}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   </select>
                 </td>
               </tr>
@@ -963,12 +1446,24 @@ function ResultSSC() {
             <table className="table table-striped table-bordered custom-table">
               <thead>
                 <tr>
+<<<<<<< HEAD
                   <th className="custom-width">{language === "English" ? "Roll No " : "हजेरी क्र"}</th>
                   <th>{language === "English" ? "Student Name " : "विद्यार्थ्याचे नाव"}</th>
+=======
+                  <th className="custom-width">
+                    {language === "English" ? "Roll No " : "हजेरी क्र"}
+                  </th>
+                  <th>
+                    {language === "English"
+                      ? "Student Name "
+                      : "विद्यार्थ्याचे नाव"}
+                  </th>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   <th>{language === "English" ? "result " : "प्रगतीपत्रक"}</th>
                 </tr>
               </thead>
               <tbody>
+<<<<<<< HEAD
                 {selectedStudents.filter((student) => division ? student.division === division : true).sort((a, b) => a.rollNo - b.rollNo).map((student) => (
                   <tr key={student.srNo}>
                     <td>{student.rollNo}</td>
@@ -981,11 +1476,37 @@ function ResultSSC() {
                     </td>
                   </tr>
                 ))}
+=======
+                {selectedStudents
+                  .filter((student) =>
+                    division ? student.division === division : true,
+                  )
+                  .sort((a, b) => a.rollNo - b.rollNo)
+                  .map((student) => (
+                    <tr key={student.srNo}>
+                      <td>{student.rollNo}</td>
+                      <td>
+                        {student.stdName} {student.stdSurname}
+                      </td>
+                      <td>
+                        <button
+                          className="btn btn-primary"
+                          onClick={() => viewResult(student.srNo)}
+                        >
+                          {language === "English"
+                            ? "View result"
+                            : "प्रगति पत्रक"}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               </tbody>
             </table>
           </div>
         )}
 
+<<<<<<< HEAD
 
         <Modal show={showModal} onHide={handleCloseModal} dialogClassName='modal-80w'>
           <Modal.Header closeButton>
@@ -1010,18 +1531,59 @@ function ResultSSC() {
                     overflow: 'hidden' // Prevent overflow if content is too large
                   }}>
                     <div className="school-info" >
+=======
+        <Modal
+          show={showModal}
+          onHide={handleCloseModal}
+          dialogClassName="modal-80w"
+        >
+          <Modal.Header closeButton>
+            <Modal.Title>
+              {language === "English"
+                ? " Exam result "
+                : "विद्यार्थ्यांचे निकाल"}
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {selectedExamName === "All Exams" && selectedStudentResults ? (
+              <div>
+                {/* Semester Second  modal content */}
+                <div className="r mt-1" style={{}}>
+                  <div
+                    className="left"
+                    style={{
+                      width: "615px",
+                      height: "900px",
+                      margin: "0 auto", // Center the div horizontally
+                      padding: "20px", // Add some padding
+                      border: "2px solid #000", // Optional: Add a border for visibility
+                      boxSizing: "border-box", // Include padding and border in the element's total width and height
+                      overflow: "hidden", // Prevent overflow if content is too large
+                    }}
+                  >
+                    <div className="school-info">
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                       {schoolLogo && (
                         <div>
                           <img
                             src={schoolLogo}
                             alt="Logo"
+<<<<<<< HEAD
                             style={{ width: '80px', height: 'auto', objectFit: 'contain' }}
+=======
+                            style={{
+                              width: "80px",
+                              height: "auto",
+                              objectFit: "contain",
+                            }}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                           />
                         </div>
                       )}
                       <h2>{schoolName}</h2>
                     </div>
                     <div>
+<<<<<<< HEAD
                       <hr style={{
                         width: 'calc(100% + 40px)', // Adjust width to account for padding
                         height: '2px',
@@ -1054,11 +1616,83 @@ function ResultSSC() {
                       </div>
                       <div style={{ flex: '1', textAlign: 'right' }}>
                         <label htmlFor="class" style={{ fontSize: '14px' }}>
+=======
+                      <hr
+                        style={{
+                          width: "calc(100% + 40px)", // Adjust width to account for padding
+                          height: "2px",
+                          backgroundColor: "black",
+                          border: "none",
+                          marginLeft: "-20px", // Negative margin to pull it to the left
+                          marginRight: "-20px", // Negative margin to pull it to the right
+                          marginBottom: "6px", // Adjust this value to reduce the gap below the hr
+                        }}
+                      />
+                      <b>
+                        <h6 style={{ textAlign: "center", margin: "0" }}>
+                          {" "}
+                          {/* Set margin to 0 */}
+                          {language === "English"
+                            ? "PROGRESS REPORT"
+                            : "विद्यार्थी प्रगती अहवाल"}
+                        </h6>
+                        <h6 style={{ textAlign: "center", margin: "0" }}>
+                          {" "}
+                          {/* Set margin to 0 */}
+                          {language === "English"
+                            ? `SECOND SEMESTER EXAMINATION- ${academicYear}`
+                            : `प्रथम सत्र परीक्षा-  ${academicYear}`}
+                        </h6>
+                      </b>
+                      <hr
+                        style={{
+                          width: "calc(100% + 40px)",
+                          height: "2px",
+                          backgroundColor: "black",
+                          border: "none",
+                          marginLeft: "-20px",
+                          marginRight: "-20px",
+                          marginTop: "6px",
+                          marginBottom: "6px",
+                        }}
+                      />
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        fontSize: "14px",
+                      }}
+                    >
+                      <div style={{ flex: "1", textAlign: "left" }}>
+                        <label htmlFor="roll-no" style={{ fontSize: "14px" }}>
+                          {language === "English"
+                            ? "Roll No : "
+                            : "हजेरी क्रमांक : "}
+                        </label>
+                        <span>{selectedStudentResults?.rollNo || "-"}</span>
+                      </div>
+                      <div style={{ flex: "1", textAlign: "center" }}>
+                        <label
+                          htmlFor="Register No"
+                          style={{ fontSize: "14px" }}
+                        >
+                          {language === "English"
+                            ? "Register No : "
+                            : "रजिस्टर क्रमांक : "}
+                        </label>
+                        <span>{selectedStudentResults?.registerNo || "-"}</span>
+                      </div>
+                      <div style={{ flex: "1", textAlign: "right" }}>
+                        <label htmlFor="class" style={{ fontSize: "14px" }}>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                           {language === "English" ? "Class : " : "वर्ग : "}
                         </label>
                         <span>
                           {previousYearClass
                             ? `${previousYearClass}`
+<<<<<<< HEAD
                             : classValue || '-'}
                           {selectedStudentResults?.division || ''}
                         </span>
@@ -1089,10 +1723,90 @@ function ResultSSC() {
                       <div style={{ width: '30%' }}>
                         {selectedStudentResults?.stdPhoto && (
                           <img src={selectedStudentResults?.stdPhoto} style={{ width: '80px', height: '80px' }} />
+=======
+                            : classValue || "-"}
+                          {selectedStudentResults?.division || ""}
+                        </span>
+                      </div>
+                    </div>
+                    <hr
+                      style={{
+                        width: "calc(100% + 40px)",
+                        height: "2px",
+                        backgroundColor: "black",
+                        border: "none",
+                        marginLeft: "-20px",
+                        marginRight: "-20px",
+                        marginTop: "1px",
+                      }}
+                    />
+                    <div
+                      style={{
+                        fontSize: "14px",
+                        marginLeft: "30px",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <div style={{ width: "70%" }}>
+                        <div>
+                          <label
+                            htmlFor="student-name"
+                            style={{ fontSize: "14px" }}
+                          >
+                            {language === "English"
+                              ? "Student Name : "
+                              : "विद्यार्थ्याचे नाव : "}
+                          </label>
+                          <span>
+                            {selectedStudentResults?.studentName || "-"}{" "}
+                            {selectedStudentResults?.stdFather || "-"}{" "}
+                            {selectedStudentResults?.stdSurname || "-"}
+                          </span>
+                        </div>
+                        <div>
+                          <label htmlFor="class" style={{ fontSize: "14px" }}>
+                            {language === "English"
+                              ? "Mother Name : "
+                              : "आईचे वर्ग : "}
+                          </label>
+                          <span>
+                            {selectedStudentResults?.stdMother || "-"}{" "}
+                          </span>
+                        </div>
+                        <div>
+                          <label htmlFor="class" style={{ fontSize: "14px" }}>
+                            {language === "English"
+                              ? "Date Of Birth : "
+                              : "जन्मतारीख : "}
+                          </label>
+                          <span>{selectedStudentResults?.dob || "-"} </span>
+                        </div>
+                        <div>
+                          <label
+                            htmlFor="exam-roll-no"
+                            style={{ fontSize: "14px" }}
+                          >
+                            {language === "English"
+                              ? "Exam : "
+                              : "परीक्षा सत्र : "}
+                          </label>
+                          <span>{selectedExamName || "-"}</span>
+                        </div>
+                      </div>
+                      <div style={{ width: "30%" }}>
+                        {selectedStudentResults?.stdPhoto && (
+                          <img
+                            src={selectedStudentResults?.stdPhoto}
+                            style={{ width: "80px", height: "80px" }}
+                          />
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                         )}
                       </div>
                     </div>
 
+<<<<<<< HEAD
 
 
 
@@ -1113,17 +1827,93 @@ function ResultSSC() {
                                 <th colSpan="2" style={{ padding: '3px', color: 'black' }}>{language === "English" ? "Semester II " : "द्वितीय सत्र"}</th>
                                 {/* Add the two new columns for total M.M and Obt.M */}
                                 <th colSpan="2" style={{ padding: '3px', color: 'black', backgroundColor: '#f0f8ff' }}>
+=======
+                    {selectedStudentResults?.results ? (
+                      <table
+                        className="table table-striped table-bordered"
+                        style={{ fontSize: "12px", padding: "5px" }}
+                      >
+                        <thead>
+                          <tr>
+                            <th
+                              rowSpan="2"
+                              style={{ padding: "3px", color: "black" }}
+                            >
+                              {language === "English" ? "Subject" : "विषय"}
+                            </th>
+                            {selectedExamName === "All Exams" ? (
+                              <>
+                                <th
+                                  colSpan="2"
+                                  style={{ padding: "3px", color: "black" }}
+                                >
+                                  {language === "English"
+                                    ? "Unit Test I"
+                                    : "पहिली चाचणी"}
+                                </th>
+                                <th
+                                  colSpan="2"
+                                  style={{ padding: "3px", color: "black" }}
+                                >
+                                  {language === "English"
+                                    ? "Unit Test II"
+                                    : "दुसरी चाचणी"}
+                                </th>
+                                <th
+                                  colSpan="2"
+                                  style={{ padding: "3px", color: "black" }}
+                                >
+                                  {language === "English"
+                                    ? "Semester I "
+                                    : "प्रथम सत्र"}
+                                </th>
+                                <th
+                                  colSpan="2"
+                                  style={{ padding: "3px", color: "black" }}
+                                >
+                                  {language === "English"
+                                    ? "Semester II "
+                                    : "द्वितीय सत्र"}
+                                </th>
+                                {/* Add the two new columns for total M.M and Obt.M */}
+                                <th
+                                  colSpan="2"
+                                  style={{
+                                    padding: "3px",
+                                    color: "black",
+                                    backgroundColor: "#f0f8ff",
+                                  }}
+                                >
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                   {language === "English" ? "Total" : "एकूण"}
                                 </th>
                               </>
                             ) : (
+<<<<<<< HEAD
                               <th colSpan="2" style={{ padding: '3px', color: 'black' }}>{selectedExamName}</th>
                             )}
                             <th rowSpan="2" colSpan="2" style={{ padding: '3px', color: 'black' }}>{language === "English" ? "Grade" : "श्रेणी"}</th>
+=======
+                              <th
+                                colSpan="2"
+                                style={{ padding: "3px", color: "black" }}
+                              >
+                                {selectedExamName}
+                              </th>
+                            )}
+                            <th
+                              rowSpan="2"
+                              colSpan="2"
+                              style={{ padding: "3px", color: "black" }}
+                            >
+                              {language === "English" ? "Grade" : "श्रेणी"}
+                            </th>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                           </tr>
                           <tr>
                             {selectedExamName === "All Exams" ? (
                               <>
+<<<<<<< HEAD
                                 <th style={{ padding: '4px', color: 'black', fontWeight: 'normal' }}>{language === "English" ? "M.M" : "पैकी"}</th>
                                 <th style={{ padding: '4px', color: 'black', fontWeight: 'normal' }}>{language === "English" ? "Obt.M" : "गुण"}</th>
                                 <th style={{ padding: '4px', color: 'black', fontWeight: 'normal' }}>{language === "English" ? "M.M" : "पैकी"}</th>
@@ -1138,17 +1928,137 @@ function ResultSSC() {
                                 </th>
                                 <th style={{ padding: '4px', color: 'black', fontWeight: 'normal', backgroundColor: '#f0f8ff' }}>
                                   {language === "English" ? "Total Obt.M" : "एकूण गुण"}
+=======
+                                <th
+                                  style={{
+                                    padding: "4px",
+                                    color: "black",
+                                    fontWeight: "normal",
+                                  }}
+                                >
+                                  {language === "English" ? "M.M" : "पैकी"}
+                                </th>
+                                <th
+                                  style={{
+                                    padding: "4px",
+                                    color: "black",
+                                    fontWeight: "normal",
+                                  }}
+                                >
+                                  {language === "English" ? "Obt.M" : "गुण"}
+                                </th>
+                                <th
+                                  style={{
+                                    padding: "4px",
+                                    color: "black",
+                                    fontWeight: "normal",
+                                  }}
+                                >
+                                  {language === "English" ? "M.M" : "पैकी"}
+                                </th>
+                                <th
+                                  style={{
+                                    padding: "4px",
+                                    color: "black",
+                                    fontWeight: "normal",
+                                  }}
+                                >
+                                  {language === "English" ? "Obt.M" : "गुण"}
+                                </th>
+                                <th
+                                  style={{
+                                    padding: "4px",
+                                    color: "black",
+                                    fontWeight: "normal",
+                                  }}
+                                >
+                                  {language === "English" ? "M.M" : "पैकी"}
+                                </th>
+                                <th
+                                  style={{
+                                    padding: "4px",
+                                    color: "black",
+                                    fontWeight: "normal",
+                                  }}
+                                >
+                                  {language === "English" ? "Obt.M" : "गुण"}
+                                </th>
+                                <th
+                                  style={{
+                                    padding: "4px",
+                                    color: "black",
+                                    fontWeight: "normal",
+                                  }}
+                                >
+                                  {language === "English" ? "M.M" : "पैकी"}
+                                </th>
+                                <th
+                                  style={{
+                                    padding: "4px",
+                                    color: "black",
+                                    fontWeight: "normal",
+                                  }}
+                                >
+                                  {language === "English" ? "Obt.M" : "गुण"}
+                                </th>
+                                {/* Add headers for the two new columns */}
+                                <th
+                                  style={{
+                                    padding: "4px",
+                                    color: "black",
+                                    fontWeight: "normal",
+                                    backgroundColor: "#f0f8ff",
+                                  }}
+                                >
+                                  {language === "English"
+                                    ? "Total M.M"
+                                    : "एकूण पैकी"}
+                                </th>
+                                <th
+                                  style={{
+                                    padding: "4px",
+                                    color: "black",
+                                    fontWeight: "normal",
+                                    backgroundColor: "#f0f8ff",
+                                  }}
+                                >
+                                  {language === "English"
+                                    ? "Total Obt.M"
+                                    : "एकूण गुण"}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                 </th>
                               </>
                             ) : (
                               <>
+<<<<<<< HEAD
                                 <th style={{ padding: '4px', color: 'black', fontWeight: 'normal' }}>{language === "English" ? "M.M" : "पैकी"}</th>
                                 <th style={{ padding: '4px', color: 'black', fontWeight: 'normal' }}>{language === "English" ? "Obt.M" : "गुण"}</th>
+=======
+                                <th
+                                  style={{
+                                    padding: "4px",
+                                    color: "black",
+                                    fontWeight: "normal",
+                                  }}
+                                >
+                                  {language === "English" ? "M.M" : "पैकी"}
+                                </th>
+                                <th
+                                  style={{
+                                    padding: "4px",
+                                    color: "black",
+                                    fontWeight: "normal",
+                                  }}
+                                >
+                                  {language === "English" ? "Obt.M" : "गुण"}
+                                </th>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                               </>
                             )}
                           </tr>
                         </thead>
 
+<<<<<<< HEAD
 
                         <tbody>
                           {selectedStudentResults && selectedStudentResults.results ? (
@@ -1169,6 +2079,31 @@ function ResultSSC() {
                               })
                               .map((subject) => {
                                 const grades = selectedStudentResults.results[subject];
+=======
+                        <tbody>
+                          {selectedStudentResults &&
+                          selectedStudentResults.results ? (
+                            subjectSequence
+                              .filter((subject) => {
+                                const grades =
+                                  selectedStudentResults.results[subject];
+                                // Only include subjects where at least one of the grade fields has a valid value (not null or undefined)
+                                return (
+                                  grades &&
+                                  (grades["Unit Test I"]?.obtainMarks ||
+                                    grades["Unit Test II"]?.obtainMarks ||
+                                    grades["Semester First "]?.obtainMarks ||
+                                    grades["Semester Second "]?.obtainMarks ||
+                                    grades["Unit Test I"]?.grade ||
+                                    grades["Unit Test II"]?.grade ||
+                                    grades["Semester First "]?.grade ||
+                                    grades["Semester Second "]?.grade)
+                                );
+                              })
+                              .map((subject) => {
+                                const grades =
+                                  selectedStudentResults.results[subject];
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
                                 // Calculate row-wise totals for the new columns
                                 let totalOutOf = 0;
@@ -1185,27 +2120,65 @@ function ResultSSC() {
                                   totalObtainMarks =
                                     (grades["Unit Test I"]?.obtainMarks || 0) +
                                     (grades["Unit Test II"]?.obtainMarks || 0) +
+<<<<<<< HEAD
                                     (grades["Semester First "]?.obtainMarks || 0) +
                                     (grades["Semester Second "]?.obtainMarks || 0);
                                   rowPercentage =
                                     totalOutOf > 0 ? ((totalObtainMarks / totalOutOf) * 100).toFixed(2) : "-";
                                   grade = rowPercentage !== "-" ? calculateGrade(Number(rowPercentage)) : "-";
+=======
+                                    (grades["Semester First "]?.obtainMarks ||
+                                      0) +
+                                    (grades["Semester Second "]?.obtainMarks ||
+                                      0);
+                                  rowPercentage =
+                                    totalOutOf > 0
+                                      ? (
+                                          (totalObtainMarks / totalOutOf) *
+                                          100
+                                        ).toFixed(2)
+                                      : "-";
+                                  grade =
+                                    rowPercentage !== "-"
+                                      ? calculateGrade(Number(rowPercentage))
+                                      : "-";
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                 } else {
                                   totalOutOf = grades.outOf || 0;
                                   totalObtainMarks = grades.obtainMarks || 0;
                                   rowPercentage =
+<<<<<<< HEAD
                                     totalOutOf > 0 ? ((totalObtainMarks / totalOutOf) * 100).toFixed(2) : "-";
                                   grade = rowPercentage !== "-" ? calculateGrade(Number(rowPercentage)) : "-";
+=======
+                                    totalOutOf > 0
+                                      ? (
+                                          (totalObtainMarks / totalOutOf) *
+                                          100
+                                        ).toFixed(2)
+                                      : "-";
+                                  grade =
+                                    rowPercentage !== "-"
+                                      ? calculateGrade(Number(rowPercentage))
+                                      : "-";
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                 }
 
                                 return (
                                   <tr key={subject} style={{ padding: "2px" }}>
+<<<<<<< HEAD
                                     <td style={{ padding: "2px", color: 'black' }}>
+=======
+                                    <td
+                                      style={{ padding: "2px", color: "black" }}
+                                    >
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                       {subject}
                                     </td>
 
                                     {selectedExamName === "All Exams" ? (
                                       <>
+<<<<<<< HEAD
                                         <td style={{ padding: "2px", color: 'black' }}>{grades["Unit Test I"]?.outOf || "-"}</td>
                                         <td style={{ padding: "2px", color: 'black' }}>
                                           {grades["Unit Test I"]?.grade ? grades["Unit Test I"]?.grade : grades["Unit Test I"]?.obtainMarks || "-"}
@@ -1228,13 +2201,132 @@ function ResultSSC() {
                                           {totalOutOf || "-"}
                                         </td>
                                         <td style={{ padding: "2px", color: 'black', backgroundColor: '#f0f8ff', fontWeight: 'bold' }}>
+=======
+                                        <td
+                                          style={{
+                                            padding: "2px",
+                                            color: "black",
+                                          }}
+                                        >
+                                          {grades["Unit Test I"]?.outOf || "-"}
+                                        </td>
+                                        <td
+                                          style={{
+                                            padding: "2px",
+                                            color: "black",
+                                          }}
+                                        >
+                                          {grades["Unit Test I"]?.grade
+                                            ? grades["Unit Test I"]?.grade
+                                            : grades["Unit Test I"]
+                                                ?.obtainMarks || "-"}
+                                        </td>
+                                        <td
+                                          style={{
+                                            padding: "2px",
+                                            color: "black",
+                                          }}
+                                        >
+                                          {grades["Unit Test II"]?.outOf || "-"}
+                                        </td>
+                                        <td
+                                          style={{
+                                            padding: "2px",
+                                            color: "black",
+                                          }}
+                                        >
+                                          {grades["Unit Test II"]?.grade
+                                            ? grades["Unit Test II"]?.grade
+                                            : grades["Unit Test II"]
+                                                ?.obtainMarks || "-"}
+                                        </td>
+                                        <td
+                                          style={{
+                                            padding: "2px",
+                                            color: "black",
+                                          }}
+                                        >
+                                          {grades["Semester First "]?.outOf ||
+                                            "-"}
+                                        </td>
+                                        <td
+                                          style={{
+                                            padding: "2px",
+                                            color: "black",
+                                          }}
+                                        >
+                                          {grades["Semester First "]?.grade
+                                            ? grades["Semester First "]?.grade
+                                            : grades["Semester First "]
+                                                ?.obtainMarks || "-"}
+                                        </td>
+                                        <td
+                                          style={{
+                                            padding: "2px",
+                                            color: "black",
+                                          }}
+                                        >
+                                          {grades["Semester Second "]?.outOf ||
+                                            "-"}
+                                        </td>
+                                        <td
+                                          style={{
+                                            padding: "2px",
+                                            color: "black",
+                                          }}
+                                        >
+                                          {grades["Semester Second "]?.grade
+                                            ? grades["Semester Second "]?.grade
+                                            : grades["Semester Second "]
+                                                ?.obtainMarks || "-"}
+                                        </td>
+
+                                        {/* Add the two new total columns */}
+                                        <td
+                                          style={{
+                                            padding: "2px",
+                                            color: "black",
+                                            backgroundColor: "#f0f8ff",
+                                            fontWeight: "bold",
+                                          }}
+                                        >
+                                          {totalOutOf || "-"}
+                                        </td>
+                                        <td
+                                          style={{
+                                            padding: "2px",
+                                            color: "black",
+                                            backgroundColor: "#f0f8ff",
+                                            fontWeight: "bold",
+                                          }}
+                                        >
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                           {totalObtainMarks || "-"}
                                         </td>
                                       </>
                                     ) : (
                                       <>
+<<<<<<< HEAD
                                         <td style={{ padding: "2px", color: 'black' }}>{grades.outOf || "-"}</td>
                                         <td style={{ padding: "2px", color: 'black' }}>{grades.obtainMarks || "-"}</td>
+=======
+                                        <td
+                                          style={{
+                                            padding: "2px",
+                                            color: "black",
+                                          }}
+                                        >
+                                          {grades.outOf || "-"}
+                                        </td>
+                                        <td
+                                          style={{
+                                            padding: "2px",
+                                            color: "black",
+                                          }}
+                                        >
+                                          {grades.obtainMarks || "-"}
+                                        </td>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                       </>
                                     )}
                                     <td colSpan="2" style={{ padding: "2px" }}>
@@ -1246,12 +2338,19 @@ function ResultSSC() {
                           ) : (
                             <tr>
                               <td colSpan="12" style={{ padding: "5px" }}>
+<<<<<<< HEAD
                                 {language === "English" ? "No data available" : "डेटा उपलब्ध नाही"}
+=======
+                                {language === "English"
+                                  ? "No data available"
+                                  : "डेटा उपलब्ध नाही"}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                               </td>
                             </tr>
                           )}
                         </tbody>
 
+<<<<<<< HEAD
 
 
                         <tfoot>
@@ -1262,34 +2361,97 @@ function ResultSSC() {
 
                             {/* Total M.M and Obt.M for each exam */}
                             {["Unit Test I", "Unit Test II", "Semester First ", "Semester Second "].map((exam, index) => (
+=======
+                        <tfoot>
+                          <tr>
+                            <td colSpan="1" style={{ padding: "5px" }}>
+                              <b>
+                                {language === "English"
+                                  ? "Total Marks"
+                                  : "एकूण गुण"}
+                              </b>
+                            </td>
+
+                            {/* Total M.M and Obt.M for each exam */}
+                            {[
+                              "Unit Test I",
+                              "Unit Test II",
+                              "Semester First ",
+                              "Semester Second ",
+                            ].map((exam, index) => (
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                               <>
                                 {/* Total M.M (Maximum Marks) */}
                                 <td colSpan="1" style={{ padding: "5px" }}>
                                   <b>
+<<<<<<< HEAD
                                     {subjectSequence.reduce((total, subject) => {
                                       const grades = selectedStudentResults.results[subject];
                                       return total + (grades?.[exam]?.outOf || 0);
                                     }, 0)}
+=======
+                                    {subjectSequence.reduce(
+                                      (total, subject) => {
+                                        const grades =
+                                          selectedStudentResults.results[
+                                            subject
+                                          ];
+                                        return (
+                                          total + (grades?.[exam]?.outOf || 0)
+                                        );
+                                      },
+                                      0,
+                                    )}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                   </b>
                                 </td>
 
                                 {/* Total Obt.M (Obtained Marks) */}
                                 <td colSpan="1" style={{ padding: "5px" }}>
                                   <b>
+<<<<<<< HEAD
                                     {subjectSequence.reduce((total, subject) => {
                                       const grades = selectedStudentResults.results[subject];
                                       return total + (grades?.[exam]?.obtainMarks || 0);
                                     }, 0)}
+=======
+                                    {subjectSequence.reduce(
+                                      (total, subject) => {
+                                        const grades =
+                                          selectedStudentResults.results[
+                                            subject
+                                          ];
+                                        return (
+                                          total +
+                                          (grades?.[exam]?.obtainMarks || 0)
+                                        );
+                                      },
+                                      0,
+                                    )}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                   </b>
                                 </td>
                               </>
                             ))}
 
                             {/* Grand Total M.M for the new columns */}
+<<<<<<< HEAD
                             <td style={{ padding: "5px", backgroundColor: '#f0f8ff' }}>
                               <b>
                                 {subjectSequence.reduce((total, subject) => {
                                   const grades = selectedStudentResults.results[subject];
+=======
+                            <td
+                              style={{
+                                padding: "5px",
+                                backgroundColor: "#f0f8ff",
+                              }}
+                            >
+                              <b>
+                                {subjectSequence.reduce((total, subject) => {
+                                  const grades =
+                                    selectedStudentResults.results[subject];
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                   return (
                                     total +
                                     (grades?.["Unit Test I"]?.outOf || 0) +
@@ -1302,6 +2464,7 @@ function ResultSSC() {
                             </td>
 
                             {/* Grand Total Obt.M for the new columns */}
+<<<<<<< HEAD
                             <td style={{ padding: "5px", backgroundColor: '#f0f8ff' }}>
                               <b>
                                 {subjectSequence.reduce((total, subject) => {
@@ -1312,17 +2475,49 @@ function ResultSSC() {
                                     (grades?.["Unit Test II"]?.obtainMarks || 0) +
                                     (grades?.["Semester First "]?.obtainMarks || 0) +
                                     (grades?.["Semester Second "]?.obtainMarks || 0)
+=======
+                            <td
+                              style={{
+                                padding: "5px",
+                                backgroundColor: "#f0f8ff",
+                              }}
+                            >
+                              <b>
+                                {subjectSequence.reduce((total, subject) => {
+                                  const grades =
+                                    selectedStudentResults.results[subject];
+                                  return (
+                                    total +
+                                    (grades?.["Unit Test I"]?.obtainMarks ||
+                                      0) +
+                                    (grades?.["Unit Test II"]?.obtainMarks ||
+                                      0) +
+                                    (grades?.["Semester First "]?.obtainMarks ||
+                                      0) +
+                                    (grades?.["Semester Second "]
+                                      ?.obtainMarks || 0)
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                   );
                                 }, 0)}
                               </b>
                             </td>
                           </tr>
 
+<<<<<<< HEAD
 
 
                           <tr>
                             <td colSpan="1" style={{ padding: "5px" }}>
                               <b>{language === "English" ? "Percentage" : "टक्केवारी"}</b>
+=======
+                          <tr>
+                            <td colSpan="1" style={{ padding: "5px" }}>
+                              <b>
+                                {language === "English"
+                                  ? "Percentage"
+                                  : "टक्केवारी"}
+                              </b>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                             </td>
                             {selectedExamName === "All Exams" ? (
                               <>
@@ -1331,6 +2526,7 @@ function ResultSSC() {
                                     {(() => {
                                       const totalMaxMarks = subjectSequence
                                         .filter((subject) => {
+<<<<<<< HEAD
                                           const grades = selectedStudentResults.results[subject];
                                           return grades && (
                                             grades["Unit Test I"]?.obtainMarks ||
@@ -1358,6 +2554,70 @@ function ResultSSC() {
                                           return total + (grades["Unit Test I"]?.obtainMarks || 0);
                                         }, 0);
                                       return totalMaxMarks > 0 ? ((totalObtainedMarks / totalMaxMarks) * 100).toFixed(2) + "%" : "0%";
+=======
+                                          const grades =
+                                            selectedStudentResults.results[
+                                              subject
+                                            ];
+                                          return (
+                                            grades &&
+                                            (grades["Unit Test I"]
+                                              ?.obtainMarks ||
+                                              grades["Unit Test II"]
+                                                ?.obtainMarks ||
+                                              grades["Semester First "]
+                                                ?.obtainMarks ||
+                                              grades["Semester Second "]
+                                                ?.obtainMarks)
+                                          );
+                                        })
+                                        .reduce((total, subject) => {
+                                          const grades =
+                                            selectedStudentResults.results[
+                                              subject
+                                            ];
+                                          return (
+                                            total +
+                                            (grades["Unit Test I"]?.outOf || 0)
+                                          );
+                                        }, 0);
+                                      const totalObtainedMarks = subjectSequence
+                                        .filter((subject) => {
+                                          const grades =
+                                            selectedStudentResults.results[
+                                              subject
+                                            ];
+                                          return (
+                                            grades &&
+                                            (grades["Unit Test I"]
+                                              ?.obtainMarks ||
+                                              grades["Unit Test II"]
+                                                ?.obtainMarks ||
+                                              grades["Semester First "]
+                                                ?.obtainMarks ||
+                                              grades["Semester Second "]
+                                                ?.obtainMarks)
+                                          );
+                                        })
+                                        .reduce((total, subject) => {
+                                          const grades =
+                                            selectedStudentResults.results[
+                                              subject
+                                            ];
+                                          return (
+                                            total +
+                                            (grades["Unit Test I"]
+                                              ?.obtainMarks || 0)
+                                          );
+                                        }, 0);
+                                      return totalMaxMarks > 0
+                                        ? (
+                                            (totalObtainedMarks /
+                                              totalMaxMarks) *
+                                            100
+                                          ).toFixed(2) + "%"
+                                        : "0%";
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                     })()}
                                   </b>
                                 </td>
@@ -1366,6 +2626,7 @@ function ResultSSC() {
                                     {(() => {
                                       const totalMaxMarks = subjectSequence
                                         .filter((subject) => {
+<<<<<<< HEAD
                                           const grades = selectedStudentResults.results[subject];
                                           return grades && (
                                             grades["Unit Test I"]?.obtainMarks ||
@@ -1393,6 +2654,70 @@ function ResultSSC() {
                                           return total + (grades["Unit Test II"]?.obtainMarks || 0);
                                         }, 0);
                                       return totalMaxMarks > 0 ? ((totalObtainedMarks / totalMaxMarks) * 100).toFixed(2) + "%" : "0%";
+=======
+                                          const grades =
+                                            selectedStudentResults.results[
+                                              subject
+                                            ];
+                                          return (
+                                            grades &&
+                                            (grades["Unit Test I"]
+                                              ?.obtainMarks ||
+                                              grades["Unit Test II"]
+                                                ?.obtainMarks ||
+                                              grades["Semester First "]
+                                                ?.obtainMarks ||
+                                              grades["Semester Second "]
+                                                ?.obtainMarks)
+                                          );
+                                        })
+                                        .reduce((total, subject) => {
+                                          const grades =
+                                            selectedStudentResults.results[
+                                              subject
+                                            ];
+                                          return (
+                                            total +
+                                            (grades["Unit Test II"]?.outOf || 0)
+                                          );
+                                        }, 0);
+                                      const totalObtainedMarks = subjectSequence
+                                        .filter((subject) => {
+                                          const grades =
+                                            selectedStudentResults.results[
+                                              subject
+                                            ];
+                                          return (
+                                            grades &&
+                                            (grades["Unit Test I"]
+                                              ?.obtainMarks ||
+                                              grades["Unit Test II"]
+                                                ?.obtainMarks ||
+                                              grades["Semester First "]
+                                                ?.obtainMarks ||
+                                              grades["Semester Second "]
+                                                ?.obtainMarks)
+                                          );
+                                        })
+                                        .reduce((total, subject) => {
+                                          const grades =
+                                            selectedStudentResults.results[
+                                              subject
+                                            ];
+                                          return (
+                                            total +
+                                            (grades["Unit Test II"]
+                                              ?.obtainMarks || 0)
+                                          );
+                                        }, 0);
+                                      return totalMaxMarks > 0
+                                        ? (
+                                            (totalObtainedMarks /
+                                              totalMaxMarks) *
+                                            100
+                                          ).toFixed(2) + "%"
+                                        : "0%";
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                     })()}
                                   </b>
                                 </td>
@@ -1401,6 +2726,7 @@ function ResultSSC() {
                                     {(() => {
                                       const totalMaxMarks = subjectSequence
                                         .filter((subject) => {
+<<<<<<< HEAD
                                           const grades = selectedStudentResults.results[subject];
                                           return grades && (
                                             grades["Unit Test I"]?.obtainMarks ||
@@ -1428,6 +2754,71 @@ function ResultSSC() {
                                           return total + (grades["Semester First "]?.obtainMarks || 0);
                                         }, 0);
                                       return totalMaxMarks > 0 ? ((totalObtainedMarks / totalMaxMarks) * 100).toFixed(2) + "%" : "0%";
+=======
+                                          const grades =
+                                            selectedStudentResults.results[
+                                              subject
+                                            ];
+                                          return (
+                                            grades &&
+                                            (grades["Unit Test I"]
+                                              ?.obtainMarks ||
+                                              grades["Unit Test II"]
+                                                ?.obtainMarks ||
+                                              grades["Semester First "]
+                                                ?.obtainMarks ||
+                                              grades["Semester Second "]
+                                                ?.obtainMarks)
+                                          );
+                                        })
+                                        .reduce((total, subject) => {
+                                          const grades =
+                                            selectedStudentResults.results[
+                                              subject
+                                            ];
+                                          return (
+                                            total +
+                                            (grades["Semester First "]?.outOf ||
+                                              0)
+                                          );
+                                        }, 0);
+                                      const totalObtainedMarks = subjectSequence
+                                        .filter((subject) => {
+                                          const grades =
+                                            selectedStudentResults.results[
+                                              subject
+                                            ];
+                                          return (
+                                            grades &&
+                                            (grades["Unit Test I"]
+                                              ?.obtainMarks ||
+                                              grades["Unit Test II"]
+                                                ?.obtainMarks ||
+                                              grades["Semester First "]
+                                                ?.obtainMarks ||
+                                              grades["Semester Second "]
+                                                ?.obtainMarks)
+                                          );
+                                        })
+                                        .reduce((total, subject) => {
+                                          const grades =
+                                            selectedStudentResults.results[
+                                              subject
+                                            ];
+                                          return (
+                                            total +
+                                            (grades["Semester First "]
+                                              ?.obtainMarks || 0)
+                                          );
+                                        }, 0);
+                                      return totalMaxMarks > 0
+                                        ? (
+                                            (totalObtainedMarks /
+                                              totalMaxMarks) *
+                                            100
+                                          ).toFixed(2) + "%"
+                                        : "0%";
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                     })()}
                                   </b>
                                 </td>
@@ -1436,6 +2827,7 @@ function ResultSSC() {
                                     {(() => {
                                       const totalMaxMarks = subjectSequence
                                         .filter((subject) => {
+<<<<<<< HEAD
                                           const grades = selectedStudentResults.results[subject];
                                           return grades && (
                                             grades["Unit Test I"]?.obtainMarks ||
@@ -1463,6 +2855,71 @@ function ResultSSC() {
                                           return total + (grades["Semester Second "]?.obtainMarks || 0);
                                         }, 0);
                                       return totalMaxMarks > 0 ? ((totalObtainedMarks / totalMaxMarks) * 100).toFixed(2) + "%" : "0%";
+=======
+                                          const grades =
+                                            selectedStudentResults.results[
+                                              subject
+                                            ];
+                                          return (
+                                            grades &&
+                                            (grades["Unit Test I"]
+                                              ?.obtainMarks ||
+                                              grades["Unit Test II"]
+                                                ?.obtainMarks ||
+                                              grades["Semester First "]
+                                                ?.obtainMarks ||
+                                              grades["Semester Second "]
+                                                ?.obtainMarks)
+                                          );
+                                        })
+                                        .reduce((total, subject) => {
+                                          const grades =
+                                            selectedStudentResults.results[
+                                              subject
+                                            ];
+                                          return (
+                                            total +
+                                            (grades["Semester Second "]
+                                              ?.outOf || 0)
+                                          );
+                                        }, 0);
+                                      const totalObtainedMarks = subjectSequence
+                                        .filter((subject) => {
+                                          const grades =
+                                            selectedStudentResults.results[
+                                              subject
+                                            ];
+                                          return (
+                                            grades &&
+                                            (grades["Unit Test I"]
+                                              ?.obtainMarks ||
+                                              grades["Unit Test II"]
+                                                ?.obtainMarks ||
+                                              grades["Semester First "]
+                                                ?.obtainMarks ||
+                                              grades["Semester Second "]
+                                                ?.obtainMarks)
+                                          );
+                                        })
+                                        .reduce((total, subject) => {
+                                          const grades =
+                                            selectedStudentResults.results[
+                                              subject
+                                            ];
+                                          return (
+                                            total +
+                                            (grades["Semester Second "]
+                                              ?.obtainMarks || 0)
+                                          );
+                                        }, 0);
+                                      return totalMaxMarks > 0
+                                        ? (
+                                            (totalObtainedMarks /
+                                              totalMaxMarks) *
+                                            100
+                                          ).toFixed(2) + "%"
+                                        : "0%";
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                     })()}
                                   </b>
                                 </td>
@@ -1473,6 +2930,7 @@ function ResultSSC() {
                                   {(() => {
                                     const totalMaxMarks = subjectSequence
                                       .filter((subject) => {
+<<<<<<< HEAD
                                         const grades = selectedStudentResults.results[subject];
                                         return grades && (
                                           grades["Unit Test I"]?.obtainMarks ||
@@ -1483,10 +2941,33 @@ function ResultSSC() {
                                       })
                                       .reduce((total, subject) => {
                                         const grades = selectedStudentResults.results[subject];
+=======
+                                        const grades =
+                                          selectedStudentResults.results[
+                                            subject
+                                          ];
+                                        return (
+                                          grades &&
+                                          (grades["Unit Test I"]?.obtainMarks ||
+                                            grades["Unit Test II"]
+                                              ?.obtainMarks ||
+                                            grades["Semester First "]
+                                              ?.obtainMarks ||
+                                            grades["Semester Second "]
+                                              ?.obtainMarks)
+                                        );
+                                      })
+                                      .reduce((total, subject) => {
+                                        const grades =
+                                          selectedStudentResults.results[
+                                            subject
+                                          ];
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                         return total + (grades.outOf || 0);
                                       }, 0);
                                     const totalObtainedMarks = subjectSequence
                                       .filter((subject) => {
+<<<<<<< HEAD
                                         const grades = selectedStudentResults.results[subject];
                                         return grades && (
                                           grades["Unit Test I"]?.obtainMarks ||
@@ -1500,6 +2981,38 @@ function ResultSSC() {
                                         return total + (grades.obtainMarks || 0);
                                       }, 0);
                                     return totalMaxMarks > 0 ? ((totalObtainedMarks / totalMaxMarks) * 100).toFixed(2) + "%" : "0%";
+=======
+                                        const grades =
+                                          selectedStudentResults.results[
+                                            subject
+                                          ];
+                                        return (
+                                          grades &&
+                                          (grades["Unit Test I"]?.obtainMarks ||
+                                            grades["Unit Test II"]
+                                              ?.obtainMarks ||
+                                            grades["Semester First "]
+                                              ?.obtainMarks ||
+                                            grades["Semester Second "]
+                                              ?.obtainMarks)
+                                        );
+                                      })
+                                      .reduce((total, subject) => {
+                                        const grades =
+                                          selectedStudentResults.results[
+                                            subject
+                                          ];
+                                        return (
+                                          total + (grades.obtainMarks || 0)
+                                        );
+                                      }, 0);
+                                    return totalMaxMarks > 0
+                                      ? (
+                                          (totalObtainedMarks / totalMaxMarks) *
+                                          100
+                                        ).toFixed(2) + "%"
+                                      : "0%";
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                   })()}
                                 </b>
                               </td>
@@ -1509,6 +3022,7 @@ function ResultSSC() {
                                 {(() => {
                                   const totalMaxMarks = subjectSequence
                                     .filter((subject) => {
+<<<<<<< HEAD
                                       const grades = selectedStudentResults.results[subject];
                                       return grades && (
                                         grades["Unit Test I"]?.obtainMarks ||
@@ -1536,11 +3050,73 @@ function ResultSSC() {
                                       return total + (grades["Unit Test I"]?.obtainMarks || 0) + (grades["Unit Test II"]?.obtainMarks || 0) + (grades["Semester First "]?.obtainMarks || 0) + (grades["Semester Second "]?.obtainMarks || 0);
                                     }, 0);
                                   return totalMaxMarks > 0 ? ((totalObtainedMarks / totalMaxMarks) * 100).toFixed(2) + "%" : "0%";
+=======
+                                      const grades =
+                                        selectedStudentResults.results[subject];
+                                      return (
+                                        grades &&
+                                        (grades["Unit Test I"]?.obtainMarks ||
+                                          grades["Unit Test II"]?.obtainMarks ||
+                                          grades["Semester First "]
+                                            ?.obtainMarks ||
+                                          grades["Semester Second "]
+                                            ?.obtainMarks)
+                                      );
+                                    })
+                                    .reduce((total, subject) => {
+                                      const grades =
+                                        selectedStudentResults.results[subject];
+                                      return (
+                                        total +
+                                        (grades["Unit Test I"]?.outOf || 0) +
+                                        (grades["Unit Test II"]?.outOf || 0) +
+                                        (grades["Semester First "]?.outOf ||
+                                          0) +
+                                        (grades["Semester Second "]?.outOf || 0)
+                                      );
+                                    }, 0);
+                                  const totalObtainedMarks = subjectSequence
+                                    .filter((subject) => {
+                                      const grades =
+                                        selectedStudentResults.results[subject];
+                                      return (
+                                        grades &&
+                                        (grades["Unit Test I"]?.obtainMarks ||
+                                          grades["Unit Test II"]?.obtainMarks ||
+                                          grades["Semester First "]
+                                            ?.obtainMarks ||
+                                          grades["Semester Second "]
+                                            ?.obtainMarks)
+                                      );
+                                    })
+                                    .reduce((total, subject) => {
+                                      const grades =
+                                        selectedStudentResults.results[subject];
+                                      return (
+                                        total +
+                                        (grades["Unit Test I"]?.obtainMarks ||
+                                          0) +
+                                        (grades["Unit Test II"]?.obtainMarks ||
+                                          0) +
+                                        (grades["Semester First "]
+                                          ?.obtainMarks || 0) +
+                                        (grades["Semester Second "]
+                                          ?.obtainMarks || 0)
+                                      );
+                                    }, 0);
+                                  return totalMaxMarks > 0
+                                    ? (
+                                        (totalObtainedMarks / totalMaxMarks) *
+                                        100
+                                      ).toFixed(2) + "%"
+                                    : "0%";
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                 })()}
                               </b>
                             </td>
                           </tr>
                         </tfoot>
+<<<<<<< HEAD
 
 
 
@@ -1554,6 +3130,15 @@ function ResultSSC() {
 
                     ) : (
                       <p style={{ fontSize: '12px' }}>{language === "English" ? "No results available." : "कोणतेही प्रगतीपत्रक उपलब्ध नाहीत."}</p>
+=======
+                      </table>
+                    ) : (
+                      <p style={{ fontSize: "12px" }}>
+                        {language === "English"
+                          ? "No results available."
+                          : "कोणतेही प्रगतीपत्रक उपलब्ध नाहीत."}
+                      </p>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     )}
 
                     <div
@@ -1570,7 +3155,12 @@ function ResultSSC() {
                           <strong>
                             {language === "English" ? "Out Of : " : "एकूण : "}
                             {subjectSequence.reduce((total, subject) => {
+<<<<<<< HEAD
                               const grades = selectedStudentResults.results[subject];
+=======
+                              const grades =
+                                selectedStudentResults.results[subject];
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                               return (
                                 total +
                                 (grades?.["Unit Test I"]?.outOf || 0) +
@@ -1583,16 +3173,33 @@ function ResultSSC() {
                         </p>
                         <p>
                           <strong>
+<<<<<<< HEAD
                             {language === "English" ? "Obtained Marks : " : "प्राप्त गुण : "}
                             <>
                               {subjectSequence.reduce((total, subject) => {
                                 const grades = selectedStudentResults.results[subject];
+=======
+                            {language === "English"
+                              ? "Obtained Marks : "
+                              : "प्राप्त गुण : "}
+                            <>
+                              {subjectSequence.reduce((total, subject) => {
+                                const grades =
+                                  selectedStudentResults.results[subject];
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                 return (
                                   total +
                                   (grades?.["Unit Test I"]?.obtainMarks || 0) +
                                   (grades?.["Unit Test II"]?.obtainMarks || 0) +
+<<<<<<< HEAD
                                   (grades?.["Semester First "]?.obtainMarks || 0) +
                                   (grades?.["Semester Second "]?.obtainMarks || 0)
+=======
+                                  (grades?.["Semester First "]?.obtainMarks ||
+                                    0) +
+                                  (grades?.["Semester Second "]?.obtainMarks ||
+                                    0)
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                 );
                               }, 0)}
                             </>
@@ -1602,6 +3209,7 @@ function ResultSSC() {
                       <div>
                         <p>
                           <b>
+<<<<<<< HEAD
                             {language === "English" ? "Percentage : " : "टक्केवारी : "}
                             {(() => {
                               const totalMaxMarks = subjectSequence
@@ -1633,6 +3241,66 @@ function ResultSSC() {
                                   return total + (grades["Unit Test I"]?.obtainMarks || 0) + (grades["Unit Test II"]?.obtainMarks || 0) + (grades["Semester First "]?.obtainMarks || 0) + (grades["Semester Second "]?.obtainMarks || 0);
                                 }, 0);
                               return totalMaxMarks > 0 ? ((totalObtainedMarks / totalMaxMarks) * 100).toFixed(2) + "%" : "0%";
+=======
+                            {language === "English"
+                              ? "Percentage : "
+                              : "टक्केवारी : "}
+                            {(() => {
+                              const totalMaxMarks = subjectSequence
+                                .filter((subject) => {
+                                  const grades =
+                                    selectedStudentResults.results[subject];
+                                  return (
+                                    grades &&
+                                    (grades["Unit Test I"]?.obtainMarks ||
+                                      grades["Unit Test II"]?.obtainMarks ||
+                                      grades["Semester First "]?.obtainMarks ||
+                                      grades["Semester Second "]?.obtainMarks)
+                                  );
+                                })
+                                .reduce((total, subject) => {
+                                  const grades =
+                                    selectedStudentResults.results[subject];
+                                  return (
+                                    total +
+                                    (grades["Unit Test I"]?.outOf || 0) +
+                                    (grades["Unit Test II"]?.outOf || 0) +
+                                    (grades["Semester First "]?.outOf || 0) +
+                                    (grades["Semester Second "]?.outOf || 0)
+                                  );
+                                }, 0);
+                              const totalObtainedMarks = subjectSequence
+                                .filter((subject) => {
+                                  const grades =
+                                    selectedStudentResults.results[subject];
+                                  return (
+                                    grades &&
+                                    (grades["Unit Test I"]?.obtainMarks ||
+                                      grades["Unit Test II"]?.obtainMarks ||
+                                      grades["Semester First "]?.obtainMarks ||
+                                      grades["Semester Second "]?.obtainMarks)
+                                  );
+                                })
+                                .reduce((total, subject) => {
+                                  const grades =
+                                    selectedStudentResults.results[subject];
+                                  return (
+                                    total +
+                                    (grades["Unit Test I"]?.obtainMarks || 0) +
+                                    (grades["Unit Test II"]?.obtainMarks || 0) +
+                                    (grades["Semester First "]?.obtainMarks ||
+                                      0) +
+                                    (grades["Semester Second "]?.obtainMarks ||
+                                      0)
+                                  );
+                                }, 0);
+                              return totalMaxMarks > 0
+                                ? (
+                                    (totalObtainedMarks / totalMaxMarks) *
+                                    100
+                                  ).toFixed(2) + "%"
+                                : "0%";
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                             })()}
                           </b>
                         </p>
@@ -1641,14 +3309,22 @@ function ResultSSC() {
                     <div
                       className="grad"
                       style={{
+<<<<<<< HEAD
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
                         padding: '0 20px',
+=======
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "0 20px",
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                       }}
                     >
                       {/* Left-aligned label */}
                       <label
+<<<<<<< HEAD
                         style={{ flex: 1, textAlign: 'left', marginBottom: '2px', marginLeft: '-10px' }}
                         htmlFor="Parent's signature"
                       >
@@ -1664,6 +3340,41 @@ function ResultSSC() {
                       {/* Right-aligned label */}
                       <label
                         style={{ flex: 1, textAlign: 'right', marginBottom: '2px', marginRight: '20px' }}
+=======
+                        style={{
+                          flex: 1,
+                          textAlign: "left",
+                          marginBottom: "2px",
+                          marginLeft: "-10px",
+                        }}
+                        htmlFor="Parent's signature"
+                      >
+                        {language === "English"
+                          ? "Parent's signature"
+                          : "पालकांची सही"}
+                      </label>
+                      {/* Center-aligned label */}
+                      <label
+                        style={{
+                          flex: 1,
+                          textAlign: "center",
+                          marginBottom: "2px",
+                        }}
+                        htmlFor="class-teacher"
+                      >
+                        {language === "English"
+                          ? "Class Teacher"
+                          : "वर्गशिक्षक"}
+                      </label>
+                      {/* Right-aligned label */}
+                      <label
+                        style={{
+                          flex: 1,
+                          textAlign: "right",
+                          marginBottom: "2px",
+                          marginRight: "20px",
+                        }}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                         htmlFor="principal"
                       >
                         {language === "English" ? "Principal" : "प्राचार्य"}
@@ -1673,6 +3384,7 @@ function ResultSSC() {
                 </div>
               </div>
             ) : (
+<<<<<<< HEAD
 
 
 
@@ -1691,18 +3403,45 @@ function ResultSSC() {
                     overflow: 'hidden' // Prevent overflow if content is too large
                   }}>
                     <div className="school-info" >
+=======
+              <div>
+                {/* Semester First  modal content */}
+                <div className="r mt-1" style={{}}>
+                  <div
+                    className="left"
+                    style={{
+                      width: "615px",
+                      height: "900px",
+                      margin: "0 auto", // Center the div horizontally
+                      padding: "20px", // Add some padding
+                      border: "2px solid #000", // Optional: Add a border for visibility
+                      boxSizing: "border-box", // Include padding and border in the element's total width and height
+                      overflow: "hidden", // Prevent overflow if content is too large
+                    }}
+                  >
+                    <div className="school-info">
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                       {schoolLogo && (
                         <div>
                           <img
                             src={schoolLogo}
                             alt="Logo"
+<<<<<<< HEAD
                             style={{ width: '80px', height: 'auto', objectFit: 'contain' }}
+=======
+                            style={{
+                              width: "80px",
+                              height: "auto",
+                              objectFit: "contain",
+                            }}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                           />
                         </div>
                       )}
                       <h2>{schoolName}</h2>
                     </div>
                     <div>
+<<<<<<< HEAD
                       <hr style={{
                         width: 'calc(100% + 40px)', // Adjust width to account for padding
                         height: '2px',
@@ -1763,10 +3502,162 @@ function ResultSSC() {
                       <div style={{ width: '30%' }}>
                         {selectedStudentResults?.stdPhoto && (
                           <img src={selectedStudentResults?.stdPhoto} style={{ width: '80px', height: '80px' }} />
+=======
+                      <hr
+                        style={{
+                          width: "calc(100% + 40px)", // Adjust width to account for padding
+                          height: "2px",
+                          backgroundColor: "black",
+                          border: "none",
+                          marginLeft: "-20px", // Negative margin to pull it to the left
+                          marginRight: "-20px", // Negative margin to pull it to the right
+                          marginBottom: "6px", // Adjust this value to reduce the gap below the hr
+                        }}
+                      />
+                      <b>
+                        <h6 style={{ textAlign: "center", margin: "0" }}>
+                          {" "}
+                          {/* Set margin to 0 */}
+                          {language === "English"
+                            ? "PROGRESS REPORT"
+                            : "विद्यार्थी प्रगती अहवाल"}
+                        </h6>
+                        <h6 style={{ textAlign: "center", margin: "0" }}>
+                          {" "}
+                          {/* Set margin to 0 */}
+                          {language === "English"
+                            ? `${selectedExamName || "-"}  EXAMINATION - ${academicYear}`
+                            : `प्रथम सत्र परीक्षा-  ${academicYear}`}
+                        </h6>
+                      </b>
+                      <hr
+                        style={{
+                          width: "calc(100% + 40px)",
+                          height: "2px",
+                          backgroundColor: "black",
+                          border: "none",
+                          marginLeft: "-20px",
+                          marginRight: "-20px",
+                          marginTop: "6px",
+                          marginBottom: "6px",
+                        }}
+                      />
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        fontSize: "14px",
+                      }}
+                    >
+                      <div style={{ flex: "1", textAlign: "left" }}>
+                        <label htmlFor="roll-no" style={{ fontSize: "14px" }}>
+                          {language === "English"
+                            ? "Roll No : "
+                            : "हजेरी क्रमांक : "}
+                        </label>
+                        <span>{selectedStudentResults?.rollNo || "-"}</span>
+                      </div>
+                      <div style={{ flex: "1", textAlign: "center" }}>
+                        <label
+                          htmlFor="Register No"
+                          style={{ fontSize: "14px" }}
+                        >
+                          {language === "English"
+                            ? "Register No : "
+                            : "रजिस्टर क्रमांक : "}
+                        </label>
+                        <span>{selectedStudentResults?.registerNo || "-"}</span>
+                      </div>
+                      <div style={{ flex: "1", textAlign: "right" }}>
+                        <label htmlFor="class" style={{ fontSize: "14px" }}>
+                          {language === "English" ? "Class : " : "वर्ग : "}
+                        </label>
+                        <span>
+                          {classValue || "-"}{" "}
+                          {selectedStudentResults?.division || "-"}{" "}
+                        </span>
+                      </div>
+                    </div>
+                    <hr
+                      style={{
+                        width: "calc(100% + 40px)",
+                        height: "2px",
+                        backgroundColor: "black",
+                        border: "none",
+                        marginLeft: "-20px",
+                        marginRight: "-20px",
+                        marginTop: "1px",
+                      }}
+                    />
+                    <div
+                      style={{
+                        fontSize: "14px",
+                        marginLeft: "30px",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <div style={{ width: "70%" }}>
+                        <div>
+                          <label
+                            htmlFor="student-name"
+                            style={{ fontSize: "14px" }}
+                          >
+                            {language === "English"
+                              ? "Student Name : "
+                              : "विद्यार्थ्याचे नाव : "}
+                          </label>
+                          <span>
+                            {selectedStudentResults?.studentName || "-"}{" "}
+                            {selectedStudentResults?.stdFather || "-"}{" "}
+                            {selectedStudentResults?.stdSurname || "-"}
+                          </span>
+                        </div>
+                        <div>
+                          <label htmlFor="class" style={{ fontSize: "14px" }}>
+                            {language === "English"
+                              ? "Mother Name : "
+                              : "आईचे वर्ग : "}
+                          </label>
+                          <span>
+                            {selectedStudentResults?.stdMother || "-"}{" "}
+                          </span>
+                        </div>
+                        <div>
+                          <label htmlFor="class" style={{ fontSize: "14px" }}>
+                            {language === "English"
+                              ? "Date Of Birth : "
+                              : "जन्मतारीख : "}
+                          </label>
+                          <span>{selectedStudentResults?.dob || "-"} </span>
+                        </div>
+                        <div>
+                          <label
+                            htmlFor="exam-roll-no"
+                            style={{ fontSize: "14px" }}
+                          >
+                            {language === "English"
+                              ? "Exam : "
+                              : "परीक्षा सत्र : "}
+                          </label>
+                          <span>{selectedExamName || "-"}</span>
+                        </div>
+                      </div>
+                      <div style={{ width: "30%" }}>
+                        {selectedStudentResults?.stdPhoto && (
+                          <img
+                            src={selectedStudentResults?.stdPhoto}
+                            style={{ width: "80px", height: "80px" }}
+                          />
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                         )}
                       </div>
                     </div>
                     {selectedStudentResults?.results ? (
+<<<<<<< HEAD
                       <table className="table table-striped table-bordered" style={{ fontSize: '12px', padding: '5px' }}>
                         <thead>
                           <tr>
@@ -1783,11 +3674,41 @@ function ResultSSC() {
                               {language === "English" ? "Obtain Marks" : "गुण"}
                             </th>
                             <th rowSpan="1" style={{ padding: '3px', color: 'black' }}>
+=======
+                      <table
+                        className="table table-striped table-bordered"
+                        style={{ fontSize: "12px", padding: "5px" }}
+                      >
+                        <thead>
+                          <tr>
+                            <th
+                              rowSpan="1"
+                              style={{ padding: "3px", color: "black" }}
+                            >
+                              {language === "English" ? "Subject" : "विषय"}
+                            </th>
+                            <th style={{ padding: "4px", color: "black" }}>
+                              {language === "English" ? "Max. Marks" : "पैकी"}
+                            </th>
+                            <th style={{ padding: "4px", color: "black" }}>
+                              {language === "English"
+                                ? "Min. Marks"
+                                : "किमान गुण"}
+                            </th>
+                            <th style={{ padding: "4px", color: "black" }}>
+                              {language === "English" ? "Obtain Marks" : "गुण"}
+                            </th>
+                            <th
+                              rowSpan="1"
+                              style={{ padding: "3px", color: "black" }}
+                            >
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                               {language === "English" ? "P %" : "%"}
                             </th>
                           </tr>
                         </thead>
                         <tbody>
+<<<<<<< HEAD
                           {selectedStudentResults && selectedStudentResults.results ? (
                             subjectSequence
                               .filter((subject) => {
@@ -1796,10 +3717,26 @@ function ResultSSC() {
                               })
                               .map((subject) => {
                                 const grades = selectedStudentResults.results[subject];
+=======
+                          {selectedStudentResults &&
+                          selectedStudentResults.results ? (
+                            subjectSequence
+                              .filter((subject) => {
+                                const grades =
+                                  selectedStudentResults.results[subject];
+                                return (
+                                  grades && (grades.obtainMarks || grades.grade)
+                                );
+                              })
+                              .map((subject) => {
+                                const grades =
+                                  selectedStudentResults.results[subject];
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                 const hasGrade = grades.grade !== undefined;
 
                                 return (
                                   <tr key={subject} style={{ padding: "2px" }}>
+<<<<<<< HEAD
                                     <td style={{ padding: "2px", color: 'black' }}>
                                       {subject}
                                     </td>
@@ -1815,6 +3752,43 @@ function ResultSSC() {
                                     <td style={{ padding: "2px" }}>
                                       <b>
                                         {hasGrade ? "-" : (grades.outOf > 0 ? ((grades.obtainMarks / grades.outOf) * 100).toFixed(2) : "-")}
+=======
+                                    <td
+                                      style={{ padding: "2px", color: "black" }}
+                                    >
+                                      {subject}
+                                    </td>
+                                    <td
+                                      style={{ padding: "2px", color: "black" }}
+                                    >
+                                      {hasGrade ? "-" : grades.outOf || "-"}
+                                    </td>
+                                    <td
+                                      style={{ padding: "2px", color: "black" }}
+                                    >
+                                      {hasGrade ? "-" : grades.minMarks || "-"}
+                                    </td>
+                                    <td
+                                      style={{ padding: "2px", color: "black" }}
+                                    >
+                                      <b>
+                                        {hasGrade
+                                          ? grades.grade
+                                          : grades.obtainMarks || "-"}
+                                      </b>
+                                    </td>
+                                    <td style={{ padding: "2px" }}>
+                                      <b>
+                                        {hasGrade
+                                          ? "-"
+                                          : grades.outOf > 0
+                                            ? (
+                                                (grades.obtainMarks /
+                                                  grades.outOf) *
+                                                100
+                                              ).toFixed(2)
+                                            : "-"}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                       </b>
                                     </td>
                                   </tr>
@@ -1823,13 +3797,20 @@ function ResultSSC() {
                           ) : (
                             <tr>
                               <td colSpan="5" style={{ padding: "5px" }}>
+<<<<<<< HEAD
                                 {language === "English" ? "No data available" : "डेटा उपलब्ध नाही"}
+=======
+                                {language === "English"
+                                  ? "No data available"
+                                  : "डेटा उपलब्ध नाही"}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                               </td>
                             </tr>
                           )}
                         </tbody>
                       </table>
                     ) : (
+<<<<<<< HEAD
                       <p style={{ fontSize: '18px', textAlign: 'center', marginTop: '20px', color: 'red' }}>
                         {language === "English" ? "! No result available please fill marks." : "कोणतेही प्रगतीपत्रक उपलब्ध नाहीत."}
                       </p>
@@ -1839,6 +3820,22 @@ function ResultSSC() {
 
 
 
+=======
+                      <p
+                        style={{
+                          fontSize: "18px",
+                          textAlign: "center",
+                          marginTop: "20px",
+                          color: "red",
+                        }}
+                      >
+                        {language === "English"
+                          ? "! No result available please fill marks."
+                          : "कोणतेही प्रगतीपत्रक उपलब्ध नाहीत."}
+                      </p>
+                    )}
+
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     <div
                       style={{
                         marginTop: "10px",
@@ -1853,21 +3850,44 @@ function ResultSSC() {
                           <strong>
                             {language === "English" ? "Out Of : " : "एकूण : "}
                             {subjectSequence
+<<<<<<< HEAD
                               .filter(subject => {
                                 const grades = selectedStudentResults?.results?.[subject] || {};
                                 return grades.obtainMarks;
                               })
                               .reduce((total, subject) => {
                                 const grades = selectedStudentResults?.results?.[subject] || {};
+=======
+                              .filter((subject) => {
+                                const grades =
+                                  selectedStudentResults?.results?.[subject] ||
+                                  {};
+                                return grades.obtainMarks;
+                              })
+                              .reduce((total, subject) => {
+                                const grades =
+                                  selectedStudentResults?.results?.[subject] ||
+                                  {};
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                 return total + (grades.outOf || 0);
                               }, 0)}
                           </strong>
                         </p>
                         <p>
                           <strong>
+<<<<<<< HEAD
                             {language === "English" ? "Obtained Marks : " : "प्राप्त गुण : "}
                             {subjectSequence.reduce((total, subject) => {
                               const grades = selectedStudentResults?.results?.[subject] || {};
+=======
+                            {language === "English"
+                              ? "Obtained Marks : "
+                              : "प्राप्त गुण : "}
+                            {subjectSequence.reduce((total, subject) => {
+                              const grades =
+                                selectedStudentResults?.results?.[subject] ||
+                                {};
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                               return (
                                 total +
                                 (grades.unitTestIObtainMarks || 0) +
@@ -1881,6 +3901,7 @@ function ResultSSC() {
                       <div>
                         <p>
                           <b>
+<<<<<<< HEAD
                             {language === "English" ? "Percentage : " : "टक्केवारी : "}
                             {(() => {
                               const totalMaxMarks = subjectSequence.reduce((total, subject) => {
@@ -1901,6 +3922,39 @@ function ResultSSC() {
                               // Calculate percentage
                               return totalMaxMarks > 0
                                 ? ((totalObtainedMarks / totalMaxMarks) * 100).toFixed(2) + "%"
+=======
+                            {language === "English"
+                              ? "Percentage : "
+                              : "टक्केवारी : "}
+                            {(() => {
+                              const totalMaxMarks = subjectSequence.reduce(
+                                (total, subject) => {
+                                  const grades =
+                                    selectedStudentResults?.results?.[
+                                      subject
+                                    ] || {};
+                                  return total + (grades.outOf || 0);
+                                },
+                                0,
+                              );
+                              const totalObtainedMarks = subjectSequence.reduce(
+                                (total, subject) => {
+                                  const grades =
+                                    selectedStudentResults?.results?.[
+                                      subject
+                                    ] || {};
+                                  return total + (grades.obtainMarks || 0);
+                                },
+                                0,
+                              );
+
+                              // Calculate percentage
+                              return totalMaxMarks > 0
+                                ? (
+                                    (totalObtainedMarks / totalMaxMarks) *
+                                    100
+                                  ).toFixed(2) + "%"
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                 : "0%";
                             })()}
                           </b>
@@ -1908,16 +3962,32 @@ function ResultSSC() {
                       </div>
                     </div>
 
+<<<<<<< HEAD
                     {selectedStudentResults && selectedStudentResults.results ? (
                       <div>
                         <table className="table table-striped table-bordered" style={{ fontSize: '12px', padding: '5px' }}>
+=======
+                    {selectedStudentResults &&
+                    selectedStudentResults.results ? (
+                      <div>
+                        <table
+                          className="table table-striped table-bordered"
+                          style={{ fontSize: "12px", padding: "5px" }}
+                        >
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                           {/* Your table code here */}
                         </table>
                         {selectedStudentResults.results.remark && (
                           <div style={{ marginTop: "10px" }}>
                             <p>
                               <strong>
+<<<<<<< HEAD
                                 {language === "English" ? "Remark : " : "टिप्पणी : "}
+=======
+                                {language === "English"
+                                  ? "Remark : "
+                                  : "टिप्पणी : "}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                 {selectedStudentResults.results.remark}
                               </strong>
                             </p>
@@ -1925,21 +3995,43 @@ function ResultSSC() {
                         )}
                       </div>
                     ) : (
+<<<<<<< HEAD
                       <p style={{ fontSize: '18px', textAlign: 'center', marginTop: '20px', color: 'red' }}>
                         {language === "English" ? "! No result available please fill marks." : "कोणतेही प्रगतीपत्रक उपलब्ध नाहीत."}
+=======
+                      <p
+                        style={{
+                          fontSize: "18px",
+                          textAlign: "center",
+                          marginTop: "20px",
+                          color: "red",
+                        }}
+                      >
+                        {language === "English"
+                          ? "! No result available please fill marks."
+                          : "कोणतेही प्रगतीपत्रक उपलब्ध नाहीत."}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                       </p>
                     )}
                     <div
                       className="grad"
                       style={{
+<<<<<<< HEAD
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
                         padding: '0 20px',
+=======
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "0 20px",
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                       }}
                     >
                       {/* Left-aligned label */}
                       <label
+<<<<<<< HEAD
                         style={{ flex: 1, textAlign: 'left', marginBottom: '2px', marginLeft: '-10px' }}
                         htmlFor="Parent's signature"
                       >
@@ -1951,11 +4043,46 @@ function ResultSSC() {
                         htmlFor="class-teacher"
                       >
                         {language === "English" ? "Class Teacher" : "वर्गशिक्षक"}
+=======
+                        style={{
+                          flex: 1,
+                          textAlign: "left",
+                          marginBottom: "2px",
+                          marginLeft: "-10px",
+                        }}
+                        htmlFor="Parent's signature"
+                      >
+                        {language === "English"
+                          ? "Parent's signature"
+                          : "पालकांची सही"}
+                      </label>
+                      {/* Center-aligned label */}
+                      <label
+                        style={{
+                          flex: 1,
+                          textAlign: "center",
+                          marginBottom: "2px",
+                        }}
+                        htmlFor="class-teacher"
+                      >
+                        {language === "English"
+                          ? "Class Teacher"
+                          : "वर्गशिक्षक"}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                       </label>
 
                       {/* Right-aligned label */}
                       <label
+<<<<<<< HEAD
                         style={{ flex: 1, textAlign: 'right', marginBottom: '2px', marginRight: '20px' }}
+=======
+                        style={{
+                          flex: 1,
+                          textAlign: "right",
+                          marginBottom: "2px",
+                          marginRight: "20px",
+                        }}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                         htmlFor="principal"
                       >
                         {language === "English" ? "Principal" : "प्राचार्य"}
@@ -1978,6 +4105,10 @@ function ResultSSC() {
       </div>
     </div>
   );
+<<<<<<< HEAD
 };
+=======
+}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
 export default ResultSSC;

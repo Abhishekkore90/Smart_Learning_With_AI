@@ -42,11 +42,44 @@ const CLASSES = [
 ];
 
 const MEDIUM_OPTIONS = [
+<<<<<<< HEAD
   { id: "none", mr: "निवडलेले नाही", en: "Not Selected", color: "text-slate-400 bg-slate-100" },
   { id: "marathi", mr: "मराठी माध्यम", en: "Marathi Medium", color: "text-amber-700 bg-amber-50" },
   { id: "semi", mr: "सेमी-इंग्रजी माध्यम", en: "Semi-English Medium", color: "text-teal-700 bg-teal-50" },
   { id: "english", mr: "इंग्रजी माध्यम", en: "English Medium", color: "text-blue-700 bg-blue-50" },
   { id: "both", mr: "दोन्ही (मराठी + सेमी)", en: "Both (Marathi & Semi)", color: "text-indigo-700 bg-indigo-50" },
+=======
+  {
+    id: "none",
+    mr: "निवडलेले नाही",
+    en: "Not Selected",
+    color: "text-slate-400 bg-slate-100",
+  },
+  {
+    id: "marathi",
+    mr: "मराठी माध्यम",
+    en: "Marathi Medium",
+    color: "text-amber-700 bg-amber-50",
+  },
+  {
+    id: "semi",
+    mr: "सेमी-इंग्रजी माध्यम",
+    en: "Semi-English Medium",
+    color: "text-teal-700 bg-teal-50",
+  },
+  {
+    id: "english",
+    mr: "इंग्रजी माध्यम",
+    en: "English Medium",
+    color: "text-blue-700 bg-blue-50",
+  },
+  {
+    id: "both",
+    mr: "दोन्ही (मराठी + सेमी)",
+    en: "Both (Marathi & Semi)",
+    color: "text-indigo-700 bg-indigo-50",
+  },
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 ];
 
 function TeacherClassSetupPage() {
@@ -70,7 +103,13 @@ function TeacherClassSetupPage() {
 
   const udise =
     profile?.udise ||
+<<<<<<< HEAD
     (typeof window !== "undefined" ? localStorage.getItem("teacher_udise") : null) ||
+=======
+    (typeof window !== "undefined"
+      ? localStorage.getItem("teacher_udise")
+      : null) ||
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     "default";
 
   useEffect(() => {
@@ -138,6 +177,7 @@ function TeacherClassSetupPage() {
           udise,
           teacherId: user.uid,
         },
+<<<<<<< HEAD
         { merge: true }
       );
 
@@ -147,6 +187,28 @@ function TeacherClassSetupPage() {
     } catch (e: any) {
       console.error("Error saving class config:", e);
       toast.error(lang === "mr" ? "रचना जतन करण्यात त्रुटी आली." : "Failed to save configuration.");
+=======
+        { merge: true },
+      );
+
+      // Save to local storage
+      localStorage.setItem(
+        `class_config_${udise}`,
+        JSON.stringify(classConfig),
+      );
+      toast.success(
+        lang === "mr"
+          ? "वर्ग आणि माध्यम रचना यशस्वीरित्या जतन केली!"
+          : "Class & Medium Configuration saved successfully!",
+      );
+    } catch (e: any) {
+      console.error("Error saving class config:", e);
+      toast.error(
+        lang === "mr"
+          ? "रचना जतन करण्यात त्रुटी आली."
+          : "Failed to save configuration.",
+      );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     } finally {
       setSaving(false);
     }
@@ -159,9 +221,21 @@ function TeacherClassSetupPage() {
     return () => window.removeEventListener("click", handleOutsideClick);
   }, []);
 
+<<<<<<< HEAD
   const marathiCount = Object.values(classConfig).filter((v) => v === "marathi" || v === "both").length;
   const semiCount = Object.values(classConfig).filter((v) => v === "semi" || v === "both").length;
   const activeCount = Object.values(classConfig).filter((v) => v !== "none").length;
+=======
+  const marathiCount = Object.values(classConfig).filter(
+    (v) => v === "marathi" || v === "both",
+  ).length;
+  const semiCount = Object.values(classConfig).filter(
+    (v) => v === "semi" || v === "both",
+  ).length;
+  const activeCount = Object.values(classConfig).filter(
+    (v) => v !== "none",
+  ).length;
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
   if (authLoading || loading) {
     return (
@@ -197,10 +271,21 @@ function TeacherClassSetupPage() {
               </div>
               <div>
                 <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+<<<<<<< HEAD
                   {lang === "mr" ? "वर्ग व माध्यम रचना" : "Class & Medium Configuration"}
                 </h1>
                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#D6B97A] mt-1">
                   {lang === "mr" ? "पहिली ते दहावी माध्यम निश्चित करा" : "Set Marathi / Semi-English Medium"}
+=======
+                  {lang === "mr"
+                    ? "वर्ग व माध्यम रचना"
+                    : "Class & Medium Configuration"}
+                </h1>
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#D6B97A] mt-1">
+                  {lang === "mr"
+                    ? "पहिली ते दहावी माध्यम निश्चित करा"
+                    : "Set Marathi / Semi-English Medium"}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 </p>
               </div>
             </div>
@@ -226,7 +311,13 @@ function TeacherClassSetupPage() {
                 <span className="text-[10px] font-black text-[#D6B97A] uppercase tracking-widest block">
                   {lang === "mr" ? "एकूण वर्ग" : "Configured Classes"}
                 </span>
+<<<<<<< HEAD
                 <span className="text-3xl font-black text-slate-800">{activeCount} / 10</span>
+=======
+                <span className="text-3xl font-black text-slate-800">
+                  {activeCount} / 10
+                </span>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               </div>
               <div className="size-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
                 <School className="size-6" />
@@ -238,7 +329,13 @@ function TeacherClassSetupPage() {
                 <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest block">
                   {lang === "mr" ? "मराठी माध्यम" : "Marathi Medium"}
                 </span>
+<<<<<<< HEAD
                 <span className="text-3xl font-black text-amber-700">{marathiCount}</span>
+=======
+                <span className="text-3xl font-black text-amber-700">
+                  {marathiCount}
+                </span>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               </div>
               <div className="size-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600">
                 <BookOpen className="size-6" />
@@ -248,9 +345,19 @@ function TeacherClassSetupPage() {
             <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between">
               <div>
                 <span className="text-[10px] font-black text-teal-600 uppercase tracking-widest block">
+<<<<<<< HEAD
                   {lang === "mr" ? "सेमी-इंग्रजी माध्यम" : "Semi-English Medium"}
                 </span>
                 <span className="text-3xl font-black text-teal-700">{semiCount}</span>
+=======
+                  {lang === "mr"
+                    ? "सेमी-इंग्रजी माध्यम"
+                    : "Semi-English Medium"}
+                </span>
+                <span className="text-3xl font-black text-teal-700">
+                  {semiCount}
+                </span>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               </div>
               <div className="size-12 rounded-2xl bg-teal-50 flex items-center justify-center text-teal-600">
                 <Award className="size-6" />
@@ -273,7 +380,13 @@ function TeacherClassSetupPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {CLASSES.map((cls, idx) => {
                 const currentVal = classConfig[cls.id] || "none";
+<<<<<<< HEAD
                 const selectedOption = MEDIUM_OPTIONS.find((opt) => opt.id === currentVal) || MEDIUM_OPTIONS[0];
+=======
+                const selectedOption =
+                  MEDIUM_OPTIONS.find((opt) => opt.id === currentVal) ||
+                  MEDIUM_OPTIONS[0];
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
                 return (
                   <div
@@ -295,9 +408,22 @@ function TeacherClassSetupPage() {
                     </div>
 
                     {/* Premium Custom Dropdown */}
+<<<<<<< HEAD
                     <div className="relative" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => setOpenDropdownId((prev) => (prev === cls.id ? null : cls.id))}
+=======
+                    <div
+                      className="relative"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        onClick={() =>
+                          setOpenDropdownId((prev) =>
+                            prev === cls.id ? null : cls.id,
+                          )
+                        }
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                         className={`min-w-[180px] md:min-w-[210px] px-5 py-3.5 rounded-xl border border-slate-200 flex items-center justify-between gap-3 text-xs font-black tracking-wide cursor-pointer transition-all ${
                           selectedOption.id !== "none"
                             ? "bg-white border-[#D6B97A]/40 text-slate-800 shadow-sm"
@@ -305,11 +431,23 @@ function TeacherClassSetupPage() {
                         }`}
                       >
                         <span className="truncate">
+<<<<<<< HEAD
                           {lang === "mr" ? selectedOption.mr : selectedOption.en}
                         </span>
                         <ChevronDown
                           className={`size-4 text-slate-400 transition-transform duration-300 ${
                             openDropdownId === cls.id ? "rotate-180 text-[#D6B97A]" : ""
+=======
+                          {lang === "mr"
+                            ? selectedOption.mr
+                            : selectedOption.en}
+                        </span>
+                        <ChevronDown
+                          className={`size-4 text-slate-400 transition-transform duration-300 ${
+                            openDropdownId === cls.id
+                              ? "rotate-180 text-[#D6B97A]"
+                              : ""
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                           }`}
                         />
                       </button>
@@ -328,7 +466,13 @@ function TeacherClassSetupPage() {
                               {MEDIUM_OPTIONS.map((opt) => (
                                 <button
                                   key={opt.id}
+<<<<<<< HEAD
                                   onClick={() => handleSelectMedium(cls.id, opt.id)}
+=======
+                                  onClick={() =>
+                                    handleSelectMedium(cls.id, opt.id)
+                                  }
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                   className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center justify-between ${
                                     currentVal === opt.id
                                       ? "bg-[#1A1A1A] text-white"

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+<<<<<<< HEAD
 import { 
   ChevronLeft, 
   ArrowLeft,
@@ -13,6 +14,29 @@ import { fetchFirestoreMarks, matchAndMergeMarks } from "./firestoreMarksHelper"
 function DailyRegister({ initialClass, initialYear, onBack }) {
   const [academicYear, setAcademicYear] = useState(initialYear || localStorage.getItem("cce_academic_year") || "");
   const [classValue, setClassValue] = useState(initialClass || localStorage.getItem("cce_selected_class") || "");
+=======
+import {
+  ChevronLeft,
+  ArrowLeft,
+  Check,
+  FileText,
+  AlertTriangle,
+  Loader2,
+} from "lucide-react";
+import AlertMessage from "../../AlertMessage";
+import {
+  fetchFirestoreMarks,
+  matchAndMergeMarks,
+} from "./firestoreMarksHelper";
+
+function DailyRegister({ initialClass, initialYear, onBack }) {
+  const [academicYear, setAcademicYear] = useState(
+    initialYear || localStorage.getItem("cce_academic_year") || "",
+  );
+  const [classValue, setClassValue] = useState(
+    initialClass || localStorage.getItem("cce_selected_class") || "",
+  );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   const [activeSemester, setActiveSemester] = useState("first"); // "first" or "second"
   const [pageLayout, setPageLayout] = useState("single"); // "single" or "double"
   const [includeAttendance, setIncludeAttendance] = useState(false);
@@ -20,13 +44,26 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
   const [studentData, setStudentData] = useState([]);
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [marksData, setMarksData] = useState({});
+<<<<<<< HEAD
   const [allNondiData, setAllNondiData] = useState({ firstSemester: {}, secondSemester: {} });
+=======
+  const [allNondiData, setAllNondiData] = useState({
+    firstSemester: {},
+    secondSemester: {},
+  });
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   const [schoolName, setSchoolName] = useState("");
   const [schoolLogo, setSchoolLogo] = useState("");
   const [schoolData, setSchoolData] = useState(null);
   const [subjectSequence, setSubjectSequence] = useState([]);
   const [subjects, setSubjects] = useState({});
+<<<<<<< HEAD
   const [language, setLanguage] = useState(localStorage.getItem("language") || "English");
+=======
+  const [language, setLanguage] = useState(
+    localStorage.getItem("language") || "English",
+  );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
   const [alertMessage, setAlertMessage] = useState("");
   const [showAlert, setShowAlert] = useState(false);
@@ -81,7 +118,13 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
 
   useEffect(() => {
     if (classValue && studentData.length > 0) {
+<<<<<<< HEAD
       const filtered = studentData.filter((student) => student.currentClass === classValue);
+=======
+      const filtered = studentData.filter(
+        (student) => student.currentClass === classValue,
+      );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       setSelectedStudents(filtered);
     }
   }, [classValue, studentData]);
@@ -95,7 +138,11 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
   const fetchSchoolName = async () => {
     try {
       const response = await fetch(
+<<<<<<< HEAD
         `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/schoolData.json`
+=======
+        `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/schoolData.json`,
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       );
       if (response.ok) {
         const data = await response.json();
@@ -111,7 +158,11 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
   const fetchStudentData = async () => {
     try {
       const response = await fetch(
+<<<<<<< HEAD
         `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData.json`
+=======
+        `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData.json`,
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       );
       if (response.ok) {
         const data = await response.json();
@@ -119,7 +170,13 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
           .filter((key) => data[key] !== null)
           .map((key) => ({ srNo: key, ...data[key] }));
 
+<<<<<<< HEAD
         const activeStudents = filteredData.filter((student) => student.isActive !== false);
+=======
+        const activeStudents = filteredData.filter(
+          (student) => student.isActive !== false,
+        );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         setStudentData(activeStudents);
       }
     } catch (error) {
@@ -130,7 +187,11 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
   const fetchSubjectSequence = async () => {
     try {
       const response = await fetch(
+<<<<<<< HEAD
         `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/subjectSequence/${academicYear}/${classValue}.json`
+=======
+        `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/subjectSequence/${academicYear}/${classValue}.json`,
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       );
       if (response.ok) {
         const data = await response.json();
@@ -154,6 +215,7 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
 
   const fetchMarksAndNondiForAllStudents = async () => {
     try {
+<<<<<<< HEAD
       const examName = activeSemester === "first" ? "First Semester" : "Second Semester";
       
       const marksDataPromises = selectedStudents.map(async (student) => {
@@ -166,12 +228,33 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
           ),
           fetch(
             `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${student.srNo}/result/${academicYear}/Second Semester/nondi.json`
+=======
+      const examName =
+        activeSemester === "first" ? "First Semester" : "Second Semester";
+
+      const marksDataPromises = selectedStudents.map(async (student) => {
+        const [marksRes, nondiFirstRes, nondiSecondRes] = await Promise.all([
+          fetch(
+            `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${student.srNo}/result/${academicYear}/${examName}.json`,
+          ),
+          fetch(
+            `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${student.srNo}/result/${academicYear}/First Semester/nondi.json`,
+          ),
+          fetch(
+            `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${student.srNo}/result/${academicYear}/Second Semester/nondi.json`,
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           ),
         ]);
 
         const marks = marksRes.ok ? await marksRes.json() : {};
         const nondiFirst = nondiFirstRes.ok ? await nondiFirstRes.json() : {};
+<<<<<<< HEAD
         const nondiSecond = nondiSecondRes.ok ? await nondiSecondRes.json() : {};
+=======
+        const nondiSecond = nondiSecondRes.ok
+          ? await nondiSecondRes.json()
+          : {};
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
         return {
           srNo: student.srNo,
@@ -194,11 +277,17 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
       // Fetch from Firestore descriptive_remarks
       try {
         const { db } = await import("@/lib/firebase");
+<<<<<<< HEAD
         const { collection, query, where, getDocs } = await import("firebase/firestore");
+=======
+        const { collection, query, where, getDocs } =
+          await import("firebase/firestore");
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         const remarksQuery = query(
           collection(db, "descriptive_remarks"),
           where("class", "==", classValue),
           where("academicYear", "==", academicYear),
+<<<<<<< HEAD
           where("term", "==", activeSemester)
         );
         const remarksSnap = await getDocs(remarksQuery);
@@ -206,6 +295,16 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
           const rData = docSnap.data();
           if (rData.studentId) {
             const semKey = activeSemester === "first" ? "firstSemester" : "secondSemester";
+=======
+          where("term", "==", activeSemester),
+        );
+        const remarksSnap = await getDocs(remarksQuery);
+        remarksSnap.forEach((docSnap) => {
+          const rData = docSnap.data();
+          if (rData.studentId) {
+            const semKey =
+              activeSemester === "first" ? "firstSemester" : "secondSemester";
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
             // Merge Firestore descriptive remarks fields into tempNondi
             tempNondi[semKey][rData.studentId] = {
               ...tempNondi[semKey][rData.studentId],
@@ -214,17 +313,43 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
           }
         });
       } catch (fsRemarksErr) {
+<<<<<<< HEAD
         console.warn("Firestore descriptive remarks fetch failed:", fsRemarksErr);
+=======
+        console.warn(
+          "Firestore descriptive remarks fetch failed:",
+          fsRemarksErr,
+        );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       }
 
       // Also fetch from Firestore marks collection and merge
       let finalMarks = tempMarks;
       try {
         const term = activeSemester; // "first" or "second"
+<<<<<<< HEAD
         const firestoreMarks = await fetchFirestoreMarks(classValue, academicYear, term);
         if (firestoreMarks.length > 0) {
           const subjectList = subjectSequence.length > 0 ? subjectSequence : Object.keys(subjects);
           const merged = matchAndMergeMarks(selectedStudents, tempMarks, firestoreMarks, subjectList);
+=======
+        const firestoreMarks = await fetchFirestoreMarks(
+          classValue,
+          academicYear,
+          term,
+        );
+        if (firestoreMarks.length > 0) {
+          const subjectList =
+            subjectSequence.length > 0
+              ? subjectSequence
+              : Object.keys(subjects);
+          const merged = matchAndMergeMarks(
+            selectedStudents,
+            tempMarks,
+            firestoreMarks,
+            subjectList,
+          );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           finalMarks = merged;
           setMarksData(merged);
         } else {
@@ -261,7 +386,11 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
   const handlePrintCompiledRegister = (
     overrideStudents = selectedStudents,
     overrideMarks = marksData,
+<<<<<<< HEAD
     overrideNondi = allNondiData
+=======
+    overrideNondi = allNondiData,
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   ) => {
     const selectedStudents = overrideStudents;
     const marksData = overrideMarks;
@@ -274,9 +403,18 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
 
     setIsCompiling(true);
 
+<<<<<<< HEAD
     const examName = activeSemester === "first" ? "First Semester" : "Second Semester";
     const termLabel = activeSemester === "first" ? "प्रथम सत्र" : "द्वितीय सत्र";
     const subjectList = subjectSequence.length > 0 ? subjectSequence : Object.keys(subjects);
+=======
+    const examName =
+      activeSemester === "first" ? "First Semester" : "Second Semester";
+    const termLabel =
+      activeSemester === "first" ? "प्रथम सत्र" : "द्वितीय सत्र";
+    const subjectList =
+      subjectSequence.length > 0 ? subjectSequence : Object.keys(subjects);
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
     // Dynamic Marathi grade mapping
     const getMarathiGrade = (total) => {
@@ -294,12 +432,24 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
     const isPrimarySubject = (subName) => {
       if (!subName) return false;
       const name = subName.toLowerCase().trim();
+<<<<<<< HEAD
       return name.includes("मराठी") || name.includes("marathi") || name.includes("इंग्रजी") || name.includes("english") || name.includes("गणित") || name.includes("math");
+=======
+      return (
+        name.includes("मराठी") ||
+        name.includes("marathi") ||
+        name.includes("इंग्रजी") ||
+        name.includes("english") ||
+        name.includes("गणित") ||
+        name.includes("math")
+      );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     };
 
     const getCasteCategoryMarathi = (casteName) => {
       if (!casteName) return "बिगर मागास";
       const name = casteName.toLowerCase().trim();
+<<<<<<< HEAD
       if (name.includes("sc") || name.includes("अनुसूचित जाती") || name.includes("मातंग") || name.includes("चर्मकार") || name.includes("बौद्ध") || name.includes("महार")) return "अनुसूचित जाती";
       if (name.includes("st") || name.includes("अनुसूचित जमाती") || name.includes("भिल्ल") || name.includes("कोळी")) return "अनुसूचित जमाती";
       if (name.includes("vj") || name.includes("nt") || name.includes("भटके") || name.includes("विमुक्त") || name.includes("धनगर") || name.includes("वंजारी")) return "वि.जा.भ. जाती";
@@ -321,6 +471,77 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
     const hmNameFallback = hmNameVal && hmNameVal.trim() !== ""
       ? hmNameVal
       : (schoolNameFallback.includes("धोंडेवाडी") ? "बाळासाहेब रामकिशन कंद्रे" : "");
+=======
+      if (
+        name.includes("sc") ||
+        name.includes("अनुसूचित जाती") ||
+        name.includes("मातंग") ||
+        name.includes("चर्मकार") ||
+        name.includes("बौद्ध") ||
+        name.includes("महार")
+      )
+        return "अनुसूचित जाती";
+      if (
+        name.includes("st") ||
+        name.includes("अनुसूचित जमाती") ||
+        name.includes("भिल्ल") ||
+        name.includes("कोळी")
+      )
+        return "अनुसूचित जमाती";
+      if (
+        name.includes("vj") ||
+        name.includes("nt") ||
+        name.includes("भटके") ||
+        name.includes("विमुक्त") ||
+        name.includes("धनगर") ||
+        name.includes("वंजारी")
+      )
+        return "वि.जा.भ. जाती";
+      if (
+        name.includes("obc") ||
+        name.includes("इतर मागास") ||
+        name.includes("माळी") ||
+        name.includes("तेली") ||
+        name.includes("कुणबी") ||
+        name.includes("sbc") ||
+        name.includes("विशेष मागास")
+      )
+        return "इतर मागास";
+      return "बिगर मागास"; // Default to Open
+    };
+
+    const schoolNameFallback =
+      schoolName && schoolName !== "N/A" && schoolName.trim() !== ""
+        ? schoolName
+        : "जिल्हा परिषद शाळा धोंडेवाडी(पेड)ता.तासगाव";
+
+    const teacherNameVal =
+      cceSettings?.teacherName ||
+      schoolData?.teacherName ||
+      schoolData?.classTeacher ||
+      "";
+    const hmNameVal =
+      schoolData?.headmasterName ||
+      schoolData?.hmName ||
+      schoolData?.headmaster ||
+      cceSettings?.headmasterName ||
+      cceSettings?.principalName ||
+      "";
+
+    const teacherNameFallback =
+      teacherNameVal && teacherNameVal.trim() !== ""
+        ? teacherNameVal
+        : schoolNameFallback.includes("धोंडेवाडी")
+          ? "श्री. विशाल रंजिना विष्णू खाडे"
+          : "";
+
+    const hmNameFallback =
+      hmNameVal && hmNameVal.trim() !== ""
+        ? hmNameVal
+        : schoolNameFallback.includes("धोंडेवाडी")
+          ? "बाळासाहेब रामकिशन कंद्रे"
+          : "";
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
     const getMark = (obj, key) => {
       const val = obj[key];
@@ -610,31 +831,56 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
               </tr>
             </thead>
             <tbody>
+<<<<<<< HEAD
               ${sortedStudents.map((student, index) => {
                 const startPage = 3 + (index * 2);
                 const endPage = startPage + 1;
                 return `
+=======
+              ${sortedStudents
+                .map((student, index) => {
+                  const startPage = 3 + index * 2;
+                  const endPage = startPage + 1;
+                  return `
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   <tr>
                     <td style="padding: 6px;">${index + 1}</td>
                     <td class="left-align" style="font-weight: bold; padding: 6px; padding-left: 15px;">${student.stdName || ""} ${student.stdFather || ""} ${student.stdSurname || ""}</td>
                     <td style="padding: 6px;">${startPage} - ${endPage}</td>
                   </tr>
                 `;
+<<<<<<< HEAD
               }).join("")}
               <tr>
                 <td style="padding: 6px;">-</td>
                 <td class="left-align" style="font-weight: bold; padding: 6px; padding-left: 15px;">श्रेणी निहाय संकलन तक्ता (वर्गस्तर)</td>
                 <td style="padding: 6px;">${3 + (sortedStudents.length * 2)}</td>
+=======
+                })
+                .join("")}
+              <tr>
+                <td style="padding: 6px;">-</td>
+                <td class="left-align" style="font-weight: bold; padding: 6px; padding-left: 15px;">श्रेणी निहाय संकलन तक्ता (वर्गस्तर)</td>
+                <td style="padding: 6px;">${3 + sortedStudents.length * 2}</td>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               </tr>
               <tr>
                 <td style="padding: 6px;">-</td>
                 <td class="left-align" style="font-weight: bold; padding: 6px; padding-left: 15px;">जातनिहाय व विषयनिहाय एकूण तेरीज पत्रक</td>
+<<<<<<< HEAD
                 <td style="padding: 6px;">${4 + (sortedStudents.length * 2)}</td>
+=======
+                <td style="padding: 6px;">${4 + sortedStudents.length * 2}</td>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               </tr>
               <tr>
                 <td style="padding: 6px;">-</td>
                 <td class="left-align" style="font-weight: bold; padding: 6px; padding-left: 15px;">निकाल पत्रक (Result Sheet)</td>
+<<<<<<< HEAD
                 <td style="padding: 6px;">${5 + (sortedStudents.length * 2)}</td>
+=======
+                <td style="padding: 6px;">${5 + sortedStudents.length * 2}</td>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               </tr>
             </tbody>
           </table>
@@ -659,7 +905,14 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
     // STUDENT PAGES (Marks & Remarks - 2 Pages per Student)
     // ────────────────────────────────────────────────────────
     sortedStudents.forEach((student) => {
+<<<<<<< HEAD
       const studentRemarks = allNondiData[activeSemester === "first" ? "firstSemester" : "secondSemester"]?.[student.srNo] || {};
+=======
+      const studentRemarks =
+        allNondiData[
+          activeSemester === "first" ? "firstSemester" : "secondSemester"
+        ]?.[student.srNo] || {};
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       const results = marksData[student.srNo] || {};
 
       // Student page 1: Marks Table
@@ -708,6 +961,7 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
               </tr>
             </thead>
             <tbody>
+<<<<<<< HEAD
               ${subjectList.map((sub) => {
                 const isPrimary = isPrimarySubject(sub);
                 const subData = results[sub] || {};
@@ -733,6 +987,43 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
 
                 if (isPrimary) {
                   return `
+=======
+              ${subjectList
+                .map((sub) => {
+                  const isPrimary = isPrimarySubject(sub);
+                  const subData = results[sub] || {};
+                  const akarik = subData.Akarik || {};
+                  const sanklik = subData.Sanklik || {};
+
+                  const a1 =
+                    getMark(akarik, "Oral Work") ||
+                    getMark(akarik, "OralWork") ||
+                    "";
+                  const a2 = getMark(akarik, "Demonstration") || "";
+                  const a3 = getMark(akarik, "Activity") || "";
+                  const a4 = getMark(akarik, "Project") || "";
+                  const a5 = getMark(akarik, "Test") || "";
+                  const a6 = getMark(akarik, "Homework") || "";
+                  const a7 =
+                    getMark(akarik, "Others") ||
+                    getMark(akarik, "Daily Monitoring") ||
+                    "";
+
+                  const b1 =
+                    getMark(sanklik, "Orally") ||
+                    getMark(sanklik, "Oral") ||
+                    "";
+                  const b2 = getMark(sanklik, "Demonstration") || "";
+                  const b3 = getMark(sanklik, "Writing") || "";
+
+                  const akarikTotal = akarik.Total || 0;
+                  const sanklikTotal = sanklik.Total || 0;
+                  const grandTotal = akarikTotal + sanklikTotal;
+                  const subjectGrade = getMarathiGrade(grandTotal);
+
+                  if (isPrimary) {
+                    return `
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     <tr>
                       <td rowspan="2" class="left-align" style="font-weight: bold;">${sub}</td>
                       <td style="font-weight: bold; background-color: #f4fcf7;">पैकी</td>
@@ -767,8 +1058,13 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
                       <td style="font-weight: bold; background-color: #e8f5e9;">${sanklikTotal || "0"}</td>
                     </tr>
                   `;
+<<<<<<< HEAD
                 } else {
                   return `
+=======
+                  } else {
+                    return `
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     <tr>
                       <td rowspan="2" class="left-align" style="font-weight: bold;">${sub}</td>
                       <td style="font-weight: bold; background-color: #f4fcf7;">पैकी</td>
@@ -803,8 +1099,14 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
                       <td style="font-weight: bold; background-color: #e8f5e9;">-</td>
                     </tr>
                   `;
+<<<<<<< HEAD
                 }
               }).join("")}
+=======
+                  }
+                })
+                .join("")}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
             </tbody>
           </table>
 
@@ -947,8 +1249,23 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
     // ────────────────────────────────────────────────────────
     // PAGE 9: GRADE-WISE COMPILATION PAGE
     // ────────────────────────────────────────────────────────
+<<<<<<< HEAD
     const marathiGrades = ["अ-1", "अ-2", "ब-1", "ब-2", "क-1", "क-2", "ड", "इ-1", "इ-2"];
     
+=======
+    const marathiGrades = [
+      "अ-1",
+      "अ-2",
+      "ब-1",
+      "ब-2",
+      "क-1",
+      "क-2",
+      "ड",
+      "इ-1",
+      "इ-2",
+    ];
+
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     htmlContent += `
       <div class="page">
         <div class="doc-header">
@@ -972,6 +1289,7 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
                   <th style="width: 20%; text-align: left; padding-left: 6px;">विषय</th>
                   <th style="width: 8%;">नोंदणीकृत संख्या</th>
                   <th style="width: 8%;">उपस्थिती</th>
+<<<<<<< HEAD
                   ${marathiGrades.map(g => `<th>${g}</th>`).join("")}
                 </tr>
               </thead>
@@ -987,15 +1305,43 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
                     if (counts[g] !== undefined) counts[g]++;
                   });
                   return `
+=======
+                  ${marathiGrades.map((g) => `<th>${g}</th>`).join("")}
+                </tr>
+              </thead>
+              <tbody>
+                ${subjectList
+                  .map((sub, index) => {
+                    const counts = {};
+                    marathiGrades.forEach((g) => (counts[g] = 0));
+                    selectedStudents.forEach((student) => {
+                      const results = marksData[student.srNo] || {};
+                      const subData = results[sub] || {};
+                      const total =
+                        (subData.Akarik?.Total || 0) +
+                        (subData.Sanklik?.Total || 0);
+                      const g = getMarathiGrade(total);
+                      if (counts[g] !== undefined) counts[g]++;
+                    });
+                    return `
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     <tr>
                       <td>${index + 1}</td>
                       <td class="left-align" style="font-weight: bold;">${sub}</td>
                       <td>${selectedStudents.length}</td>
                       <td>${selectedStudents.length}</td>
+<<<<<<< HEAD
                       ${marathiGrades.map(g => `<td style="font-weight: bold;">${counts[g] || "0"}</td>`).join("")}
                     </tr>
                   `;
                 }).join("")}
+=======
+                      ${marathiGrades.map((g) => `<td style="font-weight: bold;">${counts[g] || "0"}</td>`).join("")}
+                    </tr>
+                  `;
+                  })
+                  .join("")}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               </tbody>
             </table>
           </div>
@@ -1010,13 +1356,18 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
                   <th rowspan="2" style="width: 18%; text-align: left; padding-left: 6px;">विषय</th>
                   <th rowspan="2" style="width: 10%;">नोंदणीकृत संख्या</th>
                   <th rowspan="2" style="width: 10%;">उपस्थिती</th>
+<<<<<<< HEAD
                   ${marathiGrades.map(g => `<th colspan="2">${g}</th>`).join("")}
+=======
+                  ${marathiGrades.map((g) => `<th colspan="2">${g}</th>`).join("")}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 </tr>
                 <tr>
                   ${marathiGrades.map(() => `<th>मुले</th><th>मुली</th>`).join("")}
                 </tr>
               </thead>
               <tbody>
+<<<<<<< HEAD
                 ${subjectList.map((sub, index) => {
                   const counts = {};
                   marathiGrades.forEach(g => {
@@ -1039,11 +1390,41 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
                   });
 
                   return `
+=======
+                ${subjectList
+                  .map((sub, index) => {
+                    const counts = {};
+                    marathiGrades.forEach((g) => {
+                      counts[g] = { boys: 0, girls: 0 };
+                    });
+                    let boysTotal = 0;
+                    let girlsTotal = 0;
+
+                    selectedStudents.forEach((student) => {
+                      const isBoy = student.gender === "Male";
+                      if (isBoy) boysTotal++;
+                      else girlsTotal++;
+
+                      const results = marksData[student.srNo] || {};
+                      const subData = results[sub] || {};
+                      const total =
+                        (subData.Akarik?.Total || 0) +
+                        (subData.Sanklik?.Total || 0);
+                      const g = getMarathiGrade(total);
+                      if (counts[g] !== undefined) {
+                        if (isBoy) counts[g].boys++;
+                        else counts[g].girls++;
+                      }
+                    });
+
+                    return `
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     <tr>
                       <td>${index + 1}</td>
                       <td class="left-align" style="font-weight: bold;">${sub}</td>
                       <td>मुले: ${boysTotal} | मुली: ${girlsTotal} | एकूण: ${boysTotal + girlsTotal}</td>
                       <td>मुले: ${boysTotal} | मुली: ${girlsTotal} | एकूण: ${boysTotal + girlsTotal}</td>
+<<<<<<< HEAD
                       ${marathiGrades.map(g => `
                         <td>${counts[g].boys || "0"}</td>
                         <td>${counts[g].girls || "0"}</td>
@@ -1051,6 +1432,20 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
                     </tr>
                   `;
                 }).join("")}
+=======
+                      ${marathiGrades
+                        .map(
+                          (g) => `
+                        <td>${counts[g].boys || "0"}</td>
+                        <td>${counts[g].girls || "0"}</td>
+                      `,
+                        )
+                        .join("")}
+                    </tr>
+                  `;
+                  })
+                  .join("")}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               </tbody>
             </table>
           </div>
@@ -1074,6 +1469,7 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
     // ────────────────────────────────────────────────────────
     // PAGE 10: CASTE-WISE COMPILATION PAGE (32-Column Matrix)
     // ────────────────────────────────────────────────────────
+<<<<<<< HEAD
     const casteCategories = ["अनुसूचित जाती", "अनुसूचित जमाती", "वि.जा.भ. जाती", "इतर मागास", "बिगर मागास"];
     
     let casteHtml = "";
@@ -1085,12 +1481,32 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
           grades: {}
         };
         marathiGrades.forEach(g => {
+=======
+    const casteCategories = [
+      "अनुसूचित जाती",
+      "अनुसूचित जमाती",
+      "वि.जा.भ. जाती",
+      "इतर मागास",
+      "बिगर मागास",
+    ];
+
+    let casteHtml = "";
+    subjectList.forEach((sub, subIdx) => {
+      const catStats = {};
+      casteCategories.forEach((cat) => {
+        catStats[cat] = {
+          count: { boys: 0, girls: 0, total: 0 },
+          grades: {},
+        };
+        marathiGrades.forEach((g) => {
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           catStats[cat].grades[g] = { boys: 0, girls: 0, total: 0 };
         });
       });
 
       const totalRow = {
         count: { boys: 0, girls: 0, total: 0 },
+<<<<<<< HEAD
         grades: {}
       };
       marathiGrades.forEach(g => {
@@ -1101,6 +1517,19 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
         const results = marksData[student.srNo] || {};
         const subData = results[sub] || {};
         const total = (subData.Akarik?.Total || 0) + (subData.Sanklik?.Total || 0);
+=======
+        grades: {},
+      };
+      marathiGrades.forEach((g) => {
+        totalRow.grades[g] = { boys: 0, girls: 0, total: 0 };
+      });
+
+      selectedStudents.forEach((student) => {
+        const results = marksData[student.srNo] || {};
+        const subData = results[sub] || {};
+        const total =
+          (subData.Akarik?.Total || 0) + (subData.Sanklik?.Total || 0);
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         const g = getMarathiGrade(total);
 
         const cat = getCasteCategoryMarathi(student.caste);
@@ -1136,11 +1565,23 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
             <td>${stats.count.girls || "0"}</td>
             <td style="font-weight: bold; background-color: #f4fcf7;">${stats.count.total || "0"}</td>
 
+<<<<<<< HEAD
             ${marathiGrades.map(g => `
               <td>${stats.grades[g].boys || "0"}</td>
               <td>${stats.grades[g].girls || "0"}</td>
               <td style="font-weight: bold; background-color: #f4fcf7;">${stats.grades[g].total || "0"}</td>
             `).join("")}
+=======
+            ${marathiGrades
+              .map(
+                (g) => `
+              <td>${stats.grades[g].boys || "0"}</td>
+              <td>${stats.grades[g].girls || "0"}</td>
+              <td style="font-weight: bold; background-color: #f4fcf7;">${stats.grades[g].total || "0"}</td>
+            `,
+              )
+              .join("")}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           </tr>
         `;
       });
@@ -1151,11 +1592,23 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
           <td>${totalRow.count.boys || "0"}</td>
           <td>${totalRow.count.girls || "0"}</td>
           <td style="background-color: #e8f5e9;">${totalRow.count.total || "0"}</td>
+<<<<<<< HEAD
           ${marathiGrades.map(g => `
             <td>${totalRow.grades[g].boys || "0"}</td>
             <td>${totalRow.grades[g].girls || "0"}</td>
             <td style="background-color: #e8f5e9;">${totalRow.grades[g].total || "0"}</td>
           `).join("")}
+=======
+          ${marathiGrades
+            .map(
+              (g) => `
+            <td>${totalRow.grades[g].boys || "0"}</td>
+            <td>${totalRow.grades[g].girls || "0"}</td>
+            <td style="background-color: #e8f5e9;">${totalRow.grades[g].total || "0"}</td>
+          `,
+            )
+            .join("")}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         </tr>
       `;
     });
@@ -1179,7 +1632,11 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
                 <th rowspan="2" style="width: 3%;">विषय</th>
                 <th rowspan="2" style="width: 8%;">जात संवर्ग</th>
                 <th colspan="3" style="width: 7%;">संख्या</th>
+<<<<<<< HEAD
                 ${marathiGrades.map(g => `<th colspan="3">${g}</th>`).join("")}
+=======
+                ${marathiGrades.map((g) => `<th colspan="3">${g}</th>`).join("")}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               </tr>
               <tr>
                 <th>मुले</th><th>मुली</th><th>एकूण</th>
@@ -1217,6 +1674,7 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
       let studentMaxTotal = 0;
       let failedCount = 0;
 
+<<<<<<< HEAD
       const cells = subjectList.map(sub => {
         const isPrimary = isPrimarySubject(sub);
         const subData = results[sub] || {};
@@ -1237,21 +1695,58 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
 
         if (isPrimary) {
           return `
+=======
+      const cells = subjectList
+        .map((sub) => {
+          const isPrimary = isPrimarySubject(sub);
+          const subData = results[sub] || {};
+          const akarik = subData.Akarik || {};
+          const sanklik = subData.Sanklik || {};
+
+          const akarikTotal = akarik.Total || 0;
+          const sanklikTotal = sanklik.Total || 0;
+          const total = akarikTotal + sanklikTotal;
+          const grade = getMarathiGrade(total);
+
+          studentGrandTotal += total;
+          studentMaxTotal += 100;
+
+          if (grade === "इ-2") {
+            failedCount++;
+          }
+
+          if (isPrimary) {
+            return `
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
             <td>${akarikTotal || "0"}</td>
             <td>${sanklikTotal || "0"}</td>
             <td style="font-weight: bold; background-color: #f4fcf7;">${total || "0"}</td>
             <td style="font-weight: bold; color: #1b4d3e;">${grade}</td>
           `;
+<<<<<<< HEAD
         } else {
           return `
+=======
+          } else {
+            return `
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
             <td>${akarikTotal || "0"}</td>
             <td style="font-weight: bold; background-color: #f4fcf7;">${total || "0"}</td>
             <td style="font-weight: bold; color: #1b4d3e;">${grade}</td>
           `;
+<<<<<<< HEAD
         }
       }).join("");
 
       const pct = studentMaxTotal > 0 ? (studentGrandTotal / studentMaxTotal) * 100 : 0;
+=======
+          }
+        })
+        .join("");
+
+      const pct =
+        studentMaxTotal > 0 ? (studentGrandTotal / studentMaxTotal) * 100 : 0;
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       const pctFormatted = pct.toFixed(2);
       const overallGrade = getMarathiGrade(Math.round(pct));
       const status = failedCount === 0 ? "उत्तीर्ण" : "सुधारणा आवश्यक";
@@ -1288,10 +1783,19 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
               <tr>
                 <th rowspan="2" style="width: 3%;">हजेरी क्र.</th>
                 <th rowspan="2" style="width: 14%; text-align: left; padding-left: 8px;">विद्यार्थ्याचे नाव</th>
+<<<<<<< HEAD
                 ${subjectList.map(sub => {
                   const isPrimary = isPrimarySubject(sub);
                   return `<th colspan="${isPrimary ? 4 : 3}">${sub}</th>`;
                 }).join("")}
+=======
+                ${subjectList
+                  .map((sub) => {
+                    const isPrimary = isPrimarySubject(sub);
+                    return `<th colspan="${isPrimary ? 4 : 3}">${sub}</th>`;
+                  })
+                  .join("")}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 <th rowspan="2" class="rotate-header">एकूण गुण (${subjectList.length * 100})</th>
                 <th rowspan="2" class="rotate-header">टक्केवारी (%)</th>
                 <th rowspan="2" class="rotate-header">एकूण श्रेणी</th>
@@ -1299,6 +1803,7 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
                 ${includeAttendance ? `<th rowspan="2" class="rotate-header">उपस्थिती</th>` : ""}
               </tr>
               <tr>
+<<<<<<< HEAD
                 ${subjectList.map(sub => {
                   const isPrimary = isPrimarySubject(sub);
                   if (isPrimary) {
@@ -1307,6 +1812,18 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
                     return `<th>अ (100)</th><th>एकूण</th><th>श्रेणी</th>`;
                   }
                 }).join("")}
+=======
+                ${subjectList
+                  .map((sub) => {
+                    const isPrimary = isPrimarySubject(sub);
+                    if (isPrimary) {
+                      return `<th>अ (70)</th><th>ब (30)</th><th>एकूण</th><th>श्रेणी</th>`;
+                    } else {
+                      return `<th>अ (100)</th><th>एकूण</th><th>श्रेणी</th>`;
+                    }
+                  })
+                  .join("")}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               </tr>
             </thead>
             <tbody>
@@ -1365,7 +1882,13 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
           </button>
           <div>
             <h2 className="text-xl md:text-2xl font-black text-white tracking-tight">
+<<<<<<< HEAD
               {language === "English" ? "CCE Evaluation Register" : "CCE CCE मूल्यांकन नोंदवही"}
+=======
+              {language === "English"
+                ? "CCE Evaluation Register"
+                : "CCE CCE मूल्यांकन नोंदवही"}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
             </h2>
             <p className="text-[10px] text-emerald-500 font-bold uppercase tracking-wider mt-0.5">
               Evaluation Register (Daily Sheets)
@@ -1379,14 +1902,22 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
 
       {/* Main Settings Card */}
       <div className="flex-1 max-w-2xl mx-auto w-full space-y-6">
+<<<<<<< HEAD
         
+=======
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         {/* Semester Tab Selection */}
         <div className="flex bg-[#121c16] rounded-full p-1 border border-emerald-950/60 max-w-sm mx-auto shadow-inner">
           <button
             onClick={() => setActiveSemester("first")}
             className={`flex-1 py-2.5 rounded-full font-bold text-xs transition-all cursor-pointer ${
+<<<<<<< HEAD
               activeSemester === "first" 
                 ? "bg-[#223d2e] text-[#a2d8b4] shadow-md border border-emerald-900/30" 
+=======
+              activeSemester === "first"
+                ? "bg-[#223d2e] text-[#a2d8b4] shadow-md border border-emerald-900/30"
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 : "text-emerald-600/70 hover:text-emerald-500"
             }`}
           >
@@ -1395,8 +1926,13 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
           <button
             onClick={() => setActiveSemester("second")}
             className={`flex-1 py-2.5 rounded-full font-bold text-xs transition-all cursor-pointer ${
+<<<<<<< HEAD
               activeSemester === "second" 
                 ? "bg-[#223d2e] text-[#a2d8b4] shadow-md border border-emerald-900/30" 
+=======
+              activeSemester === "second"
+                ? "bg-[#223d2e] text-[#a2d8b4] shadow-md border border-emerald-900/30"
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 : "text-emerald-600/70 hover:text-emerald-500"
             }`}
           >
@@ -1412,21 +1948,56 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
               : "नमस्कार, CCE मूल्यांकन नोंदवहीसाठी एकाच PDF मध्ये खालील घटक समाविष्ट केले जातील -"}
           </p>
           <ol className="list-decimal list-inside space-y-2 pl-2 text-emerald-200/90 text-sm font-semibold">
+<<<<<<< HEAD
             <li>{language === "English" ? "Cover Page" : "पृष्ठभाग (Cover Page)"}</li>
             <li>{language === "English" ? "Student Formative/Summative Marks & Remarks" : "विद्यार्थ्यांचे आकारिक-संकलित गुण व नोंदी"}</li>
             <li>{language === "English" ? "Grade-wise Compilation Table" : "श्रेणी-निहाय संकलन तक्ता"}</li>
             <li>{language === "English" ? "Category-wise & Subject-wise Marks Sheet" : "जात-निहाय व विषय-निहाय एकूण गुणांचे पत्रक"}</li>
             <li>{language === "English" ? "Final Result Sheet" : "अखेरीस निकालपत्रक"}</li>
+=======
+            <li>
+              {language === "English" ? "Cover Page" : "पृष्ठभाग (Cover Page)"}
+            </li>
+            <li>
+              {language === "English"
+                ? "Student Formative/Summative Marks & Remarks"
+                : "विद्यार्थ्यांचे आकारिक-संकलित गुण व नोंदी"}
+            </li>
+            <li>
+              {language === "English"
+                ? "Grade-wise Compilation Table"
+                : "श्रेणी-निहाय संकलन तक्ता"}
+            </li>
+            <li>
+              {language === "English"
+                ? "Category-wise & Subject-wise Marks Sheet"
+                : "जात-निहाय व विषय-निहाय एकूण गुणांचे पत्रक"}
+            </li>
+            <li>
+              {language === "English"
+                ? "Final Result Sheet"
+                : "अखेरीस निकालपत्रक"}
+            </li>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           </ol>
         </div>
 
         {/* Config Options Group */}
         <div className="border-t border-emerald-950/40 pt-6 space-y-5">
+<<<<<<< HEAD
           
           {/* Page Layout Radios */}
           <div>
             <h3 className="text-sm font-bold text-[#a2d8b4]/90 mb-3">
               {language === "English" ? "Student Formative/Summative Marks & Remarks" : "विद्यार्थ्यांचे आकारिक-संकलित गुण व नोंदी"}
+=======
+          {/* Page Layout Radios */}
+          <div>
+            <h3 className="text-sm font-bold text-[#a2d8b4]/90 mb-3">
+              {language === "English"
+                ? "Student Formative/Summative Marks & Remarks"
+                : "विद्यार्थ्यांचे आकारिक-संकलित गुण व नोंदी"}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
             </h3>
             <div className="flex items-center gap-6">
               <label className="flex items-center gap-3 cursor-pointer text-sm text-white select-none">
@@ -1438,12 +2009,29 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
                   onChange={() => setPageLayout("single")}
                   className="hidden"
                 />
+<<<<<<< HEAD
                 <div className={`size-5 rounded-full border-2 flex items-center justify-center transition-all ${
                   pageLayout === "single" ? "border-[#98d9a4] bg-transparent" : "border-emerald-800"
                 }`}>
                   {pageLayout === "single" && <div className="size-2.5 rounded-full bg-[#98d9a4]" />}
                 </div>
                 <span>{language === "English" ? "Single Page" : "एकाच पानावर"}</span>
+=======
+                <div
+                  className={`size-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                    pageLayout === "single"
+                      ? "border-[#98d9a4] bg-transparent"
+                      : "border-emerald-800"
+                  }`}
+                >
+                  {pageLayout === "single" && (
+                    <div className="size-2.5 rounded-full bg-[#98d9a4]" />
+                  )}
+                </div>
+                <span>
+                  {language === "English" ? "Single Page" : "एकाच पानावर"}
+                </span>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               </label>
 
               <label className="flex items-center gap-3 cursor-pointer text-sm text-white select-none">
@@ -1455,12 +2043,29 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
                   onChange={() => setPageLayout("double")}
                   className="hidden"
                 />
+<<<<<<< HEAD
                 <div className={`size-5 rounded-full border-2 flex items-center justify-center transition-all ${
                   pageLayout === "double" ? "border-[#98d9a4] bg-transparent" : "border-emerald-800"
                 }`}>
                   {pageLayout === "double" && <div className="size-2.5 rounded-full bg-[#98d9a4]" />}
                 </div>
                 <span>{language === "English" ? "Double Page" : "दोन पानांवर"}</span>
+=======
+                <div
+                  className={`size-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                    pageLayout === "double"
+                      ? "border-[#98d9a4] bg-transparent"
+                      : "border-emerald-800"
+                  }`}
+                >
+                  {pageLayout === "double" && (
+                    <div className="size-2.5 rounded-full bg-[#98d9a4]" />
+                  )}
+                </div>
+                <span>
+                  {language === "English" ? "Double Page" : "दोन पानांवर"}
+                </span>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               </label>
             </div>
           </div>
@@ -1474,6 +2079,7 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
                 onChange={(e) => setIncludeAttendance(e.target.checked)}
                 className="hidden"
               />
+<<<<<<< HEAD
               <div className={`size-5 rounded border-2 flex items-center justify-center transition-all ${
                 includeAttendance ? "border-[#98d9a4] bg-[#223d2e] text-[#98d9a4]" : "border-emerald-800"
               }`}>
@@ -1487,6 +2093,26 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
 
 
 
+=======
+              <div
+                className={`size-5 rounded border-2 flex items-center justify-center transition-all ${
+                  includeAttendance
+                    ? "border-[#98d9a4] bg-[#223d2e] text-[#98d9a4]"
+                    : "border-emerald-800"
+                }`}
+              >
+                {includeAttendance && <Check size={14} strokeWidth={3} />}
+              </div>
+              <span>
+                {language === "English"
+                  ? "Attendance Column in Result Sheet"
+                  : "निकाल पत्रक मधील उपस्थिती कॉलम"}
+              </span>
+            </label>
+          </div>
+        </div>
+
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         {/* Bottom Compilation Trigger */}
         <button
           onClick={handlePrintCompiledRegister}
@@ -1497,6 +2123,7 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
             <>
               <Loader2 className="size-4 animate-spin" />
               <span>
+<<<<<<< HEAD
                 {language === "English" ? "Compiling register..." : "पद्धती संकलित करत आहे..."}
               </span>
             </>
@@ -1505,6 +2132,19 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
           )}
         </button>
 
+=======
+                {language === "English"
+                  ? "Compiling register..."
+                  : "पद्धती संकलित करत आहे..."}
+              </span>
+            </>
+          ) : (
+            <span>
+              {language === "English" ? "Generate / Print" : "तयार करा"}
+            </span>
+          )}
+        </button>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       </div>
     </div>
   );

@@ -11,10 +11,14 @@ export function CCEStudentList({
   onBack: () => void;
   onViewReport: (studentName: string) => void;
 }) {
+<<<<<<< HEAD
   return (
     <CCEStudentInfo
       selectedClass={selectedClass}
       onBack={onBack}
     />
   );
+=======
+  return <CCEStudentInfo selectedClass={selectedClass} onBack={onBack} />;
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 }

@@ -38,7 +38,15 @@ import loginBg from "@/assets/login-bg.jpg";
 
 export const Route = createFileRoute("/signup")({
   head: () => ({
+<<<<<<< HEAD
     meta: [{ title: "Student Registration Hub — SGK Brainova Smart Learning With AI" }],
+=======
+    meta: [
+      {
+        title: "Student Registration Hub — SGK Brainova Smart Learning With AI",
+      },
+    ],
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   }),
   component: RegistrationPage,
 });

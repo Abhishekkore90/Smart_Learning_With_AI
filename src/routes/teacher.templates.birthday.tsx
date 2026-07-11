@@ -179,7 +179,15 @@ function BirthdayTemplatesPage() {
                       ? "छात्र जन्मदिन "
                       : "Student Birthday "}{" "}
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-yellow-400">
+<<<<<<< HEAD
                     {lang === "mr" ? "प्रणाली" : lang === "hi" ? "प्रणाली" : "System"}
+=======
+                    {lang === "mr"
+                      ? "प्रणाली"
+                      : lang === "hi"
+                        ? "प्रणाली"
+                        : "System"}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   </span>
                 </h2>
                 <p className="text-slate-400 font-medium max-w-xl text-lg">
@@ -195,7 +203,15 @@ function BirthdayTemplatesPage() {
                 className="group flex items-center gap-4 px-10 py-6 bg-white text-slate-900 rounded-[2.5rem] font-black text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-2xl"
               >
                 <ArrowLeft className="size-5 group-hover:-translate-x-1 transition-transform" />{" "}
+<<<<<<< HEAD
                 {lang === "mr" ? "टेम्प्लेट्स" : lang === "hi" ? "टेम्प्लेट्स" : "Templates"}
+=======
+                {lang === "mr"
+                  ? "टेम्प्लेट्स"
+                  : lang === "hi"
+                    ? "टेम्प्लेट्स"
+                    : "Templates"}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               </Link>
             </div>
           </motion.div>
@@ -229,7 +245,15 @@ function BirthdayTemplatesPage() {
                       style={{ background: template.accent }}
                     />
                     <p className="text-[8px] font-black uppercase tracking-[0.4em] text-white/40 mb-1">
+<<<<<<< HEAD
                       {lang === "mr" ? "नाव" : lang === "hi" ? "नाम" : "Presented To"}
+=======
+                      {lang === "mr"
+                        ? "नाव"
+                        : lang === "hi"
+                          ? "नाम"
+                          : "Presented To"}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     </p>
                     <h5
                       className="text-2xl font-black text-white tracking-tighter leading-none"
@@ -264,7 +288,15 @@ function BirthdayTemplatesPage() {
                           : lang === "hi"
                             ? template.categoryHi
                             : template.category}{" "}
+<<<<<<< HEAD
                         {lang === "mr" ? "इंजिन" : lang === "hi" ? "इंजन" : "ENGINE"}
+=======
+                        {lang === "mr"
+                          ? "इंजिन"
+                          : lang === "hi"
+                            ? "इंजन"
+                            : "ENGINE"}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                       </p>
                     </div>
                     <div className="flex gap-2">
@@ -283,11 +315,27 @@ function BirthdayTemplatesPage() {
                       className="flex-1 py-3 bg-slate-950 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-slate-800 transition-all shadow-md text-center font-black"
                     >
                       <Edit3 className="size-3.5" />{" "}
+<<<<<<< HEAD
                       {lang === "mr" ? "संपादन" : lang === "hi" ? "संपादन" : "Edit"}
                     </Link>
                     <button className="flex-1 py-3 bg-blue-600 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-blue-700 transition-all shadow-md font-black">
                       <Download className="size-3.5" />{" "}
                       {lang === "mr" ? "डाउनलोड" : lang === "hi" ? "डाउनलोड" : "Download"}
+=======
+                      {lang === "mr"
+                        ? "संपादन"
+                        : lang === "hi"
+                          ? "संपादन"
+                          : "Edit"}
+                    </Link>
+                    <button className="flex-1 py-3 bg-blue-600 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-blue-700 transition-all shadow-md font-black">
+                      <Download className="size-3.5" />{" "}
+                      {lang === "mr"
+                        ? "डाउनलोड"
+                        : lang === "hi"
+                          ? "डाउनलोड"
+                          : "Download"}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     </button>
                   </div>
                 </div>

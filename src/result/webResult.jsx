@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React, { useState, useEffect } from 'react';
 import { Modal, Button } from 'react-bootstrap';
 import "../result/result.css";
@@ -7,6 +8,15 @@ import { useParams } from 'react-router-dom';
 
 const WebResult = () => {
 
+=======
+import React, { useState, useEffect } from "react";
+import { Modal, Button } from "react-bootstrap";
+import "../result/result.css";
+import AlertMessage from "../../AlertMessage";
+import { useParams } from "react-router-dom";
+
+const WebResult = () => {
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   const params = useParams();
   const udiseNumber = params.udiseNumber;
   const srNo = params.srNo;
@@ -19,10 +29,19 @@ const WebResult = () => {
   const [marksData, setMarksData] = useState({});
   const [selectedStudentResults, setSelectedStudentResults] = useState(null);
   const [showModal, setShowModal] = useState(true);
+<<<<<<< HEAD
   const [schoolName, setSchoolName] = useState('');
   const [schoolLogo, setSchoolLogo] = useState('');
 
   const [language, setLanguage] = useState(localStorage.getItem('language') || 'English');
+=======
+  const [schoolName, setSchoolName] = useState("");
+  const [schoolLogo, setSchoolLogo] = useState("");
+
+  const [language, setLanguage] = useState(
+    localStorage.getItem("language") || "English",
+  );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   const [alertMessage, setAlertMessage] = useState("");
   const [showAlert, setShowAlert] = useState(false);
 
@@ -36,10 +55,17 @@ const WebResult = () => {
   const fetchSubjectSequence = async () => {
     try {
       const response = await fetch(
+<<<<<<< HEAD
         `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/subjectSequence/${academicYear}/${classValue}.json`
       );
       if (!response.ok) {
         throw new Error('Failed to fetch subject sequence');
+=======
+        `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/subjectSequence/${academicYear}/${classValue}.json`,
+      );
+      if (!response.ok) {
+        throw new Error("Failed to fetch subject sequence");
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       }
       const data = await response.json();
       // Assuming the data is an object with numeric keys
@@ -48,7 +74,11 @@ const WebResult = () => {
         .map((key) => data[key]); // Map keys to subject names
       setSubjectSequence(orderedSubjects);
     } catch (error) {
+<<<<<<< HEAD
       console.error('Error fetching subject sequence:', error);
+=======
+      console.error("Error fetching subject sequence:", error);
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     }
   };
 
@@ -63,15 +93,21 @@ const WebResult = () => {
     }
   }, [alertMessage]);
 
+<<<<<<< HEAD
 
   useEffect(() => {
     const storedLanguage = localStorage.getItem('language') || 'English';
+=======
+  useEffect(() => {
+    const storedLanguage = localStorage.getItem("language") || "English";
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     setLanguage(storedLanguage);
   }, []);
 
   const fetchSchoolName = async () => {
     try {
       const response = await fetch(
+<<<<<<< HEAD
         `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/schoolData.json`
       );
       if (!response.ok) {
@@ -86,26 +122,55 @@ const WebResult = () => {
   };
 
 
+=======
+        `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/schoolData.json`,
+      );
+      if (!response.ok) {
+        throw new Error("Failed to fetch school name");
+      }
+      const data = await response.json();
+      setSchoolName(data.schoolName || " ");
+      setSchoolLogo(data.schoolLogo || ""); // Add this line
+    } catch (error) {
+      console.error("Error fetching school name:", error);
+    }
+  };
+
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   useEffect(() => {
     if (selectedExamName && classValue && academicYear) {
       fetchMarksForSelectedSubject();
     }
   }, [selectedExamName, classValue, academicYear]);
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   useEffect(() => {
     const fetchBasicStudentInfo = async () => {
       try {
         const response = await fetch(
+<<<<<<< HEAD
           `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${srNo}.json`
         );
         if (!response.ok) {
           throw new Error('Failed to fetch student info');
+=======
+          `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${srNo}.json`,
+        );
+        if (!response.ok) {
+          throw new Error("Failed to fetch student info");
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         }
         const studentInfo = await response.json();
 
         // Set basic student info
+<<<<<<< HEAD
         setSelectedStudentResults(prev => ({
+=======
+        setSelectedStudentResults((prev) => ({
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           ...prev,
           studentName: studentInfo.stdName,
           stdMother: studentInfo.stdMother,
@@ -116,10 +181,17 @@ const WebResult = () => {
           motherTounge: studentInfo.motherTounge,
           studentId: studentInfo.studentId,
           gender: studentInfo.gender,
+<<<<<<< HEAD
           rollNo: studentInfo.rollNo
         }));
       } catch (error) {
         console.error('Error fetching student info:', error);
+=======
+          rollNo: studentInfo.rollNo,
+        }));
+      } catch (error) {
+        console.error("Error fetching student info:", error);
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       }
     };
 
@@ -128,28 +200,46 @@ const WebResult = () => {
     }
   }, [srNo, udiseNumber]);
 
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   const fetchStudentData = async () => {
     try {
       // First semester data
       const firstSemesterResponse = await fetch(
+<<<<<<< HEAD
         `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${srNo}/result/${academicYear}/First Semester.json`
+=======
+        `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${srNo}/result/${academicYear}/First Semester.json`,
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       );
 
       // Second semester data (if viewing second semester)
       const secondSemesterResponse = await fetch(
+<<<<<<< HEAD
         `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${srNo}/result/${academicYear}/${selectedExamName}.json`
+=======
+        `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${srNo}/result/${academicYear}/${selectedExamName}.json`,
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       );
 
       const firstSemesterData = await firstSemesterResponse.json();
       const secondSemesterData = await secondSemesterResponse.json();
       // Fetch nondi data for both semesters
       const nondiFirstSemesterResponse = await fetch(
+<<<<<<< HEAD
         `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${srNo}/result/${academicYear}/First Semester/nondi.json`
       );
       const nondiSecondSemesterResponse = await fetch(
         `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${srNo}/result/${academicYear}/${selectedExamName}/nondi.json`
+=======
+        `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${srNo}/result/${academicYear}/First Semester/nondi.json`,
+      );
+      const nondiSecondSemesterResponse = await fetch(
+        `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${srNo}/result/${academicYear}/${selectedExamName}/nondi.json`,
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       );
 
       if (!nondiFirstSemesterResponse.ok || !nondiSecondSemesterResponse.ok) {
@@ -169,12 +259,17 @@ const WebResult = () => {
       const resultsWithTotal = {};
       const allSubjects = new Set([
         ...Object.keys(firstSemesterData || {}),
+<<<<<<< HEAD
         ...Object.keys(secondSemesterData || {})
+=======
+        ...Object.keys(secondSemesterData || {}),
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       ]);
 
       allSubjects.forEach((subject) => {
         const firstSemesterGrade = firstSemesterData?.[subject]?.Akarik?.Total
           ? calculateGrade(
+<<<<<<< HEAD
             firstSemesterData[subject].Akarik.Total +
             (firstSemesterData[subject].Sanklik?.Total || 0)
           )
@@ -182,6 +277,16 @@ const WebResult = () => {
 
         const akarikTotal = secondSemesterData?.[subject]?.Akarik?.Total || 0;
         const sankalikTotal = secondSemesterData?.[subject]?.Sanklik?.Total || 0;
+=======
+              firstSemesterData[subject].Akarik.Total +
+                (firstSemesterData[subject].Sanklik?.Total || 0),
+            )
+          : " ";
+
+        const akarikTotal = secondSemesterData?.[subject]?.Akarik?.Total || 0;
+        const sankalikTotal =
+          secondSemesterData?.[subject]?.Sanklik?.Total || 0;
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         const total = akarikTotal + sankalikTotal;
         const grade = calculateGrade(total);
 
@@ -195,13 +300,20 @@ const WebResult = () => {
       });
 
       // Update the state with the results
+<<<<<<< HEAD
       setSelectedStudentResults(prev => ({
         ...prev,
         results: resultsWithTotal
+=======
+      setSelectedStudentResults((prev) => ({
+        ...prev,
+        results: resultsWithTotal,
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       }));
 
       setShowModal(true);
     } catch (error) {
+<<<<<<< HEAD
       console.error('Error fetching student data:', error);
     }
   };
@@ -209,22 +321,42 @@ const WebResult = () => {
 
 
 
+=======
+      console.error("Error fetching student data:", error);
+    }
+  };
+
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   useEffect(() => {
     const fetchStudentData = async () => {
       try {
         const response = await fetch(
+<<<<<<< HEAD
           `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${srNo}.json`
         );
         if (!response.ok) {
           throw new Error('Failed to fetch student info');
+=======
+          `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${srNo}.json`,
+        );
+        if (!response.ok) {
+          throw new Error("Failed to fetch student info");
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         }
         const studentInfo = await response.json();
 
         const firstSemesterResponse = await fetch(
+<<<<<<< HEAD
           `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${srNo}/result/${academicYear}/First Semester.json`
         );
         const secondSemesterResponse = await fetch(
           `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${srNo}/result/${academicYear}/${selectedExamName}.json`
+=======
+          `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${srNo}/result/${academicYear}/First Semester.json`,
+        );
+        const secondSemesterResponse = await fetch(
+          `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${srNo}/result/${academicYear}/${selectedExamName}.json`,
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         );
 
         const firstSemesterData = await firstSemesterResponse.json();
@@ -232,6 +364,7 @@ const WebResult = () => {
 
         // Fetch nondi data for both semesters
         const nondiFirstSemesterResponse = await fetch(
+<<<<<<< HEAD
           `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${srNo}/result/${academicYear}/First Semester/nondi.json`
         );
         const nondiSecondSemesterResponse = await fetch(
@@ -240,17 +373,33 @@ const WebResult = () => {
 
         const nondiFirstSemesterData = await nondiFirstSemesterResponse.json();
         const nondiSecondSemesterData = await nondiSecondSemesterResponse.json();
+=======
+          `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${srNo}/result/${academicYear}/First Semester/nondi.json`,
+        );
+        const nondiSecondSemesterResponse = await fetch(
+          `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${srNo}/result/${academicYear}/${selectedExamName}/nondi.json`,
+        );
+
+        const nondiFirstSemesterData = await nondiFirstSemesterResponse.json();
+        const nondiSecondSemesterData =
+          await nondiSecondSemesterResponse.json();
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
         // Process the results
         const resultsWithTotal = {};
         const allSubjects = new Set([
           ...Object.keys(firstSemesterData || {}),
+<<<<<<< HEAD
           ...Object.keys(secondSemesterData || {})
+=======
+          ...Object.keys(secondSemesterData || {}),
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         ]);
 
         allSubjects.forEach((subject) => {
           const firstSemesterGrade = firstSemesterData?.[subject]?.Akarik?.Total
             ? calculateGrade(
+<<<<<<< HEAD
               firstSemesterData[subject].Akarik.Total +
               (firstSemesterData[subject].Sanklik?.Total || 0)
             )
@@ -258,6 +407,16 @@ const WebResult = () => {
 
           const akarikTotal = secondSemesterData?.[subject]?.Akarik?.Total || 0;
           const sankalikTotal = secondSemesterData?.[subject]?.Sanklik?.Total || 0;
+=======
+                firstSemesterData[subject].Akarik.Total +
+                  (firstSemesterData[subject].Sanklik?.Total || 0),
+              )
+            : " ";
+
+          const akarikTotal = secondSemesterData?.[subject]?.Akarik?.Total || 0;
+          const sankalikTotal =
+            secondSemesterData?.[subject]?.Sanklik?.Total || 0;
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           const total = akarikTotal + sankalikTotal;
           const grade = calculateGrade(total);
 
@@ -285,6 +444,7 @@ const WebResult = () => {
           results: resultsWithTotal,
           nondi: {
             specialEntries: nondiSecondSemesterData.specialEntries || "",
+<<<<<<< HEAD
             interestsAndHobbies: nondiSecondSemesterData.interestsAndHobbies || "",
             necessaryCorrections: nondiSecondSemesterData.necessaryCorrections || "",
           },
@@ -292,12 +452,29 @@ const WebResult = () => {
             specialEntries: nondiFirstSemesterData.specialEntries || "",
             interestsAndHobbies: nondiFirstSemesterData.interestsAndHobbies || "",
             necessaryCorrections: nondiFirstSemesterData.necessaryCorrections || "",
+=======
+            interestsAndHobbies:
+              nondiSecondSemesterData.interestsAndHobbies || "",
+            necessaryCorrections:
+              nondiSecondSemesterData.necessaryCorrections || "",
+          },
+          firstSemester: {
+            specialEntries: nondiFirstSemesterData.specialEntries || "",
+            interestsAndHobbies:
+              nondiFirstSemesterData.interestsAndHobbies || "",
+            necessaryCorrections:
+              nondiFirstSemesterData.necessaryCorrections || "",
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           },
         });
 
         setShowModal(true);
       } catch (error) {
+<<<<<<< HEAD
         console.error('Error fetching student data:', error);
+=======
+        console.error("Error fetching student data:", error);
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       }
     };
 
@@ -306,7 +483,10 @@ const WebResult = () => {
     }
   }, [academicYear, classValue, selectedExamName, srNo]);
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   // Call fetchStudentData when the component mounts with URL parameters
   useEffect(() => {
     fetchSchoolName();
@@ -315,18 +495,29 @@ const WebResult = () => {
     }
   }, [academicYear, classValue, selectedExamName, srNo]);
 
+<<<<<<< HEAD
 
   const fetchMarksForSelectedSubject = async () => {
     try {
       const selectedStudents = studentData.filter(
         (student) => student.currentClass === classValue
+=======
+  const fetchMarksForSelectedSubject = async () => {
+    try {
+      const selectedStudents = studentData.filter(
+        (student) => student.currentClass === classValue,
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       );
       setSelectedStudents(selectedStudents);
       const marksDataPromises = selectedStudents.map(async (student) => {
         const studentMarks = await fetchMarksData(
           student.srNo,
           academicYear,
+<<<<<<< HEAD
           selectedExamName
+=======
+          selectedExamName,
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         );
         return { srNo: student.srNo, marks: studentMarks };
       });
@@ -339,7 +530,11 @@ const WebResult = () => {
 
       setMarksData(marksData);
     } catch (error) {
+<<<<<<< HEAD
       console.error('Error fetching marks data:', error);
+=======
+      console.error("Error fetching marks data:", error);
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     }
   };
 
@@ -353,13 +548,21 @@ const WebResult = () => {
       const data = await response.json();
       return data || {};
     } catch (error) {
+<<<<<<< HEAD
       console.error('Error fetching marks data:', error);
+=======
+      console.error("Error fetching marks data:", error);
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       return {};
     }
   };
 
+<<<<<<< HEAD
   const [selectedStudentForSr, setSelectedStudentForSr] = useState('')
 
+=======
+  const [selectedStudentForSr, setSelectedStudentForSr] = useState("");
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
   const viewResult = async (srNo) => {
     try {
@@ -371,10 +574,17 @@ const WebResult = () => {
 
       // Fetch both first and second semester data
       const firstSemesterResponse = await fetch(
+<<<<<<< HEAD
         `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${srNo}/result/${academicYear}/First Semester.json`
       );
       const secondSemesterResponse = await fetch(
         `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${srNo}/result/${academicYear}/${selectedExamName}.json`
+=======
+        `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${srNo}/result/${academicYear}/First Semester.json`,
+      );
+      const secondSemesterResponse = await fetch(
+        `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${srNo}/result/${academicYear}/${selectedExamName}.json`,
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       );
 
       if (!firstSemesterResponse.ok || !secondSemesterResponse.ok) {
@@ -386,16 +596,31 @@ const WebResult = () => {
 
       // Check if either semester data is empty
       if (!firstSemesterData || Object.keys(firstSemesterData).length === 0) {
+<<<<<<< HEAD
         setAlertMessage("Add the subject and fill the marks to view the result.");
+=======
+        setAlertMessage(
+          "Add the subject and fill the marks to view the result.",
+        );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         return; // Exit the function if no data is found
       }
 
       if (!secondSemesterData || Object.keys(secondSemesterData).length === 0) {
+<<<<<<< HEAD
         setAlertMessage("Add the subject and fill the marks to view the result.");
         return; // Exit the function if no data is found
       }
 
 
+=======
+        setAlertMessage(
+          "Add the subject and fill the marks to view the result.",
+        );
+        return; // Exit the function if no data is found
+      }
+
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       const resultsWithTotal = {};
 
       // Combine all subjects from both semesters
@@ -407,6 +632,7 @@ const WebResult = () => {
       allSubjects.forEach((subject) => {
         const firstSemesterGrade = firstSemesterData[subject]?.Akarik?.Total
           ? calculateGrade(
+<<<<<<< HEAD
             firstSemesterData[subject].Akarik.Total +
             (firstSemesterData[subject].Sanklik?.Total || 0)
           )
@@ -416,6 +642,15 @@ const WebResult = () => {
           secondSemesterData[subject]?.Akarik?.Total || 0;
         const sankalikTotal =
           secondSemesterData[subject]?.Sanklik?.Total || 0;
+=======
+              firstSemesterData[subject].Akarik.Total +
+                (firstSemesterData[subject].Sanklik?.Total || 0),
+            )
+          : " ";
+
+        const akarikTotal = secondSemesterData[subject]?.Akarik?.Total || 0;
+        const sankalikTotal = secondSemesterData[subject]?.Sanklik?.Total || 0;
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         const total = akarikTotal + sankalikTotal;
         const grade = calculateGrade(total);
 
@@ -430,11 +665,19 @@ const WebResult = () => {
 
       // Fetch nondi data for both semesters
       const nondiFirstSemesterResponse = await fetch(
+<<<<<<< HEAD
         `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${srNo}/result/${academicYear}/First Semester/nondi.json`
       );
 
       const nondiSecondSemesterResponse = await fetch(
         `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${srNo}/result/${academicYear}/${selectedExamName}/nondi.json`
+=======
+        `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${srNo}/result/${academicYear}/First Semester/nondi.json`,
+      );
+
+      const nondiSecondSemesterResponse = await fetch(
+        `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${srNo}/result/${academicYear}/${selectedExamName}/nondi.json`,
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       );
 
       if (!nondiFirstSemesterResponse.ok || !nondiSecondSemesterResponse.ok) {
@@ -468,6 +711,7 @@ const WebResult = () => {
   };
 
   const calculateGradeEnglish = (total) => {
+<<<<<<< HEAD
     if (total >= 91) return 'A1';
     if (total >= 81) return 'A2';
     if (total >= 71) return 'B1';
@@ -489,10 +733,34 @@ const WebResult = () => {
     if (total >= 33) return 'ड-1';
     if (total >= 21) return 'ड-2';
     return 'अनुपस्थित';
+=======
+    if (total >= 91) return "A1";
+    if (total >= 81) return "A2";
+    if (total >= 71) return "B1";
+    if (total >= 61) return "B2";
+    if (total >= 51) return "C1";
+    if (total >= 41) return "C2";
+    if (total >= 33) return "D1";
+    if (total >= 21) return "D2";
+    return "Absent";
+  };
+
+  const calculateGradeMarathi = (total) => {
+    if (total >= 91) return "अ-1";
+    if (total >= 81) return "अ-2";
+    if (total >= 71) return "ब-1";
+    if (total >= 61) return "ब-2";
+    if (total >= 51) return "क-1";
+    if (total >= 41) return "क-2";
+    if (total >= 33) return "ड-1";
+    if (total >= 21) return "ड-2";
+    return "अनुपस्थित";
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   };
 
   // Function to calculate grade based on the current language
   const calculateGrade = (total) => {
+<<<<<<< HEAD
     return language === 'English' ? calculateGradeEnglish(total) : calculateGradeMarathi(total);
   };
 
@@ -501,19 +769,52 @@ const WebResult = () => {
     Present: {},
     Absent: {},
     Leave: {}
+=======
+    return language === "English"
+      ? calculateGradeEnglish(total)
+      : calculateGradeMarathi(total);
+  };
+
+  const months = [
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+  ];
+  const [attendance, setAttendance] = useState({
+    Present: {},
+    Absent: {},
+    Leave: {},
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   });
 
   useEffect(() => {
     const fetchAttendanceData = async () => {
       const srNo = selectedStudentForSr.serialNo;
+<<<<<<< HEAD
       const startYear = academicYear.split('-')[0];
+=======
+      const startYear = academicYear.split("-")[0];
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       const urlBase = `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/Attendance/${srNo}/Presenty/${startYear}`;
 
       try {
         const fetchedAttendance = {
           Present: {},
           Absent: {},
+<<<<<<< HEAD
           Leave: {}
+=======
+          Leave: {},
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         };
 
         for (const month of months) {
@@ -528,6 +829,7 @@ const WebResult = () => {
               let absentCount = 0;
               let leaveCount = -1;
 
+<<<<<<< HEAD
 
               for (const day in data) {
                 const status = data[day]?.present;
@@ -535,6 +837,14 @@ const WebResult = () => {
                 if (status === 'present') {
                   presentCount++;
                 } else if (status === 'absent') {
+=======
+              for (const day in data) {
+                const status = data[day]?.present;
+
+                if (status === "present") {
+                  presentCount++;
+                } else if (status === "absent") {
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   absentCount++;
                 } else if (status === null || status === undefined) {
                   leaveCount++;
@@ -548,20 +858,34 @@ const WebResult = () => {
               console.warn(`No data found for ${month}`);
             }
           } else {
+<<<<<<< HEAD
             console.error(`Failed to fetch data for ${month}:`, response.statusText);
+=======
+            console.error(
+              `Failed to fetch data for ${month}:`,
+              response.statusText,
+            );
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           }
         }
 
         setAttendance(fetchedAttendance);
       } catch (error) {
+<<<<<<< HEAD
         console.error('Error fetching attendance data:', error);
+=======
+        console.error("Error fetching attendance data:", error);
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       }
     };
 
     fetchAttendanceData();
   }, [selectedStudentForSr, udiseNumber, academicYear]);
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   const handleInputChange = async (type, month, value) => {
     const srNo = selectedStudentForSr.serialNo;
     const updatedAttendance = { ...attendance };
@@ -573,6 +897,7 @@ const WebResult = () => {
 
     try {
       const response = await fetch(url, {
+<<<<<<< HEAD
         method: 'PUT', // Use PUT to set the value
         headers: {
           'Content-Type': 'application/json'
@@ -594,31 +919,83 @@ const WebResult = () => {
   // Define the English month names
   const firstSemesterMonths = ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov'];
   const secondSemesterMonths = ['Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May'];
+=======
+        method: "PUT", // Use PUT to set the value
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(value),
+      });
+
+      if (!response.ok) {
+        console.error("Failed to save data:", response.statusText);
+      }
+    } catch (error) {
+      console.error("Error saving data:", error);
+    }
+  };
+
+  const [summerVacationDate, setSummerVacationDate] = useState("");
+  const [winterVacationDate, setWinterVacationDate] = useState("");
+
+  // Define the English month names
+  const firstSemesterMonths = ["Jun", "Jul", "Aug", "Sep", "Oct", "Nov"];
+  const secondSemesterMonths = ["Dec", "Jan", "Feb", "Mar", "Apr", "May"];
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
   // Function to translate month to Marathi if needed
   const getMonthName = (month) => {
     const marathiMonths = {
+<<<<<<< HEAD
       Jun: 'जून', Jul: 'जुलै', Aug: 'ऑगस्ट', Sep: 'सप्टेंबर', Oct: 'ऑक्टोबर', Nov: 'नोव्हेंबर',
       Dec: 'डिसेंबर', Jan: 'जानेवारी', Feb: 'फेब्रुवारी', Mar: 'मार्च', Apr: 'एप्रिल', May: 'मे'
+=======
+      Jun: "जून",
+      Jul: "जुलै",
+      Aug: "ऑगस्ट",
+      Sep: "सप्टेंबर",
+      Oct: "ऑक्टोबर",
+      Nov: "नोव्हेंबर",
+      Dec: "डिसेंबर",
+      Jan: "जानेवारी",
+      Feb: "फेब्रुवारी",
+      Mar: "मार्च",
+      Apr: "एप्रिल",
+      May: "मे",
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     };
     return language === "English" ? month : marathiMonths[month];
   };
 
   const getAttendanceType = (type) => {
     const marathiTypes = {
+<<<<<<< HEAD
       Present: 'उपस्थित',
       Absent: 'गैरहजर',
       Leave: 'रजा'
+=======
+      Present: "उपस्थित",
+      Absent: "गैरहजर",
+      Leave: "रजा",
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     };
     return language === "English" ? type : marathiTypes[type];
   };
 
+<<<<<<< HEAD
 
   const handlePrint = () => {
     const printContent = document.querySelector('.modal-body'); // Select the modal body content
 
     if (printContent) {
       const printWindow = window.open('', '', 'height=600,width=800');
+=======
+  const handlePrint = () => {
+    const printContent = document.querySelector(".modal-body"); // Select the modal body content
+
+    if (printContent) {
+      const printWindow = window.open("", "", "height=600,width=800");
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       printWindow.document.write(`
       <html>
         <head>
@@ -893,7 +1270,11 @@ background-color: #fafafa; /* Light grey background for odd rows */
       printWindow.focus();
       printWindow.print();
     } else {
+<<<<<<< HEAD
       console.error('Print content not found');
+=======
+      console.error("Print content not found");
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     }
   };
 
@@ -901,6 +1282,7 @@ background-color: #fafafa; /* Light grey background for odd rows */
     <div>
       <AlertMessage message={alertMessage} show={showAlert} />
 
+<<<<<<< HEAD
       <div className=' main-content-of-page' style={{ top: 0 }}>
 
         <Modal show={showModal} dialogClassName='modal-80w' >
@@ -910,6 +1292,14 @@ background-color: #fafafa; /* Light grey background for odd rows */
               <div>
 
 
+=======
+      <div className=" main-content-of-page" style={{ top: 0 }}>
+        <Modal show={showModal} dialogClassName="modal-80w">
+          <Modal.Body>
+            {selectedExamName === "Second Semester" &&
+            selectedStudentResults ? (
+              <div>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 <div className="container ">
                   <div className="left">
                     <div className="left-box">
@@ -926,6 +1316,7 @@ background-color: #fafafa; /* Light grey background for odd rows */
 
                     <div class="student-info-grid">
                       <p>
+<<<<<<< HEAD
                         <label>{language === "English" ? "Name :" : "नाव :"}</label>
                         <span>
                           {selectedStudentResults?.studentName || ' '}{' '}
@@ -981,6 +1372,105 @@ background-color: #fafafa; /* Light grey background for odd rows */
                             <th rowspan="2">{language === "English" ? "Subject :" : "विषय"}</th>
                             <th colspan="2">{language === "English" ? "First Semester" : "प्रथम सत्र"}</th>
                             <th colspan="2">{language === "English" ? "Second Semester" : "द्वितीय सत्र"}</th>
+=======
+                        <label>
+                          {language === "English" ? "Name :" : "नाव :"}
+                        </label>
+                        <span>
+                          {selectedStudentResults?.studentName || " "}{" "}
+                          {selectedStudentResults?.stdFather || " "}{" "}
+                          {selectedStudentResults?.stdSurname || " "}
+                        </span>
+                      </p>
+                      <p>
+                        <label>
+                          {language === "English"
+                            ? "Roll No :"
+                            : "हजेरी क्रमांक :"}
+                        </label>
+                        <span>{selectedStudentResults?.rollNo || " "}</span>
+                      </p>
+                      <p>
+                        <label>
+                          {language === "English" ? "Exam :" : "परीक्षा सत्र :"}
+                        </label>
+                        <span>{selectedExamName || " "}</span>
+                      </p>
+                      <p>
+                        <label>
+                          {language === "English" ? "Year :" : "वर्ष :"}
+                        </label>
+                        <span>{academicYear || " "}</span>
+                      </p>
+                      <p>
+                        <label>
+                          {language === "English" ? "Class :" : "वर्ग :"}
+                        </label>
+                        <span>{classValue || " "}</span>
+                      </p>
+                      <p>
+                        <label>
+                          {language === "English"
+                            ? "Mother Name :"
+                            : "आईचे नाव :"}
+                        </label>
+                        <span>{selectedStudentResults?.stdMother || ""}</span>
+                      </p>
+                      <p>
+                        <label>
+                          {language === "English" ? "DOB :" : "जन्मतारीख :"}
+                        </label>
+                        <span>{selectedStudentResults?.dob || " "}</span>
+                      </p>
+                      <p>
+                        <label>
+                          {language === "English" ? "Division :" : "तुकडी :"}
+                        </label>
+                        <span>{selectedStudentResults?.division || " "}</span>
+                      </p>
+                      <p>
+                        <label>
+                          {language === "English"
+                            ? "Mother Tongue :"
+                            : "मातृभाषा :"}
+                        </label>
+                        <span>
+                          {selectedStudentResults?.motherTounge || " "}
+                        </span>
+                      </p>
+                      <p>
+                        <label>
+                          {language === "English"
+                            ? "Student ID :"
+                            : "विद्यार्थी आयडी :"}
+                        </label>
+                        <span>{selectedStudentResults?.studentId || " "}</span>
+                      </p>
+                      <p>
+                        <label>
+                          {language === "English" ? "Gender :" : "लिंग :"}
+                        </label>
+                        <span>{selectedStudentResults?.gender || " "}</span>
+                      </p>
+                    </div>
+                    <div className="gradable">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th rowspan="2">
+                              {language === "English" ? "Subject :" : "विषय"}
+                            </th>
+                            <th colspan="2">
+                              {language === "English"
+                                ? "First Semester"
+                                : "प्रथम सत्र"}
+                            </th>
+                            <th colspan="2">
+                              {language === "English"
+                                ? "Second Semester"
+                                : "द्वितीय सत्र"}
+                            </th>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                           </tr>
                           <tr>
                             <th>Kg</th>
@@ -998,7 +1488,13 @@ background-color: #fafafa; /* Light grey background for odd rows */
                             <td></td>
                           </tr>
                           <tr>
+<<<<<<< HEAD
                             <td>{language === "English" ? "Hight " : "उंची"}</td>
+=======
+                            <td>
+                              {language === "English" ? "Hight " : "उंची"}
+                            </td>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                             <td></td>
                             <td></td>
                             <td></td>
@@ -1021,15 +1517,35 @@ background-color: #fafafa; /* Light grey background for odd rows */
                         </tr>
                       </thead>
                       <tbody>
+<<<<<<< HEAD
                         {['Present', 'Absent', 'Leave'].map((type) => (
+=======
+                        {["Present", "Absent", "Leave"].map((type) => (
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                           <tr key={type}>
                             <td>{getAttendanceType(type)}</td>
                             {firstSemesterMonths.map((month, index) => (
                               <td key={index}>
                                 <input
                                   type="text"
+<<<<<<< HEAD
                                   value={type === 'Leave' && attendance[type][month] < 0 ? '' : attendance[type][month] || ''}
                                   onChange={(e) => handleInputChange(type, month, e.target.value)}
+=======
+                                  value={
+                                    type === "Leave" &&
+                                    attendance[type][month] < 0
+                                      ? ""
+                                      : attendance[type][month] || ""
+                                  }
+                                  onChange={(e) =>
+                                    handleInputChange(
+                                      type,
+                                      month,
+                                      e.target.value,
+                                    )
+                                  }
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                 />
                               </td>
                             ))}
@@ -1039,7 +1555,15 @@ background-color: #fafafa; /* Light grey background for odd rows */
                     </table>
 
                     {/* Second Semester Attendance Table */}
+<<<<<<< HEAD
                     <h5 style={{ marginTop: '10px' }}>{language === "English" ? "Second Semester Attendance:" : "द्वितीय सत्राची हजेरी:"}</h5>
+=======
+                    <h5 style={{ marginTop: "10px" }}>
+                      {language === "English"
+                        ? "Second Semester Attendance:"
+                        : "द्वितीय सत्राची हजेरी:"}
+                    </h5>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     <table>
                       <thead>
                         <tr>
@@ -1050,15 +1574,35 @@ background-color: #fafafa; /* Light grey background for odd rows */
                         </tr>
                       </thead>
                       <tbody>
+<<<<<<< HEAD
                         {['Present', 'Absent', 'Leave'].map((type) => (
+=======
+                        {["Present", "Absent", "Leave"].map((type) => (
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                           <tr key={type}>
                             <td>{getAttendanceType(type)}</td>
                             {secondSemesterMonths.map((month, index) => (
                               <td key={index}>
                                 <input
                                   type="text"
+<<<<<<< HEAD
                                   value={type === 'Leave' && attendance[type][month] < 0 ? '' : attendance[type][month] || ''}
                                   onChange={(e) => handleInputChange(type, month, e.target.value)}
+=======
+                                  value={
+                                    type === "Leave" &&
+                                    attendance[type][month] < 0
+                                      ? ""
+                                      : attendance[type][month] || ""
+                                  }
+                                  onChange={(e) =>
+                                    handleInputChange(
+                                      type,
+                                      month,
+                                      e.target.value,
+                                    )
+                                  }
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                 />
                               </td>
                             ))}
@@ -1067,9 +1611,18 @@ background-color: #fafafa; /* Light grey background for odd rows */
                       </tbody>
                     </table>
 
+<<<<<<< HEAD
 
                     <p style={{ marginTop: '5px' }}>{language === "English" ? "After the summer vacation school will start from." : "उन्हाळी सुटीनंतर शाळा दि. पासून सुरू होईल."}</p>
                     <div style={{ width: '150px' }}>
+=======
+                    <p style={{ marginTop: "5px" }}>
+                      {language === "English"
+                        ? "After the summer vacation school will start from."
+                        : "उन्हाळी सुटीनंतर शाळा दि. पासून सुरू होईल."}
+                    </p>
+                    <div style={{ width: "150px" }}>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                       <input
                         type="date"
                         value={summerVacationDate}
@@ -1079,6 +1632,7 @@ background-color: #fafafa; /* Light grey background for odd rows */
 
                     <div className="grad">
                       <p>
+<<<<<<< HEAD
                         {language === "English" ? " Instructions for parents:" : "पालकांसाठी सूचना"}
                         <li>  {language === "English" ? " Students should wear school uniform every day." : "विद्यार्थ्यांनी दररोज शालेय गणवेश परिधान करावा."}</li>
                         <li> {language === "English" ? "  A student should do the study given in school every day." : "विद्यार्थ्याने शाळेत दिलेला अभ्यास दररोज करावा."}</li>
@@ -1113,33 +1667,153 @@ background-color: #fafafa; /* Light grey background for odd rows */
                     <div>
                       <label htmlFor="exam-roll-no">{language === "English" ? "Exam: " : "परीक्षा"}</label>
                       <span>{selectedExamName || ' '}</span>
+=======
+                        {language === "English"
+                          ? " Instructions for parents:"
+                          : "पालकांसाठी सूचना"}
+                        <li>
+                          {" "}
+                          {language === "English"
+                            ? " Students should wear school uniform every day."
+                            : "विद्यार्थ्यांनी दररोज शालेय गणवेश परिधान करावा."}
+                        </li>
+                        <li>
+                          {" "}
+                          {language === "English"
+                            ? "  A student should do the study given in school every day."
+                            : "विद्यार्थ्याने शाळेत दिलेला अभ्यास दररोज करावा."}
+                        </li>
+                        <li>
+                          {" "}
+                          {language === "English"
+                            ? " Students should attend school on time and regularly every day."
+                            : "विद्यार्थ्यांनी दररोज वेळेवर व नियमितपणे शाळेत हजर राहावे."}
+                        </li>
+                        <li>
+                          {" "}
+                          {language === "English"
+                            ? " Students should not carry valuables, money. "
+                            : "विद्यार्थ्यांनी मौल्यवान वस्तू, पैसे घेऊन जाऊ नये."}
+                        </li>
+                        <li>
+                          {" "}
+                          {language === "English"
+                            ? " Students should follow the rules and discipline of the school. "
+                            : "विद्यार्थ्यांनी शाळेचे नियम व शिस्तीचे पालन करावे."}
+                        </li>
+                      </p>
+                    </div>
+
+                    <p style={{ marginTop: "70px", marginLeft: "350px" }}>
+                      {language === "English"
+                        ? "Parents Signature "
+                        : "पालकांची सही"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="container mt-1">
+                  <div className="left">
+                    <h2>
+                      {language === "English"
+                        ? "Student Progress Report "
+                        : "विद्यार्थी प्रगती अहवाल"}
+                    </h2>
+                    <div>
+                      <label htmlFor="roll-no">
+                        {language === "English" ? "Roll No: " : "हजेरी क्रमांक"}
+                      </label>
+                      <span>{selectedStudentResults?.rollNo || " "}</span>
+                    </div>
+                    <div>
+                      <label htmlFor="student-name">
+                        {language === "English"
+                          ? "Student Name: "
+                          : "विद्यार्थ्याचे नाव"}
+                      </label>
+                      <span>
+                        {selectedStudentResults?.studentName || " "}{" "}
+                        {selectedStudentResults?.stdFather || " "}{" "}
+                        {selectedStudentResults?.stdSurname || " "}
+                      </span>
+                    </div>
+                    <div>
+                      <label htmlFor="class">
+                        {language === "English" ? "Class: " : "वर्ग"}
+                      </label>
+                      <span>{classValue || " "}</span>
+                    </div>
+
+                    <div>
+                      <label htmlFor="exam-roll-no">
+                        {language === "English" ? "Exam: " : "परीक्षा"}
+                      </label>
+                      <span>{selectedExamName || " "}</span>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     </div>
 
                     {selectedStudentResults?.results ? (
                       <table className="table table-striped table-bordered">
                         <thead>
                           <tr>
+<<<<<<< HEAD
                             <th>{language === "English" ? "Subject " : "विषय"}</th>
                             <th>{language === "English" ? "First Semester " : "पहिली सत्र"}</th>
                             <th>{language === "English" ? "Second Semester " : "द्वितीय सत्र"}</th>
+=======
+                            <th>
+                              {language === "English" ? "Subject " : "विषय"}
+                            </th>
+                            <th>
+                              {language === "English"
+                                ? "First Semester "
+                                : "पहिली सत्र"}
+                            </th>
+                            <th>
+                              {language === "English"
+                                ? "Second Semester "
+                                : "द्वितीय सत्र"}
+                            </th>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                           </tr>
                         </thead>
                         <tbody>
                           {subjectSequence
                             .filter((subject, index) => subject && index !== 0) // Skip first null or empty subject
                             .map((subject) => {
+<<<<<<< HEAD
                               const grades = selectedStudentResults.results[subject] || {}; // Get grades for the subject
                               return (
                                 <tr key={subject}>
                                   <td><b>{subject}</b></td>
                                   <td><b>{grades.firstSemesterGrade || "Absent"}</b></td> {/* First semester grade */}
                                   <td><b>{grades.grade || "Absent"}</b></td> {/* Second semester grade */}
+=======
+                              const grades =
+                                selectedStudentResults.results[subject] || {}; // Get grades for the subject
+                              return (
+                                <tr key={subject}>
+                                  <td>
+                                    <b>{subject}</b>
+                                  </td>
+                                  <td>
+                                    <b>
+                                      {grades.firstSemesterGrade || "Absent"}
+                                    </b>
+                                  </td>{" "}
+                                  {/* First semester grade */}
+                                  <td>
+                                    <b>{grades.grade || "Absent"}</b>
+                                  </td>{" "}
+                                  {/* Second semester grade */}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                 </tr>
                               );
                             })}
                         </tbody>
                       </table>
                     ) : (
+<<<<<<< HEAD
                       <p>{language === "English" ? "No results available." : "कोणतेही प्रगतीपत्रक उपलब्ध नाहीत."}</p>
                     )}
 
@@ -1163,16 +1837,125 @@ background-color: #fafafa; /* Light grey background for odd rows */
                         <tr style={{ color: "black", textAlign: "center" }}>
                           <th colSpan="" style={{ padding: "2px", border: "1px solid #ddd", fontSize: "16px" }}>{language === "English" ? "First Semester " : "पहिली सत्र"} </th>
                           <th colSpan="" style={{ padding: "2px", border: "1px solid #ddd", fontSize: "16px" }}>{language === "English" ? "Second Semester " : "दुसरी सत्र"} </th>
+=======
+                      <p>
+                        {language === "English"
+                          ? "No results available."
+                          : "कोणतेही प्रगतीपत्रक उपलब्ध नाहीत."}
+                      </p>
+                    )}
+
+                    <div></div>
+                    <div
+                      className="grad"
+                      style={{ display: "flex", alignItems: "center" }}
+                    >
+                      <label
+                        style={{
+                          marginRight: "20px",
+                          marginBottom: "2px",
+                          marginLeft: "20px",
+                        }}
+                        htmlFor="class-teacher"
+                      >
+                        {language === "English"
+                          ? "Class Teacher"
+                          : "वर्गशिक्षक"}
+                      </label>
+                      <label
+                        style={{
+                          marginRight: "20px",
+                          marginBottom: "2px",
+                          marginLeft: "45%",
+                        }}
+                        htmlFor="principal"
+                      >
+                        {language === "English" ? "Principal " : "प्राचार्य"}
+                      </label>
+                    </div>
+                  </div>
+                  <div className="right">
+                    <h2
+                      style={{
+                        textAlign: "center",
+                        color: "black",
+                        fontFamily: "Arial, sans-serif",
+                        fontWeight: "bold",
+                        marginBottom: "20px",
+                      }}
+                    >
+                      {language === "English" ? "Nondi " : "नोंदी"}
+                    </h2>
+
+                    <table
+                      style={{
+                        width: "100%",
+                        borderCollapse: "collapse",
+                        fontFamily: "Arial, sans-serif",
+                      }}
+                    >
+                      <thead>
+                        <tr style={{ color: "black", textAlign: "center" }}>
+                          <th
+                            colSpan=""
+                            style={{
+                              padding: "2px",
+                              border: "1px solid #ddd",
+                              fontSize: "16px",
+                            }}
+                          >
+                            {language === "English"
+                              ? "First Semester "
+                              : "पहिली सत्र"}{" "}
+                          </th>
+                          <th
+                            colSpan=""
+                            style={{
+                              padding: "2px",
+                              border: "1px solid #ddd",
+                              fontSize: "16px",
+                            }}
+                          >
+                            {language === "English"
+                              ? "Second Semester "
+                              : "दुसरी सत्र"}{" "}
+                          </th>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                         </tr>
                       </thead>
 
                       <tbody>
                         <tr style={{ color: "black", textAlign: "center" }}>
+<<<<<<< HEAD
                           <th colSpan="2" style={{ padding: "2px", border: "1px solid #ddd", fontSize: "16px" }}>{language === "English" ? "Special Progress" : "विशेष प्रगती"}</th>
 
                         </tr>
                         <tr style={{ backgroundColor: "#ffffff" }}>
                           <td style={{ width: "50%", padding: "2px", border: "1px solid #ddd", verticalAlign: "top" }}>
+=======
+                          <th
+                            colSpan="2"
+                            style={{
+                              padding: "2px",
+                              border: "1px solid #ddd",
+                              fontSize: "16px",
+                            }}
+                          >
+                            {language === "English"
+                              ? "Special Progress"
+                              : "विशेष प्रगती"}
+                          </th>
+                        </tr>
+                        <tr style={{ backgroundColor: "#ffffff" }}>
+                          <td
+                            style={{
+                              width: "50%",
+                              padding: "2px",
+                              border: "1px solid #ddd",
+                              verticalAlign: "top",
+                            }}
+                          >
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                             <textarea
                               id="special-progress"
                               style={{
@@ -1183,14 +1966,34 @@ background-color: #fafafa; /* Light grey background for odd rows */
                                 boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)",
                                 resize: "none",
                                 fontSize: "14px",
+<<<<<<< HEAD
                                 height: "100px"
                               }}
                               value={selectedStudentResults?.firstSemester?.specialEntries || "No data available"}
+=======
+                                height: "100px",
+                              }}
+                              value={
+                                selectedStudentResults?.firstSemester
+                                  ?.specialEntries || "No data available"
+                              }
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                               readOnly
                             />
                           </td>
 
+<<<<<<< HEAD
                           <td style={{ width: "50%", padding: "2px", border: "1px solid #ddd", verticalAlign: "top" }}>
+=======
+                          <td
+                            style={{
+                              width: "50%",
+                              padding: "2px",
+                              border: "1px solid #ddd",
+                              verticalAlign: "top",
+                            }}
+                          >
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                             <textarea
                               id="special-progress"
                               style={{
@@ -1201,6 +2004,7 @@ background-color: #fafafa; /* Light grey background for odd rows */
                                 boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)",
                                 resize: "none",
                                 fontSize: "14px",
+<<<<<<< HEAD
                                 height: "100px"
                               }}
                               value={selectedStudentResults?.nondi?.specialEntries || "No data available"}
@@ -1214,6 +2018,39 @@ background-color: #fafafa; /* Light grey background for odd rows */
                         </tr>
                         <tr style={{ backgroundColor: "#ffffff" }}>
                           <td style={{ width: "33%", padding: "2px", border: "1px solid #ddd", verticalAlign: "top" }}>
+=======
+                                height: "100px",
+                              }}
+                              value={
+                                selectedStudentResults?.nondi?.specialEntries ||
+                                "No data available"
+                              }
+                              readOnly
+                            />
+                          </td>
+                        </tr>
+                        <tr style={{ color: "black", textAlign: "center" }}>
+                          <th
+                            colSpan="2"
+                            style={{
+                              padding: "2px",
+                              border: "1px solid #ddd",
+                              fontSize: "16px",
+                            }}
+                          >
+                            {language === "English" ? "Hobbies" : "छंद"}
+                          </th>
+                        </tr>
+                        <tr style={{ backgroundColor: "#ffffff" }}>
+                          <td
+                            style={{
+                              width: "33%",
+                              padding: "2px",
+                              border: "1px solid #ddd",
+                              verticalAlign: "top",
+                            }}
+                          >
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                             <textarea
                               id="special-progress"
                               style={{
@@ -1224,12 +2061,31 @@ background-color: #fafafa; /* Light grey background for odd rows */
                                 boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)",
                                 resize: "none",
                                 fontSize: "14px",
+<<<<<<< HEAD
                                 height: "100px"
                               }}
                               value={selectedStudentResults?.firstSemester?.interestsAndHobbies || "No data available"}
                               readOnly />
                           </td>
                           <td style={{ padding: "2px", border: "1px solid #ddd", verticalAlign: "top" }}>
+=======
+                                height: "100px",
+                              }}
+                              value={
+                                selectedStudentResults?.firstSemester
+                                  ?.interestsAndHobbies || "No data available"
+                              }
+                              readOnly
+                            />
+                          </td>
+                          <td
+                            style={{
+                              padding: "2px",
+                              border: "1px solid #ddd",
+                              verticalAlign: "top",
+                            }}
+                          >
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                             <textarea
                               id="hobbies"
                               style={{
@@ -1240,6 +2096,7 @@ background-color: #fafafa; /* Light grey background for odd rows */
                                 boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)",
                                 resize: "none",
                                 fontSize: "14px",
+<<<<<<< HEAD
                                 height: "100px"
                               }}
                               value={selectedStudentResults?.nondi?.interestsAndHobbies || "No data available"}
@@ -1253,6 +2110,41 @@ background-color: #fafafa; /* Light grey background for odd rows */
                         </tr>
                         <tr style={{ backgroundColor: "#ffffff" }}>
                           <td style={{ width: "33%", padding: "2px", border: "1px solid #ddd", verticalAlign: "top" }}>
+=======
+                                height: "100px",
+                              }}
+                              value={
+                                selectedStudentResults?.nondi
+                                  ?.interestsAndHobbies || "No data available"
+                              }
+                              readOnly
+                            />
+                          </td>
+                        </tr>
+                        <tr style={{ color: "black", textAlign: "center" }}>
+                          <th
+                            colSpan="2"
+                            style={{
+                              padding: "2px",
+                              border: "1px solid #ddd",
+                              fontSize: "16px",
+                            }}
+                          >
+                            {language === "English"
+                              ? "Required Improvements"
+                              : "आवश्यक सुधारणा"}
+                          </th>
+                        </tr>
+                        <tr style={{ backgroundColor: "#ffffff" }}>
+                          <td
+                            style={{
+                              width: "33%",
+                              padding: "2px",
+                              border: "1px solid #ddd",
+                              verticalAlign: "top",
+                            }}
+                          >
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                             <textarea
                               id="special-progress"
                               style={{
@@ -1263,12 +2155,31 @@ background-color: #fafafa; /* Light grey background for odd rows */
                                 boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)",
                                 resize: "none",
                                 fontSize: "14px",
+<<<<<<< HEAD
                                 height: "100px"
                               }}
                               value={selectedStudentResults?.firstSemester?.necessaryCorrections || "No data available"}
                               readonly />
                           </td>
                           <td style={{ padding: "2px", border: "1px solid #ddd", verticalAlign: "top" }}>
+=======
+                                height: "100px",
+                              }}
+                              value={
+                                selectedStudentResults?.firstSemester
+                                  ?.necessaryCorrections || "No data available"
+                              }
+                              readonly
+                            />
+                          </td>
+                          <td
+                            style={{
+                              padding: "2px",
+                              border: "1px solid #ddd",
+                              verticalAlign: "top",
+                            }}
+                          >
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                             <textarea
                               id="improvements"
                               style={{
@@ -1279,9 +2190,18 @@ background-color: #fafafa; /* Light grey background for odd rows */
                                 boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)",
                                 resize: "none",
                                 fontSize: "14px",
+<<<<<<< HEAD
                                 height: "100px"
                               }}
                               value={selectedStudentResults?.nondi?.necessaryCorrections || "No data available"}
+=======
+                                height: "100px",
+                              }}
+                              value={
+                                selectedStudentResults?.nondi
+                                  ?.necessaryCorrections || "No data available"
+                              }
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                               readOnly
                             />
                           </td>
@@ -1289,12 +2209,25 @@ background-color: #fafafa; /* Light grey background for odd rows */
                       </tbody>
                     </table>
 
+<<<<<<< HEAD
                     <div className="grade-table" >
                       <h2>{language === "English" ? "Grade Table" : "श्रेणी टेबल"}</h2>
                       <table >
                         <thead>
                           <tr>
                             <th>{language === "English" ? "Marks" : "मार्क्स"}</th>
+=======
+                    <div className="grade-table">
+                      <h2>
+                        {language === "English" ? "Grade Table" : "श्रेणी टेबल"}
+                      </h2>
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>
+                              {language === "English" ? "Marks" : "मार्क्स"}
+                            </th>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                             <th>{language === "English" ? "A1" : "अ1"}</th>
                             <th>{language === "English" ? "A2" : "अ2"}</th>
                             <th>{language === "English" ? "B1" : "ब1"}</th>
@@ -1303,12 +2236,19 @@ background-color: #fafafa; /* Light grey background for odd rows */
                             <th>{language === "English" ? "C2" : "क2"}</th>
                             <th>{language === "English" ? "D1" : "ड1"}</th>
                             <th>{language === "English" ? "D2" : "ड2"}</th>
+<<<<<<< HEAD
                             <th>{language === "English" ? "Absent" : "अनुपस्थित"}</th>
+=======
+                            <th>
+                              {language === "English" ? "Absent" : "अनुपस्थित"}
+                            </th>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                           </tr>
                         </thead>
                         <tbody>
                           <tr>
                             <td>%</td>
+<<<<<<< HEAD
                             <td>{language === "English" ? "91% to 100%" : "91% ते 100%"}</td>
                             <td>{language === "English" ? "81% to 90%" : "81% ते 90%"}</td>
                             <td>{language === "English" ? "71% to 80%" : "71% ते 80%"}</td>
@@ -1322,14 +2262,68 @@ background-color: #fafafa; /* Light grey background for odd rows */
                         </tbody>
                       </table>
 
+=======
+                            <td>
+                              {language === "English"
+                                ? "91% to 100%"
+                                : "91% ते 100%"}
+                            </td>
+                            <td>
+                              {language === "English"
+                                ? "81% to 90%"
+                                : "81% ते 90%"}
+                            </td>
+                            <td>
+                              {language === "English"
+                                ? "71% to 80%"
+                                : "71% ते 80%"}
+                            </td>
+                            <td>
+                              {language === "English"
+                                ? "61% to 70%"
+                                : "61% ते 70%"}
+                            </td>
+                            <td>
+                              {language === "English"
+                                ? "51% to 60%"
+                                : "51% ते 60%"}
+                            </td>
+                            <td>
+                              {language === "English"
+                                ? "41% to 50%"
+                                : "41% ते 50%"}
+                            </td>
+                            <td>
+                              {language === "English"
+                                ? "33% to 40%"
+                                : "33% ते 40%"}
+                            </td>
+                            <td>
+                              {language === "English"
+                                ? "21% to 32%"
+                                : "21% ते 32%"}
+                            </td>
+                            <td>
+                              {language === "English"
+                                ? "less than 20%"
+                                : "20% पेक्षा कमी"}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     </div>
                   </div>
                 </div>
               </div>
+<<<<<<< HEAD
 
             ) : (
 
 
+=======
+            ) : (
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               <div>
                 {/* First semester modal content */}
                 <div className="container mt-1">
@@ -1348,6 +2342,7 @@ background-color: #fafafa; /* Light grey background for odd rows */
 
                     <div class="student-info-grid">
                       <p>
+<<<<<<< HEAD
                         <label>{language === "English" ? "Name :" : "विद्यार्थ्याचे नाव :"}</label>
                         <span>
                           {selectedStudentResults?.studentName || '-'}{' '}
@@ -1394,15 +2389,113 @@ background-color: #fafafa; /* Light grey background for odd rows */
                       <p>
                         <label>{language === "English" ? "Gender :" : "लिंग :"}</label>
                         <span>{selectedStudentResults?.gender || ' '}</span>
+=======
+                        <label>
+                          {language === "English"
+                            ? "Name :"
+                            : "विद्यार्थ्याचे नाव :"}
+                        </label>
+                        <span>
+                          {selectedStudentResults?.studentName || "-"}{" "}
+                          {selectedStudentResults?.stdFather || " "}{" "}
+                          {selectedStudentResults?.stdSurname || " "}
+                        </span>
+                      </p>
+                      <p>
+                        <label>
+                          {language === "English"
+                            ? "Roll No :"
+                            : "हजेरी क्रमांक :"}
+                        </label>
+                        <span>{selectedStudentResults?.rollNo || " "}</span>
+                      </p>
+                      <p>
+                        <label>
+                          {language === "English" ? "Exam :" : "परीक्षा सत्र :"}
+                        </label>
+                        <span>{selectedExamName || " "}</span>
+                      </p>
+                      <p>
+                        <label>
+                          {language === "English" ? "Year :" : "वर्ष :"}
+                        </label>
+                        <span>{academicYear || " "}</span>
+                      </p>
+                      <p>
+                        <label>
+                          {language === "English" ? "Class :" : "वर्ग :"}
+                        </label>
+                        <span>{classValue || " "}</span>
+                      </p>
+                      <p>
+                        <label>
+                          {language === "English"
+                            ? "Mother Name :"
+                            : "आईचे नाव :"}
+                        </label>
+                        <span>{selectedStudentResults?.stdMother || " "}</span>
+                      </p>
+                      <p>
+                        <label>
+                          {language === "English" ? "DOB :" : "जन्मतारीख :"}
+                        </label>
+                        <span>{selectedStudentResults?.dob || " "}</span>
+                      </p>
+                      <p>
+                        <label>
+                          {language === "English" ? "Division :" : "तुकडी :"}
+                        </label>
+                        <span>{selectedStudentResults?.division || " "}</span>
+                      </p>
+                      <p>
+                        <label>
+                          {language === "English"
+                            ? "Mother Tongue :"
+                            : "मातृभाषा :"}
+                        </label>
+                        <span>
+                          {selectedStudentResults?.motherTounge || " "}
+                        </span>
+                      </p>
+                      <p>
+                        <label>
+                          {language === "English"
+                            ? "Student ID :"
+                            : "विद्यार्थी आयडी :"}
+                        </label>
+                        <span>{selectedStudentResults?.studentId || " "}</span>
+                      </p>
+                      <p>
+                        <label>
+                          {language === "English" ? "Gender :" : "लिंग :"}
+                        </label>
+                        <span>{selectedStudentResults?.gender || " "}</span>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                       </p>
                     </div>
                     <div className="gradable">
                       <table>
                         <thead>
                           <tr>
+<<<<<<< HEAD
                             <th rowspan="2">{language === "English" ? "Subject :" : "विषय"}</th>
                             <th colspan="2">{language === "English" ? "First Semester" : "प्रथम सत्र"}</th>
                             <th colspan="2">{language === "English" ? "Second Semester" : "द्वितीय सत्र"}</th>
+=======
+                            <th rowspan="2">
+                              {language === "English" ? "Subject :" : "विषय"}
+                            </th>
+                            <th colspan="2">
+                              {language === "English"
+                                ? "First Semester"
+                                : "प्रथम सत्र"}
+                            </th>
+                            <th colspan="2">
+                              {language === "English"
+                                ? "Second Semester"
+                                : "द्वितीय सत्र"}
+                            </th>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                           </tr>
                           <tr>
                             <th>Kg</th>
@@ -1443,15 +2536,35 @@ background-color: #fafafa; /* Light grey background for odd rows */
                         </tr>
                       </thead>
                       <tbody>
+<<<<<<< HEAD
                         {['Present', 'Absent', 'Leave'].map((type) => (
+=======
+                        {["Present", "Absent", "Leave"].map((type) => (
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                           <tr key={type}>
                             <td>{getAttendanceType(type)}</td>
                             {firstSemesterMonths.map((month, index) => (
                               <td key={index}>
                                 <input
                                   type="text"
+<<<<<<< HEAD
                                   value={type === 'Leave' && attendance[type][month] < 0 ? '' : attendance[type][month] || ''}
                                   onChange={(e) => handleInputChange(type, month, e.target.value)}
+=======
+                                  value={
+                                    type === "Leave" &&
+                                    attendance[type][month] < 0
+                                      ? ""
+                                      : attendance[type][month] || ""
+                                  }
+                                  onChange={(e) =>
+                                    handleInputChange(
+                                      type,
+                                      month,
+                                      e.target.value,
+                                    )
+                                  }
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                 />
                               </td>
                             ))}
@@ -1459,9 +2572,18 @@ background-color: #fafafa; /* Light grey background for odd rows */
                         ))}
                       </tbody>
                     </table>
+<<<<<<< HEAD
                     <p style={{ marginTop: '5px' }}>{language === "English" ? "After the winter vacation the school will start from." : "हिवाळी सुटीनंतर शाळा दि. पासून सुरू होईल."}</p>
                     <div style={{ width: '150px' }}>
 
+=======
+                    <p style={{ marginTop: "5px" }}>
+                      {language === "English"
+                        ? "After the winter vacation the school will start from."
+                        : "हिवाळी सुटीनंतर शाळा दि. पासून सुरू होईल."}
+                    </p>
+                    <div style={{ width: "150px" }}>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                       <input
                         type="date"
                         value={winterVacationDate}
@@ -1471,6 +2593,7 @@ background-color: #fafafa; /* Light grey background for odd rows */
 
                     <div className="grad">
                       <p>
+<<<<<<< HEAD
                         {language === "English" ? " Instructions for parents:" : "पालकांसाठी सूचना"}
                         <li>  {language === "English" ? " Students should wear school uniform every day." : "विद्यार्थ्यांनी दररोज शालेय गणवेश परिधान करावा."}</li>
                         <li> {language === "English" ? "  A student should do the study given in school every day." : "विद्यार्थ्याने शाळेत दिलेला अभ्यास दररोज करावा."}</li>
@@ -1481,11 +2604,54 @@ background-color: #fafafa; /* Light grey background for odd rows */
                     </div>
                     <p style={{ marginTop: '70px', marginLeft: '350px' }}>{language === "English" ? "Parents Signature " : "पालकांची सही"}</p>
 
+=======
+                        {language === "English"
+                          ? " Instructions for parents:"
+                          : "पालकांसाठी सूचना"}
+                        <li>
+                          {" "}
+                          {language === "English"
+                            ? " Students should wear school uniform every day."
+                            : "विद्यार्थ्यांनी दररोज शालेय गणवेश परिधान करावा."}
+                        </li>
+                        <li>
+                          {" "}
+                          {language === "English"
+                            ? "  A student should do the study given in school every day."
+                            : "विद्यार्थ्याने शाळेत दिलेला अभ्यास दररोज करावा."}
+                        </li>
+                        <li>
+                          {" "}
+                          {language === "English"
+                            ? " Students should attend school on time and regularly every day."
+                            : "विद्यार्थ्यांनी दररोज वेळेवर व नियमितपणे शाळेत हजर राहावे."}
+                        </li>
+                        <li>
+                          {" "}
+                          {language === "English"
+                            ? " Students should not carry valuables, money. "
+                            : "विद्यार्थ्यांनी मौल्यवान वस्तू, पैसे घेऊन जाऊ नये."}
+                        </li>
+                        <li>
+                          {" "}
+                          {language === "English"
+                            ? " Students should follow the rules and discipline of the school. "
+                            : "विद्यार्थ्यांनी शाळेचे नियम व शिस्तीचे पालन करावे."}
+                        </li>
+                      </p>
+                    </div>
+                    <p style={{ marginTop: "70px", marginLeft: "350px" }}>
+                      {language === "English"
+                        ? "Parents Signature "
+                        : "पालकांची सही"}
+                    </p>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   </div>
                 </div>
 
                 <div className="container mt-1">
                   <div className="left">
+<<<<<<< HEAD
                     <h2>{language === "English" ? " Student Progress Report" : "विद्यार्थी प्रगती अहवाल"}</h2>
                     <div>
                       <label htmlFor="roll-no">{language === "English" ? " Roll No:" : "हजेरी क्रमांक:"}</label>
@@ -1510,29 +2676,92 @@ background-color: #fafafa; /* Light grey background for odd rows */
 
 
 
+=======
+                    <h2>
+                      {language === "English"
+                        ? " Student Progress Report"
+                        : "विद्यार्थी प्रगती अहवाल"}
+                    </h2>
+                    <div>
+                      <label htmlFor="roll-no">
+                        {language === "English"
+                          ? " Roll No:"
+                          : "हजेरी क्रमांक:"}
+                      </label>
+                      <span>{selectedStudentResults?.rollNo || " "}</span>
+                    </div>
+                    <div>
+                      <label htmlFor="student-name">
+                        {language === "English"
+                          ? " Student Name:"
+                          : "विद्यार्थ्याचे नाव:"}
+                      </label>
+                      <span>
+                        {selectedStudentResults?.studentName || " "}{" "}
+                        {selectedStudentResults?.stdFather || " "}{" "}
+                        {selectedStudentResults?.stdSurname || " "}
+                      </span>
+                    </div>
+                    <div>
+                      <label htmlFor="class">
+                        {language === "English" ? " Class:" : "वर्ग:"}
+                      </label>
+                      <span>{classValue || " "}</span>
+                    </div>
+                    <div>
+                      <label htmlFor="exam-roll-no">
+                        {language === "English" ? " Exam:" : "परीक्षा:"}
+                      </label>
+                      <span>{selectedExamName || " "}</span>
+                    </div>
+
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     {selectedStudentResults?.results ? (
                       <table className="table table-striped table-bordered">
                         <thead>
                           <tr>
+<<<<<<< HEAD
                             <th>{language === "English" ? "Subject" : "विषय"}</th>
                             <th>{language === "English" ? "Grade" : "श्रेणी"}</th>
+=======
+                            <th>
+                              {language === "English" ? "Subject" : "विषय"}
+                            </th>
+                            <th>
+                              {language === "English" ? "Grade" : "श्रेणी"}
+                            </th>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                           </tr>
                         </thead>
                         <tbody>
                           {subjectSequence
                             .filter((subject, index) => subject && index !== 0) // Skip first null or empty subject
                             .map((subject) => {
+<<<<<<< HEAD
                               const { grade } = selectedStudentResults.results[subject] || {}; // Get grade for the subject
                               return (
                                 <tr key={subject}>
                                   <td><b>{subject}</b></td>
                                   <td><b>{grade || "Absent"}</b></td>
+=======
+                              const { grade } =
+                                selectedStudentResults.results[subject] || {}; // Get grade for the subject
+                              return (
+                                <tr key={subject}>
+                                  <td>
+                                    <b>{subject}</b>
+                                  </td>
+                                  <td>
+                                    <b>{grade || "Absent"}</b>
+                                  </td>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                 </tr>
                               );
                             })}
                         </tbody>
                       </table>
                     ) : (
+<<<<<<< HEAD
                       <p>{language === "English" ? "No results available." : "कोणतेही प्रगतीपत्रक उपलब्ध नाहीत."}</p>
                     )}
 
@@ -1542,17 +2771,71 @@ background-color: #fafafa; /* Light grey background for odd rows */
                     <div className="grad" style={{ display: 'flex', alignItems: 'center' }}>
                       <label style={{ marginRight: '20px', marginBottom: '2px', marginLeft: '20px' }} htmlFor="class-teacher">{language === "English" ? "Class Teacher" : "वर्गशिक्षक"}</label>
                       <label style={{ marginRight: '20px', marginBottom: '2px', marginLeft: '45%' }} htmlFor="principal">{language === "English" ? "Principal" : "प्राचार्य"}</label>
+=======
+                      <p>
+                        {language === "English"
+                          ? "No results available."
+                          : "कोणतेही प्रगतीपत्रक उपलब्ध नाहीत."}
+                      </p>
+                    )}
+
+                    <div></div>
+                    <div
+                      className="grad"
+                      style={{ display: "flex", alignItems: "center" }}
+                    >
+                      <label
+                        style={{
+                          marginRight: "20px",
+                          marginBottom: "2px",
+                          marginLeft: "20px",
+                        }}
+                        htmlFor="class-teacher"
+                      >
+                        {language === "English"
+                          ? "Class Teacher"
+                          : "वर्गशिक्षक"}
+                      </label>
+                      <label
+                        style={{
+                          marginRight: "20px",
+                          marginBottom: "2px",
+                          marginLeft: "45%",
+                        }}
+                        htmlFor="principal"
+                      >
+                        {language === "English" ? "Principal" : "प्राचार्य"}
+                      </label>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     </div>
                   </div>
                   <div className="right">
                     <h2>{language === "English" ? "Nondi" : "नोंदी"}</h2>
 
+<<<<<<< HEAD
 
                     <table>
                       <tr>
                         <th style={{ width: "33%" }}>{language === "English" ? "Special Progress:" : "विशेष प्रगती:"}</th>
                         <th style={{ width: "33%" }}>{language === "English" ? "Hobbies:" : "छंद:"}</th>
                         <th style={{ width: "33%" }}>{language === "English" ? "Required Improvements:" : "आवश्यक सुधारणा:"}</th>
+=======
+                    <table>
+                      <tr>
+                        <th style={{ width: "33%" }}>
+                          {language === "English"
+                            ? "Special Progress:"
+                            : "विशेष प्रगती:"}
+                        </th>
+                        <th style={{ width: "33%" }}>
+                          {language === "English" ? "Hobbies:" : "छंद:"}
+                        </th>
+                        <th style={{ width: "33%" }}>
+                          {language === "English"
+                            ? "Required Improvements:"
+                            : "आवश्यक सुधारणा:"}
+                        </th>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                       </tr>
                       <tr>
                         <td style={{ width: "33%" }}>
@@ -1567,7 +2850,12 @@ background-color: #fafafa; /* Light grey background for odd rows */
                             contentEditable="false"
                             suppressContentEditableWarning={true}
                           >
+<<<<<<< HEAD
                             {selectedStudentResults?.nondi?.specialEntries || ""}
+=======
+                            {selectedStudentResults?.nondi?.specialEntries ||
+                              ""}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                           </div>
                         </td>
                         <td style={{ width: "33%" }}>
@@ -1582,7 +2870,12 @@ background-color: #fafafa; /* Light grey background for odd rows */
                             contentEditable="false"
                             suppressContentEditableWarning={true}
                           >
+<<<<<<< HEAD
                             {selectedStudentResults?.nondi?.interestsAndHobbies || ""}
+=======
+                            {selectedStudentResults?.nondi
+                              ?.interestsAndHobbies || ""}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                           </div>
                         </td>
                         <td style={{ width: "33%" }}>
@@ -1597,18 +2890,35 @@ background-color: #fafafa; /* Light grey background for odd rows */
                             contentEditable="false"
                             suppressContentEditableWarning={true}
                           >
+<<<<<<< HEAD
                             {selectedStudentResults?.nondi?.necessaryCorrections || ""}
+=======
+                            {selectedStudentResults?.nondi
+                              ?.necessaryCorrections || ""}
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                           </div>
                         </td>
                       </tr>
                     </table>
 
                     <div className="grade-table">
+<<<<<<< HEAD
                       <h2>{language === "English" ? "Grade Table" : "श्रेणी टेबल"}</h2>
                       <table>
                         <thead>
                           <tr>
                             <th>{language === "English" ? "Marks" : "मार्क्स"}</th>
+=======
+                      <h2>
+                        {language === "English" ? "Grade Table" : "श्रेणी टेबल"}
+                      </h2>
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>
+                              {language === "English" ? "Marks" : "मार्क्स"}
+                            </th>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                             <th>{language === "English" ? "A1" : "अ-1"}</th>
                             <th>{language === "English" ? "A2" : "अ-2"}</th>
                             <th>{language === "English" ? "B1" : "ब-1"}</th>
@@ -1617,12 +2927,19 @@ background-color: #fafafa; /* Light grey background for odd rows */
                             <th>{language === "English" ? "C2" : "क-2"}</th>
                             <th>{language === "English" ? "D1" : "ड-1"}</th>
                             <th>{language === "English" ? "D2" : "ड-2"}</th>
+<<<<<<< HEAD
                             <th>{language === "English" ? "Absent" : "अनुपस्थित"}</th>
+=======
+                            <th>
+                              {language === "English" ? "Absent" : "अनुपस्थित"}
+                            </th>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                           </tr>
                         </thead>
                         <tbody>
                           <tr>
                             <td>%</td>
+<<<<<<< HEAD
                             <td>{language === "English" ? "91% to 100%" : "91% ते 100%"}</td>
                             <td>{language === "English" ? "81% to 90%" : "81% ते 90%"}</td>
                             <td>{language === "English" ? "71% to 80%" : "71% ते 80%"}</td>
@@ -1632,6 +2949,53 @@ background-color: #fafafa; /* Light grey background for odd rows */
                             <td>{language === "English" ? "33% to 40%" : "33% ते 40%"}</td>
                             <td>{language === "English" ? "21% to 32%" : "21% ते 32%"}</td>
                             <td>{language === "English" ? "less than 20%" : "20% पेक्षा कमी"}</td>
+=======
+                            <td>
+                              {language === "English"
+                                ? "91% to 100%"
+                                : "91% ते 100%"}
+                            </td>
+                            <td>
+                              {language === "English"
+                                ? "81% to 90%"
+                                : "81% ते 90%"}
+                            </td>
+                            <td>
+                              {language === "English"
+                                ? "71% to 80%"
+                                : "71% ते 80%"}
+                            </td>
+                            <td>
+                              {language === "English"
+                                ? "61% to 70%"
+                                : "61% ते 70%"}
+                            </td>
+                            <td>
+                              {language === "English"
+                                ? "51% to 60%"
+                                : "51% ते 60%"}
+                            </td>
+                            <td>
+                              {language === "English"
+                                ? "41% to 50%"
+                                : "41% ते 50%"}
+                            </td>
+                            <td>
+                              {language === "English"
+                                ? "33% to 40%"
+                                : "33% ते 40%"}
+                            </td>
+                            <td>
+                              {language === "English"
+                                ? "21% to 32%"
+                                : "21% ते 32%"}
+                            </td>
+                            <td>
+                              {language === "English"
+                                ? "less than 20%"
+                                : "20% पेक्षा कमी"}
+                            </td>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                           </tr>
                         </tbody>
                       </table>
@@ -1649,13 +3013,24 @@ background-color: #fafafa; /* Light grey background for odd rows */
         </Modal>
 
         <style jsx>{`
+<<<<<<< HEAD
       .modal.show .modal-dialog {
   transform: auto; 
       }
       `}</style>
+=======
+          .modal.show .modal-dialog {
+            transform: auto;
+          }
+        `}</style>
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       </div>
     </div>
   );
 };
 
+<<<<<<< HEAD
 export default WebResult;
+=======
+export default WebResult;
+>>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
