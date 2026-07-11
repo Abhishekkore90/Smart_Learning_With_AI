@@ -1,0 +1,2107 @@
+<!DOCTYPE html>
+<html lang="mr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>शिक्षक संचिका</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@300;400;500;600;700;900&family=Playfair+Display:wght@700;900&display=swap');
+
+    :root {
+      --navy: #0d1b4b;
+      --navy-mid: #1a2e6e;
+      --navy-light: #253a8a;
+      --gold: #c9a227;
+      --gold-light: #f5d060;
+      --gold-pale: #fdf3d0;
+      --crimson: #9b1c1c;
+      --crimson-light: #c62828;
+      --green: #1b5e20;
+      --green-mid: #2e7d32;
+      --blue-pale: #e8f0fe;
+      --white: #ffffff;
+      --off-white: #f9f7f2;
+      --border-gold: #c9a227;
+      --border-navy: #1a2e6e;
+      --shadow: 0 8px 32px rgba(13,27,75,0.18);
+      --page-scale: 1;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Noto Sans Devanagari', Arial, sans-serif;
+      background: linear-gradient(135deg, #0d1b4b 0%, #1a2e6e 40%, #0d1b4b 100%);
+      background-attachment: fixed;
+      color: #111;
+      max-width: 100%;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    /* ===== PRINT BAR ===== */
+    .print-bar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+      background: linear-gradient(90deg, #0d1b4b 0%, #1a2e6e 50%, #0d1b4b 100%);
+      padding: 0 24px;
+      height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+      box-shadow: 0 3px 20px rgba(0,0,0,0.5);
+      gap: 12px; flex-wrap: wrap;
+      border-bottom: 2px solid var(--gold);
+    }
+    .print-bar::before {
+      content: '';
+      position: absolute; bottom: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold), var(--gold-light), var(--gold), transparent);
+    }
+    .print-bar h2 {
+      color: var(--gold-light);
+      font-size: 16px;
+      font-family: 'Noto Sans Devanagari', sans-serif;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .print-bar h2::before {
+      content: '📚';
+      font-size: 18px;
+    }
+    .bar-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .print-btn {
+      background: linear-gradient(135deg, #9b1c1c, #c62828);
+      color: #fff; border: 1px solid rgba(255,255,255,0.2);
+      padding: 8px 20px; border-radius: 8px; font-size: 13px;
+      font-family: 'Noto Sans Devanagari', sans-serif;
+      cursor: pointer; font-weight: 700;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(155,28,28,0.4);
+      letter-spacing: 0.3px;
+    }
+    .print-btn:hover {
+      background: linear-gradient(135deg, #c62828, #ef5350);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(198,40,40,0.5);
+    }
+    .save-btn {
+      background: linear-gradient(135deg, #1b5e20, #2e7d32);
+      color: #fff; border: 1px solid rgba(255,255,255,0.2);
+      padding: 8px 20px; border-radius: 8px; font-size: 13px;
+      font-family: 'Noto Sans Devanagari', sans-serif;
+      cursor: pointer; font-weight: 700;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(27,94,32,0.4);
+    }
+    .save-btn:hover {
+      background: linear-gradient(135deg, #2e7d32, #43a047);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(46,125,50,0.5);
+    }
+    .clear-btn {
+      background: linear-gradient(135deg, #bf360c, #e64a19);
+      color: #fff; border: 1px solid rgba(255,255,255,0.2);
+      padding: 8px 16px; border-radius: 8px; font-size: 13px;
+      font-family: 'Noto Sans Devanagari', sans-serif;
+      cursor: pointer; font-weight: 700;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(191,54,12,0.4);
+    }
+    .clear-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(230,74,25,0.5);
+    }
+
+    .pages-wrapper {
+      padding-top: 72px;
+      padding-bottom: 0;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Responsive styling for mobile view */
+    @media (max-width: 600px) {
+      .print-bar {
+        padding: 8px 12px;
+        height: auto;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+      }
+      .print-bar h2 {
+        font-size: 14px;
+        margin-bottom: 4px;
+      }
+      .bar-btns {
+        width: 100%;
+        justify-content: center;
+        gap: 6px;
+      }
+      .save-btn, .print-btn, .clear-btn {
+        padding: 6px 12px;
+        font-size: 12px;
+        flex: 1;
+        text-align: center;
+        justify-content: center;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .pages-wrapper {
+        padding-top: 120px;
+      }
+    }
+
+    /* ===== A4 PAGE ===== */
+    .page {
+      display: none;
+      opacity: 0;
+      width: 210mm; min-height: 297mm;
+      margin: 0 auto;
+      background: var(--white);
+      position: relative;
+      box-shadow: var(--shadow), 0 2px 0 var(--gold);
+      transform-origin: top center;
+      transform: scale(var(--page-scale, 1));
+      transition: opacity 0.4s ease, transform 0.4s ease, box-shadow 0.2s;
+      border-radius: 0;
+    }
+    .page.active-slide {
+      display: block;
+      opacity: 1;
+      transform: scale(var(--page-scale, 1));
+      z-index: 10;
+    }
+    .page:hover {
+      box-shadow: 0 12px 48px rgba(13,27,75,0.25), 0 2px 0 var(--gold);
+    }
+
+    /* ===== EDITABLE FIELD ===== */
+    .ef {
+      display: inline-block;
+      min-width: 80px;
+      min-height: 28px;
+      border-bottom: 2px solid var(--gold);
+      padding: 4px 10px;
+      outline: none;
+      font-family: 'Noto Sans Devanagari', Arial, sans-serif;
+      font-size: inherit;
+      color: var(--navy);
+      font-weight: 700;
+      background: rgba(201, 162, 39, 0.03);
+      cursor: text;
+      transition: all 0.2s ease;
+      border-radius: 4px 4px 0 0;
+      width: 100%;
+    }
+    .ef:focus {
+      background: rgba(201, 162, 39, 0.1);
+      border-bottom: 2px solid var(--navy-mid);
+      box-shadow: 0 2px 8px rgba(201, 162, 39, 0.15);
+    }
+    .ef:empty:before {
+      content: attr(data-ph);
+      color: #bbb;
+      font-weight: 400;
+      font-style: italic;
+    }
+
+    /* Table editable cell */
+    .tef {
+      display: block;
+      width: 100%;
+      min-height: 26px;
+      outline: none;
+      padding: 6px 8px;
+      font-family: 'Noto Sans Devanagari', Arial, sans-serif;
+      font-size: 13px;
+      color: var(--navy);
+      font-weight: 700;
+      cursor: text;
+      background: rgba(201, 162, 39, 0.02);
+      transition: all 0.2s ease;
+      border-radius: 3px;
+    }
+    .tef:focus { 
+      background: rgba(201, 162, 39, 0.08); 
+      box-shadow: inset 0 0 4px rgba(201, 162, 39, 0.2);
+    }
+    .tef:empty:before { content: attr(data-ph); color: #ccc; font-style: italic; font-weight: 400; }
+
+    /* ===== PAGE 1 - COVER ===== */
+    .cover-border {
+      width: 100%; min-height: 297mm;
+      border: 14px double var(--gold);
+      padding: 30px 45px;
+      display: flex; flex-direction: column; align-items: center;
+      background: radial-gradient(circle at center, #ffffff 0%, #fdfaf3 100%);
+      position: relative;
+      overflow: hidden;
+      border-radius: 6px;
+    }
+    .cover-border::before {
+      content: '';
+      position: absolute;
+      inset: 20px;
+      border: 1.5px solid rgba(201,162,39,0.35);
+      pointer-events: none;
+    }
+    .cover-border::after {
+      content: '';
+      position: absolute;
+      inset: 22px;
+      border: 1px solid rgba(201,162,39,0.15);
+      pointer-events: none;
+    }
+
+    /* Cover Corner Ornaments */
+    .corner-ornament {
+      position: absolute;
+      color: var(--gold);
+      font-size: 38px;
+      z-index: 5;
+      pointer-events: none;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+    .corner-ornament.top-left { top: 25px; left: 25px; }
+    .corner-ornament.top-right { top: 25px; right: 25px; }
+    .corner-ornament.bottom-left { bottom: 25px; left: 25px; }
+    .corner-ornament.bottom-right { bottom: 25px; right: 25px; }
+
+    #saraswati-img {
+      border: 6px double var(--gold);
+      border-radius: 50%;
+      padding: 12px;
+      background: #ffffff;
+      box-shadow: 0 8px 24px rgba(13,27,75,0.15), inset 0 2px 8px rgba(201,162,39,0.15);
+    }
+
+    .cover-top-stripe {
+      width: 100%;
+      height: 8px;
+      background: linear-gradient(90deg, var(--navy) 0%, var(--gold) 30%, var(--crimson) 50%, var(--gold) 70%, var(--navy) 100%);
+      border-radius: 4px;
+      box-shadow: 0 1px 6px rgba(201,162,39,0.4);
+    }
+
+    .cover-title {
+      font-size: 58px;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 100%);
+      color: var(--gold-light);
+      text-align: center;
+      padding: 14px 50px;
+      border-radius: 6px;
+      border: 4px double var(--gold);
+      box-shadow: 0 10px 30px rgba(13,27,75,0.25);
+      letter-spacing: 2px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+      position: relative;
+    }
+    .cover-title::before, .cover-title::after {
+      content: '✦';
+      color: var(--gold);
+      font-size: 22px;
+      position: absolute;
+      top: 50%; transform: translateY(-50%);
+    }
+    .cover-title::before { left: 15px; }
+    .cover-title::after { right: 15px; }
+
+    .cover-info-box {
+      width: 100%;
+      border: 2px solid var(--border-navy);
+      border-radius: 8px;
+      padding: 0;
+      background: var(--white);
+      overflow: hidden;
+      box-shadow: 0 6px 20px rgba(13,27,75,0.12);
+    }
+    .cover-info-box-header {
+      background: linear-gradient(90deg, var(--navy) 0%, var(--navy-mid) 100%);
+      padding: 12px 20px;
+      text-align: center;
+      color: var(--gold-light);
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+    .cover-info-row {
+      display: flex; align-items: center;
+      padding: 14px 24px;
+      border-bottom: 1px solid #e8eaf6;
+      font-size: 19px;
+      transition: background 0.15s;
+    }
+    .cover-info-row:hover { background: var(--blue-pale); }
+    .cover-info-row:last-child { border-bottom: none; }
+    .cover-info-label {
+      font-weight: 700;
+      color: var(--navy);
+      min-width: 200px;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .cover-info-label::before { content: '◆'; color: var(--gold); font-size: 10px; }
+
+    .cover-ef {
+      flex: 1; min-height: 32px; padding: 4px 12px;
+      background: transparent;
+      border-bottom: 2px solid var(--gold);
+      outline: none;
+      font-family: 'Noto Sans Devanagari', Arial, sans-serif;
+      font-size: 18px; color: var(--navy); font-weight: 700; cursor: text;
+      transition: background 0.15s;
+    }
+    .cover-ef:focus { background: var(--gold-pale); border-bottom: 2px solid var(--navy); }
+    .cover-ef:empty:before { content: attr(data-ph); color: #aaa; font-weight: 400; font-style: italic; }
+
+    .cover-bottom-stripe {
+      width: 100%;
+      height: 8px;
+      background: linear-gradient(90deg, var(--navy) 0%, var(--gold) 30%, var(--crimson) 50%, var(--gold) 70%, var(--navy) 100%);
+      border-radius: 4px;
+      box-shadow: 0 -1px 6px rgba(201,162,39,0.4);
+    }
+
+    .cover-ornament {
+      color: var(--gold);
+      font-size: 28px;
+      letter-spacing: 16px;
+      opacity: 0.8;
+      text-align: center;
+    }
+
+    /* ===== COMMON PAGE STYLES ===== */
+    .page-inner {
+      width: 100%; min-height: 297mm;
+      border: 8px double var(--navy);
+      padding: 24px 30px;
+      display: flex; flex-direction: column;
+      justify-content: space-between;
+      background: radial-gradient(circle at top left, #ffffff 0%, #f8faff 100%);
+      position: relative;
+      border-radius: 6px;
+    }
+    .page-inner::before {
+      content: '';
+      position: absolute;
+      inset: 12px;
+      border: 1px solid rgba(26,46,110,0.15);
+      pointer-events: none;
+    }
+
+    .page-header {
+      text-align: center;
+      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 100%);
+      color: var(--gold-light);
+      padding: 14px 24px;
+      border-radius: 6px;
+      font-size: 23px;
+      font-weight: 800;
+      margin-bottom: 18px;
+      letter-spacing: 1.5px;
+      box-shadow: 0 4px 15px rgba(13,27,75,0.25);
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(201,162,39,0.2);
+    }
+    .page-header::before {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, transparent, var(--gold), var(--gold-light), var(--gold), transparent);
+    }
+    .page-header::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    }
+
+    .page-subheader {
+      text-align: center;
+      background: linear-gradient(135deg, var(--crimson) 0%, var(--crimson-light) 100%);
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-size: 15px;
+      font-weight: 800;
+      margin-bottom: 12px;
+      box-shadow: 0 3px 10px rgba(155,28,28,0.25);
+      letter-spacing: 0.5px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    /* Info Table */
+    .info-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 8px;
+      flex: 1;
+    }
+    .info-table td {
+      padding: 0;
+      border: none;
+    }
+    .info-table tr {
+      box-shadow: 0 2px 5px rgba(0,0,0,0.04);
+      border-radius: 6px;
+    }
+    .info-table .label-cell {
+      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 100%);
+      color: var(--gold-light);
+      font-weight: 700;
+      width: 40%;
+      font-size: 14px;
+      padding: 10px 16px;
+      border-radius: 6px 0 0 6px;
+      transition: all 0.2s;
+      border-right: 3px solid var(--gold);
+    }
+    .info-table .label-cell::before {
+      content: '✦ ';
+      color: var(--gold-light);
+      font-size: 11px;
+    }
+    .info-table .value-cell {
+      background: #fafbff;
+      width: 60%;
+      padding: 4px 12px;
+      border-radius: 0 6px 6px 0;
+      transition: all 0.2s;
+      border: 1px solid #e8ebf5;
+      border-left: none;
+    }
+    .info-table tr:hover .label-cell {
+      background: linear-gradient(135deg, var(--navy-mid) 0%, var(--navy-light) 100%);
+      color: #ffffff;
+    }
+    .info-table tr:hover .value-cell {
+      background: #ffffff;
+      border-color: var(--gold);
+      box-shadow: 0 4px 12px rgba(201, 162, 39, 0.1);
+    }
+
+    /* Photo Box */
+    .photo-box {
+      border: 3px solid var(--gold);
+      width: 115px; height: 135px;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, #f5f7ff, #e8ecf8);
+      font-size: 13px; color: #666; text-align: center;
+      float: right; margin: 0 0 14px 18px; border-radius: 6px;
+      flex-direction: column; cursor: pointer; position: relative; overflow: hidden;
+      box-shadow: 0 3px 12px rgba(13,27,75,0.18), 0 0 0 1px rgba(201,162,39,0.25);
+      transition: box-shadow 0.2s;
+    }
+    .photo-box:hover {
+      box-shadow: 0 6px 20px rgba(13,27,75,0.25), 0 0 0 2px var(--gold);
+    }
+    .photo-box img { width: 100%; height: 100%; object-fit: cover; }
+    .photo-box input { display: none; }
+    .photo-box .photo-label { font-size: 10px; margin-top: 4px; color: #666; }
+
+    /* Data Table */
+    .data-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin-top: 10px;
+      flex: 1;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+      border: 1px solid #e0e4f5;
+    }
+    .data-table th {
+      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 100%);
+      color: var(--gold-light);
+      padding: 12px 8px;
+      font-size: 13.5px;
+      font-weight: 700;
+      border: none;
+      border-bottom: 3px solid var(--gold);
+      text-align: center;
+      letter-spacing: 0.5px;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    }
+    .data-table td {
+      border: none;
+      border-bottom: 1px solid #eef1f9;
+      padding: 2px 6px;
+      font-size: 13px;
+      text-align: center;
+      transition: all 0.15s;
+    }
+    .data-table tr:last-child td {
+      border-bottom: none;
+    }
+    .data-table tr:nth-child(even) td { background: rgba(244, 246, 252, 0.7); }
+    .data-table tr:nth-child(odd) td { background: var(--white); }
+    
+    .data-table tr:hover td {
+      background: var(--gold-pale) !important;
+    }
+    .sr-cell {
+      background: linear-gradient(135deg, #eef1ff, #e3e7f5) !important;
+      font-weight: 800;
+      color: var(--navy);
+      width: 40px;
+      font-size: 13px;
+      border-right: 2px solid #cdd3eb !important;
+    }
+    .data-table tr:hover .sr-cell {
+      background: linear-gradient(135deg, var(--gold-light), var(--gold)) !important;
+      color: var(--navy) !important;
+    }
+    .data-table tr { height: auto; }
+    .data-table tr:nth-child(even) td { background: var(--blue-pale); }
+    .data-table tr:nth-child(odd) td { background: var(--white); }
+    .data-table tr:hover td { background: var(--gold-pale) !important; }
+    .sr-cell {
+      background: linear-gradient(180deg, #c5cae9, #b3bae4) !important;
+      font-weight: 700;
+      color: var(--navy);
+      width: 38px;
+      font-size: 13px;
+      border-right: 2px solid #9fa8da !important;
+    }
+    .data-table tr:hover .sr-cell { background: linear-gradient(180deg, #ffd54f, #ffca28) !important; }
+
+    /* Page Footer */
+    .page-footer {
+      text-align: right;
+      font-size: 11px;
+      color: var(--gold);
+      padding-top: 6px;
+      border-top: 1px solid var(--gold);
+      font-style: italic;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    /* Make tables grow to fill available space */
+    .table-wrap { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+
+    /* ===== PRINT STYLES ===== */
+    @media print {
+      .print-bar, .no-print { display: none !important; }
+      .pages-wrapper { padding-top: 0 !important; }
+      body { background: #fff; }
+      .page { margin: 0 !important; box-shadow: none !important; border: none !important; page-break-after: always; break-after: page; }
+      .ef:focus, .tef:focus, .cover-ef:focus { background: transparent !important; }
+      .ef:empty:before, .tef:empty:before, .cover-ef:empty:before { content: '' !important; }
+    }
+
+    .add-page-btn {
+      background: linear-gradient(135deg, var(--green) 0%, var(--green-mid) 100%);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 13px 32px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: 'Noto Sans Devanagari', sans-serif;
+      box-shadow: 0 4px 16px rgba(27,94,32,0.4);
+      transition: all 0.2s ease;
+      letter-spacing: 0.5px;
+    }
+    .add-page-btn:hover {
+      background: linear-gradient(135deg, var(--green-mid) 0%, #43a047 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(27,94,32,0.5);
+    }
+    .add-page-btn:active { transform: translateY(1px); }
+
+    .add-page-container {
+      display: none !important;
+    }
+
+    .add-page-header-btn {
+      background: linear-gradient(135deg, #0d47a1, #1976d2);
+      color: #fff; border: 1px solid rgba(255,255,255,0.2);
+      padding: 8px 16px; border-radius: 8px; font-size: 13px;
+      font-family: 'Noto Sans Devanagari', sans-serif;
+      cursor: pointer; font-weight: 700;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(13,71,161,0.4);
+    }
+    .add-page-header-btn:hover {
+      background: linear-gradient(135deg, #1976d2, #2196f3);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(25,118,210,0.5);
+    }
+
+    /* Doc upload area styling */
+    .doc-upload-area {
+      border: 2px dashed var(--border-navy);
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 14px;
+      background: linear-gradient(135deg, #f5f7ff 0%, #eef1ff 100%);
+      box-shadow: inset 0 2px 8px rgba(13,27,75,0.06);
+    }
+    .doc-upload-area-title {
+      color: var(--navy);
+      font-weight: 800;
+      font-size: 14px;
+      margin-bottom: 10px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .doc-section {
+      border: 2px solid var(--gold);
+      border-radius: 10px;
+      padding: 16px;
+      background: linear-gradient(135deg, #fdf8ee 0%, #fffbf0 100%);
+      box-shadow: 0 3px 12px rgba(201,162,39,0.12);
+    }
+    .doc-section-title {
+      color: var(--navy);
+      font-weight: 800;
+      font-size: 15px;
+      margin-bottom: 12px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .sign-area {
+      margin-top: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding-top: 8px;
+    }
+    .sign-box {
+      text-align: center;
+    }
+    .sign-line {
+      border-top: 2px solid var(--navy);
+      width: 160px;
+      padding-top: 6px;
+      font-size: 12.5px;
+      color: var(--navy);
+      font-weight: 600;
+    }
+
+    /* Page number badge */
+    .page-num-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, var(--navy), var(--navy-light));
+      color: var(--gold-light);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+
+    /* Slider layout classes */
+    .nav-arrow {
+      position: fixed;
+      top: 55%;
+      transform: translateY(-50%);
+      width: 56px;
+      height: 56px;
+      background: rgba(13, 27, 75, 0.75);
+      border: 2px solid var(--gold);
+      color: var(--gold-light);
+      font-size: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      cursor: pointer;
+      z-index: 2000;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      backdrop-filter: blur(8px);
+      user-select: none;
+    }
+    .nav-arrow:hover {
+      background: rgba(13, 27, 75, 0.95);
+      color: #ffffff;
+      border-color: #ffffff;
+      box-shadow: 0 0 15px rgba(255,255,255,0.4);
+    }
+    .nav-arrow.prev-arrow {
+      left: 30px;
+    }
+    .nav-arrow.next-arrow {
+      right: 30px;
+    }
+
+    .bottom-controller {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2000;
+      background: rgba(13, 27, 75, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1.5px solid rgba(201, 162, 39, 0.45);
+      padding: 10px 24px;
+      border-radius: 40px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+      transition: all 0.3s ease;
+      width: auto;
+      max-width: 95%;
+    }
+    
+    .bottom-controller:hover {
+      border-color: var(--gold);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 10px rgba(201, 162, 39, 0.2);
+    }
+
+    .controller-btn {
+      background: none;
+      border: none;
+      color: var(--gold-light);
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 16px;
+      border-radius: 20px;
+      transition: all 0.2s ease;
+    }
+    
+    .controller-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: #fff;
+    }
+    
+    .controller-btn:disabled {
+      color: rgba(255,255,255,0.3);
+      cursor: not-allowed;
+      background: none;
+    }
+
+    .page-select-dropdown {
+      background: rgba(26, 46, 110, 0.85);
+      color: var(--gold-light);
+      border: 1px solid var(--gold);
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-family: 'Noto Sans Devanagari', sans-serif;
+      font-size: 13.5px;
+      font-weight: 600;
+      outline: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .page-select-dropdown:hover, .page-select-dropdown:focus {
+      border-color: #fff;
+      background: rgba(26, 46, 110, 0.95);
+      color: #fff;
+    }
+
+    .dots-container {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      justify-content: center;
+      overflow-x: auto;
+      max-width: 180px;
+      padding: 4px 8px;
+    }
+    
+    .dots-container::-webkit-scrollbar {
+      display: none;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.35);
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+    
+    .dot.active-dot {
+      background: var(--gold);
+      transform: scale(1.3);
+      box-shadow: 0 0 8px var(--gold-light);
+    }
+
+    .counter-text {
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      min-width: 80px;
+      text-align: center;
+      font-family: 'Noto Sans Devanagari', sans-serif;
+    }
+
+    @media print {
+      .nav-arrow, .bottom-controller, .add-page-container {
+        display: none !important;
+      }
+      .page {
+        display: block !important;
+        opacity: 1 !important;
+        transform: none !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+        page-break-after: always;
+        break-after: page;
+      }
+    }
+
+    @media (max-width: 800px) {
+      .nav-arrow {
+        width: 46px;
+        height: 46px;
+        font-size: 20px;
+        top: auto;
+        bottom: 24px;
+        transform: none;
+      }
+      .nav-arrow.prev-arrow {
+        left: 20px;
+      }
+      .nav-arrow.next-arrow {
+        right: 20px;
+      }
+    }
+  </style>
+<body>
+
+<!-- Slider navigation controls (only visible on screen, hidden in print) -->
+<button class="nav-arrow prev-arrow no-print" id="slider-prev-arrow" onclick="changeSlide(-1)">◀</button>
+<button class="nav-arrow next-arrow no-print" id="slider-next-arrow" onclick="changeSlide(1)">▶</button>
+
+<!-- Print Bar -->
+<div class="print-bar">
+  <h2>शिक्षक संचिका - Shikshak Sanchika</h2>
+  <div class="bar-btns">
+    <button class="add-page-header-btn no-print" onclick="addNewPage()">➕ नवीन पान जोडा</button>
+    <button class="save-btn" onclick="saveData()">💾 माहिती जतन करा</button>
+    <button class="print-btn" onclick="downloadPDF()">📥 PDF डाउनलोड करा</button>
+    <button class="clear-btn" onclick="clearData()">🗑️ Clear</button>
+  </div>
+</div>
+
+<div class="pages-wrapper">
+
+<!-- ===== PAGE 1: COVER PAGE ===== -->
+<div class="page">
+  <div class="cover-border">
+    <div class="cover-top-stripe"></div>
+
+    <!-- Top Group: Saraswati + Title (stays together) -->
+    <div style="display:flex;flex-direction:column;align-items:center;gap:18px;margin-top:auto;margin-bottom:auto;">
+      <img id="saraswati-img" src="/saraswati_mata.png" alt="सरस्वती माता"
+        style="width:270px;height:270px;object-fit:contain;filter:sepia(20%) contrast(1.05);" />
+
+      <div class="cover-ornament">❋ ❋ ❋</div>
+
+      <div class="cover-title">शिक्षक संचिका</div>
+
+      <div class="cover-ornament">❋ ❋ ❋</div>
+    </div>
+
+    <!-- Info Box pushed to bottom -->
+    <div style="margin-top:auto;margin-bottom:auto; width:100%;">
+      <div class="cover-info-box">
+        <div class="cover-info-box-header">✦ शिक्षक माहिती ✦</div>
+        <div class="cover-info-row">
+          <span class="cover-info-label">शिक्षकांचे नाव :-</span>
+          <div class="cover-ef" id="c-name" contenteditable="true" data-ph="शिक्षकाचे पूर्ण नाव लिहा"></div>
+        </div>
+        <div class="cover-info-row">
+          <span class="cover-info-label">मोबाईल न:-</span>
+          <div class="cover-ef" id="c-mobile" contenteditable="true" data-ph="मोबाईल नंबर"></div>
+        </div>
+      </div>
+
+    </div>
+    <div class="cover-bottom-stripe" style="margin-top:auto;"></div>
+  </div>
+</div>
+
+<!-- ===== PAGE 2: SCHOOL INFO ===== -->
+<div class="page">
+  <div class="page-inner">
+    <div class="page-header">शाळा व शिक्षक माहिती</div>
+
+    <!-- Photo Box -->
+    <div class="photo-box" onclick="document.getElementById('photo-upload').click()" title="फोटो अपलोड करण्यासाठी click करा">
+      <img id="teacher-photo" src="" alt="" style="display:none;width:100%;height:100%;object-fit:cover;" />
+      <div id="photo-placeholder">
+        <div style="font-size:30px;">📷</div>
+        <div class="photo-label">फोटो<br>click करा</div>
+      </div>
+      <input type="file" id="photo-upload" accept="image/*" onchange="loadPhoto(this)" />
+    </div>
+
+    <table class="info-table">
+      <tr><td class="label-cell">शाळा संकेताक</td><td class="value-cell"><div class="ef" id="p2-1" contenteditable="true" data-ph="..."></div></td></tr>
+      <tr><td class="label-cell">वर्गशिक्षकाचे नाव</td><td class="value-cell"><div class="ef" id="p2-2" contenteditable="true" data-ph="..."></div></td></tr>
+      <tr><td class="label-cell">शाळेचे नाव</td><td class="value-cell"><div class="ef" id="p2-3" contenteditable="true" data-ph="..."></div></td></tr>
+      <tr><td class="label-cell">पोस्ट</td><td class="value-cell"><div class="ef" id="p2-4" contenteditable="true" data-ph="..."></div></td></tr>
+      <tr><td class="label-cell">केंद्र</td><td class="value-cell"><div class="ef" id="p2-5" contenteditable="true" data-ph="..."></div></td></tr>
+      <tr><td class="label-cell">तालुका</td><td class="value-cell"><div class="ef" id="p2-6" contenteditable="true" data-ph="..."></div></td></tr>
+      <tr><td class="label-cell">जिल्हा</td><td class="value-cell"><div class="ef" id="p2-7" contenteditable="true" data-ph="..."></div></td></tr>
+      <tr><td class="label-cell">पिन</td><td class="value-cell"><div class="ef" id="p2-8" contenteditable="true" data-ph="..."></div></td></tr>
+      <tr><td class="label-cell">इयत्ता</td><td class="value-cell"><div class="ef" id="p2-9" contenteditable="true" data-ph="..."></div></td></tr>
+      <tr><td class="label-cell">तुकडी</td><td class="value-cell"><div class="ef" id="p2-10" contenteditable="true" data-ph="..."></div></td></tr>
+      <tr><td class="label-cell">मोबाईल</td><td class="value-cell"><div class="ef" id="p2-11" contenteditable="true" data-ph="..."></div></td></tr>
+    </table>
+    <div class="page-footer">पृष्ठ २</div>
+  </div>
+</div>
+
+<!-- ===== PAGE 3: PERSONAL DETAILS ===== -->
+<div class="page">
+  <div class="page-inner">
+    <div class="page-header">शिक्षक वैयक्तिक माहिती</div>
+    <table class="info-table">
+      <tr><td class="label-cell">शिक्षकाचे नाव</td><td class="value-cell"><div class="ef" id="p3-1" contenteditable="true" data-ph="..."></div></td></tr>
+      <tr><td class="label-cell">जन्मतारीख</td><td class="value-cell"><div class="ef" id="p3-2" contenteditable="true" data-ph="DD/MM/YYYY"></div></td></tr>
+      <tr><td class="label-cell">जन्मस्थळ</td><td class="value-cell"><div class="ef" id="p3-3" contenteditable="true" data-ph="..."></div></td></tr>
+      <tr><td class="label-cell">पद</td><td class="value-cell"><div class="ef" id="p3-4" contenteditable="true" data-ph="..."></div></td></tr>
+      <tr><td class="label-cell">जात</td><td class="value-cell"><div class="ef" id="p3-5" contenteditable="true" data-ph="..."></div></td></tr>
+      <tr><td class="label-cell">प्रवर्ग</td><td class="value-cell"><div class="ef" id="p3-6" contenteditable="true" data-ph="..."></div></td></tr>
+      <tr><td class="label-cell">आधार क्र.</td><td class="value-cell"><div class="ef" id="p3-7" contenteditable="true" data-ph="xxxx xxxx xxxx"></div></td></tr>
+      <tr><td class="label-cell">सरल ID क्र.</td><td class="value-cell"><div class="ef" id="p3-8" contenteditable="true" data-ph="..."></div></td></tr>
+      <tr><td class="label-cell">शालार्थ ID</td><td class="value-cell"><div class="ef" id="p3-9" contenteditable="true" data-ph="..."></div></td></tr>
+      <tr><td class="label-cell">मोबाईल</td><td class="value-cell"><div class="ef" id="p3-10" contenteditable="true" data-ph="..."></div></td></tr>
+      <tr><td class="label-cell">प्रा. फंड क्र.</td><td class="value-cell"><div class="ef" id="p3-11" contenteditable="true" data-ph="..."></div></td></tr>
+      <tr><td class="label-cell">PAN न.</td><td class="value-cell"><div class="ef" id="p3-12" contenteditable="true" data-ph="..."></div></td></tr>
+      <tr><td class="label-cell">निवडणूक कार्ड न.</td><td class="value-cell"><div class="ef" id="p3-13" contenteditable="true" data-ph="..."></div></td></tr>
+      <tr><td class="label-cell">रेशनकार्ड न.</td><td class="value-cell"><div class="ef" id="p3-14" contenteditable="true" data-ph="..."></div></td></tr>
+      <tr><td class="label-cell">ई-मेल ID</td><td class="value-cell"><div class="ef" id="p3-15" contenteditable="true" data-ph="..."></div></td></tr>
+    </table>
+    <div class="page-footer">पृष्ठ ३</div>
+  </div>
+</div>
+
+<!-- ===== PAGE 4: ADDITIONAL PERSONAL ===== -->
+<div class="page">
+  <div class="page-inner">
+    <div class="page-header">इतर वैयक्तिक माहिती</div>
+    <table class="info-table">
+      <tr><td class="label-cell">रक्तगट</td><td class="value-cell"><div class="ef" id="p4-1" contenteditable="true" data-ph="A+/B+/O+..."></div></td></tr>
+      <tr><td class="label-cell">वजन</td><td class="value-cell"><div class="ef" id="p4-2" contenteditable="true" data-ph="kg"></div></td></tr>
+      <tr><td class="label-cell">उंची</td><td class="value-cell"><div class="ef" id="p4-3" contenteditable="true" data-ph="cm"></div></td></tr>
+      <tr><td class="label-cell">सेवानिवृत्ती ता.</td><td class="value-cell"><div class="ef" id="p4-4" contenteditable="true" data-ph="DD/MM/YYYY"></div></td></tr>
+      <tr><td class="label-cell">सलगसेवा</td><td class="value-cell"><div class="ef" id="p4-5" contenteditable="true" data-ph="..."></div></td></tr>
+      <tr><td class="label-cell">या शाळेवर हजर दि.</td><td class="value-cell"><div class="ef" id="p4-6" contenteditable="true" data-ph="DD/MM/YYYY"></div></td></tr>
+      <tr><td class="label-cell">या तालुक्यात हजर दि.</td><td class="value-cell"><div class="ef" id="p4-7" contenteditable="true" data-ph="DD/MM/YYYY"></div></td></tr>
+      <tr><td class="label-cell">या जिल्ह्यात हजर दि.</td><td class="value-cell"><div class="ef" id="p4-8" contenteditable="true" data-ph="DD/MM/YYYY"></div></td></tr>
+      <tr><td class="label-cell">अपंगत्व प्रमाणपत्र क्र.</td><td class="value-cell"><div class="ef" id="p4-9" contenteditable="true" data-ph="N/A"></div></td></tr>
+      <tr><td class="label-cell">वाहन लायसन्स क्र.</td><td class="value-cell"><div class="ef" id="p4-10" contenteditable="true" data-ph="..."></div></td></tr>
+      <tr><td class="label-cell">वाहन क्र.</td><td class="value-cell"><div class="ef" id="p4-11" contenteditable="true" data-ph="MH-XX-XXXX"></div></td></tr>
+      <tr><td class="label-cell">इन्कमटॅक्स न.</td><td class="value-cell"><div class="ef" id="p4-12" contenteditable="true" data-ph="..."></div></td></tr>
+      <tr><td class="label-cell">NPS/DCPS क्र.</td><td class="value-cell"><div class="ef" id="p4-13" contenteditable="true" data-ph="..."></div></td></tr>
+      <tr><td class="label-cell">शैक्षणिक पात्रता</td><td class="value-cell"><div class="ef" id="p4-14" contenteditable="true" data-ph="..."></div></td></tr>
+      <tr><td class="label-cell">व्यावसायिक पात्रता</td><td class="value-cell"><div class="ef" id="p4-15" contenteditable="true" data-ph="..."></div></td></tr>
+    </table>
+    <div class="page-footer">पृष्ठ ४</div>
+  </div>
+</div>
+
+<!-- ===== PAGE 5: HOBBIES & ADDRESS ===== -->
+<div class="page">
+  <div class="page-inner">
+    <div class="page-header">आवड, शालेय काम व पत्ता</div>
+    <table class="info-table">
+      <tr><td class="label-cell">आवड</td><td class="value-cell" style="height:52px;"><div class="ef" id="p5-1" contenteditable="true" data-ph="..." style="min-height:44px;display:block;width:100%;"></div></td></tr>
+      <tr><td class="label-cell">शालेय काम</td><td class="value-cell" style="height:52px;"><div class="ef" id="p5-2" contenteditable="true" data-ph="..." style="min-height:44px;display:block;width:100%;"></div></td></tr>
+      <tr><td class="label-cell">अवगत असलेल्या भाषा</td><td class="value-cell"><div class="ef" id="p5-3" contenteditable="true" data-ph="मराठी, हिंदी, इंग्रजी"></div></td></tr>
+      <tr><td class="label-cell">सध्याचा पत्ता</td><td class="value-cell" style="height:60px;"><div class="ef" id="p5-4" contenteditable="true" data-ph="..." style="min-height:52px;display:block;width:100%;"></div></td></tr>
+      <tr><td class="label-cell">कायमचा पत्ता</td><td class="value-cell" style="height:60px;"><div class="ef" id="p5-5" contenteditable="true" data-ph="..." style="min-height:52px;display:block;width:100%;"></div></td></tr>
+      <tr><td class="label-cell">पत्रव्यवहाराचा पत्ता</td><td class="value-cell" style="height:60px;"><div class="ef" id="p5-6" contenteditable="true" data-ph="..." style="min-height:52px;display:block;width:100%;"></div></td></tr>
+      <tr><td class="label-cell">मोबाईल क्र. १</td><td class="value-cell"><div class="ef" id="p5-7" contenteditable="true" data-ph="..."></div></td></tr>
+      <tr><td class="label-cell">मोबाईल क्र. २</td><td class="value-cell"><div class="ef" id="p5-8" contenteditable="true" data-ph="..."></div></td></tr>
+    </table>
+    <div class="page-footer">पृष्ठ ५</div>
+  </div>
+</div>
+
+<!-- ===== PAGE 6: EDUCATIONAL QUALIFICATIONS ===== -->
+<div class="page">
+  <div class="page-inner">
+    <div class="page-header">शैक्षणिक पात्रता</div>
+    <div class="page-subheader">शैक्षणिक पात्रता</div>
+    <table class="data-table">
+      <thead><tr><th>अ.न.</th><th>शैक्षणिक पात्रता</th><th>विद्यापीठ</th><th>श्रेणी</th><th>वर्ष</th></tr></thead>
+      <tbody id="edu-table">
+        <tr><td class="sr-cell">१</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">२</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">३</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">४</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">५</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top:22px;"></div>
+    <div class="page-subheader">व्यावसायिक पात्रता</div>
+    <table class="data-table">
+      <thead><tr><th>अ.न.</th><th>शैक्षणिक पात्रता</th><th>विद्यापीठ</th><th>श्रेणी</th><th>वर्ष</th></tr></thead>
+      <tbody>
+        <tr><td class="sr-cell">१</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">२</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">३</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">४</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+      </tbody>
+    </table>
+    <div class="page-footer">पृष्ठ ६</div>
+  </div>
+</div>
+
+<!-- ===== PAGE 7: OTHER QUAL & BANK ===== -->
+<div class="page">
+  <div class="page-inner">
+    <div class="page-header">इतर पात्रता व बँक माहिती</div>
+    <div class="page-subheader">इतर पात्रता</div>
+    <table class="data-table">
+      <thead><tr><th>अ.न.</th><th>शैक्षणिक पात्रता</th><th>विद्यापीठ</th><th>श्रेणी</th><th>वर्ष</th></tr></thead>
+      <tbody>
+        <tr><td class="sr-cell">१</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">२</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">३</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">४</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">५</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+      </tbody>
+    </table>
+    <div style="margin-top:22px;"></div>
+    <div class="page-subheader">बँक खात्याविषयी माहिती</div>
+    <table class="data-table">
+      <thead><tr><th>अ.न.</th><th>बँकेचे नाव</th><th>शाखा</th><th>खाते क्र.</th><th>IFSC</th></tr></thead>
+      <tbody>
+        <tr><td class="sr-cell">१</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">२</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">३</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">४</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+      </tbody>
+    </table>
+    <div class="page-footer">पृष्ठ ७</div>
+  </div>
+</div>
+
+<!-- ===== PAGE 8: SERVICE HISTORY ===== -->
+<div class="page">
+  <div class="page-inner">
+    <div class="page-header">शैक्षणिक सेवा तपशील</div>
+    <table class="data-table">
+      <thead><tr><th>अ.न.</th><th>बदली हजर झालेली शाळा</th><th>कालावधी</th><th>एकूण सेवा</th><th>बदली आदेश क्र.</th></tr></thead>
+      <tbody>
+        <tr><td class="sr-cell">१</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">२</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">३</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">४</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">५</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">६</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">७</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">८</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">९</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">१०</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">११</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">१२</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">१३</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+      </tbody>
+    </table>
+    <div class="page-footer">पृष्ठ ८</div>
+  </div>
+</div>
+
+<!-- ===== PAGE 9: FAMILY INFO ===== -->
+<div class="page">
+  <div class="page-inner">
+    <div class="page-header">कौटुंबिक माहिती</div>
+    <table class="data-table">
+      <thead><tr><th>अ.न.</th><th>कुटुंबातील व्यक्तीचे नाव</th><th>नाते</th><th>जन्मतारीख</th><th>आधार क्र.</th></tr></thead>
+      <tbody>
+        <tr><td class="sr-cell">१</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">२</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">३</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">४</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">५</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">६</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">७</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">८</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">९</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+      </tbody>
+    </table>
+    <div class="page-footer">पृष्ठ ९</div>
+  </div>
+</div>
+
+<!-- ===== PAGE 10: BOOKS ===== -->
+<div class="page">
+  <div class="page-inner">
+    <div class="page-header">आवडलेली पुस्तके</div>
+    <table class="data-table">
+      <thead><tr><th>अ.न.</th><th>पुस्तकाचे नाव</th><th>लेखक</th><th>आशय</th></tr></thead>
+      <tbody>
+        <tr><td class="sr-cell">१</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">२</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">३</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">४</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">५</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">६</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">७</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">८</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">९</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">१०</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">११</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">१२</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">१३</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">१४</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+      </tbody>
+    </table>
+    <div class="page-footer">पृष्ठ १०</div>
+  </div>
+</div>
+
+<!-- ===== PAGE 11: PUBLISHED LITERATURE ===== -->
+<div class="page">
+  <div class="page-inner">
+    <div class="page-header">प्रकाशित साहित्य / कवितासंग्रह</div>
+    <table class="data-table">
+      <thead><tr><th>अ.न.</th><th>विषय</th><th>तपशील</th><th>वर्ष</th></tr></thead>
+      <tbody>
+        <tr><td class="sr-cell">१</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">२</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">३</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">४</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">५</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">६</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">७</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">८</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">९</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">१०</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">११</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+        <tr><td class="sr-cell">१२</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+      </tbody>
+    </table>
+    <div class="page-footer">पृष्ठ ११</div>
+  </div>
+</div>
+
+<!-- PAGES 12-16: TRAINING 1-5 -->
+<div class="page"><div class="page-inner"><div class="page-header">प्रशिक्षण (१)</div><table class="data-table"><thead><tr><th>अ.न.</th><th>प्रशिक्षणाचे नाव</th><th>ठिकाण</th><th>स्तर</th><th>कालावधी</th><th>दिवस</th></tr></thead><tbody>
+<tr><td class="sr-cell">१</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">२</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">३</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">४</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">५</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">६</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">७</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">८</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">९</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">१०</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+</tbody></table><div class="page-footer">पृष्ठ १२</div></div></div>
+
+<div class="page"><div class="page-inner"><div class="page-header">प्रशिक्षण (२)</div><table class="data-table"><thead><tr><th>अ.न.</th><th>प्रशिक्षणाचे नाव</th><th>ठिकाण</th><th>स्तर</th><th>कालावधी</th><th>दिवस</th></tr></thead><tbody>
+<tr><td class="sr-cell">१</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">२</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">३</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">४</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">५</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">६</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">७</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">८</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">९</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">१०</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+</tbody></table><div class="page-footer">पृष्ठ १३</div></div></div>
+
+<div class="page"><div class="page-inner"><div class="page-header">प्रशिक्षण (३)</div><table class="data-table"><thead><tr><th>अ.न.</th><th>प्रशिक्षणाचे नाव</th><th>ठिकाण</th><th>स्तर</th><th>कालावधी</th><th>दिवस</th></tr></thead><tbody>
+<tr><td class="sr-cell">१</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">२</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">३</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">४</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">५</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">६</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">७</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">८</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">९</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">१०</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+</tbody></table><div class="page-footer">पृष्ठ १४</div></div></div>
+
+<div class="page"><div class="page-inner"><div class="page-header">प्रशिक्षण (४)</div><table class="data-table"><thead><tr><th>अ.न.</th><th>प्रशिक्षणाचे नाव</th><th>ठिकाण</th><th>स्तर</th><th>कालावधी</th><th>दिवस</th></tr></thead><tbody>
+<tr><td class="sr-cell">१</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">२</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">३</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">४</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">५</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">६</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">७</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">८</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">९</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">१०</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+</tbody></table><div class="page-footer">पृष्ठ १५</div></div></div>
+
+<div class="page"><div class="page-inner"><div class="page-header">प्रशिक्षण (५)</div><table class="data-table"><thead><tr><th>अ.न.</th><th>प्रशिक्षणाचे नाव</th><th>ठिकाण</th><th>स्तर</th><th>कालावधी</th><th>दिवस</th></tr></thead><tbody>
+<tr><td class="sr-cell">१</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">२</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">३</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">४</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">५</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">६</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">७</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">८</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">९</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+<tr><td class="sr-cell">१०</td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td><td><div class="tef" contenteditable="true" data-ph="..."></div></td></tr>
+</tbody></table><div class="page-footer">पृष्ठ १६</div></div></div>
+
+<!-- ===== PAGE 17: OTHER INFO + DOC UPLOAD ===== -->
+<div class="page">
+  <div class="page-inner">
+    <div class="page-header">इतर माहिती व कागदपत्रे</div>
+    <div class="doc-upload-area">
+      <div class="doc-upload-area-title">📝 इतर महत्त्वाची माहिती:</div>
+      <div class="tef" contenteditable="true" data-ph="येथे माहिती लिहा..." style="min-height:120px;display:block;text-align:left;font-size:13px;line-height:2;"></div>
+    </div>
+
+    <!-- Document Upload Section -->
+    <div class="doc-section">
+      <div class="doc-section-title">📎 कागदपत्रे / Documents Upload</div>
+
+      <!-- Upload Button Area -->
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+        <label for="doc-upload" style="cursor:pointer;background:linear-gradient(135deg,var(--navy),var(--navy-light));color:#fff;padding:10px 22px;border-radius:8px;font-weight:700;font-size:14px;font-family:'Noto Sans Devanagari',sans-serif;display:inline-flex;align-items:center;gap:8px;box-shadow:0 3px 10px rgba(13,27,75,0.3);transition:all 0.2s;">
+          📁 फाईल निवडा
+          <input type="file" id="doc-upload" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xls,.xlsx" onchange="handleDocUpload(this)" style="display:none;" />
+        </label>
+        <span style="font-size:13px;color:#666;">(PDF, Word, Image, Excel)</span>
+      </div>
+
+      <!-- Uploaded Files List -->
+      <div id="doc-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+      <div id="doc-empty" style="color:#999;font-size:13px;font-style:italic;">कोणतेही document upload केले नाही.</div>
+    </div>
+
+    <div class="page-footer">पृष्ठ १७</div>
+  </div>
+</div>
+
+<!-- ===== PAGE 18: OTHER INFO 2 + DOC UPLOAD ===== -->
+<div class="page">
+  <div class="page-inner">
+    <div class="page-header">इतर माहिती व कागदपत्रे (२)</div>
+    <div class="doc-upload-area">
+      <div class="doc-upload-area-title">📝 इतर महत्त्वाची माहिती:</div>
+      <div class="tef" contenteditable="true" data-ph="येथे माहिती लिहा..." style="min-height:110px;display:block;text-align:left;font-size:13px;line-height:2;"></div>
+    </div>
+
+    <!-- Document Upload Section 2 -->
+    <div class="doc-section">
+      <div class="doc-section-title">📎 कागदपत्रे / Documents Upload (२)</div>
+
+      <!-- Upload Button Area -->
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+        <label for="doc-upload-2" style="cursor:pointer;background:linear-gradient(135deg,var(--navy),var(--navy-light));color:#fff;padding:10px 22px;border-radius:8px;font-weight:700;font-size:14px;font-family:'Noto Sans Devanagari',sans-serif;display:inline-flex;align-items:center;gap:8px;box-shadow:0 3px 10px rgba(13,27,75,0.3);">
+          📁 फाईल निवडा
+          <input type="file" id="doc-upload-2" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xls,.xlsx" onchange="handleDocUpload2(this)" style="display:none;" />
+        </label>
+        <span style="font-size:13px;color:#666;">(PDF, Word, Image, Excel)</span>
+      </div>
+
+      <!-- Uploaded Files List -->
+      <div id="doc-list-2" style="display:flex;flex-direction:column;gap:8px;"></div>
+      <div id="doc-empty-2" style="color:#999;font-size:13px;font-style:italic;">कोणतेही document upload केले नाही.</div>
+    </div>
+
+    <div class="sign-area">
+      <div class="sign-box">
+        <div class="sign-line">शिक्षकाची सही</div>
+      </div>
+      <div class="sign-box">
+        <div class="sign-line">मुख्याध्यापकाची सही</div>
+      </div>
+    </div>
+
+    <div class="page-footer">पृष्ठ १८</div>
+  </div>
+</div>
+
+<!-- Add Page Button (Screen only, hidden in print) -->
+<div class="add-page-container no-print" style="text-align:center; padding: 28px 0; margin-bottom: 48px;">
+  <button class="add-page-btn" onclick="addNewPage()">➕ नवीन पान जोडा / Add Page</button>
+</div>
+
+</div><!-- end pages-wrapper -->
+
+<script>
+let currentSlideIndex = 0;
+// ===== DOCUMENT UPLOAD =====
+let uploadedDocs = JSON.parse(localStorage.getItem('sanchika_docs') || '[]');
+
+function handleDocUpload(input) {
+  if (!input.files || !input.files.length) return;
+  const files = Array.from(input.files);
+  let processed = 0;
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      uploadedDocs.push({ name: file.name, size: file.size, type: file.type, data: e.target.result });
+      processed++;
+      if (processed === files.length) {
+        localStorage.setItem('sanchika_docs', JSON.stringify(uploadedDocs));
+        renderDocList();
+        showMsg('✅ ' + files.length + ' document(s) upload झाले!', '#1a2e6e');
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+
+function removeDoc(idx) {
+  uploadedDocs.splice(idx, 1);
+  localStorage.setItem('sanchika_docs', JSON.stringify(uploadedDocs));
+  renderDocList();
+}
+
+function openDoc(idx) {
+  const doc = uploadedDocs[idx];
+  const win = window.open();
+  if (doc.type && doc.type.startsWith('image/')) {
+    win.document.write('<img src="' + doc.data + '" style="max-width:100%;" />');
+  } else {
+    win.location.href = doc.data;
+  }
+}
+
+function renderDocList() {
+  const list = document.getElementById('doc-list');
+  const empty = document.getElementById('doc-empty');
+  if (!list) return;
+  if (uploadedDocs.length === 0) {
+    list.innerHTML = '';
+    if (empty) empty.style.display = 'block';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+  list.innerHTML = uploadedDocs.map((doc, i) => {
+    const kb = (doc.size / 1024).toFixed(1);
+    const isImage = doc.type && doc.type.startsWith('image/');
+    const isPDF = doc.type && doc.type.includes('pdf');
+    const icon = isPDF ? '📄' : isImage ? '🖼️' : doc.type && doc.type.includes('word') ? '📝' : doc.type && doc.type.includes('sheet') ? '📊' : '📎';
+    const preview = isImage
+      ? `<img src="${doc.data}" alt="${doc.name}" style="width:100%;max-height:320px;object-fit:contain;border-radius:6px;border:1px solid #c9a227;margin-top:8px;display:block;" />`
+      : `<div style="display:flex;align-items:center;justify-content:center;height:80px;background:linear-gradient(135deg,#f5f7ff,#eef1ff);border-radius:6px;border:2px dashed #c9a227;margin-top:8px;font-size:13px;color:#555;gap:8px;">${icon} <span style="font-weight:700;">${doc.name}</span><br/><span style="font-size:11px;color:#888;">(${kb} KB — PDF/Doc: पाहण्यासाठी Download करा)</span></div>`;
+    return `<div style="background:#fff;border:1px solid #c9a227;border-radius:8px;padding:10px 14px;box-shadow:0 2px 6px rgba(201,162,39,0.1);margin-bottom:4px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+          <span style="font-size:22px;">${icon}</span>
+          <div style="min-width:0;">
+            <div style="font-weight:700;font-size:13px;color:#0d1b4b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:340px;">${doc.name}</div>
+            <div style="font-size:11px;color:#888;">${kb} KB</div>
+          </div>
+        </div>
+        <div class="no-print" style="display:flex;gap:8px;flex-shrink:0;">
+          <button onclick="openDoc(${i})" style="background:linear-gradient(135deg,#1a2e6e,#253a8a);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-family:'Noto Sans Devanagari',sans-serif;font-weight:600;">👁️ पाहा</button>
+          <button onclick="removeDoc(${i})" style="background:linear-gradient(135deg,#9b1c1c,#c62828);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-family:'Noto Sans Devanagari',sans-serif;font-weight:600;">🗑️ काढा</button>
+        </div>
+      </div>
+      ${preview}
+    </div>`;
+  }).join('');
+}
+
+// ===== DOCUMENT UPLOAD 2 =====
+let uploadedDocs2 = JSON.parse(localStorage.getItem('sanchika_docs_2') || '[]');
+
+function handleDocUpload2(input) {
+  if (!input.files || !input.files.length) return;
+  const files = Array.from(input.files);
+  let processed = 0;
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      uploadedDocs2.push({ name: file.name, size: file.size, type: file.type, data: e.target.result });
+      processed++;
+      if (processed === files.length) {
+        localStorage.setItem('sanchika_docs_2', JSON.stringify(uploadedDocs2));
+        renderDocList2();
+        showMsg('✅ ' + files.length + ' document(s) upload झाले!', '#1a2e6e');
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+
+function removeDoc2(idx) {
+  uploadedDocs2.splice(idx, 1);
+  localStorage.setItem('sanchika_docs_2', JSON.stringify(uploadedDocs2));
+  renderDocList2();
+}
+
+function openDoc2(idx) {
+  const doc = uploadedDocs2[idx];
+  const win = window.open();
+  if (doc.type && doc.type.startsWith('image/')) {
+    win.document.write('<img src="' + doc.data + '" style="max-width:100%;" />');
+  } else {
+    win.location.href = doc.data;
+  }
+}
+
+function renderDocList2() {
+  const list = document.getElementById('doc-list-2');
+  const empty = document.getElementById('doc-empty-2');
+  if (!list) return;
+  if (uploadedDocs2.length === 0) {
+    list.innerHTML = '';
+    if (empty) empty.style.display = 'block';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+  list.innerHTML = uploadedDocs2.map((doc, i) => {
+    const kb = (doc.size / 1024).toFixed(1);
+    const isImage = doc.type && doc.type.startsWith('image/');
+    const isPDF = doc.type && doc.type.includes('pdf');
+    const icon = isPDF ? '📄' : isImage ? '🖼️' : doc.type && doc.type.includes('word') ? '📝' : doc.type && doc.type.includes('sheet') ? '📊' : '📎';
+    const preview = isImage
+      ? `<img src="${doc.data}" alt="${doc.name}" style="width:100%;max-height:320px;object-fit:contain;border-radius:6px;border:1px solid #c9a227;margin-top:8px;display:block;" />`
+      : `<div style="display:flex;align-items:center;justify-content:center;height:80px;background:linear-gradient(135deg,#f5f7ff,#eef1ff);border-radius:6px;border:2px dashed #c9a227;margin-top:8px;font-size:13px;color:#555;gap:8px;">${icon} <span style="font-weight:700;">${doc.name}</span><br/><span style="font-size:11px;color:#888;">(${kb} KB — PDF/Doc: पाहण्यासाठी Download करा)</span></div>`;
+    return `<div style="background:#fff;border:1px solid #c9a227;border-radius:8px;padding:10px 14px;box-shadow:0 2px 6px rgba(201,162,39,0.1);margin-bottom:4px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+          <span style="font-size:22px;">${icon}</span>
+          <div style="min-width:0;">
+            <div style="font-weight:700;font-size:13px;color:#0d1b4b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:340px;">${doc.name}</div>
+            <div style="font-size:11px;color:#888;">${kb} KB</div>
+          </div>
+        </div>
+        <div class="no-print" style="display:flex;gap:8px;flex-shrink:0;">
+          <button onclick="openDoc2(${i})" style="background:linear-gradient(135deg,#1a2e6e,#253a8a);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-family:'Noto Sans Devanagari',sans-serif;font-weight:600;">👁️ पाहा</button>
+          <button onclick="removeDoc2(${i})" style="background:linear-gradient(135deg,#9b1c1c,#c62828);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-family:'Noto Sans Devanagari',sans-serif;font-weight:600;">🗑️ काढा</button>
+        </div>
+      </div>
+      ${preview}
+    </div>`;
+  }).join('');
+}
+
+// ===== PHOTO UPLOAD =====
+function loadPhoto(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = document.getElementById('teacher-photo');
+      const ph = document.getElementById('photo-placeholder');
+      img.src = e.target.result;
+      img.style.display = 'block';
+      ph.style.display = 'none';
+      localStorage.setItem('sanchika_photo', e.target.result);
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+// ===== DYNAMIC PAGES SYSTEM =====
+let activePages = JSON.parse(localStorage.getItem('sanchika_dynamic_pages') || '[]');
+let dynamicDocs = {};
+
+function initDynamicDocs(pageNum) {
+  if (!dynamicDocs[pageNum]) {
+    dynamicDocs[pageNum] = JSON.parse(localStorage.getItem('sanchika_docs_dynamic_' + pageNum) || '[]');
+  }
+}
+
+function handleDynamicDocUpload(input, pageNum) {
+  if (!input.files || !input.files.length) return;
+  initDynamicDocs(pageNum);
+  const files = Array.from(input.files);
+  let processed = 0;
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      dynamicDocs[pageNum].push({ name: file.name, size: file.size, type: file.type, data: e.target.result });
+      processed++;
+      if (processed === files.length) {
+        localStorage.setItem('sanchika_docs_dynamic_' + pageNum, JSON.stringify(dynamicDocs[pageNum]));
+        renderDynamicDocList(pageNum);
+        showMsg('✅ ' + files.length + ' document(s) upload झाले!', '#1a2e6e');
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+
+function removeDynamicDoc(pageNum, idx) {
+  initDynamicDocs(pageNum);
+  dynamicDocs[pageNum].splice(idx, 1);
+  localStorage.setItem('sanchika_docs_dynamic_' + pageNum, JSON.stringify(dynamicDocs[pageNum]));
+  renderDynamicDocList(pageNum);
+}
+
+function openDynamicDoc(pageNum, idx) {
+  initDynamicDocs(pageNum);
+  const doc = dynamicDocs[pageNum][idx];
+  const win = window.open();
+  if (doc.type && doc.type.startsWith('image/')) {
+    win.document.write('<img src="' + doc.data + '" style="max-width:100%;" />');
+  } else {
+    win.location.href = doc.data;
+  }
+}
+
+function renderDynamicDocList(pageNum) {
+  initDynamicDocs(pageNum);
+  const list = document.getElementById('doc-list-dynamic-' + pageNum);
+  const empty = document.getElementById('doc-empty-dynamic-' + pageNum);
+  if (!list) return;
+  const docs = dynamicDocs[pageNum];
+  if (docs.length === 0) {
+    list.innerHTML = '';
+    if (empty) empty.style.display = 'block';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+  list.innerHTML = docs.map((doc, i) => {
+    const kb = (doc.size / 1024).toFixed(1);
+    const isImage = doc.type && doc.type.startsWith('image/');
+    const isPDF = doc.type && doc.type.includes('pdf');
+    const icon = isPDF ? '📄' : isImage ? '🖼️' : doc.type && doc.type.includes('word') ? '📝' : doc.type && doc.type.includes('sheet') ? '📊' : '📎';
+    const preview = isImage
+      ? `<img src="${doc.data}" alt="${doc.name}" style="width:100%;max-height:320px;object-fit:contain;border-radius:6px;border:1px solid #c9a227;margin-top:8px;display:block;" />`
+      : `<div style="display:flex;align-items:center;justify-content:center;height:80px;background:linear-gradient(135deg,#f5f7ff,#eef1ff);border-radius:6px;border:2px dashed #c9a227;margin-top:8px;font-size:13px;color:#555;gap:8px;">${icon} <span style="font-weight:700;">${doc.name}</span><br/><span style="font-size:11px;color:#888;">(${kb} KB — PDF/Doc: पाहण्यासाठी Download करा)</span></div>`;
+    return `<div style="background:#fff;border:1px solid #c9a227;border-radius:8px;padding:10px 14px;box-shadow:0 2px 6px rgba(201,162,39,0.1);margin-bottom:4px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+          <span style="font-size:22px;">${icon}</span>
+          <div style="min-width:0;">
+            <div style="font-weight:700;font-size:13px;color:#0d1b4b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:340px;">${doc.name}</div>
+            <div style="font-size:11px;color:#888;">${kb} KB</div>
+          </div>
+        </div>
+        <div class="no-print" style="display:flex;gap:8px;flex-shrink:0;">
+          <button onclick="openDynamicDoc(${pageNum}, ${i})" style="background:linear-gradient(135deg,#1a2e6e,#253a8a);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-family:'Noto Sans Devanagari',sans-serif;font-weight:600;">👁️ पाहा</button>
+          <button onclick="removeDynamicDoc(${pageNum}, ${i})" style="background:linear-gradient(135deg,#9b1c1c,#c62828);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-family:'Noto Sans Devanagari',sans-serif;font-weight:600;">🗑️ काढा</button>
+        </div>
+      </div>
+      ${preview}
+    </div>`;
+  }).join('');
+}
+
+function updateDynamicPageLabels() {
+  const dynPages = document.querySelectorAll('.dynamic-page');
+  dynPages.forEach((page, index) => {
+    const displayNum = index + 3;
+    const displayPageNum = index + 19;
+    
+    const header = page.querySelector('.page-header');
+    if (header) {
+      header.textContent = `इतर माहिती व कागदपत्रे (${displayNum})`;
+    }
+    
+    const uploadTitle = page.querySelector('.upload-section-title');
+    if (uploadTitle) {
+      uploadTitle.textContent = `📎 कागदपत्रे / Documents Upload (${displayNum})`;
+    }
+    
+    const footer = page.querySelector('.page-footer');
+    if (footer) {
+      footer.innerHTML = `पृष्ठ ${displayPageNum}`;
+    }
+  });
+}
+
+function generatePageHTML(pageNum) {
+  return `
+<!-- ===== DYNAMIC PAGE ${pageNum} ===== -->
+<div class="page dynamic-page" id="page-dynamic-${pageNum}">
+  <div class="page-inner">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <div class="page-header" style="margin-bottom:0; flex:1; text-align:center;">इतर माहिती व कागदपत्रे (${pageNum - 16})</div>
+      <button class="no-print" onclick="deleteDynamicPage(${pageNum})" style="margin-left:12px; background:linear-gradient(135deg,#9b1c1c,#c62828); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; font-family:'Noto Sans Devanagari',sans-serif; box-shadow: 0 2px 8px rgba(155,28,28,0.4); transition: all 0.2s;">
+        🗑️ पान काढा
+      </button>
+    </div>
+    
+    <div class="doc-upload-area">
+      <div class="doc-upload-area-title">📝 इतर महत्त्वाची माहिती:</div>
+      <div class="tef" contenteditable="true" data-ph="येथे माहिती लिहा..." style="min-height:110px;display:block;text-align:left;font-size:13px;line-height:2;"></div>
+    </div>
+
+    <!-- Document Upload Section -->
+    <div class="doc-section">
+      <div class="upload-section-title doc-section-title">📎 कागदपत्रे / Documents Upload (${pageNum - 16})</div>
+
+      <!-- Upload Button Area -->
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+        <label for="doc-upload-dynamic-${pageNum}" style="cursor:pointer;background:linear-gradient(135deg,#0d1b4b,#1a2e6e);color:#fff;padding:10px 22px;border-radius:8px;font-weight:700;font-size:14px;font-family:'Noto Sans Devanagari',sans-serif;display:inline-flex;align-items:center;gap:8px;box-shadow:0 3px 10px rgba(13,27,75,0.3);">
+          📁 फाईल निवडा
+          <input type="file" id="doc-upload-dynamic-${pageNum}" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xls,.xlsx" onchange="handleDynamicDocUpload(this, ${pageNum})" style="display:none;" />
+        </label>
+        <span style="font-size:13px;color:#555;">(PDF, Word, Image, Excel)</span>
+      </div>
+
+      <!-- Uploaded Files List -->
+      <div id="doc-list-dynamic-${pageNum}" style="display:flex;flex-direction:column;gap:8px;"></div>
+      <div id="doc-empty-dynamic-${pageNum}" style="color:#999;font-size:13px;font-style:italic;">कोणतेही document upload केले नाही.</div>
+    </div>
+
+    <div class="sign-area">
+      <div class="sign-box">
+        <div class="sign-line">शिक्षकाची सही</div>
+      </div>
+      <div class="sign-box">
+        <div class="sign-line">मुख्याध्यापकाची सही</div>
+      </div>
+    </div>
+
+    <div class="page-footer">पृष्ठ ${pageNum}</div>
+  </div>
+</div>`;
+}
+
+function addNewPage() {
+  const pageNum = activePages.length > 0 ? Math.max(...activePages) + 1 : 19;
+  activePages.push(pageNum);
+  localStorage.setItem('sanchika_dynamic_pages', JSON.stringify(activePages));
+  
+  const pageHTML = generatePageHTML(pageNum);
+  
+  const container = document.querySelector('.add-page-container');
+  if (container) {
+    container.insertAdjacentHTML('beforebegin', pageHTML);
+  }
+  
+  updateDynamicPageLabels();
+  renderDynamicDocList(pageNum);
+  saveData();
+  showMsg('📄 नवीन पान जोडले गेले!', '#1b5e20');
+  
+  // Set currentSlideIndex to the newly added page (last page) and init slider
+  const pages = document.querySelectorAll('.page');
+  currentSlideIndex = pages.length - 1;
+  initSlider();
+}
+
+function deleteDynamicPage(pageNum) {
+  if (confirm('हे पान आणि त्यावरील सर्व माहिती/कागदपत्रे काढून टाकायची आहेत का?')) {
+    activePages = activePages.filter(p => p !== pageNum);
+    localStorage.setItem('sanchika_dynamic_pages', JSON.stringify(activePages));
+    
+    const pageEl = document.getElementById('page-dynamic-' + pageNum);
+    if (pageEl) pageEl.remove();
+    
+    localStorage.removeItem('sanchika_docs_dynamic_' + pageNum);
+    if (dynamicDocs[pageNum]) delete dynamicDocs[pageNum];
+    
+    updateDynamicPageLabels();
+    saveData();
+    showMsg('🗑️ पान यशस्वीरीत्या काढून टाकले', '#9b1c1c');
+    
+    // Switch to previous page index and update slider
+    currentSlideIndex = Math.max(0, currentSlideIndex - 1);
+    initSlider();
+  }
+}
+
+// ===== PAGE SCALING =====
+function adjustPageScale() {
+  const targetWidth = 810; // A4 page width in px (210mm ≈ 793px, + padding)
+  const viewportWidth = window.innerWidth;
+  
+  // Scale to fill full viewport width
+  const scale = viewportWidth / targetWidth;
+  
+  // Clamp between 0.35 and 1.235 (matches student portfolio's max width of 1000px)
+  const clampedScale = Math.min(Math.max(scale, 0.35), 1.235);
+  
+  document.documentElement.style.setProperty('--page-scale', clampedScale);
+  
+  // Since transform: scale() doesn't change layout size,
+  // adjust the layout footprint using margin-bottom
+  // Use currentSlideIndex because .active-slide might not be applied yet
+  const pages = document.querySelectorAll('.page');
+  const activePage = pages[typeof currentSlideIndex !== 'undefined' ? currentSlideIndex : 0];
+  if (activePage) {
+    const pageHeight = activePage.offsetHeight;
+    const marginDiff = (pageHeight * clampedScale) - pageHeight;
+    
+    // Apply margin so the layout box matches visual size
+    activePage.style.marginBottom = marginDiff + 'px';
+    
+    // Reset margins on inactive pages just in case
+    document.querySelectorAll('.page').forEach(p => {
+      if (p !== activePage) p.style.marginBottom = '0px';
+    });
+
+    const wrapper = document.querySelector('.pages-wrapper');
+    if (wrapper) {
+      wrapper.style.minHeight = 'auto'; // Let the wrapper size naturally
+      wrapper.style.paddingBottom = '40px'; // Add a little breathing room at the bottom
+    }
+  }
+}
+window.addEventListener('resize', adjustPageScale);
+
+// ===== SAVE DATA to localStorage =====
+function saveData() {
+  const all = document.querySelectorAll('[contenteditable]');
+  const arr = [];
+  all.forEach(el => arr.push(el.innerHTML));
+  localStorage.setItem('sanchika_data', JSON.stringify(arr));
+  showMsg('✅ माहिती यशस्वीरीत्या जतन केली!', '#1b5e20');
+}
+
+// ===== LOAD DATA from localStorage =====
+function loadData() {
+  const container = document.querySelector('.add-page-container');
+  if (container) {
+    activePages.forEach(pageNum => {
+      const pageHTML = generatePageHTML(pageNum);
+      container.insertAdjacentHTML('beforebegin', pageHTML);
+    });
+  }
+  
+  updateDynamicPageLabels();
+
+  const saved = localStorage.getItem('sanchika_data');
+  if (saved) {
+    try {
+      const arr = JSON.parse(saved);
+      const all = document.querySelectorAll('[contenteditable]');
+      all.forEach((el, i) => { if (arr[i] !== undefined && arr[i] !== '') el.innerHTML = arr[i]; });
+    } catch(e) {}
+  }
+  const photo = localStorage.getItem('sanchika_photo');
+  if (photo) {
+    const img = document.getElementById('teacher-photo');
+    const ph = document.getElementById('photo-placeholder');
+    if (img && ph) { img.src = photo; img.style.display = 'block'; ph.style.display = 'none'; }
+  }
+  renderDocList();
+  renderDocList2();
+  activePages.forEach(pageNum => {
+    renderDynamicDocList(pageNum);
+  });
+  
+  // Initialize slider state and DOM updates
+  initSlider();
+}
+
+// ===== CLEAR DATA =====
+function clearData() {
+  if (confirm('सर्व माहिती clear करायची आहे?')) {
+    activePages.forEach(pageNum => {
+      localStorage.removeItem('sanchika_docs_dynamic_' + pageNum);
+    });
+    localStorage.removeItem('sanchika_dynamic_pages');
+    
+    localStorage.removeItem('sanchika_data');
+    localStorage.removeItem('sanchika_photo');
+    localStorage.removeItem('sanchika_docs');
+    localStorage.removeItem('sanchika_docs_2');
+    
+    uploadedDocs = [];
+    uploadedDocs2 = [];
+    dynamicDocs = {};
+    
+    document.querySelectorAll('.dynamic-page').forEach(el => el.remove());
+    activePages = [];
+    
+    document.querySelectorAll('[contenteditable]').forEach(el => el.innerHTML = '');
+    const img = document.getElementById('teacher-photo');
+    const ph = document.getElementById('photo-placeholder');
+    if (img && ph) { img.src = ''; img.style.display = 'none'; ph.style.display = 'flex'; }
+    renderDocList();
+    renderDocList2();
+    showMsg('🗑️ सर्व माहिती साफ केली', '#9b1c1c');
+  }
+}
+
+// ===== SHOW TOAST =====
+function showMsg(msg, color) {
+  const t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = `position:fixed;bottom:24px;right:24px;z-index:99999;background:${color};color:#fff;padding:14px 28px;border-radius:10px;font-family:'Noto Sans Devanagari',sans-serif;font-weight:700;font-size:15px;box-shadow:0 6px 24px rgba(0,0,0,0.35);transition:opacity 0.4s;border:1px solid rgba(255,255,255,0.2);`;
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 2500);
+}
+
+// ===== DOWNLOAD DIRECT PDF (PAGE BY PAGE) =====
+async function downloadPDF() {
+  const pages = document.querySelectorAll('.page');
+  if (!pages.length) return;
+
+  // Temporarily hide .no-print elements
+  const noPrintEls = document.querySelectorAll('.no-print');
+  noPrintEls.forEach(el => el.style.display = 'none');
+
+  showMsg('⏳ PDF जनरेट होत आहे, कृपया थांबा (0/' + pages.length + ')...', '#1a2e6e');
+
+  // Determine jsPDF constructor safely from bundle
+  let jsPDFClass = window.jsPDF;
+  if (window.jspdf && window.jspdf.jsPDF) {
+    jsPDFClass = window.jspdf.jsPDF;
+  }
+  
+  if (!jsPDFClass) {
+    showMsg('❌ PDF लायब्ररी लोड झाली नाही', '#9b1c1c');
+    noPrintEls.forEach(el => el.style.display = '');
+    return;
+  }
+
+  const pdf = new jsPDFClass('p', 'mm', 'a4');
+
+  try {
+    // Reset scale to 1 for high quality print
+    document.documentElement.style.setProperty('--page-scale', '1');
+
+    // Temporarily show all pages for PDF capture
+    pages.forEach(page => {
+      page.style.display = 'block';
+      page.style.opacity = '1';
+      page.style.transform = 'none';
+    });
+
+    for (let i = 0; i < pages.length; i++) {
+      const page = pages[i];
+      
+      // Update progress message
+      showMsg('⏳ PDF जनरेट होत आहे... (' + (i + 1) + '/' + pages.length + ')', '#1a2e6e');
+
+      // Temporarily remove margins, box-shadow for exact A4 capture
+      const originalMargin = page.style.margin;
+      const originalBoxShadow = page.style.boxShadow;
+      page.style.margin = '0';
+      page.style.boxShadow = 'none';
+
+      // Capture single page to canvas at high resolution
+      const canvas = await html2canvas(page, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+
+      // Restore styles immediately
+      page.style.margin = originalMargin;
+      page.style.boxShadow = originalBoxShadow;
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      
+      // Add page image to PDF (fills exactly 210mm x 297mm)
+      pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+
+      // Add new page if more pages remain
+      if (i < pages.length - 1) {
+        pdf.addPage();
+      }
+    }
+
+    // Save generated PDF
+    pdf.save('Shikshak_Sanchika.pdf');
+    showMsg('✅ PDF यशस्वीरीत्या डाउनलोड झाली!', '#1b5e20');
+  } catch (error) {
+    console.error(error);
+    showMsg('❌ PDF डाउनलोड करण्यात अडचण आली', '#9b1c1c');
+  } finally {
+    // Restore display, opacity, and transform
+    pages.forEach(page => {
+      page.style.display = '';
+      page.style.opacity = '';
+      page.style.transform = '';
+    });
+    // Re-run initSlider to restore active page state correctly
+    initSlider();
+    // Restore .no-print elements
+    noPrintEls.forEach(el => el.style.display = '');
+    // Restore page scale
+    adjustPageScale();
+  }
+}
+
+// ===== SLIDER SYSTEM FUNCTIONS =====
+function initSlider() {
+  const pages = document.querySelectorAll('.page');
+  if (!pages.length) return;
+
+  // Clamp currentSlideIndex within valid range
+  if (currentSlideIndex >= pages.length) {
+    currentSlideIndex = pages.length - 1;
+  }
+  if (currentSlideIndex < 0) {
+    currentSlideIndex = 0;
+  }
+
+  // Update visibility of pages
+  pages.forEach((page, idx) => {
+    if (idx === currentSlideIndex) {
+      page.classList.add('active-slide');
+      
+      // Trigger a small animation entry
+      page.style.display = 'block';
+      setTimeout(() => {
+        page.style.opacity = '1';
+        page.style.transform = 'scale(var(--page-scale)) rotateY(0deg)';
+      }, 50);
+    } else {
+      page.classList.remove('active-slide');
+      page.style.display = 'none';
+      page.style.opacity = '0';
+      page.style.transform = 'scale(calc(var(--page-scale) * 0.96)) rotateY(-5deg)';
+    }
+  });
+
+  // Re-generate/update page select dropdown options
+  updatePageSelector(pages);
+
+  // Re-generate dots
+  updateDots(pages);
+
+  // Update page counter text
+  const counter = document.getElementById('slider-counter-text');
+  if (counter) {
+    counter.textContent = `पृष्ठ ${currentSlideIndex + 1} / ${pages.length}`;
+  }
+
+  // Disable/enable prev/next buttons
+  const prevBtn = document.getElementById('slider-prev-btn');
+  const nextBtn = document.getElementById('slider-next-btn');
+  const prevArrow = document.getElementById('slider-prev-arrow');
+  const nextArrow = document.getElementById('slider-next-arrow');
+  
+  if (prevBtn) prevBtn.disabled = (currentSlideIndex === 0);
+  if (nextBtn) nextBtn.disabled = (currentSlideIndex === pages.length - 1);
+  if (prevArrow) prevArrow.style.display = (currentSlideIndex === 0) ? 'none' : 'flex';
+  if (nextArrow) nextArrow.style.display = (currentSlideIndex === pages.length - 1) ? 'none' : 'flex';
+  
+  // Adjust page scale to fit view nicely
+  adjustPageScale();
+}
+
+function updatePageSelector(pages) {
+  const dropdown = document.getElementById('slider-page-select');
+  if (!dropdown) return;
+  
+  dropdown.innerHTML = '';
+  pages.forEach((page, idx) => {
+    const header = page.querySelector('.page-header');
+    let title = '';
+    if (idx === 0) {
+      title = '१: मुखपृष्ठ (Cover Page)';
+    } else if (header) {
+      title = `${idx + 1}: ${header.textContent.trim()}`;
+    } else {
+      title = `पृष्ठ ${idx + 1}`;
+    }
+    
+    const opt = document.createElement('option');
+    opt.value = idx;
+    opt.textContent = title;
+    if (idx === currentSlideIndex) {
+      opt.selected = true;
+    }
+    dropdown.appendChild(opt);
+  });
+}
+
+function updateDots(pages) {
+  const container = document.getElementById('slider-dots-container');
+  if (!container) return;
+  
+  container.innerHTML = '';
+  pages.forEach((_, idx) => {
+    const dot = document.createElement('div');
+    dot.className = 'dot' + (idx === currentSlideIndex ? ' active-dot' : '');
+    dot.onclick = () => {
+      currentSlideIndex = idx;
+      initSlider();
+    };
+    container.appendChild(dot);
+  });
+}
+
+function changeSlide(direction) {
+  const pages = document.querySelectorAll('.page');
+  const targetIndex = currentSlideIndex + direction;
+  if (targetIndex >= 0 && targetIndex < pages.length) {
+    currentSlideIndex = targetIndex;
+    initSlider();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+
+function selectPageFromDropdown(val) {
+  currentSlideIndex = parseInt(val, 10);
+  initSlider();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Keyboard Navigation
+window.addEventListener('keydown', (e) => {
+  if (document.activeElement && (
+    document.activeElement.hasAttribute('contenteditable') ||
+    document.activeElement.tagName === 'INPUT' ||
+    document.activeElement.tagName === 'TEXTAREA'
+  )) {
+    return;
+  }
+  
+  if (e.key === 'ArrowRight') {
+    changeSlide(1);
+  } else if (e.key === 'ArrowLeft') {
+    changeSlide(-1);
+  }
+});
+
+// Mobile Swipe Touch Support
+let touchStartX = 0;
+let touchEndX = 0;
+
+window.addEventListener('touchstart', (e) => {
+  touchStartX = e.changedTouches[0].screenX;
+}, { passive: true });
+
+window.addEventListener('touchend', (e) => {
+  touchEndX = e.changedTouches[0].screenX;
+  handleSwipe();
+}, { passive: true });
+
+function handleSwipe() {
+  const threshold = 60;
+  if (touchStartX - touchEndX > threshold) {
+    changeSlide(1); // Swiped left -> next page
+  } else if (touchEndX - touchStartX > threshold) {
+    changeSlide(-1); // Swiped right -> prev page
+  }
+}
+
+document.addEventListener('input', function(e) {
+  if (e.target.hasAttribute('contenteditable')) {
+    clearTimeout(window._autoSave);
+    window._autoSave = setTimeout(saveData, 1200);
+  }
+});
+
+window.addEventListener('load', loadData);
+</script>
+</body>
+</html>
