@@ -5081,6 +5081,14 @@ function TeacherSqaafPage() {
 
 
   const handleDownloadPdf = async (formatOverride?: "table" | "responses", action: "view" | "download" = "download") => {
+    let newTab: Window | null = null;
+    if (action === "view") {
+      newTab = window.open("", "_blank");
+      if (newTab) {
+        newTab.document.write(`<html><head><title>SQAAF PDF Viewer</title></head><body style="font-family:sans-serif;text-align:center;margin-top:20%;color:#475569;">${pdfLang === 'mr' ? 'PDF तयार होत आहे, कृपया प्रतीक्षा करा...' : 'Generating PDF, please wait...'}</body></html>`);
+      }
+    }
+    
     try {
       const currentFormat = formatOverride || pdfFormat;
       const toastId = toast.loading(pdfLang === "mr" ? "PDF तयार करत आहे..." : "Generating PDF...");
@@ -6304,7 +6312,11 @@ function TeacherSqaafPage() {
           toast.success(pdfLang === "mr" ? "PDF डाउनलोड झाली!" : "PDF downloaded!");
         } else {
           const url = URL.createObjectURL(doc.output("blob"));
-          window.open(url, "_blank");
+          if (newTab) {
+            newTab.location.href = url;
+          } else {
+            window.open(url, "_blank");
+          }
           toast.dismiss(toastId);
           toast.success(pdfLang === "mr" ? "PDF उघडली आहे." : "PDF opened.");
         }
@@ -6334,12 +6346,17 @@ function TeacherSqaafPage() {
             toast.success(pdfLang === "mr" ? "PDF डाउनलोड झाली!" : "PDF downloaded!");
          } else {
             html2pdf().set(pdfOptions).from(container).output('bloburl').then((url: any) => {
-              window.open(url as string, "_blank");
+              if (newTab) {
+                newTab.location.href = url;
+              } else {
+                window.open(url as string, "_blank");
+              }
               document.body.removeChild(container);
               toast.dismiss(toastId);
               toast.success(pdfLang === "mr" ? "PDF उघडली आहे." : "PDF opened.");
             }).catch((err: any) => {
               console.error("PDF View Error:", err);
+              if (newTab) newTab.close();
               document.body.removeChild(container);
               toast.dismiss(toastId);
               toast.error(pdfLang === "mr" ? "PDF उघडताना त्रुटी आली." : "Error opening PDF.");
@@ -6348,6 +6365,7 @@ function TeacherSqaafPage() {
       }
     } catch (err) {
       console.error("PDF generation error:", err);
+      if (newTab) newTab.close();
       toast.error(pdfLang === "mr" ? "PDF बनवताना त्रुटी आली." : "Error generating PDF.");
     }
   };
