@@ -31,13 +31,7 @@ import teacherLoginBg from "@/assets/teacher login.avif";
 
 export const Route = createFileRoute("/teacher/signup")({
   head: () => ({
-<<<<<<< HEAD
     meta: [{ title: "Join Educator Network — SGK Brainova Smart Learning With AI" }],
-=======
-    meta: [
-      { title: "Join Educator Network — SGK Brainova Smart Learning With AI" },
-    ],
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   }),
   component: TeacherSignupPage,
 });
@@ -93,7 +87,6 @@ function TeacherSignupPage() {
       });
 
       localStorage.setItem("teacher_udise", udise);
-<<<<<<< HEAD
       localStorage.setItem("sqaaf_teacher_profile", JSON.stringify({
         fullName: name,
         email: email,
@@ -104,21 +97,6 @@ function TeacherSignupPage() {
         board: "Maharashtra ZP Teacher",
         role: "teacher"
       }));
-=======
-      localStorage.setItem(
-        "sqaaf_teacher_profile",
-        JSON.stringify({
-          fullName: name,
-          email: email,
-          udise: udise,
-          schoolName: schoolName,
-          address: address,
-          state: "Maharashtra",
-          board: "Maharashtra ZP Teacher",
-          role: "teacher",
-        }),
-      );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       toast.success("Educator account created successfully!");
       window.location.href = "/teacher";
     } catch (error: any) {

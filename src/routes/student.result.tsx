@@ -56,43 +56,18 @@ function StudentResultsPage() {
 
     // Normalizing class standard (e.g. if profile class is "4" or "4th", try to match "4th")
     let studentClass = profile.class;
-<<<<<<< HEAD
     if (!studentClass.toLowerCase().endsWith("th") && !studentClass.toLowerCase().endsWith("st") && !studentClass.toLowerCase().endsWith("nd") && !studentClass.toLowerCase().endsWith("rd")) {
       // If it's a number, map it:
       const suffixMap: Record<string, string> = {
         "1": "1st", "2": "2nd", "3": "3rd", "4": "4th", "5": "5th",
         "6": "6th", "7": "7th", "8": "8th", "9": "9th", "10": "10th"
-=======
-    if (
-      !studentClass.toLowerCase().endsWith("th") &&
-      !studentClass.toLowerCase().endsWith("st") &&
-      !studentClass.toLowerCase().endsWith("nd") &&
-      !studentClass.toLowerCase().endsWith("rd")
-    ) {
-      // If it's a number, map it:
-      const suffixMap: Record<string, string> = {
-        "1": "1st",
-        "2": "2nd",
-        "3": "3rd",
-        "4": "4th",
-        "5": "5th",
-        "6": "6th",
-        "7": "7th",
-        "8": "8th",
-        "9": "9th",
-        "10": "10th",
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       };
       studentClass = suffixMap[studentClass] || studentClass;
     }
 
     const q = query(
       collection(db, "results"),
-<<<<<<< HEAD
       where("class", "==", studentClass)
-=======
-      where("class", "==", studentClass),
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -101,14 +76,7 @@ function StudentResultsPage() {
         ...doc.data(),
       }));
       // Sort in memory since Firestore compound queries with where & order-by require composite indexes
-<<<<<<< HEAD
       data.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-=======
-      data.sort(
-        (a: any, b: any) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-      );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       setResultsList(data);
     });
 
@@ -179,14 +147,7 @@ function StudentResultsPage() {
           {/* Search Bar & Stats */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="relative w-full md:w-96">
-<<<<<<< HEAD
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
-=======
-              <Search
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"
-                size={16}
-              />
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               <input
                 type="text"
                 value={searchTerm}
@@ -196,14 +157,7 @@ function StudentResultsPage() {
               />
             </div>
             <div className="flex items-center gap-4 text-xs font-bold text-slate-400">
-<<<<<<< HEAD
               Total Reports: <span className="text-slate-900 font-black">{filteredData.length}</span>
-=======
-              Total Reports:{" "}
-              <span className="text-slate-900 font-black">
-                {filteredData.length}
-              </span>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
             </div>
           </div>
 
@@ -239,13 +193,7 @@ function StudentResultsPage() {
 
                     <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-[10px] font-bold text-slate-400">
                       <span>Uploaded By:</span>
-<<<<<<< HEAD
                       <span className="text-slate-900 font-black uppercase tracking-wider">{res.uploadedBy}</span>
-=======
-                      <span className="text-slate-900 font-black uppercase tracking-wider">
-                        {res.uploadedBy}
-                      </span>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     </div>
                   </div>
 
@@ -254,15 +202,7 @@ function StudentResultsPage() {
                       onClick={() => handleDownloadFile(res)}
                       className="w-full py-4 bg-slate-50 border border-slate-100 text-slate-900 rounded-2xl font-black text-[9px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 hover:bg-indigo-600 hover:text-white transition-all shadow-sm group"
                     >
-<<<<<<< HEAD
                       <Download size={14} className="group-hover:scale-110 transition-transform" /> Download Marksheet
-=======
-                      <Download
-                        size={14}
-                        className="group-hover:scale-110 transition-transform"
-                      />{" "}
-                      Download Marksheet
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     </button>
                   </div>
                 </motion.div>
@@ -276,12 +216,7 @@ function StudentResultsPage() {
                   No academic results uploaded
                 </h3>
                 <p className="text-slate-300 text-[10px] font-bold mt-2 italic">
-<<<<<<< HEAD
                   Results uploaded by your teachers for Class {profile?.class || "your class"} will show up here.
-=======
-                  Results uploaded by your teachers for Class{" "}
-                  {profile?.class || "your class"} will show up here.
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 </p>
               </div>
             )}

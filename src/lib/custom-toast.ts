@@ -6,14 +6,7 @@
 
 type ToastType = "success" | "error" | "warning" | "info" | "loading";
 
-<<<<<<< HEAD
 const TOAST_COLORS: Record<ToastType, { bg: string; border: string; text: string; icon: string }> = {
-=======
-const TOAST_COLORS: Record<
-  ToastType,
-  { bg: string; border: string; text: string; icon: string }
-> = {
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   success: {
     bg: "linear-gradient(135deg, #059669, #10b981)",
     border: "#34d399",
@@ -49,13 +42,7 @@ const TOAST_COLORS: Record<
 function getOrCreateContainer(): HTMLDivElement | null {
   if (typeof document === "undefined") return null;
 
-<<<<<<< HEAD
   let container = document.getElementById("custom-toast-container") as HTMLDivElement | null;
-=======
-  let container = document.getElementById(
-    "custom-toast-container",
-  ) as HTMLDivElement | null;
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   if (!container) {
     container = document.createElement("div");
     container.id = "custom-toast-container";
@@ -127,11 +114,7 @@ function createDOMToast(message: string, type: ToastType = "success"): string {
   // Add spinning effect for loading type
   if (type === "loading") {
     iconEl.style.animation = "spin 1.5s linear infinite";
-<<<<<<< HEAD
     
-=======
-
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     // Inject keyframes if not present
     if (!document.getElementById("custom-toast-styles")) {
       const styleEl = document.createElement("style");

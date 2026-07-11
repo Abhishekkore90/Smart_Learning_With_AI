@@ -4,19 +4,8 @@
   "outputDirectory": "dist",
   "cleanUrls": true,
   "routes": [
-<<<<<<< HEAD
     { "src": "/api/bunny-stream/(.*)", "dest": "https://video.bunnycdn.com/$1" },
     { "src": "/api/bunny-storage/(.*)", "dest": "https://storage.bunnycdn.com/$1" },
-=======
-    {
-      "src": "/api/bunny-stream/(.*)",
-      "dest": "https://video.bunnycdn.com/$1"
-    },
-    {
-      "src": "/api/bunny-storage/(.*)",
-      "dest": "https://storage.bunnycdn.com/$1"
-    },
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/" }
   ]

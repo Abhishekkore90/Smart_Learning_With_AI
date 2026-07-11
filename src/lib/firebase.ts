@@ -2,15 +2,7 @@ import { FirebaseApp, initializeApp, getApps, getApp } from "firebase/app";
 import { Analytics, getAnalytics } from "firebase/analytics";
 import { Auth, getAuth } from "firebase/auth";
 import { Firestore, getFirestore } from "firebase/firestore";
-<<<<<<< HEAD
 import { getFunctions, httpsCallable, connectFunctionsEmulator } from "firebase/functions";
-=======
-import {
-  getFunctions,
-  httpsCallable,
-  connectFunctionsEmulator,
-} from "firebase/functions";
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 import { getStorage } from "firebase/storage";
 
 // Your web app's Firebase configuration
@@ -39,14 +31,7 @@ if (import.meta.env.DEV) {
 }
 
 // Pre-bind the Firebase Callable Function wrapper
-<<<<<<< HEAD
 export const generateAIResponseCallable = httpsCallable(functions, "generateAIResponse");
-=======
-export const generateAIResponseCallable = httpsCallable(
-  functions,
-  "generateAIResponse",
-);
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
 export let analytics: Analytics | null = null;
 

@@ -27,7 +27,6 @@ function RecordBookPage() {
 
             <div className="space-y-4">
               <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-<<<<<<< HEAD
                 अभिलेख नोंदवही / <span className="text-rose-500">Record Book</span>
               </h1>
               <p className="text-slate-500 font-medium leading-relaxed">
@@ -35,18 +34,6 @@ function RecordBookPage() {
               </p>
               <p className="text-slate-400 text-xs font-bold leading-relaxed italic">
                 A digital registry for school records, circulars, meeting minutes, and legal documentation is coming soon.
-=======
-                अभिलेख नोंदवही /{" "}
-                <span className="text-rose-500">Record Book</span>
-              </h1>
-              <p className="text-slate-500 font-medium leading-relaxed">
-                शाळेतील विविध अधिकृत नोंदी, परिपत्रके आणि इतिवृत्त यांची नोंद
-                ठेवण्याची डिजिटल सुविधा येथे लवकरच उपलब्ध होईल.
-              </p>
-              <p className="text-slate-400 text-xs font-bold leading-relaxed italic">
-                A digital registry for school records, circulars, meeting
-                minutes, and legal documentation is coming soon.
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               </p>
             </div>
 

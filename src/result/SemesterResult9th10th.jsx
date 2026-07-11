@@ -6,22 +6,14 @@ function CombinedResult9th10th() {
   const [classValue, setClassValue] = useState("");
   const [division, setDivision] = useState("");
   const [subject, setSubject] = useState("");
-<<<<<<< HEAD
   
-=======
-
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   const [studentData, setStudentData] = useState([]);
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [marksData, setMarksData] = useState({});
   const [classes, setClasses] = useState([]);
   const [divisions, setDivisions] = useState(["A", "B", "C", "D"]);
   const [subjects, setSubjects] = useState({});
-<<<<<<< HEAD
   const [schoolData, setSchoolData] = useState(null); 
-=======
-  const [schoolData, setSchoolData] = useState(null);
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
   const examNames = [
     "Unit Test I",
@@ -29,7 +21,6 @@ function CombinedResult9th10th() {
     "Semester First ",
     "Unit Test III",
     "Unit Test IV",
-<<<<<<< HEAD
     "Semester Second "
   ];
 
@@ -38,18 +29,6 @@ function CombinedResult9th10th() {
 
   useEffect(() => {
     const storedLanguage = localStorage.getItem('language') || 'English';
-=======
-    "Semester Second ",
-  ];
-
-  const udiseNumber = localStorage.getItem("udiseNumber");
-  const [language, setLanguage] = useState(
-    localStorage.getItem("language") || "English",
-  );
-
-  useEffect(() => {
-    const storedLanguage = localStorage.getItem("language") || "English";
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     setLanguage(storedLanguage);
   }, []);
 
@@ -63,19 +42,10 @@ function CombinedResult9th10th() {
   useEffect(() => {
     const fetchDefaultSettings = async () => {
       try {
-<<<<<<< HEAD
         const response = await fetch(`${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/defaultSettings.json`);
         if (response.ok) {
           const data = await response.json();
           if (data) setAcademicYear(data.defaultYear || ""); 
-=======
-        const response = await fetch(
-          `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/defaultSettings.json`,
-        );
-        if (response.ok) {
-          const data = await response.json();
-          if (data) setAcademicYear(data.defaultYear || "");
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         }
       } catch (error) {
         console.error("Error fetching default settings:", error);
@@ -87,15 +57,9 @@ function CombinedResult9th10th() {
   const handleAcademicYearChange = (e) => setAcademicYear(e.target.value);
   const handleSubjectChange = (e) => setSubject(e.target.value);
 
-<<<<<<< HEAD
   const DB_NAME = 'SchoolManagementDB';
   const STUDENT_STORE = 'studentData';
   const SCHOOL_STORE = 'schoolData';
-=======
-  const DB_NAME = "SchoolManagementDB";
-  const STUDENT_STORE = "studentData";
-  const SCHOOL_STORE = "schoolData";
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   const DB_VERSION = 1;
 
   const openDB = () => {
@@ -105,15 +69,8 @@ function CombinedResult9th10th() {
       request.onsuccess = (event) => resolve(event.target.result);
       request.onupgradeneeded = (event) => {
         const db = event.target.result;
-<<<<<<< HEAD
         if (!db.objectStoreNames.contains(STUDENT_STORE)) db.createObjectStore(STUDENT_STORE, { keyPath: "id" });
         if (!db.objectStoreNames.contains(SCHOOL_STORE)) db.createObjectStore(SCHOOL_STORE, { keyPath: "udiseNumber" });
-=======
-        if (!db.objectStoreNames.contains(STUDENT_STORE))
-          db.createObjectStore(STUDENT_STORE, { keyPath: "id" });
-        if (!db.objectStoreNames.contains(SCHOOL_STORE))
-          db.createObjectStore(SCHOOL_STORE, { keyPath: "udiseNumber" });
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       };
     });
   };
@@ -127,13 +84,7 @@ function CombinedResult9th10th() {
 
       request.onsuccess = (event) => {
         const students = event.target.result;
-<<<<<<< HEAD
         const activeStudents = students.filter(student => student.isActive !== false);
-=======
-        const activeStudents = students.filter(
-          (student) => student.isActive !== false,
-        );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
         const classesAndDivisions = {};
         activeStudents.forEach((student) => {
@@ -203,20 +154,12 @@ function CombinedResult9th10th() {
             .filter(([_, value]) => value !== null && value !== undefined)
             .sort(([a], [b]) => parseInt(a) - parseInt(b))
             .map(([_, sub]) => sub);
-<<<<<<< HEAD
           
-=======
-
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           const formattedSubjects = validSubjects.reduce((acc, sub) => {
             acc[sub] = true;
             return acc;
           }, {});
-<<<<<<< HEAD
           
-=======
-
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           setSubjects(formattedSubjects);
           setSubject(Object.keys(formattedSubjects)[0] || "");
         } else {
@@ -239,28 +182,14 @@ function CombinedResult9th10th() {
     if (selectedClass) {
       await fetchDivisionsForClass(selectedClass);
     }
-<<<<<<< HEAD
     const filteredStudents = studentData.filter((student) => student.currentClass === selectedClass);
-=======
-    const filteredStudents = studentData.filter(
-      (student) => student.currentClass === selectedClass,
-    );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     setSelectedStudents(filteredStudents);
   };
 
   const handleDivisionChange = (e) => {
     const selectedDivision = e.target.value;
     setDivision(selectedDivision);
-<<<<<<< HEAD
     const filteredStudents = studentData.filter((student) => student.currentClass === classValue && student.division === selectedDivision);
-=======
-    const filteredStudents = studentData.filter(
-      (student) =>
-        student.currentClass === classValue &&
-        student.division === selectedDivision,
-    );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     setSelectedStudents(filteredStudents);
   };
 
@@ -273,29 +202,10 @@ function CombinedResult9th10th() {
       return new Promise((resolve) => {
         request.onsuccess = (event) => {
           const sData = event.target.result;
-<<<<<<< HEAD
           if (sData && sData.result && sData.result[academicYear] && sData.result[academicYear][examName] && sData.result[academicYear][examName][subject]) {
             resolve(sData.result[academicYear][examName][subject]);
           } else if (sData && sData.icseResult && sData.icseResult[academicYear] && sData.icseResult[academicYear][examName] && sData.icseResult[academicYear][examName][subject]) {
              resolve(sData.icseResult[academicYear][examName][subject]);
-=======
-          if (
-            sData &&
-            sData.result &&
-            sData.result[academicYear] &&
-            sData.result[academicYear][examName] &&
-            sData.result[academicYear][examName][subject]
-          ) {
-            resolve(sData.result[academicYear][examName][subject]);
-          } else if (
-            sData &&
-            sData.icseResult &&
-            sData.icseResult[academicYear] &&
-            sData.icseResult[academicYear][examName] &&
-            sData.icseResult[academicYear][examName][subject]
-          ) {
-            resolve(sData.icseResult[academicYear][examName][subject]);
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           } else {
             resolve({});
           }
@@ -309,15 +219,7 @@ function CombinedResult9th10th() {
 
   const fetchAllMarks = async () => {
     try {
-<<<<<<< HEAD
       const filteredStudents = studentData.filter((student) => student.currentClass === classValue && (division ? student.division === division : true));
-=======
-      const filteredStudents = studentData.filter(
-        (student) =>
-          student.currentClass === classValue &&
-          (division ? student.division === division : true),
-      );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       if (filteredStudents.length === 0 || !subject) {
         setMarksData({});
         return;
@@ -369,11 +271,7 @@ function CombinedResult9th10th() {
       const tableContent = tableElement.outerHTML;
       const schoolName = schoolData?.schoolName || " ";
       const schoolLogo = schoolData?.schoolLogo || " ";
-<<<<<<< HEAD
       
-=======
-
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       const printWindow = window.open("", "", "height=600,width=800");
       printWindow.document.write("<html><head><title>Print</title>");
       printWindow.document.write(`
@@ -390,34 +288,19 @@ function CombinedResult9th10th() {
         </style>
       `);
       printWindow.document.write("</head><body>");
-<<<<<<< HEAD
       
       printWindow.document.write(`
         <div class="school-header">
           ${schoolLogo ? '<img src="' + schoolLogo + '" alt="School Logo">' : ''}
-=======
-
-      printWindow.document.write(`
-        <div class="school-header">
-          ${schoolLogo ? '<img src="' + schoolLogo + '" alt="School Logo">' : ""}
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           <h1>${schoolName}</h1>
           <p>Class: ${classValue} ${division} | Subject: ${subject}</p>
         </div>
       `);
-<<<<<<< HEAD
       
       printWindow.document.write(tableContent);
       printWindow.document.write("</body></html>");
       printWindow.document.close();
       
-=======
-
-      printWindow.document.write(tableContent);
-      printWindow.document.write("</body></html>");
-      printWindow.document.close();
-
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       setTimeout(() => {
         printWindow.print();
       }, 500);
@@ -433,27 +316,17 @@ function CombinedResult9th10th() {
     let obtainedTotal = 0;
     const studentMarks = marksData[studentSrNo];
     if (!studentMarks) return { obtained: 0, max: 200, status: "AB" };
-<<<<<<< HEAD
     
     let allAbsent = true;
     
     examNames.forEach(examName => {
       const m = studentMarks[examName];
       if (m && m.obtainMarks && m.obtainMarks.toLowerCase() !== 'ab') {
-=======
-
-    let allAbsent = true;
-
-    examNames.forEach((examName) => {
-      const m = studentMarks[examName];
-      if (m && m.obtainMarks && m.obtainMarks.toLowerCase() !== "ab") {
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         obtainedTotal += parseFloat(m.obtainMarks) || 0;
         allAbsent = false;
       }
     });
 
-<<<<<<< HEAD
     return { obtained: obtainedTotal, max: 200, status: allAbsent ? "AB" : obtainedTotal };
   };
 
@@ -471,59 +344,6 @@ function CombinedResult9th10th() {
               <td>
                 <select value={academicYear} onChange={handleAcademicYearChange} className="form-control custom-select">
                   <option value="">{language === "English" ? "Select Year" : "वर्ष निवडा"}</option>
-=======
-    return {
-      obtained: obtainedTotal,
-      max: 200,
-      status: allAbsent ? "AB" : obtainedTotal,
-    };
-  };
-
-  return (
-    <div style={{ minHeight: "100vh", backgroundColor: "#f5f7fa" }}>
-      <div
-        className="p-3 main-content-of-page"
-        style={{ padding: "20px", maxWidth: "100%", overflowX: "auto" }}
-      >
-        <h3
-          style={{
-            color: "rgb(3, 54, 94)",
-            marginBottom: "25px",
-            textAlign: "center",
-            fontSize: "1.8rem",
-            fontWeight: "600",
-          }}
-          className="title"
-        >
-          {language === "English"
-            ? "9th & 10th Combined Result"
-            : "9वी आणि 10वी एकत्रित निकाल"}
-        </h3>
-
-        <table
-          className="table table-striped table-bordered"
-          style={{
-            width: "100%",
-            marginBottom: "25px",
-            backgroundColor: "#fff",
-            borderRadius: "8px",
-          }}
-        >
-          <tbody>
-            <tr>
-              <th>
-                {language === "English" ? "Academic Year" : "शैक्षणिक वर्ष"}
-              </th>
-              <td>
-                <select
-                  value={academicYear}
-                  onChange={handleAcademicYearChange}
-                  className="form-control custom-select"
-                >
-                  <option value="">
-                    {language === "English" ? "Select Year" : "वर्ष निवडा"}
-                  </option>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   <option value="2023-2024">2023-2024</option>
                   <option value="2024-2025">2024-2025</option>
                   <option value="2025-2026">2025-2026</option>
@@ -534,97 +354,39 @@ function CombinedResult9th10th() {
             <tr>
               <th>{language === "English" ? "Class" : "वर्ग"}</th>
               <td>
-<<<<<<< HEAD
                 <select value={classValue} onChange={handleClassChange} className="form-control custom-select">
                   <option value="">{language === "English" ? "Select Class" : "वर्ग निवडा"}</option>
                   {["Class IX", "Class X"].map(cls => <option key={cls} value={cls}>{cls}</option>)}
-=======
-                <select
-                  value={classValue}
-                  onChange={handleClassChange}
-                  className="form-control custom-select"
-                >
-                  <option value="">
-                    {language === "English" ? "Select Class" : "वर्ग निवडा"}
-                  </option>
-                  {["Class IX", "Class X"].map((cls) => (
-                    <option key={cls} value={cls}>
-                      {cls}
-                    </option>
-                  ))}
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 </select>
               </td>
             </tr>
             <tr>
               <th>{language === "English" ? "Division" : "तुकडी"}</th>
               <td>
-<<<<<<< HEAD
                 <select value={division} onChange={handleDivisionChange} className="form-control custom-select">
                   <option value="">{language === "English" ? "Select Division" : "तुकडी निवडा"}</option>
                   {divisions.map(div => <option key={div} value={div}>{div}</option>)}
-=======
-                <select
-                  value={division}
-                  onChange={handleDivisionChange}
-                  className="form-control custom-select"
-                >
-                  <option value="">
-                    {language === "English" ? "Select Division" : "तुकडी निवडा"}
-                  </option>
-                  {divisions.map((div) => (
-                    <option key={div} value={div}>
-                      {div}
-                    </option>
-                  ))}
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 </select>
               </td>
             </tr>
             <tr>
               <th>{language === "English" ? "Subject" : "विषय"}</th>
               <td>
-<<<<<<< HEAD
                 <select value={subject} onChange={handleSubjectChange} className="form-control custom-select">
                   <option value="">{language === "English" ? "Select Subject" : "विषय निवडा"}</option>
                   {Object.keys(subjects).map((sub, i) => <option key={i} value={sub}>{sub}</option>)}
-=======
-                <select
-                  value={subject}
-                  onChange={handleSubjectChange}
-                  className="form-control custom-select"
-                >
-                  <option value="">
-                    {language === "English" ? "Select Subject" : "विषय निवडा"}
-                  </option>
-                  {Object.keys(subjects).map((sub, i) => (
-                    <option key={i} value={sub}>
-                      {sub}
-                    </option>
-                  ))}
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 </select>
               </td>
             </tr>
             <tr>
-<<<<<<< HEAD
               <td colSpan="2" style={{ textAlign: 'center' }}>
                 <button onClick={handlePrint} className="btn btn-primary" style={{ padding: '10px 25px' }}>
-=======
-              <td colSpan="2" style={{ textAlign: "center" }}>
-                <button
-                  onClick={handlePrint}
-                  className="btn btn-primary"
-                  style={{ padding: "10px 25px" }}
-                >
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   {language === "English" ? "Print" : "Print करा"}
                 </button>
               </td>
             </tr>
           </tbody>
         </table>
-<<<<<<< HEAD
         
         <div style={{ width: '100%', overflowX: 'auto', backgroundColor: '#fff', borderRadius: '8px' }}>
           <table className="table table-bordered" id="printableTable" style={{ minWidth: '1200px', fontSize: '0.95rem' }}>
@@ -636,96 +398,16 @@ function CombinedResult9th10th() {
                   <th colSpan="2" key={i} style={{ textAlign: 'center', backgroundColor: '#b8daff' }}>{exam}</th>
                 ))}
                 <th colSpan="2" style={{ textAlign: 'center', backgroundColor: '#b8daff' }}>Total Marks</th>
-=======
-
-        <div
-          style={{
-            width: "100%",
-            overflowX: "auto",
-            backgroundColor: "#fff",
-            borderRadius: "8px",
-          }}
-        >
-          <table
-            className="table table-bordered"
-            id="printableTable"
-            style={{ minWidth: "1200px", fontSize: "0.95rem" }}
-          >
-            <thead style={{ backgroundColor: "#cce5ff" }}>
-              <tr>
-                <th
-                  rowSpan="2"
-                  style={{
-                    verticalAlign: "middle",
-                    textAlign: "center",
-                    backgroundColor: "#b8daff",
-                  }}
-                >
-                  Roll No
-                </th>
-                <th
-                  rowSpan="2"
-                  style={{
-                    verticalAlign: "middle",
-                    textAlign: "center",
-                    backgroundColor: "#b8daff",
-                  }}
-                >
-                  Name
-                </th>
-                {examNames.map((exam, i) => (
-                  <th
-                    colSpan="2"
-                    key={i}
-                    style={{ textAlign: "center", backgroundColor: "#b8daff" }}
-                  >
-                    {exam}
-                  </th>
-                ))}
-                <th
-                  colSpan="2"
-                  style={{ textAlign: "center", backgroundColor: "#b8daff" }}
-                >
-                  Total Marks
-                </th>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               </tr>
               <tr>
                 {examNames.map((_, i) => (
                   <React.Fragment key={i}>
-<<<<<<< HEAD
                     <th style={{ textAlign: 'center', backgroundColor: '#e2e3e5' }}>M.M.</th>
                     <th style={{ textAlign: 'center', backgroundColor: '#e2e3e5' }}>Obt. M.</th>
                   </React.Fragment>
                 ))}
                 <th style={{ textAlign: 'center', backgroundColor: '#e2e3e5' }}>M.M.</th>
                 <th style={{ textAlign: 'center', backgroundColor: '#e2e3e5' }}>Obt. M.</th>
-=======
-                    <th
-                      style={{
-                        textAlign: "center",
-                        backgroundColor: "#e2e3e5",
-                      }}
-                    >
-                      M.M.
-                    </th>
-                    <th
-                      style={{
-                        textAlign: "center",
-                        backgroundColor: "#e2e3e5",
-                      }}
-                    >
-                      Obt. M.
-                    </th>
-                  </React.Fragment>
-                ))}
-                <th style={{ textAlign: "center", backgroundColor: "#e2e3e5" }}>
-                  M.M.
-                </th>
-                <th style={{ textAlign: "center", backgroundColor: "#e2e3e5" }}>
-                  Obt. M.
-                </th>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               </tr>
             </thead>
             <tbody>
@@ -733,21 +415,13 @@ function CombinedResult9th10th() {
                 const total = calculateTotal(student.srNo);
                 return (
                   <tr key={index}>
-<<<<<<< HEAD
                     <td style={{ textAlign: 'center' }}>{student.rollNo}</td>
                     <td style={{ textAlign: 'left' }}>{student.stdName} {student.stdFather} {student.stdSurname}</td>
-=======
-                    <td style={{ textAlign: "center" }}>{student.rollNo}</td>
-                    <td style={{ textAlign: "left" }}>
-                      {student.stdName} {student.stdFather} {student.stdSurname}
-                    </td>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     {examNames.map((exam, i) => {
                       const m = marksData[student.srNo]?.[exam];
                       const obtMarks = m?.obtainMarks || "AB";
                       return (
                         <React.Fragment key={i}>
-<<<<<<< HEAD
                           <td style={{ textAlign: 'center' }}>{getExamMaxMarks(exam)}</td>
                           <td style={{ textAlign: 'center' }}>{obtMarks}</td>
                         </React.Fragment>
@@ -755,30 +429,12 @@ function CombinedResult9th10th() {
                     })}
                     <td style={{ textAlign: 'center' }}>{total.max}</td>
                     <td style={{ textAlign: 'center' }}>{total.status}</td>
-=======
-                          <td style={{ textAlign: "center" }}>
-                            {getExamMaxMarks(exam)}
-                          </td>
-                          <td style={{ textAlign: "center" }}>{obtMarks}</td>
-                        </React.Fragment>
-                      );
-                    })}
-                    <td style={{ textAlign: "center" }}>{total.max}</td>
-                    <td style={{ textAlign: "center" }}>{total.status}</td>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   </tr>
                 );
               })}
               {selectedStudents.length === 0 && (
                 <tr>
-<<<<<<< HEAD
                   <td colSpan={examNames.length * 2 + 4} style={{ textAlign: 'center', padding: '20px' }}>
-=======
-                  <td
-                    colSpan={examNames.length * 2 + 4}
-                    style={{ textAlign: "center", padding: "20px" }}
-                  >
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     No Data Available
                   </td>
                 </tr>

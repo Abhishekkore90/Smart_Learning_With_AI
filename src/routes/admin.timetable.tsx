@@ -12,18 +12,7 @@ import {
   Layers,
   Loader2,
 } from "lucide-react";
-<<<<<<< HEAD
 import { collection, addDoc, getDocs, deleteDoc, doc, getDoc } from "firebase/firestore";
-=======
-import {
-  collection,
-  addDoc,
-  getDocs,
-  deleteDoc,
-  doc,
-  getDoc,
-} from "firebase/firestore";
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 import { db } from "@/lib/firebase";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -109,13 +98,7 @@ function TimetableAdmin() {
     if (!file) return;
 
     if (file.size > 1024 * 1024 * 5) {
-<<<<<<< HEAD
       toast.error(`File is too large (${formatSize(file.size)}). Maximum allowed size is 5MB.`);
-=======
-      toast.error(
-        `File is too large (${formatSize(file.size)}). Maximum allowed size is 5MB.`,
-      );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       return;
     }
 
@@ -125,7 +108,6 @@ function TimetableAdmin() {
       try {
         const base64 = reader.result as string;
         const formattedDate = new Date().toLocaleDateString("en-IN");
-<<<<<<< HEAD
         
         // Chunk the base64 string to bypass 1MB Firestore limit
         const base64Chunks = chunkString(base64, 800000); // 800KB chunks
@@ -135,17 +117,6 @@ function TimetableAdmin() {
           addDoc(collection(db, "admin_timetables_chunks"), { data: chunk })
         );
         
-=======
-
-        // Chunk the base64 string to bypass 1MB Firestore limit
-        const base64Chunks = chunkString(base64, 800000); // 800KB chunks
-
-        // Upload all chunks in parallel for dramatically faster speed
-        const chunkUploadPromises = base64Chunks.map((chunk) =>
-          addDoc(collection(db, "admin_timetables_chunks"), { data: chunk }),
-        );
-
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         const chunkRefs = await Promise.all(chunkUploadPromises);
         const chunkIds = chunkRefs.map((ref) => ref.id);
 
@@ -167,45 +138,26 @@ function TimetableAdmin() {
           ...prev,
           { id: docRef.id, ...newTimetable } as TimetableFile,
         ]);
-<<<<<<< HEAD
         
-=======
-
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         toast.success(`"${file.name}" uploaded successfully! 🎉`);
       } catch (err: any) {
         console.error("Upload error:", err);
         toast.error(err?.message || "Failed to save file details.");
       } finally {
         setUploading(false);
-<<<<<<< HEAD
         if (e.target) e.target.value = ''; // Reset input
-=======
-        if (e.target) e.target.value = ""; // Reset input
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       }
     };
     reader.readAsDataURL(file);
   };
 
   const handleDelete = async (timetable: TimetableFile) => {
-<<<<<<< HEAD
     if (!confirm(`Are you sure you want to delete "${timetable.name}"?`)) return;
-=======
-    if (!confirm(`Are you sure you want to delete "${timetable.name}"?`))
-      return;
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
     try {
       if (timetable.chunks) {
         for (const chunkId of timetable.chunks) {
-<<<<<<< HEAD
           await deleteDoc(doc(db, "admin_timetables_chunks", chunkId)).catch(() => {});
-=======
-          await deleteDoc(doc(db, "admin_timetables_chunks", chunkId)).catch(
-            () => {},
-          );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         }
       }
 
@@ -228,34 +180,15 @@ function TimetableAdmin() {
       try {
         let fullBase64 = "";
         for (const chunkId of timetable.chunks) {
-<<<<<<< HEAD
           const chunkDoc = await getDoc(doc(db, "admin_timetables_chunks", chunkId));
-=======
-          const chunkDoc = await getDoc(
-            doc(db, "admin_timetables_chunks", chunkId),
-          );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           if (chunkDoc.exists()) fullBase64 += chunkDoc.data().data;
         }
         if (timetable.type.includes("pdf")) {
           const newWin = window.open();
-<<<<<<< HEAD
           if (newWin) newWin.document.write(`<iframe src="${fullBase64}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
         } else {
           const newWin = window.open();
           if (newWin) newWin.document.write(`<img src="${fullBase64}" style="max-width:100%;" />`);
-=======
-          if (newWin)
-            newWin.document.write(
-              `<iframe src="${fullBase64}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`,
-            );
-        } else {
-          const newWin = window.open();
-          if (newWin)
-            newWin.document.write(
-              `<img src="${fullBase64}" style="max-width:100%;" />`,
-            );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         }
       } catch (err) {
         console.error("View error:", err);
@@ -277,13 +210,7 @@ function TimetableAdmin() {
       try {
         let fullBase64 = "";
         for (const chunkId of timetable.chunks) {
-<<<<<<< HEAD
           const chunkDoc = await getDoc(doc(db, "admin_timetables_chunks", chunkId));
-=======
-          const chunkDoc = await getDoc(
-            doc(db, "admin_timetables_chunks", chunkId),
-          );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           if (chunkDoc.exists()) fullBase64 += chunkDoc.data().data;
         }
         const a = document.createElement("a");
@@ -322,12 +249,7 @@ function TimetableAdmin() {
                 Timetable <span className="text-[#6C63FF]">Uploader.</span>
               </h1>
               <p className="text-[#6B7280] font-medium max-w-xl">
-<<<<<<< HEAD
                 Upload official class timetables to sync globally for all teachers and students.
-=======
-                Upload official class timetables to sync globally for all
-                teachers and students.
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               </p>
             </div>
           </div>
@@ -399,12 +321,7 @@ function TimetableAdmin() {
           <div className="lg:col-span-2 bg-white border border-black/5 rounded-[3rem] p-8 shadow-sm space-y-6">
             <div className="flex items-center justify-between border-b border-stone-100 pb-3">
               <h3 className="text-xl font-black tracking-tight text-stone-900 flex items-center gap-2">
-<<<<<<< HEAD
                 <Calendar className="size-5 text-[#6C63FF]" /> Uploaded Timetables
-=======
-                <Calendar className="size-5 text-[#6C63FF]" /> Uploaded
-                Timetables
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               </h3>
               <span className="px-3.5 py-1 bg-blue-100 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-wider">
                 {timetables.length} Files
@@ -424,13 +341,7 @@ function TimetableAdmin() {
                   <Calendar className="size-8" />
                 </div>
                 <div>
-<<<<<<< HEAD
                   <h4 className="text-slate-700 font-bold">No timetables uploaded yet</h4>
-=======
-                  <h4 className="text-slate-700 font-bold">
-                    No timetables uploaded yet
-                  </h4>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   <p className="text-slate-400 text-xs mt-1">
                     Select a class on the left to start uploading.
                   </p>
@@ -452,14 +363,7 @@ function TimetableAdmin() {
                           <FileText className="size-6" />
                         </div>
                         <div className="overflow-hidden">
-<<<<<<< HEAD
                           <div className="font-bold text-slate-800 text-sm truncate max-w-[250px] sm:max-w-md" title={timetable.name}>
-=======
-                          <div
-                            className="font-bold text-slate-800 text-sm truncate max-w-[250px] sm:max-w-md"
-                            title={timetable.name}
-                          >
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                             {timetable.name}
                           </div>
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[10px] font-black text-slate-400 uppercase tracking-widest">

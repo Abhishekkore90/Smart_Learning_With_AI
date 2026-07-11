@@ -63,36 +63,21 @@ const MODULE_CARDS = [
     fallbackLabel: "वेळापत्रक",
     to: "/teacher/timetable",
     icon: CalendarIcon,
-<<<<<<< HEAD
     description: "शिक्षकांचे व वर्गांचे दैनिक तसेच साप्ताहिक वेळापत्रक व्यवस्थापन.",
-=======
-    description:
-      "शिक्षकांचे व वर्गांचे दैनिक तसेच साप्ताहिक वेळापत्रक व्यवस्थापन.",
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   },
   {
     labelKey: "specialDay",
     fallbackLabel: "परिपाठ",
     to: "/teacher/modules/special-day",
     icon: Star,
-<<<<<<< HEAD
     description: "शाळेचा दैनिक परिपाठ आणि विशेष दिनाची माहिती नोंदवणे व व्यवस्थापन.",
-=======
-    description:
-      "शाळेचा दैनिक परिपाठ आणि विशेष दिनाची माहिती नोंदवणे व व्यवस्थापन.",
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   },
   {
     labelKey: "templates",
     fallbackLabel: "टेम्पलेट्स",
     to: "/teacher/templates",
     icon: Layout,
-<<<<<<< HEAD
     description: "विविध शुभेच्छा संदेश, क्रीडा आणि स्नेहसंमेलन कार्यक्रम पत्रिका डिझाइन टेम्पलेट्स.",
-=======
-    description:
-      "विविध शुभेच्छा संदेश, क्रीडा आणि स्नेहसंमेलन कार्यक्रम पत्रिका डिझाइन टेम्पलेट्स.",
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   },
   {
     labelKey: "planningQuestionBank",
@@ -114,24 +99,14 @@ const MODULE_CARDS = [
     fallbackLabel: "माझे निकाल",
     to: "/teacher/result",
     icon: FileSpreadsheet,
-<<<<<<< HEAD
     description: "विद्यार्थ्यांचे गुण नोंदणी, प्रगती पत्रके आणि निकाल विश्लेषण.",
-=======
-    description:
-      "विद्यार्थ्यांचे गुण नोंदणी, प्रगती पत्रके आणि निकाल विश्लेषण.",
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   },
   {
     labelKey: "monthlyMeeting",
     fallbackLabel: "मासिक सभा",
     to: "/teacher/meeting",
     icon: Users,
-<<<<<<< HEAD
     description: "विविध शालेय समित्यांचे मासिक अहवाल, इतिवृत्त आणि स्वाक्षरी नोंदणी.",
-=======
-    description:
-      "विविध शालेय समित्यांचे मासिक अहवाल, इतिवृत्त आणि स्वाक्षरी नोंदणी.",
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   },
   {
     labelKey: "mdm",
@@ -213,19 +188,10 @@ function TeacherDashboard() {
             <div className="bg-gradient-to-r from-violet-50 to-indigo-50/50 p-8 rounded-[2rem] border border-indigo-100/50 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm">
               <div className="space-y-1">
                 <h2 className="text-lg font-black text-slate-800 flex items-center gap-2">
-<<<<<<< HEAD
                   <Sparkles className="size-5 text-indigo-600 animate-pulse" /> शिक्षक विभाग सेवा सूची (Teacher Modules)
                 </h2>
                 <p className="text-xs font-bold text-slate-500">
                   माहिती भरण्यासाठी किंवा अहवाल पाहण्यासाठी खालीलपैकी कोणतेही एक मॉड्यूल निवडा.
-=======
-                  <Sparkles className="size-5 text-indigo-600 animate-pulse" />{" "}
-                  शिक्षक विभाग सेवा सूची (Teacher Modules)
-                </h2>
-                <p className="text-xs font-bold text-slate-500">
-                  माहिती भरण्यासाठी किंवा अहवाल पाहण्यासाठी खालीलपैकी कोणतेही एक
-                  मॉड्यूल निवडा.
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 </p>
               </div>
               <div className="flex items-center gap-2 text-xs font-black text-indigo-600 bg-indigo-50 border border-indigo-100 px-4 py-2 rounded-xl">
@@ -259,12 +225,7 @@ function TeacherDashboard() {
                       {/* Committee Name */}
                       <div className="space-y-2">
                         <h3 className="text-xl font-black leading-tight tracking-tight pr-4">
-<<<<<<< HEAD
                           {t[item.labelKey as keyof typeof t] || item.fallbackLabel}
-=======
-                          {t[item.labelKey as keyof typeof t] ||
-                            item.fallbackLabel}
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                         </h3>
                         <p className="text-[11px] text-violet-100/70 font-semibold line-clamp-2 leading-relaxed">
                           {item.description}

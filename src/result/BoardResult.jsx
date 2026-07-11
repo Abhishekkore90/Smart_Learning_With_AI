@@ -1,69 +1,38 @@
-<<<<<<< HEAD
 import React, { useState, useEffect } from 'react';
 import { Modal, Button } from 'react-bootstrap';
 import "../result/result.css";
 import { Link } from 'react-router-dom';
-=======
-import React, { useState, useEffect } from "react";
-import { Modal, Button } from "react-bootstrap";
-import "../result/result.css";
-import { Link } from "react-router-dom";
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 // import Sidebar from '../../components/Sidebar';
 import AlertMessage from "../../AlertMessage";
 
 const BoardResult = () => {
-<<<<<<< HEAD
   const [academicYear, setAcademicYear] = useState('');
   const [classValue, setClassValue] = useState('');
   const [selectedExamName, setSelectedExamName] = useState('');
-=======
-  const [academicYear, setAcademicYear] = useState("");
-  const [classValue, setClassValue] = useState("");
-  const [selectedExamName, setSelectedExamName] = useState("");
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   const [studentData, setStudentData] = useState([]);
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [marksData, setMarksData] = useState({});
   const [classes, setClasses] = useState([]);
   const [selectedStudentResults, setSelectedStudentResults] = useState(null);
   const [showModal, setShowModal] = useState(false);
-<<<<<<< HEAD
   const [schoolName, setSchoolName] = useState('');
   const [schoolLogo, setSchoolLogo] = useState('');
   const [division, setDivision] = useState("");
   const [divisions, setDivisions] = useState(["A", "B", "C", "D"]);
   const udiseNumber = localStorage.getItem("udiseNumber");
   const examNames = ['First Semester', 'Second Semester', 'All Exams'];
-=======
-  const [schoolName, setSchoolName] = useState("");
-  const [schoolLogo, setSchoolLogo] = useState("");
-  const [division, setDivision] = useState("");
-  const [divisions, setDivisions] = useState(["A", "B", "C", "D"]);
-  const udiseNumber = localStorage.getItem("udiseNumber");
-  const examNames = ["First Semester", "Second Semester", "All Exams"];
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   const examNameTranslations = {
     "First Semester": "प्रथम सत्र",
     "Second Semester": "द्वितीय सत्र",
     "All Exams": "सर्व परीक्षा",
   };
-<<<<<<< HEAD
   const [language, setLanguage] = useState(localStorage.getItem('language') || 'English');
-=======
-  const [language, setLanguage] = useState(
-    localStorage.getItem("language") || "English",
-  );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
   const [alertMessage, setAlertMessage] = useState("");
   const [showAlert, setShowAlert] = useState(false);
 
-<<<<<<< HEAD
 
 
-=======
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   useEffect(() => {
     if (alertMessage) {
       setShowAlert(true);
@@ -75,21 +44,12 @@ const BoardResult = () => {
     }
   }, [alertMessage]);
 
-<<<<<<< HEAD
 
 
   useEffect(() => {
     const fetchDefaultSettings = async () => {
       try {
         const response = await fetch(`${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/defaultSettings.json`);
-=======
-  useEffect(() => {
-    const fetchDefaultSettings = async () => {
-      try {
-        const response = await fetch(
-          `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/defaultSettings.json`,
-        );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         if (response.ok) {
           const data = await response.json();
 
@@ -117,17 +77,10 @@ const BoardResult = () => {
   const fetchSubjectSequence = async () => {
     try {
       const response = await fetch(
-<<<<<<< HEAD
         `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/subjectSequence/${academicYear}/${classValue}.json`
       );
       if (!response.ok) {
         throw new Error('Failed to fetch subject sequence');
-=======
-        `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/subjectSequence/${academicYear}/${classValue}.json`,
-      );
-      if (!response.ok) {
-        throw new Error("Failed to fetch subject sequence");
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       }
       const data = await response.json();
       // Assuming the data is an object with numeric keys
@@ -136,7 +89,6 @@ const BoardResult = () => {
         .map((key) => data[key]); // Map keys to subject names
       setSubjectSequence(orderedSubjects);
     } catch (error) {
-<<<<<<< HEAD
       console.error('Error fetching subject sequence:', error);
     }
   };
@@ -153,21 +105,6 @@ const BoardResult = () => {
     try {
       const db = await openDB();
       const transaction = db.transaction(SCHOOL_STORE, 'readonly');
-=======
-      console.error("Error fetching subject sequence:", error);
-    }
-  };
-
-  useEffect(() => {
-    const storedLanguage = localStorage.getItem("language") || "English";
-    setLanguage(storedLanguage);
-  }, []);
-
-  const fetchSchoolName = async () => {
-    try {
-      const db = await openDB();
-      const transaction = db.transaction(SCHOOL_STORE, "readonly");
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       const store = transaction.objectStore(SCHOOL_STORE);
 
       // Get the school data using the udiseNumber as key
@@ -177,18 +114,12 @@ const BoardResult = () => {
         const schoolData = event.target.result;
         if (schoolData) {
           // Set school name and logo from IndexedDB
-<<<<<<< HEAD
           setSchoolName(schoolData.schoolName || '-');
           setSchoolLogo(schoolData.schoolLogo || '');
-=======
-          setSchoolName(schoolData.schoolName || "-");
-          setSchoolLogo(schoolData.schoolLogo || "");
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
           // Update language if available in school data
           if (schoolData.language) {
             setLanguage(schoolData.language);
-<<<<<<< HEAD
             localStorage.setItem('language', schoolData.language);
           }
         } else {
@@ -196,20 +127,10 @@ const BoardResult = () => {
           // Fallback to empty values if no data found
           setSchoolName('-');
           setSchoolLogo('');
-=======
-            localStorage.setItem("language", schoolData.language);
-          }
-        } else {
-          console.log("No school data found in IndexedDB");
-          // Fallback to empty values if no data found
-          setSchoolName("-");
-          setSchoolLogo("");
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         }
       };
 
       request.onerror = (event) => {
-<<<<<<< HEAD
         console.error('Error fetching school data from IndexedDB:', event.target.error);
         // Fallback to empty values on error
         setSchoolName('-');
@@ -220,31 +141,13 @@ const BoardResult = () => {
       // Fallback to empty values on error
       setSchoolName('-');
       setSchoolLogo('');
-=======
-        console.error(
-          "Error fetching school data from IndexedDB:",
-          event.target.error,
-        );
-        // Fallback to empty values on error
-        setSchoolName("-");
-        setSchoolLogo("");
-      };
-    } catch (error) {
-      console.error("Error accessing IndexedDB:", error);
-      // Fallback to empty values on error
-      setSchoolName("-");
-      setSchoolLogo("");
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     }
   };
 
   useEffect(() => {
     fetchSchoolName();
     fetchStudentData();
-<<<<<<< HEAD
 
-=======
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   }, [udiseNumber]); // Add udiseNumber as dependency
 
   useEffect(() => {
@@ -260,20 +163,12 @@ const BoardResult = () => {
   // };
   const handleExamNameChange = (e) => {
     // Prevent changing the selected exam name from "Second Semester" or "All Exams"
-<<<<<<< HEAD
     if (e.target.value !== "Second Semester" && e.target.value !== "All Exams") {
-=======
-    if (
-      e.target.value !== "Second Semester" &&
-      e.target.value !== "All Exams"
-    ) {
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       return;
     }
     setSelectedExamName(e.target.value);
   };
 
-<<<<<<< HEAD
   const filteredExamNames = examNames.filter((examName) => examName === "Second Semester" || examName === "All Exams");
 
   // IndexedDB constants
@@ -285,19 +180,6 @@ const BoardResult = () => {
 
   const SCHOOL_STORE = 'schoolData';
 
-=======
-  const filteredExamNames = examNames.filter(
-    (examName) => examName === "Second Semester" || examName === "All Exams",
-  );
-
-  // IndexedDB constants
-  const DB_NAME = "SchoolManagementDB";
-  const STUDENT_STORE = "studentData";
-  const DB_VERSION = 1;
-  const ATTENDANCE_STORE = "attendance";
-
-  const SCHOOL_STORE = "schoolData";
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
   // Function to open IndexedDB
   const openDB = () => {
@@ -346,13 +228,8 @@ const BoardResult = () => {
         const allStudents = event.target.result;
 
         // Filter out students where isActive is false
-<<<<<<< HEAD
         const activeStudents = allStudents.filter(student =>
           student.isActive !== false
-=======
-        const activeStudents = allStudents.filter(
-          (student) => student.isActive !== false,
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         );
 
         const classesAndDivisions = {};
@@ -367,7 +244,6 @@ const BoardResult = () => {
               classesAndDivisions[student.currentClass][division] = [];
             }
 
-<<<<<<< HEAD
             // Use the ID as the serial number equivalent 
             classesAndDivisions[student.currentClass][division].push(student.id);
           }
@@ -379,41 +255,15 @@ const BoardResult = () => {
           const className = keyParts[0]; // First part is class 
           const division = keyParts[1]; // Second part is division 
           const srNo = keyParts[keyParts.length - 1]; // Last part is srNo 
-=======
-            // Use the ID as the serial number equivalent
-            classesAndDivisions[student.currentClass][division].push(
-              student.id,
-            );
-          }
-        });
-
-        // Extract class, division, and srNo from key
-        const updatedStudents = activeStudents.map((student) => {
-          const keyParts = student.id.split("-"); // Split by "-"
-          const className = keyParts[0]; // First part is class
-          const division = keyParts[1]; // Second part is division
-          const srNo = keyParts[keyParts.length - 1]; // Last part is srNo
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           return { ...student, className, division, srNo };
         });
 
         setClasses(Object.keys(classesAndDivisions));
-<<<<<<< HEAD
         setStudentData(updatedStudents); // Store updated students 
       };
 
       request.onerror = (event) => {
         console.error("Error fetching student data from IndexedDB:", event.target.error);
-=======
-        setStudentData(updatedStudents); // Store updated students
-      };
-
-      request.onerror = (event) => {
-        console.error(
-          "Error fetching student data from IndexedDB:",
-          event.target.error,
-        );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       };
     } catch (error) {
       console.error("Error fetching student data:", error);
@@ -445,14 +295,7 @@ const BoardResult = () => {
       };
 
       request.onerror = (event) => {
-<<<<<<< HEAD
         console.error("Error fetching divisions from IndexedDB:", event.target.error);
-=======
-        console.error(
-          "Error fetching divisions from IndexedDB:",
-          event.target.error,
-        );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       };
     } catch (error) {
       console.error("Error opening IndexedDB:", error);
@@ -473,10 +316,7 @@ const BoardResult = () => {
     loadData();
   }, []);
 
-<<<<<<< HEAD
 
-=======
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   const handleClassChange = async (e) => {
     const selectedClass = e.target.value;
     setClassValue(selectedClass); // Update the class value
@@ -488,7 +328,6 @@ const BoardResult = () => {
     }
 
     // Filter students based on the selected class
-<<<<<<< HEAD
     const filteredStudents = studentData.filter((student) => student.currentClass === selectedClass);
     setSelectedStudents(filteredStudents);
   };
@@ -505,47 +344,20 @@ const BoardResult = () => {
       }
     } catch (error) {
       console.error(`Error fetching subjects for class ${classValue} and academic year ${academicYear}:`, error);
-=======
-    const filteredStudents = studentData.filter(
-      (student) => student.currentClass === selectedClass,
-    );
-    setSelectedStudents(filteredStudents);
-  };
-
-  const fetchSubjectsForClass = async (classValue) => {
-    try {
-      if (!academicYear) {
-        console.error("Academic year is not set");
-        return;
-      }
-    } catch (error) {
-      console.error(
-        `Error fetching subjects for class ${classValue} and academic year ${academicYear}:`,
-        error,
-      );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     }
   };
 
   const fetchMarksForSelectedSubject = async () => {
     try {
       const selectedStudents = studentData.filter(
-<<<<<<< HEAD
         (student) => student.currentClass === classValue
-=======
-        (student) => student.currentClass === classValue,
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       );
       setSelectedStudents(selectedStudents);
       const marksDataPromises = selectedStudents.map(async (student) => {
         const studentMarks = await fetchMarksData(
           student.srNo,
           academicYear,
-<<<<<<< HEAD
           selectedExamName
-=======
-          selectedExamName,
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         );
         return { srNo: student.srNo, marks: studentMarks };
       });
@@ -558,27 +370,16 @@ const BoardResult = () => {
 
       setMarksData(marksData);
     } catch (error) {
-<<<<<<< HEAD
       console.error('Error fetching marks data:', error);
-=======
-      console.error("Error fetching marks data:", error);
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     }
   };
 
   const fetchMarksData = async (key, academicYear, examName) => {
     try {
-<<<<<<< HEAD
       console.log('Fetching Marks Data with:', {
         key,
         academicYear,
         examName
-=======
-      console.log("Fetching Marks Data with:", {
-        key,
-        academicYear,
-        examName,
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       });
 
       const db = await openDB();
@@ -593,7 +394,6 @@ const BoardResult = () => {
       });
 
       // Improved key matching to handle more flexible key formats
-<<<<<<< HEAD
       const matchingKey = allKeys.find(storeKey =>
         typeof storeKey === 'string' &&
         (storeKey.endsWith(`-${key}`) || storeKey === key)
@@ -603,18 +403,6 @@ const BoardResult = () => {
 
       if (!matchingKey) {
         console.warn('No matching key found for:', key);
-=======
-      const matchingKey = allKeys.find(
-        (storeKey) =>
-          typeof storeKey === "string" &&
-          (storeKey.endsWith(`-${key}`) || storeKey === key),
-      );
-
-      console.log("Matching Key:", matchingKey);
-
-      if (!matchingKey) {
-        console.warn("No matching key found for:", key);
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         return null;
       }
 
@@ -624,19 +412,11 @@ const BoardResult = () => {
         request.onsuccess = (event) => {
           const studentData = event.target.result;
 
-<<<<<<< HEAD
           console.log('Raw Student Data:', studentData);
 
           // More robust nested structure checking
           if (!studentData || !studentData.result) {
             console.warn('No result data found for student');
-=======
-          console.log("Raw Student Data:", studentData);
-
-          // More robust nested structure checking
-          if (!studentData || !studentData.result) {
-            console.warn("No result data found for student");
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
             resolve(null);
             return;
           }
@@ -660,33 +440,20 @@ const BoardResult = () => {
               name: studentData.stdName,
               surname: studentData.stdSurname,
               class: studentData.currentClass,
-<<<<<<< HEAD
               rollNo: studentData.rollNo
             }
-=======
-              rollNo: studentData.rollNo,
-            },
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           };
 
           // Dynamically process subjects, including specialized structures
           Object.keys(examData).forEach((subject) => {
             // Skip 'remark' and other non-subject keys
-<<<<<<< HEAD
             if (subject === 'remark') {
-=======
-            if (subject === "remark") {
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               result.remark = examData[subject];
               return;
             }
 
             // Explicitly handle 'nondi' key
-<<<<<<< HEAD
             if (subject === 'nondi') {
-=======
-            if (subject === "nondi") {
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               result.nondi = examData[subject];
               return;
             }
@@ -701,13 +468,8 @@ const BoardResult = () => {
                 Sanklik: processSubjectSection(subjectData.Sanklik),
                 Total: {
                   Akarik: subjectData.Akarik?.Total || 0,
-<<<<<<< HEAD
                   Sanklik: subjectData.Sanklik?.Total || 0
                 }
-=======
-                  Sanklik: subjectData.Sanklik?.Total || 0,
-                },
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               };
             }
             // Standard subject mark structure
@@ -719,41 +481,22 @@ const BoardResult = () => {
                 writtenMarks: subjectData.writtenMarks,
                 oralMarks: subjectData.oralMarks,
                 subtype: subjectData.subtype,
-<<<<<<< HEAD
                 graceMarks: subjectData.graceMarks
-=======
-                graceMarks: subjectData.graceMarks,
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               };
             }
           });
 
-<<<<<<< HEAD
           console.log('Processed Marks:', result);
-=======
-          console.log("Processed Marks:", result);
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           resolve(result);
         };
 
         request.onerror = (event) => {
-<<<<<<< HEAD
           console.error("Error fetching marks from IndexedDB:", event.target.error);
-=======
-          console.error(
-            "Error fetching marks from IndexedDB:",
-            event.target.error,
-          );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           reject(event.target.error);
         };
       });
     } catch (error) {
-<<<<<<< HEAD
       console.error('Error in fetchMarksData:', error);
-=======
-      console.error("Error in fetchMarksData:", error);
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       return null;
     }
   };
@@ -764,36 +507,21 @@ const BoardResult = () => {
 
     return {
       Activity: section.Activity || 0,
-<<<<<<< HEAD
       'Daily Monitoring': section['Daily Monitoring'] || 0,
       Demonstration: section.Demonstration || 0,
       Homework: section.Homework || 0,
       'Oral Work': section['Oral Work'] || 0,
-=======
-      "Daily Monitoring": section["Daily Monitoring"] || 0,
-      Demonstration: section.Demonstration || 0,
-      Homework: section.Homework || 0,
-      "Oral Work": section["Oral Work"] || 0,
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       Others: section.Others || 0,
       Project: section.Project || 0,
       Test: section.Test || 0,
       Total: section.Total || 0,
       Orally: section.Orally || 0,
-<<<<<<< HEAD
       Writing: section.Writing || 0
     };
   }
 
   const [selectedStudentForSr, setSelectedStudentForSr] = useState('')
 
-=======
-      Writing: section.Writing || 0,
-    };
-  }
-
-  const [selectedStudentForSr, setSelectedStudentForSr] = useState("");
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
   const fetchHeightWeightData = async (srNo, academicYear) => {
     try {
@@ -808,11 +536,7 @@ const BoardResult = () => {
           const studentData = event.target.result;
 
           if (!studentData || !studentData.weightandHeight) {
-<<<<<<< HEAD
             console.warn('No height and weight data found for student');
-=======
-            console.warn("No height and weight data found for student");
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
             resolve(null);
             return;
           }
@@ -822,23 +546,12 @@ const BoardResult = () => {
         };
 
         request.onerror = (event) => {
-<<<<<<< HEAD
           console.error("Error fetching height and weight from IndexedDB:", event.target.error);
-=======
-          console.error(
-            "Error fetching height and weight from IndexedDB:",
-            event.target.error,
-          );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           reject(event.target.error);
         };
       });
     } catch (error) {
-<<<<<<< HEAD
       console.error('Error in fetchHeightWeightData:', error);
-=======
-      console.error("Error in fetchHeightWeightData:", error);
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       return null;
     }
   };
@@ -856,46 +569,25 @@ const BoardResult = () => {
       setSelectedStudentForSr(student);
 
       // Fetch height and weight data
-<<<<<<< HEAD
       const heightWeightData = await fetchHeightWeightData(student.id || srNo, academicYear);
-=======
-      const heightWeightData = await fetchHeightWeightData(
-        student.id || srNo,
-        academicYear,
-      );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
       // Fetch First Semester marks
       const firstSemesterData = await fetchMarksData(
         student.id || srNo,
         academicYear,
-<<<<<<< HEAD
         'First Semester'
-=======
-        "First Semester",
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       );
 
       // Fetch Selected Exam (Second Semester) marks
       const secondSemesterData = await fetchMarksData(
         student.id || srNo,
         academicYear,
-<<<<<<< HEAD
         selectedExamName === "All Exams" ? "Second Semester" : selectedExamName
-=======
-        selectedExamName === "All Exams" ? "Second Semester" : selectedExamName,
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       );
 
       // Validate data
       if (!firstSemesterData || !secondSemesterData) {
-<<<<<<< HEAD
         setAlertMessage("Add the subject and fill the marks to view the result.");
-=======
-        setAlertMessage(
-          "Add the subject and fill the marks to view the result.",
-        );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         return;
       }
 
@@ -903,33 +595,15 @@ const BoardResult = () => {
 
       // Combine all subjects from both semesters
       const allSubjects = new Set([
-<<<<<<< HEAD
         ...Object.keys(firstSemesterData).filter(key => key !== 'studentInfo' && key !== 'remark' && key !== 'nondi'),
         ...Object.keys(secondSemesterData).filter(key => key !== 'studentInfo' && key !== 'remark' && key !== 'nondi')
-=======
-        ...Object.keys(firstSemesterData).filter(
-          (key) => key !== "studentInfo" && key !== "remark" && key !== "nondi",
-        ),
-        ...Object.keys(secondSemesterData).filter(
-          (key) => key !== "studentInfo" && key !== "remark" && key !== "nondi",
-        ),
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       ]);
 
       allSubjects.forEach((subject) => {
         // First Semester Grade Calculation
-<<<<<<< HEAD
         const firstSemesterAkarikTotal = firstSemesterData[subject]?.Akarik?.Total || 0;
         const firstSemesterSankalikTotal = firstSemesterData[subject]?.Sanklik?.Total || 0;
         const firstSemesterTotal = firstSemesterAkarikTotal + firstSemesterSankalikTotal;
-=======
-        const firstSemesterAkarikTotal =
-          firstSemesterData[subject]?.Akarik?.Total || 0;
-        const firstSemesterSankalikTotal =
-          firstSemesterData[subject]?.Sanklik?.Total || 0;
-        const firstSemesterTotal =
-          firstSemesterAkarikTotal + firstSemesterSankalikTotal;
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         const firstSemesterGrade = calculateGrade(firstSemesterTotal);
 
         // Second Semester Grade Calculation
@@ -947,10 +621,7 @@ const BoardResult = () => {
         };
       });
 
-<<<<<<< HEAD
 
-=======
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       // Prepare height and weight data for display
       const heightSeptember = heightWeightData?.September ?? {};
       const heightMarch = heightWeightData?.March ?? {};
@@ -963,17 +634,10 @@ const BoardResult = () => {
       setSelectedStudentResults({
         studentName: student.stdName,
         results: resultsWithTotal,
-<<<<<<< HEAD
         heightSeptember: heightSeptember.height || '',
         weightSeptember: heightSeptember.weight || '',
         heightMarch: heightMarch.height || '',
         weightMarch: heightMarch.weight || '',
-=======
-        heightSeptember: heightSeptember.height || "",
-        weightSeptember: heightSeptember.weight || "",
-        heightMarch: heightMarch.height || "",
-        weightMarch: heightMarch.weight || "",
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         nondi: secondSemesterNondi, // Use second semester nondi as primary
         firstSemester: firstSemesterNondi,
         stdMother: student.stdMother,
@@ -994,12 +658,9 @@ const BoardResult = () => {
     }
   };
 
-<<<<<<< HEAD
 
 
 
-=======
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   const handleGradeChange = (subject, type, value) => {
     setSelectedStudentResults((prevState) => {
       const updatedResults = { ...prevState.results };
@@ -1012,7 +673,6 @@ const BoardResult = () => {
     });
   };
 
-<<<<<<< HEAD
 
   const calculateGradeEnglish = (total) => {
     if (total >= 91) return 'A1';
@@ -1036,41 +696,11 @@ const BoardResult = () => {
     if (total >= 33) return 'ड-1';
     if (total >= 21) return 'ड-2';
     return 'नापास';
-=======
-  const calculateGradeEnglish = (total) => {
-    if (total >= 91) return "A1";
-    if (total >= 81) return "A2";
-    if (total >= 71) return "B1";
-    if (total >= 61) return "B2";
-    if (total >= 51) return "C1";
-    if (total >= 41) return "C2";
-    if (total >= 33) return "D1";
-    if (total >= 21) return "D2";
-    return "Fail";
-  };
-
-  const calculateGradeMarathi = (total) => {
-    if (total >= 91) return "अ-1";
-    if (total >= 81) return "अ-2";
-    if (total >= 71) return "ब-1";
-    if (total >= 61) return "ब-2";
-    if (total >= 51) return "क-1";
-    if (total >= 41) return "क-2";
-    if (total >= 33) return "ड-1";
-    if (total >= 21) return "ड-2";
-    return "नापास";
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   };
 
   // Function to calculate grade based on the current language
   const calculateGrade = (total) => {
-<<<<<<< HEAD
     return language === 'English' ? calculateGradeEnglish(total) : calculateGradeMarathi(total);
-=======
-    return language === "English"
-      ? calculateGradeEnglish(total)
-      : calculateGradeMarathi(total);
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   };
 
   const submit = () => {
@@ -1078,41 +708,16 @@ const BoardResult = () => {
   };
   const handleCloseModal = () => setShowModal(false);
 
-<<<<<<< HEAD
   const months = ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May'];
   const [attendance, setAttendance] = useState({
     Present: {},
     Absent: {},
     Leave: {}
-=======
-  const months = [
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-  ];
-  const [attendance, setAttendance] = useState({
-    Present: {},
-    Absent: {},
-    Leave: {},
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   });
 
   const fetchAttendanceFromIndexedDB = async (srNo, academicYear) => {
     try {
-<<<<<<< HEAD
       console.log('Fetching Attendance Data with:', { srNo, academicYear });
-=======
-      console.log("Fetching Attendance Data with:", { srNo, academicYear });
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
       const db = await openDB();
       const transaction = db.transaction(ATTENDANCE_STORE, "readonly");
@@ -1123,59 +728,36 @@ const BoardResult = () => {
         const keysRequest = store.getAllKeys();
         keysRequest.onsuccess = (event) => {
           const keys = event.target.result;
-<<<<<<< HEAD
           console.log('ALL KEYS IN ATTENDANCE STORE:', keys);
-=======
-          console.log("ALL KEYS IN ATTENDANCE STORE:", keys);
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           resolve(keys);
         };
         keysRequest.onerror = (event) => reject(event.target.error);
       });
 
       // Improved key matching with extensive logging
-<<<<<<< HEAD
       const matchingKey = allKeys.find(storeKey => {
-=======
-      const matchingKey = allKeys.find((storeKey) => {
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         const storeKeyStr = String(storeKey).trim();
         const srNoStr = String(srNo).trim();
 
         const isMatch = storeKeyStr === srNoStr;
 
         if (isMatch) {
-<<<<<<< HEAD
           console.log('MATCHING KEY FOUND:', {
             storeKey,
             srNo,
             match: isMatch
-=======
-          console.log("MATCHING KEY FOUND:", {
-            storeKey,
-            srNo,
-            match: isMatch,
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           });
         }
 
         return isMatch;
       });
 
-<<<<<<< HEAD
 
       console.log('Matching Attendance Key:', matchingKey);
 
       if (!matchingKey) {
         console.warn('No matching attendance key found for:', srNo);
         console.warn('Available keys:', allKeys);
-=======
-      console.log("Matching Attendance Key:", matchingKey);
-
-      if (!matchingKey) {
-        console.warn("No matching attendance key found for:", srNo);
-        console.warn("Available keys:", allKeys);
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         return null;
       }
 
@@ -1185,28 +767,16 @@ const BoardResult = () => {
         request.onsuccess = (event) => {
           const attendanceData = event.target.result;
 
-<<<<<<< HEAD
           console.log('RAW ATTENDANCE DATA:', JSON.stringify(attendanceData, null, 2));
 
           // Extract the year from academic year
           const startYear = academicYear.split('-')[0];
           const endYear = academicYear.split('-')[1];
-=======
-          console.log(
-            "RAW ATTENDANCE DATA:",
-            JSON.stringify(attendanceData, null, 2),
-          );
-
-          // Extract the year from academic year
-          const startYear = academicYear.split("-")[0];
-          const endYear = academicYear.split("-")[1];
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
           // Process the attendance based on the months
           const fetchedAttendance = {
             Present: {},
             Absent: {},
-<<<<<<< HEAD
             Leave: {}
           };
 
@@ -1220,65 +790,25 @@ const BoardResult = () => {
 
             // Get the attendance for the month
             const monthData = attendanceData.Presenty?.Presenty?.[yearForMonth]?.[month] || {};
-=======
-            Leave: {},
-          };
-
-          // Define the first and second semester months
-          const firstSemesterMonths = [
-            "Jun",
-            "Jul",
-            "Aug",
-            "Sep",
-            "Oct",
-            "Nov",
-            "Dec",
-          ];
-          const secondSemesterMonths = ["Jan", "Feb", "Mar", "Apr", "May"];
-
-          // Process each month
-          [...firstSemesterMonths, ...secondSemesterMonths].forEach((month) => {
-            let yearForMonth = firstSemesterMonths.includes(month)
-              ? startYear
-              : endYear;
-
-            // Get the attendance for the month
-            const monthData =
-              attendanceData.Presenty?.Presenty?.[yearForMonth]?.[month] || {};
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
             let presentCount = 0;
             let absentCount = 0;
             let leaveCount = 0;
 
             // Count attendance status for each day in the month
-<<<<<<< HEAD
             Object.keys(monthData).forEach(day => {
               const statusObj = monthData[day];
               let status;
 
               if (statusObj && typeof statusObj === 'object') {
-=======
-            Object.keys(monthData).forEach((day) => {
-              const statusObj = monthData[day];
-              let status;
-
-              if (statusObj && typeof statusObj === "object") {
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 status = statusObj.present || statusObj.status;
               } else {
                 status = statusObj;
               }
 
-<<<<<<< HEAD
               if (status === 'present' || status === true) {
                 presentCount++;
               } else if (status === 'absent' || status === false) {
-=======
-              if (status === "present" || status === true) {
-                presentCount++;
-              } else if (status === "absent" || status === false) {
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 absentCount++;
               } else if (status === null || status === undefined) {
                 leaveCount++;
@@ -1291,37 +821,21 @@ const BoardResult = () => {
             fetchedAttendance.Leave[month] = leaveCount - 1;
           });
 
-<<<<<<< HEAD
           console.log('PROCESSED ATTENDANCE:', fetchedAttendance);
-=======
-          console.log("PROCESSED ATTENDANCE:", fetchedAttendance);
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           resolve(fetchedAttendance);
         };
 
         request.onerror = (event) => {
-<<<<<<< HEAD
           console.error("Error fetching attendance from IndexedDB:", event.target.error);
-=======
-          console.error(
-            "Error fetching attendance from IndexedDB:",
-            event.target.error,
-          );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           reject(event.target.error);
         };
       });
     } catch (error) {
-<<<<<<< HEAD
       console.error('Error in fetchAttendanceFromIndexedDB:', error);
-=======
-      console.error("Error in fetchAttendanceFromIndexedDB:", error);
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       return null;
     }
   };
 
-<<<<<<< HEAD
 
 
   useEffect(() => {
@@ -1332,21 +846,10 @@ const BoardResult = () => {
 
       if (!selectedStudentForSr) {
         console.warn('No student selected');
-=======
-  useEffect(() => {
-    const fetchAttendanceData = async () => {
-      console.log("FETCH ATTENDANCE EFFECT TRIGGERED");
-      console.log("Selected Student:", selectedStudentForSr);
-      console.log("Academic Year:", academicYear);
-
-      if (!selectedStudentForSr) {
-        console.warn("No student selected");
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         return;
       }
 
       const srNo = selectedStudentForSr.serialNo;
-<<<<<<< HEAD
       console.log('Student SR No:', srNo);
       const academicYearParts = academicYear.split('-');
 
@@ -1370,34 +873,6 @@ const BoardResult = () => {
           Present: {},
           Absent: {},
           Leave: {}
-=======
-      console.log("Student SR No:", srNo);
-      const academicYearParts = academicYear.split("-");
-
-      try {
-        const attendanceData = await fetchAttendanceFromIndexedDB(
-          srNo,
-          academicYearParts[0] + "-" + academicYearParts[1],
-        );
-
-        if (attendanceData) {
-          setAttendance(attendanceData);
-          console.log("FINAL ATTENDANCE SET:", attendanceData);
-        } else {
-          console.warn("No attendance data found");
-          setAttendance({
-            Present: {},
-            Absent: {},
-            Leave: {},
-          });
-        }
-      } catch (error) {
-        console.error("Error fetching attendance data:", error);
-        setAttendance({
-          Present: {},
-          Absent: {},
-          Leave: {},
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         });
       }
     };
@@ -1405,7 +880,6 @@ const BoardResult = () => {
     fetchAttendanceData();
   }, [selectedStudentForSr, academicYear]);
 
-<<<<<<< HEAD
 
   const [summerVacationDate, setSummerVacationDate] = useState('');
   const [winterVacationDate, setWinterVacationDate] = useState('');
@@ -1413,75 +887,30 @@ const BoardResult = () => {
   // Define the English month names
   const firstSemesterMonths = ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov'];
   const secondSemesterMonths = ['Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May'];
-=======
-  const [summerVacationDate, setSummerVacationDate] = useState("");
-  const [winterVacationDate, setWinterVacationDate] = useState("");
-
-  // Define the English month names
-  const firstSemesterMonths = ["Jun", "Jul", "Aug", "Sep", "Oct", "Nov"];
-  const secondSemesterMonths = ["Dec", "Jan", "Feb", "Mar", "Apr", "May"];
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
   // Function to translate month to Marathi if needed
   const getMonthName = (month) => {
     const marathiMonths = {
-<<<<<<< HEAD
       Jun: 'जून', Jul: 'जुलै', Aug: 'ऑगस्ट', Sep: 'सप्टेंबर', Oct: 'ऑक्टोबर', Nov: 'नोव्हेंबर',
       Dec: 'डिसेंबर', Jan: 'जानेवारी', Feb: 'फेब्रुवारी', Mar: 'मार्च', Apr: 'एप्रिल', May: 'मे'
-=======
-      Jun: "जून",
-      Jul: "जुलै",
-      Aug: "ऑगस्ट",
-      Sep: "सप्टेंबर",
-      Oct: "ऑक्टोबर",
-      Nov: "नोव्हेंबर",
-      Dec: "डिसेंबर",
-      Jan: "जानेवारी",
-      Feb: "फेब्रुवारी",
-      Mar: "मार्च",
-      Apr: "एप्रिल",
-      May: "मे",
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     };
     return language === "English" ? month : marathiMonths[month];
   };
 
   const getAttendanceType = (type) => {
     const marathiTypes = {
-<<<<<<< HEAD
       Present: 'उपस्थित',
       Absent: 'गैरहजर',
       Leave: 'रजा'
-=======
-      Present: "उपस्थित",
-      Absent: "गैरहजर",
-      Leave: "रजा",
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     };
     return language === "English" ? type : marathiTypes[type];
   };
 
-<<<<<<< HEAD
   //  setting marks to pass 
   const getPassingMarks = (currentClass) => {
     if (selectedStudentForSr.currentClass === "Class V" || selectedStudentForSr.currentClass === "5th" || selectedStudentForSr.currentClass === "इयत्ता पाचवी") {
       return 18;
     } else if (selectedStudentForSr.currentClass === "Class VIII" || selectedStudentForSr.currentClass === "8th" || selectedStudentForSr.currentClass === "इयत्ता आठवी") {
-=======
-  //  setting marks to pass
-  const getPassingMarks = (currentClass) => {
-    if (
-      selectedStudentForSr.currentClass === "Class V" ||
-      selectedStudentForSr.currentClass === "5th" ||
-      selectedStudentForSr.currentClass === "इयत्ता पाचवी"
-    ) {
-      return 18;
-    } else if (
-      selectedStudentForSr.currentClass === "Class VIII" ||
-      selectedStudentForSr.currentClass === "8th" ||
-      selectedStudentForSr.currentClass === "इयत्ता आठवी"
-    ) {
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       return 21;
     }
     // Default passing marks if none of the specified classes are selected
@@ -1490,64 +919,30 @@ const BoardResult = () => {
 
   const passingMarks = getPassingMarks(selectedStudentForSr.currentClass);
 
-<<<<<<< HEAD
   //percentage 
-=======
-  //percentage
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   let totalSubjects = 0;
   let totalMarks = 0;
   let percentage = 0;
 
   if (selectedStudentResults && selectedStudentResults.results) {
-<<<<<<< HEAD
     totalSubjects = Object.entries(selectedStudentResults.results)
       .filter(([subject]) => subject !== "nondi").length;
 
     totalMarks = Object.entries(selectedStudentResults.results)
       .filter(([subject]) => subject !== "nondi")
       .reduce((acc, [subject, grades]) => acc + (grades.sankalikTotal || 0) + (grades.akarikTotal || 0), 0);
-=======
-    totalSubjects = Object.entries(selectedStudentResults.results).filter(
-      ([subject]) => subject !== "nondi",
-    ).length;
-
-    totalMarks = Object.entries(selectedStudentResults.results)
-      .filter(([subject]) => subject !== "nondi")
-      .reduce(
-        (acc, [subject, grades]) =>
-          acc + (grades.sankalikTotal || 0) + (grades.akarikTotal || 0),
-        0,
-      );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
     percentage = (totalMarks / (totalSubjects * 100)) * 100;
   }
 
   // Re-Exam
   const currentClass = selectedStudentResults?.currentClass; // Example: "Class V" or "Class VIII"
-<<<<<<< HEAD
   const hasFailed = selectedStudentResults?.results &&
     Object.values(selectedStudentResults.results).some(grades => (grades.sankalikTotal || 0) + (grades.akarikTotal || 0) < passingMarks);
 
   // Add "Re-Exam" if the student is in Class V or VIII and has failed
   let examOptions = [...examNames];
   if ((currentClass === "Class V" || currentClass === "Class VIII") && hasFailed) {
-=======
-  const hasFailed =
-    selectedStudentResults?.results &&
-    Object.values(selectedStudentResults.results).some(
-      (grades) =>
-        (grades.sankalikTotal || 0) + (grades.akarikTotal || 0) < passingMarks,
-    );
-
-  // Add "Re-Exam" if the student is in Class V or VIII and has failed
-  let examOptions = [...examNames];
-  if (
-    (currentClass === "Class V" || currentClass === "Class VIII") &&
-    hasFailed
-  ) {
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     examOptions.push("Re-Exam");
   }
 
@@ -1559,30 +954,17 @@ const BoardResult = () => {
 
     if (selectedDivision === "") {
       // Show all students from the selected class if "All Student" is chosen
-<<<<<<< HEAD
       filteredStudents = studentData.filter((student) => student.currentClass === classValue);
     } else {
       // Filter by class and division
       filteredStudents = studentData.filter(
         (student) => student.currentClass === classValue && student.division === selectedDivision
-=======
-      filteredStudents = studentData.filter(
-        (student) => student.currentClass === classValue,
-      );
-    } else {
-      // Filter by class and division
-      filteredStudents = studentData.filter(
-        (student) =>
-          student.currentClass === classValue &&
-          student.division === selectedDivision,
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       );
     }
 
     setSelectedStudents(filteredStudents);
   };
 
-<<<<<<< HEAD
 
 
   const handlePrint = () => {
@@ -1590,24 +972,13 @@ const BoardResult = () => {
 
     if (printContent) {
       const printWindow = window.open('', '', 'height=600,width=800');
-=======
-  const handlePrint = () => {
-    const printContent = document.querySelector(".modal-body"); // Select the modal body content
-
-    if (printContent) {
-      const printWindow = window.open("", "", "height=600,width=800");
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       printWindow.document.write(`
         <html>
           <head>
             <title>Print Student Report</title>
             <style>
              @page {
-<<<<<<< HEAD
                 size: ${selectedExamName === 'All Exams' ? 'A4 Portrait' : 'A4 Landscape'}; /* auto is the initial value */
-=======
-                size: ${selectedExamName === "All Exams" ? "A4 Portrait" : "A4 Landscape"}; /* auto is the initial value */
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               margin: 3mm; /* this affects the margin in the printer settings */
             }
               body {
@@ -1903,11 +1274,7 @@ tbody tr:nth-child(odd) {
       printWindow.focus();
       printWindow.print();
     } else {
-<<<<<<< HEAD
       console.error('Print content not found');
-=======
-      console.error("Print content not found");
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     }
   };
 
@@ -1931,7 +1298,6 @@ tbody tr:nth-child(odd) {
       <AlertMessage message={alertMessage} show={showAlert} />
 
       {/* <Sidebar /> */}
-<<<<<<< HEAD
       <div className=' main-content-of-page'>
         <h2 style={{ color: '#0c2a52', textAlign: 'center', fontWeight: 'bold', marginBottom: '20px' }} className="title">  {language === "English" ? "Board Exam Result " : " बोर्ड परीक्षेचा निकाल"}</h2>
         <table className="table table-striped table-bordered">
@@ -1945,76 +1311,13 @@ tbody tr:nth-child(odd) {
                   <option >{language === "English" ? "Select Year " : "वर्ष निवडा"}</option>
                   <option value="2023-2024" >2023-2024</option>
                   <option value="2024-2025" >2024-2025</option>
-=======
-      <div className=" main-content-of-page">
-        <h2
-          style={{
-            color: "#0c2a52",
-            textAlign: "center",
-            fontWeight: "bold",
-            marginBottom: "20px",
-          }}
-          className="title"
-        >
-          {" "}
-          {language === "English"
-            ? "Board Exam Result "
-            : " बोर्ड परीक्षेचा निकाल"}
-        </h2>
-        <table className="table table-striped table-bordered">
-          <tbody>
-            <tr>
-              <th
-                style={{
-                  backgroundColor: "#b5d3f2",
-                  textAlign: "center",
-                  verticalAlign: "middle",
-                  fontWeight: "bold",
-                }}
-              >
-                {" "}
-                {language === "English" ? "Academic Year " : "शैक्षणिक वर्ष"}
-              </th>
-              <td>
-                <select
-                  id="academicYear"
-                  value={academicYear}
-                  onChange={handleAcademicYearChange}
-                  className="form-control custom-select"
-                  style={{
-                    width: "100%",
-                    padding: "8px",
-                    border: "1px solid #ccc",
-                    borderRadius: "4px",
-                  }}
-                >
-                  <option>
-                    {language === "English" ? "Select Year " : "वर्ष निवडा"}
-                  </option>
-                  <option value="2023-2024">2023-2024</option>
-                  <option value="2024-2025">2024-2025</option>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   <option value="2025-2026">2025-2026</option>
                   <option value="2026-2027">2026-2027</option>
                 </select>
               </td>
             </tr>
             <tr>
-<<<<<<< HEAD
               <th style={{ backgroundColor: '#b5d3f2', textAlign: 'center', verticalAlign: 'middle', fontWeight: 'bold' }}> {language === "English" ? "Class " : "वर्ग"}</th>
-=======
-              <th
-                style={{
-                  backgroundColor: "#b5d3f2",
-                  textAlign: "center",
-                  verticalAlign: "middle",
-                  fontWeight: "bold",
-                }}
-              >
-                {" "}
-                {language === "English" ? "Class " : "वर्ग"}
-              </th>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               <td>
                 <select
                   id="class"
@@ -2022,36 +1325,11 @@ tbody tr:nth-child(odd) {
                   onChange={handleClassChange}
                   className="form-control custom-select"
                   defaultValue={examNames[0]}
-<<<<<<< HEAD
                   style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
                 >
                   <option value="">{language === "English" ? "Select Class " : "वर्ग निवडा"}</option>
                   {classes
                     .filter(cls => cls === 'Class V' || cls === 'Class VIII' || cls === '5th' || cls === '8th' || cls === 'इयत्ता पाचवी' || cls === 'इयत्ता आठवी' || cls === 'पाचवी' || cls === 'आठवी')
-=======
-                  style={{
-                    width: "100%",
-                    padding: "8px",
-                    border: "1px solid #ccc",
-                    borderRadius: "4px",
-                  }}
-                >
-                  <option value="">
-                    {language === "English" ? "Select Class " : "वर्ग निवडा"}
-                  </option>
-                  {classes
-                    .filter(
-                      (cls) =>
-                        cls === "Class V" ||
-                        cls === "Class VIII" ||
-                        cls === "5th" ||
-                        cls === "8th" ||
-                        cls === "इयत्ता पाचवी" ||
-                        cls === "इयत्ता आठवी" ||
-                        cls === "पाचवी" ||
-                        cls === "आठवी",
-                    )
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     .map((cls, index) => (
                       <option key={index} value={cls}>
                         {cls}
@@ -2061,82 +1339,36 @@ tbody tr:nth-child(odd) {
               </td>
             </tr>
             <tr>
-<<<<<<< HEAD
               <th style={{ backgroundColor: '#b5d3f2', textAlign: 'center', verticalAlign: 'middle', fontWeight: 'bold' }}>{language === "English" ? "Division" : "तुकडी"}</th>
-=======
-              <th
-                style={{
-                  backgroundColor: "#b5d3f2",
-                  textAlign: "center",
-                  verticalAlign: "middle",
-                  fontWeight: "bold",
-                }}
-              >
-                {language === "English" ? "Division" : "तुकडी"}
-              </th>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               <td>
                 <select
                   value={division}
                   onChange={handleDivisionChange}
                   className="form-control custom-select"
-<<<<<<< HEAD
                   style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
-=======
-                  style={{
-                    width: "100%",
-                    padding: "8px",
-                    border: "1px solid #ccc",
-                    borderRadius: "4px",
-                  }}
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 >
                   <option value="">
                     {language === "English" ? "All Student" : "सर्व विद्यार्थी"}
                   </option>
                   {divisions
-<<<<<<< HEAD
                     .filter((div) => div !== null && div !== undefined && div.trim() !== "")
-=======
-                    .filter(
-                      (div) =>
-                        div !== null && div !== undefined && div.trim() !== "",
-                    )
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     .map((div) => (
                       <option key={div} value={div}>
                         {div}
                       </option>
                     ))}
                 </select>
-<<<<<<< HEAD
 
               </td>
             </tr>
             <tr>
               <th style={{ backgroundColor: '#b5d3f2', textAlign: 'center', verticalAlign: 'middle', fontWeight: 'bold' }}>{language === "English" ? "Exam Name " : "परीक्षेचे नाव"}</th>
-=======
-              </td>
-            </tr>
-            <tr>
-              <th
-                style={{
-                  backgroundColor: "#b5d3f2",
-                  textAlign: "center",
-                  verticalAlign: "middle",
-                  fontWeight: "bold",
-                }}
-              >
-                {language === "English" ? "Exam Name " : "परीक्षेचे नाव"}
-              </th>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               <td>
                 <select
                   id="examName"
                   value={selectedExamName}
                   onChange={handleExamNameChange}
                   className="form-control custom-select"
-<<<<<<< HEAD
                   style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
                 >
                   <option value="">{language === "English" ? "Select Exam " : "परीक्षा निवडा"}</option>
@@ -2147,26 +1379,6 @@ tbody tr:nth-child(odd) {
                   ))}
                 </select>
 
-=======
-                  style={{
-                    width: "100%",
-                    padding: "8px",
-                    border: "1px solid #ccc",
-                    borderRadius: "4px",
-                  }}
-                >
-                  <option value="">
-                    {language === "English" ? "Select Exam " : "परीक्षा निवडा"}
-                  </option>
-                  {examOptions.map((examName, index) => (
-                    <option key={index} value={examName}>
-                      {language === "English"
-                        ? examName
-                        : examNameTranslations[examName]}
-                    </option>
-                  ))}
-                </select>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               </td>
             </tr>
           </tbody>
@@ -2174,41 +1386,9 @@ tbody tr:nth-child(odd) {
 
         <Link to="/failed">
           {language === "English" ? (
-<<<<<<< HEAD
             <button className="btn btn-primary" style={{ backgroundColor: '#0d6efd', color: '#fff', border: 'none', padding: '10px 25px', fontSize: '1rem', fontWeight: '500', borderRadius: '6px' }}>Go to Re-Exam Page</button>
           ) : (
             <button className="btn btn-primary" style={{ backgroundColor: '#0d6efd', color: '#fff', border: 'none', padding: '10px 25px', fontSize: '1rem', fontWeight: '500', borderRadius: '6px' }}>पुनर परिषा</button>
-=======
-            <button
-              className="btn btn-primary"
-              style={{
-                backgroundColor: "#0d6efd",
-                color: "#fff",
-                border: "none",
-                padding: "10px 25px",
-                fontSize: "1rem",
-                fontWeight: "500",
-                borderRadius: "6px",
-              }}
-            >
-              Go to Re-Exam Page
-            </button>
-          ) : (
-            <button
-              className="btn btn-primary"
-              style={{
-                backgroundColor: "#0d6efd",
-                color: "#fff",
-                border: "none",
-                padding: "10px 25px",
-                fontSize: "1rem",
-                fontWeight: "500",
-                borderRadius: "6px",
-              }}
-            >
-              पुनर परिषा
-            </button>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           )}
         </Link>
         {selectedStudents.length > 0 && (
@@ -2216,43 +1396,9 @@ tbody tr:nth-child(odd) {
             <table className="table table-striped table-bordered custom-table">
               <thead>
                 <tr>
-<<<<<<< HEAD
                   <th className="custom-width" style={{ backgroundColor: '#b5d3f2', textAlign: 'center', verticalAlign: 'middle', fontWeight: 'bold' }}>{language === "English" ? "Roll No " : "हजरी क्र"}</th>
                   <th style={{ backgroundColor: '#b5d3f2', textAlign: 'center', verticalAlign: 'middle', fontWeight: 'bold' }}>{language === "English" ? "Name " : "नाव"}</th>
                   <th style={{ backgroundColor: '#b5d3f2', textAlign: 'center', verticalAlign: 'middle', fontWeight: 'bold' }}>{language === "English" ? "Result " : "प्रगतीपत्रक"}</th>
-=======
-                  <th
-                    className="custom-width"
-                    style={{
-                      backgroundColor: "#b5d3f2",
-                      textAlign: "center",
-                      verticalAlign: "middle",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {language === "English" ? "Roll No " : "हजरी क्र"}
-                  </th>
-                  <th
-                    style={{
-                      backgroundColor: "#b5d3f2",
-                      textAlign: "center",
-                      verticalAlign: "middle",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {language === "English" ? "Name " : "नाव"}
-                  </th>
-                  <th
-                    style={{
-                      backgroundColor: "#b5d3f2",
-                      textAlign: "center",
-                      verticalAlign: "middle",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {language === "English" ? "Result " : "प्रगतीपत्रक"}
-                  </th>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 </tr>
               </thead>
               <tbody>
@@ -2261,28 +1407,12 @@ tbody tr:nth-child(odd) {
                   .map((student) => (
                     <tr key={student.srNo}>
                       <td>{student.rollNo}</td>
-<<<<<<< HEAD
                       <td>{student.stdName} {student.stdFather} {student.stdSurname}</td>
                       <td>
                         <button className="btn btn-primary" onClick={() => viewResult(student.srNo)}>
                           {language === "English" ? "View Result" : "प्रगति पत्रक"}
                         </button>
 
-=======
-                      <td>
-                        {student.stdName} {student.stdFather}{" "}
-                        {student.stdSurname}
-                      </td>
-                      <td>
-                        <button
-                          className="btn btn-primary"
-                          onClick={() => viewResult(student.srNo)}
-                        >
-                          {language === "English"
-                            ? "View Result"
-                            : "प्रगति पत्रक"}
-                        </button>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                       </td>
                     </tr>
                   ))}
@@ -2290,7 +1420,6 @@ tbody tr:nth-child(odd) {
             </table>
           </div>
         )}
-<<<<<<< HEAD
         <Modal show={showModal} onHide={handleCloseModal} dialogClassName='modal-80w'>
           <Modal.Header closeButton>
             <Modal.Title>{language === "English" ? "Exam Result " : "विद्यार्थ्यांचे निकाल"}</Modal.Title>
@@ -2355,162 +1484,10 @@ tbody tr:nth-child(odd) {
                     <div style={{ flex: 0.5 }}><strong>हजेरी क्र.:</strong> {selectedStudentResults?.rollNo}</div>
                     <div style={{ flex: 0.5 }}><strong>तुकडी:</strong> {selectedStudentResults?.division}</div>
                     <div style={{ flex: 1 }}><strong>इयत्ता:</strong> {classValue === 'Class V' ? '५ वी' : '८ वी'}</div>
-=======
-        <Modal
-          show={showModal}
-          onHide={handleCloseModal}
-          dialogClassName="modal-80w"
-        >
-          <Modal.Header closeButton>
-            <Modal.Title>
-              {language === "English"
-                ? "Exam Result "
-                : "विद्यार्थ्यांचे निकाल"}
-            </Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            {selectedExamName === "All Exams" && selectedStudentResults ? (
-              <div
-                style={{
-                  width: "210mm",
-                  minHeight: "297mm",
-                  padding: "15mm",
-                  background:
-                    "linear-gradient(to bottom, rgb(240, 217, 228), rgb(245, 255, 255), rgb(250, 230, 240))",
-                  fontFamily: '"Nirmala UI", Arial, sans-serif',
-                  border: "12px double #2c3e50",
-                  margin: "20px auto",
-                  boxSizing: "border-box",
-                  position: "relative",
-                  color: "#000",
-                  boxShadow: "0 0 20px rgba(0,0,0,0.2)",
-                }}
-                className="board-result-container"
-              >
-                {/* Header Section */}
-                <div
-                  style={{
-                    textAlign: "center",
-                    position: "relative",
-                    marginBottom: "20px",
-                  }}
-                >
-                  <p
-                    style={{
-                      position: "absolute",
-                      left: 0,
-                      top: 0,
-                      margin: 0,
-                      fontSize: "10px",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    शासन निर्णय क्रमांक: आरटीई-२०२२/प्र.क्र. २७६/एस.डी-१
-                  </p>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      marginBottom: "10px",
-                    }}
-                  >
-                    {schoolLogo ? (
-                      <img
-                        src={schoolLogo}
-                        alt="Logo"
-                        style={{ height: "50px", marginRight: "15px" }}
-                      />
-                    ) : (
-                      <div
-                        style={{
-                          height: "50px",
-                          width: "50px",
-                          borderRadius: "50%",
-                          backgroundColor: "#ffd700",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          marginRight: "15px",
-                        }}
-                      >
-                        <span style={{ fontSize: "20px" }}>🪔</span>
-                      </div>
-                    )}
-                  </div>
-                  <h5
-                    style={{
-                      margin: "2px 0",
-                      color: "#2c3e50",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    परिशिष्ट- १
-                  </h5>
-                  <h4
-                    style={{
-                      margin: "2px 0",
-                      color: "#d35400",
-                      fontWeight: "bold",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    गुणपत्रक नमुना - वार्षिक परीक्षा / पुनर्परीक्षा
-                  </h4>
-                </div>
-
-                {/* School & Student Info Section */}
-                <div
-                  style={{
-                    marginBottom: "15px",
-                    borderBottom: "1px solid #000",
-                    paddingBottom: "10px",
-                    fontSize: "13px",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      marginBottom: "5px",
-                    }}
-                  >
-                    <div style={{ flex: 2 }}>
-                      <strong>शाळेचे नाव:</strong> {schoolName}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <strong>शाळा UDISE:</strong> {udiseNumber}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <strong>शैक्षणिक वर्ष:</strong> {academicYear}
-                    </div>
-                  </div>
-                  <div
-                    style={{ display: "flex", justifyContent: "space-between" }}
-                  >
-                    <div style={{ flex: 2 }}>
-                      <strong>विद्यार्थ्यांचे नाव:</strong>{" "}
-                      {selectedStudentResults?.studentName}{" "}
-                      {selectedStudentResults?.stdFather}{" "}
-                      {selectedStudentResults?.stdSurname}
-                    </div>
-                    <div style={{ flex: 0.5 }}>
-                      <strong>हजेरी क्र.:</strong>{" "}
-                      {selectedStudentResults?.rollNo}
-                    </div>
-                    <div style={{ flex: 0.5 }}>
-                      <strong>तुकडी:</strong> {selectedStudentResults?.division}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <strong>इयत्ता:</strong>{" "}
-                      {classValue === "Class V" ? "५ वी" : "८ वी"}
-                    </div>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   </div>
                 </div>
 
                 {/* Marks Table */}
-<<<<<<< HEAD
                 <table style={{ width: '100%', borderCollapse: 'collapse', border: '1.5px solid #2c3e50', fontSize: '13px', backgroundColor: '#fff' }}>
                   <thead>
                     <tr style={{ backgroundColor: '#d1e7ff', color: '#003366' }}>
@@ -2560,236 +1537,16 @@ tbody tr:nth-child(odd) {
                       const totalM = academicResults.reduce((sum, s) => sum + (selectedStudentResults.results[s]?.total || 0), 0);
                       const totalS = academicResults.length;
                       const perc = totalS > 0 ? (totalM / (totalS * 100)) * 100 : 0;
-=======
-                <table
-                  style={{
-                    width: "100%",
-                    borderCollapse: "collapse",
-                    border: "1.5px solid #2c3e50",
-                    fontSize: "13px",
-                    backgroundColor: "#fff",
-                  }}
-                >
-                  <thead>
-                    <tr
-                      style={{ backgroundColor: "#d1e7ff", color: "#003366" }}
-                    >
-                      <th
-                        style={{
-                          border: "1px solid #000",
-                          padding: "5px",
-                          width: "40px",
-                          textAlign: "center",
-                        }}
-                      >
-                        अ.क्र.
-                      </th>
-                      <th
-                        style={{
-                          border: "1px solid #000",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        विषय
-                      </th>
-                      <th
-                        style={{
-                          border: "1px solid #000",
-                          padding: "5px",
-                          width: "100px",
-                          textAlign: "center",
-                        }}
-                      >
-                        किमान आवश्यक गुण
-                      </th>
-                      <th
-                        style={{
-                          border: "1px solid #000",
-                          padding: "5px",
-                          width: "120px",
-                          textAlign: "center",
-                        }}
-                      >
-                        एकूण गुण ५०/६० पैकी
-                      </th>
-                      <th
-                        style={{
-                          border: "1px solid #000",
-                          padding: "5px",
-                          width: "120px",
-                          textAlign: "center",
-                        }}
-                      >
-                        शेरा (उत्तीर्ण/अनुत्तीर्ण)
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {subjectSequence &&
-                      subjectSequence
-                        .filter((s) => s)
-                        .map((subject, index) => {
-                          const marks =
-                            selectedStudentResults.results[subject] || {};
-
-                          // Check if it's an extra/grade-based subject (Art, PE, etc.)
-                          const isExtraSubject = [
-                            ...englishSubjects,
-                            ...marathiSubjects,
-                          ].some(
-                            (s) =>
-                              s?.name?.toLowerCase() === subject?.toLowerCase(),
-                          );
-
-                          // For Board Results, show Sankalik (Summative) marks (out of 50/60)
-                          const obtMarks =
-                            marks.sankalikTotal !== undefined
-                              ? marks.sankalikTotal
-                              : "-";
-                          const isPass =
-                            marks.sankalikTotal >=
-                            (isExtraSubject ? 0 : passingMarks);
-
-                          // Determine the remark/grade
-                          const remark = isExtraSubject
-                            ? marks.grade || "-"
-                            : obtMarks === "-"
-                              ? "-"
-                              : isPass
-                                ? "उत्तीर्ण"
-                                : "अनुत्तीर्ण";
-
-                          return (
-                            <tr key={index}>
-                              <td
-                                style={{
-                                  border: "1px solid #000",
-                                  padding: "5px",
-                                  textAlign: "center",
-                                }}
-                              >
-                                {index + 1}
-                              </td>
-                              <td
-                                style={{
-                                  border: "1px solid #000",
-                                  padding: "5px",
-                                  fontWeight: "bold",
-                                }}
-                              >
-                                {subject}
-                              </td>
-                              <td
-                                style={{
-                                  border: "1px solid #000",
-                                  padding: "5px",
-                                  textAlign: "center",
-                                }}
-                              >
-                                {isExtraSubject ? "-" : passingMarks}
-                              </td>
-                              <td
-                                style={{
-                                  border: "1px solid #000",
-                                  padding: "5px",
-                                  textAlign: "center",
-                                }}
-                              >
-                                {obtMarks}
-                              </td>
-                              <td
-                                style={{
-                                  border: "1px solid #000",
-                                  padding: "5px",
-                                  textAlign: "center",
-                                }}
-                              >
-                                {isExtraSubject ? `श्रेणी - ${remark}` : remark}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                  </tbody>
-                  <tfoot>
-                    {(() => {
-                      const academicResults = Object.keys(
-                        selectedStudentResults.results,
-                      ).filter(
-                        (subj) =>
-                          ![
-                            "Art",
-                            "Work Experience",
-                            "Physical Education",
-                            "कला",
-                            "कार्यानुभव",
-                            "शारीरिक शिक्षण",
-                          ].includes(subj),
-                      );
-                      const totalM = academicResults.reduce(
-                        (sum, s) =>
-                          sum + (selectedStudentResults.results[s]?.total || 0),
-                        0,
-                      );
-                      const totalS = academicResults.length;
-                      const perc =
-                        totalS > 0 ? (totalM / (totalS * 100)) * 100 : 0;
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
                       return (
                         <>
                           <tr>
-<<<<<<< HEAD
                             <td colSpan="3" style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}><strong>शेकडा गुण :</strong></td>
                             <td colSpan="2" style={{ border: '1px solid #000', padding: '5px' }}><strong>{perc.toFixed(2)}%</strong></td>
                           </tr>
                           <tr>
                             <td colSpan="3" style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}><strong>निकाल दिनांक :</strong></td>
                             <td colSpan="2" style={{ border: '1px solid #000', padding: '5px' }}><strong>{new Date().toLocaleDateString('mr-IN')}</strong></td>
-=======
-                            <td
-                              colSpan="3"
-                              style={{
-                                border: "1px solid #000",
-                                padding: "5px",
-                                textAlign: "right",
-                              }}
-                            >
-                              <strong>शेकडा गुण :</strong>
-                            </td>
-                            <td
-                              colSpan="2"
-                              style={{
-                                border: "1px solid #000",
-                                padding: "5px",
-                              }}
-                            >
-                              <strong>{perc.toFixed(2)}%</strong>
-                            </td>
-                          </tr>
-                          <tr>
-                            <td
-                              colSpan="3"
-                              style={{
-                                border: "1px solid #000",
-                                padding: "5px",
-                                textAlign: "right",
-                              }}
-                            >
-                              <strong>निकाल दिनांक :</strong>
-                            </td>
-                            <td
-                              colSpan="2"
-                              style={{
-                                border: "1px solid #000",
-                                padding: "5px",
-                              }}
-                            >
-                              <strong>
-                                {new Date().toLocaleDateString("mr-IN")}
-                              </strong>
-                            </td>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                           </tr>
                         </>
                       );
@@ -2798,7 +1555,6 @@ tbody tr:nth-child(odd) {
                 </table>
 
                 {/* Footer Signatures */}
-<<<<<<< HEAD
                 <div style={{ marginTop: '40px', display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ marginBottom: '30px' }}>..........................................</div>
@@ -2806,31 +1562,10 @@ tbody tr:nth-child(odd) {
                   </div>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ marginBottom: '30px' }}>..........................................</div>
-=======
-                <div
-                  style={{
-                    marginTop: "40px",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    fontSize: "13px",
-                  }}
-                >
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ marginBottom: "30px" }}>
-                      ..........................................
-                    </div>
-                    <strong>वर्गशिक्षक नाव व स्वाक्षरी</strong>
-                  </div>
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ marginBottom: "30px" }}>
-                      ..........................................
-                    </div>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     <strong>मुख्याध्यापक नाव व स्वाक्षरी</strong>
                   </div>
                 </div>
 
-<<<<<<< HEAD
                 <div style={{ textAlign: 'center', marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '5px' }}>
                   <p style={{ margin: 0, fontStyle: 'italic', fontSize: '12px' }}>शाळेचा शिक्का</p>
                 </div>
@@ -2845,38 +1580,6 @@ tbody tr:nth-child(odd) {
                 }} >
                   <div className="left">
                     <div className="left-box" style={{ border: '1px solid black' }}>
-=======
-                <div
-                  style={{
-                    textAlign: "center",
-                    marginTop: "20px",
-                    borderTop: "1px solid #eee",
-                    paddingTop: "5px",
-                  }}
-                >
-                  <p
-                    style={{ margin: 0, fontStyle: "italic", fontSize: "12px" }}
-                  >
-                    शाळेचा शिक्का
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div>
-                {/* Second semester modal content */}
-
-                <div
-                  className="container  "
-                  style={{
-                    background: `linear-gradient(to bottom, rgb(240, 217, 228), rgb(245, 255, 255), rgb(250, 230, 240))`,
-                  }}
-                >
-                  <div className="left">
-                    <div
-                      className="left-box"
-                      style={{ border: "1px solid black" }}
-                    >
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                       <div className="school-info">
                         {schoolLogo && (
                           <div>
@@ -2888,7 +1591,6 @@ tbody tr:nth-child(odd) {
                     </div>
                     <br />
 
-<<<<<<< HEAD
                     <div class="student-info-grid" style={{ border: '1px solid black' }}>
                       <p>
                         <label>{language === "English" ? "Name:" : "नाव:"}</label>
@@ -2931,90 +1633,12 @@ tbody tr:nth-child(odd) {
                       <p>
                         <label>{language === "English" ? "Mother Tongue:" : "मातृभाषा:"}</label>
                         <span>{selectedStudentResults?.motherTounge || 'N/A'}</span>
-=======
-                    <div
-                      class="student-info-grid"
-                      style={{ border: "1px solid black" }}
-                    >
-                      <p>
-                        <label>
-                          {language === "English" ? "Name:" : "नाव:"}
-                        </label>
-                        <span>
-                          {selectedStudentResults?.studentName || "N/A"}{" "}
-                          {selectedStudentResults?.stdFather || "N/A"}{" "}
-                          {selectedStudentResults?.stdSurname || "N/A"}
-                        </span>
-                      </p>
-                      <p>
-                        <label>
-                          {language === "English"
-                            ? "Academic Year: "
-                            : "शैक्षणिक वर्ष: "}
-                        </label>
-                        <span>{academicYear || "N/A"}</span>
-                      </p>
-                      <p>
-                        <label>
-                          {language === "English"
-                            ? "Roll No: "
-                            : "हजेरी क्रमांक: "}
-                        </label>
-                        <span>{selectedStudentResults?.rollNo || "N/A"}</span>
-                      </p>
-                      <p>
-                        <label>
-                          {language === "English" ? "Exam: " : "परीक्षा: "}
-                        </label>
-                        <span>{selectedExamName || "N/A"}</span>
-                      </p>
-                      <p>
-                        <label>
-                          {language === "English" ? "Class:" : "वर्ग:"}
-                        </label>
-                        <span>{classValue || "N/A"}</span>
-                      </p>
-                      <p>
-                        <label>
-                          {language === "English"
-                            ? "Mother Name:"
-                            : "आईचे नाव:"}
-                        </label>
-                        <span>
-                          {selectedStudentResults?.stdMother || "N/A"}
-                        </span>
-                      </p>
-                      <p>
-                        <label>
-                          {language === "English"
-                            ? "Date Of Birth:"
-                            : "जन्मतारीख:"}
-                        </label>
-                        <span>{selectedStudentResults?.dob || "N/A"}</span>
-                      </p>
-                      <p>
-                        <label>
-                          {language === "English" ? "Division:" : "तुकडी:"}
-                        </label>
-                        <span>{selectedStudentResults?.division || "N/A"}</span>
-                      </p>
-                      <p>
-                        <label>
-                          {language === "English"
-                            ? "Mother Tongue:"
-                            : "मातृभाषा:"}
-                        </label>
-                        <span>
-                          {selectedStudentResults?.motherTounge || "N/A"}
-                        </span>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                       </p>
                       {/* <p>
         <label>{language === "English" ? "Student ID:" : "विद्यार्थी आयडी:"}</label>
         <span>{selectedStudentResults?.studentId || 'N/A'}</span>
       </p> */}
                       <p>
-<<<<<<< HEAD
                         <label>{language === "English" ? "Gender:" : "लिंग:"}</label>
                         <span>{selectedStudentResults?.gender || 'N/A'}</span>
                       </p>
@@ -3022,20 +1646,10 @@ tbody tr:nth-child(odd) {
                     <div className="gradable" >
 
 
-=======
-                        <label>
-                          {language === "English" ? "Gender:" : "लिंग:"}
-                        </label>
-                        <span>{selectedStudentResults?.gender || "N/A"}</span>
-                      </p>
-                    </div>
-                    <div className="gradable">
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                       <table>
                         <thead>
                           <tr>
                             <th rowspan="2"></th>
-<<<<<<< HEAD
                             <th colspan="1">{language === "English" ? "First Semester" : "प्रथम सत्र"}</th>
                             <th colspan="1">{language === "English" ? "Second Semester" : "द्वितीय सत्र"}</th>
                           </tr>
@@ -3047,71 +1661,29 @@ tbody tr:nth-child(odd) {
                             <td>
                               <span>
                                 {selectedStudentResults?.weightSeptember ?? ''}
-=======
-                            <th colspan="1">
-                              {language === "English"
-                                ? "First Semester"
-                                : "प्रथम सत्र"}
-                            </th>
-                            <th colspan="1">
-                              {language === "English"
-                                ? "Second Semester"
-                                : "द्वितीय सत्र"}
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <td>
-                              {language === "English" ? "Weight" : "वजन"} (Kg)
-                            </td>
-                            <td>
-                              <span>
-                                {selectedStudentResults?.weightSeptember ?? ""}
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                               </span>
                             </td>
                             <td>
                               <span>
-<<<<<<< HEAD
                                 {selectedStudentResults?.weightMarch ?? ''}
-=======
-                                {selectedStudentResults?.weightMarch ?? ""}
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                               </span>
                             </td>
                           </tr>
                           <tr>
-<<<<<<< HEAD
                             <td>{language === "English" ? "Height" : "उंची"} (Cm)</td>
                             <td>
                               <span>
                                 {selectedStudentResults?.heightSeptember ?? ''}
-=======
-                            <td>
-                              {language === "English" ? "Height" : "उंची"} (Cm)
-                            </td>
-                            <td>
-                              <span>
-                                {selectedStudentResults?.heightSeptember ?? ""}
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                               </span>
                             </td>
                             <td>
                               <span>
-<<<<<<< HEAD
                                 {selectedStudentResults?.heightMarch ?? ''}
-=======
-                                {selectedStudentResults?.heightMarch ?? ""}
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                               </span>
                             </td>
                           </tr>
                         </tbody>
-<<<<<<< HEAD
 
-=======
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                       </table>
                     </div>
                   </div>
@@ -3128,29 +1700,15 @@ tbody tr:nth-child(odd) {
                         </tr>
                       </thead>
                       <tbody>
-<<<<<<< HEAD
                         {['Present', 'Absent', 'Leave'].map((type) => (
-=======
-                        {["Present", "Absent", "Leave"].map((type) => (
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                           <tr key={type}>
                             <td>{getAttendanceType(type)}</td>
                             {firstSemesterMonths.map((month, index) => (
                               <td key={index}>
                                 <input
                                   type="text"
-<<<<<<< HEAD
                                   value={type === 'Leave' && attendance[type][month] < 0 ? '' : attendance[type][month] || ''}
                                 // onChange={(e) => handleInputChange(type, month, e.target.value)}
-=======
-                                  value={
-                                    type === "Leave" &&
-                                    attendance[type][month] < 0
-                                      ? ""
-                                      : attendance[type][month] || ""
-                                  }
-                                  // onChange={(e) => handleInputChange(type, month, e.target.value)}
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                 />
                               </td>
                             ))}
@@ -3160,15 +1718,7 @@ tbody tr:nth-child(odd) {
                     </table>
 
                     {/* Second Semester Attendance Table */}
-<<<<<<< HEAD
                     <h5 style={{ marginTop: '10px' }}>{language === "English" ? "Second Semester Attendance:" : "द्वितीय सत्राची हजेरी:"}</h5>
-=======
-                    <h5 style={{ marginTop: "10px" }}>
-                      {language === "English"
-                        ? "Second Semester Attendance:"
-                        : "द्वितीय सत्राची हजेरी:"}
-                    </h5>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     <table className="attendance-table">
                       <thead>
                         <tr>
@@ -3179,29 +1729,15 @@ tbody tr:nth-child(odd) {
                         </tr>
                       </thead>
                       <tbody>
-<<<<<<< HEAD
                         {['Present', 'Absent', 'Leave'].map((type) => (
-=======
-                        {["Present", "Absent", "Leave"].map((type) => (
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                           <tr key={type}>
                             <td>{getAttendanceType(type)}</td>
                             {secondSemesterMonths.map((month, index) => (
                               <td key={index}>
                                 <input
                                   type="text"
-<<<<<<< HEAD
                                   value={type === 'Leave' && attendance[type][month] < 0 ? '' : attendance[type][month] || ''}
                                 // onChange={(e) => handleInputChange(type, month, e.target.value)}
-=======
-                                  value={
-                                    type === "Leave" &&
-                                    attendance[type][month] < 0
-                                      ? ""
-                                      : attendance[type][month] || ""
-                                  }
-                                  // onChange={(e) => handleInputChange(type, month, e.target.value)}
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                 />
                               </td>
                             ))}
@@ -3211,7 +1747,6 @@ tbody tr:nth-child(odd) {
                     </table>
                     <div className="grad">
                       <p>
-<<<<<<< HEAD
                         {language === "English" ? " Instructions for parents:" : "पालकांसाठी सूचना"}
                         <li>  {language === "English" ? " Students should wear school uniform every day." : "विद्यार्थ्यांनी दररोज शालेय गणवेश परिधान करावा."}</li>
                         <li> {language === "English" ? "  A student should do the study given in school every day." : "विद्यार्थ्याने शाळेत दिलेला अभ्यास दररोज करावा."}</li>
@@ -3245,102 +1780,12 @@ tbody tr:nth-child(odd) {
                     <div>
                       <label htmlFor="exam-roll-no">{language === "English" ? "Exam: " : "परीक्षा सत्र: "}</label>
                       <span>{selectedExamName || 'N/A'}</span>
-=======
-                        {language === "English"
-                          ? " Instructions for parents:"
-                          : "पालकांसाठी सूचना"}
-                        <li>
-                          {" "}
-                          {language === "English"
-                            ? " Students should wear school uniform every day."
-                            : "विद्यार्थ्यांनी दररोज शालेय गणवेश परिधान करावा."}
-                        </li>
-                        <li>
-                          {" "}
-                          {language === "English"
-                            ? "  A student should do the study given in school every day."
-                            : "विद्यार्थ्याने शाळेत दिलेला अभ्यास दररोज करावा."}
-                        </li>
-                        <li>
-                          {" "}
-                          {language === "English"
-                            ? " Students should attend school on time and regularly every day."
-                            : "विद्यार्थ्यांनी दररोज वेळेवर व नियमितपणे शाळेत हजर राहावे."}
-                        </li>
-                        <li>
-                          {" "}
-                          {language === "English"
-                            ? " Students should not carry valuables, money. "
-                            : "विद्यार्थ्यांनी मौल्यवान वस्तू, पैसे घेऊन जाऊ नये."}
-                        </li>
-                        <li>
-                          {" "}
-                          {language === "English"
-                            ? " Students should follow the rules and discipline of the school. "
-                            : "विद्यार्थ्यांनी शाळेचे नियम व शिस्तीचे पालन करावे."}
-                        </li>
-                      </p>
-                    </div>
-                    <p style={{ marginTop: "40px", marginLeft: "350px" }}>
-                      {language === "English"
-                        ? "Parents Signature "
-                        : "पालकांची सही"}
-                    </p>
-                  </div>
-                </div>
-
-                <div
-                  className="container mt-1"
-                  style={{
-                    background: `linear-gradient(to bottom, rgb(240, 217, 228), rgb(245, 255, 255), rgb(250, 230, 240))`,
-                  }}
-                >
-                  <div className="left">
-                    <h3>
-                      {language === "English"
-                        ? "Student Progress Report "
-                        : "विद्यार्थी प्रगती अहवाल"}
-                    </h3>
-                    <div>
-                      <label htmlFor="roll-no">
-                        {language === "English"
-                          ? "Roll No: "
-                          : "हजेरी क्रमांक: "}
-                      </label>
-                      <span>{selectedStudentResults?.rollNo || "N/A"}</span>
-                    </div>
-                    <div>
-                      <label htmlFor="student-name">
-                        {language === "English"
-                          ? "Student Name: "
-                          : "विद्यार्थ्याचे नाव: "}
-                      </label>
-                      <span>
-                        {selectedStudentResults?.studentName || "N/A"}{" "}
-                        {selectedStudentResults?.stdFather || "N/A"}{" "}
-                        {selectedStudentResults?.stdSurname || "N/A"}
-                      </span>
-                    </div>
-                    <div>
-                      <label htmlFor="class">
-                        {language === "English" ? "Class: " : "वर्ग: "}
-                      </label>
-                      <span>{classValue || "N/A"}</span>
-                    </div>
-
-                    <div>
-                      <label htmlFor="exam-roll-no">
-                        {language === "English" ? "Exam: " : "परीक्षा सत्र: "}
-                      </label>
-                      <span>{selectedExamName || "N/A"}</span>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     </div>
 
                     {selectedStudentResults?.results ? (
                       <table className="table table-striped table-bordered">
                         <thead>
                           <tr>
-<<<<<<< HEAD
                             <th rowSpan='2'>{language === "English" ? "Subject" : "विषय"}</th>
                             <th colSpan="1">{language === "English" ? "First Sem" : "प्रथम सत्र"}</th>
                             <th colSpan="3">{language === "English" ? "Second Sem" : "द्वितीय सत्र"}</th>
@@ -3359,36 +1804,6 @@ tbody tr:nth-child(odd) {
 
 
 
-=======
-                            <th rowSpan="2">
-                              {language === "English" ? "Subject" : "विषय"}
-                            </th>
-                            <th colSpan="1">
-                              {language === "English"
-                                ? "First Sem"
-                                : "प्रथम सत्र"}
-                            </th>
-                            <th colSpan="3">
-                              {language === "English"
-                                ? "Second Sem"
-                                : "द्वितीय सत्र"}
-                            </th>
-                          </tr>
-                          <tr>
-                            <th>{language === "English" ? "Grade" : "गुण"}</th>
-                            <th>
-                              {language === "English" ? "Min.M" : "किमान गुण"}
-                            </th>
-                            <th>
-                              {language === "English" ? "Obt.M" : "एकूण गुण"}
-                            </th>
-                            <th>
-                              {language === "English" ? "Remark" : "शेरा"}
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                           {/* {selectedStudentResults && selectedStudentResults.results ? (
   subjectSequence
     .filter((subject) => subject in selectedStudentResults.results) 
@@ -3425,7 +1840,6 @@ tbody tr:nth-child(odd) {
   </tr>
 )} */}
 
-<<<<<<< HEAD
                           {selectedStudentResults && selectedStudentResults.results ? (
                             subjectSequence
                               .filter((subject) => subject in selectedStudentResults.results)
@@ -3433,32 +1847,12 @@ tbody tr:nth-child(odd) {
                                 const grades = selectedStudentResults.results[subject];
                                 const isExtraSubject = [...englishSubjects, ...marathiSubjects].some(
                                   s => s.name.toLowerCase() === subject.toLowerCase()
-=======
-                          {selectedStudentResults &&
-                          selectedStudentResults.results ? (
-                            subjectSequence
-                              .filter(
-                                (subject) =>
-                                  subject in selectedStudentResults.results,
-                              )
-                              .map((subject) => {
-                                const grades =
-                                  selectedStudentResults.results[subject];
-                                const isExtraSubject = [
-                                  ...englishSubjects,
-                                  ...marathiSubjects,
-                                ].some(
-                                  (s) =>
-                                    s.name.toLowerCase() ===
-                                    subject.toLowerCase(),
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                 );
 
                                 // If it's an extra subject, calculate grade using only Akarik total
                                 const remark = isExtraSubject
                                   ? calculateGrade(grades.akarikTotal || 0)
                                   : grades.sankalikTotal >= passingMarks
-<<<<<<< HEAD
                                     ? language === "English" ? "Pass" : "उत्तीर्ण"
                                     : language === "English" ? "Fail" : "अनुत्तीर्ण";
 
@@ -3469,39 +1863,11 @@ tbody tr:nth-child(odd) {
                                     <td><b>{passingMarks || 'N/A'}</b></td>
                                     <td><b>{grades.sankalikTotal || '-'}</b></td>
                                     <td><b>{remark}</b></td> {/* Modified Remark column */}
-=======
-                                    ? language === "English"
-                                      ? "Pass"
-                                      : "उत्तीर्ण"
-                                    : language === "English"
-                                      ? "Fail"
-                                      : "अनुत्तीर्ण";
-
-                                return (
-                                  <tr key={subject}>
-                                    <td>
-                                      <b>{subject}</b>
-                                    </td>
-                                    <td>
-                                      <b>{grades.firstSemesterGrade || "-"}</b>
-                                    </td>
-                                    <td>
-                                      <b>{passingMarks || "N/A"}</b>
-                                    </td>
-                                    <td>
-                                      <b>{grades.sankalikTotal || "-"}</b>
-                                    </td>
-                                    <td>
-                                      <b>{remark}</b>
-                                    </td>{" "}
-                                    {/* Modified Remark column */}
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                                   </tr>
                                 );
                               })
                           ) : (
                             <tr>
-<<<<<<< HEAD
                               <td colSpan="5">{language === "English" ? "No data available" : "डेटा उपलब्ध नाही"}</td>
                             </tr>
                           )}
@@ -3548,158 +1914,16 @@ tbody tr:nth-child(odd) {
                         <tr style={{ color: "black", textAlign: "center" }}>
                           <th colSpan="" style={{ padding: "2px", border: "1px solid #ddd", fontSize: "16px" }}>{language === "English" ? "First Semester " : "प्रथम सत्र"} </th>
                           <th colSpan="" style={{ padding: "2px", border: "1px solid #ddd", fontSize: "16px" }}>{language === "English" ? "Second Semester " : "द्वितीय सत्र"} </th>
-=======
-                              <td colSpan="5">
-                                {language === "English"
-                                  ? "No data available"
-                                  : "डेटा उपलब्ध नाही"}
-                              </td>
-                            </tr>
-                          )}
-
-                          {selectedStudentResults &&
-                            selectedStudentResults.results && (
-                              <>
-                                <tr>
-                                  <td colSpan="1"></td>
-                                  <td colSpan="2">
-                                    <b>
-                                      {language === "English"
-                                        ? "Total Marks"
-                                        : "एकूण गुण"}
-                                    </b>
-                                  </td>
-                                  <td colSpan="1">
-                                    <b>
-                                      {totalMarks} / {totalSubjects * 100}
-                                    </b>
-                                  </td>
-                                  <td colSpan="1">
-                                    <b>{percentage.toFixed(2)}%</b>
-                                  </td>
-                                </tr>
-                              </>
-                            )}
-                        </tbody>
-                      </table>
-                    ) : (
-                      <p>
-                        {language === "English"
-                          ? "No results available. "
-                          : "कोणतेही प्रगतीपत्रक उपलब्ध नाहीत."}
-                      </p>
-                    )}
-                    <div></div>
-                    <div
-                      className="grad"
-                      style={{ display: "flex", alignItems: "center" }}
-                    >
-                      <label
-                        style={{
-                          marginRight: "20px",
-                          marginBottom: "2px",
-                          marginLeft: "20px",
-                        }}
-                        htmlFor="class-teacher"
-                      >
-                        {language === "English"
-                          ? "Class Teacher"
-                          : "वर्गशिक्षक"}
-                      </label>
-                      <label
-                        style={{
-                          marginRight: "20px",
-                          marginBottom: "2px",
-                          marginLeft: "45%",
-                        }}
-                        htmlFor="principal"
-                      >
-                        {language === "English" ? "Principal " : "प्राचार्य"}
-                      </label>
-                    </div>
-                  </div>
-                  <div className="right">
-                    <h3
-                      style={{
-                        textAlign: "center",
-                        color: "black",
-                        fontFamily: "Arial, sans-serif",
-                        fontWeight: "bold",
-                        marginBottom: "20px",
-                      }}
-                    >
-                      {language === "English" ? "Nondi " : "नोंदी"}
-                    </h3>
-
-                    <table
-                      style={{
-                        width: "100%",
-                        borderCollapse: "collapse",
-                        fontFamily: "Arial, sans-serif",
-                      }}
-                    >
-                      <thead>
-                        <tr style={{ color: "black", textAlign: "center" }}>
-                          <th
-                            colSpan=""
-                            style={{
-                              padding: "2px",
-                              border: "1px solid #ddd",
-                              fontSize: "16px",
-                            }}
-                          >
-                            {language === "English"
-                              ? "First Semester "
-                              : "प्रथम सत्र"}{" "}
-                          </th>
-                          <th
-                            colSpan=""
-                            style={{
-                              padding: "2px",
-                              border: "1px solid #ddd",
-                              fontSize: "16px",
-                            }}
-                          >
-                            {language === "English"
-                              ? "Second Semester "
-                              : "द्वितीय सत्र"}{" "}
-                          </th>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                         </tr>
                       </thead>
 
                       <tbody>
                         <tr style={{ color: "black", textAlign: "center" }}>
-<<<<<<< HEAD
                           <th colSpan="2" style={{ padding: "2px", border: "1px solid #ddd", fontSize: "16px" }}>{language === "English" ? "Special Progress" : "विशेष प्रगती"}</th>
 
                         </tr>
                         <tr style={{ backgroundColor: "#ffffff" }}>
                           <td style={{ width: "50%", padding: "2px", border: "1px solid #ddd", verticalAlign: "top" }}>
-=======
-                          <th
-                            colSpan="2"
-                            style={{
-                              padding: "2px",
-                              border: "1px solid #ddd",
-                              fontSize: "16px",
-                            }}
-                          >
-                            {language === "English"
-                              ? "Special Progress"
-                              : "विशेष प्रगती"}
-                          </th>
-                        </tr>
-                        <tr style={{ backgroundColor: "#ffffff" }}>
-                          <td
-                            style={{
-                              width: "50%",
-                              padding: "2px",
-                              border: "1px solid #ddd",
-                              verticalAlign: "top",
-                            }}
-                          >
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                             <textarea
                               id="special-progress"
                               style={{
@@ -3710,34 +1934,14 @@ tbody tr:nth-child(odd) {
                                 boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)",
                                 resize: "none",
                                 fontSize: "14px",
-<<<<<<< HEAD
                                 height: "100px"
                               }}
                               value={selectedStudentResults?.firstSemester?.specialEntries || "No data available"}
-=======
-                                height: "100px",
-                              }}
-                              value={
-                                selectedStudentResults?.firstSemester
-                                  ?.specialEntries || "No data available"
-                              }
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                               readOnly
                             />
                           </td>
 
-<<<<<<< HEAD
                           <td style={{ width: "50%", padding: "2px", border: "1px solid #ddd", verticalAlign: "top" }}>
-=======
-                          <td
-                            style={{
-                              width: "50%",
-                              padding: "2px",
-                              border: "1px solid #ddd",
-                              verticalAlign: "top",
-                            }}
-                          >
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                             <textarea
                               id="special-progress"
                               style={{
@@ -3748,50 +1952,18 @@ tbody tr:nth-child(odd) {
                                 boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)",
                                 resize: "none",
                                 fontSize: "14px",
-<<<<<<< HEAD
                                 height: "100px"
                               }}
                               value={selectedStudentResults?.nondi?.specialEntries || "No data available"}
-=======
-                                height: "100px",
-                              }}
-                              value={
-                                selectedStudentResults?.nondi?.specialEntries ||
-                                "No data available"
-                              }
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                               readOnly
                             />
                           </td>
                         </tr>
                         <tr style={{ color: "black", textAlign: "center" }}>
-<<<<<<< HEAD
                           <th colSpan="2" style={{ padding: "2px", border: "1px solid #ddd", fontSize: "16px" }}>{language === "English" ? "Hobbies" : "छंद"}</th>
                         </tr>
                         <tr style={{ backgroundColor: "#ffffff" }}>
                           <td style={{ width: "33%", padding: "2px", border: "1px solid #ddd", verticalAlign: "top" }}>
-=======
-                          <th
-                            colSpan="2"
-                            style={{
-                              padding: "2px",
-                              border: "1px solid #ddd",
-                              fontSize: "16px",
-                            }}
-                          >
-                            {language === "English" ? "Hobbies" : "छंद"}
-                          </th>
-                        </tr>
-                        <tr style={{ backgroundColor: "#ffffff" }}>
-                          <td
-                            style={{
-                              width: "33%",
-                              padding: "2px",
-                              border: "1px solid #ddd",
-                              verticalAlign: "top",
-                            }}
-                          >
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                             <textarea
                               id="special-progress"
                               style={{
@@ -3802,31 +1974,12 @@ tbody tr:nth-child(odd) {
                                 boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)",
                                 resize: "none",
                                 fontSize: "14px",
-<<<<<<< HEAD
                                 height: "100px"
                               }}
                               value={selectedStudentResults?.firstSemester?.interestsAndHobbies || "No data available"}
                               readOnly />
                           </td>
                           <td style={{ padding: "2px", border: "1px solid #ddd", verticalAlign: "top" }}>
-=======
-                                height: "100px",
-                              }}
-                              value={
-                                selectedStudentResults?.firstSemester
-                                  ?.interestsAndHobbies || "No data available"
-                              }
-                              readOnly
-                            />
-                          </td>
-                          <td
-                            style={{
-                              padding: "2px",
-                              border: "1px solid #ddd",
-                              verticalAlign: "top",
-                            }}
-                          >
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                             <textarea
                               id="hobbies"
                               style={{
@@ -3837,7 +1990,6 @@ tbody tr:nth-child(odd) {
                                 boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)",
                                 resize: "none",
                                 fontSize: "14px",
-<<<<<<< HEAD
                                 height: "100px"
                               }}
                               value={selectedStudentResults?.nondi?.interestsAndHobbies || "No data available"}
@@ -3851,41 +2003,6 @@ tbody tr:nth-child(odd) {
                         </tr>
                         <tr style={{ backgroundColor: "#ffffff" }}>
                           <td style={{ width: "33%", padding: "2px", border: "1px solid #ddd", verticalAlign: "top" }}>
-=======
-                                height: "100px",
-                              }}
-                              value={
-                                selectedStudentResults?.nondi
-                                  ?.interestsAndHobbies || "No data available"
-                              }
-                              readOnly
-                            />
-                          </td>
-                        </tr>
-                        <tr style={{ color: "black", textAlign: "center" }}>
-                          <th
-                            colSpan="2"
-                            style={{
-                              padding: "2px",
-                              border: "1px solid #ddd",
-                              fontSize: "16px",
-                            }}
-                          >
-                            {language === "English"
-                              ? "Required Improvements"
-                              : "आवश्यक सुधारणा"}
-                          </th>
-                        </tr>
-                        <tr style={{ backgroundColor: "#ffffff" }}>
-                          <td
-                            style={{
-                              width: "33%",
-                              padding: "2px",
-                              border: "1px solid #ddd",
-                              verticalAlign: "top",
-                            }}
-                          >
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                             <textarea
                               id="special-progress"
                               style={{
@@ -3896,31 +2013,12 @@ tbody tr:nth-child(odd) {
                                 boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)",
                                 resize: "none",
                                 fontSize: "14px",
-<<<<<<< HEAD
                                 height: "100px"
                               }}
                               value={selectedStudentResults?.firstSemester?.necessaryCorrections || "No data available"}
                               readonly />
                           </td>
                           <td style={{ padding: "2px", border: "1px solid #ddd", verticalAlign: "top" }}>
-=======
-                                height: "100px",
-                              }}
-                              value={
-                                selectedStudentResults?.firstSemester
-                                  ?.necessaryCorrections || "No data available"
-                              }
-                              readonly
-                            />
-                          </td>
-                          <td
-                            style={{
-                              padding: "2px",
-                              border: "1px solid #ddd",
-                              verticalAlign: "top",
-                            }}
-                          >
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                             <textarea
                               id="improvements"
                               style={{
@@ -3931,43 +2029,21 @@ tbody tr:nth-child(odd) {
                                 boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)",
                                 resize: "none",
                                 fontSize: "14px",
-<<<<<<< HEAD
                                 height: "100px"
                               }}
                               value={selectedStudentResults?.nondi?.necessaryCorrections || "No data available"}
-=======
-                                height: "100px",
-                              }}
-                              value={
-                                selectedStudentResults?.nondi
-                                  ?.necessaryCorrections || "No data available"
-                              }
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                               readOnly
                             />
                           </td>
                         </tr>
                       </tbody>
                     </table>
-<<<<<<< HEAD
                     <div className="grade-table" >
                       <h3>{language === "English" ? "Grade Table" : "श्रेणी टेबल"}</h3>
                       <table >
                         <thead>
                           <tr>
                             <th>{language === "English" ? "Marks" : "मार्क्स"}</th>
-=======
-                    <div className="grade-table">
-                      <h3>
-                        {language === "English" ? "Grade Table" : "श्रेणी टेबल"}
-                      </h3>
-                      <table>
-                        <thead>
-                          <tr>
-                            <th>
-                              {language === "English" ? "Marks" : "मार्क्स"}
-                            </th>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                             <th>{language === "English" ? "A1" : "अ1"}</th>
                             <th>{language === "English" ? "A2" : "अ2"}</th>
                             <th>{language === "English" ? "B1" : "ब1"}</th>
@@ -3994,18 +2070,12 @@ tbody tr:nth-child(odd) {
                           </tr>
                         </tbody>
                       </table>
-<<<<<<< HEAD
 
-=======
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     </div>
                   </div>
                 </div>
               </div>
-<<<<<<< HEAD
 
-=======
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
             )}
           </Modal.Body>
 
@@ -4018,19 +2088,12 @@ tbody tr:nth-child(odd) {
             </Button>
           </Modal.Footer>
         </Modal>
-<<<<<<< HEAD
 
       </div>
 
-=======
-      </div>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     </div>
   );
 };
 
 export default BoardResult;
-<<<<<<< HEAD
 
-=======
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557

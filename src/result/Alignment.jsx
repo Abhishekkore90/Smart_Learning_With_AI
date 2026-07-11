@@ -10,28 +10,10 @@ import {
   Loader2,
   AlertCircle,
   Info,
-<<<<<<< HEAD
   GripVertical
 } from "lucide-react";
 
 const ALL_CLASSES = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th"];
-=======
-  GripVertical,
-} from "lucide-react";
-
-const ALL_CLASSES = [
-  "1st",
-  "2nd",
-  "3rd",
-  "4th",
-  "5th",
-  "6th",
-  "7th",
-  "8th",
-  "9th",
-  "10th",
-];
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
 function Alignment({ onClose }) {
   const [academicYear, setAcademicYear] = useState("");
@@ -42,24 +24,13 @@ function Alignment({ onClose }) {
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-<<<<<<< HEAD
   const [language, setLanguage] = useState(localStorage.getItem('language') || 'English');
   const [alertMessage, setAlertMessage] = useState('');
-=======
-  const [language, setLanguage] = useState(
-    localStorage.getItem("language") || "English",
-  );
-  const [alertMessage, setAlertMessage] = useState("");
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
   const udiseNumber = localStorage.getItem("udiseNumber");
 
   useEffect(() => {
-<<<<<<< HEAD
     const storedLanguage = localStorage.getItem('language') || 'English';
-=======
-    const storedLanguage = localStorage.getItem("language") || "English";
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     setLanguage(storedLanguage);
   }, []);
 
@@ -79,7 +50,6 @@ function Alignment({ onClose }) {
     try {
       // First try to fetch from ssc path if they started using it
       let response = await fetch(
-<<<<<<< HEAD
         `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/subjectSequence/ssc/${academicYear}.json`
       );
       let data = await response.json();
@@ -88,29 +58,11 @@ function Alignment({ onClose }) {
       if (!data) {
         response = await fetch(
           `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/subjectSequence/${academicYear}.json`
-=======
-        `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/subjectSequence/ssc/${academicYear}.json`,
-      );
-      let data = await response.json();
-
-      // Fallback to legacy path to show classes if they haven't migrated yet
-      if (!data) {
-        response = await fetch(
-          `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/subjectSequence/${academicYear}.json`,
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         );
         data = await response.json();
       }
 
-<<<<<<< HEAD
       setClasses(data ? Object.keys(data).filter(k => k !== 'null' && k !== undefined) : []);
-=======
-      setClasses(
-        data
-          ? Object.keys(data).filter((k) => k !== "null" && k !== undefined)
-          : [],
-      );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       setError(null);
     } catch (err) {
       console.error("Error fetching classes:", err);
@@ -127,11 +79,7 @@ function Alignment({ onClose }) {
     setLoading(true);
     try {
       const response = await fetch(
-<<<<<<< HEAD
         `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/subjectSequence/ssc/${academicYear}/${classValue}/${division}.json`
-=======
-        `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/subjectSequence/ssc/${academicYear}/${classValue}/${division}.json`,
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       );
       if (!response.ok) throw new Error("Failed to fetch subjects");
 
@@ -173,15 +121,9 @@ function Alignment({ onClose }) {
             newSequence.reduce((acc, subject, index) => {
               acc[index + 1] = subject;
               return acc;
-<<<<<<< HEAD
             }, {})
           ),
         }
-=======
-            }, {}),
-          ),
-        },
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       );
     } catch (error) {
       console.error("Error updating subject sequence:", error);
@@ -198,7 +140,6 @@ function Alignment({ onClose }) {
 
   const fetchDivisions = async () => {
     if (!academicYear || !classValue) return;
-<<<<<<< HEAD
   
     setLoading(true);
     try {
@@ -209,20 +150,6 @@ function Alignment({ onClose }) {
   
       const data = await response.json();
       const fetchedDivisions = data ? Object.keys(data).filter((key) => isNaN(key)) : [];
-=======
-
-    setLoading(true);
-    try {
-      const response = await fetch(
-        `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/subjectSequence/ssc/${academicYear}/${classValue}.json`,
-      );
-      if (!response.ok) throw new Error("Failed to fetch divisions");
-
-      const data = await response.json();
-      const fetchedDivisions = data
-        ? Object.keys(data).filter((key) => isNaN(key))
-        : [];
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       if (fetchedDivisions.length > 0) {
         setDivisions(fetchedDivisions);
       } else {
@@ -237,11 +164,7 @@ function Alignment({ onClose }) {
       setLoading(false);
     }
   };
-<<<<<<< HEAD
   
-=======
-
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   useEffect(() => {
     fetchDivisions();
   }, [academicYear, classValue]);
@@ -356,13 +279,7 @@ function Alignment({ onClose }) {
           {loading && (
             <div className="flex flex-col items-center justify-center py-8 gap-2 text-slate-400 dark:text-slate-500">
               <Loader2 className="size-7 animate-spin text-indigo-600 dark:text-indigo-400" />
-<<<<<<< HEAD
               <span className="text-[10px] font-black uppercase tracking-wider">Syncing Sequence Data...</span>
-=======
-              <span className="text-[10px] font-black uppercase tracking-wider">
-                Syncing Sequence Data...
-              </span>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
             </div>
           )}
 
@@ -438,22 +355,10 @@ function Alignment({ onClose }) {
               </DragDropContext>
             </div>
           ) : (
-<<<<<<< HEAD
             !loading && academicYear && classValue && division && (
               <div className="text-center py-12 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-[2rem] text-slate-400">
                 <SlidersHorizontal className="size-8 mx-auto mb-2 text-slate-300" />
                 <p className="text-xs font-bold">No subjects aligned for this class yet.</p>
-=======
-            !loading &&
-            academicYear &&
-            classValue &&
-            division && (
-              <div className="text-center py-12 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-[2rem] text-slate-400">
-                <SlidersHorizontal className="size-8 mx-auto mb-2 text-slate-300" />
-                <p className="text-xs font-bold">
-                  No subjects aligned for this class yet.
-                </p>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               </div>
             )
           )}
@@ -474,8 +379,4 @@ function Alignment({ onClose }) {
   );
 }
 
-<<<<<<< HEAD
 export default Alignment;
-=======
-export default Alignment;
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557

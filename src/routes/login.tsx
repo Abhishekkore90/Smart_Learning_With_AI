@@ -38,15 +38,7 @@ export const Route = createFileRoute("/login")({
     redirect: search.redirect as string | undefined,
     role: search.role as string | undefined,
   }),
-<<<<<<< HEAD
   head: () => ({ meta: [{ title: "Institutional Gateway — SGK Brainova Smart Learning With AI" }] }),
-=======
-  head: () => ({
-    meta: [
-      { title: "Institutional Gateway — SGK Brainova Smart Learning With AI" },
-    ],
-  }),
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   component: UnifiedLoginPortal,
 });
 
@@ -192,14 +184,7 @@ function UnifiedLoginPortal() {
       }
 
       const userData = userDoc.data();
-<<<<<<< HEAD
       const userRole = activeRole === "teacher" && userDoc.ref.parent.id === "teachers" ? "teacher" : (userData.role || "student");
-=======
-      const userRole =
-        activeRole === "teacher" && userDoc.ref.parent.id === "teachers"
-          ? "teacher"
-          : userData.role || "student";
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
       if (userRole !== activeRole) {
         await auth.signOut();
@@ -210,7 +195,6 @@ function UnifiedLoginPortal() {
 
       if (activeRole === "teacher" && userData.udise) {
         localStorage.setItem("teacher_udise", userData.udise);
-<<<<<<< HEAD
         localStorage.setItem("sqaaf_teacher_profile", JSON.stringify({
           fullName: userData.fullName,
           email: userData.email,
@@ -219,19 +203,6 @@ function UnifiedLoginPortal() {
           address: userData.address,
           role: "teacher"
         }));
-=======
-        localStorage.setItem(
-          "sqaaf_teacher_profile",
-          JSON.stringify({
-            fullName: userData.fullName,
-            email: userData.email,
-            udise: userData.udise,
-            schoolName: userData.schoolName,
-            address: userData.address,
-            role: "teacher",
-          }),
-        );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       }
 
       toast.success(`Identity Verified. Welcome back!`);

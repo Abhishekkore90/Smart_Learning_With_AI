@@ -122,14 +122,7 @@ function TeacherSettings() {
             address: parsed.address || "",
           });
         } catch (e) {
-<<<<<<< HEAD
           setFormData((prev) => ({ ...prev, fullName: user.displayName || "" }));
-=======
-          setFormData((prev) => ({
-            ...prev,
-            fullName: user.displayName || "",
-          }));
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         }
       } else {
         setFormData((prev) => ({ ...prev, fullName: user.displayName || "" }));
@@ -175,11 +168,7 @@ function TeacherSettings() {
           schoolName: formData.schoolName,
           updatedAt: new Date().toISOString(),
         },
-<<<<<<< HEAD
         { merge: true }
-=======
-        { merge: true },
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       );
 
       // Sync local storage profile
@@ -355,12 +344,7 @@ function TeacherSettings() {
                   {/* School UDISE Code */}
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-<<<<<<< HEAD
                       <School className="size-4 text-indigo-500" /> School UDISE Code
-=======
-                      <School className="size-4 text-indigo-500" /> School UDISE
-                      Code
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     </label>
                     <input
                       type="text"
@@ -375,12 +359,7 @@ function TeacherSettings() {
                   {/* School Address (Jurisdiction) */}
                   <div className="space-y-2 md:col-span-2">
                     <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-<<<<<<< HEAD
                       <MapPin className="size-4 text-indigo-500" /> School Address (Jurisdiction)
-=======
-                      <MapPin className="size-4 text-indigo-500" /> School
-                      Address (Jurisdiction)
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     </label>
                     <input
                       type="text"

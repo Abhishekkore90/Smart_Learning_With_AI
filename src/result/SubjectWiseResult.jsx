@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-<<<<<<< HEAD
 import { 
   ChevronLeft, 
   ArrowLeft,
@@ -14,29 +13,6 @@ import "../result/result.css";
 const SubjectWiseResult = ({ initialClass, initialYear, onBack }) => {
   const [academicYear, setAcademicYear] = useState(initialYear || localStorage.getItem("cce_academic_year") || "");
   const [classValue, setClassValue] = useState(initialClass || localStorage.getItem("cce_selected_class") || "");
-=======
-import {
-  ChevronLeft,
-  ArrowLeft,
-  Check,
-  AlertTriangle,
-  Loader2,
-} from "lucide-react";
-import AlertMessage from "../../AlertMessage";
-import {
-  fetchFirestoreMarks,
-  matchAndMergeMarks,
-} from "./firestoreMarksHelper";
-import "../result/result.css";
-
-const SubjectWiseResult = ({ initialClass, initialYear, onBack }) => {
-  const [academicYear, setAcademicYear] = useState(
-    initialYear || localStorage.getItem("cce_academic_year") || "",
-  );
-  const [classValue, setClassValue] = useState(
-    initialClass || localStorage.getItem("cce_selected_class") || "",
-  );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   const [activeSemester, setActiveSemester] = useState("first"); // "first" or "second"
   const [division, setDivision] = useState("");
   const [divisions, setDivisions] = useState(["A", "B", "C", "D"]);
@@ -49,13 +25,7 @@ const SubjectWiseResult = ({ initialClass, initialYear, onBack }) => {
   const [schoolLogo, setSchoolLogo] = useState("");
   const [subjectSequence, setSubjectSequence] = useState([]);
   const [subjects, setSubjects] = useState({});
-<<<<<<< HEAD
   const [language, setLanguage] = useState(localStorage.getItem("language") || "English");
-=======
-  const [language, setLanguage] = useState(
-    localStorage.getItem("language") || "English",
-  );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
   const [alertMessage, setAlertMessage] = useState("");
   const [showAlert, setShowAlert] = useState(false);
@@ -132,12 +102,7 @@ const SubjectWiseResult = ({ initialClass, initialYear, onBack }) => {
   useEffect(() => {
     if (classValue && studentData.length > 0) {
       const filtered = studentData.filter(
-<<<<<<< HEAD
         (student) => student.currentClass === classValue && student.division === division
-=======
-        (student) =>
-          student.currentClass === classValue && student.division === division,
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       );
       setSelectedStudents(filtered);
     }
@@ -160,11 +125,7 @@ const SubjectWiseResult = ({ initialClass, initialYear, onBack }) => {
   const fetchSchoolData = async () => {
     try {
       const response = await fetch(
-<<<<<<< HEAD
         `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/schoolData.json`
-=======
-        `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/schoolData.json`,
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       );
       if (response.ok) {
         const data = await response.json();
@@ -180,11 +141,7 @@ const SubjectWiseResult = ({ initialClass, initialYear, onBack }) => {
   const fetchStudentData = async () => {
     try {
       const response = await fetch(
-<<<<<<< HEAD
         `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData.json`
-=======
-        `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData.json`,
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       );
       if (response.ok) {
         const data = await response.json();
@@ -192,13 +149,7 @@ const SubjectWiseResult = ({ initialClass, initialYear, onBack }) => {
           .filter((key) => data[key] !== null)
           .map((key) => ({ srNo: key, ...data[key] }));
 
-<<<<<<< HEAD
         const activeStudents = filteredData.filter((student) => student.isActive !== false);
-=======
-        const activeStudents = filteredData.filter(
-          (student) => student.isActive !== false,
-        );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         setStudentData(activeStudents);
       }
     } catch (error) {
@@ -209,11 +160,7 @@ const SubjectWiseResult = ({ initialClass, initialYear, onBack }) => {
   const fetchSubjectSequence = async () => {
     try {
       if (!academicYear || !classValue || !division) return;
-<<<<<<< HEAD
       
-=======
-
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       const urlSsc = `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/subjectSequence/ssc/${academicYear}/${classValue}/${division}.json`;
       const urlRegular = `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/subjectSequence/${academicYear}/${classValue}.json`;
       const urlSscNoDiv = `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/subjectSequence/ssc/${academicYear}/${classValue}.json`;
@@ -256,11 +203,7 @@ const SubjectWiseResult = ({ initialClass, initialYear, onBack }) => {
           .sort((a, b) => parseInt(a) - parseInt(b))
           .map((key) => subjectsData[key])
           .filter(Boolean);
-<<<<<<< HEAD
         
-=======
-
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         setSubjectSequence(orderedSubjects);
 
         const formattedSubjects = orderedSubjects.reduce((acc, sub) => {
@@ -279,22 +222,12 @@ const SubjectWiseResult = ({ initialClass, initialYear, onBack }) => {
 
   const fetchMarksForAllStudents = async () => {
     try {
-<<<<<<< HEAD
       const examName = activeSemester === "first" ? "First Semester" : "Second Semester";
       
       const marksDataPromises = selectedStudents.map(async (student) => {
         try {
           const response = await fetch(
             `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${student.srNo}/result/${academicYear}/${examName}.json`
-=======
-      const examName =
-        activeSemester === "first" ? "First Semester" : "Second Semester";
-
-      const marksDataPromises = selectedStudents.map(async (student) => {
-        try {
-          const response = await fetch(
-            `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${student.srNo}/result/${academicYear}/${examName}.json`,
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           );
           const marks = response.ok ? await response.json() : {};
           return {
@@ -316,29 +249,10 @@ const SubjectWiseResult = ({ initialClass, initialYear, onBack }) => {
       // Also fetch from Firestore marks collection and merge
       try {
         const term = activeSemester; // "first" or "second"
-<<<<<<< HEAD
         const firestoreMarks = await fetchFirestoreMarks(classValue, academicYear, term);
         if (firestoreMarks.length > 0) {
           const subjectList = subjectSequence.length > 0 ? subjectSequence : Object.keys(subjects);
           const merged = matchAndMergeMarks(selectedStudents, tempMarks, firestoreMarks, subjectList);
-=======
-        const firestoreMarks = await fetchFirestoreMarks(
-          classValue,
-          academicYear,
-          term,
-        );
-        if (firestoreMarks.length > 0) {
-          const subjectList =
-            subjectSequence.length > 0
-              ? subjectSequence
-              : Object.keys(subjects);
-          const merged = matchAndMergeMarks(
-            selectedStudents,
-            tempMarks,
-            firestoreMarks,
-            subjectList,
-          );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           setMarksData(merged);
         } else {
           setMarksData(tempMarks);
@@ -378,11 +292,7 @@ const SubjectWiseResult = ({ initialClass, initialYear, onBack }) => {
       hindi: "तृतीय भाषा : हिंदी",
       "first language: marathi": "प्रथम भाषा : मराठी",
       "second language: english": "द्वितीय भाषा : इंग्रजी",
-<<<<<<< HEAD
       "mathematics": "गणित"
-=======
-      mathematics: "गणित",
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     };
     const key = sub.toLowerCase().trim();
     return translations[key] || sub;
@@ -396,18 +306,9 @@ const SubjectWiseResult = ({ initialClass, initialYear, onBack }) => {
 
     setIsCompiling(true);
 
-<<<<<<< HEAD
     const examName = activeSemester === "first" ? "First Semester" : "Second Semester";
     const termLabel = activeSemester === "first" ? "प्रथम सत्र" : "द्वितीय सत्र";
     const subjectList = subjectSequence.length > 0 ? subjectSequence : Object.keys(subjects);
-=======
-    const examName =
-      activeSemester === "first" ? "First Semester" : "Second Semester";
-    const termLabel =
-      activeSemester === "first" ? "प्रथम सत्र" : "द्वितीय सत्र";
-    const subjectList =
-      subjectSequence.length > 0 ? subjectSequence : Object.keys(subjects);
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
     if (subjectList.length === 0) {
       setAlertMessage("विषय यादी उपलब्ध नाही.");
@@ -578,14 +479,8 @@ const SubjectWiseResult = ({ initialClass, initialYear, onBack }) => {
 
         const akarikTotal = Number(akarik.Total) || 0;
         const sanklikTotal = Number(sanklik.Total) || 0;
-<<<<<<< HEAD
         const hasMarks = Object.keys(akarik).length > 0 || Object.keys(sanklik).length > 0;
         const grandTotal = hasMarks ? (akarikTotal + sanklikTotal) : 0;
-=======
-        const hasMarks =
-          Object.keys(akarik).length > 0 || Object.keys(sanklik).length > 0;
-        const grandTotal = hasMarks ? akarikTotal + sanklikTotal : 0;
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         const grade = hasMarks ? calculateGrade(grandTotal) : "-";
 
         htmlContent += `
@@ -659,13 +554,7 @@ const SubjectWiseResult = ({ initialClass, initialYear, onBack }) => {
           </button>
           <div>
             <h2 className="text-xl md:text-2xl font-black text-white tracking-tight">
-<<<<<<< HEAD
               {language === "English" ? "Learning Outcomes Register" : "अध्ययन निष्पत्तीनिहाय संपादणूक प्रगती..."}
-=======
-              {language === "English"
-                ? "Learning Outcomes Register"
-                : "अध्ययन निष्पत्तीनिहाय संपादणूक प्रगती..."}
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
             </h2>
             <p className="text-[10px] text-emerald-500 font-bold uppercase tracking-wider mt-0.5">
               Learning Outcomes Achievement Register (Student-wise)
@@ -679,22 +568,14 @@ const SubjectWiseResult = ({ initialClass, initialYear, onBack }) => {
 
       {/* Settings Options Card */}
       <div className="flex-1 max-w-2xl mx-auto w-full space-y-6">
-<<<<<<< HEAD
         
-=======
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         {/* Semester Tab Selection */}
         <div className="flex bg-[#121c16] rounded-full p-1 border border-emerald-950/60 max-w-sm mx-auto shadow-inner">
           <button
             onClick={() => setActiveSemester("first")}
             className={`flex-1 py-2.5 rounded-full font-bold text-xs transition-all cursor-pointer ${
-<<<<<<< HEAD
               activeSemester === "first" 
                 ? "bg-[#223d2e] text-[#a2d8b4] shadow-md border border-emerald-900/30" 
-=======
-              activeSemester === "first"
-                ? "bg-[#223d2e] text-[#a2d8b4] shadow-md border border-emerald-900/30"
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 : "text-emerald-600/70 hover:text-emerald-500"
             }`}
           >
@@ -703,13 +584,8 @@ const SubjectWiseResult = ({ initialClass, initialYear, onBack }) => {
           <button
             onClick={() => setActiveSemester("second")}
             className={`flex-1 py-2.5 rounded-full font-bold text-xs transition-all cursor-pointer ${
-<<<<<<< HEAD
               activeSemester === "second" 
                 ? "bg-[#223d2e] text-[#a2d8b4] shadow-md border border-emerald-900/30" 
-=======
-              activeSemester === "second"
-                ? "bg-[#223d2e] text-[#a2d8b4] shadow-md border border-emerald-900/30"
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 : "text-emerald-600/70 hover:text-emerald-500"
             }`}
           >
@@ -721,13 +597,7 @@ const SubjectWiseResult = ({ initialClass, initialYear, onBack }) => {
         {divisions.length > 1 && (
           <div className="space-y-3">
             <h3 className="text-sm font-bold text-[#a2d8b4]/90 text-center">
-<<<<<<< HEAD
               {language === "English" ? "Select Division" : "तुकडी निवडा (Select Division)"}
-=======
-              {language === "English"
-                ? "Select Division"
-                : "तुकडी निवडा (Select Division)"}
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
             </h3>
             <div className="flex flex-wrap justify-center gap-3">
               {divisions.map((div) => (
@@ -750,13 +620,8 @@ const SubjectWiseResult = ({ initialClass, initialYear, onBack }) => {
         {/* Info Text */}
         <div className="space-y-4 pt-4 text-center">
           <p className="text-sm text-emerald-100/90 leading-relaxed max-w-md mx-auto">
-<<<<<<< HEAD
             {language === "English" 
               ? "Hello, the learning outcomes achievement register is attached student-wise." 
-=======
-            {language === "English"
-              ? "Hello, the learning outcomes achievement register is attached student-wise."
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               : "नमस्कार, अध्ययन निष्पत्तीनिहाय संपादणूक प्रगतीदर्शक नोंदतक्ता विद्यार्थीनिहाय जोडला आहे."}
           </p>
         </div>
@@ -776,14 +641,7 @@ const SubjectWiseResult = ({ initialClass, initialYear, onBack }) => {
               </>
             ) : (
               <>
-<<<<<<< HEAD
                 <AlertTriangle size={15} className="shrink-0 mt-0.5 text-[#ff9800]" />
-=======
-                <AlertTriangle
-                  size={15}
-                  className="shrink-0 mt-0.5 text-[#ff9800]"
-                />
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 <span className="text-[#ff9800]/90">
                   {language === "English"
                     ? "School Name is missing in School Info."
@@ -796,28 +654,11 @@ const SubjectWiseResult = ({ initialClass, initialYear, onBack }) => {
           {/* Headmaster Name Check */}
           <div className="flex items-start gap-2.5">
             {(() => {
-<<<<<<< HEAD
               const hmName = schoolData?.headmasterName || schoolData?.hmName || schoolData?.headmaster || cceSettings?.headmasterName || cceSettings?.principalName || "";
               if (hmName.trim()) {
                 return (
                   <>
                     <Check size={15} className="shrink-0 mt-0.5 text-emerald-400" />
-=======
-              const hmName =
-                schoolData?.headmasterName ||
-                schoolData?.hmName ||
-                schoolData?.headmaster ||
-                cceSettings?.headmasterName ||
-                cceSettings?.principalName ||
-                "";
-              if (hmName.trim()) {
-                return (
-                  <>
-                    <Check
-                      size={15}
-                      className="shrink-0 mt-0.5 text-emerald-400"
-                    />
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     <span>
                       {language === "English"
                         ? `Headmaster: ${hmName}`
@@ -828,14 +669,7 @@ const SubjectWiseResult = ({ initialClass, initialYear, onBack }) => {
               } else {
                 return (
                   <>
-<<<<<<< HEAD
                     <AlertTriangle size={15} className="shrink-0 mt-0.5 text-[#ff9800]" />
-=======
-                    <AlertTriangle
-                      size={15}
-                      className="shrink-0 mt-0.5 text-[#ff9800]"
-                    />
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     <span className="text-[#ff9800]/90">
                       {language === "English"
                         ? "Headmaster name is missing in School Info."
@@ -850,24 +684,11 @@ const SubjectWiseResult = ({ initialClass, initialYear, onBack }) => {
           {/* Caste Configured Check */}
           <div className="flex items-start gap-2.5">
             {(() => {
-<<<<<<< HEAD
               const missing = selectedStudents.filter(s => !s.caste || !s.caste.trim());
               if (selectedStudents.length === 0) {
                 return (
                   <>
                     <AlertTriangle size={15} className="shrink-0 mt-0.5 text-[#ff9800]" />
-=======
-              const missing = selectedStudents.filter(
-                (s) => !s.caste || !s.caste.trim(),
-              );
-              if (selectedStudents.length === 0) {
-                return (
-                  <>
-                    <AlertTriangle
-                      size={15}
-                      className="shrink-0 mt-0.5 text-[#ff9800]"
-                    />
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     <span className="text-[#ff9800]/90">
                       {language === "English"
                         ? "No student data available to check castes."
@@ -876,7 +697,6 @@ const SubjectWiseResult = ({ initialClass, initialYear, onBack }) => {
                   </>
                 );
               } else if (missing.length > 0) {
-<<<<<<< HEAD
                 const sampleNames = missing.slice(0, 2).map(s => s.fullName || s.studentName || s.name || `Roll ${s.rollNo || s.srNo}`).join(", ");
                 const remaining = missing.length - 2;
                 const sampleText = remaining > 0 
@@ -885,29 +705,6 @@ const SubjectWiseResult = ({ initialClass, initialYear, onBack }) => {
                 return (
                   <>
                     <AlertTriangle size={15} className="shrink-0 mt-0.5 text-[#ff9800]" />
-=======
-                const sampleNames = missing
-                  .slice(0, 2)
-                  .map(
-                    (s) =>
-                      s.fullName ||
-                      s.studentName ||
-                      s.name ||
-                      `Roll ${s.rollNo || s.srNo}`,
-                  )
-                  .join(", ");
-                const remaining = missing.length - 2;
-                const sampleText =
-                  remaining > 0
-                    ? `${sampleNames} + ${remaining} ${language === "English" ? "more" : "इतर"}`
-                    : sampleNames;
-                return (
-                  <>
-                    <AlertTriangle
-                      size={15}
-                      className="shrink-0 mt-0.5 text-[#ff9800]"
-                    />
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     <span className="text-[#ff9800]/90">
                       {language === "English"
                         ? `Caste missing for ${missing.length} student(s) (${sampleText}). Select it in Student Info.`
@@ -918,14 +715,7 @@ const SubjectWiseResult = ({ initialClass, initialYear, onBack }) => {
               } else {
                 return (
                   <>
-<<<<<<< HEAD
                     <Check size={15} className="shrink-0 mt-0.5 text-emerald-400" />
-=======
-                    <Check
-                      size={15}
-                      className="shrink-0 mt-0.5 text-emerald-400"
-                    />
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     <span>
                       {language === "English"
                         ? "Castes configured for all students."
@@ -939,20 +729,10 @@ const SubjectWiseResult = ({ initialClass, initialYear, onBack }) => {
 
           {/* Paper orientation disclaimer */}
           <div className="flex items-start gap-2.5">
-<<<<<<< HEAD
             <AlertTriangle size={15} className="shrink-0 mt-0.5 text-emerald-500" />
             <span>
               {language === "English" 
                 ? "This table will be printed on landscape A4 sheets, containing formative and summative scores for all subjects." 
-=======
-            <AlertTriangle
-              size={15}
-              className="shrink-0 mt-0.5 text-emerald-500"
-            />
-            <span>
-              {language === "English"
-                ? "This table will be printed on landscape A4 sheets, containing formative and summative scores for all subjects."
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 : "हा तक्ता सर्व विषयांच्या आकारिक व संकलित मूल्यमापन गुणांसह landscape A4 पानांवर प्रिंट केला जाईल."}
             </span>
           </div>
@@ -968,7 +748,6 @@ const SubjectWiseResult = ({ initialClass, initialYear, onBack }) => {
             <>
               <Loader2 className="size-4 animate-spin" />
               <span>
-<<<<<<< HEAD
                 {language === "English" ? "Compiling results..." : "गुण तक्ते संकलित करत आहे..."}
               </span>
             </>
@@ -977,26 +756,9 @@ const SubjectWiseResult = ({ initialClass, initialYear, onBack }) => {
           )}
         </button>
 
-=======
-                {language === "English"
-                  ? "Compiling results..."
-                  : "गुण तक्ते संकलित करत आहे..."}
-              </span>
-            </>
-          ) : (
-            <span>
-              {language === "English" ? "Generate / Print" : "तयार करा"}
-            </span>
-          )}
-        </button>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       </div>
     </div>
   );
 };
 
-<<<<<<< HEAD
 export default SubjectWiseResult;
-=======
-export default SubjectWiseResult;
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557

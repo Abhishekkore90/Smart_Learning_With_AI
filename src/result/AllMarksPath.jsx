@@ -4,13 +4,7 @@ import { motion } from "framer-motion";
 
 function AllMarksPath() {
   const navigate = useNavigate();
-<<<<<<< HEAD
   const [language, setLanguage] = useState(localStorage.getItem("language") || "English");
-=======
-  const [language, setLanguage] = useState(
-    localStorage.getItem("language") || "English",
-  );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   const [activeButton, setActiveButton] = useState(null);
 
   useEffect(() => {
@@ -19,7 +13,6 @@ function AllMarksPath() {
 
   const buttons = [
     {
-<<<<<<< HEAD
       label: { English: "Enter Marks of 1st to 8th", Marathi: "पहिली ते आठवी साठी गुण प्रविष्ट करा" },
       path: "/GunaNeendani"
     },
@@ -27,21 +20,6 @@ function AllMarksPath() {
       label: { English: "Enter Marks of 9th 10th", Marathi: "नववी दहावी साठी गुण प्रविष्ट करा" },
       path: "/markenterssc"
     }
-=======
-      label: {
-        English: "Enter Marks of 1st to 8th",
-        Marathi: "पहिली ते आठवी साठी गुण प्रविष्ट करा",
-      },
-      path: "/GunaNeendani",
-    },
-    {
-      label: {
-        English: "Enter Marks of 9th 10th",
-        Marathi: "नववी दहावी साठी गुण प्रविष्ट करा",
-      },
-      path: "/markenterssc",
-    },
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   ];
 
   useEffect(() => {
@@ -50,11 +28,7 @@ function AllMarksPath() {
     setLanguage(storedLanguage);
     if (storedActive) setActiveButton(storedActive);
   }, []);
-<<<<<<< HEAD
   
-=======
-
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   const handleClick = (path) => {
     setActiveButton(path);
     localStorage.setItem("activePath", path);
@@ -62,10 +36,7 @@ function AllMarksPath() {
       navigate(path);
     }, 150);
   };
-<<<<<<< HEAD
   
-=======
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
   const renderButton = (button) => {
     const isActive = activeButton === button.path;
@@ -99,14 +70,7 @@ function AllMarksPath() {
   };
 
   return (
-<<<<<<< HEAD
     <div style={{ textAlign: "center", padding: "20px", marginBottom: "20px" }} className="main-content-of-page">
-=======
-    <div
-      style={{ textAlign: "center", padding: "20px", marginBottom: "20px" }}
-      className="main-content-of-page"
-    >
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       {buttons.map(renderButton)}
     </div>
   );

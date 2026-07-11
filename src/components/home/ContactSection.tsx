@@ -185,12 +185,7 @@ export function ContactPage() {
                     {
                       icon: MapPin,
                       title: t.contact_info_location,
-<<<<<<< HEAD
                       detail: "145/A, 194/A/2, PL NO 100, SHREE CAPITAL-2, WARNALI, WILLINGDON COLLEGE SANGLI, MIRAJ, SANGLI, MAHARASHTRA - 416415",
-=======
-                      detail:
-                        "145/A, 194/A/2, PL NO 100, SHREE CAPITAL-2, WARNALI, WILLINGDON COLLEGE SANGLI, MIRAJ, SANGLI, MAHARASHTRA - 416415",
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                       sub: "Main Office",
                     },
                     {

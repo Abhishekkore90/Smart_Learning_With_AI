@@ -108,12 +108,7 @@ function FloatInput({
   clearable?: boolean;
 }) {
   const [focused, setFocused] = useState(false);
-<<<<<<< HEAD
   const filled = value !== undefined && value !== null && value.toString().length > 0;
-=======
-  const filled =
-    value !== undefined && value !== null && value.toString().length > 0;
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   return (
     <div className="relative mb-4">
       <label
@@ -127,27 +122,15 @@ function FloatInput({
           paddingRight: focused || filled ? "4px" : "0",
         }}
       >
-<<<<<<< HEAD
         {label}{required && "*"}
-=======
-        {label}
-        {required && "*"}
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       </label>
       <input
         type={type}
         value={value || ""}
-<<<<<<< HEAD
         onChange={e => onChange(e.target.value)}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         placeholder={focused ? (placeholder || "") : ""}
-=======
-        onChange={(e) => onChange(e.target.value)}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        placeholder={focused ? placeholder || "" : ""}
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         className={`w-full px-4 py-4 rounded-xl text-sm font-medium outline-none transition-all ${clearable ? "pr-10" : ""}`}
         style={{
           background: "transparent",
@@ -204,31 +187,14 @@ function PlainInput({
 
 // Image upload box
 function ImageBox({
-<<<<<<< HEAD
   label, value, onChange,
 }: {
   label: string; value: string; onChange: (v: string) => void;
-=======
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 }) {
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-<<<<<<< HEAD
     if (file.size > 500 * 1024) { toast.error("फाइल 500KB पेक्षा लहान असावी"); return; }
-=======
-    if (file.size > 500 * 1024) {
-      toast.error("फाइल 500KB पेक्षा लहान असावी");
-      return;
-    }
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     const reader = new FileReader();
     reader.onloadend = () => onChange(reader.result as string);
     reader.readAsDataURL(file);
@@ -246,32 +212,12 @@ function ImageBox({
           }}
         >
           {value ? (
-<<<<<<< HEAD
             <img src={value} alt={label} className="w-full h-full object-contain" />
           ) : (
             <p className="text-xs text-center text-slate-400">Clik to add image</p>
           )}
         </div>
         <input type="file" accept="image/*" onChange={handleFile} className="hidden" />
-=======
-            <img
-              src={value}
-              alt={label}
-              className="w-full h-full object-contain"
-            />
-          ) : (
-            <p className="text-xs text-center text-slate-400">
-              Clik to add image
-            </p>
-          )}
-        </div>
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleFile}
-          className="hidden"
-        />
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       </label>
     </div>
   );
@@ -286,13 +232,7 @@ export function CCEStudentInfo({
 }) {
   const [students, setStudents] = useState<StudentRecord[]>([]);
   const [loading, setLoading] = useState(true);
-<<<<<<< HEAD
   const [editingStudent, setEditingStudent] = useState<StudentRecord | null>(null);
-=======
-  const [editingStudent, setEditingStudent] = useState<StudentRecord | null>(
-    null,
-  );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   const [details, setDetails] = useState<StudentDetails>(emptyDetails());
   const [saving, setSaving] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
@@ -309,15 +249,8 @@ export function CCEStudentInfo({
   const [editGender, setEditGender] = useState("Male");
   const [editPhotoUrl, setEditPhotoUrl] = useState("");
 
-<<<<<<< HEAD
   const set = <K extends keyof StudentDetails>(key: K, val: StudentDetails[K]) =>
     setDetails((prev) => ({ ...prev, [key]: val }));
-=======
-  const set = <K extends keyof StudentDetails>(
-    key: K,
-    val: StudentDetails[K],
-  ) => setDetails((prev) => ({ ...prev, [key]: val }));
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
   const academicYear = localStorage.getItem("cce_academic_year") || "2025-2026";
 
@@ -327,11 +260,7 @@ export function CCEStudentInfo({
     const q = query(
       collection(db, "users"),
       where("role", "==", "student"),
-<<<<<<< HEAD
       where("class", "==", selectedClass)
-=======
-      where("class", "==", selectedClass),
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     );
     const unsub = onSnapshot(q, (snap) => {
       const data = snap.docs.map((d) => {
@@ -349,13 +278,7 @@ export function CCEStudentInfo({
           role: "student",
         } as StudentRecord;
       });
-<<<<<<< HEAD
       data.sort((a, b) => parseInt(a.rollNo || "999") - parseInt(b.rollNo || "999"));
-=======
-      data.sort(
-        (a, b) => parseInt(a.rollNo || "999") - parseInt(b.rollNo || "999"),
-      );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       setStudents(data);
       setLoading(false);
     });
@@ -504,13 +427,7 @@ export function CCEStudentInfo({
           >
             <ArrowLeft className="size-5" />
           </button>
-<<<<<<< HEAD
           <h2 className="text-base font-bold text-slate-800">नवीन विद्यार्थी जोडा</h2>
-=======
-          <h2 className="text-base font-bold text-slate-800">
-            नवीन विद्यार्थी जोडा
-          </h2>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         </div>
 
         {/* Form */}
@@ -541,25 +458,13 @@ export function CCEStudentInfo({
                 { label: "पुरुष", value: "Male" },
                 { label: "स्त्री", value: "Female" },
               ].map((opt) => (
-<<<<<<< HEAD
                 <label key={opt.value} className="flex items-center gap-2.5 cursor-pointer">
-=======
-                <label
-                  key={opt.value}
-                  className="flex items-center gap-2.5 cursor-pointer"
-                >
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   <div
                     onClick={() => setNewGender(opt.value)}
                     className="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer"
                     style={{
                       borderColor: "#3b82f6",
-<<<<<<< HEAD
                       background: newGender === opt.value ? "#3b82f6" : "transparent",
-=======
-                      background:
-                        newGender === opt.value ? "#3b82f6" : "transparent",
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     }}
                   >
                     {newGender === opt.value && (
@@ -611,13 +516,7 @@ export function CCEStudentInfo({
           >
             <ArrowLeft className="size-5" />
           </button>
-<<<<<<< HEAD
           <h2 className="text-base font-bold text-slate-800">विद्यार्थी संपादन करा</h2>
-=======
-          <h2 className="text-base font-bold text-slate-800">
-            विद्यार्थी संपादन करा
-          </h2>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         </div>
 
         {/* Student name badge */}
@@ -663,25 +562,13 @@ export function CCEStudentInfo({
                 { label: "पुरुष", value: "Male" },
                 { label: "स्त्री", value: "Female" },
               ].map((opt) => (
-<<<<<<< HEAD
                 <label key={opt.value} className="flex items-center gap-2.5 cursor-pointer">
-=======
-                <label
-                  key={opt.value}
-                  className="flex items-center gap-2.5 cursor-pointer"
-                >
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   <div
                     onClick={() => setEditGender(opt.value)}
                     className="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer"
                     style={{
                       borderColor: "#3b82f6",
-<<<<<<< HEAD
                       background: editGender === opt.value ? "#3b82f6" : "transparent",
-=======
-                      background:
-                        editGender === opt.value ? "#3b82f6" : "transparent",
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     }}
                   >
                     {editGender === opt.value && (
@@ -792,13 +679,7 @@ export function CCEStudentInfo({
 
           {/* आई/पालक माहिती */}
           <div>
-<<<<<<< HEAD
             <p className="text-slate-800 text-sm font-bold mt-4 mb-2 ml-1">आई/पालक माहिती</p>
-=======
-            <p className="text-slate-800 text-sm font-bold mt-4 mb-2 ml-1">
-              आई/पालक माहिती
-            </p>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
             <div className="space-y-3">
               <FloatInput
                 label="नाव"
@@ -821,13 +702,7 @@ export function CCEStudentInfo({
 
           {/* वडील/पालक माहिती */}
           <div>
-<<<<<<< HEAD
             <p className="text-slate-800 text-sm font-bold mt-4 mb-2 ml-1">वडील/पालक माहिती</p>
-=======
-            <p className="text-slate-800 text-sm font-bold mt-4 mb-2 ml-1">
-              वडील/पालक माहिती
-            </p>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
             <div className="space-y-3">
               <FloatInput
                 label="नाव"
@@ -876,37 +751,17 @@ export function CCEStudentInfo({
               प्रदेश प्रकार
             </label>
             <div className="flex items-center gap-8 pl-1 mb-4">
-<<<<<<< HEAD
               {([
                 { label: "ग्रामीण", value: "ग्रामीण" },
                 { label: "शहरी", value: "शहरी" },
               ] as const).map((opt) => (
                 <label key={opt.value} className="flex items-center gap-2.5 cursor-pointer">
-=======
-              {(
-                [
-                  { label: "ग्रामीण", value: "ग्रामीण" },
-                  { label: "शहरी", value: "शहरी" },
-                ] as const
-              ).map((opt) => (
-                <label
-                  key={opt.value}
-                  className="flex items-center gap-2.5 cursor-pointer"
-                >
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   <div
                     onClick={() => set("regionType", opt.value)}
                     className="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer"
                     style={{
                       borderColor: "#3b82f6",
-<<<<<<< HEAD
                       background: details.regionType === opt.value ? "#3b82f6" : "transparent",
-=======
-                      background:
-                        details.regionType === opt.value
-                          ? "#3b82f6"
-                          : "transparent",
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     }}
                   >
                     {details.regionType === opt.value && (
@@ -956,13 +811,7 @@ export function CCEStudentInfo({
         >
           <ArrowLeft className="size-5" />
         </button>
-<<<<<<< HEAD
         <h2 className="text-lg font-bold tracking-tight text-slate-800">विद्यार्थ्यांची माहिती</h2>
-=======
-        <h2 className="text-lg font-bold tracking-tight text-slate-800">
-          विद्यार्थ्यांची माहिती
-        </h2>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       </div>
 
       {/* Student List */}
@@ -970,23 +819,11 @@ export function CCEStudentInfo({
         {loading ? (
           <div className="flex flex-col items-center justify-center py-24 gap-3">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-<<<<<<< HEAD
             <span className="text-xs text-slate-400 font-bold">विद्यार्थी लोड होत आहेत...</span>
           </div>
         ) : students.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <p className="text-slate-400 font-bold text-sm">अद्याप कोणताही विद्यार्थी जोडला नाही</p>
-=======
-            <span className="text-xs text-slate-400 font-bold">
-              विद्यार्थी लोड होत आहेत...
-            </span>
-          </div>
-        ) : students.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <p className="text-slate-400 font-bold text-sm">
-              अद्याप कोणताही विद्यार्थी जोडला नाही
-            </p>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           </div>
         ) : (
           <div className="space-y-0.5">

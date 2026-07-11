@@ -13,19 +13,8 @@ const DEFAULT_SUBJECTS = [
   "श शारीरिक शिक्षण",
 ];
 
-<<<<<<< HEAD
 export function CCESubjectConfig({ selectedClass, academicYear, onBack }: {
   selectedClass: string; academicYear: string; onBack: () => void;
-=======
-export function CCESubjectConfig({
-  selectedClass,
-  academicYear,
-  onBack,
-}: {
-  selectedClass: string;
-  academicYear: string;
-  onBack: () => void;
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 }) {
   const [subjects, setSubjects] = useState<string[]>(DEFAULT_SUBJECTS);
   const [loading, setLoading] = useState(true);
@@ -41,13 +30,7 @@ export function CCESubjectConfig({
         if (snap.exists() && snap.data().subjects) {
           setSubjects(snap.data().subjects);
         }
-<<<<<<< HEAD
       } catch (err) { console.error(err); }
-=======
-      } catch (err) {
-        console.error(err);
-      }
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       setLoading(false);
     };
     load();
@@ -56,38 +39,17 @@ export function CCESubjectConfig({
   const save = async () => {
     setSaving(true);
     try {
-<<<<<<< HEAD
       await setDoc(doc(db, "cce_settings", `${selectedClass}_${academicYear}`), {
         subjects, class: selectedClass, academicYear, updatedAt: new Date().toISOString(),
       }, { merge: true });
       toast.success("विषय यशस्वीरित्या जतन केले!");
     } catch (err: any) { toast.error("जतन अयशस्वी: " + err.message); }
-=======
-      await setDoc(
-        doc(db, "cce_settings", `${selectedClass}_${academicYear}`),
-        {
-          subjects,
-          class: selectedClass,
-          academicYear,
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true },
-      );
-      toast.success("विषय यशस्वीरित्या जतन केले!");
-    } catch (err: any) {
-      toast.error("जतन अयशस्वी: " + err.message);
-    }
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     setSaving(false);
   };
 
   const addSubject = () => {
     if (newSubject.trim() && !subjects.includes(newSubject.trim())) {
-<<<<<<< HEAD
       setSubjects(prev => [...prev, newSubject.trim()]);
-=======
-      setSubjects((prev) => [...prev, newSubject.trim()]);
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       setNewSubject("");
     } else if (subjects.includes(newSubject.trim())) {
       toast.error("हा विषय आधीच जोडलेला आहे.");
@@ -95,20 +57,12 @@ export function CCESubjectConfig({
   };
 
   const removeSubject = (sub: string) => {
-<<<<<<< HEAD
     setSubjects(prev => prev.filter(s => s !== sub));
-=======
-    setSubjects((prev) => prev.filter((s) => s !== sub));
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   };
 
   const moveSubjectUp = (index: number) => {
     if (index === 0) return;
-<<<<<<< HEAD
     setSubjects(prev => {
-=======
-    setSubjects((prev) => {
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       const list = [...prev];
       const temp = list[index];
       list[index] = list[index - 1];
@@ -119,11 +73,7 @@ export function CCESubjectConfig({
 
   const moveSubjectDown = (index: number) => {
     if (index === subjects.length - 1) return;
-<<<<<<< HEAD
     setSubjects(prev => {
-=======
-    setSubjects((prev) => {
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       const list = [...prev];
       const temp = list[index];
       list[index] = list[index + 1];
@@ -132,20 +82,11 @@ export function CCESubjectConfig({
     });
   };
 
-<<<<<<< HEAD
   if (loading) return (
     <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-2xl p-10 flex items-center justify-center min-h-[300px]">
       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
     </div>
   );
-=======
-  if (loading)
-    return (
-      <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-2xl p-10 flex items-center justify-center min-h-[300px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-      </div>
-    );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
   return (
     <div
@@ -161,17 +102,8 @@ export function CCESubjectConfig({
           <ArrowLeft className="size-5" />
         </button>
         <div>
-<<<<<<< HEAD
           <h2 className="text-[17px] font-black text-slate-800 tracking-tight">विषय निश्चिती</h2>
           <p className="text-[11px] text-blue-600 font-bold uppercase tracking-wider">{selectedClass} • {academicYear}</p>
-=======
-          <h2 className="text-[17px] font-black text-slate-800 tracking-tight">
-            विषय निश्चिती
-          </h2>
-          <p className="text-[11px] text-blue-600 font-bold uppercase tracking-wider">
-            {selectedClass} • {academicYear}
-          </p>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         </div>
       </div>
 
@@ -179,36 +111,17 @@ export function CCESubjectConfig({
       <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
         <div className="space-y-4 max-w-xl mx-auto">
           <p className="text-slate-600 text-[13px] font-medium leading-relaxed bg-blue-50/50 p-4 rounded-2xl border border-blue-100">
-<<<<<<< HEAD
             येथे तुम्ही <b>{selectedClass}</b> च्या वर्गासाठी विषय जोडू शकता, काढून टाकू शकता किंवा त्यांचा क्रम ठरवू शकता. तुम्ही लावलेला क्रम थेट <b>गुण नोंदणी</b> मध्ये लागू होईल.
-=======
-            येथे तुम्ही <b>{selectedClass}</b> च्या वर्गासाठी विषय जोडू शकता,
-            काढून टाकू शकता किंवा त्यांचा क्रम ठरवू शकता. तुम्ही लावलेला क्रम
-            थेट <b>गुण नोंदणी</b> मध्ये लागू होईल.
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
           </p>
 
           <div className="space-y-3 pt-2">
             {subjects.map((sub, idx) => (
-<<<<<<< HEAD
               <div key={sub} className="flex items-center justify-between bg-white border border-slate-200 p-3.5 rounded-2xl shadow-sm hover:border-blue-300 transition-colors group">
-=======
-              <div
-                key={sub}
-                className="flex items-center justify-between bg-white border border-slate-200 p-3.5 rounded-2xl shadow-sm hover:border-blue-300 transition-colors group"
-              >
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 <div className="flex items-center gap-3.5">
                   <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-bold font-mono">
                     {idx + 1}
                   </div>
-<<<<<<< HEAD
                   <span className="text-slate-800 text-[15px] font-bold">{sub}</span>
-=======
-                  <span className="text-slate-800 text-[15px] font-bold">
-                    {sub}
-                  </span>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 </div>
                 <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
                   <button

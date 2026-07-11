@@ -58,14 +58,7 @@ function UploaderDetailDashboard() {
     if (!isAdmin) {
       navigate({
         to: "/login",
-<<<<<<< HEAD
         search: { redirect: `/admin/uploader/${uploaderId}`, role: "admin" } as any,
-=======
-        search: {
-          redirect: `/admin/uploader/${uploaderId}`,
-          role: "admin",
-        } as any,
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       });
       return;
     }

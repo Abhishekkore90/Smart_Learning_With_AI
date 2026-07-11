@@ -89,18 +89,10 @@ export function StudentHeader() {
           <div className="relative">
             <button
               onClick={() => setLangOpen(!langOpen)}
-<<<<<<< HEAD
               className={`flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all border shadow-sm ${langOpen
                 ? "bg-white text-slate-900 border-white"
                 : "bg-white/10 border-white/20 text-white hover:bg-white/20"
                 }`}
-=======
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all border shadow-sm ${
-                langOpen
-                  ? "bg-white text-slate-900 border-white"
-                  : "bg-white/10 border-white/20 text-white hover:bg-white/20"
-              }`}
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
             >
               <Globe className="size-4" />
               <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">
@@ -130,18 +122,10 @@ export function StudentHeader() {
                         setLang(l.code as any);
                         setLangOpen(false);
                       }}
-<<<<<<< HEAD
                       className={`px-3 py-2 text-left rounded-xl transition-all flex flex-col ${lang === l.code
                         ? "bg-indigo-50 text-indigo-600 font-bold"
                         : "hover:bg-slate-50 text-slate-600 hover:text-slate-900"
                         }`}
-=======
-                      className={`px-3 py-2 text-left rounded-xl transition-all flex flex-col ${
-                        lang === l.code
-                          ? "bg-indigo-50 text-indigo-600 font-bold"
-                          : "hover:bg-slate-50 text-slate-600 hover:text-slate-900"
-                      }`}
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                     >
                       <span className="text-xs">{l.label}</span>
                     </button>

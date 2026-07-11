@@ -10,12 +10,7 @@ const PDF_OPTIONS = [
   },
   {
     id: "learning_outcomes",
-<<<<<<< HEAD
     label: "अध्ययन निष्पतीनिहाय संपादणूक प्रगतीदर्शक नोंदतक्ता\n(विद्यार्थीनिहाय)",
-=======
-    label:
-      "अध्ययन निष्पतीनिहाय संपादणूक प्रगतीदर्शक नोंदतक्ता\n(विद्यार्थीनिहाय)",
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     description: "विद्यार्थीनिहाय अध्ययन निष्पती प्रगती",
   },
   {
@@ -35,42 +30,19 @@ const PDF_OPTIONS = [
   },
 ];
 
-<<<<<<< HEAD
 export function CCEPdfCreation({ selectedClass, academicYear, onBack }: { selectedClass: string; academicYear: string; onBack: () => void }) {
-=======
-export function CCEPdfCreation({
-  selectedClass,
-  academicYear,
-  onBack,
-}: {
-  selectedClass: string;
-  academicYear: string;
-  onBack: () => void;
-}) {
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   const [generating, setGenerating] = useState<string | null>(null);
 
   const handleGenerate = async (optionId: string) => {
     setGenerating(optionId);
     // Simulate PDF generation delay
-<<<<<<< HEAD
     await new Promise(r => setTimeout(r, 1500));
-=======
-    await new Promise((r) => setTimeout(r, 1500));
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     toast.info("PDF निर्मिती लवकरच उपलब्ध होईल.");
     setGenerating(null);
   };
 
   return (
-<<<<<<< HEAD
     <div className="bg-white text-slate-800 rounded-[2.5rem] border border-slate-200 shadow-2xl min-h-[600px] flex flex-col font-sans select-none" style={{ fontFamily: "'Inter', 'Noto Sans Devanagari', sans-serif" }}>
-=======
-    <div
-      className="bg-white text-slate-800 rounded-[2.5rem] border border-slate-200 shadow-2xl min-h-[600px] flex flex-col font-sans select-none"
-      style={{ fontFamily: "'Inter', 'Noto Sans Devanagari', sans-serif" }}
-    >
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       {/* Header */}
       <div className="flex items-center gap-4 px-5 py-4 border-b border-slate-100">
         <button
@@ -79,13 +51,7 @@ export function CCEPdfCreation({
         >
           <ArrowLeft className="size-5" />
         </button>
-<<<<<<< HEAD
         <h2 className="text-lg font-bold tracking-tight text-slate-800">PDF निर्मिती</h2>
-=======
-        <h2 className="text-lg font-bold tracking-tight text-slate-800">
-          PDF निर्मिती
-        </h2>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       </div>
 
       {/* PDF Options List */}

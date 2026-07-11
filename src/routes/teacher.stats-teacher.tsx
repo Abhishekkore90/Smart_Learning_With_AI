@@ -22,13 +22,7 @@ function TeacherStatsPage() {
           >
             <ChevronLeft className="size-3.5" /> Back
           </Link>
-<<<<<<< HEAD
           <span className="text-sm font-black text-slate-700">शिक्षक संचिका</span>
-=======
-          <span className="text-sm font-black text-slate-700">
-            शिक्षक संचिका
-          </span>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         </div>
 
         {/* Full-screen iframe showing the sanchika directly */}

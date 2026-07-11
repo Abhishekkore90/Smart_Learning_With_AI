@@ -22,26 +22,10 @@ const DEFAULT_SUBJECTS = [
 
 // Floating label input component (matches image style)
 function FloatInput({
-<<<<<<< HEAD
   label, value, onChange, placeholder, required, type = "text",
 }: {
   label: string; value: string; onChange: (v: string) => void;
   placeholder?: string; required?: boolean; type?: string;
-=======
-  label,
-  value,
-  onChange,
-  placeholder,
-  required,
-  type = "text",
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  required?: boolean;
-  type?: string;
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 }) {
   const [focused, setFocused] = useState(false);
   const filled = value.length > 0;
@@ -58,27 +42,15 @@ function FloatInput({
           paddingRight: focused || filled ? "4px" : "0",
         }}
       >
-<<<<<<< HEAD
         {label}{required && "*"}
-=======
-        {label}
-        {required && "*"}
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       </label>
       <input
         type={type}
         value={value}
-<<<<<<< HEAD
         onChange={e => onChange(e.target.value)}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         placeholder={focused ? (placeholder || "") : ""}
-=======
-        onChange={(e) => onChange(e.target.value)}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        placeholder={focused ? placeholder || "" : ""}
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         className="w-full px-4 py-4 rounded-xl text-sm font-medium outline-none transition-all"
         style={{
           background: "transparent",
@@ -92,24 +64,10 @@ function FloatInput({
 
 // Floating label dropdown for माध्यम
 function FloatSelect({
-<<<<<<< HEAD
   label, value, onChange, options, required,
 }: {
   label: string; value: string; onChange: (v: string) => void;
   options: string[]; required?: boolean;
-=======
-  label,
-  value,
-  onChange,
-  options,
-  required,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: string[];
-  required?: boolean;
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 }) {
   const [open, setOpen] = useState(false);
   const filled = value.length > 0;
@@ -126,12 +84,7 @@ function FloatSelect({
           paddingRight: "4px",
         }}
       >
-<<<<<<< HEAD
         {label}{required && "*"}
-=======
-        {label}
-        {required && "*"}
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       </label>
       <button
         type="button"
@@ -149,28 +102,12 @@ function FloatSelect({
       {open && (
         <div
           className="absolute left-0 right-0 z-50 rounded-xl overflow-hidden shadow-2xl"
-<<<<<<< HEAD
           style={{ top: "calc(100% + 4px)", background: "white", border: "1px solid #e2e8f0" }}
         >
           {options.map(opt => (
             <button
               key={opt}
               onClick={() => { onChange(opt); setOpen(false); }}
-=======
-          style={{
-            top: "calc(100% + 4px)",
-            background: "white",
-            border: "1px solid #e2e8f0",
-          }}
-        >
-          {options.map((opt) => (
-            <button
-              key={opt}
-              onClick={() => {
-                onChange(opt);
-                setOpen(false);
-              }}
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               className="w-full text-left px-4 py-3 text-sm transition-colors cursor-pointer"
               style={{
                 background: value === opt ? "#eff6ff" : "transparent",
@@ -189,33 +126,14 @@ function FloatSelect({
 
 // Image upload box
 function ImageBox({
-<<<<<<< HEAD
   label, value, onChange, wide,
 }: {
   label: string; value: string; onChange: (v: string) => void; wide?: boolean;
-=======
-  label,
-  value,
-  onChange,
-  wide,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  wide?: boolean;
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 }) {
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-<<<<<<< HEAD
     if (file.size > 500 * 1024) { toast.error("फाइल 500KB पेक्षा लहान असावी"); return; }
-=======
-    if (file.size > 500 * 1024) {
-      toast.error("फाइल 500KB पेक्षा लहान असावी");
-      return;
-    }
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     const reader = new FileReader();
     reader.onloadend = () => onChange(reader.result as string);
     reader.readAsDataURL(file);
@@ -223,14 +141,7 @@ function ImageBox({
   return (
     <div className="mb-4">
       <p className="text-sm font-medium mb-2 text-slate-600">{label}</p>
-<<<<<<< HEAD
       <label className="cursor-pointer block" style={{ width: wide ? "100%" : "160px" }}>
-=======
-      <label
-        className="cursor-pointer block"
-        style={{ width: wide ? "100%" : "160px" }}
-      >
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         <div
           className="rounded-xl flex items-center justify-center overflow-hidden transition-all"
           style={{
@@ -240,38 +151,17 @@ function ImageBox({
           }}
         >
           {value ? (
-<<<<<<< HEAD
             <img src={value} alt={label} className="w-full h-full object-contain" />
           ) : (
             <p className="text-xs text-center text-slate-400">Click to add image</p>
           )}
         </div>
         <input type="file" accept="image/*" onChange={handleFile} className="hidden" />
-=======
-            <img
-              src={value}
-              alt={label}
-              className="w-full h-full object-contain"
-            />
-          ) : (
-            <p className="text-xs text-center text-slate-400">
-              Click to add image
-            </p>
-          )}
-        </div>
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleFile}
-          className="hidden"
-        />
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       </label>
     </div>
   );
 }
 
-<<<<<<< HEAD
 export function CCESettings({ selectedClass, academicYear, onBack }: {
   selectedClass: string; academicYear: string; onBack: () => void;
 }) {
@@ -280,29 +170,6 @@ export function CCESettings({ selectedClass, academicYear, onBack }: {
     medium: "मराठी - Marathi", slogan: "",
     teacherName: "", teacherMobile: "", principalName: "",
     schoolLogo: "", signatureUrl: "", principalSignature: "",
-=======
-export function CCESettings({
-  selectedClass,
-  academicYear,
-  onBack,
-}: {
-  selectedClass: string;
-  academicYear: string;
-  onBack: () => void;
-}) {
-  const [settings, setSettings] = useState({
-    schoolName: "",
-    address: "",
-    udiseCode: "",
-    medium: "मराठी - Marathi",
-    slogan: "",
-    teacherName: "",
-    teacherMobile: "",
-    principalName: "",
-    schoolLogo: "",
-    signatureUrl: "",
-    principalSignature: "",
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     subjects: DEFAULT_SUBJECTS,
     isSemiEnglish: false,
   });
@@ -318,15 +185,8 @@ export function CCESettings({
       try {
         const ref = doc(db, "cce_settings", `${selectedClass}_${academicYear}`);
         const snap = await getDoc(ref);
-<<<<<<< HEAD
         if (snap.exists()) setSettings(prev => ({ ...prev, ...snap.data() }));
       } catch (err) { console.error(err); }
-=======
-        if (snap.exists()) setSettings((prev) => ({ ...prev, ...snap.data() }));
-      } catch (err) {
-        console.error(err);
-      }
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       setLoading(false);
     };
     load();
@@ -335,65 +195,29 @@ export function CCESettings({
   const save = async () => {
     setSaving(true);
     try {
-<<<<<<< HEAD
       await setDoc(doc(db, "cce_settings", `${selectedClass}_${academicYear}`), {
         ...settings, class: selectedClass, academicYear, updatedAt: new Date().toISOString(),
       }, { merge: true });
       toast.success("सेटिंग्ज जतन झाल्या!");
       setEditingSchoolInfo(false);
     } catch (err: any) { toast.error("जतन अयशस्वी: " + err.message); }
-=======
-      await setDoc(
-        doc(db, "cce_settings", `${selectedClass}_${academicYear}`),
-        {
-          ...settings,
-          class: selectedClass,
-          academicYear,
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true },
-      );
-      toast.success("सेटिंग्ज जतन झाल्या!");
-      setEditingSchoolInfo(false);
-    } catch (err: any) {
-      toast.error("जतन अयशस्वी: " + err.message);
-    }
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     setSaving(false);
   };
 
   const addSubject = () => {
     if (newSubject.trim() && !settings.subjects.includes(newSubject.trim())) {
-<<<<<<< HEAD
       setSettings(prev => ({ ...prev, subjects: [...prev.subjects, newSubject.trim()] }));
-=======
-      setSettings((prev) => ({
-        ...prev,
-        subjects: [...prev.subjects, newSubject.trim()],
-      }));
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       setNewSubject("");
     }
   };
 
   const removeSubject = (sub: string) => {
-<<<<<<< HEAD
     setSettings(prev => ({ ...prev, subjects: prev.subjects.filter(s => s !== sub) }));
-=======
-    setSettings((prev) => ({
-      ...prev,
-      subjects: prev.subjects.filter((s) => s !== sub),
-    }));
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   };
 
   const moveSubjectUp = (index: number) => {
     if (index === 0) return;
-<<<<<<< HEAD
     setSettings(prev => {
-=======
-    setSettings((prev) => {
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       const list = [...prev.subjects];
       const temp = list[index];
       list[index] = list[index - 1];
@@ -404,11 +228,7 @@ export function CCESettings({
 
   const moveSubjectDown = (index: number) => {
     if (index === settings.subjects.length - 1) return;
-<<<<<<< HEAD
     setSettings(prev => {
-=======
-    setSettings((prev) => {
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       const list = [...prev.subjects];
       const temp = list[index];
       list[index] = list[index + 1];
@@ -418,7 +238,6 @@ export function CCESettings({
   };
 
   const upd = (field: string) => (v: string) =>
-<<<<<<< HEAD
     setSettings(prev => ({ ...prev, [field]: v }));
 
   if (loading) return (
@@ -426,16 +245,6 @@ export function CCESettings({
       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
     </div>
   );
-=======
-    setSettings((prev) => ({ ...prev, [field]: v }));
-
-  if (loading)
-    return (
-      <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-2xl p-10 flex items-center justify-center min-h-[300px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-      </div>
-    );
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
   // ── SCHOOL INFO EDIT FORM (full page) ──
   if (editingSchoolInfo) {
@@ -460,7 +269,6 @@ export function CCESettings({
         {/* Scrollable form */}
         <div className="flex-1 overflow-y-auto pb-24 px-5 py-5">
           <FloatInput
-<<<<<<< HEAD
             label="शाळेचे नाव" value={settings.schoolName}
             onChange={upd("schoolName")} required
             placeholder="जिल्हा परिषद शाळा..."
@@ -486,45 +294,6 @@ export function CCESettings({
           />
           <FloatInput
             label="घोषवाक्य" value={settings.slogan}
-=======
-            label="शाळेचे नाव"
-            value={settings.schoolName}
-            onChange={upd("schoolName")}
-            required
-            placeholder="जिल्हा परिषद शाळा..."
-          />
-          <FloatInput
-            label="UDISE कोड"
-            value={settings.udiseCode}
-            onChange={upd("udiseCode")}
-            required
-            placeholder="27350800701"
-          />
-          <FloatSelect
-            label="माध्यम"
-            value={settings.medium}
-            onChange={upd("medium")}
-            options={MEDIUM_OPTIONS}
-            required
-          />
-          <FloatInput
-            label="पत्ता"
-            value={settings.address}
-            onChange={upd("address")}
-            required
-            placeholder="ता. जि...."
-          />
-          <FloatInput
-            label="मुख्याध्यापक"
-            value={settings.principalName}
-            onChange={upd("principalName")}
-            required
-            placeholder="श्री/श्रीमती..."
-          />
-          <FloatInput
-            label="घोषवाक्य"
-            value={settings.slogan}
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
             onChange={upd("slogan")}
             placeholder="ज्ञान, संस्कार..."
           />
@@ -569,32 +338,17 @@ export function CCESettings({
         >
           <ArrowLeft className="size-5" />
         </button>
-<<<<<<< HEAD
         <h2 className="text-lg font-bold tracking-tight text-slate-800">Settings</h2>
-=======
-        <h2 className="text-lg font-bold tracking-tight text-slate-800">
-          Settings
-        </h2>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
       </div>
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto px-5 py-4 space-y-6">
-<<<<<<< HEAD
 
-=======
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
         {/* Medium row → Change opens full-page editor */}
         <div className="border-b border-slate-100 pb-4">
           <p className="text-xs text-slate-500 font-medium mb-1">Medium</p>
           <div className="flex items-center justify-between">
-<<<<<<< HEAD
             <p className="text-slate-800 text-lg font-bold">{settings.medium}</p>
-=======
-            <p className="text-slate-800 text-lg font-bold">
-              {settings.medium}
-            </p>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
             <button
               onClick={() => setEditingSchoolInfo(true)}
               className="text-blue-600 text-sm font-bold hover:text-blue-700 transition-colors cursor-pointer"
@@ -606,7 +360,6 @@ export function CCESettings({
 
         {/* Is Semi-English */}
         <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-<<<<<<< HEAD
           <p className="text-slate-700 text-[15px] font-medium">Is class semi-english?</p>
           <div className="flex items-center gap-4">
             {[true, false].map((val) => (
@@ -617,47 +370,18 @@ export function CCESettings({
                   style={{
                     borderColor: "#3b82f6",
                     background: settings.isSemiEnglish === val ? "#3b82f6" : "transparent",
-=======
-          <p className="text-slate-700 text-[15px] font-medium">
-            Is class semi-english?
-          </p>
-          <div className="flex items-center gap-4">
-            {[true, false].map((val) => (
-              <label
-                key={String(val)}
-                className="flex items-center gap-2 cursor-pointer"
-              >
-                <div
-                  onClick={() =>
-                    setSettings((prev) => ({ ...prev, isSemiEnglish: val }))
-                  }
-                  className="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer"
-                  style={{
-                    borderColor: "#3b82f6",
-                    background:
-                      settings.isSemiEnglish === val
-                        ? "#3b82f6"
-                        : "transparent",
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   }}
                 >
                   {settings.isSemiEnglish === val && (
                     <div className="w-2.5 h-2.5 rounded-full bg-white" />
                   )}
                 </div>
-<<<<<<< HEAD
                 <span className="text-slate-600 text-sm">{val ? "Yes" : "No"}</span>
-=======
-                <span className="text-slate-600 text-sm">
-                  {val ? "Yes" : "No"}
-                </span>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               </label>
             ))}
           </div>
         </div>
 
-<<<<<<< HEAD
 
 
 
@@ -678,47 +402,11 @@ export function CCESettings({
             </div>
             <input
               type="file" accept="image/*"
-=======
-        {/* Teacher Signature */}
-        <div className="space-y-2">
-          <p className="text-slate-700 text-[15px] font-medium">
-            वर्गशिक्षक सही
-          </p>
-          <label className="cursor-pointer block" style={{ width: "160px" }}>
-            <div
-              className="rounded-xl flex items-center justify-center overflow-hidden transition-all"
-              style={{
-                height: "110px",
-                border: "1px solid #cbd5e1",
-                background: "#f8fafc",
-              }}
-            >
-              {settings.signatureUrl ? (
-                <img
-                  src={settings.signatureUrl}
-                  alt="Signature"
-                  className="w-full h-full object-contain"
-                />
-              ) : (
-                <p className="text-xs text-center text-slate-400">
-                  Click to add image
-                </p>
-              )}
-            </div>
-            <input
-              type="file"
-              accept="image/*"
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (!file) return;
                 const reader = new FileReader();
-<<<<<<< HEAD
                 reader.onloadend = () => upd("signatureUrl")(reader.result as string);
-=======
-                reader.onloadend = () =>
-                  upd("signatureUrl")(reader.result as string);
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 reader.readAsDataURL(file);
               }}
               className="hidden"

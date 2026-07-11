@@ -66,15 +66,7 @@ const SCHOOL_RESOURCES = [
   { m: "एमडीएम", e: "Mid-Day Meal (MDM)", icon: Utensils },
   { m: "शिक्षक संख्यिका", e: "Teacher Statistics", icon: ChartPie },
   { m: "विद्यार्थी संख्यिका", e: "Student Statistics", icon: Users2 },
-<<<<<<< HEAD
   { m: "परिपाठ नोंदवही", e: "Paripath Nondvahi (Daily Activity Record Book)", icon: Table },
-=======
-  {
-    m: "परिपाठ नोंदवही",
-    e: "Paripath Nondvahi (Daily Activity Record Book)",
-    icon: Table,
-  },
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   { m: "एसक्यूएफ मूल्यांकन", e: "SQAAF Evaluation", icon: Calculator },
   { m: "टाचन वही", e: "Tachanvahi (Teaching Record Notebook)", icon: Edit3 },
 ];

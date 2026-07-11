@@ -1,22 +1,5 @@
 import React, { useState, useEffect } from "react";
-<<<<<<< HEAD
 import { Lock, Eye, EyeOff, Loader2, KeyRound, School, User, UserCheck, MapPin, Milestone, GraduationCap, Save } from "lucide-react";
-=======
-import {
-  Lock,
-  Eye,
-  EyeOff,
-  Loader2,
-  KeyRound,
-  School,
-  User,
-  UserCheck,
-  MapPin,
-  Milestone,
-  GraduationCap,
-  Save,
-} from "lucide-react";
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 import { showToast as toast } from "@/lib/custom-toast";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -26,15 +9,7 @@ interface PinGateProps {
   enabled?: boolean;
 }
 
-<<<<<<< HEAD
 export function PinGate({ sectionKey, children, enabled = true }: PinGateProps) {
-=======
-export function PinGate({
-  sectionKey,
-  children,
-  enabled = true,
-}: PinGateProps) {
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
   const [isUnlocked, setIsUnlocked] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<"pin" | "setup">("pin");
   const [pin, setPin] = useState<string>("");
@@ -81,12 +56,7 @@ export function PinGate({
       const cleanedPin = pin.trim();
 
       // Access granted if PIN is 1234 or matches the saved UDISE code
-<<<<<<< HEAD
       const isCorrect = cleanedPin === "1234" || (cleanedUdise && cleanedPin === cleanedUdise);
-=======
-      const isCorrect =
-        cleanedPin === "1234" || (cleanedUdise && cleanedPin === cleanedUdise);
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
 
       if (isCorrect) {
         sessionStorage.setItem(storageKey, "true");
@@ -104,11 +74,7 @@ export function PinGate({
 
   const handleSaveSetup = (e: React.FormEvent) => {
     e.preventDefault();
-<<<<<<< HEAD
     
-=======
-
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
     localStorage.setItem("teacher_name", teacherName);
     localStorage.setItem("teacher_principal_name", principalName);
     localStorage.setItem("teacher_school_name", schoolName);
@@ -183,31 +149,15 @@ export function PinGate({
                   सुरक्षित विभाग प्रवेश (Secure Access)
                 </h3>
                 <p className="text-xs font-bold text-slate-500 max-w-xs leading-relaxed">
-<<<<<<< HEAD
                   या विभागात प्रवेश करण्यासाठी तुमचा ४-अंकी सुरक्षा पिन किंवा UDISE कोड टाका.
                   <br />
                   <span className="text-[10px] text-slate-400 font-semibold block mt-1">
                     (Enter your 4-digit security PIN or school UDISE code to access this section.)
-=======
-                  या विभागात प्रवेश करण्यासाठी तुमचा ४-अंकी सुरक्षा पिन किंवा
-                  UDISE कोड टाका.
-                  <br />
-                  <span className="text-[10px] text-slate-400 font-semibold block mt-1">
-                    (Enter your 4-digit security PIN or school UDISE code to
-                    access this section.)
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   </span>
                 </p>
               </div>
 
-<<<<<<< HEAD
               <form onSubmit={handleSubmitPin} className="w-full space-y-4 pt-2">
-=======
-              <form
-                onSubmit={handleSubmitPin}
-                className="w-full space-y-4 pt-2"
-              >
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
                     <KeyRound className="size-5" />
@@ -226,15 +176,7 @@ export function PinGate({
                     onClick={() => setShowPin(!showPin)}
                     className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
                   >
-<<<<<<< HEAD
                     {showPin ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
-=======
-                    {showPin ? (
-                      <EyeOff className="size-5" />
-                    ) : (
-                      <Eye className="size-5" />
-                    )}
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   </button>
                 </div>
 
@@ -268,22 +210,10 @@ export function PinGate({
                 </p>
               </div>
 
-<<<<<<< HEAD
               <form onSubmit={handleSaveSetup} className="space-y-4 max-h-[420px] overflow-y-auto pr-2 custom-scrollbar">
                 {/* 1. School Name */}
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">शाळेचे नाव (School Name)</label>
-=======
-              <form
-                onSubmit={handleSaveSetup}
-                className="space-y-4 max-h-[420px] overflow-y-auto pr-2 custom-scrollbar"
-              >
-                {/* 1. School Name */}
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">
-                    शाळेचे नाव (School Name)
-                  </label>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   <div className="relative">
                     <School className="absolute left-3 top-3.5 size-4 text-slate-400" />
                     <input
@@ -299,13 +229,7 @@ export function PinGate({
 
                 {/* 2. UDISE Number */}
                 <div className="space-y-1">
-<<<<<<< HEAD
                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">UDISE NUMBER</label>
-=======
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">
-                    UDISE NUMBER
-                  </label>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   <div className="relative">
                     <Milestone className="absolute left-3 top-3.5 size-4 text-slate-400" />
                     <input
@@ -321,13 +245,7 @@ export function PinGate({
 
                 {/* 3. Center */}
                 <div className="space-y-1">
-<<<<<<< HEAD
                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">केंद्र (Center)</label>
-=======
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">
-                    केंद्र (Center)
-                  </label>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   <div className="relative">
                     <MapPin className="absolute left-3 top-3.5 size-4 text-slate-400" />
                     <input
@@ -343,13 +261,7 @@ export function PinGate({
 
                 {/* 4. Taluka */}
                 <div className="space-y-1">
-<<<<<<< HEAD
                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">तालुका (Taluka)</label>
-=======
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">
-                    तालुका (Taluka)
-                  </label>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   <div className="relative">
                     <MapPin className="absolute left-3 top-3.5 size-4 text-slate-400" />
                     <input
@@ -365,13 +277,7 @@ export function PinGate({
 
                 {/* 5. District */}
                 <div className="space-y-1">
-<<<<<<< HEAD
                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">जिल्हा (District)</label>
-=======
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">
-                    जिल्हा (District)
-                  </label>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   <div className="relative">
                     <MapPin className="absolute left-3 top-3.5 size-4 text-slate-400" />
                     <input
@@ -387,13 +293,7 @@ export function PinGate({
 
                 {/* 6. Teacher Name */}
                 <div className="space-y-1">
-<<<<<<< HEAD
                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">शिक्षकाचे नाव (Teacher Name)</label>
-=======
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">
-                    शिक्षकाचे नाव (Teacher Name)
-                  </label>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   <div className="relative">
                     <User className="absolute left-3 top-3.5 size-4 text-slate-400" />
                     <input
@@ -409,13 +309,7 @@ export function PinGate({
 
                 {/* 7. Principal Name */}
                 <div className="space-y-1">
-<<<<<<< HEAD
                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">मुख्याध्यापकांचे नाव (Principal Name)</label>
-=======
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">
-                    मुख्याध्यापकांचे नाव (Principal Name)
-                  </label>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   <div className="relative">
                     <UserCheck className="absolute left-3 top-3.5 size-4 text-slate-400" />
                     <input
@@ -431,13 +325,7 @@ export function PinGate({
 
                 {/* 8. Default Academic Year (Locked to 2026-27 by default) */}
                 <div className="space-y-1">
-<<<<<<< HEAD
                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">शैक्षणिक वर्ष (Academic Year)</label>
-=======
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">
-                    शैक्षणिक वर्ष (Academic Year)
-                  </label>
->>>>>>> dbeff7e14a4166b051f7c9a6dda16ad16f4ca557
                   <div className="relative">
                     <GraduationCap className="absolute left-3 top-3.5 size-4 text-slate-400" />
                     <input
