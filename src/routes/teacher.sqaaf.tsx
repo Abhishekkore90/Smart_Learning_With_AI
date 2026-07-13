@@ -7896,39 +7896,39 @@ function TeacherSqaafPage() {
                 <div className="p-6 md:p-8 flex flex-col gap-10 flex-1 w-full">
                   {/* Top Section: Premium Summary Analytics Card */}
                   <div className="w-full flex justify-center">
-                    <div className="w-full max-w-lg bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-[2.5rem] p-8 space-y-8 shadow-xl relative overflow-hidden border border-orange-400/20">
-                      <div className="absolute top-0 right-0 size-32 bg-white/10 rounded-full blur-2xl" />
-                      <div className="absolute -bottom-10 -left-10 size-40 bg-black/10 rounded-full blur-2xl" />
+                    <div className="w-full bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-[2.5rem] p-8 md:p-10 shadow-xl relative overflow-hidden border border-orange-400/20">
+                      <div className="absolute top-0 right-0 size-64 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+                      <div className="absolute -bottom-10 -left-10 size-64 bg-black/10 rounded-full blur-3xl pointer-events-none" />
 
-                      <div className="space-y-2 text-center border-b border-white/20 pb-6 relative z-10">
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-orange-100">Audit Status</span>
-                        <h2 className="text-2xl font-black tracking-tight">{t.summaryTitle}</h2>
+                      <div className="space-y-2 text-center border-b border-white/20 pb-6 relative z-10 mb-8">
+                        <span className="text-[10px] md:text-xs font-black uppercase tracking-[0.3em] text-orange-100">Audit Status</span>
+                        <h2 className="text-2xl md:text-4xl font-black tracking-tight">{t.summaryTitle}</h2>
                       </div>
 
-                      <div className="space-y-4 font-bold text-[15px] relative z-10">
-                        <div className="flex justify-between items-center py-3 border-b border-white/10">
-                          <span className="text-orange-50 font-medium">{t.totalStands}</span>
-                          <span className="bg-white/20 backdrop-blur-md text-white px-4 py-1.5 rounded-xl text-xs font-black min-w-[60px] text-center shadow-inner border border-white/30">{totalStandards}</span>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 font-bold text-[15px] relative z-10">
+                        <div className="flex flex-col sm:flex-row justify-between items-center p-5 bg-white/10 rounded-2xl border border-white/20 shadow-inner backdrop-blur-sm transition-transform hover:scale-[1.02]">
+                          <span className="text-orange-50 font-medium text-center sm:text-left mb-2 sm:mb-0">{t.totalStands}</span>
+                          <span className="bg-white/20 text-white px-5 py-2 rounded-xl text-sm font-black min-w-[70px] text-center shadow-inner border border-white/30">{totalStandards}</span>
                         </div>
-                        <div className="flex justify-between items-center py-3 border-b border-white/10">
-                          <span className="text-orange-50 font-medium">{t.completedStands}</span>
-                          <span className="bg-white/20 backdrop-blur-md text-white px-4 py-1.5 rounded-xl text-xs font-black min-w-[60px] text-center shadow-inner border border-white/30">{completedCount}</span>
+                        <div className="flex flex-col sm:flex-row justify-between items-center p-5 bg-white/10 rounded-2xl border border-white/20 shadow-inner backdrop-blur-sm transition-transform hover:scale-[1.02]">
+                          <span className="text-orange-50 font-medium text-center sm:text-left mb-2 sm:mb-0">{t.completedStands}</span>
+                          <span className="bg-white/20 text-white px-5 py-2 rounded-xl text-sm font-black min-w-[70px] text-center shadow-inner border border-white/30">{completedCount}</span>
                         </div>
-                        <div className="flex justify-between items-center py-3 border-b border-white/10">
-                          <span className="text-orange-50 font-medium">{t.uncompletedStands}</span>
-                          <span className="bg-white/20 backdrop-blur-md text-white px-4 py-1.5 rounded-xl text-xs font-black min-w-[60px] text-center shadow-inner border border-white/30">{uncompletedCount}</span>
+                        <div className="flex flex-col sm:flex-row justify-between items-center p-5 bg-white/10 rounded-2xl border border-white/20 shadow-inner backdrop-blur-sm transition-transform hover:scale-[1.02]">
+                          <span className="text-orange-50 font-medium text-center sm:text-left mb-2 sm:mb-0">{t.uncompletedStands}</span>
+                          <span className="bg-white/20 text-white px-5 py-2 rounded-xl text-sm font-black min-w-[70px] text-center shadow-inner border border-white/30">{uncompletedCount}</span>
                         </div>
-                        <div className="flex justify-between items-center py-3 border-b border-white/10">
-                          <span className="text-orange-50 font-medium">{t.applicableStands}</span>
-                          <span className="bg-white/20 backdrop-blur-md text-white px-4 py-1.5 rounded-xl text-xs font-black min-w-[60px] text-center shadow-inner border border-white/30">{applicableCount}</span>
+                        <div className="flex flex-col sm:flex-row justify-between items-center p-5 bg-white/10 rounded-2xl border border-white/20 shadow-inner backdrop-blur-sm transition-transform hover:scale-[1.02]">
+                          <span className="text-orange-50 font-medium text-center sm:text-left mb-2 sm:mb-0">{t.applicableStands}</span>
+                          <span className="bg-white/20 text-white px-5 py-2 rounded-xl text-sm font-black min-w-[70px] text-center shadow-inner border border-white/30">{applicableCount}</span>
                         </div>
-                        <div className="flex justify-between items-center py-3 border-b border-white/10">
-                          <span className="text-orange-50 font-medium">{t.notApplicableStands}</span>
-                          <span className="bg-white/20 backdrop-blur-md text-white px-4 py-1.5 rounded-xl text-xs font-black min-w-[60px] text-center shadow-inner border border-white/30">{notApplicableCount}</span>
+                        <div className="flex flex-col sm:flex-row justify-between items-center p-5 bg-white/10 rounded-2xl border border-white/20 shadow-inner backdrop-blur-sm transition-transform hover:scale-[1.02]">
+                          <span className="text-orange-50 font-medium text-center sm:text-left mb-2 sm:mb-0">{t.notApplicableStands}</span>
+                          <span className="bg-white/20 text-white px-5 py-2 rounded-xl text-sm font-black min-w-[70px] text-center shadow-inner border border-white/30">{notApplicableCount}</span>
                         </div>
-                        <div className="flex justify-between items-center py-3">
-                          <span className="text-orange-50 font-medium">{t.marksRatio}</span>
-                          <span className="bg-amber-300 text-slate-900 px-5 py-1.5 rounded-xl text-xs font-black min-w-[90px] text-center shadow-md">{obtainedMarks} / {totalMarks}</span>
+                        <div className="flex flex-col sm:flex-row justify-between items-center p-5 bg-amber-400/20 rounded-2xl border border-amber-300/40 shadow-inner backdrop-blur-sm transition-transform hover:scale-[1.02]">
+                          <span className="text-white font-bold text-center sm:text-left mb-2 sm:mb-0">{t.marksRatio}</span>
+                          <span className="bg-amber-300 text-slate-900 px-5 py-2 rounded-xl text-sm font-black min-w-[90px] text-center shadow-md">{obtainedMarks} / {totalMarks}</span>
                         </div>
                       </div>
                     </div>
