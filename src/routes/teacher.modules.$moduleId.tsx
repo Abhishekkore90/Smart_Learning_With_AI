@@ -1898,13 +1898,13 @@ function DailyAssemblyContent() {
             const content = formData[itemDef.key] || fallbackItem.content;
             
             return (
-              <div key={idx} className="bg-[#FAFAF7] border border-[#E8DFD1]/30 rounded-2xl p-5 shadow-sm">
-                <div className="flex items-center gap-3 mb-3 border-b border-[#E8DFD1]/40 pb-2">
-                  <span className="text-xl">{fallbackItem.emoji}</span>
-                  <h4 className="font-black text-lg text-[#1A1A1A]">{fallbackItem.label}</h4>
-                  <span className="text-[10px] font-black text-[#D6B97A]/60 uppercase tracking-widest ml-auto">{fallbackItem.sub}</span>
+              <div key={idx} className="bg-[#FAFAF7] border border-[#E8DFD1]/30 rounded-2xl p-6 md:p-8 shadow-sm">
+                <div className="flex flex-col items-center justify-center gap-2 mb-6 border-b border-[#E8DFD1]/40 pb-4">
+                  <span className="text-3xl mb-1">{fallbackItem.emoji}</span>
+                  <h4 className="font-black text-xl text-[#1A1A1A] text-center uppercase tracking-wider">{fallbackItem.label}</h4>
+                  <span className="text-[10px] font-black text-[#D6B97A]/80 uppercase tracking-widest text-center">{fallbackItem.sub}</span>
                 </div>
-                <pre className="whitespace-pre-wrap text-sm text-[#333] font-medium leading-relaxed font-sans">
+                <pre className="whitespace-pre-wrap text-base md:text-lg text-[#1A1A1A] font-bold leading-relaxed font-sans text-center">
                   {content}
                 </pre>
               </div>

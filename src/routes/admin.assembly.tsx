@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { collection, addDoc, getDocs, deleteDoc, doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { DEFAULT_FORM_DATA } from "@/lib/assemblyTranslations";
+import { DEFAULT_FORM_DATA, DEFAULT_ASSEMBLY_ITEMS } from "@/lib/assemblyTranslations";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { showToast as toast } from "@/lib/custom-toast";
@@ -448,25 +448,25 @@ function AssemblyBookAdmin() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-8">
               {/* Assembly Start Section */}
-              <div className="space-y-6 lg:col-span-2 p-6 bg-green-50/50 border border-green-100 rounded-3xl">
-                <h4 className="text-lg font-bold text-green-900 flex items-center gap-2 mb-4">
+              <div className="space-y-6 lg:col-span-2 p-6 md:p-10 bg-green-50/50 border border-green-100 rounded-[2.5rem]">
+                <h4 className="text-xl font-black text-green-900 flex items-center justify-center gap-3 mb-8 text-center uppercase tracking-widest">
                   🇮🇳 सुरुवातीचा परिपाठ (Assembly Start)
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="flex flex-col space-y-8 max-w-3xl mx-auto">
                   {[
-                    { key: 'nationalAnthem', label: '🇮🇳 राष्ट्रगीत (National Anthem)', rows: 4 },
-                    { key: 'stateAnthem', label: '🚩 राज्यगीत (State Anthem)', rows: 4 },
-                    { key: 'pledge', label: '🇮🇳 प्रतिज्ञा (Pledge)', rows: 4 },
-                    { key: 'preamble', label: '🇪🇺 संविधान (Preamble)', rows: 4 },
-                    { key: 'prayer', label: '👏🏻 प्रार्थना (Prayer)', rows: 4 },
+                    { key: 'nationalAnthem', label: '🇮🇳 राष्ट्रगीत (National Anthem)', rows: 11, idx: 0 },
+                    { key: 'stateAnthem', label: '🚩 राज्यगीत (State Anthem)', rows: 14, idx: 1 },
+                    { key: 'pledge', label: '🇮🇳 प्रतिज्ञा (Pledge)', rows: 17, idx: 2 },
+                    { key: 'preamble', label: '🇪🇺 संविधान (Preamble)', rows: 6, idx: 3 },
+                    { key: 'prayer', label: '👏🏻 प्रार्थना (Prayer)', rows: 14, idx: 4 },
                   ].map((field) => (
-                    <div key={field.key} className={field.key === 'prayer' ? "md:col-span-2" : ""}>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-green-700 mb-2">{field.label}</label>
+                    <div key={field.key} className="bg-white p-6 rounded-3xl border border-green-200/50 shadow-sm text-center">
+                      <label className="block text-sm font-black uppercase tracking-widest text-green-800 mb-4">{field.label}</label>
                       <textarea
                         rows={field.rows}
-                        value={paripathData[field.key] || ''}
+                        value={paripathData[field.key] || DEFAULT_ASSEMBLY_ITEMS.mr[field.idx].content}
                         onChange={(e) => setParipathData({ ...paripathData, [field.key]: e.target.value })}
-                        className="w-full px-5 py-4 bg-white border border-green-200 rounded-2xl focus:outline-none focus:border-green-400 focus:ring-4 focus:ring-green-400/10 transition-all resize-none"
+                        className="w-full px-5 py-4 bg-green-50/30 border border-green-200 rounded-2xl focus:outline-none focus:border-green-400 focus:ring-4 focus:ring-green-400/10 transition-all resize-none text-center font-bold text-slate-800 leading-relaxed"
                       />
                     </div>
                   ))}
