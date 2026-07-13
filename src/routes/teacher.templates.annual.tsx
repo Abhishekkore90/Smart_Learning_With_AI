@@ -59,8 +59,7 @@ const ANNUAL_TEMPLATES = [
     accent: "linear-gradient(to right, #bf953f, #fcf6ba, #b38728)",
     icon: Theater,
     quote: "Step into a night of wonder and celebration. Witness the magic!",
-    quoteMr:
-      "अद्भूत आणि उत्साहाच्या संध्याकाळमध्ये सामील व्हा. जादूचे साक्षीदार व्हा!",
+    quoteMr: "अद्भूत आणि उत्साहाच्या संध्याकाळमध्ये सामील व्हा. जादूचे साक्षीदार व्हा!",
     quoteHi: "अद्भुत और उत्सव की रात में शामिल हों। जादू के साक्षी बनें!",
   },
   {
@@ -76,8 +75,7 @@ const ANNUAL_TEMPLATES = [
     icon: Trophy,
     quote: "Celebrating the hard work, talent, and achievements of our stars.",
     quoteMr: "आमच्या ताऱ्यांच्या कठोर परिश्रम, प्रतिभा आणि यशाचा गौरव सोहळा.",
-    quoteHi:
-      "हमारे सितारों की कड़ी मेहनत, प्रतिभा और उपलब्धियों का सम्मान सोहळा।",
+    quoteHi: "हमारे सितारों की कड़ी मेहनत, प्रतिभा और उपलब्धियों का सम्मान सोहळा।",
   },
   {
     id: 3,
@@ -156,11 +154,7 @@ function AnnualTemplatesPage() {
                       : "Annual Command Center"}
                 </motion.div>
                 <h2 className="text-6xl md:text-7xl font-black tracking-tighter leading-none">
-                  {lang === "mr"
-                    ? "वार्षिक"
-                    : lang === "hi"
-                      ? "वार्षिक"
-                      : "Annual"}{" "}
+                  {lang === "mr" ? "वार्षिक" : lang === "hi" ? "वार्षिक" : "Annual"}{" "}
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-400 italic">
                     {lang === "mr"
                       ? "स्नेहसंमेलन नैपुण्य"
@@ -182,11 +176,7 @@ function AnnualTemplatesPage() {
                 className="group flex items-center gap-4 px-10 py-6 bg-white text-slate-900 rounded-[2.5rem] font-black text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-2xl"
               >
                 <ArrowLeft className="size-5 group-hover:-translate-x-1 transition-transform" />{" "}
-                {lang === "mr"
-                  ? "टेम्प्लेट्स"
-                  : lang === "hi"
-                    ? "टेम्प्लेट्स"
-                    : "Templates"}
+                {lang === "mr" ? "टेम्प्लेट्स" : lang === "hi" ? "टेम्प्लेट्स" : "Templates"}
               </Link>
             </div>
           </motion.div>
@@ -299,13 +289,11 @@ function AnnualTemplatesPage() {
                             : template.name}
                       </p>
                       <p className="text-xs font-bold text-slate-400 italic leading-snug">
-                        "
-                        {lang === "mr"
+                        "{lang === "mr"
                           ? template.quoteMr
                           : lang === "hi"
                             ? template.quoteHi
-                            : template.quote}
-                        "
+                            : template.quote}"
                       </p>
                     </div>
                     <div className="flex gap-3">
@@ -321,19 +309,11 @@ function AnnualTemplatesPage() {
                       className="flex-1 py-3.5 bg-slate-950 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-slate-800 transition-all shadow-md text-center font-black"
                     >
                       <Edit3 className="size-4" />{" "}
-                      {lang === "mr"
-                        ? "संपादन"
-                        : lang === "hi"
-                          ? "संपादन"
-                          : "Edit"}
+                      {lang === "mr" ? "संपादन" : lang === "hi" ? "संपादन" : "Edit"}
                     </Link>
                     <button className="flex-1 py-3.5 bg-blue-600 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-blue-700 transition-all shadow-md font-black">
                       <Download className="size-4" />{" "}
-                      {lang === "mr"
-                        ? "डाउनलोड"
-                        : lang === "hi"
-                          ? "डाउनलोड"
-                          : "Download"}
+                      {lang === "mr" ? "डाउनलोड" : lang === "hi" ? "डाउनलोड" : "Download"}
                     </button>
                   </div>
                 </div>

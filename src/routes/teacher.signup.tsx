@@ -31,9 +31,7 @@ import teacherLoginBg from "@/assets/teacher login.avif";
 
 export const Route = createFileRoute("/teacher/signup")({
   head: () => ({
-    meta: [
-      { title: "Join Educator Network — SGK Brainova Smart Learning With AI" },
-    ],
+    meta: [{ title: "Join Educator Network — SGK Brainova Smart Learning With AI" }],
   }),
   component: TeacherSignupPage,
 });
@@ -89,19 +87,16 @@ function TeacherSignupPage() {
       });
 
       localStorage.setItem("teacher_udise", udise);
-      localStorage.setItem(
-        "sqaaf_teacher_profile",
-        JSON.stringify({
-          fullName: name,
-          email: email,
-          udise: udise,
-          schoolName: schoolName,
-          address: address,
-          state: "Maharashtra",
-          board: "Maharashtra ZP Teacher",
-          role: "teacher",
-        }),
-      );
+      localStorage.setItem("sqaaf_teacher_profile", JSON.stringify({
+        fullName: name,
+        email: email,
+        udise: udise,
+        schoolName: schoolName,
+        address: address,
+        state: "Maharashtra",
+        board: "Maharashtra ZP Teacher",
+        role: "teacher"
+      }));
       toast.success("Educator account created successfully!");
       window.location.href = "/teacher";
     } catch (error: any) {

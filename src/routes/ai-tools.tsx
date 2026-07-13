@@ -149,41 +149,36 @@ function AIChatWorkspace() {
   const [isListening, setIsListening] = useState(false);
 
   const startSpeechRecognition = () => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition ||
-      (window as any).webkitSpeechRecognition;
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
       toast.error("Speech recognition is not supported in this browser.");
       return;
     }
-
+    
     if (isListening) {
       return;
     }
-
+    
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
-    recognition.lang =
-      lang === "mr" ? "mr-IN" : lang === "hi" ? "hi-IN" : "en-US";
+    recognition.lang = lang === "mr" ? "mr-IN" : lang === "hi" ? "hi-IN" : "en-US";
     recognition.interimResults = false;
-
+    
     recognition.onstart = () => {
       setIsListening(true);
-      toast.info(
-        lang === "mr" ? "बोलणे सुरू करा..." : "Listening... Speak now",
-      );
+      toast.info(lang === "mr" ? "बोलणे सुरू करा..." : "Listening... Speak now");
     };
-
+    
     recognition.onerror = (event: any) => {
       console.error("Speech recognition error", event.error);
       toast.error(`Speech recognition error: ${event.error}`);
       setIsListening(false);
     };
-
+    
     recognition.onend = () => {
       setIsListening(false);
     };
-
+    
     recognition.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript;
       if (transcript) {
@@ -191,14 +186,12 @@ function AIChatWorkspace() {
         toast.success(lang === "mr" ? "आवाज रेकॉर्ड केला!" : "Voice captured!");
       }
     };
-
+    
     recognition.start();
   };
 
   const currentModel = MODEL_CONFIGS[activeModel];
-  const activeChat = activeChatId
-    ? chats.find((c) => c.id === activeChatId) || null
-    : null;
+  const activeChat = activeChatId ? (chats.find((c) => c.id === activeChatId) || null) : null;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -250,8 +243,8 @@ function AIChatWorkspace() {
                 ...c,
                 messages: [...c.messages, userMsgObj],
               }
-            : c,
-        ),
+            : c
+        )
       );
     }
 
@@ -259,7 +252,7 @@ function AIChatWorkspace() {
       messageText,
       currentChatId,
       currentFile?.name,
-      currentFile ? `${(currentFile.size / 1024).toFixed(1)} KB` : undefined,
+      currentFile ? `${(currentFile.size / 1024).toFixed(1)} KB` : undefined
     );
   };
 
@@ -289,19 +282,12 @@ function AIChatWorkspace() {
     return "Format your response as clear and organized study notes with bullet points, bold key terms, and easy-to-read sections.";
   };
 
-  const fetchAIResponse = async (
-    userText: string,
-    chatId: string,
-    fileName?: string,
-    fileSize?: string,
-  ) => {
+  const fetchAIResponse = async (userText: string, chatId: string, fileName?: string, fileSize?: string) => {
     setIsGenerating(true);
 
     const formatInstruction = getFormatInstruction(selectedFormat);
     const systemPrompt = `You are a smart educational AI assistant integrated into the Smart Learn platform. You help students learn by generating study materials, practice questions, summaries and insights. ${formatInstruction}${fileName ? ` The user has also attached a file named "${fileName}" (${fileSize}) — reference it in your response.` : ""}`;
-    const cleanText =
-      userText.replace(/\[File:.*?\]/, "").trim() ||
-      "Please analyze and create study material.";
+    const cleanText = userText.replace(/\[File:.*?\]/, "").trim() || "Please analyze and create study material.";
 
     const aiMessageId = `ai-${Date.now()}`;
 
@@ -309,13 +295,7 @@ function AIChatWorkspace() {
     setChats((prev) =>
       prev.map((c) =>
         c.id === chatId
-          ? {
-              ...c,
-              messages: [
-                ...c.messages,
-                { id: aiMessageId, sender: "ai" as const, text: "" },
-              ],
-            }
+          ? { ...c, messages: [...c.messages, { id: aiMessageId, sender: "ai" as const, text: "" }] }
           : c,
       ),
     );
@@ -326,7 +306,7 @@ function AIChatWorkspace() {
       const result = await generateAIResponseCallable({
         model: activeModel,
         systemPrompt,
-        userText: cleanText,
+        userText: cleanText
       });
       response = (result.data as any).text || "No response received.";
     } catch (err: any) {
@@ -350,9 +330,7 @@ function AIChatWorkspace() {
             ? {
                 ...c,
                 messages: c.messages.map((m) =>
-                  m.id === aiMessageId
-                    ? { ...m, text: response.slice(0, i) }
-                    : m,
+                  m.id === aiMessageId ? { ...m, text: response.slice(0, i) } : m,
                 ),
               }
             : c,
@@ -361,9 +339,11 @@ function AIChatWorkspace() {
     }, 15);
   };
 
+
   return (
     <div>
       <div className="h-screen w-full flex bg-[#f6f8fc] text-slate-800 font-sans overflow-hidden relative">
+        
         {/* Background Animated Glows */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
           <motion.div
@@ -408,7 +388,7 @@ function AIChatWorkspace() {
             className="absolute top-[35%] left-[25%] w-[35%] h-[35%] rounded-full bg-indigo-200/30 blur-[130px]"
           />
         </div>
-
+        
         {/* Sidebar overlay drawer (Desktop & Mobile) */}
         <AnimatePresence>
           {sidebarOpen && (
@@ -438,7 +418,7 @@ function AIChatWorkspace() {
                     <X size={18} />
                   </button>
                 </div>
-
+                
                 <button
                   onClick={() => {
                     setActiveChatId("");
@@ -450,15 +430,13 @@ function AIChatWorkspace() {
                 >
                   <Plus size={16} /> {lang === "mr" ? "नवीन शोध" : "New Search"}
                 </button>
-
+                
                 <div className="h-px bg-slate-200/60 my-4 shrink-0" />
-
+                
                 <div className="flex-1 overflow-y-auto space-y-1">
                   {chats.length === 0 ? (
                     <div className="text-center py-8 text-[11px] text-slate-400 font-medium italic">
-                      {lang === "mr"
-                        ? "कोणताही इतिहास नाही"
-                        : "No search history"}
+                      {lang === "mr" ? "कोणताही इतिहास नाही" : "No search history"}
                     </div>
                   ) : (
                     chats.map((chat) => (
@@ -475,20 +453,13 @@ function AIChatWorkspace() {
                         }`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                          <MessageSquare
-                            size={14}
-                            className="shrink-0 opacity-70"
-                          />
-                          <span className="text-[11px] truncate">
-                            {chat.title}
-                          </span>
+                          <MessageSquare size={14} className="shrink-0 opacity-70" />
+                          <span className="text-[11px] truncate">{chat.title}</span>
                         </div>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            setChats((prev) =>
-                              prev.filter((c) => c.id !== chat.id),
-                            );
+                            setChats((prev) => prev.filter((c) => c.id !== chat.id));
                             if (activeChatId === chat.id) {
                               setActiveChatId("");
                             }
@@ -515,7 +486,7 @@ function AIChatWorkspace() {
               >
                 <ChevronLeft size={20} />
               </button>
-
+              
               {/* Menu Toggle for Sidebar (Desktop & Mobile) */}
               <button
                 onClick={() => setSidebarOpen(true)}
@@ -531,18 +502,18 @@ function AIChatWorkspace() {
                 {t.ai_workspace_header}
               </span>
             </div>
-            <div className="flex items-center gap-3"></div>
+            <div className="flex items-center gap-3">
+            </div>
           </header>
 
-          <div
-            className={`flex-1 overflow-y-auto px-6 py-6 md:px-12 lg:px-16 ${
-              !activeChat || activeChat.messages.length === 0
-                ? "flex items-center justify-center"
-                : "block"
-            }`}
-          >
+          <div className={`flex-1 overflow-y-auto px-6 py-6 md:px-12 lg:px-16 ${
+            !activeChat || activeChat.messages.length === 0
+              ? "flex items-center justify-center"
+              : "block"
+          }`}>
             {!activeChat || activeChat.messages.length === 0 ? (
               <div className="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+                
                 {/* Left Panel: Header Title & Model Select */}
                 <motion.div
                   initial="hidden"
@@ -551,57 +522,49 @@ function AIChatWorkspace() {
                     hidden: { opacity: 0 },
                     visible: {
                       opacity: 1,
-                      transition: { staggerChildren: 0.12 },
-                    },
+                      transition: { staggerChildren: 0.12 }
+                    }
                   }}
                   className="lg:col-span-5 space-y-6 text-left"
                 >
-                  <motion.div
+                  <motion.div 
                     variants={{
                       hidden: { opacity: 0, y: 15 },
-                      visible: {
-                        opacity: 1,
-                        y: 0,
-                        transition: { type: "spring", stiffness: 100 },
-                      },
+                      visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100 } }
                     }}
                     className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-violet-50/70 border border-violet-100 text-violet-600 text-[10px] font-black uppercase tracking-widest shadow-[0_2px_10px_rgba(109,40,217,0.04)]"
                   >
-                    <Sparkles className="size-3.5 text-violet-500" /> Generative
-                    AI Workspace
+                    <Sparkles className="size-3.5 text-violet-500" /> Generative AI Workspace
                   </motion.div>
-
-                  <motion.h1
+ 
+                  <motion.h1 
                     variants={{
                       hidden: { opacity: 0, y: 20 },
-                      visible: { opacity: 1, y: 0 },
+                      visible: { opacity: 1, y: 0 }
                     }}
                     className="text-3xl md:text-4xl font-black tracking-tight leading-tight text-slate-900"
                   >
                     Get Practice Questions & <br />
                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-650 via-indigo-600 to-blue-600">
                       Study Insights
-                    </span>{" "}
-                    In Seconds
+                    </span> In Seconds
                   </motion.h1>
-
-                  <motion.p
+ 
+                  <motion.p 
                     variants={{
                       hidden: { opacity: 0, y: 20 },
-                      visible: { opacity: 1, y: 0 },
+                      visible: { opacity: 1, y: 0 }
                     }}
                     className="text-xs text-slate-500 font-semibold leading-relaxed"
                   >
-                    Enter a prompt, paste a URL, or upload your document to
-                    immediately generate practice quizzes, study cards, and
-                    summaries.
+                    Enter a prompt, paste a URL, or upload your document to immediately generate practice quizzes, study cards, and summaries.
                   </motion.p>
-
+ 
                   {/* Choose AI Model */}
-                  <motion.div
+                  <motion.div 
                     variants={{
                       hidden: { opacity: 0, y: 20 },
-                      visible: { opacity: 1, y: 0 },
+                      visible: { opacity: 1, y: 0 }
                     }}
                     className="space-y-3"
                   >
@@ -612,20 +575,18 @@ function AIChatWorkspace() {
                       {(Object.keys(MODEL_CONFIGS) as ModelKey[]).map((key) => {
                         const cfg = MODEL_CONFIGS[key];
                         const isActive = activeModel === key;
-                        const borderStyle = isActive
-                          ? key === "chatgpt"
-                            ? "border-emerald-250 bg-emerald-50/50 text-emerald-900 shadow-[0_8px_30px_rgba(16,185,129,0.06)]"
-                            : key === "claude"
-                              ? "border-orange-250 bg-orange-50/50 text-orange-900 shadow-[0_8px_30px_rgba(249,115,22,0.06)]"
-                              : "border-blue-250 bg-blue-50/50 text-blue-900 shadow-[0_8px_30px_rgba(59,130,246,0.06)]"
+                        const borderStyle = isActive 
+                          ? key === "chatgpt" ? "border-emerald-250 bg-emerald-50/50 text-emerald-900 shadow-[0_8px_30px_rgba(16,185,129,0.06)]"
+                            : key === "claude" ? "border-orange-250 bg-orange-50/50 text-orange-900 shadow-[0_8px_30px_rgba(249,115,22,0.06)]"
+                            : "border-blue-250 bg-blue-50/50 text-blue-900 shadow-[0_8px_30px_rgba(59,130,246,0.06)]"
                           : "border-slate-200/80 bg-white/70 hover:bg-white text-slate-700 hover:border-slate-350 shadow-[0_4px_15px_rgba(0,0,0,0.01)]";
-
+                        
                         const emojiMap: Record<ModelKey, string> = {
                           chatgpt: "🤖",
                           claude: "🧡",
                           gemini: "✨",
                         };
-
+ 
                         return (
                           <motion.button
                             key={key}
@@ -645,16 +606,14 @@ function AIChatWorkspace() {
                                 </div>
                               </div>
                             </div>
-
+                            
                             {isActive ? (
                               <motion.div
                                 layoutId="model-active-dot"
                                 className={`size-2 rounded-full ${
-                                  key === "chatgpt"
-                                    ? "bg-emerald-500 shadow-[0_0_8px_#10b981]"
-                                    : key === "claude"
-                                      ? "bg-orange-500 shadow-[0_0_8px_#f97316]"
-                                      : "bg-blue-500 shadow-[0_0_8px_#3b82f6]"
+                                  key === "chatgpt" ? "bg-emerald-500 shadow-[0_0_8px_#10b981]"
+                                  : key === "claude" ? "bg-orange-500 shadow-[0_0_8px_#f97316]"
+                                  : "bg-blue-500 shadow-[0_0_8px_#3b82f6]"
                                 }`}
                               />
                             ) : (
@@ -666,7 +625,7 @@ function AIChatWorkspace() {
                     </div>
                   </motion.div>
                 </motion.div>
-
+ 
                 {/* Right Panel: Prompt, File Upload & Output format */}
                 <motion.div
                   initial="hidden"
@@ -675,19 +634,17 @@ function AIChatWorkspace() {
                     hidden: { opacity: 0 },
                     visible: {
                       opacity: 1,
-                      transition: {
-                        staggerChildren: 0.12,
-                        delayChildren: 0.15,
-                      },
-                    },
+                      transition: { staggerChildren: 0.12, delayChildren: 0.15 }
+                    }
                   }}
                   className="lg:col-span-7 space-y-6"
                 >
+                  
                   {/* Prompt Bar */}
-                  <motion.div
+                  <motion.div 
                     variants={{
                       hidden: { opacity: 0, y: 20 },
-                      visible: { opacity: 1, y: 0 },
+                      visible: { opacity: 1, y: 0 }
                     }}
                     className="space-y-2 text-left"
                   >
@@ -703,7 +660,7 @@ function AIChatWorkspace() {
                       >
                         <Plus size={18} />
                       </button>
-
+ 
                       {/* Middle: Input field */}
                       <input
                         type="text"
@@ -718,7 +675,7 @@ function AIChatWorkspace() {
                           }
                         }}
                       />
-
+ 
                       {/* Right: Mic + Send button */}
                       <div className="flex items-center gap-2 shrink-0">
                         <button
@@ -743,19 +700,19 @@ function AIChatWorkspace() {
                       </div>
                     </div>
                   </motion.div>
-
+ 
                   {/* Upload Zone */}
-                  <motion.div
+                  <motion.div 
                     variants={{
                       hidden: { opacity: 0, y: 20 },
-                      visible: { opacity: 1, y: 0 },
+                      visible: { opacity: 1, y: 0 }
                     }}
                     className="space-y-2 text-left"
                   >
                     <label className="text-[9px] font-black uppercase tracking-widest text-slate-400">
                       Upload Source Document
                     </label>
-
+                    
                     <input
                       type="file"
                       ref={fileInputRef}
@@ -763,8 +720,8 @@ function AIChatWorkspace() {
                       className="hidden"
                       accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.csv,.ppt,.pptx"
                     />
-
-                    <div
+                    
+                    <div 
                       onClick={() => fileInputRef.current?.click()}
                       className="border border-dashed border-slate-200 hover:border-violet-400 bg-white/40 hover:bg-white/70 shadow-[0_8px_30px_rgba(0,0,0,0.01)] rounded-2xl p-5 text-center transition-all duration-300 cursor-pointer group flex flex-col items-center justify-center gap-2.5"
                     >
@@ -780,7 +737,7 @@ function AIChatWorkspace() {
                         </p>
                       </div>
                     </div>
-
+ 
                     {/* Display Attached File Status */}
                     <AnimatePresence>
                       {attachedFile && (
@@ -817,23 +774,21 @@ function AIChatWorkspace() {
                       )}
                     </AnimatePresence>
                   </motion.div>
-
+ 
                   {/* Format Selector Section */}
-                  <motion.div
+                  <motion.div 
                     variants={{
                       hidden: { opacity: 0, y: 20 },
-                      visible: { opacity: 1, y: 0 },
+                      visible: { opacity: 1, y: 0 }
                     }}
                     className="space-y-3 text-left"
                   >
                     <div>
                       <p className="text-[9px] font-black uppercase tracking-[0.25em] text-slate-400">
-                        {lang === "mr"
-                          ? "खालील प्रकारांवर काम करते"
-                          : "Works On"}
+                        {lang === "mr" ? "खालील प्रकारांवर काम करते" : "Works On"}
                       </p>
                     </div>
-
+                    
                     <div className="grid grid-cols-3 gap-2">
                       {[
                         { emoji: "🛝", name: "lecture slides" },
@@ -846,7 +801,7 @@ function AIChatWorkspace() {
                         { emoji: "📖", name: "textbooks" },
                         { emoji: "🗒️", name: "notes" },
                         { emoji: "📑", name: "study guides" },
-                        { emoji: "🔬", name: "research papers" },
+                        { emoji: "🔬", name: "research papers" }
                       ].map((item, idx) => {
                         const isSelected = selectedFormat === item.name;
                         return (
@@ -855,27 +810,21 @@ function AIChatWorkspace() {
                             type="button"
                             onClick={() => setSelectedFormat(item.name)}
                             className={`relative px-3 py-2 rounded-xl flex items-center gap-2 border shadow-[0_2px_10px_rgba(0,0,0,0.015)] transition-all duration-300 cursor-pointer text-left focus:outline-none ${
-                              isSelected
-                                ? "border-violet-500 bg-violet-50/80 ring-2 ring-violet-500/20"
+                              isSelected 
+                                ? "border-violet-500 bg-violet-50/80 ring-2 ring-violet-500/20" 
                                 : "border-slate-200/80 bg-white/40 hover:bg-white hover:border-slate-300"
                             }`}
                           >
-                            <div
-                              className={`size-6 rounded-lg flex items-center justify-center shrink-0 text-xs border ${
-                                isSelected
-                                  ? "bg-violet-100 border-violet-200"
-                                  : "bg-slate-50 border-slate-150"
-                              }`}
-                            >
+                            <div className={`size-6 rounded-lg flex items-center justify-center shrink-0 text-xs border ${
+                              isSelected
+                                ? "bg-violet-100 border-violet-200"
+                                : "bg-slate-50 border-slate-150"
+                            }`}>
                               {item.emoji}
                             </div>
-                            <span
-                              className={`text-[9px] font-black uppercase tracking-wide truncate ${
-                                isSelected
-                                  ? "text-violet-700"
-                                  : "text-slate-600"
-                              }`}
-                            >
+                            <span className={`text-[9px] font-black uppercase tracking-wide truncate ${
+                              isSelected ? "text-violet-700" : "text-slate-600"
+                            }`}>
                               {item.name}
                             </span>
                           </button>
@@ -883,7 +832,9 @@ function AIChatWorkspace() {
                       })}
                     </div>
                   </motion.div>
+
                 </motion.div>
+
               </div>
             ) : (
               <div className="max-w-3xl mx-auto space-y-6 w-full">
@@ -897,11 +848,9 @@ function AIChatWorkspace() {
                         msg.sender === "user"
                           ? "bg-violet-50 border border-violet-100 text-slate-900 rounded-tr-none ml-auto shadow-[0_2px_10px_rgba(0,0,0,0.01)]"
                           : `bg-white/80 border border-slate-200/80 text-slate-800 backdrop-blur-md rounded-tl-none border-l-4 shadow-[0_8px_30px_rgba(0,0,0,0.02)] ${
-                              activeModel === "chatgpt"
-                                ? "border-l-emerald-500"
-                                : activeModel === "claude"
-                                  ? "border-l-orange-500"
-                                  : "border-l-blue-500"
+                              activeModel === "chatgpt" ? "border-l-emerald-500" :
+                              activeModel === "claude" ? "border-l-orange-500" :
+                              "border-l-blue-500"
                             }`
                       }`}
                     >
@@ -920,10 +869,7 @@ function AIChatWorkspace() {
                           </div>
                         </div>
                       )}
-                      <MarkdownMessage
-                        text={msg.text.replace(/\[File:.*?\]/, "").trim()}
-                        sender={msg.sender}
-                      />
+                      <MarkdownMessage text={msg.text.replace(/\[File:.*?\]/, "").trim()} sender={msg.sender} />
                     </div>
                   </div>
                 ))}
@@ -931,9 +877,7 @@ function AIChatWorkspace() {
                   <div className="flex justify-start">
                     <div className="bg-white/80 text-slate-500 p-5 rounded-2xl rounded-tl-none border border-slate-200/80 flex items-center gap-3 shadow-md backdrop-blur-md">
                       <div className="size-4 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
-                      <span className="text-[10px] font-black uppercase tracking-wider">
-                        AI is generating insights...
-                      </span>
+                      <span className="text-[10px] font-black uppercase tracking-wider">AI is generating insights...</span>
                     </div>
                   </div>
                 )}
@@ -944,29 +888,23 @@ function AIChatWorkspace() {
 
           {activeChat && activeChat.messages.length > 0 && (
             <div className="px-6 pb-6 pt-3 max-w-3xl w-full mx-auto border-t border-slate-200/80 space-y-3 shrink-0">
+
               {/* Model + Format indicator row */}
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 {(Object.keys(MODEL_CONFIGS) as ModelKey[]).map((key) => {
                   const cfg = MODEL_CONFIGS[key];
                   const isActive = activeModel === key;
                   const colorMap: Record<ModelKey, string> = {
-                    chatgpt:
-                      "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]",
-                    claude:
-                      "bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]",
+                    chatgpt: "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]",
+                    claude: "bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]",
                     gemini: "bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]",
                   };
                   const activeStyleMap: Record<ModelKey, string> = {
-                    chatgpt:
-                      "text-emerald-700 bg-emerald-50 border-emerald-250",
+                    chatgpt: "text-emerald-700 bg-emerald-50 border-emerald-250",
                     claude: "text-orange-700 bg-orange-50 border-orange-250",
                     gemini: "text-blue-700 bg-blue-50 border-blue-250",
                   };
-                  const emojiMap: Record<ModelKey, string> = {
-                    chatgpt: "🤖",
-                    claude: "🧡",
-                    gemini: "✨",
-                  };
+                  const emojiMap: Record<ModelKey, string> = { chatgpt: "🤖", claude: "🧡", gemini: "✨" };
                   return (
                     <button
                       key={key}
@@ -977,11 +915,7 @@ function AIChatWorkspace() {
                           : "text-slate-500 bg-white/60 border-slate-200/80 hover:bg-white"
                       }`}
                     >
-                      {isActive && (
-                        <span
-                          className={`size-1.5 rounded-full inline-block ${colorMap[key]}`}
-                        />
-                      )}
+                      {isActive && <span className={`size-1.5 rounded-full inline-block ${colorMap[key]}`} />}
                       <span>{emojiMap[key]}</span>
                       {cfg.name}
                     </button>
@@ -1020,10 +954,7 @@ function AIChatWorkspace() {
                 )}
               </AnimatePresence>
 
-              <form
-                onSubmit={handleSendMessage}
-                className="relative flex items-center bg-white/85 border border-slate-200 shadow-[0_8px_30px_rgba(0,0,0,0.03)] focus-within:border-violet-500/40 focus-within:ring-4 focus-within:ring-violet-500/5 focus-within:bg-white rounded-2xl px-3 py-2.5 w-full backdrop-blur-md transition-all"
-              >
+              <form onSubmit={handleSendMessage} className="relative flex items-center bg-white/85 border border-slate-200 shadow-[0_8px_30px_rgba(0,0,0,0.03)] focus-within:border-violet-500/40 focus-within:ring-4 focus-within:ring-violet-500/5 focus-within:bg-white rounded-2xl px-3 py-2.5 w-full backdrop-blur-md transition-all">
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -1031,7 +962,7 @@ function AIChatWorkspace() {
                   className="hidden"
                   accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.csv,.ppt,.pptx"
                 />
-
+                
                 {/* Left: Plus attachment button */}
                 <button
                   type="button"
@@ -1071,9 +1002,7 @@ function AIChatWorkspace() {
                   </button>
                   <button
                     type="submit"
-                    disabled={
-                      isGenerating || (!inputValue.trim() && !attachedFile)
-                    }
+                    disabled={isGenerating || (!inputValue.trim() && !attachedFile)}
                     className="flex items-center justify-center w-10 h-10 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:bg-slate-100 disabled:text-slate-400 text-white transition-all shrink-0 shadow-[0_4px_15px_rgba(124,58,237,0.2)] disabled:shadow-none"
                   >
                     {isGenerating ? (
@@ -1092,13 +1021,7 @@ function AIChatWorkspace() {
   );
 }
 
-function MarkdownMessage({
-  text,
-  sender,
-}: {
-  text: string;
-  sender?: "user" | "ai";
-}) {
+function MarkdownMessage({ text, sender }: { text: string; sender?: "user" | "ai" }) {
   const parts = text.split(/(```[\s\S]*?```)/g);
   return (
     <div className="space-y-4">
@@ -1175,16 +1098,11 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
   );
 }
 
-function FormattedText({
-  text,
-  sender,
-}: {
-  text: string;
-  sender?: "user" | "ai";
-}) {
+function FormattedText({ text, sender }: { text: string; sender?: "user" | "ai" }) {
   const lines = text.split("\n");
-  const textColorClass =
-    sender === "user" ? "text-slate-800" : "text-slate-700 dark:text-[#dcdcdc]";
+  const textColorClass = sender === "user" 
+    ? "text-slate-800" 
+    : "text-slate-700 dark:text-[#dcdcdc]";
 
   return (
     <div className="space-y-2">
@@ -1220,9 +1138,7 @@ function FormattedText({
             <h4
               key={idx}
               className={`text-sm font-black mt-4 mb-2 border-l-2 border-emerald-500 pl-2 ${
-                sender === "user"
-                  ? "text-slate-800"
-                  : "text-slate-800 dark:text-white"
+                sender === "user" ? "text-slate-800" : "text-slate-800 dark:text-white"
               }`}
             >
               {renderInlineStyles(line.slice(4), sender)}
@@ -1231,14 +1147,9 @@ function FormattedText({
         }
         if (line.startsWith("## ")) {
           return (
-            <h3
-              key={idx}
-              className={`text-base font-black mt-5 mb-2 ${
-                sender === "user"
-                  ? "text-slate-900"
-                  : "text-slate-850 dark:text-white"
-              }`}
-            >
+            <h3 key={idx} className={`text-base font-black mt-5 mb-2 ${
+              sender === "user" ? "text-slate-900" : "text-slate-850 dark:text-white"
+            }`}>
               {renderInlineStyles(line.slice(3), sender)}
             </h3>
           );
@@ -1256,10 +1167,9 @@ function FormattedText({
 function renderInlineStyles(text: string, sender?: "user" | "ai") {
   const boldParts: React.ReactNode[] = [];
   const splitBold = text.split(/(\*\*.*?\*\*)/g);
-  const boldClass =
-    sender === "user"
-      ? "font-bold text-slate-900"
-      : "font-bold text-slate-900 dark:text-white";
+  const boldClass = sender === "user"
+    ? "font-bold text-slate-900"
+    : "font-bold text-slate-900 dark:text-white";
 
   splitBold.forEach((part, i) => {
     if (part.startsWith("**") && part.endsWith("**")) {

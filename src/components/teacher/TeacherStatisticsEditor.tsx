@@ -1,5 +1,10 @@
 import React, { useState } from "react";
-import { BookOpen, Download, Camera, Loader2 } from "lucide-react";
+import {
+  BookOpen,
+  Download,
+  Camera,
+  Loader2,
+} from "lucide-react";
 import { showToast as toast } from "@/lib/custom-toast";
 import html2pdf from "html2pdf.js";
 
@@ -96,56 +101,36 @@ export function TeacherStatisticsEditor({
       { bankName: "", branch: "", accountNo: "", ifsc: "" },
       { bankName: "", branch: "", accountNo: "", ifsc: "" },
     ],
-    serviceDetails:
-      safeData.serviceDetails ||
-      Array(13)
-        .fill(null)
-        .map(() => ({
-          transferType: "",
-          joinedSchool: "",
-          duration: "",
-          totalService: "",
-          orderNo: "",
-        })),
-    familyDetails:
-      safeData.familyDetails ||
-      Array(9)
-        .fill(null)
-        .map(() => ({
-          name: "",
-          relation: "",
-          dob: "",
-          aadhaar: "",
-        })),
-    favoriteBooks:
-      safeData.favoriteBooks ||
-      Array(14)
-        .fill(null)
-        .map(() => ({
-          bookTitle: "",
-          author: "",
-          summary: "",
-        })),
-    publications:
-      safeData.publications ||
-      Array(12)
-        .fill(null)
-        .map(() => ({
-          subject: "",
-          details: "",
-          year: "",
-        })),
-    trainings:
-      safeData.trainings ||
-      Array(50)
-        .fill(null)
-        .map(() => ({
-          trainingName: "",
-          location: "",
-          level: "",
-          duration: "",
-          days: "",
-        })),
+    serviceDetails: safeData.serviceDetails || Array(13).fill(null).map(() => ({
+      transferType: "",
+      joinedSchool: "",
+      duration: "",
+      totalService: "",
+      orderNo: "",
+    })),
+    familyDetails: safeData.familyDetails || Array(9).fill(null).map(() => ({
+      name: "",
+      relation: "",
+      dob: "",
+      aadhaar: "",
+    })),
+    favoriteBooks: safeData.favoriteBooks || Array(14).fill(null).map(() => ({
+      bookTitle: "",
+      author: "",
+      summary: "",
+    })),
+    publications: safeData.publications || Array(12).fill(null).map(() => ({
+      subject: "",
+      details: "",
+      year: "",
+    })),
+    trainings: safeData.trainings || Array(50).fill(null).map(() => ({
+      trainingName: "",
+      location: "",
+      level: "",
+      duration: "",
+      days: "",
+    })),
     otherNotes1: safeData.otherNotes1 || "",
     otherNotes2: safeData.otherNotes2 || "",
   };
@@ -161,11 +146,9 @@ export function TeacherStatisticsEditor({
     arrayField: string,
     index: number,
     key: string,
-    value: any,
+    value: any
   ) => {
-    const updatedArray = [
-      ...(mergedData[arrayField as keyof typeof mergedData] as any),
-    ];
+    const updatedArray = [...mergedData[arrayField as keyof typeof mergedData] as any];
     updatedArray[index] = { ...updatedArray[index], [key]: value };
     handleFieldChange(arrayField, updatedArray);
   };
@@ -189,14 +172,9 @@ export function TeacherStatisticsEditor({
     try {
       let html2pdfFn = html2pdf;
       // @ts-ignore
-      if (html2pdfFn && (html2pdfFn as any).default) {
-        html2pdfFn = (html2pdfFn as any).default;
-      }
+      if (html2pdfFn && html2pdfFn.default) { html2pdfFn = html2pdfFn.default; }
       if (typeof html2pdfFn !== "function") {
-        if (
-          typeof window !== "undefined" &&
-          typeof (window as any).html2pdf === "function"
-        ) {
+        if (typeof window !== "undefined" && typeof (window as any).html2pdf === "function") {
           html2pdfFn = (window as any).html2pdf;
         }
       }
@@ -213,27 +191,23 @@ export function TeacherStatisticsEditor({
           useCORS: true,
           logging: false,
           onclone: (clonedDoc: any) => {
-            const el = clonedDoc.getElementById(
-              "teacher-portfolio-pdf-content",
-            );
+            const el = clonedDoc.getElementById("teacher-portfolio-pdf-content");
             if (el) {
               el.style.gap = "0px";
               el.style.padding = "0px";
               el.style.backgroundColor = "#ffffff";
               el.classList.add("is-printing-pdf");
             }
-          },
+          }
         },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const },
-        pagebreak: { mode: ["avoid-all", "css"], before: ".pdf-a4-page" },
+        pagebreak: { mode: ['avoid-all', 'css'], before: '.pdf-a4-page' }
       };
 
       await html2pdfFn().set(opt).from(element).save();
       toast.success("PDF यशस्वीरित्या डाउनलोड झाली!");
     } catch (err: any) {
-      toast.error(
-        `PDF डाउनलोड करण्यात अडथळा आला: ${err?.message || String(err)}`,
-      );
+      toast.error(`PDF डाउनलोड करण्यात अडथळा आला: ${err?.message || String(err)}`);
     } finally {
       setIsExporting(false);
     }
@@ -243,15 +217,8 @@ export function TeacherStatisticsEditor({
     const handleDownloadEvent = () => {
       handleDownloadPDF();
     };
-    window.addEventListener(
-      "download-teacher-portfolio-pdf",
-      handleDownloadEvent,
-    );
-    return () =>
-      window.removeEventListener(
-        "download-teacher-portfolio-pdf",
-        handleDownloadEvent,
-      );
+    window.addEventListener("download-teacher-portfolio-pdf", handleDownloadEvent);
+    return () => window.removeEventListener("download-teacher-portfolio-pdf", handleDownloadEvent);
   }, [mergedData]);
 
   const renderTrainingPageTable = (startIndex: number) => {
@@ -272,93 +239,54 @@ export function TeacherStatisticsEditor({
             </tr>
           </thead>
           <tbody>
-            {mergedData.trainings
-              .slice(startIndex, startIndex + 10)
-              .map((item: any, idx: number) => {
-                const globalIdx = startIndex + idx;
-                return (
-                  <tr key={globalIdx} style={{ height: "36px" }}>
-                    <td style={{ textAlign: "center" }} className="font-bold">
-                      {globalIdx + 1}
-                    </td>
-                    <td>
-                      <input
-                        type="text"
-                        value={item.trainingName}
-                        onChange={(e) =>
-                          handleArrayFieldChange(
-                            "trainings",
-                            globalIdx,
-                            "trainingName",
-                            e.target.value,
-                          )
-                        }
-                        className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="text"
-                        value={item.location}
-                        onChange={(e) =>
-                          handleArrayFieldChange(
-                            "trainings",
-                            globalIdx,
-                            "location",
-                            e.target.value,
-                          )
-                        }
-                        className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="text"
-                        value={item.level}
-                        onChange={(e) =>
-                          handleArrayFieldChange(
-                            "trainings",
-                            globalIdx,
-                            "level",
-                            e.target.value,
-                          )
-                        }
-                        className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="text"
-                        value={item.duration}
-                        onChange={(e) =>
-                          handleArrayFieldChange(
-                            "trainings",
-                            globalIdx,
-                            "duration",
-                            e.target.value,
-                          )
-                        }
-                        className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="text"
-                        value={item.days}
-                        onChange={(e) =>
-                          handleArrayFieldChange(
-                            "trainings",
-                            globalIdx,
-                            "days",
-                            e.target.value,
-                          )
-                        }
-                        className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1 text-center"
-                      />
-                    </td>
-                  </tr>
-                );
-              })}
+            {mergedData.trainings.slice(startIndex, startIndex + 10).map((item: any, idx: number) => {
+              const globalIdx = startIndex + idx;
+              return (
+                <tr key={globalIdx} style={{ height: "36px" }}>
+                  <td style={{ textAlign: "center" }} className="font-bold">{globalIdx + 1}</td>
+                  <td>
+                    <input
+                      type="text"
+                      value={item.trainingName}
+                      onChange={(e) => handleArrayFieldChange("trainings", globalIdx, "trainingName", e.target.value)}
+                      className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      value={item.location}
+                      onChange={(e) => handleArrayFieldChange("trainings", globalIdx, "location", e.target.value)}
+                      className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      value={item.level}
+                      onChange={(e) => handleArrayFieldChange("trainings", globalIdx, "level", e.target.value)}
+                      className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      value={item.duration}
+                      onChange={(e) => handleArrayFieldChange("trainings", globalIdx, "duration", e.target.value)}
+                      className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      value={item.days}
+                      onChange={(e) => handleArrayFieldChange("trainings", globalIdx, "days", e.target.value)}
+                      className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1 text-center"
+                    />
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -368,12 +296,11 @@ export function TeacherStatisticsEditor({
   const renderSingleA4Page = (pageNum: number) => {
     return (
       <div className="pdf-a4-page relative p-12 flex flex-col justify-between">
+
         {/* Page Inner Content */}
         {pageNum === 1 && (
           <div className="flex-1 flex flex-col justify-between items-center text-center relative">
-            <span className="absolute top-0 left-0 text-[8px] text-black/30 font-semibold">
-              4to40
-            </span>
+            <span className="absolute top-0 left-0 text-[8px] text-black/30 font-semibold">4to40</span>
             <div className="flex flex-col items-center gap-4 mt-8">
               <img
                 src="/saraswati_lineart.png"
@@ -387,23 +314,17 @@ export function TeacherStatisticsEditor({
 
             <div className="w-full max-w-sm space-y-6 text-left pt-6 mb-16">
               <div className="text-md font-black text-red-600 flex items-center gap-2">
-                <span className="font-black text-red-600 text-base">
-                  • शिक्षकाचे नाव:-
-                </span>
+                <span className="font-black text-red-600 text-base">• शिक्षकाचे नाव:-</span>
                 <input
                   type="text"
                   value={mergedData.teacherName}
-                  onChange={(e) =>
-                    handleFieldChange("teacherName", e.target.value)
-                  }
+                  onChange={(e) => handleFieldChange("teacherName", e.target.value)}
                   className="flex-1 bg-transparent border-b border-dotted border-black outline-none focus:border-red-600 font-bold px-1 py-0.5 text-black text-base"
                   placeholder="नाव लिहा..."
                 />
               </div>
               <div className="text-md font-black text-red-600 flex items-center gap-2">
-                <span className="font-black text-red-600 text-base">
-                  • मोबाईल न:-
-                </span>
+                <span className="font-black text-red-600 text-base">• मोबाईल न:-</span>
                 <input
                   type="text"
                   value={mergedData.mobile}
@@ -419,65 +340,26 @@ export function TeacherStatisticsEditor({
         {pageNum === 2 && (
           <>
             <div className="flex justify-between items-start w-full border-b border-black pb-3 mb-4">
-              <h3 className="text-xl font-bold text-purple-700">
-                शाळा व वर्ग शिक्षक माहिती
-              </h3>
-              <span className="text-[9px] text-slate-400 font-mono">
-                Page 2
-              </span>
+              <h3 className="text-xl font-bold text-purple-700">शाळा व वर्ग शिक्षक माहिती</h3>
+              <span className="text-[9px] text-slate-400 font-mono">Page 2</span>
             </div>
 
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                marginBottom: "8px",
-              }}
-            >
-              <div
-                className="relative group"
-                style={{
-                  width: "96px",
-                  height: "120px",
-                  border: "1px solid black",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  overflow: "hidden",
-                  cursor: "pointer",
-                  background: "#f9fafb",
-                }}
-              >
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "8px" }}>
+              <div className="relative group" style={{ width: "96px", height: "120px", border: "1px solid black", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", cursor: "pointer", background: "#f9fafb" }}>
                 {mergedData.photoUrl ? (
                   <>
-                    <img
-                      src={mergedData.photoUrl}
-                      alt="Teacher"
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                      }}
-                    />
+                    <img src={mergedData.photoUrl} alt="Teacher" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity">
                       <Camera className="size-5" />
                     </div>
                   </>
                 ) : (
-                  <div
-                    className="flex flex-col items-center gap-1"
-                    style={{ color: "#94a3b8" }}
-                  >
+                  <div className="flex flex-col items-center gap-1" style={{ color: "#94a3b8" }}>
                     <Camera style={{ width: 24, height: 24 }} />
                     <span style={{ fontSize: "8px" }}>फोटो निवडा</span>
                   </div>
                 )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handlePhotoUpload}
-                  className="absolute inset-0 opacity-0 cursor-pointer"
-                />
+                <input type="file" accept="image/*" onChange={handlePhotoUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
               </div>
             </div>
 
@@ -498,23 +380,14 @@ export function TeacherStatisticsEditor({
                     { label: "मोबाईल", key: "schoolMobile" },
                   ].map((field) => (
                     <tr key={field.key} style={{ height: "32px" }}>
-                      <td
-                        className="font-bold text-purple-700"
-                        style={{ width: "180px" }}
-                      >
+                      <td className="font-bold text-purple-700" style={{ width: "180px" }}>
                         {field.label}
                       </td>
                       <td className="p-0">
                         <input
                           type="text"
-                          value={
-                            mergedData[
-                              field.key as keyof typeof mergedData
-                            ] as string
-                          }
-                          onChange={(e) =>
-                            handleFieldChange(field.key, e.target.value)
-                          }
+                          value={mergedData[field.key as keyof typeof mergedData] as string}
+                          onChange={(e) => handleFieldChange(field.key, e.target.value)}
                           className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-2"
                         />
                       </td>
@@ -529,12 +402,8 @@ export function TeacherStatisticsEditor({
         {pageNum === 3 && (
           <>
             <div className="flex justify-between items-start w-full border-b border-black pb-3 mb-4">
-              <h3 className="text-xl font-bold text-red-600">
-                शिक्षकाची वैयक्तिक माहिती
-              </h3>
-              <span className="text-[9px] text-slate-400 font-mono">
-                Page 3
-              </span>
+              <h3 className="text-xl font-bold text-red-600">शिक्षकाची वैयक्तिक माहिती</h3>
+              <span className="text-[9px] text-slate-400 font-mono">Page 3</span>
             </div>
 
             <div className="flex-1 overflow-hidden">
@@ -558,23 +427,14 @@ export function TeacherStatisticsEditor({
                     { label: "ई-मेल ID", key: "email" },
                   ].map((item) => (
                     <tr key={item.key} style={{ height: "34px" }}>
-                      <td
-                        className="font-bold text-red-600"
-                        style={{ width: "180px" }}
-                      >
+                      <td className="font-bold text-red-600" style={{ width: "180px" }}>
                         {item.label}
                       </td>
                       <td className="p-0">
                         <input
                           type="text"
-                          value={
-                            mergedData[
-                              item.key as keyof typeof mergedData
-                            ] as string
-                          }
-                          onChange={(e) =>
-                            handleFieldChange(item.key, e.target.value)
-                          }
+                          value={mergedData[item.key as keyof typeof mergedData] as string}
+                          onChange={(e) => handleFieldChange(item.key, e.target.value)}
                           className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-2 font-bold"
                         />
                       </td>
@@ -589,12 +449,8 @@ export function TeacherStatisticsEditor({
         {pageNum === 4 && (
           <>
             <div className="flex justify-between items-start w-full border-b border-black pb-3 mb-4">
-              <h3 className="text-xl font-bold text-red-600">
-                वैयक्तिक माहिती (चालू...)
-              </h3>
-              <span className="text-[9px] text-slate-400 font-mono">
-                Page 4
-              </span>
+              <h3 className="text-xl font-bold text-red-600">वैयक्तिक माहिती (चालू...)</h3>
+              <span className="text-[9px] text-slate-400 font-mono">Page 4</span>
             </div>
 
             <div className="flex-1 overflow-hidden">
@@ -609,33 +465,21 @@ export function TeacherStatisticsEditor({
                     { label: "या शाळेवर हजर दि.", key: "schoolJoinDate" },
                     { label: "या तालुक्यात हजर दि.", key: "talukaJoinDate" },
                     { label: "या जिल्ह्यात हजर दि.", key: "districtJoinDate" },
-                    {
-                      label: "अपंगत्व प्रमाणपत्र क्र.",
-                      key: "disabilityCertNo",
-                    },
+                    { label: "अपंगत्व प्रमाणपत्र क्र.", key: "disabilityCertNo" },
                     { label: "वाहन लायसन्स क्र.", key: "licenseNo" },
                     { label: "वाहन क्र.", key: "vehicleNo" },
                     { label: "इन्कमटॅक्स न.", key: "incomeTaxNo" },
                     { label: "NPS/DCPS क्र.", key: "npsDcpsNo" },
                   ].map((item) => (
                     <tr key={item.key} style={{ height: "34px" }}>
-                      <td
-                        className="font-bold text-red-600"
-                        style={{ width: "200px" }}
-                      >
+                      <td className="font-bold text-red-600" style={{ width: "200px" }}>
                         {item.label}
                       </td>
                       <td className="p-0">
                         <input
                           type="text"
-                          value={
-                            mergedData[
-                              item.key as keyof typeof mergedData
-                            ] as string
-                          }
-                          onChange={(e) =>
-                            handleFieldChange(item.key, e.target.value)
-                          }
+                          value={mergedData[item.key as keyof typeof mergedData] as string}
+                          onChange={(e) => handleFieldChange(item.key, e.target.value)}
                           className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-2 font-bold"
                         />
                       </td>
@@ -647,31 +491,19 @@ export function TeacherStatisticsEditor({
                       <input
                         type="text"
                         value={mergedData.academicQualSummary}
-                        onChange={(e) =>
-                          handleFieldChange(
-                            "academicQualSummary",
-                            e.target.value,
-                          )
-                        }
+                        onChange={(e) => handleFieldChange("academicQualSummary", e.target.value)}
                         className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-2 font-bold"
                         placeholder="शैक्षणिक पात्रता लिहा..."
                       />
                     </td>
                   </tr>
                   <tr style={{ height: "34px" }}>
-                    <td className="font-bold text-red-600">
-                      व्यावसायिक पात्रता
-                    </td>
+                    <td className="font-bold text-red-600">व्यावसायिक पात्रता</td>
                     <td className="p-0">
                       <input
                         type="text"
                         value={mergedData.professionalQualSummary}
-                        onChange={(e) =>
-                          handleFieldChange(
-                            "professionalQualSummary",
-                            e.target.value,
-                          )
-                        }
+                        onChange={(e) => handleFieldChange("professionalQualSummary", e.target.value)}
                         className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-2 font-bold"
                         placeholder="व्यावसायिक पात्रता लिहा..."
                       />
@@ -686,31 +518,20 @@ export function TeacherStatisticsEditor({
         {pageNum === 5 && (
           <>
             <div className="flex justify-between items-start w-full border-b border-black pb-3 mb-4">
-              <h3 className="text-xl font-bold text-red-600">
-                इतर माहिती आणि पत्ते
-              </h3>
-              <span className="text-[9px] text-slate-400 font-mono">
-                Page 5
-              </span>
+              <h3 className="text-xl font-bold text-red-600">इतर माहिती आणि पत्ते</h3>
+              <span className="text-[9px] text-slate-400 font-mono">Page 5</span>
             </div>
 
             <div className="flex-1 overflow-hidden">
               <table style={{ fontSize: "11px" }}>
                 <tbody>
                   <tr style={{ height: "32px" }}>
-                    <td
-                      className="font-bold text-red-600"
-                      style={{ width: "180px" }}
-                    >
-                      आवड
-                    </td>
+                    <td className="font-bold text-red-600" style={{ width: "180px" }}>आवड</td>
                     <td className="p-0">
                       <input
                         type="text"
                         value={mergedData.hobbies}
-                        onChange={(e) =>
-                          handleFieldChange("hobbies", e.target.value)
-                        }
+                        onChange={(e) => handleFieldChange("hobbies", e.target.value)}
                         className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-2"
                       />
                     </td>
@@ -721,24 +542,18 @@ export function TeacherStatisticsEditor({
                       <input
                         type="text"
                         value={mergedData.schoolDuties}
-                        onChange={(e) =>
-                          handleFieldChange("schoolDuties", e.target.value)
-                        }
+                        onChange={(e) => handleFieldChange("schoolDuties", e.target.value)}
                         className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-2"
                       />
                     </td>
                   </tr>
                   <tr style={{ height: "32px" }}>
-                    <td className="font-bold text-red-600">
-                      अवगत असलेल्या भाषा
-                    </td>
+                    <td className="font-bold text-red-600">अवगत असलेल्या भाषा</td>
                     <td className="p-0">
                       <input
                         type="text"
                         value={mergedData.languages}
-                        onChange={(e) =>
-                          handleFieldChange("languages", e.target.value)
-                        }
+                        onChange={(e) => handleFieldChange("languages", e.target.value)}
                         className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-2"
                       />
                     </td>
@@ -748,9 +563,7 @@ export function TeacherStatisticsEditor({
                     <td className="p-1">
                       <textarea
                         value={mergedData.currentAddress}
-                        onChange={(e) =>
-                          handleFieldChange("currentAddress", e.target.value)
-                        }
+                        onChange={(e) => handleFieldChange("currentAddress", e.target.value)}
                         className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs p-1 resize-none"
                       />
                     </td>
@@ -760,26 +573,17 @@ export function TeacherStatisticsEditor({
                     <td className="p-1">
                       <textarea
                         value={mergedData.permanentAddress}
-                        onChange={(e) =>
-                          handleFieldChange("permanentAddress", e.target.value)
-                        }
+                        onChange={(e) => handleFieldChange("permanentAddress", e.target.value)}
                         className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs p-1 resize-none"
                       />
                     </td>
                   </tr>
                   <tr style={{ height: "70px" }}>
-                    <td className="font-bold text-red-600">
-                      पत्रव्यवहाराचा पत्ता
-                    </td>
+                    <td className="font-bold text-red-600">पत्रव्यवहाराचा पत्ता</td>
                     <td className="p-1">
                       <textarea
                         value={mergedData.correspondenceAddress}
-                        onChange={(e) =>
-                          handleFieldChange(
-                            "correspondenceAddress",
-                            e.target.value,
-                          )
-                        }
+                        onChange={(e) => handleFieldChange("correspondenceAddress", e.target.value)}
                         className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs p-1 resize-none"
                       />
                     </td>
@@ -790,9 +594,7 @@ export function TeacherStatisticsEditor({
                       <input
                         type="text"
                         value={mergedData.altMobile1}
-                        onChange={(e) =>
-                          handleFieldChange("altMobile1", e.target.value)
-                        }
+                        onChange={(e) => handleFieldChange("altMobile1", e.target.value)}
                         className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-2"
                       />
                     </td>
@@ -803,22 +605,18 @@ export function TeacherStatisticsEditor({
                       <input
                         type="text"
                         value={mergedData.altMobile2}
-                        onChange={(e) =>
-                          handleFieldChange("altMobile2", e.target.value)
-                        }
+                        onChange={(e) => handleFieldChange("altMobile2", e.target.value)}
                         className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-2"
                       />
                     </td>
                   </tr>
                   {/* Blank placeholder rows to match physical workbook format */}
-                  {Array(6)
-                    .fill(null)
-                    .map((_, i) => (
-                      <tr key={i} style={{ height: "24px" }}>
-                        <td className="border-t border-black bg-slate-50/20"></td>
-                        <td className="border-t border-black bg-slate-50/20"></td>
-                      </tr>
-                    ))}
+                  {Array(6).fill(null).map((_, i) => (
+                    <tr key={i} style={{ height: "24px" }}>
+                      <td className="border-t border-black bg-slate-50/20"></td>
+                      <td className="border-t border-black bg-slate-50/20"></td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -828,37 +626,20 @@ export function TeacherStatisticsEditor({
         {pageNum === 6 && (
           <>
             <div className="flex justify-between items-start w-full border-b border-black pb-3 mb-4">
-              <h3 className="text-xl font-bold text-red-600">
-                शैक्षणिक व व्यावसायिक पात्रता
-              </h3>
-              <span className="text-[9px] text-slate-400 font-mono">
-                Page 6
-              </span>
+              <h3 className="text-xl font-bold text-red-600">शैक्षणिक व व्यावसायिक पात्रता</h3>
+              <span className="text-[9px] text-slate-400 font-mono">Page 6</span>
             </div>
 
             <div className="flex-1 flex flex-col justify-around gap-6">
               {/* Academic Table */}
               <div>
-                <div
-                  style={{
-                    backgroundColor: "#fff9c4",
-                    border: "1px solid black",
-                    textAlign: "center",
-                    padding: "5px 0",
-                    fontWeight: 700,
-                    fontSize: "13px",
-                    color: "#c62828",
-                    marginBottom: "6px",
-                  }}
-                >
+                <div style={{ backgroundColor: "#fff9c4", border: "1px solid black", textAlign: "center", padding: "5px 0", fontWeight: 700, fontSize: "13px", color: "#c62828", marginBottom: "6px" }}>
                   शैक्षणिक पात्रता
                 </div>
                 <table>
                   <thead>
                     <tr>
-                      <th style={{ width: "40px", textAlign: "center" }}>
-                        अ.न.
-                      </th>
+                      <th style={{ width: "40px", textAlign: "center" }}>अ.न.</th>
                       <th>शैक्षणिक पात्रता</th>
                       <th>विद्यापीठ</th>
                       <th>श्रेणी</th>
@@ -866,104 +647,56 @@ export function TeacherStatisticsEditor({
                     </tr>
                   </thead>
                   <tbody>
-                    {mergedData.academicQualifications.map(
-                      (item: any, idx: number) => (
-                        <tr key={idx} style={{ height: "36px" }}>
-                          <td
-                            style={{ textAlign: "center" }}
-                            className="font-bold"
-                          >
-                            {idx + 1}
-                          </td>
-                          <td>
-                            <input
-                              type="text"
-                              value={item.degree}
-                              onChange={(e) =>
-                                handleArrayFieldChange(
-                                  "academicQualifications",
-                                  idx,
-                                  "degree",
-                                  e.target.value,
-                                )
-                              }
-                              className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="text"
-                              value={item.university}
-                              onChange={(e) =>
-                                handleArrayFieldChange(
-                                  "academicQualifications",
-                                  idx,
-                                  "university",
-                                  e.target.value,
-                                )
-                              }
-                              className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="text"
-                              value={item.grade}
-                              onChange={(e) =>
-                                handleArrayFieldChange(
-                                  "academicQualifications",
-                                  idx,
-                                  "grade",
-                                  e.target.value,
-                                )
-                              }
-                              className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="text"
-                              value={item.year}
-                              onChange={(e) =>
-                                handleArrayFieldChange(
-                                  "academicQualifications",
-                                  idx,
-                                  "year",
-                                  e.target.value,
-                                )
-                              }
-                              className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1 text-center"
-                            />
-                          </td>
-                        </tr>
-                      ),
-                    )}
+                    {mergedData.academicQualifications.map((item: any, idx: number) => (
+                      <tr key={idx} style={{ height: "36px" }}>
+                        <td style={{ textAlign: "center" }} className="font-bold">{idx + 1}</td>
+                        <td>
+                          <input
+                            type="text"
+                            value={item.degree}
+                            onChange={(e) => handleArrayFieldChange("academicQualifications", idx, "degree", e.target.value)}
+                            className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={item.university}
+                            onChange={(e) => handleArrayFieldChange("academicQualifications", idx, "university", e.target.value)}
+                            className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={item.grade}
+                            onChange={(e) => handleArrayFieldChange("academicQualifications", idx, "grade", e.target.value)}
+                            className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={item.year}
+                            onChange={(e) => handleArrayFieldChange("academicQualifications", idx, "year", e.target.value)}
+                            className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1 text-center"
+                          />
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
 
               {/* Professional Table */}
               <div>
-                <div
-                  style={{
-                    backgroundColor: "#fff9c4",
-                    border: "1px solid black",
-                    textAlign: "center",
-                    padding: "5px 0",
-                    fontWeight: 700,
-                    fontSize: "13px",
-                    color: "#c62828",
-                    marginBottom: "6px",
-                  }}
-                >
+                <div style={{ backgroundColor: "#fff9c4", border: "1px solid black", textAlign: "center", padding: "5px 0", fontWeight: 700, fontSize: "13px", color: "#c62828", marginBottom: "6px" }}>
                   व्यावसायिक पात्रता
                 </div>
                 <table>
                   <thead>
                     <tr>
-                      <th style={{ width: "40px", textAlign: "center" }}>
-                        अ.न.
-                      </th>
+                      <th style={{ width: "40px", textAlign: "center" }}>अ.न.</th>
                       <th>व्यावसायिक पात्रता</th>
                       <th>विद्यापीठ</th>
                       <th>श्रेणी</th>
@@ -971,78 +704,43 @@ export function TeacherStatisticsEditor({
                     </tr>
                   </thead>
                   <tbody>
-                    {mergedData.professionalQualifications.map(
-                      (item: any, idx: number) => (
-                        <tr key={idx} style={{ height: "36px" }}>
-                          <td
-                            style={{ textAlign: "center" }}
-                            className="font-bold"
-                          >
-                            {idx + 1}
-                          </td>
-                          <td>
-                            <input
-                              type="text"
-                              value={item.qualification}
-                              onChange={(e) =>
-                                handleArrayFieldChange(
-                                  "professionalQualifications",
-                                  idx,
-                                  "qualification",
-                                  e.target.value,
-                                )
-                              }
-                              className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="text"
-                              value={item.university}
-                              onChange={(e) =>
-                                handleArrayFieldChange(
-                                  "professionalQualifications",
-                                  idx,
-                                  "university",
-                                  e.target.value,
-                                )
-                              }
-                              className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="text"
-                              value={item.grade}
-                              onChange={(e) =>
-                                handleArrayFieldChange(
-                                  "professionalQualifications",
-                                  idx,
-                                  "grade",
-                                  e.target.value,
-                                )
-                              }
-                              className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="text"
-                              value={item.year}
-                              onChange={(e) =>
-                                handleArrayFieldChange(
-                                  "professionalQualifications",
-                                  idx,
-                                  "year",
-                                  e.target.value,
-                                )
-                              }
-                              className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1 text-center"
-                            />
-                          </td>
-                        </tr>
-                      ),
-                    )}
+                    {mergedData.professionalQualifications.map((item: any, idx: number) => (
+                      <tr key={idx} style={{ height: "36px" }}>
+                        <td style={{ textAlign: "center" }} className="font-bold">{idx + 1}</td>
+                        <td>
+                          <input
+                            type="text"
+                            value={item.qualification}
+                            onChange={(e) => handleArrayFieldChange("professionalQualifications", idx, "qualification", e.target.value)}
+                            className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={item.university}
+                            onChange={(e) => handleArrayFieldChange("professionalQualifications", idx, "university", e.target.value)}
+                            className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={item.grade}
+                            onChange={(e) => handleArrayFieldChange("professionalQualifications", idx, "grade", e.target.value)}
+                            className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={item.year}
+                            onChange={(e) => handleArrayFieldChange("professionalQualifications", idx, "year", e.target.value)}
+                            className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1 text-center"
+                          />
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -1053,37 +751,20 @@ export function TeacherStatisticsEditor({
         {pageNum === 7 && (
           <>
             <div className="flex justify-between items-start w-full border-b border-black pb-3 mb-4">
-              <h3 className="text-xl font-bold text-red-600">
-                इतर पात्रता &amp; बँक माहिती
-              </h3>
-              <span className="text-[9px] text-slate-400 font-mono">
-                Page 7
-              </span>
+              <h3 className="text-xl font-bold text-red-600">इतर पात्रता &amp; बँक माहिती</h3>
+              <span className="text-[9px] text-slate-400 font-mono">Page 7</span>
             </div>
 
             <div className="flex-1 flex flex-col justify-around gap-6">
               {/* Other qualifications */}
               <div>
-                <div
-                  style={{
-                    backgroundColor: "#fff9c4",
-                    border: "1px solid black",
-                    textAlign: "center",
-                    padding: "5px 0",
-                    fontWeight: 700,
-                    fontSize: "13px",
-                    color: "#c62828",
-                    marginBottom: "6px",
-                  }}
-                >
+                <div style={{ backgroundColor: "#fff9c4", border: "1px solid black", textAlign: "center", padding: "5px 0", fontWeight: 700, fontSize: "13px", color: "#c62828", marginBottom: "6px" }}>
                   इतर पात्रता
                 </div>
                 <table>
                   <thead>
                     <tr>
-                      <th style={{ width: "40px", textAlign: "center" }}>
-                        अ.न.
-                      </th>
+                      <th style={{ width: "40px", textAlign: "center" }}>अ.न.</th>
                       <th>शैक्षणिक पात्रता</th>
                       <th>विद्यापीठ</th>
                       <th>श्रेणी</th>
@@ -1091,104 +772,56 @@ export function TeacherStatisticsEditor({
                     </tr>
                   </thead>
                   <tbody>
-                    {mergedData.otherQualifications.map(
-                      (item: any, idx: number) => (
-                        <tr key={idx} style={{ height: "36px" }}>
-                          <td
-                            style={{ textAlign: "center" }}
-                            className="font-bold"
-                          >
-                            {idx + 1}
-                          </td>
-                          <td>
-                            <input
-                              type="text"
-                              value={item.qualification}
-                              onChange={(e) =>
-                                handleArrayFieldChange(
-                                  "otherQualifications",
-                                  idx,
-                                  "qualification",
-                                  e.target.value,
-                                )
-                              }
-                              className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="text"
-                              value={item.university}
-                              onChange={(e) =>
-                                handleArrayFieldChange(
-                                  "otherQualifications",
-                                  idx,
-                                  "university",
-                                  e.target.value,
-                                )
-                              }
-                              className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="text"
-                              value={item.grade}
-                              onChange={(e) =>
-                                handleArrayFieldChange(
-                                  "otherQualifications",
-                                  idx,
-                                  "grade",
-                                  e.target.value,
-                                )
-                              }
-                              className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="text"
-                              value={item.year}
-                              onChange={(e) =>
-                                handleArrayFieldChange(
-                                  "otherQualifications",
-                                  idx,
-                                  "year",
-                                  e.target.value,
-                                )
-                              }
-                              className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1 text-center"
-                            />
-                          </td>
-                        </tr>
-                      ),
-                    )}
+                    {mergedData.otherQualifications.map((item: any, idx: number) => (
+                      <tr key={idx} style={{ height: "36px" }}>
+                        <td style={{ textAlign: "center" }} className="font-bold">{idx + 1}</td>
+                        <td>
+                          <input
+                            type="text"
+                            value={item.qualification}
+                            onChange={(e) => handleArrayFieldChange("otherQualifications", idx, "qualification", e.target.value)}
+                            className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={item.university}
+                            onChange={(e) => handleArrayFieldChange("otherQualifications", idx, "university", e.target.value)}
+                            className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={item.grade}
+                            onChange={(e) => handleArrayFieldChange("otherQualifications", idx, "grade", e.target.value)}
+                            className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={item.year}
+                            onChange={(e) => handleArrayFieldChange("otherQualifications", idx, "year", e.target.value)}
+                            className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1 text-center"
+                          />
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
 
               {/* Bank account details */}
               <div>
-                <div
-                  style={{
-                    backgroundColor: "#fff9c4",
-                    border: "1px solid black",
-                    textAlign: "center",
-                    padding: "5px 0",
-                    fontWeight: 700,
-                    fontSize: "13px",
-                    color: "#c62828",
-                    marginBottom: "6px",
-                  }}
-                >
+                <div style={{ backgroundColor: "#fff9c4", border: "1px solid black", textAlign: "center", padding: "5px 0", fontWeight: 700, fontSize: "13px", color: "#c62828", marginBottom: "6px" }}>
                   बँक खात्याविषयी माहिती
                 </div>
                 <table>
                   <thead>
                     <tr>
-                      <th style={{ width: "40px", textAlign: "center" }}>
-                        अ.न.
-                      </th>
+                      <th style={{ width: "40px", textAlign: "center" }}>अ.न.</th>
                       <th>बँकेचे नाव</th>
                       <th>शाखा</th>
                       <th>खाते क्र.</th>
@@ -1198,24 +831,12 @@ export function TeacherStatisticsEditor({
                   <tbody>
                     {mergedData.bankDetails.map((item: any, idx: number) => (
                       <tr key={idx} style={{ height: "36px" }}>
-                        <td
-                          style={{ textAlign: "center" }}
-                          className="font-bold"
-                        >
-                          {idx + 1}
-                        </td>
+                        <td style={{ textAlign: "center" }} className="font-bold">{idx + 1}</td>
                         <td>
                           <input
                             type="text"
                             value={item.bankName}
-                            onChange={(e) =>
-                              handleArrayFieldChange(
-                                "bankDetails",
-                                idx,
-                                "bankName",
-                                e.target.value,
-                              )
-                            }
+                            onChange={(e) => handleArrayFieldChange("bankDetails", idx, "bankName", e.target.value)}
                             className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
                           />
                         </td>
@@ -1223,14 +844,7 @@ export function TeacherStatisticsEditor({
                           <input
                             type="text"
                             value={item.branch}
-                            onChange={(e) =>
-                              handleArrayFieldChange(
-                                "bankDetails",
-                                idx,
-                                "branch",
-                                e.target.value,
-                              )
-                            }
+                            onChange={(e) => handleArrayFieldChange("bankDetails", idx, "branch", e.target.value)}
                             className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
                           />
                         </td>
@@ -1238,14 +852,7 @@ export function TeacherStatisticsEditor({
                           <input
                             type="text"
                             value={item.accountNo}
-                            onChange={(e) =>
-                              handleArrayFieldChange(
-                                "bankDetails",
-                                idx,
-                                "accountNo",
-                                e.target.value,
-                              )
-                            }
+                            onChange={(e) => handleArrayFieldChange("bankDetails", idx, "accountNo", e.target.value)}
                             className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
                           />
                         </td>
@@ -1253,14 +860,7 @@ export function TeacherStatisticsEditor({
                           <input
                             type="text"
                             value={item.ifsc}
-                            onChange={(e) =>
-                              handleArrayFieldChange(
-                                "bankDetails",
-                                idx,
-                                "ifsc",
-                                e.target.value,
-                              )
-                            }
+                            onChange={(e) => handleArrayFieldChange("bankDetails", idx, "ifsc", e.target.value)}
                             className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
                           />
                         </td>
@@ -1276,27 +876,12 @@ export function TeacherStatisticsEditor({
         {pageNum === 8 && (
           <>
             <div className="flex justify-between items-start w-full border-b border-black pb-3 mb-3">
-              <h3 className="text-xl font-bold text-red-600">
-                शैक्षणिक सेवा तपशील
-              </h3>
-              <span className="text-[9px] text-slate-400 font-mono">
-                Page 8
-              </span>
+              <h3 className="text-xl font-bold text-red-600">शैक्षणिक सेवा तपशील</h3>
+              <span className="text-[9px] text-slate-400 font-mono">Page 8</span>
             </div>
 
             <div className="flex-1 overflow-hidden mt-2">
-              <div
-                style={{
-                  backgroundColor: "#fff9c4",
-                  border: "1px solid black",
-                  textAlign: "center",
-                  padding: "5px 0",
-                  fontWeight: 700,
-                  fontSize: "12px",
-                  color: "#c62828",
-                  marginBottom: "6px",
-                }}
-              >
+              <div style={{ backgroundColor: "#fff9c4", border: "1px solid black", textAlign: "center", padding: "5px 0", fontWeight: 700, fontSize: "12px", color: "#c62828", marginBottom: "6px" }}>
                 शैक्षणिक सेवा तपशील (Service History)
               </div>
               <table style={{ fontSize: "9px" }}>
@@ -1313,21 +898,12 @@ export function TeacherStatisticsEditor({
                 <tbody>
                   {mergedData.serviceDetails.map((item: any, idx: number) => (
                     <tr key={idx} style={{ height: "28px" }}>
-                      <td style={{ textAlign: "center" }} className="font-bold">
-                        {idx + 1}
-                      </td>
+                      <td style={{ textAlign: "center" }} className="font-bold">{idx + 1}</td>
                       <td>
                         <input
                           type="text"
                           value={item.transferType}
-                          onChange={(e) =>
-                            handleArrayFieldChange(
-                              "serviceDetails",
-                              idx,
-                              "transferType",
-                              e.target.value,
-                            )
-                          }
+                          onChange={(e) => handleArrayFieldChange("serviceDetails", idx, "transferType", e.target.value)}
                           className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-[10px] px-1"
                         />
                       </td>
@@ -1335,14 +911,7 @@ export function TeacherStatisticsEditor({
                         <input
                           type="text"
                           value={item.joinedSchool}
-                          onChange={(e) =>
-                            handleArrayFieldChange(
-                              "serviceDetails",
-                              idx,
-                              "joinedSchool",
-                              e.target.value,
-                            )
-                          }
+                          onChange={(e) => handleArrayFieldChange("serviceDetails", idx, "joinedSchool", e.target.value)}
                           className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-[10px] px-1"
                         />
                       </td>
@@ -1350,14 +919,7 @@ export function TeacherStatisticsEditor({
                         <input
                           type="text"
                           value={item.duration}
-                          onChange={(e) =>
-                            handleArrayFieldChange(
-                              "serviceDetails",
-                              idx,
-                              "duration",
-                              e.target.value,
-                            )
-                          }
+                          onChange={(e) => handleArrayFieldChange("serviceDetails", idx, "duration", e.target.value)}
                           className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-[10px] px-1"
                         />
                       </td>
@@ -1365,14 +927,7 @@ export function TeacherStatisticsEditor({
                         <input
                           type="text"
                           value={item.totalService}
-                          onChange={(e) =>
-                            handleArrayFieldChange(
-                              "serviceDetails",
-                              idx,
-                              "totalService",
-                              e.target.value,
-                            )
-                          }
+                          onChange={(e) => handleArrayFieldChange("serviceDetails", idx, "totalService", e.target.value)}
                           className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-[10px] px-1"
                         />
                       </td>
@@ -1380,14 +935,7 @@ export function TeacherStatisticsEditor({
                         <input
                           type="text"
                           value={item.orderNo}
-                          onChange={(e) =>
-                            handleArrayFieldChange(
-                              "serviceDetails",
-                              idx,
-                              "orderNo",
-                              e.target.value,
-                            )
-                          }
+                          onChange={(e) => handleArrayFieldChange("serviceDetails", idx, "orderNo", e.target.value)}
                           className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-[10px] px-1"
                         />
                       </td>
@@ -1402,27 +950,12 @@ export function TeacherStatisticsEditor({
         {pageNum === 9 && (
           <>
             <div className="flex justify-between items-start w-full border-b border-black pb-3 mb-4">
-              <h3 className="text-xl font-bold text-red-600">
-                कौटुंबिक माहिती
-              </h3>
-              <span className="text-[9px] text-slate-400 font-mono">
-                Page 9
-              </span>
+              <h3 className="text-xl font-bold text-red-600">कौटुंबिक माहिती</h3>
+              <span className="text-[9px] text-slate-400 font-mono">Page 9</span>
             </div>
 
             <div className="flex-1 overflow-hidden">
-              <div
-                style={{
-                  backgroundColor: "#fff9c4",
-                  border: "1px solid black",
-                  textAlign: "center",
-                  padding: "5px 0",
-                  fontWeight: 700,
-                  fontSize: "13px",
-                  color: "#c62828",
-                  marginBottom: "6px",
-                }}
-              >
+              <div style={{ backgroundColor: "#fff9c4", border: "1px solid black", textAlign: "center", padding: "5px 0", fontWeight: 700, fontSize: "13px", color: "#c62828", marginBottom: "6px" }}>
                 कौटुंबिक माहिती
               </div>
               <table>
@@ -1438,21 +971,12 @@ export function TeacherStatisticsEditor({
                 <tbody>
                   {mergedData.familyDetails.map((item: any, idx: number) => (
                     <tr key={idx} style={{ height: "40px" }}>
-                      <td style={{ textAlign: "center" }} className="font-bold">
-                        {idx + 1}
-                      </td>
+                      <td style={{ textAlign: "center" }} className="font-bold">{idx + 1}</td>
                       <td>
                         <input
                           type="text"
                           value={item.name}
-                          onChange={(e) =>
-                            handleArrayFieldChange(
-                              "familyDetails",
-                              idx,
-                              "name",
-                              e.target.value,
-                            )
-                          }
+                          onChange={(e) => handleArrayFieldChange("familyDetails", idx, "name", e.target.value)}
                           className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
                         />
                       </td>
@@ -1460,14 +984,7 @@ export function TeacherStatisticsEditor({
                         <input
                           type="text"
                           value={item.relation}
-                          onChange={(e) =>
-                            handleArrayFieldChange(
-                              "familyDetails",
-                              idx,
-                              "relation",
-                              e.target.value,
-                            )
-                          }
+                          onChange={(e) => handleArrayFieldChange("familyDetails", idx, "relation", e.target.value)}
                           className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
                         />
                       </td>
@@ -1475,14 +992,7 @@ export function TeacherStatisticsEditor({
                         <input
                           type="text"
                           value={item.dob}
-                          onChange={(e) =>
-                            handleArrayFieldChange(
-                              "familyDetails",
-                              idx,
-                              "dob",
-                              e.target.value,
-                            )
-                          }
+                          onChange={(e) => handleArrayFieldChange("familyDetails", idx, "dob", e.target.value)}
                           className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
                         />
                       </td>
@@ -1490,14 +1000,7 @@ export function TeacherStatisticsEditor({
                         <input
                           type="text"
                           value={item.aadhaar}
-                          onChange={(e) =>
-                            handleArrayFieldChange(
-                              "familyDetails",
-                              idx,
-                              "aadhaar",
-                              e.target.value,
-                            )
-                          }
+                          onChange={(e) => handleArrayFieldChange("familyDetails", idx, "aadhaar", e.target.value)}
                           className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-xs px-1"
                         />
                       </td>
@@ -1512,27 +1015,12 @@ export function TeacherStatisticsEditor({
         {pageNum === 10 && (
           <>
             <div className="flex justify-between items-start w-full border-b border-black pb-3 mb-3">
-              <h3 className="text-xl font-bold text-red-600">
-                आवडलेली पुस्तके
-              </h3>
-              <span className="text-[9px] text-slate-400 font-mono">
-                Page 10
-              </span>
+              <h3 className="text-xl font-bold text-red-600">आवडलेली पुस्तके</h3>
+              <span className="text-[9px] text-slate-400 font-mono">Page 10</span>
             </div>
 
             <div className="flex-1 overflow-hidden">
-              <div
-                style={{
-                  backgroundColor: "#fff9c4",
-                  border: "1px solid black",
-                  textAlign: "center",
-                  padding: "5px 0",
-                  fontWeight: 700,
-                  fontSize: "12px",
-                  color: "#c62828",
-                  marginBottom: "6px",
-                }}
-              >
+              <div style={{ backgroundColor: "#fff9c4", border: "1px solid black", textAlign: "center", padding: "5px 0", fontWeight: 700, fontSize: "12px", color: "#c62828", marginBottom: "6px" }}>
                 आवडलेली पुस्तके
               </div>
               <table style={{ fontSize: "9px" }}>
@@ -1547,21 +1035,12 @@ export function TeacherStatisticsEditor({
                 <tbody>
                   {mergedData.favoriteBooks.map((item: any, idx: number) => (
                     <tr key={idx} style={{ height: "28px" }}>
-                      <td style={{ textAlign: "center" }} className="font-bold">
-                        {idx + 1}
-                      </td>
+                      <td style={{ textAlign: "center" }} className="font-bold">{idx + 1}</td>
                       <td>
                         <input
                           type="text"
                           value={item.bookTitle}
-                          onChange={(e) =>
-                            handleArrayFieldChange(
-                              "favoriteBooks",
-                              idx,
-                              "bookTitle",
-                              e.target.value,
-                            )
-                          }
+                          onChange={(e) => handleArrayFieldChange("favoriteBooks", idx, "bookTitle", e.target.value)}
                           className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-[10px] px-1"
                         />
                       </td>
@@ -1569,14 +1048,7 @@ export function TeacherStatisticsEditor({
                         <input
                           type="text"
                           value={item.author}
-                          onChange={(e) =>
-                            handleArrayFieldChange(
-                              "favoriteBooks",
-                              idx,
-                              "author",
-                              e.target.value,
-                            )
-                          }
+                          onChange={(e) => handleArrayFieldChange("favoriteBooks", idx, "author", e.target.value)}
                           className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-[10px] px-1"
                         />
                       </td>
@@ -1584,14 +1056,7 @@ export function TeacherStatisticsEditor({
                         <input
                           type="text"
                           value={item.summary}
-                          onChange={(e) =>
-                            handleArrayFieldChange(
-                              "favoriteBooks",
-                              idx,
-                              "summary",
-                              e.target.value,
-                            )
-                          }
+                          onChange={(e) => handleArrayFieldChange("favoriteBooks", idx, "summary", e.target.value)}
                           className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-[10px] px-1"
                         />
                       </td>
@@ -1606,12 +1071,8 @@ export function TeacherStatisticsEditor({
         {pageNum === 11 && (
           <>
             <div className="flex justify-between items-start w-full border-b border-black pb-3 mb-3">
-              <h3 className="text-xl font-bold text-red-600">
-                प्रकाशित साहित्य / कवितासंग्रह
-              </h3>
-              <span className="text-[9px] text-slate-400 font-mono">
-                Page 11
-              </span>
+              <h3 className="text-xl font-bold text-red-600">प्रकाशित साहित्य / कवितासंग्रह</h3>
+              <span className="text-[9px] text-slate-400 font-mono">Page 11</span>
             </div>
 
             <div className="flex-1 overflow-hidden">
@@ -1627,21 +1088,12 @@ export function TeacherStatisticsEditor({
                 <tbody>
                   {mergedData.publications.map((item: any, idx: number) => (
                     <tr key={idx} style={{ height: "30px" }}>
-                      <td style={{ textAlign: "center" }} className="font-bold">
-                        {idx + 1}
-                      </td>
+                      <td style={{ textAlign: "center" }} className="font-bold">{idx + 1}</td>
                       <td>
                         <input
                           type="text"
                           value={item.subject}
-                          onChange={(e) =>
-                            handleArrayFieldChange(
-                              "publications",
-                              idx,
-                              "subject",
-                              e.target.value,
-                            )
-                          }
+                          onChange={(e) => handleArrayFieldChange("publications", idx, "subject", e.target.value)}
                           className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-[10px] px-1"
                         />
                       </td>
@@ -1649,14 +1101,7 @@ export function TeacherStatisticsEditor({
                         <input
                           type="text"
                           value={item.details}
-                          onChange={(e) =>
-                            handleArrayFieldChange(
-                              "publications",
-                              idx,
-                              "details",
-                              e.target.value,
-                            )
-                          }
+                          onChange={(e) => handleArrayFieldChange("publications", idx, "details", e.target.value)}
                           className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-[10px] px-1"
                         />
                       </td>
@@ -1664,14 +1109,7 @@ export function TeacherStatisticsEditor({
                         <input
                           type="text"
                           value={item.year}
-                          onChange={(e) =>
-                            handleArrayFieldChange(
-                              "publications",
-                              idx,
-                              "year",
-                              e.target.value,
-                            )
-                          }
+                          onChange={(e) => handleArrayFieldChange("publications", idx, "year", e.target.value)}
                           className="w-full h-full border-none bg-transparent outline-none focus:bg-red-50 text-[10px] px-1 text-center"
                         />
                       </td>
@@ -1686,12 +1124,8 @@ export function TeacherStatisticsEditor({
         {pageNum === 12 && (
           <>
             <div className="flex justify-between items-start w-full border-b border-black pb-3 mb-3">
-              <h3 className="text-xl font-bold text-red-600">
-                प्रशिक्षण नोंदी
-              </h3>
-              <span className="text-[9px] text-slate-400 font-mono">
-                Page 12
-              </span>
+              <h3 className="text-xl font-bold text-red-600">प्रशिक्षण नोंदी</h3>
+              <span className="text-[9px] text-slate-400 font-mono">Page 12</span>
             </div>
             {renderTrainingPageTable(0)}
           </>
@@ -1700,12 +1134,8 @@ export function TeacherStatisticsEditor({
         {pageNum === 13 && (
           <>
             <div className="flex justify-between items-start w-full border-b border-black pb-3 mb-3">
-              <h3 className="text-xl font-bold text-red-600">
-                प्रशिक्षण नोंदी (चालू...)
-              </h3>
-              <span className="text-[9px] text-slate-400 font-mono">
-                Page 13
-              </span>
+              <h3 className="text-xl font-bold text-red-600">प्रशिक्षण नोंदी (चालू...)</h3>
+              <span className="text-[9px] text-slate-400 font-mono">Page 13</span>
             </div>
             {renderTrainingPageTable(10)}
           </>
@@ -1714,12 +1144,8 @@ export function TeacherStatisticsEditor({
         {pageNum === 14 && (
           <>
             <div className="flex justify-between items-start w-full border-b border-black pb-3 mb-3">
-              <h3 className="text-xl font-bold text-red-600">
-                प्रशिक्षण नोंदी (चालू...)
-              </h3>
-              <span className="text-[9px] text-slate-400 font-mono">
-                Page 14
-              </span>
+              <h3 className="text-xl font-bold text-red-600">प्रशिक्षण नोंदी (चालू...)</h3>
+              <span className="text-[9px] text-slate-400 font-mono">Page 14</span>
             </div>
             {renderTrainingPageTable(20)}
           </>
@@ -1728,12 +1154,8 @@ export function TeacherStatisticsEditor({
         {pageNum === 15 && (
           <>
             <div className="flex justify-between items-start w-full border-b border-black pb-3 mb-3">
-              <h3 className="text-xl font-bold text-red-600">
-                प्रशिक्षण नोंदी (चालू...)
-              </h3>
-              <span className="text-[9px] text-slate-400 font-mono">
-                Page 15
-              </span>
+              <h3 className="text-xl font-bold text-red-600">प्रशिक्षण नोंदी (चालू...)</h3>
+              <span className="text-[9px] text-slate-400 font-mono">Page 15</span>
             </div>
             {renderTrainingPageTable(30)}
           </>
@@ -1742,12 +1164,8 @@ export function TeacherStatisticsEditor({
         {pageNum === 16 && (
           <>
             <div className="flex justify-between items-start w-full border-b border-black pb-3 mb-3">
-              <h3 className="text-xl font-bold text-red-600">
-                प्रशिक्षण नोंदी (चालू...)
-              </h3>
-              <span className="text-[9px] text-slate-400 font-mono">
-                Page 16
-              </span>
+              <h3 className="text-xl font-bold text-red-600">प्रशिक्षण नोंदी (चालू...)</h3>
+              <span className="text-[9px] text-slate-400 font-mono">Page 16</span>
             </div>
             {renderTrainingPageTable(40)}
           </>
@@ -1756,23 +1174,15 @@ export function TeacherStatisticsEditor({
         {pageNum === 17 && (
           <>
             <div className="flex justify-between items-start w-full border-b border-black pb-3 mb-4">
-              <h3 className="text-xl font-bold text-red-600">
-                इतर माहिती / नोंदी
-              </h3>
-              <span className="text-[9px] text-slate-400 font-mono">
-                Page 17
-              </span>
+              <h3 className="text-xl font-bold text-red-600">इतर माहिती / नोंदी</h3>
+              <span className="text-[9px] text-slate-400 font-mono">Page 17</span>
             </div>
 
             <div className="flex-1 flex flex-col mt-4">
-              <div className="font-bold text-red-600 text-sm mb-2">
-                अतिरिक्त नोंदी (Notes):
-              </div>
+              <div className="font-bold text-red-600 text-sm mb-2">अतिरिक्त नोंदी (Notes):</div>
               <textarea
                 value={mergedData.otherNotes1}
-                onChange={(e) =>
-                  handleFieldChange("otherNotes1", e.target.value)
-                }
+                onChange={(e) => handleFieldChange("otherNotes1", e.target.value)}
                 className="border border-black p-6 flex-1 rounded-xl bg-transparent outline-none focus:border-red-600 text-sm leading-relaxed resize-none text-left"
                 placeholder="पहिले पान नोंदी लिहा..."
               />
@@ -1783,29 +1193,23 @@ export function TeacherStatisticsEditor({
         {pageNum === 18 && (
           <>
             <div className="flex justify-between items-start w-full border-b border-black pb-3 mb-4">
-              <h3 className="text-xl font-bold text-red-600">
-                इतर माहिती / नोंदी (चालू...)
-              </h3>
-              <span className="text-[9px] text-slate-400 font-mono">
-                Page 18
-              </span>
+              <h3 className="text-xl font-bold text-red-600">इतर माहिती / नोंदी (चालू...)</h3>
+              <span className="text-[9px] text-slate-400 font-mono">Page 18</span>
             </div>
 
             <div className="flex-1 flex flex-col mt-4">
-              <div className="font-bold text-red-600 text-sm mb-2">
-                अतिरिक्त नोंदी (Notes Continued):
-              </div>
+              <div className="font-bold text-red-600 text-sm mb-2">अतिरिक्त नोंदी (Notes Continued):</div>
               <textarea
                 value={mergedData.otherNotes2}
-                onChange={(e) =>
-                  handleFieldChange("otherNotes2", e.target.value)
-                }
+                onChange={(e) => handleFieldChange("otherNotes2", e.target.value)}
                 className="border border-black p-6 flex-1 rounded-xl bg-transparent outline-none focus:border-red-600 text-sm leading-relaxed resize-none text-left"
                 placeholder="दुसरे पान नोंदी लिहा..."
               />
             </div>
           </>
         )}
+
+
       </div>
     );
   };
@@ -1898,10 +1302,7 @@ export function TeacherStatisticsEditor({
 
       {/* Stack of all 18 A4 sheets scrollable vertically */}
       <div className="flex flex-col items-center gap-8 w-full py-6 bg-slate-800 rounded-[2.5rem] p-6 shadow-inner overflow-x-auto">
-        <div
-          id="teacher-portfolio-pdf-content"
-          className="is-exporting-pdf flex flex-col gap-8"
-        >
+        <div id="teacher-portfolio-pdf-content" className="is-exporting-pdf flex flex-col gap-8">
           {Array(18)
             .fill(null)
             .map((_, i) => (

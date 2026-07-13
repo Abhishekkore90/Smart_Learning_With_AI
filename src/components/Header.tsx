@@ -104,8 +104,7 @@ export function Header() {
   };
 
   const currentPath = loc.pathname;
-  const browserPath =
-    typeof window !== "undefined" ? window.location.pathname : "";
+  const browserPath = typeof window !== "undefined" ? window.location.pathname : "";
 
   if (isExcludedPath(currentPath) || isExcludedPath(browserPath)) {
     return null;

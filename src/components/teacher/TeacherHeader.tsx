@@ -146,10 +146,7 @@ export function TeacherHeader() {
         <div className="h-8 w-px bg-slate-200 mx-1 hidden sm:block"></div>
 
         {/* User profile & logout controls */}
-        <Link
-          to="/teacher/settings"
-          className="flex items-center gap-3 pl-1 hover:opacity-85 active:scale-95 transition-all cursor-pointer"
-        >
+        <Link to="/teacher/settings" className="flex items-center gap-3 pl-1 hover:opacity-85 active:scale-95 transition-all cursor-pointer">
           <div className="text-right hidden md:block">
             <div className="text-xs font-bold text-slate-800 leading-none">
               {user?.displayName || "Teacher"}

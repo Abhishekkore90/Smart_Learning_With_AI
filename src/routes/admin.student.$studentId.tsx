@@ -76,10 +76,7 @@ function StudentDetailDashboard() {
     if (!isAdmin) {
       navigate({
         to: "/login",
-        search: {
-          redirect: `/admin/student/${studentId}`,
-          role: "admin",
-        } as any,
+        search: { redirect: `/admin/student/${studentId}`, role: "admin" } as any,
       });
       return;
     }

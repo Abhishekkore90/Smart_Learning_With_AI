@@ -60,8 +60,7 @@ const ADMISSION_TEMPLATES = [
     icon: School,
     quote:
       "Step into excellence. Your legacy of learning begins in these halls.",
-    quoteMr:
-      "उत्कृष्टतेच्या जगात प्रवेश करा. तुमचा शैक्षणिक वारसा येथे सुरू होतो.",
+    quoteMr: "उत्कृष्टतेच्या जगात प्रवेश करा. तुमचा शैक्षणिक वारसा येथे सुरू होतो.",
     quoteHi: "उत्कृष्टता की ओर पहला कदम। इस ज्ञान के मंदिर में आपका स्वागत है।",
     particle: "sparkle",
   },
@@ -77,10 +76,8 @@ const ADMISSION_TEMPLATES = [
     icon: Crown,
     quote:
       "A bright future awaits. We are honored to have you as our newest leader.",
-    quoteMr:
-      "एक उज्ज्वल भविष्य तुमची वाट पाहत आहे. आमचे नवीन नेते म्हणून तुमचे स्वागत.",
-    quoteHi:
-      "एक उज्ज्वल भविष्य आपका इंतजार कर रहा है। नए नेता के रूप में आपका स्वागत है।",
+    quoteMr: "एक उज्ज्वल भविष्य तुमची वाट पाहत आहे. आमचे नवीन नेते म्हणून तुमचे स्वागत.",
+    quoteHi: "एक उज्ज्वल भविष्य आपका इंतजार कर रहा है। नए नेता के रूप में आपका स्वागत है।",
     particle: "float",
   },
   {
@@ -94,8 +91,7 @@ const ADMISSION_TEMPLATES = [
     accent: "linear-gradient(to right, #fbbf24, #f59e0b, #d97706)",
     icon: BookOpen,
     quote: "Unleash your curiosity. Welcome to a journey of endless knowledge.",
-    quoteMr:
-      "तुमची जिज्ञासा जागृत करा. अमर्याद ज्ञानाच्या प्रवासात आपले स्वागत.",
+    quoteMr: "तुमची जिज्ञासा जागृत करा. अमर्याद ज्ञानाच्या प्रवासात आपले स्वागत.",
     quoteHi: "अपनी जिज्ञासा को जगाएं। अनंत ज्ञान की यात्रा में आपका स्वागत है।",
     particle: "orbit",
   },
@@ -110,10 +106,8 @@ const ADMISSION_TEMPLATES = [
     accent: "linear-gradient(to right, #22d3ee, #0d9488, #2dd4bf)",
     icon: GraduationCap,
     quote: "Steady sails to success. We're proud to welcome you on board.",
-    quoteMr:
-      "यशाच्या दिशेने मार्गक्रमण. आमच्यासोबत जोडल्याबद्दल आम्हाचा अभिमान आहे.",
-    quoteHi:
-      "सफलता की स्थिर लहरें। हमें आपको शालेय परिवार में शामिल करने पर गर्व है।",
+    quoteMr: "यशाच्या दिशेने मार्गक्रमण. आमच्यासोबत जोडल्याबद्दल आम्हाचा अभिमान आहे.",
+    quoteHi: "सफलता की स्थिर लहरें। हमें आपको शालेय परिवार में शामिल करने पर गर्व है।",
     particle: "wave",
   },
   {
@@ -195,11 +189,7 @@ function AdmissionTemplatesPage() {
                       : "Admission Creative Studio"}
                 </motion.div>
                 <h2 className="text-6xl md:text-7xl font-black tracking-tighter leading-none">
-                  {lang === "mr"
-                    ? "स्वागत"
-                    : lang === "hi"
-                      ? "स्वागत"
-                      : "Welcome"}{" "}
+                  {lang === "mr" ? "स्वागत" : lang === "hi" ? "स्वागत" : "Welcome"}{" "}
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400 italic">
                     {lang === "mr"
                       ? "तेजस्वी विद्यार्थ्यांचे"
@@ -221,11 +211,7 @@ function AdmissionTemplatesPage() {
                 className="group flex items-center gap-4 px-10 py-6 bg-white text-slate-900 rounded-[2.5rem] font-black text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-2xl"
               >
                 <ArrowLeft className="size-5 group-hover:-translate-x-1 transition-transform" />{" "}
-                {lang === "mr"
-                  ? "टेम्प्लेट्स"
-                  : lang === "hi"
-                    ? "टेम्प्लेट्स"
-                    : "Templates"}
+                {lang === "mr" ? "टेम्प्लेट्स" : lang === "hi" ? "टेम्प्लेट्स" : "Templates"}
               </Link>
             </div>
           </motion.div>
@@ -339,13 +325,11 @@ function AdmissionTemplatesPage() {
                             : template.name}
                       </p>
                       <p className="text-xs font-bold text-slate-400 italic leading-snug">
-                        "
-                        {lang === "mr"
+                        "{lang === "mr"
                           ? template.quoteMr
                           : lang === "hi"
                             ? template.quoteHi
-                            : template.quote}
-                        "
+                            : template.quote}"
                       </p>
                     </div>
                     <div className="flex gap-3">
@@ -363,19 +347,11 @@ function AdmissionTemplatesPage() {
                       className="flex-1 py-3.5 bg-slate-950 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-slate-800 transition-all shadow-md text-center font-black"
                     >
                       <Edit3 className="size-4" />{" "}
-                      {lang === "mr"
-                        ? "संपादन"
-                        : lang === "hi"
-                          ? "संपादन"
-                          : "Edit"}
+                      {lang === "mr" ? "संपादन" : lang === "hi" ? "संपादन" : "Edit"}
                     </Link>
                     <button className="flex-1 py-3.5 bg-blue-600 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-blue-700 transition-all shadow-md font-black">
                       <Download className="size-4" />{" "}
-                      {lang === "mr"
-                        ? "डाउनलोड"
-                        : lang === "hi"
-                          ? "डाउनलोड"
-                          : "Download"}
+                      {lang === "mr" ? "डाउनलोड" : lang === "hi" ? "डाउनलोड" : "Download"}
                     </button>
                   </div>
                 </div>

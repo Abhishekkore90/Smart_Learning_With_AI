@@ -10,7 +10,7 @@ import {
   Loader2,
   AlertCircle,
   Info,
-  GripVertical,
+  GripVertical
 } from "lucide-react";
 
 const ALL_CLASSES = ["11th", "12th"];
@@ -24,15 +24,13 @@ function HscSubAlignment({ onClose }) {
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [language, setLanguage] = useState(
-    localStorage.getItem("language") || "English",
-  );
-  const [alertMessage, setAlertMessage] = useState("");
+  const [language, setLanguage] = useState(localStorage.getItem('language') || 'English');
+  const [alertMessage, setAlertMessage] = useState('');
 
   const udiseNumber = localStorage.getItem("udiseNumber");
 
   useEffect(() => {
-    const storedLanguage = localStorage.getItem("language") || "English";
+    const storedLanguage = localStorage.getItem('language') || 'English';
     setLanguage(storedLanguage);
   }, []);
 
@@ -51,7 +49,7 @@ function HscSubAlignment({ onClose }) {
     setLoading(true);
     try {
       const response = await fetch(
-        `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/subjectSequence/hsc/${academicYear}.json`,
+        `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/subjectSequence/hsc/${academicYear}.json`
       );
       if (!response.ok) throw new Error("Failed to fetch classes");
 
@@ -73,7 +71,7 @@ function HscSubAlignment({ onClose }) {
     setLoading(true);
     try {
       const response = await fetch(
-        `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/subjectSequence/hsc/${academicYear}/${classValue}/${division}.json`,
+        `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/subjectSequence/hsc/${academicYear}/${classValue}/${division}.json`
       );
       if (!response.ok) throw new Error("Failed to fetch subjects");
 
@@ -120,6 +118,7 @@ function HscSubAlignment({ onClose }) {
       setAlertMessage(`${subject.name} added successfully!`);
       // Re-fetch subjects after adding the new subject
       fetchSubjects();
+
     } catch (error) {
       console.error("Error adding subject:", error);
       setAlertMessage("Failed to add subject");
@@ -150,9 +149,9 @@ function HscSubAlignment({ onClose }) {
             newSequence.reduce((acc, subject, index) => {
               acc[index + 1] = subject;
               return acc;
-            }, {}),
+            }, {})
           ),
-        },
+        }
       );
     } catch (error) {
       console.error("Error updating subject sequence:", error);
@@ -167,20 +166,19 @@ function HscSubAlignment({ onClose }) {
     fetchSubjects();
   }, [academicYear, classValue, division, udiseNumber]);
 
+
   const fetchDivisions = async () => {
     if (!academicYear || !classValue) return;
-
+  
     setLoading(true);
     try {
       const response = await fetch(
-        `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/subjectSequence/hsc/${academicYear}/${classValue}.json`,
+        `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/subjectSequence/hsc/${academicYear}/${classValue}.json`
       );
       if (!response.ok) throw new Error("Failed to fetch divisions");
-
+  
       const data = await response.json();
-      const fetchedDivisions = data
-        ? Object.keys(data).filter((key) => isNaN(key))
-        : [];
+      const fetchedDivisions = data ? Object.keys(data).filter((key) => isNaN(key)) : [];
       setDivisions(fetchedDivisions);
       setError(null);
     } catch (err) {
@@ -191,10 +189,13 @@ function HscSubAlignment({ onClose }) {
       setLoading(false);
     }
   };
-
+  
   useEffect(() => {
     fetchDivisions();
   }, [academicYear, classValue]);
+  
+    
+
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
@@ -306,9 +307,7 @@ function HscSubAlignment({ onClose }) {
           {loading && (
             <div className="flex flex-col items-center justify-center py-8 gap-2 text-slate-400 dark:text-slate-500">
               <Loader2 className="size-7 animate-spin text-indigo-600 dark:text-indigo-400" />
-              <span className="text-[10px] font-black uppercase tracking-wider">
-                Syncing Sequence Data...
-              </span>
+              <span className="text-[10px] font-black uppercase tracking-wider">Syncing Sequence Data...</span>
             </div>
           )}
 
@@ -384,15 +383,10 @@ function HscSubAlignment({ onClose }) {
               </DragDropContext>
             </div>
           ) : (
-            !loading &&
-            academicYear &&
-            classValue &&
-            division && (
+            !loading && academicYear && classValue && division && (
               <div className="text-center py-12 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-[2rem] text-slate-400">
                 <SlidersHorizontal className="size-8 mx-auto mb-2 text-slate-300" />
-                <p className="text-xs font-bold">
-                  No subjects aligned for this class yet.
-                </p>
+                <p className="text-xs font-bold">No subjects aligned for this class yet.</p>
               </div>
             )
           )}

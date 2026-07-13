@@ -1,6 +1,6 @@
 /**
  * parse-diary-file.ts
- *
+ * 
  * Utility to extract text from PDF/DOCX files and parse it into
  * the teaching diary structure used by teacher.teaching-record.tsx
  */
@@ -35,7 +35,7 @@ async function extractTextFromPDF(base64Data: string): Promise<string> {
   try {
     // Dynamic import for pdfjs-dist
     const pdfjsLib = await import("pdfjs-dist");
-
+    
     // Set worker source
     pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
@@ -52,7 +52,9 @@ async function extractTextFromPDF(base64Data: string): Promise<string> {
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
       const page = await pdf.getPage(pageNum);
       const textContent = await page.getTextContent();
-      const pageText = textContent.items.map((item: any) => item.str).join(" ");
+      const pageText = textContent.items
+        .map((item: any) => item.str)
+        .join(" ");
       textParts.push(pageText);
     }
 
@@ -105,14 +107,8 @@ function getBase64FromDataUrl(dataUrl: string): string {
  * Parse extracted raw text into the diary structure.
  * Tries multiple strategies to find period/lesson rows.
  */
-function parseTextToDiary(
-  rawText: string,
-  className: string,
-): ParsedDiaryContent {
-  const lines = rawText
-    .split(/\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
+function parseTextToDiary(rawText: string, className: string): ParsedDiaryContent {
+  const lines = rawText.split(/\n/).map(l => l.trim()).filter(Boolean);
   const fullText = rawText;
 
   // ─── Extract date ───
@@ -191,28 +187,14 @@ function parseTextToDiary(
 
   // Strategy 1: Look for structured table rows with known Marathi subject names
   const marathiSubjects = [
-    "मराठी",
-    "गणित",
-    "इंग्रजी",
-    "हिंदी",
-    "विज्ञान",
-    "सामाजिक शास्त्र",
-    "परिसर अभ्यास",
-    "परिसर अभ्यास १",
-    "परिसर अभ्यास २",
-    "कला",
-    "शा. शि.",
-    "शारीरिक शिक्षण",
-    "क्रीडा",
-    "कार्यानुभव",
-    "संगीत",
-    "चित्रकला",
-    "सुलेख",
+    "मराठी", "गणित", "इंग्रजी", "हिंदी", "विज्ञान", "सामाजिक शास्त्र",
+    "परिसर अभ्यास", "परिसर अभ्यास १", "परिसर अभ्यास २",
+    "कला", "शा. शि.", "शारीरिक शिक्षण", "क्रीडा", "कार्यानुभव",
+    "संगीत", "चित्रकला", "सुलेख",
   ];
 
   // Try to find tab/pipe-separated table rows (common in DOCX tables)
-  const tableRowPattern =
-    /(\d+)\s*[\t|]+\s*(.+?)[\t|]+\s*(.+?)[\t|]+\s*(.+?)(?:[\t|]+\s*(.+?))?(?:[\t|]+\s*(.+?))?(?:[\t|]+\s*(.+?))?/g;
+  const tableRowPattern = /(\d+)\s*[\t|]+\s*(.+?)[\t|]+\s*(.+?)[\t|]+\s*(.+?)(?:[\t|]+\s*(.+?))?(?:[\t|]+\s*(.+?))?(?:[\t|]+\s*(.+?))?/g;
   let tableMatch;
   while ((tableMatch = tableRowPattern.exec(fullText)) !== null) {
     const periodNum = tableMatch[1].trim();
@@ -232,8 +214,7 @@ function parseTextToDiary(
 
   // Strategy 2: Look for period markers like "तास 1:", "तासिका 1:", "Period 1:" etc.
   if (periods.length === 0) {
-    const periodMarkerPattern =
-      /(?:तास(?:िका)?\s*|Period\s*|तास\s*क्र\s*\.?\s*)(\d+)\s*[:：\-]?\s*/gi;
+    const periodMarkerPattern = /(?:तास(?:िका)?\s*|Period\s*|तास\s*क्र\s*\.?\s*)(\d+)\s*[:：\-]?\s*/gi;
     const periodMarkers: { index: number; num: string }[] = [];
     let markerMatch;
     while ((markerMatch = periodMarkerPattern.exec(fullText)) !== null) {
@@ -242,10 +223,7 @@ function parseTextToDiary(
 
     for (let i = 0; i < periodMarkers.length; i++) {
       const start = periodMarkers[i].index;
-      const end =
-        i + 1 < periodMarkers.length
-          ? periodMarkers[i + 1].index
-          : fullText.length;
+      const end = i + 1 < periodMarkers.length ? periodMarkers[i + 1].index : fullText.length;
       const section = fullText.substring(start, end).trim();
 
       // Try to extract subject, topic, etc. from the section
@@ -264,18 +242,7 @@ function parseTextToDiary(
         }
       }
       // Also check for English subjects
-      const engSubjects = [
-        "English",
-        "Maths",
-        "Mathematics",
-        "Science",
-        "Social Studies",
-        "Hindi",
-        "Marathi",
-        "Art",
-        "Music",
-        "PT",
-      ];
+      const engSubjects = ["English", "Maths", "Mathematics", "Science", "Social Studies", "Hindi", "Marathi", "Art", "Music", "PT"];
       for (const sub of engSubjects) {
         if (section.toLowerCase().includes(sub.toLowerCase()) && !subject) {
           subject = sub;
@@ -284,29 +251,19 @@ function parseTextToDiary(
       }
 
       // Extract fields using Marathi/English labels
-      const topicMatch = section.match(
-        /(?:विषय|अध्याय|धडा|घटक|Topic|Chapter)\s*[:：]?\s*(.+?)(?:\n|$)/i,
-      );
+      const topicMatch = section.match(/(?:विषय|अध्याय|धडा|घटक|Topic|Chapter)\s*[:：]?\s*(.+?)(?:\n|$)/i);
       if (topicMatch) topic = topicMatch[1].trim();
 
-      const expMatch = section.match(
-        /(?:अनुभव|अभ्यासाच्या अनुभवाचे स्वरूप|Experience)\s*[:：]?\s*(.+?)(?:\n|$)/i,
-      );
+      const expMatch = section.match(/(?:अनुभव|अभ्यासाच्या अनुभवाचे स्वरूप|Experience)\s*[:：]?\s*(.+?)(?:\n|$)/i);
       if (expMatch) experience = expMatch[1].trim();
 
-      const toolsMatch = section.match(
-        /(?:साधन|तंत्र|साधन तंत्र|Tools|Method)\s*[:：]?\s*(.+?)(?:\n|$)/i,
-      );
+      const toolsMatch = section.match(/(?:साधन|तंत्र|साधन तंत्र|Tools|Method)\s*[:：]?\s*(.+?)(?:\n|$)/i);
       if (toolsMatch) tools = toolsMatch[1].trim();
 
-      const matMatch = section.match(
-        /(?:साहित्य|आवश्यक साहित्य|Materials)\s*[:：]?\s*(.+?)(?:\n|$)/i,
-      );
+      const matMatch = section.match(/(?:साहित्य|आवश्यक साहित्य|Materials)\s*[:：]?\s*(.+?)(?:\n|$)/i);
       if (matMatch) materials = matMatch[1].trim();
 
-      const outcomeMatch = section.match(
-        /(?:परिणाम|निष्कर्ष|Outcome|Result)\s*[:：]?\s*(.+?)(?:\n|$)/i,
-      );
+      const outcomeMatch = section.match(/(?:परिणाम|निष्कर्ष|Outcome|Result)\s*[:：]?\s*(.+?)(?:\n|$)/i);
       if (outcomeMatch) outcome = outcomeMatch[1].trim();
 
       // If no specific topic extracted, use remaining text as topic
@@ -343,7 +300,7 @@ function parseTextToDiary(
           // This line likely starts a period section
           const topic = lines[i + 1] || "";
           const experience = lines[i + 2] || "";
-
+          
           periods.push({
             period: periodCounter.toString(),
             class: className,
@@ -364,22 +321,17 @@ function parseTextToDiary(
   // Strategy 4: If still no periods, split content into chunks and assign as periods
   if (periods.length === 0 && lines.length > 3) {
     // Use entire text as a single period with full content
-    const contentLines = lines.filter(
-      (l) =>
-        !l.match(/तारीख|दिवस|सुविचार|दिनविशेष|टाचन|वर्गशिक्षक|मुख्याध्यापक/i) &&
-        l.length > 5,
+    const contentLines = lines.filter(l => 
+      !l.match(/तारीख|दिवस|सुविचार|दिनविशेष|टाचन|वर्गशिक्षक|मुख्याध्यापक/i) &&
+      l.length > 5
     );
-
+    
     if (contentLines.length > 0) {
       // Try to split into reasonable chunks as periods
       const chunkSize = Math.max(1, Math.ceil(contentLines.length / 4));
       let periodNum = 1;
-
-      for (
-        let i = 0;
-        i < contentLines.length && periodNum <= 8;
-        i += chunkSize
-      ) {
+      
+      for (let i = 0; i < contentLines.length && periodNum <= 8; i += chunkSize) {
         const chunk = contentLines.slice(i, i + chunkSize);
         periods.push({
           period: periodNum.toString(),
@@ -414,7 +366,7 @@ function parseTextToDiary(
 export async function parseDiaryFile(
   dataUrl: string,
   fileType: string,
-  className: string,
+  className: string
 ): Promise<ParsedDiaryContent | null> {
   try {
     const base64Data = getBase64FromDataUrl(dataUrl);
@@ -428,9 +380,7 @@ export async function parseDiaryFile(
       fileType.includes("document") ||
       fileType.includes("docx") ||
       fileType.includes("doc") ||
-      fileType.includes(
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      )
+      fileType.includes("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     ) {
       rawText = await extractTextFromDOCX(base64Data);
     } else {

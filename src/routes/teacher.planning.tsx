@@ -27,16 +27,13 @@ function TeacherPlanningPage() {
 
             <div className="space-y-4">
               <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-                नियोजन /{" "}
-                <span className="text-teal-600">Syllabus Planning</span>
+                नियोजन / <span className="text-teal-600">Syllabus Planning</span>
               </h1>
               <p className="text-slate-500 font-medium leading-relaxed">
-                वार्षिक आणि घटक निहाय अभ्यासक्रम नियोजनाचे वेळापत्रक येथे लवकरच
-                उपलब्ध होईल.
+                वार्षिक आणि घटक निहाय अभ्यासक्रम नियोजनाचे वेळापत्रक येथे लवकरच उपलब्ध होईल.
               </p>
               <p className="text-slate-400 text-xs font-bold leading-relaxed italic">
-                Annual and unit-wise syllabus planning calendars and scheduling
-                will be coming soon.
+                Annual and unit-wise syllabus planning calendars and scheduling will be coming soon.
               </p>
             </div>
 

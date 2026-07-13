@@ -61,10 +61,8 @@ const ACHIEVEMENT_TEMPLATES = [
     icon: Trophy,
     quote:
       "Excellence is not a skill, it's an attitude. Congratulations on your rank!",
-    quoteMr:
-      "उत्कृष्टता हे केवळ कौशल्य नसून एक वृत्ती आहे. तुमच्या रँक बद्दल अभिनंदन!",
-    quoteHi:
-      "उत्कृष्टता एक कौशल नहीं, बल्कि एक दृष्टिकोण है। आपकी रैंक पर बधाई!",
+    quoteMr: "उत्कृष्टता हे केवळ कौशल्य नसून एक वृत्ती आहे. तुमच्या रँक बद्दल अभिनंदन!",
+    quoteHi: "उत्कृष्टता एक कौशल नहीं, बल्कि एक दृष्टिकोण है। आपकी रैंक पर बधाई!",
   },
   {
     id: 2,
@@ -93,10 +91,8 @@ const ACHIEVEMENT_TEMPLATES = [
     accent: "linear-gradient(to right, #a78bfa, #818cf8, #6366f1)",
     icon: Sparkles,
     quote: "Watching you grow and succeed is our greatest reward. Keep it up!",
-    quoteMr:
-      "तुम्हाला प्रगती करताना आणि यशस्वी होताना पाहणे हाच आमचा सर्वात मोठा आनंद आहे. असेच पुढे जा!",
-    quoteHi:
-      "आपको बढ़ते और सफल होते देखना हमारा सबसे बड़ा पुरस्कार है। इसे जारी रखें!",
+    quoteMr: "तुम्हाला प्रगती करताना आणि यशस्वी होताना पाहणे हाच आमचा सर्वात मोठा आनंद आहे. असेच पुढे जा!",
+    quoteHi: "आपको बढ़ते और सफल होते देखना हमारा सबसे बड़ा पुरस्कार है। इसे जारी रखें!",
   },
   {
     id: 4,
@@ -110,10 +106,8 @@ const ACHIEVEMENT_TEMPLATES = [
     accent: "linear-gradient(to right, #f87171, #fb923c, #facc15)",
     icon: Medal,
     quote: "Integrity and character define a true leader. We are proud of you!",
-    quoteMr:
-      "प्रामाणिकता आणि चारित्र्य खऱ्या नेत्याची व्याख्या करते. आम्हाला तुमचा सार्थ अभिमान आहे!",
-    quoteHi:
-      "ईमानदारी और चरित्र एक सच्चे नेता की पहचान हैं। हमें आप पर गर्व है!",
+    quoteMr: "प्रामाणिकता आणि चारित्र्य खऱ्या नेत्याची व्याख्या करते. आम्हाला तुमचा सार्थ अभिमान आहे!",
+    quoteHi: "ईमानदारी और चरित्र एक सच्चे नेता की पहचान हैं। हमें आप पर गर्व है!",
   },
 ];
 
@@ -162,17 +156,9 @@ function AchievementTemplatesPage() {
                       : "Victory Command Center"}
                 </motion.div>
                 <h2 className="text-6xl md:text-7xl font-black tracking-tighter leading-none">
-                  {lang === "mr"
-                    ? "यशस्वी"
-                    : lang === "hi"
-                      ? "विजय"
-                      : "Victory"}{" "}
+                  {lang === "mr" ? "यशस्वी" : lang === "hi" ? "विजय" : "Victory"}{" "}
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-amber-400 italic">
-                    {lang === "mr"
-                      ? "दालन"
-                      : lang === "hi"
-                        ? "दालान"
-                        : "Pavilion"}
+                    {lang === "mr" ? "दालन" : lang === "hi" ? "दालान" : "Pavilion"}
                   </span>
                 </h2>
                 <p className="text-slate-400 font-medium max-w-2xl text-xl leading-relaxed">
@@ -188,11 +174,7 @@ function AchievementTemplatesPage() {
                 className="group flex items-center gap-4 px-10 py-6 bg-white text-slate-900 rounded-[2.5rem] font-black text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-2xl"
               >
                 <ArrowLeft className="size-5 group-hover:-translate-x-1 transition-transform" />{" "}
-                {lang === "mr"
-                  ? "टेम्प्लेट्स"
-                  : lang === "hi"
-                    ? "टेम्प्लेट्स"
-                    : "Templates"}
+                {lang === "mr" ? "टेम्प्लेट्स" : lang === "hi" ? "टेम्प्लेट्स" : "Templates"}
               </Link>
             </div>
           </motion.div>
@@ -306,13 +288,11 @@ function AchievementTemplatesPage() {
                             : template.name}
                       </p>
                       <p className="text-sm font-bold text-slate-400 italic leading-relaxed">
-                        "
-                        {lang === "mr"
+                        "{lang === "mr"
                           ? template.quoteMr
                           : lang === "hi"
                             ? template.quoteHi
-                            : template.quote}
-                        "
+                            : template.quote}"
                       </p>
                     </div>
                     <div className="flex gap-4">
@@ -330,19 +310,11 @@ function AchievementTemplatesPage() {
                       className="flex-1 py-3.5 bg-slate-950 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-slate-800 transition-all shadow-md text-center font-black"
                     >
                       <Edit3 className="size-4" />{" "}
-                      {lang === "mr"
-                        ? "संपादन"
-                        : lang === "hi"
-                          ? "संपादन"
-                          : "Edit"}
+                      {lang === "mr" ? "संपादन" : lang === "hi" ? "संपादन" : "Edit"}
                     </Link>
                     <button className="flex-1 py-3.5 bg-blue-600 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-blue-700 transition-all shadow-md font-black">
                       <Download className="size-4" />{" "}
-                      {lang === "mr"
-                        ? "डाउनलोड"
-                        : lang === "hi"
-                          ? "डाउनलोड"
-                          : "Download"}
+                      {lang === "mr" ? "डाउनलोड" : lang === "hi" ? "डाउनलोड" : "Download"}
                     </button>
                   </div>
                 </div>

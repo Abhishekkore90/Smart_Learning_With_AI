@@ -5,13 +5,7 @@ import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { ArrowLeft, ChevronDown, ChevronUp, X } from "lucide-react";
 import { toast } from "sonner";
 
-interface Student {
-  id: string;
-  fullName?: string;
-  name?: string;
-  rollNo?: string;
-  [key: string]: any;
-}
+interface Student { id: string; fullName?: string; name?: string; rollNo?: string; [key: string]: any; }
 type Semester = "sem1" | "sem2";
 
 const adjustRemarkGender = (remark: string, gender?: string): string => {
@@ -514,48 +508,25 @@ const REMARK_SUBJECTS = [
 // Student remarks data structure: { [subjectKey]: string[] }
 type StudentRemarks = Record<string, string[]>;
 
-export function CCERemarks({
-  selectedClass,
-  academicYear,
-  onBack,
-}: {
-  selectedClass: string;
-  academicYear: string;
-  onBack: () => void;
-}) {
+export function CCERemarks({ selectedClass, academicYear, onBack }: { selectedClass: string; academicYear: string; onBack: () => void }) {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeSemester, setActiveSemester] = useState<Semester>("sem1");
-  const [allRemarks, setAllRemarks] = useState<Record<string, StudentRemarks>>(
-    {},
-  );
+  const [allRemarks, setAllRemarks] = useState<Record<string, StudentRemarks>>({});
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
 
   // Per-student editor state
   const [studentRemarks, setStudentRemarks] = useState<StudentRemarks>({});
-  const [expandedSubject, setExpandedSubject] = useState<string | null>(
-    REMARK_SUBJECTS[0].key,
-  );
+  const [expandedSubject, setExpandedSubject] = useState<string | null>(REMARK_SUBJECTS[0].key);
   const [writeMode, setWriteMode] = useState<string | null>(null); // subjectKey for custom write
   const [writeText, setWriteText] = useState("");
 
   useEffect(() => {
-    const q = query(
-      collection(db, "users"),
-      where("role", "==", "student"),
-      where("class", "==", selectedClass),
-    );
+    const q = query(collection(db, "users"), where("role", "==", "student"), where("class", "==", selectedClass));
     const unsub = onSnapshot(q, (snap) => {
-      const data = snap.docs.map((d) => ({
-        id: d.id,
-        ...d.data(),
-      })) as Student[];
-      setStudents(
-        data.sort(
-          (a, b) => parseInt(a.rollNo || "999") - parseInt(b.rollNo || "999"),
-        ),
-      );
+      const data = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Student[];
+      setStudents(data.sort((a, b) => parseInt(a.rollNo || "999") - parseInt(b.rollNo || "999")));
     });
     return () => unsub();
   }, [selectedClass]);
@@ -564,16 +535,10 @@ export function CCERemarks({
     const load = async () => {
       setLoading(true);
       try {
-        const ref = doc(
-          db,
-          "cce_remarks_v2",
-          `${selectedClass}_${academicYear}_${activeSemester}`,
-        );
+        const ref = doc(db, "cce_remarks_v2", `${selectedClass}_${academicYear}_${activeSemester}`);
         const snap = await getDoc(ref);
         setAllRemarks(snap.exists() ? snap.data().records || {} : {});
-      } catch {
-        /* ignore */
-      }
+      } catch { /* ignore */ }
       setLoading(false);
     };
     load();
@@ -588,16 +553,16 @@ export function CCERemarks({
   };
 
   const removeRemark = (subKey: string, text: string) => {
-    setStudentRemarks((prev) => ({
+    setStudentRemarks(prev => ({
       ...prev,
-      [subKey]: (prev[subKey] || []).filter((r) => r !== text),
+      [subKey]: (prev[subKey] || []).filter(r => r !== text),
     }));
   };
 
   const addRemark = (subKey: string, text: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
-    setStudentRemarks((prev) => ({
+    setStudentRemarks(prev => ({
       ...prev,
       [subKey]: [...new Set([...(prev[subKey] || []), trimmed])],
     }));
@@ -617,22 +582,11 @@ export function CCERemarks({
     setSaving(true);
     try {
       const updated = { ...allRemarks, [editingStudent.id]: studentRemarks };
-      const ref = doc(
-        db,
-        "cce_remarks_v2",
-        `${selectedClass}_${academicYear}_${activeSemester}`,
-      );
-      await setDoc(
-        ref,
-        {
-          class: selectedClass,
-          academicYear,
-          semester: activeSemester,
-          records: updated,
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true },
-      );
+      const ref = doc(db, "cce_remarks_v2", `${selectedClass}_${academicYear}_${activeSemester}`);
+      await setDoc(ref, {
+        class: selectedClass, academicYear, semester: activeSemester,
+        records: updated, updatedAt: new Date().toISOString(),
+      }, { merge: true });
       setAllRemarks(updated);
       toast.success("नोंदी जतन झाल्या!");
       setEditingStudent(null);
@@ -659,9 +613,7 @@ export function CCERemarks({
           >
             <ArrowLeft className="size-5" />
           </button>
-          <h2 className="text-base font-bold text-slate-800">
-            वर्णनात्मक नोंदी
-          </h2>
+          <h2 className="text-base font-bold text-slate-800">वर्णनात्मक नोंदी</h2>
         </div>
 
         {/* Student Information Banner */}
@@ -684,11 +636,7 @@ export function CCERemarks({
               <div key={sub.key} className="border-b border-slate-100">
                 {/* Subject accordion header */}
                 <button
-                  onClick={() => {
-                    setExpandedSubject(isExpanded ? null : sub.key);
-                    setWriteMode(null);
-                    setWriteText("");
-                  }}
+                  onClick={() => { setExpandedSubject(isExpanded ? null : sub.key); setWriteMode(null); setWriteText(""); }}
                   className="w-full flex items-center justify-between py-4 px-1 cursor-pointer"
                 >
                   <span
@@ -698,17 +646,18 @@ export function CCERemarks({
                   </span>
                   <div className="flex items-center gap-2">
                     {remarks.length > 0 && (
-                      <div className="w-7 h-7 rounded-full flex items-center justify-center bg-blue-50 border border-blue-100">
+                      <div
+                        className="w-7 h-7 rounded-full flex items-center justify-center bg-blue-50 border border-blue-100"
+                      >
                         <span className="text-xs font-bold text-blue-600">
                           {remarks.length}
                         </span>
                       </div>
                     )}
-                    {isExpanded ? (
-                      <ChevronUp className="size-4 text-slate-400" />
-                    ) : (
-                      <ChevronDown className="size-4 text-slate-400" />
-                    )}
+                    {isExpanded
+                      ? <ChevronUp className="size-4 text-slate-400" />
+                      : <ChevronDown className="size-4 text-slate-400" />
+                    }
                   </div>
                 </button>
 
@@ -746,20 +695,13 @@ export function CCERemarks({
                         />
                         <div className="flex gap-2">
                           <button
-                            onClick={() => {
-                              addRemark(sub.key, writeText);
-                              setWriteText("");
-                              setWriteMode(null);
-                            }}
+                            onClick={() => { addRemark(sub.key, writeText); setWriteText(""); setWriteMode(null); }}
                             className="flex-1 py-2.5 font-bold text-xs rounded-xl cursor-pointer transition-colors bg-blue-600 hover:bg-blue-700 text-white"
                           >
                             जोडा
                           </button>
                           <button
-                            onClick={() => {
-                              setWriteMode(null);
-                              setWriteText("");
-                            }}
+                            onClick={() => { setWriteMode(null); setWriteText(""); }}
                             className="flex-1 py-2.5 font-bold text-xs rounded-xl cursor-pointer transition-colors bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
                           >
                             रद्द करा
@@ -772,22 +714,15 @@ export function CCERemarks({
                     {writeMode !== sub.key && (
                       <div className="space-y-1">
                         {sub.suggestions.map((s) => {
-                          const adjustedS = adjustRemarkGender(
-                            s,
-                            editingStudent?.gender,
-                          );
-                          const selected = (
-                            studentRemarks[sub.key] || []
-                          ).includes(adjustedS);
+                          const adjustedS = adjustRemarkGender(s, editingStudent?.gender);
+                          const selected = (studentRemarks[sub.key] || []).includes(adjustedS);
                           return (
                             <button
                               key={s}
-                              onClick={() =>
-                                toggleSuggestion(sub.key, adjustedS)
-                              }
+                              onClick={() => toggleSuggestion(sub.key, adjustedS)}
                               className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer border ${
-                                selected
-                                  ? "bg-blue-50 border-blue-200 text-blue-600 font-bold"
+                                selected 
+                                  ? "bg-blue-50 border-blue-200 text-blue-600 font-bold" 
                                   : "bg-transparent border-slate-150 text-slate-600 hover:bg-slate-50"
                               }`}
                             >
@@ -808,10 +743,7 @@ export function CCERemarks({
                           निवडा
                         </button>
                         <button
-                          onClick={() => {
-                            setWriteMode(sub.key);
-                            setWriteText("");
-                          }}
+                          onClick={() => { setWriteMode(sub.key); setWriteText(""); }}
                           className="flex-1 py-3 font-bold text-sm rounded-2xl cursor-pointer transition-colors bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
                         >
                           लिहा
@@ -826,7 +758,9 @@ export function CCERemarks({
         </div>
 
         {/* Fixed Save button */}
-        <div className="absolute bottom-0 left-0 right-0 px-5 pb-5 pt-3 bg-gradient-to-t from-white via-white to-transparent">
+        <div
+          className="absolute bottom-0 left-0 right-0 px-5 pb-5 pt-3 bg-gradient-to-t from-white via-white to-transparent"
+        >
           <button
             onClick={saveStudentRemarks}
             disabled={saving}
@@ -868,8 +802,8 @@ export function CCERemarks({
               key={sem}
               onClick={() => setActiveSemester(sem)}
               className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all cursor-pointer ${
-                activeSemester === sem
-                  ? "bg-white text-blue-600 shadow-sm border border-slate-200/50"
+                activeSemester === sem 
+                  ? "bg-white text-blue-600 shadow-sm border border-slate-200/50" 
                   : "text-slate-500 hover:text-slate-800"
               }`}
             >
@@ -884,9 +818,7 @@ export function CCERemarks({
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-            <span className="text-xs font-bold text-slate-400">
-              लोड होत आहे...
-            </span>
+            <span className="text-xs font-bold text-slate-400">लोड होत आहे...</span>
           </div>
         ) : students.length === 0 ? (
           <div className="flex justify-center py-20 text-sm text-slate-400">
@@ -896,44 +828,24 @@ export function CCERemarks({
           <div className="space-y-0.5">
             {students.map((student, idx) => {
               const sr = allRemarks[student.id] || {};
-              const totalCount = Object.values(sr).reduce(
-                (s, arr) => s + arr.length,
-                0,
-              );
+              const totalCount = Object.values(sr).reduce((s, arr) => s + arr.length, 0);
               return (
-                <div
-                  key={student.id}
+                <div key={student.id}
                   onClick={() => openStudent(student)}
-                  className="flex items-center justify-between px-2 py-3.5 rounded-xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100 cursor-pointer"
-                >
+                  className="flex items-center justify-between px-2 py-3.5 rounded-xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100 cursor-pointer">
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 border border-blue-100 font-bold text-sm flex items-center justify-center">
-                      {idx + 1}
-                    </div>
-                    <span className="text-[15px] font-medium text-slate-800">
-                      {student.fullName || student.name || "-"}
-                    </span>
+                    <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 border border-blue-100 font-bold text-sm flex items-center justify-center">{idx + 1}</div>
+                    <span className="text-[15px] font-medium text-slate-800">{student.fullName || student.name || "-"}</span>
                   </div>
                   <div
                     className={`w-9 h-9 rounded-full border-2 flex items-center justify-center transition-all ${
-                      totalCount > 0
-                        ? "border-emerald-500 bg-emerald-500 text-white"
+                      totalCount > 0 
+                        ? "border-emerald-500 bg-emerald-500 text-white" 
                         : "border-slate-300 bg-transparent"
-                    }`}
-                  >
+                    }`}>
                     {totalCount > 0 && (
-                      <svg
-                        className="w-4 h-4 text-white"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={3}
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M5 13l4 4L19 7"
-                        />
+                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
                     )}
                   </div>

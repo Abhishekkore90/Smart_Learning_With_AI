@@ -71,24 +71,18 @@ function AntigravityUploadForm() {
   const [uploadMethod, setUploadMethod] = useState<"link" | "file">("link");
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoUploadProgress, setVideoUploadProgress] = useState(0);
-  const [videoUploadStatus, setVideoUploadStatus] = useState<
-    "" | "uploading" | "success" | "error"
-  >("");
+  const [videoUploadStatus, setVideoUploadStatus] = useState<"" | "uploading" | "success" | "error">("");
   const [videoUploadError, setVideoUploadError] = useState("");
 
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailUploadProgress, setThumbnailUploadProgress] = useState(0);
-  const [thumbnailUploadStatus, setThumbnailUploadStatus] = useState<
-    "" | "uploading" | "success" | "error"
-  >("");
+  const [thumbnailUploadStatus, setThumbnailUploadStatus] = useState<"" | "uploading" | "success" | "error">("");
   const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [thumbnailUploadError, setThumbnailUploadError] = useState("");
 
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfUploadProgress, setPdfUploadProgress] = useState(0);
-  const [pdfUploadStatus, setPdfUploadStatus] = useState<
-    "" | "uploading" | "success" | "error"
-  >("");
+  const [pdfUploadStatus, setPdfUploadStatus] = useState<"" | "uploading" | "success" | "error">("");
   const [pdfUrl, setPdfUrl] = useState("");
   const [pdfUploadError, setPdfUploadError] = useState("");
 
@@ -136,9 +130,7 @@ function AntigravityUploadForm() {
 
     if (!apiKey || !libraryId) {
       setVideoUploadStatus("error");
-      setVideoUploadError(
-        "Bunny.net API keys are not configured in your .env file.",
-      );
+      setVideoUploadError("Bunny.net API keys are not configured in your .env file.");
       toast.error("Bunny.net API keys are not configured in your .env file.");
       return;
     }
@@ -148,23 +140,18 @@ function AntigravityUploadForm() {
     setVideoUploadError("");
 
     try {
-      const createResponse = await fetch(
-        `/api/bunny-stream/library/${libraryId}/videos`,
-        {
-          method: "POST",
-          headers: {
-            AccessKey: apiKey,
-            "Content-Type": "application/json",
-            accept: "application/json",
-          },
-          body: JSON.stringify({ title: title || videoFile.name }),
+      const createResponse = await fetch(`/api/bunny-stream/library/${libraryId}/videos`, {
+        method: "POST",
+        headers: {
+          "AccessKey": apiKey,
+          "Content-Type": "application/json",
+          "accept": "application/json"
         },
-      );
+        body: JSON.stringify({ title: title || videoFile.name })
+      });
 
       if (!createResponse.ok) {
-        throw new Error(
-          `Failed to create video record in Bunny.net (Status: ${createResponse.status})`,
-        );
+        throw new Error(`Failed to create video record in Bunny.net (Status: ${createResponse.status})`);
       }
 
       const createData = await createResponse.json();
@@ -178,23 +165,16 @@ function AntigravityUploadForm() {
         const xhr = new XMLHttpRequest();
         xhr.upload.addEventListener("progress", (event) => {
           if (event.lengthComputable) {
-            setVideoUploadProgress(
-              Math.round((event.loaded / event.total) * 100),
-            );
+            setVideoUploadProgress(Math.round((event.loaded / event.total) * 100));
           }
         });
         xhr.addEventListener("load", () => {
           if (xhr.status >= 200 && xhr.status < 300) resolve();
           else reject(new Error(`Video upload failed (Status: ${xhr.status})`));
         });
-        xhr.addEventListener("error", () =>
-          reject(new Error("Network error during video upload.")),
-        );
+        xhr.addEventListener("error", () => reject(new Error("Network error during video upload.")));
 
-        xhr.open(
-          "PUT",
-          `/api/bunny-stream/library/${libraryId}/videos/${videoId}`,
-        );
+        xhr.open("PUT", `/api/bunny-stream/library/${libraryId}/videos/${videoId}`);
         xhr.setRequestHeader("AccessKey", apiKey);
         xhr.setRequestHeader("Content-Type", "application/octet-stream");
         xhr.send(videoFile);
@@ -219,9 +199,7 @@ function AntigravityUploadForm() {
 
     if (!storageApiKey || !storageZone || !cdnHostname) {
       setThumbnailUploadStatus("error");
-      setThumbnailUploadError(
-        "Bunny Storage configuration is missing in .env.",
-      );
+      setThumbnailUploadError("Bunny Storage configuration is missing in .env.");
       toast.error("Bunny Storage configuration is missing in .env.");
       return;
     }
@@ -231,40 +209,25 @@ function AntigravityUploadForm() {
     setThumbnailUploadError("");
 
     try {
-      const uniqueId =
-        Math.random().toString(36).substring(2, 9) + "_" + Date.now();
-      const cleanFileName =
-        uniqueId + "_" + file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+      const uniqueId = Math.random().toString(36).substring(2, 9) + "_" + Date.now();
+      const cleanFileName = uniqueId + "_" + file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
 
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.upload.addEventListener("progress", (event) => {
           if (event.lengthComputable) {
-            setThumbnailUploadProgress(
-              Math.round((event.loaded / event.total) * 100),
-            );
+            setThumbnailUploadProgress(Math.round((event.loaded / event.total) * 100));
           }
         });
         xhr.addEventListener("load", () => {
           if (xhr.status >= 200 && xhr.status < 300) resolve();
-          else
-            reject(
-              new Error(`Thumbnail upload failed (Status: ${xhr.status})`),
-            );
+          else reject(new Error(`Thumbnail upload failed (Status: ${xhr.status})`));
         });
-        xhr.addEventListener("error", () =>
-          reject(new Error("Network error during thumbnail upload.")),
-        );
+        xhr.addEventListener("error", () => reject(new Error("Network error during thumbnail upload.")));
 
-        xhr.open(
-          "PUT",
-          `/api/bunny-storage/${storageZone}/thumbnails/${cleanFileName}`,
-        );
+        xhr.open("PUT", `/api/bunny-storage/${storageZone}/thumbnails/${cleanFileName}`);
         xhr.setRequestHeader("AccessKey", storageApiKey);
-        xhr.setRequestHeader(
-          "Content-Type",
-          file.type || "application/octet-stream",
-        );
+        xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
         xhr.send(file);
       });
 
@@ -297,32 +260,23 @@ function AntigravityUploadForm() {
     setPdfUploadError("");
 
     try {
-      const uniqueId =
-        Math.random().toString(36).substring(2, 9) + "_" + Date.now();
-      const cleanFileName =
-        uniqueId + "_" + file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+      const uniqueId = Math.random().toString(36).substring(2, 9) + "_" + Date.now();
+      const cleanFileName = uniqueId + "_" + file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
 
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.upload.addEventListener("progress", (event) => {
           if (event.lengthComputable) {
-            setPdfUploadProgress(
-              Math.round((event.loaded / event.total) * 100),
-            );
+            setPdfUploadProgress(Math.round((event.loaded / event.total) * 100));
           }
         });
         xhr.addEventListener("load", () => {
           if (xhr.status >= 200 && xhr.status < 300) resolve();
           else reject(new Error(`PDF upload failed (Status: ${xhr.status})`));
         });
-        xhr.addEventListener("error", () =>
-          reject(new Error("Network error during PDF upload.")),
-        );
+        xhr.addEventListener("error", () => reject(new Error("Network error during PDF upload.")));
 
-        xhr.open(
-          "PUT",
-          `/api/bunny-storage/${storageZone}/documents/${cleanFileName}`,
-        );
+        xhr.open("PUT", `/api/bunny-storage/${storageZone}/documents/${cleanFileName}`);
         xhr.setRequestHeader("AccessKey", storageApiKey);
         xhr.setRequestHeader("Content-Type", file.type || "application/pdf");
         xhr.send(file);
@@ -553,10 +507,7 @@ function AntigravityUploadForm() {
                         </label>
                         {!videoFile ? (
                           <div
-                            onDragOver={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                            }}
+                            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
                             onDrop={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
@@ -567,11 +518,7 @@ function AntigravityUploadForm() {
                                 setVideoUploadProgress(0);
                               }
                             }}
-                            onClick={() =>
-                              document
-                                .getElementById("bunny-video-input")
-                                ?.click()
-                            }
+                            onClick={() => document.getElementById("bunny-video-input")?.click()}
                             className="border-2 border-dashed border-slate-200 hover:border-[#6C63FF]/50 bg-[#F9FAFB] hover:bg-[#F3F4F6] transition-all rounded-3xl p-10 flex flex-col items-center justify-center gap-4 cursor-pointer text-center"
                           >
                             <input
@@ -592,12 +539,8 @@ function AntigravityUploadForm() {
                               <UploadIcon className="size-8" />
                             </div>
                             <div>
-                              <p className="text-sm font-bold">
-                                Drag and drop your video file here
-                              </p>
-                              <p className="text-xs text-[#6B7280] mt-1">
-                                Or click to browse files (MP4, MOV, etc.)
-                              </p>
+                              <p className="text-sm font-bold">Drag and drop your video file here</p>
+                              <p className="text-xs text-[#6B7280] mt-1">Or click to browse files (MP4, MOV, etc.)</p>
                             </div>
                           </div>
                         ) : (
@@ -607,13 +550,8 @@ function AntigravityUploadForm() {
                                 <FileVideo className="size-6" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-bold truncate">
-                                  {videoFile.name}
-                                </p>
-                                <p className="text-xs text-[#6B7280]">
-                                  {(videoFile.size / (1024 * 1024)).toFixed(2)}{" "}
-                                  MB
-                                </p>
+                                <p className="text-sm font-bold truncate">{videoFile.name}</p>
+                                <p className="text-xs text-[#6B7280]">{(videoFile.size / (1024 * 1024)).toFixed(2)} MB</p>
                               </div>
                               {videoUploadStatus !== "uploading" && (
                                 <button
@@ -659,10 +597,7 @@ function AntigravityUploadForm() {
                             {videoUploadStatus === "success" && (
                               <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-100 rounded-2xl text-emerald-700 text-xs font-bold">
                                 <CheckCircle2 className="size-4 shrink-0" />
-                                <span>
-                                  Uploaded successfully! Video ID:{" "}
-                                  {videoLink.split("/").pop()}
-                                </span>
+                                <span>Uploaded successfully! Video ID: {videoLink.split("/").pop()}</span>
                               </div>
                             )}
 
@@ -692,28 +627,17 @@ function AntigravityUploadForm() {
                       </label>
                       {!thumbnailFile ? (
                         <div
-                          onDragOver={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                          }}
+                          onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
                           onDrop={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
                             const files = e.dataTransfer.files;
-                            if (
-                              files &&
-                              files.length > 0 &&
-                              files[0].type.startsWith("image/")
-                            ) {
+                            if (files && files.length > 0 && files[0].type.startsWith("image/")) {
                               setThumbnailFile(files[0]);
                               handleUploadThumbnail(files[0]);
                             }
                           }}
-                          onClick={() =>
-                            document
-                              .getElementById("bunny-thumbnail-input")
-                              ?.click()
-                          }
+                          onClick={() => document.getElementById("bunny-thumbnail-input")?.click()}
                           className="border-2 border-dashed border-slate-200 hover:border-[#6C63FF]/50 bg-[#F9FAFB] hover:bg-[#F3F4F6] transition-all rounded-3xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer text-center"
                         >
                           <input
@@ -733,38 +657,23 @@ function AntigravityUploadForm() {
                             <UploadIcon className="size-6" />
                           </div>
                           <div>
-                            <p className="text-xs font-bold">
-                              Select or drag thumbnail image here
-                            </p>
-                            <p className="text-[10px] text-[#6B7280] mt-0.5">
-                              PNG, JPG or WEBP (Max 5MB)
-                            </p>
+                            <p className="text-xs font-bold">Select or drag thumbnail image here</p>
+                            <p className="text-[10px] text-[#6B7280] mt-0.5">PNG, JPG or WEBP (Max 5MB)</p>
                           </div>
                         </div>
                       ) : (
                         <div className="bg-[#F9FAFB] border border-slate-200 rounded-3xl p-6 flex flex-col gap-4">
                           <div className="flex items-center gap-4">
                             {thumbnailUrl ? (
-                              <img
-                                src={thumbnailUrl}
-                                className="size-12 rounded-xl object-cover shadow-sm bg-white"
-                                alt="Thumbnail Preview"
-                              />
+                              <img src={thumbnailUrl} className="size-12 rounded-xl object-cover shadow-sm bg-white" alt="Thumbnail Preview" />
                             ) : (
                               <div className="size-12 rounded-xl bg-indigo-50 flex items-center justify-center text-[#6C63FF]">
                                 <UploadIcon className="size-6" />
                               </div>
                             )}
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs font-bold truncate">
-                                {thumbnailFile.name}
-                              </p>
-                              <p className="text-[10px] text-[#6B7280]">
-                                {(thumbnailFile.size / (1024 * 1024)).toFixed(
-                                  2,
-                                )}{" "}
-                                MB
-                              </p>
+                              <p className="text-xs font-bold truncate">{thumbnailFile.name}</p>
+                              <p className="text-[10px] text-[#6B7280]">{(thumbnailFile.size / (1024 * 1024)).toFixed(2)} MB</p>
                             </div>
                             {thumbnailUploadStatus !== "uploading" && (
                               <button
@@ -791,9 +700,7 @@ function AntigravityUploadForm() {
                               <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
                                 <div
                                   className="bg-indigo-600 h-full rounded-full transition-all duration-300"
-                                  style={{
-                                    width: `${thumbnailUploadProgress}%`,
-                                  }}
+                                  style={{ width: `${thumbnailUploadProgress}%` }}
                                 />
                               </div>
                             </div>
@@ -813,9 +720,7 @@ function AntigravityUploadForm() {
                               </div>
                               <button
                                 type="button"
-                                onClick={() =>
-                                  handleUploadThumbnail(thumbnailFile)
-                                }
+                                onClick={() => handleUploadThumbnail(thumbnailFile)}
                                 className="w-full py-2.5 bg-[#6C63FF] text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-glow-sm transition-all"
                               >
                                 Retry Upload
@@ -833,26 +738,17 @@ function AntigravityUploadForm() {
                       </label>
                       {!pdfFile ? (
                         <div
-                          onDragOver={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                          }}
+                          onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
                           onDrop={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
                             const files = e.dataTransfer.files;
-                            if (
-                              files &&
-                              files.length > 0 &&
-                              files[0].type === "application/pdf"
-                            ) {
+                            if (files && files.length > 0 && files[0].type === "application/pdf") {
                               setPdfFile(files[0]);
                               handleUploadPdf(files[0]);
                             }
                           }}
-                          onClick={() =>
-                            document.getElementById("bunny-pdf-input")?.click()
-                          }
+                          onClick={() => document.getElementById("bunny-pdf-input")?.click()}
                           className="border-2 border-dashed border-slate-200 hover:border-[#6C63FF]/50 bg-[#F9FAFB] hover:bg-[#F3F4F6] transition-all rounded-3xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer text-center"
                         >
                           <input
@@ -872,12 +768,8 @@ function AntigravityUploadForm() {
                             <FileText className="size-6" />
                           </div>
                           <div>
-                            <p className="text-xs font-bold">
-                              Select or drag PDF study material here
-                            </p>
-                            <p className="text-[10px] text-[#6B7280] mt-0.5">
-                              PDF documents (Max 10MB)
-                            </p>
+                            <p className="text-xs font-bold">Select or drag PDF study material here</p>
+                            <p className="text-[10px] text-[#6B7280] mt-0.5">PDF documents (Max 10MB)</p>
                           </div>
                         </div>
                       ) : (
@@ -887,12 +779,8 @@ function AntigravityUploadForm() {
                               <FileText className="size-6" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs font-bold truncate">
-                                {pdfFile.name}
-                              </p>
-                              <p className="text-[10px] text-[#6B7280]">
-                                {(pdfFile.size / (1024 * 1024)).toFixed(2)} MB
-                              </p>
+                              <p className="text-xs font-bold truncate">{pdfFile.name}</p>
+                              <p className="text-[10px] text-[#6B7280]">{(pdfFile.size / (1024 * 1024)).toFixed(2)} MB</p>
                             </div>
                             {pdfUploadStatus !== "uploading" && (
                               <button
@@ -928,9 +816,7 @@ function AntigravityUploadForm() {
                           {pdfUploadStatus === "success" && (
                             <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-100 rounded-2xl text-emerald-700 text-xs font-bold">
                               <CheckCircle2 className="size-4 shrink-0" />
-                              <span>
-                                Study material PDF uploaded and linked!
-                              </span>
+                              <span>Study material PDF uploaded and linked!</span>
                             </div>
                           )}
 

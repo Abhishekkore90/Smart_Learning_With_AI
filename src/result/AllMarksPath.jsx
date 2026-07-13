@@ -4,9 +4,7 @@ import { motion } from "framer-motion";
 
 function AllMarksPath() {
   const navigate = useNavigate();
-  const [language, setLanguage] = useState(
-    localStorage.getItem("language") || "English",
-  );
+  const [language, setLanguage] = useState(localStorage.getItem("language") || "English");
   const [activeButton, setActiveButton] = useState(null);
 
   useEffect(() => {
@@ -15,19 +13,13 @@ function AllMarksPath() {
 
   const buttons = [
     {
-      label: {
-        English: "Enter Marks of 1st to 8th",
-        Marathi: "पहिली ते आठवी साठी गुण प्रविष्ट करा",
-      },
-      path: "/GunaNeendani",
+      label: { English: "Enter Marks of 1st to 8th", Marathi: "पहिली ते आठवी साठी गुण प्रविष्ट करा" },
+      path: "/GunaNeendani"
     },
     {
-      label: {
-        English: "Enter Marks of 9th 10th",
-        Marathi: "नववी दहावी साठी गुण प्रविष्ट करा",
-      },
-      path: "/markenterssc",
-    },
+      label: { English: "Enter Marks of 9th 10th", Marathi: "नववी दहावी साठी गुण प्रविष्ट करा" },
+      path: "/markenterssc"
+    }
   ];
 
   useEffect(() => {
@@ -36,7 +28,7 @@ function AllMarksPath() {
     setLanguage(storedLanguage);
     if (storedActive) setActiveButton(storedActive);
   }, []);
-
+  
   const handleClick = (path) => {
     setActiveButton(path);
     localStorage.setItem("activePath", path);
@@ -44,6 +36,7 @@ function AllMarksPath() {
       navigate(path);
     }, 150);
   };
+  
 
   const renderButton = (button) => {
     const isActive = activeButton === button.path;
@@ -77,10 +70,7 @@ function AllMarksPath() {
   };
 
   return (
-    <div
-      style={{ textAlign: "center", padding: "20px", marginBottom: "20px" }}
-      className="main-content-of-page"
-    >
+    <div style={{ textAlign: "center", padding: "20px", marginBottom: "20px" }} className="main-content-of-page">
       {buttons.map(renderButton)}
     </div>
   );

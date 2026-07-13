@@ -122,10 +122,7 @@ function TeacherSettings() {
             address: parsed.address || "",
           });
         } catch (e) {
-          setFormData((prev) => ({
-            ...prev,
-            fullName: user.displayName || "",
-          }));
+          setFormData((prev) => ({ ...prev, fullName: user.displayName || "" }));
         }
       } else {
         setFormData((prev) => ({ ...prev, fullName: user.displayName || "" }));
@@ -171,7 +168,7 @@ function TeacherSettings() {
           schoolName: formData.schoolName,
           updatedAt: new Date().toISOString(),
         },
-        { merge: true },
+        { merge: true }
       );
 
       // Sync local storage profile
@@ -347,8 +344,7 @@ function TeacherSettings() {
                   {/* School UDISE Code */}
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                      <School className="size-4 text-indigo-500" /> School UDISE
-                      Code
+                      <School className="size-4 text-indigo-500" /> School UDISE Code
                     </label>
                     <input
                       type="text"
@@ -363,8 +359,7 @@ function TeacherSettings() {
                   {/* School Address (Jurisdiction) */}
                   <div className="space-y-2 md:col-span-2">
                     <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                      <MapPin className="size-4 text-indigo-500" /> School
-                      Address (Jurisdiction)
+                      <MapPin className="size-4 text-indigo-500" /> School Address (Jurisdiction)
                     </label>
                     <input
                       type="text"

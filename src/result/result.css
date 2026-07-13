@@ -1,19 +1,20 @@
 .parent-container {
-  display: flex; /* Or grid */
-  flex-direction: column;
-}
+    display: flex;         /* Or grid */
+    flex-direction: column;
+  }
+  
+  .form-container {
+    flex: 1;               /* Allows container to grow within the flex parent */
+  }
 
-.form-container {
-  flex: 1; /* Allows container to grow within the flex parent */
-}
 
-.modal-90w {
-  width: 100%;
-  max-width: 100%;
-  height: 100%;
-  max-height: 100%;
-}
-
+  .modal-90w {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+  }
+  
 .custom-modal .modal-dialog {
   width: 90%;
   max-width: 90%;
@@ -37,11 +38,13 @@
   height: 140px; /* Adjust the height as needed */
 }
 
+  
+
 /* -------------------------------------------------------------------------------------------------------------------------------- */
-/* Add this to your CSS file (e.g., ProgressSheet.css) */
+  /* Add this to your CSS file (e.g., ProgressSheet.css) */
 .custom-table {
   max-width: 600px; /* Adjust the width as needed */
-  margin: left; /* Center the table */
+  margin: left  ; /* Center the table */
   width: 150px; /* Adjust the width as needed */
 }
 .modal-80w {
@@ -50,6 +53,7 @@
   height: 100%;
   max-height: 100%;
 }
+
 
 body {
   font-family: sans-serif;
@@ -79,8 +83,7 @@ table {
   border-collapse: collapse;
 }
 
-th,
-td {
+th, td {
   border: 1px solid #130606;
   padding: 5px;
   text-align: left;
@@ -96,8 +99,7 @@ td {
   border-collapse: collapse;
 }
 
-.grade-table th,
-.grade-table td {
+.grade-table th, .grade-table td {
   border: 1px solid #ccc;
   padding: 5px;
   text-align: center;
@@ -111,6 +113,7 @@ td {
 .grade-table tbody td {
   text-align: center;
 }
+
 
 /* -----------------------------------------------------------Result--------------------------------------- */
 
@@ -131,21 +134,23 @@ li {
   position: relative; /* add this */
 }
 
-.grad {
+.grad{
   position: absolute; /* add this */
   bottom: 0; /* add this */
   left: 20px; /* add this */
   width: 100%; /* add this */
 }
 
-.semtgrad {
+.semtgrad{
   position: absolute; /* add this */
   bottom: 5px; /* add this */
   left: 5px; /* add this */
   width: 100%; /* add this */
 }
 
+
 /* -----------------------------------student-info */
+
 
 .student-info-grid {
   display: grid;
@@ -191,12 +196,17 @@ li {
   margin-bottom: 0;
 }
 
+
+
+
+
+
 .left {
   border: 2px solid #0f0202; /* add a border to the .left div */
   padding: 20px; /* add some padding to make the content more readable */
   position: relative; /* add this */
 }
-.gradable {
+.gradable{
   position: absolute; /* add this */
   bottom: 2px; /* add this */
   left: 1%; /* add this */
@@ -259,13 +269,31 @@ li {
   color: #666;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 table {
   width: 100%;
   border-collapse: collapse;
 }
 
-th,
-td {
+th, td {
   border: 1px solid #ccc;
   padding: 5px;
   text-align: left;
@@ -275,11 +303,13 @@ td {
 thead th {
   background-color: #f4f4f4;
   font-weight: normal; /* Removes bold styling */
+
 }
 
 tbody td {
   text-align: center;
   font-weight: normal; /* Removes bold styling */
+
 }
 
 input {
@@ -287,13 +317,13 @@ input {
   box-sizing: border-box;
 }
 
+
 .grade-table table {
   width: 100%;
   border-collapse: collapse;
 }
 
-.grade-table th,
-.grade-table td {
+.grade-table th, .grade-table td {
   border: 1px solid #ccc;
   padding: 5px;
   text-align: center;
@@ -307,6 +337,8 @@ input {
 .grade-table tbody td {
   text-align: center;
 }
+
+
 
 .footer-notes {
   left: 12%;
@@ -360,6 +392,8 @@ input {
   border-top: 1px solid #ddd;
 }
 
+
+
 /* ------------------------------------------------Gradewise-------------------------------------------------------------- */
 
 .table {
@@ -367,8 +401,7 @@ input {
   border-collapse: collapse;
 }
 
-.table th,
-.table td {
+.table th, .table td {
   border: 1px solid #000;
   padding: 8px;
   text-align: center;
@@ -390,8 +423,22 @@ input {
 .text-center {
   text-align: center;
 }
+         
+
+
+
+
+
+
+
+
 
 /* ----------------------------------------------------------------------------------------------- nondi---------------------- */
+
+
+
+
+
 
 .blink {
   animation: blink 1s infinite;
@@ -450,7 +497,7 @@ input {
   border: 1px solid rgba(0, 0, 0, 0.2);
   border-radius: 1rem;
   outline: 0;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
 }
 .modal-backdrop {
   position: fixed;
@@ -493,8 +540,7 @@ input {
   border-bottom-right-radius: 1rem;
   border-bottom-left-radius: 1rem;
 }
-.close,
-.btn-close {
+.close, .btn-close {
   background: transparent;
   border: 0;
   font-size: 1.5rem;

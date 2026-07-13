@@ -1,32 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
-import {
-  Users,
-  UserCheck,
-  ArrowRight,
-  ShieldCheck,
-  Search,
-} from "lucide-react";
+import { Users, UserCheck, ArrowRight, ShieldCheck, Search } from "lucide-react";
 
 // IndexedDB Constants
 const DB_NAME = "SchoolManagementDB";
 const STUDENT_STORE = "studentData";
 const DB_VERSION = 1;
 
-const CLASSES = [
-  "1st",
-  "2nd",
-  "3rd",
-  "4th",
-  "5th",
-  "6th",
-  "7th",
-  "8th",
-  "9th",
-  "10th",
-  "11th",
-  "12th",
-];
+const CLASSES = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th", "11th", "12th"];
 const TARGET_CLASSES = [...CLASSES, "Alumni"];
 
 function openDB() {
@@ -44,7 +25,7 @@ export default function PromoteStudents() {
   const [targetYear, setTargetYear] = useState("");
   const [targetClass, setTargetClass] = useState("");
   const [targetDivision, setTargetDivision] = useState("");
-
+  
   const [studentData, setStudentData] = useState([]);
   const [filteredStudents, setFilteredStudents] = useState([]);
   const [selectedStudents, setSelectedStudents] = useState({});
@@ -64,10 +45,10 @@ export default function PromoteStudents() {
 
       request.onsuccess = (event) => {
         const students = event.target.result || [];
-        const activeStudents = students.filter((s) => s.isActive !== false);
+        const activeStudents = students.filter(s => s.isActive !== false);
 
         // Normalize student fields
-        const normalized = activeStudents.map((student) => {
+        const normalized = activeStudents.map(student => {
           const keyParts = student.id.split("-");
           const className = keyParts[0];
           const div = keyParts[1];
@@ -84,13 +65,11 @@ export default function PromoteStudents() {
 
   useEffect(() => {
     loadStudentData();
-
+    
     // Fetch default academic year
     const fetchDefaultSettings = async () => {
       try {
-        const response = await fetch(
-          `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/defaultSettings.json`,
-        );
+        const response = await fetch(`${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/defaultSettings.json`);
         if (response.ok) {
           const data = await response.json();
           if (data && data.defaultYear) {
@@ -108,8 +87,8 @@ export default function PromoteStudents() {
   useEffect(() => {
     if (classValue) {
       const classDivs = studentData
-        .filter((s) => s.currentClass === classValue)
-        .map((s) => s.division)
+        .filter(s => s.currentClass === classValue)
+        .map(s => s.division)
         .filter((value, index, self) => value && self.indexOf(value) === index);
       setDivisions(classDivs);
       setDivision("");
@@ -122,18 +101,13 @@ export default function PromoteStudents() {
   // Filter students based on selection & search
   useEffect(() => {
     if (classValue && division) {
-      const result = studentData
-        .filter((s) => {
-          const matchClass = s.currentClass === classValue;
-          const matchDiv = s.division === division;
-          const fullName =
-            `${s.stdName || ""} ${s.stdFather || ""} ${s.stdSurname || ""}`.toLowerCase();
-          const matchSearch =
-            fullName.includes(searchTerm.toLowerCase()) ||
-            (s.rollNo && String(s.rollNo).includes(searchTerm));
-          return matchClass && matchDiv && matchSearch;
-        })
-        .sort((a, b) => (Number(a.rollNo) || 0) - (Number(b.rollNo) || 0));
+      const result = studentData.filter(s => {
+        const matchClass = s.currentClass === classValue;
+        const matchDiv = s.division === division;
+        const fullName = `${s.stdName || ""} ${s.stdFather || ""} ${s.stdSurname || ""}`.toLowerCase();
+        const matchSearch = fullName.includes(searchTerm.toLowerCase()) || (s.rollNo && String(s.rollNo).includes(searchTerm));
+        return matchClass && matchDiv && matchSearch;
+      }).sort((a, b) => (Number(a.rollNo) || 0) - (Number(b.rollNo) || 0));
 
       setFilteredStudents(result);
       // Reset selections
@@ -180,9 +154,9 @@ export default function PromoteStudents() {
   }, [division]);
 
   const handleSelectStudent = (srNo) => {
-    setSelectedStudents((prev) => ({
+    setSelectedStudents(prev => ({
       ...prev,
-      [srNo]: !prev[srNo],
+      [srNo]: !prev[srNo]
     }));
   };
 
@@ -190,7 +164,7 @@ export default function PromoteStudents() {
     const checked = e.target.checked;
     const nextSelections = {};
     if (checked) {
-      filteredStudents.forEach((s) => {
+      filteredStudents.forEach(s => {
         nextSelections[s.srNo] = true;
       });
     }
@@ -198,9 +172,7 @@ export default function PromoteStudents() {
   };
 
   const handlePromote = async () => {
-    const selectedIds = Object.keys(selectedStudents).filter(
-      (id) => selectedStudents[id],
-    );
+    const selectedIds = Object.keys(selectedStudents).filter(id => selectedStudents[id]);
     if (selectedIds.length === 0) {
       toast.error("Please select at least one student to promote!");
       return;
@@ -216,12 +188,12 @@ export default function PromoteStudents() {
 
       for (const srNo of selectedIds) {
         // Find student details
-        const student = studentData.find((s) => s.srNo === srNo);
+        const student = studentData.find(s => s.srNo === srNo);
         if (!student) continue;
 
         // 1. Update Firebase Realtime Database
         const firebaseRef = `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${srNo}.json`;
-
+        
         const updates = { currentClass: targetClass };
         if (targetDivision) updates.division = targetDivision;
         if (targetYear) updates.academicYear = targetYear;
@@ -229,15 +201,15 @@ export default function PromoteStudents() {
         await fetch(firebaseRef, {
           method: "PATCH",
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type": "application/json"
           },
-          body: JSON.stringify(updates),
+          body: JSON.stringify(updates)
         });
 
         // 2. Update local IndexedDB
         const transaction = dbInstance.transaction(STUDENT_STORE, "readwrite");
         const store = transaction.objectStore(STUDENT_STORE);
-
+        
         await new Promise((resolve, reject) => {
           const getReq = store.get(student.id);
           getReq.onsuccess = () => {
@@ -246,7 +218,7 @@ export default function PromoteStudents() {
               data.currentClass = targetClass;
               if (targetDivision) data.division = targetDivision;
               if (targetYear) data.academicYear = targetYear;
-
+              
               const putReq = store.put(data);
               putReq.onsuccess = () => resolve(true);
               putReq.onerror = () => reject(putReq.error);
@@ -258,9 +230,7 @@ export default function PromoteStudents() {
         });
       }
 
-      toast.success(
-        `Successfully promoted ${selectedIds.length} students to ${targetClass}!`,
-      );
+      toast.success(`Successfully promoted ${selectedIds.length} students to ${targetClass}!`);
       // Reload students state
       await loadStudentData();
       setSelectedStudents({});
@@ -275,145 +245,58 @@ export default function PromoteStudents() {
   return (
     <div className="space-y-8">
       {/* Old Table-based Command Center Replacement */}
-      <div
-        className="main-content-of-page p-3"
-        style={{
-          backgroundColor: "#f9f9f9",
-          borderRadius: "8px",
-          padding: "20px",
-          marginBottom: "30px",
-        }}
-      >
-        <h2
-          style={{
-            color: "#0c2a52",
-            textAlign: "center",
-            fontWeight: "bold",
-            marginBottom: "30px",
-          }}
-        >
-          Promote Students
-        </h2>
-
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: "20px",
-          }}
-        >
+      <div className="main-content-of-page p-3" style={{ backgroundColor: '#f9f9f9', borderRadius: '8px', padding: '20px', marginBottom: '30px' }}>
+        <h2 style={{ color: '#0c2a52', textAlign: 'center', fontWeight: 'bold', marginBottom: '30px' }}>Promote Students</h2>
+        
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
+          
           {/* Current Class Details Table */}
-          <div style={{ flex: "1", minWidth: "300px" }}>
-            <h4
-              style={{
-                color: "#0056b3",
-                marginBottom: "10px",
-                fontSize: "1.1rem",
-              }}
-            >
-              Current Class Details
-            </h4>
-            <table
-              className="table table-bordered"
-              style={{
-                width: "100%",
-                backgroundColor: "#fff",
-                boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-                borderRadius: "4px",
-              }}
-            >
+          <div style={{ flex: '1', minWidth: '300px' }}>
+            <h4 style={{ color: '#0056b3', marginBottom: '10px', fontSize: '1.1rem' }}>Current Class Details</h4>
+            <table className="table table-bordered" style={{ width: '100%', backgroundColor: '#fff', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', borderRadius: '4px' }}>
               <tbody>
                 <tr>
-                  <th
-                    style={{
-                      backgroundColor: "#b5d3f2",
-                      width: "35%",
-                      verticalAlign: "middle",
-                      fontWeight: "bold",
-                      padding: "10px",
-                    }}
-                  >
-                    Academic Year
-                  </th>
-                  <td style={{ padding: "5px" }}>
-                    <input
-                      type="text"
-                      value={academicYear}
-                      onChange={(e) => setAcademicYear(e.target.value)}
-                      className="form-control"
-                      placeholder="e.g. 2026-2027"
-                      style={{
-                        border: "1px solid #ccc",
-                        borderRadius: "4px",
-                        padding: "8px",
-                        width: "100%",
-                      }}
+                  <th style={{ backgroundColor: '#b5d3f2', width: '35%', verticalAlign: 'middle', fontWeight: 'bold', padding: '10px' }}>Academic Year</th>
+                  <td style={{ padding: '5px' }}>
+                    <input 
+                      type="text" 
+                      value={academicYear} 
+                      onChange={(e) => setAcademicYear(e.target.value)} 
+                      className="form-control" 
+                      placeholder="e.g. 2026-2027" 
+                      style={{ border: '1px solid #ccc', borderRadius: '4px', padding: '8px', width: '100%' }} 
                     />
                   </td>
                 </tr>
                 <tr>
-                  <th
-                    style={{
-                      backgroundColor: "#b5d3f2",
-                      verticalAlign: "middle",
-                      fontWeight: "bold",
-                      padding: "10px",
-                    }}
-                  >
-                    Class
-                  </th>
-                  <td style={{ padding: "5px" }}>
-                    <select
-                      value={classValue}
-                      onChange={(e) => setClassValue(e.target.value)}
-                      className="form-control custom-select"
-                      style={{
-                        border: "1px solid #ccc",
-                        borderRadius: "4px",
-                        padding: "8px",
-                        width: "100%",
-                      }}
+                  <th style={{ backgroundColor: '#b5d3f2', verticalAlign: 'middle', fontWeight: 'bold', padding: '10px' }}>Class</th>
+                  <td style={{ padding: '5px' }}>
+                    <select 
+                      value={classValue} 
+                      onChange={(e) => setClassValue(e.target.value)} 
+                      className="form-control custom-select" 
+                      style={{ border: '1px solid #ccc', borderRadius: '4px', padding: '8px', width: '100%' }}
                     >
                       <option value="">Select Class</option>
                       {CLASSES.map((cls) => (
-                        <option key={cls} value={cls}>
-                          {cls}
-                        </option>
+                        <option key={cls} value={cls}>{cls}</option>
                       ))}
                     </select>
                   </td>
                 </tr>
                 <tr>
-                  <th
-                    style={{
-                      backgroundColor: "#b5d3f2",
-                      verticalAlign: "middle",
-                      fontWeight: "bold",
-                      padding: "10px",
-                    }}
-                  >
-                    Division
-                  </th>
-                  <td style={{ padding: "5px" }}>
-                    <select
-                      value={division}
-                      onChange={(e) => setDivision(e.target.value)}
-                      className="form-control custom-select"
-                      style={{
-                        border: "1px solid #ccc",
-                        borderRadius: "4px",
-                        padding: "8px",
-                        width: "100%",
-                      }}
+                  <th style={{ backgroundColor: '#b5d3f2', verticalAlign: 'middle', fontWeight: 'bold', padding: '10px' }}>Division</th>
+                  <td style={{ padding: '5px' }}>
+                    <select 
+                      value={division} 
+                      onChange={(e) => setDivision(e.target.value)} 
+                      className="form-control custom-select" 
+                      style={{ border: '1px solid #ccc', borderRadius: '4px', padding: '8px', width: '100%' }}
                       disabled={!classValue}
                     >
                       <option value="">All Divisions</option>
                       {divisions.map((div) => (
-                        <option key={div} value={div}>
-                          {div}
-                        </option>
+                        <option key={div} value={div}>{div}</option>
                       ))}
                     </select>
                   </td>
@@ -423,163 +306,78 @@ export default function PromoteStudents() {
           </div>
 
           {/* Arrow */}
-          <div style={{ padding: "20px", textAlign: "center" }}>
+          <div style={{ padding: '20px', textAlign: 'center' }}>
             <ArrowRight size={40} color="green" strokeWidth={3} />
           </div>
 
           {/* Target Class Details Table */}
-          <div style={{ flex: "1", minWidth: "300px" }}>
-            <h4
-              style={{
-                color: "#0056b3",
-                marginBottom: "10px",
-                fontSize: "1.1rem",
-              }}
-            >
-              Promote to the next class
-            </h4>
-            <table
-              className="table table-bordered"
-              style={{
-                width: "100%",
-                backgroundColor: "#fff",
-                boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-                borderRadius: "4px",
-              }}
-            >
+          <div style={{ flex: '1', minWidth: '300px' }}>
+            <h4 style={{ color: '#0056b3', marginBottom: '10px', fontSize: '1.1rem' }}>Promote to the next class</h4>
+            <table className="table table-bordered" style={{ width: '100%', backgroundColor: '#fff', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', borderRadius: '4px' }}>
               <tbody>
                 <tr>
-                  <th
-                    style={{
-                      backgroundColor: "#b5d3f2",
-                      width: "35%",
-                      verticalAlign: "middle",
-                      fontWeight: "bold",
-                      padding: "10px",
-                    }}
-                  >
-                    Target Year
-                  </th>
-                  <td style={{ padding: "5px" }}>
-                    <input
-                      type="text"
+                  <th style={{ backgroundColor: '#b5d3f2', width: '35%', verticalAlign: 'middle', fontWeight: 'bold', padding: '10px' }}>Target Year</th>
+                  <td style={{ padding: '5px' }}>
+                    <input 
+                      type="text" 
                       value={targetYear}
                       onChange={(e) => setTargetYear(e.target.value)}
-                      placeholder="e.g. 2027-2028"
-                      className="form-control"
-                      style={{
-                        border: "1px solid #ccc",
-                        borderRadius: "4px",
-                        padding: "8px",
-                        width: "100%",
-                      }}
+                      placeholder="e.g. 2027-2028" 
+                      className="form-control" 
+                      style={{ border: '1px solid #ccc', borderRadius: '4px', padding: '8px', width: '100%' }} 
                     />
                   </td>
                 </tr>
                 <tr>
-                  <th
-                    style={{
-                      backgroundColor: "#b5d3f2",
-                      verticalAlign: "middle",
-                      fontWeight: "bold",
-                      padding: "10px",
-                    }}
-                  >
-                    Target Class
-                  </th>
-                  <td style={{ padding: "5px" }}>
-                    <select
-                      value={targetClass}
-                      onChange={(e) => setTargetClass(e.target.value)}
-                      className="form-control custom-select"
-                      style={{
-                        border: "1px solid #ccc",
-                        borderRadius: "4px",
-                        padding: "8px",
-                        width: "100%",
-                      }}
+                  <th style={{ backgroundColor: '#b5d3f2', verticalAlign: 'middle', fontWeight: 'bold', padding: '10px' }}>Target Class</th>
+                  <td style={{ padding: '5px' }}>
+                    <select 
+                      value={targetClass} 
+                      onChange={(e) => setTargetClass(e.target.value)} 
+                      className="form-control custom-select" 
+                      style={{ border: '1px solid #ccc', borderRadius: '4px', padding: '8px', width: '100%' }}
                     >
                       <option value="">Select Class</option>
                       {TARGET_CLASSES.map((cls) => (
-                        <option key={cls} value={cls}>
-                          {cls}
-                        </option>
+                        <option key={cls} value={cls}>{cls}</option>
                       ))}
                     </select>
                   </td>
                 </tr>
                 <tr>
-                  <th
-                    style={{
-                      backgroundColor: "#b5d3f2",
-                      verticalAlign: "middle",
-                      fontWeight: "bold",
-                      padding: "10px",
-                    }}
-                  >
-                    Target Division
-                  </th>
-                  <td style={{ padding: "5px" }}>
-                    <div style={{ display: "flex", gap: "10px" }}>
-                      <input
-                        type="text"
+                  <th style={{ backgroundColor: '#b5d3f2', verticalAlign: 'middle', fontWeight: 'bold', padding: '10px' }}>Target Division</th>
+                  <td style={{ padding: '5px' }}>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <input 
+                        type="text" 
                         value={targetDivision}
                         onChange={(e) => setTargetDivision(e.target.value)}
-                        placeholder="Keep Current"
-                        className="form-control"
-                        style={{
-                          border: "1px solid #ccc",
-                          borderRadius: "4px",
-                          padding: "8px",
-                          flex: "1",
-                        }}
+                        placeholder="Keep Current" 
+                        className="form-control" 
+                        style={{ border: '1px solid #ccc', borderRadius: '4px', padding: '8px', flex: '1' }} 
                       />
-                      <button
-                        className="btn btn-outline-primary"
-                        style={{
-                          padding: "0 15px",
-                          color: "#0d6efd",
-                          border: "1px solid #0d6efd",
-                          backgroundColor: "transparent",
-                          borderRadius: "4px",
-                          fontWeight: "bold",
-                          cursor: "pointer",
-                        }}
-                      >
-                        +
-                      </button>
+                      <button className="btn btn-outline-primary" style={{ padding: '0 15px', color: '#0d6efd', border: '1px solid #0d6efd', backgroundColor: 'transparent', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}>+</button>
                     </div>
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
+
         </div>
 
         {/* Action Button */}
-        <div style={{ textAlign: "center", marginTop: "20px" }}>
+        <div style={{ textAlign: 'center', marginTop: '20px' }}>
           <button
             onClick={() => {
-              if (
-                Object.keys(selectedStudents).filter((k) => selectedStudents[k])
-                  .length === 0
-              ) {
+              if (Object.keys(selectedStudents).filter(k => selectedStudents[k]).length === 0) {
                 toast.error("Please select at least one student to promote!");
                 return;
               }
               handlePromote();
             }}
             className="btn btn-primary"
-            style={{
-              backgroundColor: "#0d6efd",
-              color: "#fff",
-              padding: "12px 40px",
-              fontSize: "1.1rem",
-              borderRadius: "6px",
-              border: "none",
-              fontWeight: "bold",
-              cursor: "pointer",
-            }}
+            style={{ backgroundColor: '#0d6efd', color: '#fff', padding: '12px 40px', fontSize: '1.1rem', borderRadius: '6px', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}
           >
             {isSubmitting ? "Processing..." : "Promote Selected"}
           </button>
@@ -598,13 +396,10 @@ export default function PromoteStudents() {
                 Select the students to promote to {targetClass || "..."}
               </p>
             </div>
-
+            
             {/* Search */}
             <div className="relative w-72">
-              <Search
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"
-                size={16}
-              />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
               <input
                 type="text"
                 value={searchTerm}
@@ -624,12 +419,7 @@ export default function PromoteStudents() {
                       <input
                         type="checkbox"
                         onChange={handleSelectAll}
-                        checked={
-                          filteredStudents.length > 0 &&
-                          filteredStudents.every(
-                            (s) => selectedStudents[s.srNo],
-                          )
-                        }
+                        checked={filteredStudents.length > 0 && filteredStudents.every(s => selectedStudents[s.srNo])}
                         className="size-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                       />
                     </th>
@@ -660,10 +450,7 @@ export default function PromoteStudents() {
                           className={`${idx % 2 === 0 ? "bg-white" : "bg-indigo-50/5"} hover:bg-indigo-50/10 transition-colors cursor-pointer`}
                           onClick={() => handleSelectStudent(student.srNo)}
                         >
-                          <td
-                            className="px-6 py-5 text-center"
-                            onClick={(e) => e.stopPropagation()}
-                          >
+                          <td className="px-6 py-5 text-center" onClick={(e) => e.stopPropagation()}>
                             <input
                               type="checkbox"
                               checked={isChecked}
@@ -678,8 +465,7 @@ export default function PromoteStudents() {
                           </td>
                           <td className="px-8 py-5">
                             <span className="text-sm font-black text-slate-800">
-                              {student.stdSurname} {student.stdName}{" "}
-                              {student.stdFather}
+                              {student.stdSurname} {student.stdName} {student.stdFather}
                             </span>
                           </td>
                           <td className="px-8 py-5">
@@ -698,9 +484,7 @@ export default function PromoteStudents() {
                                 <ShieldCheck className="size-3" /> Ready
                               </span>
                             ) : (
-                              <span className="text-xs font-semibold text-slate-300">
-                                Pending
-                              </span>
+                              <span className="text-xs font-semibold text-slate-300">Pending</span>
                             )}
                           </td>
                         </tr>

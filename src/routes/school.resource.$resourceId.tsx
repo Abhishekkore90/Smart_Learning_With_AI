@@ -34,6 +34,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
 
+
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
@@ -192,9 +193,7 @@ function ResourcePage() {
                     {lang === "en" ? config.e : config.m}
                   </h1>
                   <p className="text-slate-400 font-black text-[10px] uppercase tracking-[0.2em]">
-                    {lang === "en"
-                      ? `${config.m} Section`
-                      : `${config.e} Section`}
+                    {lang === "en" ? `${config.m} Section` : `${config.e} Section`}
                   </p>
                 </div>
               </div>
@@ -311,91 +310,34 @@ function ResourcePage() {
 function StudentTeachingDiaryFlow({ content }: { content: any }) {
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
 
-  const filesByClass =
-    content && typeof content === "object" && content.filesByClass
-      ? content.filesByClass
-      : {
-          "Class 1": [
-            {
-              name: "वर्ग १ ली - मराठी दैनिक टाचण.pdf",
-              size: "1.4 MB",
-              type: "application/pdf",
-              date: "19/06/2026",
-              url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-            },
-            {
-              name: "Class 1 - English Lesson Plan.pdf",
-              size: "980 KB",
-              type: "application/pdf",
-              date: "19/06/2026",
-              url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-            },
-          ],
-          "Class 2": [
-            {
-              name: "वर्ग २ री - गणित टाचण वही.pdf",
-              size: "2.1 MB",
-              type: "application/pdf",
-              date: "19/06/2026",
-              url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-            },
-          ],
-          "Class 3": [
-            {
-              name: "वर्ग ३ री - इंग्रजी मासिक नियोजन.pdf",
-              size: "1.8 MB",
-              type: "application/pdf",
-              date: "19/06/2026",
-              url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-            },
-          ],
-          "Class 4": [
-            {
-              name: "वर्ग ४ थी - परिसर अभ्यास टाचण.pdf",
-              size: "2.4 MB",
-              type: "application/pdf",
-              date: "19/06/2026",
-              url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-            },
-          ],
-          "Class 5": [
-            {
-              name: "वर्ग ५ वी - हिंदी व गणित टाचण.pdf",
-              size: "1.5 MB",
-              type: "application/pdf",
-              date: "19/06/2026",
-              url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-            },
-          ],
-          "Class 6": [
-            {
-              name: "वर्ग ६ वी - विज्ञान अध्यापन टाचण.pdf",
-              size: "3.2 MB",
-              type: "application/pdf",
-              date: "19/06/2026",
-              url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-            },
-          ],
-          "Class 7": [
-            {
-              name: "वर्ग ७ वी - समाजशास्त्र टाचण.pdf",
-              size: "2.8 MB",
-              type: "application/pdf",
-              date: "19/06/2026",
-              url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-            },
-          ],
-        };
+  const filesByClass = content && typeof content === "object" && content.filesByClass
+    ? content.filesByClass
+    : {
+        "Class 1": [
+          { name: "वर्ग १ ली - मराठी दैनिक टाचण.pdf", size: "1.4 MB", type: "application/pdf", date: "19/06/2026", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" },
+          { name: "Class 1 - English Lesson Plan.pdf", size: "980 KB", type: "application/pdf", date: "19/06/2026", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" }
+        ],
+        "Class 2": [
+          { name: "वर्ग २ री - गणित टाचण वही.pdf", size: "2.1 MB", type: "application/pdf", date: "19/06/2026", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" }
+        ],
+        "Class 3": [
+          { name: "वर्ग ३ री - इंग्रजी मासिक नियोजन.pdf", size: "1.8 MB", type: "application/pdf", date: "19/06/2026", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" }
+        ],
+        "Class 4": [
+          { name: "वर्ग ४ थी - परिसर अभ्यास टाचण.pdf", size: "2.4 MB", type: "application/pdf", date: "19/06/2026", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" }
+        ],
+        "Class 5": [
+          { name: "वर्ग ५ वी - हिंदी व गणित टाचण.pdf", size: "1.5 MB", type: "application/pdf", date: "19/06/2026", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" }
+        ],
+        "Class 6": [
+          { name: "वर्ग ६ वी - विज्ञान अध्यापन टाचण.pdf", size: "3.2 MB", type: "application/pdf", date: "19/06/2026", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" }
+        ],
+        "Class 7": [
+          { name: "वर्ग ७ वी - समाजशास्त्र टाचण.pdf", size: "2.8 MB", type: "application/pdf", date: "19/06/2026", url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf" }
+        ]
+      };
 
-  const classes = [
-    "Class 1",
-    "Class 2",
-    "Class 3",
-    "Class 4",
-    "Class 5",
-    "Class 6",
-    "Class 7",
-  ];
+  const classes = ["Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6", "Class 7"];
   const currentFiles = selectedClass ? filesByClass[selectedClass] || [] : [];
 
   const classColors = [
@@ -423,9 +365,7 @@ function StudentTeachingDiaryFlow({ content }: { content: any }) {
               <h3 className="text-xl font-black text-slate-800 flex items-center gap-2">
                 Select Class / वर्ग निवडा
               </h3>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
-                अध्यापन टाचण पाहण्यासाठी वर्ग निवडा
-              </p>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">अध्यापन टाचण पाहण्यासाठी वर्ग निवडा</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -448,12 +388,8 @@ function StudentTeachingDiaryFlow({ content }: { content: any }) {
                         {fileCount} Files
                       </span>
                       <div>
-                        <h4 className="text-lg font-black tracking-tight">
-                          {cls}
-                        </h4>
-                        <p className="text-[10px] text-white/80 font-bold uppercase tracking-wider mt-1">
-                          अध्यापन नोंद वही
-                        </p>
+                        <h4 className="text-lg font-black tracking-tight">{cls}</h4>
+                        <p className="text-[10px] text-white/80 font-bold uppercase tracking-wider mt-1">अध्यापन नोंद वही</p>
                       </div>
                     </button>
                   </motion.div>
@@ -474,9 +410,7 @@ function StudentTeachingDiaryFlow({ content }: { content: any }) {
                 <h3 className="text-xl font-black text-slate-800 flex items-center gap-2">
                   {selectedClass} Diary Files
                 </h3>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
-                  वर्गवार दैनिक टाचण फाईल्स
-                </p>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">वर्गवार दैनिक टाचण फाईल्स</p>
               </div>
               <button
                 onClick={() => setSelectedClass(null)}
@@ -492,12 +426,8 @@ function StudentTeachingDiaryFlow({ content }: { content: any }) {
                   <BookOpen className="size-8" />
                 </div>
                 <div>
-                  <h4 className="text-slate-700 font-bold">
-                    या वर्गासाठी कोणतीही फाईल आढळली नाही
-                  </h4>
-                  <p className="text-slate-400 text-xs mt-1">
-                    शिक्षकाने या वर्गासाठी अजून फाईल्स अपलोड केलेल्या नाहीत.
-                  </p>
+                  <h4 className="text-slate-700 font-bold">या वर्गासाठी कोणतीही फाईल आढळली नाही</h4>
+                  <p className="text-slate-400 text-xs mt-1">शिक्षकाने या वर्गासाठी अजून फाईल्स अपलोड केलेल्या नाहीत.</p>
                 </div>
               </div>
             ) : (
@@ -512,10 +442,7 @@ function StudentTeachingDiaryFlow({ content }: { content: any }) {
                         <FileText className="size-6" />
                       </div>
                       <div className="overflow-hidden">
-                        <div
-                          className="font-bold text-slate-800 text-sm truncate max-w-[200px] sm:max-w-xs"
-                          title={file.name}
-                        >
+                        <div className="font-bold text-slate-800 text-sm truncate max-w-[200px] sm:max-w-xs" title={file.name}>
                           {file.name}
                         </div>
                         <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
@@ -523,7 +450,7 @@ function StudentTeachingDiaryFlow({ content }: { content: any }) {
                         </div>
                       </div>
                     </div>
-
+                    
                     <div className="flex items-center gap-2">
                       <a
                         href={file.url}
@@ -553,3 +480,5 @@ function StudentTeachingDiaryFlow({ content }: { content: any }) {
     </div>
   );
 }
+
+

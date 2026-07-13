@@ -27,16 +27,13 @@ function TeacherSpecialDayPage() {
 
             <div className="space-y-4">
               <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-                विशेष दिवस /{" "}
-                <span className="text-amber-500">Special Days</span>
+                विशेष दिवस / <span className="text-amber-500">Special Days</span>
               </h1>
               <p className="text-slate-500 font-medium leading-relaxed">
-                शाळेतील विविध दिनविशेष, महापुरुषांची जयंती व राष्ट्रीय सण यांची
-                माहिती आणि उपक्रम येथे लवकरच उपलब्ध होतील.
+                शाळेतील विविध दिनविशेष, महापुरुषांची जयंती व राष्ट्रीय सण यांची माहिती आणि उपक्रम येथे लवकरच उपलब्ध होतील.
               </p>
               <p className="text-slate-400 text-xs font-bold leading-relaxed italic">
-                Information about national events, national heroes
-                anniversaries, and school functions is coming soon.
+                Information about national events, national heroes anniversaries, and school functions is coming soon.
               </p>
             </div>
 

@@ -24,8 +24,6 @@ import {
   Home,
   Grid,
   User,
-  Sun,
-  Moon,
   ArrowRight,
   Sparkles,
   MessageSquare,
@@ -52,20 +50,11 @@ import {
   Check,
   Trash2,
   AlertCircle,
-  Music,
-  HelpCircle,
 } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/lib/firebase";
-import {
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  onSnapshot,
-  collection,
-} from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, onSnapshot, collection } from "firebase/firestore";
 import { showToast as toast } from "@/lib/custom-toast";
 import html2pdf from "html2pdf.js";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
@@ -73,10 +62,6 @@ import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import { TeacherStatisticsEditor } from "@/components/teacher/TeacherStatisticsEditor";
 import { PinGate } from "@/components/teacher/PinGate";
 import class1SyllabusData from "./class1_syllabus.json";
-import class2SyllabusData from "./class2_syllabus.json";
-import class3SyllabusData from "./class3_syllabus.json";
-import class4SyllabusData from "./class4_syllabus.json";
-import class5SyllabusData from "./class5_syllabus.json";
 
 export const Route = createFileRoute("/teacher/modules/$moduleId")({
   component: ModulePage,
@@ -166,6 +151,7 @@ function ModulePage() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedClass, setSelectedClass] = useState("5th");
+
 
   const config = MODULE_MAP[moduleId] || {
     m: moduleId,
@@ -270,156 +256,150 @@ function ModulePage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 md:gap-4">
-            {moduleId === "teacher-statistics" && (
-              <button
-                onClick={() =>
-                  window.dispatchEvent(
-                    new Event("download-teacher-portfolio-pdf"),
-                  )
-                }
-                className="group flex items-center gap-2 md:gap-4 px-6 md:px-12 py-3 md:py-5 bg-white text-slate-800 text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] rounded-full hover:bg-[#D6B97A] hover:text-white hover:border-[#D6B97A] border border-slate-200 transition-all duration-700 shadow-xl cursor-pointer"
-              >
-                <Download className="size-3 md:size-4 text-[#D6B97A] group-hover:text-white" />
-                <span className="hidden sm:inline">Download PDF</span>
-                <span className="sm:hidden">PDF</span>
-              </button>
-            )}
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="group flex items-center gap-2 md:gap-4 px-6 md:px-12 py-3 md:py-5 bg-[#1A1A1A] text-white text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] rounded-full hover:bg-[#D6B97A] transition-all duration-700 shadow-2xl disabled:opacity-50"
-            >
-              {saving ? (
-                <Loader2 className="size-3 md:size-4 animate-spin" />
-              ) : (
-                <Save className="size-3 md:size-4 group-hover:rotate-12 transition-transform text-[#D6B97A] group-hover:text-white" />
-              )}
-              <span className="hidden sm:inline">Commit Sync</span>
-              <span className="sm:hidden">Save</span>
-            </button>
-          </div>
+           <div className="flex items-center gap-2 md:gap-4">
+             {moduleId === "teacher-statistics" && (
+               <button
+                 onClick={() => window.dispatchEvent(new Event("download-teacher-portfolio-pdf"))}
+                 className="group flex items-center gap-2 md:gap-4 px-6 md:px-12 py-3 md:py-5 bg-white text-slate-800 text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] rounded-full hover:bg-[#D6B97A] hover:text-white hover:border-[#D6B97A] border border-slate-200 transition-all duration-700 shadow-xl cursor-pointer"
+               >
+                 <Download className="size-3 md:size-4 text-[#D6B97A] group-hover:text-white" />
+                 <span className="hidden sm:inline">Download PDF</span>
+                 <span className="sm:hidden">PDF</span>
+               </button>
+             )}
+             <button
+               onClick={handleSave}
+               disabled={saving}
+               className="group flex items-center gap-2 md:gap-4 px-6 md:px-12 py-3 md:py-5 bg-[#1A1A1A] text-white text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] rounded-full hover:bg-[#D6B97A] transition-all duration-700 shadow-2xl disabled:opacity-50"
+             >
+               {saving ? (
+                 <Loader2 className="size-3 md:size-4 animate-spin" />
+               ) : (
+                 <Save className="size-3 md:size-4 group-hover:rotate-12 transition-transform text-[#D6B97A] group-hover:text-white" />
+               )}
+               <span className="hidden sm:inline">Commit Sync</span>
+               <span className="sm:hidden">Save</span>
+             </button>
+           </div>
         </div>
       </header>
 
       <TeacherSidebar />
 
       <main className="flex-1 lg:pl-64 pt-24 max-w-[1400px] mx-auto w-full px-6 py-12 md:py-20 relative z-10">
-        <PinGate
-          sectionKey="planning"
-          enabled={moduleId === "annual-monthly-planning"}
-        >
+        <PinGate sectionKey="planning" enabled={moduleId === "annual-monthly-planning"}>
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white/80 backdrop-blur-3xl rounded-[4rem] border border-white/50 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.1)] relative overflow-hidden"
-          >
-            {/* Canvas Decoration */}
-            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-[#D6B97A]/30 to-transparent" />
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white/80 backdrop-blur-3xl rounded-[4rem] border border-white/50 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.1)] relative overflow-hidden"
+        >
+          {/* Canvas Decoration */}
+          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-[#D6B97A]/30 to-transparent" />
 
-            <div className="p-4 md:p-16">
-              <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none group-hover:scale-110 transition-transform duration-1000">
-                <config.icon className="size-32 md:size-64 text-[#D6B97A]" />
-              </div>
+          <div className="p-4 md:p-16">
+            <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none group-hover:scale-110 transition-transform duration-1000">
+              <config.icon className="size-32 md:size-64 text-[#D6B97A]" />
+            </div>
 
-              {moduleId === "timetable" && (
-                <>
-                  <div className="md:hidden flex items-center justify-center gap-2 mb-6 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] animate-pulse">
-                    <ArrowRight className="size-3" /> Swipe left to see more{" "}
-                    <ArrowRight className="size-3" />
-                  </div>
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-100 rounded-[2rem] mb-12 overflow-x-auto no-scrollbar shadow-sm"
-                  >
-                    {["5th", "6th", "7th", "8th", "9th", "10th"].map((cls) => (
-                      <button
-                        key={cls}
-                        onClick={() => setSelectedClass(cls)}
-                        className={`px-10 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all duration-500 ${
-                          selectedClass === cls
-                            ? "bg-slate-900 text-white shadow-2xl translate-y-[-2px]"
-                            : "text-slate-400 hover:text-slate-900 hover:bg-white"
+
+            {moduleId === "timetable" && (
+              <>
+                <div className="md:hidden flex items-center justify-center gap-2 mb-6 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] animate-pulse">
+                  <ArrowRight className="size-3" /> Swipe left to see more{" "}
+                  <ArrowRight className="size-3" />
+                </div>
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-100 rounded-[2rem] mb-12 overflow-x-auto no-scrollbar shadow-sm"
+                >
+                  {["5th", "6th", "7th", "8th", "9th", "10th"].map((cls) => (
+                    <button
+                      key={cls}
+                      onClick={() => setSelectedClass(cls)}
+                      className={`px-10 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all duration-500 ${selectedClass === cls
+                          ? "bg-slate-900 text-white shadow-2xl translate-y-[-2px]"
+                          : "text-slate-400 hover:text-slate-900 hover:bg-white"
                         }`}
-                      >
-                        Class {cls}
-                      </button>
-                    ))}
-                  </motion.div>
-                </>
-              )}
-              {loading ? (
-                <div className="h-96 flex flex-col items-center justify-center text-slate-400 gap-6">
-                  <Loader2 className="size-10 animate-spin text-indigo-600" />
-                  <p className="text-[12px] font-black uppercase tracking-[0.3em] animate-pulse">
-                    Synchronizing Data...
+                    >
+                      Class {cls}
+                    </button>
+                  ))}
+                </motion.div>
+              </>
+            )}
+            {loading ? (
+              <div className="h-96 flex flex-col items-center justify-center text-slate-400 gap-6">
+                <Loader2 className="size-10 animate-spin text-indigo-600" />
+                <p className="text-[12px] font-black uppercase tracking-[0.3em] animate-pulse">
+                  Synchronizing Data...
+                </p>
+              </div>
+            ) : moduleId === "timetable" ? (
+              <TimetableEditor
+                data={data}
+                selectedClass={selectedClass}
+                onChange={(val: any) => setData(val)}
+              />
+            ) : moduleId === "special-day" ? (
+              <AssemblyBookViewer />
+            ) : moduleId === "template" ? (
+              <TemplateVisualHub data={data} onChange={setData} />
+
+            ) : moduleId === "mid-day-meal-(mdm)" ? (
+              <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-6">
+                <div className="size-20 rounded-full bg-[#D6B97A]/10 text-[#D6B97A] flex items-center justify-center shadow-inner">
+                  <Utensils className="size-10" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-2xl font-black text-[#1A1A1A] italic">
+                    Mid-Day Meal (MDM) Portal
+                  </h3>
+                  <p className="text-slate-500 font-medium max-w-md mx-auto">
+                    Access the interactive meal distribution registers, food
+                    stock inventory ledgers, helper records, and autogenerated
+                    reports.
                   </p>
                 </div>
-              ) : moduleId === "timetable" ? (
-                <TimetableEditor
-                  data={data}
-                  selectedClass={selectedClass}
-                  onChange={(val: any) => setData(val)}
-                />
-              ) : moduleId === "special-day" ? (
-                <AssemblyBookViewer />
-              ) : moduleId === "template" ? (
-                <TemplateVisualHub data={data} onChange={setData} />
-              ) : moduleId === "mid-day-meal-(mdm)" ? (
-                <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-6">
-                  <div className="size-20 rounded-full bg-[#D6B97A]/10 text-[#D6B97A] flex items-center justify-center shadow-inner">
-                    <Utensils className="size-10" />
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="text-2xl font-black text-[#1A1A1A] italic">
-                      Mid-Day Meal (MDM) Portal
-                    </h3>
-                    <p className="text-slate-500 font-medium max-w-md mx-auto">
-                      Access the interactive meal distribution registers, food
-                      stock inventory ledgers, helper records, and autogenerated
-                      reports.
-                    </p>
-                  </div>
-                  <Link
-                    to="/teacher/mdm"
-                    className="px-10 py-5 bg-[#1A1A1A] hover:bg-[#D6B97A] text-white rounded-full text-[10px] font-black uppercase tracking-[0.3em] transition-all shadow-xl"
-                  >
-                    Access MDM Workspace
-                  </Link>
+                <Link
+                  to="/teacher/mdm"
+                  className="px-10 py-5 bg-[#1A1A1A] hover:bg-[#D6B97A] text-white rounded-full text-[10px] font-black uppercase tracking-[0.3em] transition-all shadow-xl"
+                >
+                  Access MDM Workspace
+                </Link>
+              </div>
+            ) : moduleId === "annual-monthly-planning" ? (
+              <AnnualMonthlyPlanningEditor
+                data={data}
+                onChange={(val: any) => setData(val)}
+              />
+            ) : moduleId === "teaching-record-notebook" ? (
+              <TeachingDiaryManager
+                data={data}
+                onChange={(val: any) => setData(val)}
+              />
+            ) : moduleId === "teacher-statistics" ? (
+              <TeacherStatisticsEditor
+                data={data}
+                onChange={(val: any) => setData(val)}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-6">
+                <div className="size-20 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+                  <Grid className="size-10" />
                 </div>
-              ) : moduleId === "annual-monthly-planning" ? (
-                <AnnualMonthlyPlanningEditor
-                  data={data}
-                  onChange={(val: any) => setData(val)}
-                />
-              ) : moduleId === "teaching-record-notebook" ? (
-                <TeachingDiaryManager
-                  data={data}
-                  onChange={(val: any) => setData(val)}
-                />
-              ) : moduleId === "teacher-statistics" ? (
-                <TeacherStatisticsEditor
-                  data={data}
-                  onChange={(val: any) => setData(val)}
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-6">
-                  <div className="size-20 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
-                    <Grid className="size-10" />
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="text-xl font-black text-slate-900">
-                      Module Under Construction
-                    </h3>
-                    <p className="text-slate-500 font-medium">
-                      We're building something amazing here. Please check back
-                      soon.
-                    </p>
-                  </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-black text-slate-900">
+                    Module Under Construction
+                  </h3>
+                  <p className="text-slate-500 font-medium">
+                    We're building something amazing here. Please check back
+                    soon.
+                  </p>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+          </div>
           </motion.div>
         </PinGate>
       </main>
@@ -672,12 +652,12 @@ function TemplateVisualHub({
     return typeof data === "object" && data !== null
       ? data
       : {
-          studentPhoto: localStorage.getItem("school_template_photo"),
-          editFields:
-            JSON.parse(
-              localStorage.getItem("school_template_fields") || "null",
-            ) || defaultFields,
-        };
+        studentPhoto: localStorage.getItem("school_template_photo"),
+        editFields:
+          JSON.parse(
+            localStorage.getItem("school_template_fields") || "null",
+          ) || defaultFields,
+      };
   });
 
   // Sync safeData with incoming data prop
@@ -814,11 +794,10 @@ function TemplateVisualHub({
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 whitespace-nowrap border-2 ${
-                activeTab === tab
+              className={`px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 whitespace-nowrap border-2 ${activeTab === tab
                   ? "bg-[#111827] text-white border-[#111827] shadow-2xl scale-105"
                   : "bg-white text-[#111827]/40 border-transparent hover:border-[#E8DFD1]/50 hover:text-[#111827]"
-              }`}
+                }`}
             >
               {tab}
             </button>
@@ -1499,293 +1478,10 @@ function TemplateVisualHub({
   );
 }
 
-function DailyParipathViewer() {
-  const [formData, setFormData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const docRef = doc(db, "admin_settings", "current_paripath");
-    const unsubscribe = onSnapshot(docRef, (docSnap) => {
-      if (docSnap.exists()) {
-        setFormData(docSnap.data());
-      } else {
-        setFormData(null);
-      }
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="h-40 flex items-center justify-center">
-        <Loader2 className="size-8 text-[#D6B97A] animate-spin" />
-      </div>
-    );
-  }
-
-  if (!formData) return null;
-
-  return (
-    <div className="bg-white rounded-[2.5rem] p-8 sm:p-12 border border-slate-200/60 shadow-sm space-y-10 mb-10 relative overflow-hidden">
-      <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
-        <BookOpen className="w-64 h-64" />
-      </div>
-
-      <div className="text-center space-y-2 relative z-10">
-        <h2 className="text-4xl font-black text-slate-800 tracking-tight">
-          आजचा परिपाठ
-        </h2>
-        <p className="text-sm font-bold text-[#D6B97A] uppercase tracking-[0.2em]">
-          {formData.dateMonth} • {formData.day}
-        </p>
-      </div>
-
-      {/* Assembly Opening Items */}
-      <div className="bg-gradient-to-br from-orange-50 to-amber-50/80 rounded-[2rem] border border-orange-200/40 p-6 sm:p-8 relative z-10">
-        <h3 className="text-xs font-black text-orange-800 uppercase tracking-[0.2em] flex items-center gap-3 mb-5">
-          🇮🇳 परिपाठ सुरुवात
-        </h3>
-        <div className="space-y-3">
-          {(formData?.assemblyItems || [
-            { emoji: "🇮🇳", label: "राष्ट्रगीत", sub: "National Anthem", content: `जनगणमन अधिनायक जय हे, भारत भाग्य विधाता\n\nपंजाब सिंधु गुजरात मराठा द्राविड उत्कल बंग\n\nविंध्य हिमाचल यमुना गंगा उच्छल जलधितरंग\n\nतव शुभ नामे जागे, तव शुभ आशिष मागे\n\nगाहे तव जय गाथा\n\nजनगणमंगलदायक जय हे, भारत भाग्यविधाता\n\nजय हे, जय हे, जय हे, जय जय जय जय हे. ||१||\n\nअहरह तव आव्हान प्रचारित सुनि, तव उदार वाणी\nहिंदू बौद्ध सिख जैन पारसिक मुसलमान ख्रिस्तानी\nपूरब पश्चिम आसे, तव सिंहासन पासे\nप्रेमहार हय गाथा\nजनगणऐक्यविधायक जय हे, भारत भाग्यविधाता\nजय हे, जय हे, जय हे, जय जय जय जय हे. ||२||\n\nपतनअभ्युदयबंधुर पंथा युगयुग धावित यात्री\nतुम चिर सारथी, तव रथचक्रे मुखरित पथ दिन रात्री\nदारुण विप्लव माजे, तव शंखध्वनि बाजे\nसंकंट दुखयात्रा\nजनगण पथ परिचायक जय हे, भारत भाग्यविधाता\nजय हे, जय हे, जय हे, जय जय जय जय हे. ||३||\n\nघोरतिमिरघननिबिड निशीथे पीडित मूर्छित देशे\nजागृत छिल तव अविचल मंगल नत नयने अनिमेषे\nदुःस्वप्ने आतंके, रक्षा करिले अंके\nस्नेहमयी तुमी माता\nजनगण दुःख त्रायक जय हे, भारत भाग्यविधाता\nजय हे, जय हे, जय हे, जय जय जय जय हे. ||४||\n\nरात्र प्रभातिल उदिल रविच्छवि पुर्व उदयगिरि भाले\nगाहे विहंगम पुण्य समीरण नवजीवन रस ढाले\nतव करुणारुण रागे, निद्रित भारत जागे\nतव चरणे नत माथा\nजय हे, जय हे, जय हे, जय जय जय जय हे. भारत भाग्यविधाता ||५||` },
-            { emoji: "🚩", label: "राज्यगीत", sub: "State Anthem", content: `जय जय महाराष्ट्र माझा, गर्जा महाराष्ट्र माझा\nरेवा वरदा, कृष्ण कोयना, भद्रा गोदावरी\nएकपणाचे भरती पाणी मातीच्या घागरी\nभीमथडीच्या तट्टांना या यमुनेचे पाणी पाजा\nजय जय महाराष्ट्र माझा ...\n\nभीती न आम्हा तुझी मुळी ही गडगडणार्‍या नभा\nअस्मानाच्या सुलतानीला जवाब देती जीभा\nसह्याद्रीचा सिंह गर्जतो, शिवशंभू राजा\nदरीदरीतून नाद गुंजला महाराष्ट्र माझा\n\nकाळ्या छातीवरी कोरली अभिमानाची लेणी\nपोलादी मनगटे खेळती खेळ जीवघेणी\nदारिद्र्याच्या उन्हात शिजला, निढळाच्या घामाने भिजला\nदेशगौरवासाठी झिजला\nदिल्लीचेही तख्त राखितो, महाराष्ट्र माझा` },
-            { emoji: "🇮🇳", label: "प्रतिज्ञा", sub: "Pledge", content: `भारत माझा देश आहे. \n\nसारे भारतीय माझे बांधव आहेत.\nमाझ्या देशावर माझे प्रेम आहे.\nमाझ्या देशातल्या समृद्ध आणि\nविविधतेने नटलेल्या परंपरांचा मला अभिमान आहे.\nत्या परंपरांचा पाईक होण्याची पात्रता\nमाझ्या अंगी यावी म्हणून मी सदैव प्रयत्न करेन. मी माझ्या पालकांचा, गुरुजनांचा\nआणि वडीलधाऱ्या माणसांचा मान ठेवीन\nआणि प्रत्येकाशी सौजन्याने वागेन.\nमाझा देश आणि माझे देशबांधव\nयांच्याशी निष्ठा राखण्याची\nमी प्रतिज्ञा करीत आहे.\nत्यांचे कल्याण आणि\nत्यांची समृद्धी ह्यांतच माझे\nसौख्य सामावले आहे.\n\nजय हिंद` },
-            { emoji: "📜", label: "संविधान उद्देशिका", sub: "Preamble", content: `"हम, भारत के लोग, भारत को एक संपूर्ण प्रभुत्व-संपन्न, समाजवादी, पंथ-निरपेक्ष, लोकतंत्रात्मक गणराज्य बनाने के लिए, तथा उसके समस्त नागरिकों को:\nसामाजिक, आर्थिक और राजनैतिक न्याय,\nविचार, अभिव्यक्ति, विश्वास, धर्म और उपासना की स्वतंत्रता,\nप्रतिष्ठा और अवसर की समता प्राप्त कराने के लिए,\nतथा उन सब में व्यक्ति की गरिमा और राष्ट्र की एकता और अखंडता सुनिश्चित करने वाली बंधुता बढ़ाने के लिए,\nदृढ़संकल्प होकर अपनी इस संविधान सभा में आज तारीख 26 नवंबर, 1949 ईस्वी को एतद्द्वारा इस संविधान को अंगीकृत, अधिनियमित और आत्मार्पित करते हैं।"` },
-            { emoji: "🙏🏻", label: "प्रार्थना", sub: "Prayer", content: `हीच अमुची प्रार्थना अन् हेच अमुचे मागणे\nमाणसाने माणसाशी माणसासम वागणे\n\nधर्म जाती प्रांत भाषा द्वेष सारे संपू दे\nएक निष्ठा एक आशा एक रंगी रंगू दे\nअन् पुन्हा पसरो मनावर शुद्धतेचे चांदणे\nमाणसाने माणसाशी माणसासम वागणे\n\nभोवताली दाटला अंधार दुःखाचा जरी\nसूर्य सत्याचा उद्या उगवेल आहे खात्री\nतोवरी देई आम्हाला काजव्यांचे जागणे\nमाणसाने माणसाशी माणसासम वागणे\n\nलाभले आयुष्य जितके ते जगावे चांगले\nपाऊले चालो पुढे, जे थांबले ते संपले\nघेतला जो श्वास आता तो पुन्हा ना लाभणे\nमाणसाने माणसाशी माणसासम वागणे` },
-          ]).map((item: any, idx: number) => (
-            <div
-              key={idx}
-              className="bg-white/90 backdrop-blur-sm rounded-xl border border-orange-100/60 shadow-sm overflow-hidden"
-            >
-              <div className="flex items-center gap-3 px-4 py-3">
-                <span className="text-xl">{item.emoji}</span>
-                <div className="flex-1">
-                  <p className="text-sm font-black text-slate-800">
-                    {item.label}
-                  </p>
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                    {item.sub}
-                  </p>
-                </div>
-              </div>
-              {item.content && (
-                <div className="px-5 pb-5 pt-2 border-t border-orange-100/60">
-                  <pre className="text-sm font-bold text-slate-700 whitespace-pre-wrap leading-relaxed font-sans">
-                    {item.content}
-                  </pre>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
-        <div className="space-y-6">
-          <div className="p-8 bg-amber-50/50 rounded-[2rem] border border-amber-100/50 hover:shadow-md transition-all">
-            <h3 className="text-xs font-black text-amber-800 uppercase tracking-[0.2em] flex items-center gap-3 mb-6">
-              <Calendar className="size-5" /> पंचांग
-            </h3>
-            <div className="grid grid-cols-2 gap-6 text-sm font-bold text-amber-900/80">
-              <p>
-                मास:{" "}
-                <span className="text-amber-950 font-black">
-                  {formData.month}
-                </span>
-              </p>
-              <p>
-                पक्ष:{" "}
-                <span className="text-amber-950 font-black">
-                  {formData.paksha}
-                </span>
-              </p>
-              <p>
-                तिथी:{" "}
-                <span className="text-amber-950 font-black">
-                  {formData.tithi}
-                </span>
-              </p>
-              <p>
-                नक्षत्र:{" "}
-                <span className="text-amber-950 font-black">
-                  {formData.nakshatra}
-                </span>
-              </p>
-              <p className="col-span-2">
-                योग:{" "}
-                <span className="text-amber-950 font-black">
-                  {formData.yog}
-                </span>
-              </p>
-              <p className="flex items-center gap-2">
-                <Sun className="size-4 text-amber-500" /> {formData.sunrise}
-              </p>
-              <p className="flex items-center gap-2">
-                <Moon className="size-4 text-indigo-500" /> {formData.sunset}
-              </p>
-            </div>
-          </div>
-
-          <div className="p-8 bg-emerald-50/50 rounded-[2rem] border border-emerald-100/50 hover:shadow-md transition-all">
-            <h3 className="text-xs font-black text-emerald-800 uppercase tracking-[0.2em] flex items-center gap-3 mb-6">
-              <MessageSquare className="size-5" /> सुविचार व म्हण
-            </h3>
-            <div className="space-y-6">
-              <div>
-                <p className="text-[10px] font-black text-emerald-800/60 uppercase tracking-[0.2em] mb-2">
-                  सुविचार
-                </p>
-                <p className="text-base font-black text-emerald-950">
-                  {formData.thought}
-                </p>
-              </div>
-              <div className="w-full h-px bg-emerald-200/50"></div>
-              <div>
-                <p className="text-[10px] font-black text-emerald-800/60 uppercase tracking-[0.2em] mb-2">
-                  म्हण
-                </p>
-                <p className="text-sm font-black text-emerald-950">
-                  {formData.proverb}
-                </p>
-                <p className="text-xs font-bold text-emerald-800/80 mt-2">
-                  अर्थ: {formData.proverbMeaning}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-8 bg-rose-50/50 rounded-[2rem] border border-rose-100/50 hover:shadow-md transition-all">
-            <h3 className="text-xs font-black text-rose-800 uppercase tracking-[0.2em] flex items-center gap-3 mb-6">
-              <Music className="size-5" /> देशभक्ती गीत
-            </h3>
-            <p className="text-base font-black text-rose-950 mb-4">
-              {formData.songTitle}
-            </p>
-            <p className="text-sm font-bold text-rose-900/80 whitespace-pre-line leading-relaxed">
-              {formData.patrioticSong}
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          <div className="p-8 bg-blue-50/50 rounded-[2rem] border border-blue-100/50 hover:shadow-md transition-all">
-            <h3 className="text-xs font-black text-blue-800 uppercase tracking-[0.2em] flex items-center gap-3 mb-6">
-              <BookOpen className="size-5" /> दिनविशेष
-            </h3>
-            <div className="space-y-6 text-sm">
-              <div>
-                <p className="text-[10px] font-black text-blue-800/60 uppercase tracking-[0.2em] mb-2">
-                  महत्त्वाच्या घटना
-                </p>
-                <p className="text-blue-950 font-bold whitespace-pre-line leading-relaxed">
-                  {formData.events}
-                </p>
-              </div>
-              <div className="w-full h-px bg-blue-200/50"></div>
-              <div>
-                <p className="text-[10px] font-black text-blue-800/60 uppercase tracking-[0.2em] mb-2">
-                  जन्मदिवस / जयंती
-                </p>
-                <p className="text-blue-950 font-bold whitespace-pre-line leading-relaxed">
-                  {formData.birthdays}
-                </p>
-              </div>
-              <div className="w-full h-px bg-blue-200/50"></div>
-              <div>
-                <p className="text-[10px] font-black text-blue-800/60 uppercase tracking-[0.2em] mb-2">
-                  मृत्यू / पुण्यतिथी / स्मृतिदिन
-                </p>
-                <p className="text-blue-950 font-bold whitespace-pre-line leading-relaxed">
-                  {formData.deaths}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-8 bg-violet-50/50 rounded-[2rem] border border-violet-100/50 hover:shadow-md transition-all">
-            <h3 className="text-xs font-black text-violet-800 uppercase tracking-[0.2em] flex items-center gap-3 mb-6">
-              <User className="size-5" /> थोरव्यक्ती परिचय
-            </h3>
-            <p className="text-base font-black text-violet-950 mb-3">
-              {formData.personalityTitle}
-            </p>
-            <p className="text-sm font-bold text-violet-900/80 whitespace-pre-line leading-relaxed">
-              {formData.personality}
-            </p>
-          </div>
-
-          <div className="p-8 bg-teal-50/50 rounded-[2rem] border border-teal-100/50 hover:shadow-md transition-all">
-            <h3 className="text-xs font-black text-teal-800 uppercase tracking-[0.2em] flex items-center gap-3 mb-6">
-              <BookOpen className="size-5" /> बोधकथा
-            </h3>
-            <p className="text-base font-black text-teal-950 mb-3">
-              {formData.storyTitle}
-            </p>
-            <p className="text-sm font-bold text-teal-900/80 whitespace-pre-line leading-relaxed mb-4">
-              {formData.story}
-            </p>
-            <div className="inline-block px-4 py-2 bg-teal-100/50 rounded-xl">
-              <p className="text-xs font-black text-teal-900">
-                तात्पर्य: {formData.moral}
-              </p>
-            </div>
-          </div>
-
-          <div className="p-8 bg-slate-50 rounded-[2rem] border border-slate-200 hover:shadow-md transition-all">
-            <h3 className="text-xs font-black text-slate-800 uppercase tracking-[0.2em] flex items-center gap-3 mb-6">
-              <HelpCircle className="size-5" /> सामान्य ज्ञान
-            </h3>
-            <div className="space-y-4 text-sm font-bold text-slate-700">
-              <p>
-                १) {formData.gkQ1} <br />
-                <span className="text-slate-900 font-black mt-1 inline-block">
-                  उ: {formData.gkA1}
-                </span>
-              </p>
-              <div className="w-full h-px bg-slate-200"></div>
-              <p>
-                २) {formData.gkQ2} <br />
-                <span className="text-slate-900 font-black mt-1 inline-block">
-                  उ: {formData.gkA2}
-                </span>
-              </p>
-              <div className="w-full h-px bg-slate-200"></div>
-              <p>
-                ३) {formData.gkQ3} <br />
-                <span className="text-slate-900 font-black mt-1 inline-block">
-                  उ: {formData.gkA3}
-                </span>
-              </p>
-              <div className="w-full h-px bg-slate-200"></div>
-              <p>
-                ४) {formData.gkQ4} <br />
-                <span className="text-slate-900 font-black mt-1 inline-block">
-                  उ: {formData.gkA4}
-                </span>
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="pt-8 border-t border-slate-100 text-center relative z-10">
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">
-          निर्मिती: {formData.creator}
-        </p>
-      </div>
-    </div>
-  );
-}
-
 function AssemblyBookViewer() {
   const [books, setBooks] = useState<any[]>([]);
   const [selectedBook, setSelectedBook] = useState<any>(null);
-  const [bookData, setBookData] = useState<{
-    type: string;
-    base64: string;
-    name: string;
-  } | null>(null);
+  const [bookData, setBookData] = useState<{ type: string; base64: string; name: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingData, setLoadingData] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
@@ -1794,7 +1490,7 @@ function AssemblyBookViewer() {
   useEffect(() => {
     const htmlLang = document.documentElement.lang || "en";
     setLang(htmlLang.startsWith("mr") ? "mr" : "en");
-
+    
     setLoading(true);
     const q = collection(db, "admin_assembly_books");
     const unsubscribe = onSnapshot(
@@ -1810,7 +1506,7 @@ function AssemblyBookViewer() {
       (error) => {
         console.error("Error loading assembly books:", error);
         setLoading(false);
-      },
+      }
     );
     return () => unsubscribe();
   }, []);
@@ -1835,9 +1531,7 @@ function AssemblyBookViewer() {
       try {
         let fullBase64 = "";
         for (const chunkId of book.chunks) {
-          const chunkDoc = await getDoc(
-            doc(db, "admin_assembly_chunks", chunkId),
-          );
+          const chunkDoc = await getDoc(doc(db, "admin_assembly_chunks", chunkId));
           if (chunkDoc.exists()) {
             fullBase64 += chunkDoc.data().data;
           }
@@ -1868,9 +1562,7 @@ function AssemblyBookViewer() {
       try {
         let fullBase64 = "";
         for (const chunkId of book.chunks) {
-          const chunkDoc = await getDoc(
-            doc(db, "admin_assembly_chunks", chunkId),
-          );
+          const chunkDoc = await getDoc(doc(db, "admin_assembly_chunks", chunkId));
           if (chunkDoc.exists()) fullBase64 += chunkDoc.data().data;
         }
         const a = document.createElement("a");
@@ -1902,14 +1594,10 @@ function AssemblyBookViewer() {
           </div>
           <div className="space-y-1 px-4">
             <h4 className="text-slate-800 font-extrabold text-sm">
-              {lang === "en"
-                ? "No daily assembly books uploaded yet."
-                : "कोणतेही परिपाठ पुस्तक अपलोड केलेले नाही."}
+              {lang === "en" ? "No daily assembly books uploaded yet." : "कोणतेही परिपाठ पुस्तक अपलोड केलेले नाही."}
             </h4>
             <p className="text-slate-400 text-[10px] font-bold">
-              {lang === "en"
-                ? "Please contact the admin to upload guidebooks."
-                : "नवीन पुस्तकांसाठी कृपया प्रशासकांशी संपर्क साधा."}
+              {lang === "en" ? "Please contact the admin to upload guidebooks." : "नवीन पुस्तकांसाठी कृपया प्रशासकांशी संपर्क साधा."}
             </p>
           </div>
         </div>
@@ -1928,20 +1616,13 @@ function AssemblyBookViewer() {
                   }`}
                 >
                   <div className="flex gap-3">
-                    <div
-                      className={`size-12 rounded-xl bg-white border flex items-center justify-center flex-shrink-0 ${
-                        isSelected
-                          ? "text-[#D6B97A] border-[#D6B97A]/30"
-                          : "text-slate-400 border-slate-100"
-                      }`}
-                    >
+                    <div className={`size-12 rounded-xl bg-white border flex items-center justify-center flex-shrink-0 ${
+                      isSelected ? "text-[#D6B97A] border-[#D6B97A]/30" : "text-slate-400 border-slate-100"
+                    }`}>
                       <FileText className="size-6" />
                     </div>
                     <div className="space-y-1 overflow-hidden">
-                      <h4
-                        className="font-extrabold text-slate-800 text-xs truncate pr-2"
-                        title={book.name}
-                      >
+                      <h4 className="font-extrabold text-slate-800 text-xs truncate pr-2" title={book.name}>
                         {book.name}
                       </h4>
                       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[9px] font-black text-slate-400 uppercase tracking-widest">
@@ -1968,15 +1649,7 @@ function AssemblyBookViewer() {
                       ) : (
                         <Eye className="size-3" />
                       )}
-                      <span>
-                        {isSelected
-                          ? lang === "en"
-                            ? "Close"
-                            : "बंद करा"
-                          : lang === "en"
-                            ? "View"
-                            : "पहा"}
-                      </span>
+                      <span>{isSelected ? (lang === "en" ? "Close" : "बंद करा") : (lang === "en" ? "View" : "पहा")}</span>
                     </button>
                     <button
                       onClick={() => handleDownload(book)}
@@ -2007,12 +1680,8 @@ function AssemblyBookViewer() {
                 <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                   <h4 className="font-extrabold text-slate-800 text-xs flex items-center gap-1.5">
                     <Eye className="size-3.5 text-[#D6B97A] animate-pulse" />
-                    <span>
-                      {lang === "en" ? "Book Preview:" : "पुस्तक पूर्वावलोकन:"}
-                    </span>
-                    <span className="text-[#D6B97A] font-black truncate max-w-xs">
-                      {selectedBook.name}
-                    </span>
+                    <span>{lang === "en" ? "Book Preview:" : "पुस्तक पूर्वावलोकन:"}</span>
+                    <span className="text-[#D6B97A] font-black truncate max-w-xs">{selectedBook.name}</span>
                   </h4>
                   <button
                     onClick={() => {
@@ -2030,9 +1699,7 @@ function AssemblyBookViewer() {
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50/80 backdrop-blur-[1px] gap-2 rounded-xl z-10">
                       <Loader2 className="size-8 text-[#D6B97A] animate-spin" />
                       <p className="text-[9px] font-black uppercase tracking-wider text-slate-500 animate-pulse">
-                        {lang === "en"
-                          ? "Loading preview..."
-                          : "पूर्वावलोकन लोड होत आहे..."}
+                        {lang === "en" ? "Loading preview..." : "पूर्वावलोकन लोड होत आहे..."}
                       </p>
                     </div>
                   ) : null}
@@ -2058,11 +1725,7 @@ function AssemblyBookViewer() {
                     !loadingData && (
                       <div className="flex flex-col items-center justify-center h-60 text-slate-400 bg-white border border-slate-100 rounded-2xl">
                         <AlertCircle className="size-6 mb-1" />
-                        <span className="text-[10px] font-bold">
-                          {lang === "en"
-                            ? "No Preview Available"
-                            : "पूर्वावलोकन उपलब्ध नाही"}
-                        </span>
+                        <span className="text-[10px] font-bold">{lang === "en" ? "No Preview Available" : "पूर्वावलोकन उपलब्ध नाही"}</span>
                       </div>
                     )
                   )}
@@ -2101,12 +1764,12 @@ function SpecialDayEditor({
     typeof data === "object" && data !== null
       ? data
       : {
-          thought: { en: "", mr: "" },
-          story: { en: "", mr: "" },
-          joke: { en: "", mr: "" },
-          news: { en: "", mr: "" },
-          significance: { en: "", mr: "" },
-        };
+        thought: { en: "", mr: "" },
+        story: { en: "", mr: "" },
+        joke: { en: "", mr: "" },
+        news: { en: "", mr: "" },
+        significance: { en: "", mr: "" },
+      };
 
   const updateField = (field: string, value: string) => {
     const updated = { ...safeData };
@@ -2255,11 +1918,10 @@ function SpecialDayEditor({
           <button
             key={s.id}
             onClick={() => setActiveSection(s.id)}
-            className={`p-8 rounded-[3rem] text-left transition-all duration-700 flex items-center gap-6 border-2 relative overflow-hidden group ${
-              activeSection === s.id
+            className={`p-8 rounded-[3rem] text-left transition-all duration-700 flex items-center gap-6 border-2 relative overflow-hidden group ${activeSection === s.id
                 ? "bg-white border-[#D6B97A] shadow-[0_32px_64px_-16px_rgba(214,185,122,0.2)] scale-[1.05]"
                 : "bg-white/40 border-transparent hover:bg-white hover:border-[#E8DFD1]"
-            }`}
+              }`}
           >
             <div
               className={`size-14 rounded-2xl ${activeSection === s.id ? "bg-[#D6B97A] text-white" : "bg-[#F8F5EF] text-[#D6B97A]"} flex items-center justify-center shadow-sm group-hover:rotate-12 transition-transform duration-500`}
@@ -2351,10 +2013,7 @@ function SpecialDayEditor({
 
           <div className="flex-1 p-12 space-y-8">
             {activeSection === "assembly-book" ? (
-              <>
-                <DailyParipathViewer />
-                <AssemblyBookViewer />
-              </>
+              <AssemblyBookViewer />
             ) : (
               <>
                 <div className="flex items-center justify-between px-8 py-5 bg-[#FAFAF7] border border-[#E8DFD1]/40 rounded-[2.5rem] shadow-sm">
@@ -2370,9 +2029,7 @@ function SpecialDayEditor({
                     <button
                       onClick={() =>
                         (
-                          document.querySelector(
-                            "textarea",
-                          ) as HTMLTextAreaElement
+                          document.querySelector("textarea") as HTMLTextAreaElement
                         )?.focus()
                       }
                       className="flex items-center gap-3 px-8 py-4 bg-white border border-[#E8DFD1]/50 text-[#D6B97A] text-[10px] font-black uppercase tracking-[0.2em] rounded-[1.5rem] hover:border-[#D6B97A] transition-all duration-500 shadow-sm"
@@ -2389,48 +2046,46 @@ function SpecialDayEditor({
                   </button>
                 </div>
 
-                <div className="relative group flex-1 flex flex-col">
-                  <div className="absolute -top-4 left-10 px-5 py-2 bg-[#1A1A1A] text-white rounded-full text-[9px] font-black uppercase tracking-[0.4em] z-10 shadow-xl">
-                    {lang === "en"
-                      ? "Anglicized Manuscript"
-                      : "Vedic Manuscript"}
+            <div className="relative group flex-1 flex flex-col">
+              <div className="absolute -top-4 left-10 px-5 py-2 bg-[#1A1A1A] text-white rounded-full text-[9px] font-black uppercase tracking-[0.4em] z-10 shadow-xl">
+                {lang === "en" ? "Anglicized Manuscript" : "Vedic Manuscript"}
+              </div>
+              <textarea
+                className={`w-full flex-1 p-8 md:p-12 bg-white/40 border-2 border-transparent focus:border-[#D6B97A]/30 rounded-[2.5rem] md:rounded-[3.5rem] outline-none focus:bg-white transition-all text-xl md:text-2xl text-[#1A1A1A] font-medium leading-relaxed resize-none shadow-inner ${isGenerating ? "animate-pulse opacity-50" : ""}`}
+                placeholder={
+                  isGenerating
+                    ? "Transcribing universal knowledge..."
+                    : `Document your daily ${current.label.toLowerCase()} in ${lang === "en" ? "English" : "Marathi"}...`
+                }
+                value={safeData[activeSection]?.[lang] || ""}
+                onChange={(e) => updateField(activeSection, e.target.value)}
+                disabled={isGenerating}
+              ></textarea>
+              {isGenerating && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="flex flex-col items-center gap-6">
+                    <div className="size-20 rounded-full border-4 border-[#D6B97A]/20 border-t-[#D6B97A] animate-spin" />
+                    <span className="text-[11px] font-black uppercase tracking-[0.4em] text-[#D6B97A] animate-pulse">
+                      Synchronizing Intelligence
+                    </span>
                   </div>
-                  <textarea
-                    className={`w-full flex-1 p-8 md:p-12 bg-white/40 border-2 border-transparent focus:border-[#D6B97A]/30 rounded-[2.5rem] md:rounded-[3.5rem] outline-none focus:bg-white transition-all text-xl md:text-2xl text-[#1A1A1A] font-medium leading-relaxed resize-none shadow-inner ${isGenerating ? "animate-pulse opacity-50" : ""}`}
-                    placeholder={
-                      isGenerating
-                        ? "Transcribing universal knowledge..."
-                        : `Document your daily ${current.label.toLowerCase()} in ${lang === "en" ? "English" : "Marathi"}...`
-                    }
-                    value={safeData[activeSection]?.[lang] || ""}
-                    onChange={(e) => updateField(activeSection, e.target.value)}
-                    disabled={isGenerating}
-                  ></textarea>
-                  {isGenerating && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <div className="flex flex-col items-center gap-6">
-                        <div className="size-20 rounded-full border-4 border-[#D6B97A]/20 border-t-[#D6B97A] animate-spin" />
-                        <span className="text-[11px] font-black uppercase tracking-[0.4em] text-[#D6B97A] animate-pulse">
-                          Synchronizing Intelligence
-                        </span>
-                      </div>
-                    </div>
-                  )}
                 </div>
+              )}
+            </div>
 
-                <div className="flex justify-end">
-                  <button
-                    onClick={autoFillIntelligence}
-                    className="group flex items-center gap-4 px-10 py-5 bg-[#F8F5EF] text-[#D6B97A] text-[10px] font-black uppercase tracking-[0.3em] rounded-[2rem] border border-[#D6B97A]/30 hover:bg-[#D6B97A] hover:text-white transition-all duration-700 shadow-lg"
-                  >
-                    <div className="size-8 rounded-xl bg-white group-hover:bg-[#1A1A1A] flex items-center justify-center shadow-sm transition-colors">
-                      <Sparkles className="size-4" />
-                    </div>
-                    Global Intelligence Sync
-                  </button>
+            <div className="flex justify-end">
+              <button
+                onClick={autoFillIntelligence}
+                className="group flex items-center gap-4 px-10 py-5 bg-[#F8F5EF] text-[#D6B97A] text-[10px] font-black uppercase tracking-[0.3em] rounded-[2rem] border border-[#D6B97A]/30 hover:bg-[#D6B97A] hover:text-white transition-all duration-700 shadow-lg"
+              >
+                <div className="size-8 rounded-xl bg-white group-hover:bg-[#1A1A1A] flex items-center justify-center shadow-sm transition-colors">
+                  <Sparkles className="size-4" />
                 </div>
-              </>
-            )}
+                Global Intelligence Sync
+              </button>
+            </div>
+          </>
+        )}
           </div>
         </motion.main>
       </AnimatePresence>
@@ -2536,253 +2191,44 @@ const getSyllabusData = (classVal: string, mediumVal: string) => {
     { en: "February", mr: "फेब्रुवारी" },
     { en: "March", mr: "मार्च" },
     { en: "April", mr: "एप्रिल" },
+    { en: "May", mr: "मे" }
   ];
-  if (
-    numericClass !== 1 &&
-    numericClass !== 2 &&
-    numericClass !== 3 &&
-    numericClass !== 4 &&
-    numericClass !== 5
-  ) {
-    months.push({ en: "May", mr: "मे" });
-  }
 
   let subjects: string[] = [];
-  if (numericClass === 1) {
-    subjects = [
-      "मराठी",
-      isSemi ? "Mathematics" : "गणित",
-      "इंग्रजी",
-      "कलाशिक्षण (शिकू)",
-      "कार्यशिक्षण (करू)",
-      "शारीरिक शिक्षण व निरामयता",
-    ];
-  } else if (numericClass === 2) {
-    subjects = [
-      "मराठी",
-      isSemi ? "Mathematics" : "गणित",
-      "इंग्रजी",
-      "कलाशिक्षण (शिकू)",
-      "कार्यशिक्षण (करू)",
-      "शारीरिक शिक्षण व निरामयता",
-    ];
-  } else if (numericClass === 3) {
-    subjects = [
-      "मराठी",
-      isSemi ? "Mathematics" : "गणित",
-      "इंग्रजी",
-      "परिसर अभ्यास १",
-      "परिसर अभ्यास २",
-      "कलाशिक्षण (शिकू)",
-      "कार्यशिक्षण (करू)",
-      "शारीरिक शिक्षण व निरामयता",
-    ];
+  if (numericClass <= 3) {
+    subjects = ["मराठी", isSemi ? "Mathematics" : "गणित", "इंग्रजी", "खेळू करू शिकू"];
   } else if (numericClass === 4) {
-    subjects = [
-      "मराठी",
-      isSemi ? "Mathematics" : "गणित",
-      "इंग्रजी",
-      "परिसर अभ्यास १",
-      "परिसर अभ्यास २",
-      "कलाशिक्षण (शिकू)",
-      "कार्यशिक्षण (करू)",
-      "शारीरिक शिक्षण व निरामयता",
-    ];
+    subjects = ["मराठी", "इंग्रजी", isSemi ? "Mathematics" : "गणित", "परिसर अभ्यास १", "परिसर अभ्यास २"];
   } else if (numericClass === 5) {
-    subjects = isSemi
-      ? [
-          "मराठी",
-          "Mathematics",
-          "इंग्रजी",
-          "हिंदी",
-          "परिसर अभ्यास १",
-          "परिसर अभ्यास २",
-          "कलाशिक्षण (शिकू)",
-          "कार्यशिक्षण (करू)",
-          "शारीरिक शिक्षण व निरामयता",
-          "Science",
-        ]
-      : [
-          "मराठी",
-          "गणित",
-          "इंग्रजी",
-          "हिंदी",
-          "परिसर अभ्यास १",
-          "परिसर अभ्यास २",
-          "कलाशिक्षण (शिकू)",
-          "कार्यशिक्षण (करू)",
-          "शारीरिक शिक्षण व निरामयता",
-        ];
-  } else if (numericClass <= 3) {
-    subjects = [
-      "मराठी",
-      isSemi ? "Mathematics" : "गणित",
-      "इंग्रजी",
-      "खेळू करू शिकू",
-    ];
+    subjects = ["मराठी", "इंग्रजी", "हिंदी", isSemi ? "Mathematics" : "गणित", isSemi ? "General Science" : "परिसर अभ्यास १", isSemi ? "Social Sciences" : "परिसर अभ्यास २"];
   } else {
-    subjects = [
-      "मराठी",
-      "इंग्रजी",
-      "हिंदी",
-      isSemi ? "Mathematics" : "गणित",
-      isSemi ? "General Science" : "सामान्य विज्ञान",
-      "इतिहास व नागरिकशास्त्र",
-      "भूगोल",
-    ];
+    subjects = ["मराठी", "इंग्रजी", "हिंदी", isSemi ? "Mathematics" : "गणित", isSemi ? "General Science" : "सामान्य विज्ञान", "इतिहास व नागरिकशास्त्र", "भूगोल"];
   }
 
   if (numericClass === 1) {
-    const syllabusBySubject: Record<
-      string,
-      Record<string, { topic: string; objectives: string; activity: string }>
-    > = {};
-    subjects.forEach((subject) => {
+    const syllabusBySubject: Record<string, Record<string, { topic: string; objectives: string; activity: string }>> = {};
+    subjects.forEach(subject => {
       syllabusBySubject[subject] = {};
     });
 
     const mathSubjectName = isSemi ? "Mathematics" : "गणित";
 
     const syllabusData = class1SyllabusData as any;
-    months.forEach((m) => {
+    months.forEach(m => {
       syllabusBySubject["मराठी"][m.en] = syllabusData.marathi[m.en];
-      syllabusBySubject[mathSubjectName][m.en] = isSemi
-        ? syllabusData.math_en[m.en]
-        : syllabusData.math_mr[m.en];
+      syllabusBySubject[mathSubjectName][m.en] = isSemi ? syllabusData.math_en[m.en] : syllabusData.math_mr[m.en];
       syllabusBySubject["इंग्रजी"][m.en] = syllabusData.english[m.en];
-      syllabusBySubject["कलाशिक्षण (शिकू)"][m.en] = syllabusData.art[m.en];
-      syllabusBySubject["कार्यशिक्षण (करू)"][m.en] = syllabusData.work[m.en];
-      syllabusBySubject["शारीरिक शिक्षण व निरामयता"][m.en] =
-        syllabusData.pe[m.en];
+      syllabusBySubject["खेळू करू शिकू"][m.en] = syllabusData.kks[m.en];
     });
 
     return { subjects, months, syllabusBySubject };
   }
 
-  if (numericClass === 2) {
-    const syllabusBySubject: Record<
-      string,
-      Record<string, { topic: string; objectives: string; activity: string }>
-    > = {};
-    subjects.forEach((subject) => {
-      syllabusBySubject[subject] = {};
-    });
+  const syllabusBySubject: Record<string, Record<string, { topic: string; objectives: string; activity: string }>> = {};
 
-    const mathSubjectName = isSemi ? "Mathematics" : "गणित";
-
-    const syllabusData = class2SyllabusData as any;
-    months.forEach((m) => {
-      syllabusBySubject["मराठी"][m.en] = syllabusData.marathi[m.en];
-      syllabusBySubject[mathSubjectName][m.en] = isSemi
-        ? syllabusData.math_en[m.en]
-        : syllabusData.math_mr[m.en];
-      syllabusBySubject["इंग्रजी"][m.en] = syllabusData.english[m.en];
-      syllabusBySubject["कलाशिक्षण (शिकू)"][m.en] = syllabusData.art[m.en];
-      syllabusBySubject["कार्यशिक्षण (करू)"][m.en] = syllabusData.work[m.en];
-      syllabusBySubject["शारीरिक शिक्षण व निरामयता"][m.en] =
-        syllabusData.pe[m.en];
-    });
-
-    return { subjects, months, syllabusBySubject };
-  }
-
-  if (numericClass === 3) {
-    const syllabusBySubject: Record<
-      string,
-      Record<string, { topic: string; objectives: string; activity: string }>
-    > = {};
-    subjects.forEach((subject) => {
-      syllabusBySubject[subject] = {};
-    });
-
-    const mathSubjectName = isSemi ? "Mathematics" : "गणित";
-
-    const syllabusData = class3SyllabusData as any;
-    months.forEach((m) => {
-      syllabusBySubject["मराठी"][m.en] = syllabusData.marathi[m.en];
-      syllabusBySubject[mathSubjectName][m.en] = isSemi
-        ? syllabusData.math_en[m.en]
-        : syllabusData.math_mr[m.en];
-      syllabusBySubject["इंग्रजी"][m.en] = syllabusData.english[m.en];
-      syllabusBySubject["परिसर अभ्यास १"][m.en] = syllabusData.evs1[m.en];
-      syllabusBySubject["परिसर अभ्यास २"][m.en] = syllabusData.evs2[m.en];
-      syllabusBySubject["कलाशिक्षण (शिकू)"][m.en] = syllabusData.art[m.en];
-      syllabusBySubject["कार्यशिक्षण (करू)"][m.en] = syllabusData.work[m.en];
-      syllabusBySubject["शारीरिक शिक्षण व निरामयता"][m.en] =
-        syllabusData.pe[m.en];
-    });
-
-    return { subjects, months, syllabusBySubject };
-  }
-
-  if (numericClass === 4) {
-    const syllabusBySubject: Record<
-      string,
-      Record<string, { topic: string; objectives: string; activity: string }>
-    > = {};
-    subjects.forEach((subject) => {
-      syllabusBySubject[subject] = {};
-    });
-
-    const mathSubjectName = isSemi ? "Mathematics" : "गणित";
-
-    const syllabusData = class4SyllabusData as any;
-    months.forEach((m) => {
-      syllabusBySubject["मराठी"][m.en] = syllabusData.marathi[m.en];
-      syllabusBySubject[mathSubjectName][m.en] = isSemi
-        ? syllabusData.math_en[m.en]
-        : syllabusData.math_mr[m.en];
-      syllabusBySubject["इंग्रजी"][m.en] = syllabusData.english[m.en];
-      syllabusBySubject["परिसर अभ्यास १"][m.en] = syllabusData.evs1[m.en];
-      syllabusBySubject["परिसर अभ्यास २"][m.en] = syllabusData.evs2[m.en];
-      syllabusBySubject["कलाशिक्षण (शिकू)"][m.en] = syllabusData.art[m.en];
-      syllabusBySubject["कार्यशिक्षण (करू)"][m.en] = syllabusData.work[m.en];
-      syllabusBySubject["शारीरिक शिक्षण व निरामयता"][m.en] =
-        syllabusData.pe[m.en];
-    });
-
-    return { subjects, months, syllabusBySubject };
-  }
-
-  if (numericClass === 5) {
-    const syllabusBySubject: Record<
-      string,
-      Record<string, { topic: string; objectives: string; activity: string }>
-    > = {};
-    subjects.forEach((subject) => {
-      syllabusBySubject[subject] = {};
-    });
-
-    const syllabusData = class5SyllabusData as any;
-    months.forEach((m) => {
-      syllabusBySubject["मराठी"][m.en] = syllabusData.marathi[m.en];
-      if (isSemi) {
-        syllabusBySubject["Mathematics"][m.en] = syllabusData.math_en[m.en];
-        syllabusBySubject["Science"][m.en] = syllabusData.science_en[m.en];
-      } else {
-        syllabusBySubject["गणित"][m.en] = syllabusData.math_mr[m.en];
-      }
-      syllabusBySubject["इंग्रजी"][m.en] = syllabusData.english[m.en];
-      syllabusBySubject["हिंदी"][m.en] = syllabusData.hindi[m.en];
-      syllabusBySubject["परिसर अभ्यास १"][m.en] = syllabusData.evs1[m.en];
-      syllabusBySubject["परिसर अभ्यास २"][m.en] = syllabusData.evs2[m.en];
-      syllabusBySubject["कलाशिक्षण (शिकू)"][m.en] = syllabusData.art[m.en];
-      syllabusBySubject["कार्यशिक्षण (करू)"][m.en] = syllabusData.work[m.en];
-      syllabusBySubject["शारीरिक शिक्षण व निरामयता"][m.en] =
-        syllabusData.pe[m.en];
-    });
-
-    return { subjects, months, syllabusBySubject };
-  }
-
-  const syllabusBySubject: Record<
-    string,
-    Record<string, { topic: string; objectives: string; activity: string }>
-  > = {};
-
-  subjects.forEach((subject) => {
+  subjects.forEach(subject => {
     syllabusBySubject[subject] = {};
-    months.forEach((m) => {
+    months.forEach(m => {
       const monthNameEn = m.en;
       const monthNameMr = m.mr;
 
@@ -2791,28 +2237,18 @@ const getSyllabusData = (classVal: string, mediumVal: string) => {
       let activity = "";
 
       if (monthNameEn === "May") {
-        const langIsEng =
-          isSemi ||
-          subject.toLowerCase().includes("english") ||
-          subject.toLowerCase().includes("math") ||
-          subject.toLowerCase().includes("science");
+        const langIsEng = isSemi || subject.toLowerCase().includes("english") || subject.toLowerCase().includes("math") || subject.toLowerCase().includes("science");
         topic = langIsEng ? "Summer Vacation / Holidays" : "उन्हाळी सुट्टी";
-        objectives = langIsEng
-          ? "Revision and summer homework assignment"
-          : "गृहपाठ व सुट्टी उपक्रम.";
-        activity = langIsEng
-          ? "Creative projects and hobby exploration"
-          : "विविध छंद जोपासणे व गृहप्रकल्प.";
+        objectives = langIsEng ? "Revision and summer homework assignment" : "गृहपाठ व सुट्टी उपक्रम.";
+        activity = langIsEng ? "Creative projects and hobby exploration" : "विविध छंद जोपासणे व गृहप्रकल्प.";
       } else if (subject.includes("मराठी")) {
         if (monthNameEn === "June") {
           topic = "पाठ १. माय मराठी (कविता)";
-          objectives =
-            "कवितेचे तालासुरात गायन करणे, मातृभाषेविषयी प्रेम जागृत करणे.";
+          objectives = "कवितेचे तालासुरात गायन करणे, मातृभाषेविषयी प्रेम जागृत करणे.";
           activity = "सामूहिक कविता गायन व सुलेखन सराव.";
         } else if (monthNameEn === "July") {
           topic = "पाठ २. हत्तीचे चातुर्य & व्याकरण: नाम";
-          objectives =
-            "चित्रावरून गोष्ट सांगणे, नामाची व्याख्या व उदाहरणे ओळखणे.";
+          objectives = "चित्रावरून गोष्ट सांगणे, नामाची व्याख्या व उदाहरणे ओळखणे.";
           activity = "चित्रे पाहून गोष्ट पूर्ण करणे, नाम ओळखा स्पर्धा.";
         } else if (monthNameEn === "August") {
           topic = "पाठ ३. खेळूया शब्दांशी & व्याकरण: सर्वनाम";
@@ -2854,119 +2290,54 @@ const getSyllabusData = (classVal: string, mediumVal: string) => {
       } else if (subject.includes("Math") || subject.includes("गणित")) {
         const langIsEng = isSemi || subject.toLowerCase().includes("math");
         if (monthNameEn === "June") {
-          topic = langIsEng
-            ? "Unit 1: Roman Numerals"
-            : "घटक १: रोमन संख्याचिन्हे";
-          objectives = langIsEng
-            ? "Unit 1: Numbers and place value up to 100"
-            : "घटक १: रोमन संख्याचिन्हे व स्थानिक किंमत";
-          activity = langIsEng
-            ? "Number chart activities and place value blocks"
-            : "अबेकसवर संख्या दाखवणे व लिहिणे.";
+          topic = langIsEng ? "Unit 1: Roman Numerals" : "घटक १: रोमन संख्याचिन्हे";
+          objectives = langIsEng ? "Unit 1: Numbers and place value up to 100" : "घटक १: रोमन संख्याचिन्हे व स्थानिक किंमत";
+          activity = langIsEng ? "Number chart activities and place value blocks" : "अबेकसवर संख्या दाखवणे व लिहिणे.";
         } else if (monthNameEn === "July") {
-          topic = langIsEng
-            ? "Unit 2: Addition & Subtraction (up to 99)"
-            : "घटक २: बेरीज व वजाबाकी (99 पर्यंत)";
-          objectives = langIsEng
-            ? "Performing addition and subtraction with carrying/borrowing"
-            : "हातउसने घेऊन बेरीज-वजाबाकी करणे.";
-          activity = langIsEng
-            ? "Abacus sums, mental math drills"
-            : "संख्यारेषेवर बेरीज व वजाबाकी खेळ.";
+          topic = langIsEng ? "Unit 2: Addition & Subtraction (up to 99)" : "घटक २: बेरीज व वजाबाकी (99 पर्यंत)";
+          objectives = langIsEng ? "Performing addition and subtraction with carrying/borrowing" : "हातउसने घेऊन बेरीज-वजाबाकी करणे.";
+          activity = langIsEng ? "Abacus sums, mental math drills" : "संख्यारेषेवर बेरीज व वजाबाकी खेळ.";
         } else if (monthNameEn === "August") {
-          topic = langIsEng
-            ? "Unit 3: Multiplication tables (2-5)"
-            : "घटक ३: गुणाकार पाढे (२ ते ५)";
-          objectives = langIsEng
-            ? "Reciting and applying multiplication tables 2–5"
-            : "पाढे म्हणणे व गुणाकार समजणे.";
-          activity = langIsEng
-            ? "Times tables songs and flashcard quiz"
-            : "गाण्याच्या चालीवर पाढे म्हणणे.";
+          topic = langIsEng ? "Unit 3: Multiplication tables (2-5)" : "घटक ३: गुणाकार पाढे (२ ते ५)";
+          objectives = langIsEng ? "Reciting and applying multiplication tables 2–5" : "पाढे म्हणणे व गुणाकार समजणे.";
+          activity = langIsEng ? "Times tables songs and flashcard quiz" : "गाण्याच्या चालीवर पाढे म्हणणे.";
         } else if (monthNameEn === "September") {
-          topic = langIsEng
-            ? "Unit 4: Division – equal sharing"
-            : "घटक ४: भागाकार – समान वाटप";
-          objectives = langIsEng
-            ? "Understanding division as equal grouping"
-            : "समान गटांमध्ये विभागणी समजणे.";
-          activity = langIsEng
-            ? "Sharing objects equally in groups"
-            : "वस्तू समान गटांत वाटप करणे.";
+          topic = langIsEng ? "Unit 4: Division – equal sharing" : "घटक ४: भागाकार – समान वाटप";
+          objectives = langIsEng ? "Understanding division as equal grouping" : "समान गटांमध्ये विभागणी समजणे.";
+          activity = langIsEng ? "Sharing objects equally in groups" : "वस्तू समान गटांत वाटप करणे.";
         } else if (monthNameEn === "October") {
-          topic = langIsEng
-            ? "Unit 5: Fractions & Half/Quarter"
-            : "घटक ५: अपूर्णांक – अर्धे व पाव";
-          objectives = langIsEng
-            ? "Identifying ½ and ¼ of shapes and sets"
-            : "आकृतींचे अर्धे व पाव भाग ओळखणे.";
-          activity = langIsEng
-            ? "Folding shapes into halves and quarters"
-            : "कागदाच्या घड्या घालून अर्धे दाखवणे.";
+          topic = langIsEng ? "Unit 5: Fractions & Half/Quarter" : "घटक ५: अपूर्णांक – अर्धे व पाव";
+          objectives = langIsEng ? "Identifying ½ and ¼ of shapes and sets" : "आकृतींचे अर्धे व पाव भाग ओळखणे.";
+          activity = langIsEng ? "Folding shapes into halves and quarters" : "कागदाच्या घड्या घालून अर्धे दाखवणे.";
         } else if (monthNameEn === "November") {
-          topic = langIsEng
-            ? "Unit 6: Measurement – Length, Weight, Capacity"
-            : "घटक ६: मापन – लांबी, वजन व क्षमता";
-          objectives = langIsEng
-            ? "Measuring objects using standard & non-standard units"
-            : "मानक व अमानक एककांनी मापन करणे.";
-          activity = langIsEng
-            ? "Classroom measurement activities"
-            : "वर्गातील वस्तू मोजणे व तुलना करणे.";
+          topic = langIsEng ? "Unit 6: Measurement – Length, Weight, Capacity" : "घटक ६: मापन – लांबी, वजन व क्षमता";
+          objectives = langIsEng ? "Measuring objects using standard & non-standard units" : "मानक व अमानक एककांनी मापन करणे.";
+          activity = langIsEng ? "Classroom measurement activities" : "वर्गातील वस्तू मोजणे व तुलना करणे.";
         } else if (monthNameEn === "December") {
-          topic = langIsEng
-            ? "Unit 7: Time – Reading Clock"
-            : "घटक ७: वेळ – घड्याळ वाचन";
-          objectives = langIsEng
-            ? "Reading time to the hour and half hour"
-            : "पूर्ण व अर्ध्या तासाची वेळ सांगणे.";
-          activity = langIsEng
-            ? "Clock model making and time matching"
-            : "घड्याळाच्या काट्या फिरवून वेळ दाखवणे.";
+          topic = langIsEng ? "Unit 7: Time – Reading Clock" : "घटक ७: वेळ – घड्याळ वाचन";
+          objectives = langIsEng ? "Reading time to the hour and half hour" : "पूर्ण व अर्ध्या तासाची वेळ सांगणे.";
+          activity = langIsEng ? "Clock model making and time matching" : "घड्याळाच्या काट्या फिरवून वेळ दाखवणे.";
         } else if (monthNameEn === "January") {
-          topic = langIsEng
-            ? "Unit 8: Money – Coins and Notes"
-            : "घटक ८: पैसे – नाणी व नोटा";
-          objectives = langIsEng
-            ? "Identifying and counting Indian currency"
-            : "नाणी व नोटा ओळखणे व मोजणे.";
-          activity = langIsEng
-            ? "Mock shop activity with paper notes"
-            : "कागदी नोटा वापरून खरेदी-विक्री खेळ.";
+          topic = langIsEng ? "Unit 8: Money – Coins and Notes" : "घटक ८: पैसे – नाणी व नोटा";
+          objectives = langIsEng ? "Identifying and counting Indian currency" : "नाणी व नोटा ओळखणे व मोजणे.";
+          activity = langIsEng ? "Mock shop activity with paper notes" : "कागदी नोटा वापरून खरेदी-विक्री खेळ.";
         } else if (monthNameEn === "February") {
-          topic = langIsEng
-            ? "Unit 9: Geometry – Shapes & Patterns"
-            : "घटक ९: भूमिती – आकार व आकृतीबंध";
-          objectives = langIsEng
-            ? "Identifying 2D & 3D shapes and repeating patterns"
-            : "समतल व घनाकार आकार ओळखणे.";
-          activity = langIsEng
-            ? "Shape collage and pattern drawing"
-            : "आकारांचे चित्र काढणे व रंगवणे.";
+          topic = langIsEng ? "Unit 9: Geometry – Shapes & Patterns" : "घटक ९: भूमिती – आकार व आकृतीबंध";
+          objectives = langIsEng ? "Identifying 2D & 3D shapes and repeating patterns" : "समतल व घनाकार आकार ओळखणे.";
+          activity = langIsEng ? "Shape collage and pattern drawing" : "आकारांचे चित्र काढणे व रंगवणे.";
         } else if (monthNameEn === "March") {
-          topic = langIsEng
-            ? "Revision & Problem Solving"
-            : "उजळणी व समस्या सोडवणे";
-          objectives = langIsEng
-            ? "Reviewing all math topics and solving word problems"
-            : "सर्व घटकांची उजळणी व शब्दसमस्या सोडवणे.";
-          activity = langIsEng
-            ? "Sample paper practice"
-            : "नमुना प्रश्नपत्रिका सोडविणे.";
+          topic = langIsEng ? "Revision & Problem Solving" : "उजळणी व समस्या सोडवणे";
+          objectives = langIsEng ? "Reviewing all math topics and solving word problems" : "सर्व घटकांची उजळणी व शब्दसमस्या सोडवणे.";
+          activity = langIsEng ? "Sample paper practice" : "नमुना प्रश्नपत्रिका सोडविणे.";
         } else {
           topic = langIsEng ? "Annual Exam Revision" : "वार्षिक परीक्षा उजळणी";
-          objectives = langIsEng
-            ? "Final evaluation and grade compilation"
-            : "वार्षिक मूल्यमापन व गुणदान.";
-          activity = langIsEng
-            ? "Final written exam"
-            : "अंतिम परीक्षा व गुणनोंदणी.";
+          objectives = langIsEng ? "Final evaluation and grade compilation" : "वार्षिक मूल्यमापन व गुणदान.";
+          activity = langIsEng ? "Final written exam" : "अंतिम परीक्षा व गुणनोंदणी.";
         }
       } else if (subject.includes("English") || subject.includes("इंग्रजी")) {
         if (monthNameEn === "June") {
           topic = "Chapter 1: Greetings & Introductions";
-          objectives =
-            "Using basic greeting expressions and self-introduction.";
+          objectives = "Using basic greeting expressions and self-introduction.";
           activity = "Role-play introductions, Hello song.";
         } else if (monthNameEn === "July") {
           topic = "Chapter 2: My School & Classroom";
@@ -2982,8 +2353,7 @@ const getSyllabusData = (classVal: string, mediumVal: string) => {
           activity = "Drawing & colouring activity, vocabulary bingo.";
         } else if (monthNameEn === "October") {
           topic = "Chapter 5: Number words & Rhymes";
-          objectives =
-            "Writing numbers as words (one to twenty), reciting rhymes.";
+          objectives = "Writing numbers as words (one to twenty), reciting rhymes.";
           activity = "Number poem recitation, fill-in-the-blanks.";
         } else if (monthNameEn === "November") {
           topic = "Chapter 6: Action words (Verbs)";
@@ -2995,8 +2365,7 @@ const getSyllabusData = (classVal: string, mediumVal: string) => {
           activity = "Adjective matching, describe-the-picture worksheet.";
         } else if (monthNameEn === "January") {
           topic = "Chapter 8: Sentence Formation & Punctuation";
-          objectives =
-            "Writing complete sentences with full stop and question mark.";
+          objectives = "Writing complete sentences with full stop and question mark.";
           activity = "Sentence jumbles, punctuation spotting.";
         } else if (monthNameEn === "February") {
           topic = "Chapter 9: Short Stories & Comprehension";
@@ -3066,686 +2435,179 @@ const getSyllabusData = (classVal: string, mediumVal: string) => {
   return { subjects, months, syllabusBySubject };
 };
 
-const CLASS4_JUNE_PLAN: Record<
-  string,
-  Record<
-    number,
-    {
-      topic: string;
-      experience: string;
-      tools: string;
-      materials: string;
-      outcome: string;
-      isHolidayText?: string;
-    }
-  >
-> = {
-  मराठी: {
-    15: {
-      topic: "चित्र वाचन",
-      experience: "चित्र पाहून चित्रात काय दिसते ते सांगा.",
-      tools: "तोंडीकाम",
-      materials: "चित्र",
-      outcome:
-        "१.३.१ सांगितलेल्या/विचारलेल्या वस्तूंविषयी, घटकाविषयी पाच ते सहा ओळींत माहिती सांगतो.",
-    },
-    16: {
-      topic: "अभिव्यक्ती",
-      experience: "दिलेल्या विषयावर आपले मत मांडतात.",
-      tools: "तोंडीकाम",
-      materials: "चित्र",
-      outcome:
-        "१.३.१ सांगितलेल्या/विचारलेल्या वस्तूंविषयी, घटकाविषयी पाच ते सहा ओळींत माहिती सांगतो.",
-    },
-    17: {
-      topic: "कथा सांगणे",
-      experience: "कथा लक्षपूर्वक ऐकतात व चर्चा करतात",
-      tools: "तोंडीकाम",
-      materials: "चित्र",
-      outcome:
-        "१.१.२ कथा, उतारा, परिच्छेद, बातमी ऐकून त्यांच्यावर गटचर्चा करती.",
-    },
-    18: {
-      topic: "बातमी वाचन",
-      experience: "बातमी वाचन करून चर्चा करतात.",
-      tools: "तोंडीकाम",
-      materials: "चित्र",
-      outcome:
-        "१.१.२ कथा, उतारा, परिच्छेद, बातमी ऐकून त्यांच्यावर गटचर्चा करती.",
-    },
-    19: {
-      topic: "शब्दसमूह",
-      experience: "शब्दसमूहाचा अर्थ सांगतात.",
-      tools: "तोंडीकाम",
-      materials: "तक्ता",
-      outcome: "३.१.१ दिलेल्या शब्दसमूहापासून सुसंगत वाक्य तयार करून लिहितो.",
-    },
-    20: {
-      topic: "शब्दसमूह",
-      experience: "शब्दसमूहाचा वाक्यात उपयोग करून सांगतात.",
-      tools: "तोंडीकाम",
-      materials: "तक्ता",
-      outcome: "३.१.१ दिलेल्या शब्दसमूहापासून सुसंगत वाक्य तयार करून लिहितो.",
-    },
-    22: {
-      topic: "हीच अमुची प्रार्थना",
-      experience: "प्रार्थना सामूहिक पाठीमागे म्हणतात.",
-      tools: "तोंडीकाम",
-      materials: "ध्वनीफीत",
-      outcome: "२.२.३ वाचलेल्या साहित्यातील (गद्य/पद्य) आशय, निष्कर्ष सांगतो.",
-    },
-    23: {
-      topic: "हीच अमुची प्रार्थना",
-      experience: "प्रार्थना सामूहिक तालासुरात म्हणतात.",
-      tools: "तोंडीकाम",
-      materials: "ध्वनीफीत",
-      outcome: "२.२.३ वाचलेल्या साहित्यातील (गद्य/पद्य) आशय, निष्कर्ष सांगतो.",
-    },
-    24: {
-      topic: "हीच अमुची प्रार्थना",
-      experience: "विचारलेल्या प्रश्नांची उत्तरे देतात.",
-      tools: "तोंडीकाम",
-      materials: "ध्वनीफीत",
-      outcome: "२.२.३ वाचलेल्या साहित्यातील (गद्य/पद्य) आशय, निष्कर्ष सांगतो.",
-    },
-    25: {
-      topic: "हीच अमुची प्रार्थना",
-      experience: "आपले अनुभव सांगतात.",
-      tools: "उपक्रम",
-      materials: "पेपर",
-      outcome:
-        "१.१.३ घडलेल्या घटना, प्रसंग व दैनंदिन अनुभव यांबाबत सुसंगतपणे मत व्यक्त करतो.",
-    },
-    26: {
-      topic: "",
-      experience: "",
-      tools: "",
-      materials: "",
-      outcome: "",
-      isHolidayText: "राजर्षी शाहू महाराज जयंती व मोहरम",
-    },
-    27: {
-      topic: "माझा पतंग",
-      experience: "चित्र पहा, वाचा व सांगा.",
-      tools: "तोंडीकाम",
-      materials: "चित्र",
-      outcome: "२.१.२ मजकुरातील मुख्य घटना व पात्रे यांविषयी बोलतो.",
-    },
-    29: {
-      topic: "माझा पतंग",
-      experience: "चित्र कथेच्या आधारे संवाद लिहितात.",
-      tools: "तोंडीकाम",
-      materials: "चित्र",
-      outcome:
-        "३.१.२ परिसरात घडलेल्या घटनांचा क्रम लावून स्वानुभवावर आधारित परिच्छेद तयार करतो, स्व-मतासह समारोप करतो.",
-    },
-    30: {
-      topic: "माझा पतंग",
-      experience: "खेळताना घडलेल्या प्रसंगाचे वर्णन करतात.",
-      tools: "तोंडीकाम",
-      materials: "चित्र",
-      outcome: "३.३.४ स्वतःच्या अनुभवाचे संवाद रूपात लेखन करतो.",
-    },
+const CLASS4_JUNE_PLAN: Record<string, Record<number, { topic: string; experience: string; tools: string; materials: string; outcome: string; isHolidayText?: string }>> = {
+  "मराठी": {
+    15: { topic: "चित्र वाचन", experience: "चित्र पाहून चित्रात काय दिसते ते सांगा.", tools: "तोंडीकाम", materials: "चित्र", outcome: "१.३.१ सांगितलेल्या/विचारलेल्या वस्तूंविषयी, घटकाविषयी पाच ते सहा ओळींत माहिती सांगतो." },
+    16: { topic: "अभिव्यक्ती", experience: "दिलेल्या विषयावर आपले मत मांडतात.", tools: "तोंडीकाम", materials: "चित्र", outcome: "१.३.१ सांगितलेल्या/विचारलेल्या वस्तूंविषयी, घटकाविषयी पाच ते सहा ओळींत माहिती सांगतो." },
+    17: { topic: "कथा सांगणे", experience: "कथा लक्षपूर्वक ऐकतात व चर्चा करतात", tools: "तोंडीकाम", materials: "चित्र", outcome: "१.१.२ कथा, उतारा, परिच्छेद, बातमी ऐकून त्यांच्यावर गटचर्चा करती." },
+    18: { topic: "बातमी वाचन", experience: "बातमी वाचन करून चर्चा करतात.", tools: "तोंडीकाम", materials: "चित्र", outcome: "१.१.२ कथा, उतारा, परिच्छेद, बातमी ऐकून त्यांच्यावर गटचर्चा करती." },
+    19: { topic: "शब्दसमूह", experience: "शब्दसमूहाचा अर्थ सांगतात.", tools: "तोंडीकाम", materials: "तक्ता", outcome: "३.१.१ दिलेल्या शब्दसमूहापासून सुसंगत वाक्य तयार करून लिहितो." },
+    20: { topic: "शब्दसमूह", experience: "शब्दसमूहाचा वाक्यात उपयोग करून सांगतात.", tools: "तोंडीकाम", materials: "तक्ता", outcome: "३.१.१ दिलेल्या शब्दसमूहापासून सुसंगत वाक्य तयार करून लिहितो." },
+    22: { topic: "हीच अमुची प्रार्थना", experience: "प्रार्थना सामूहिक पाठीमागे म्हणतात.", tools: "तोंडीकाम", materials: "ध्वनीफीत", outcome: "२.२.३ वाचलेल्या साहित्यातील (गद्य/पद्य) आशय, निष्कर्ष सांगतो." },
+    23: { topic: "हीच अमुची प्रार्थना", experience: "प्रार्थना सामूहिक तालासुरात म्हणतात.", tools: "तोंडीकाम", materials: "ध्वनीफीत", outcome: "२.२.३ वाचलेल्या साहित्यातील (गद्य/पद्य) आशय, निष्कर्ष सांगतो." },
+    24: { topic: "हीच अमुची प्रार्थना", experience: "विचारलेल्या प्रश्नांची उत्तरे देतात.", tools: "तोंडीकाम", materials: "ध्वनीफीत", outcome: "२.२.३ वाचलेल्या साहित्यातील (गद्य/पद्य) आशय, निष्कर्ष सांगतो." },
+    25: { topic: "हीच अमुची प्रार्थना", experience: "आपले अनुभव सांगतात.", tools: "उपक्रम", materials: "पेपर", outcome: "१.१.३ घडलेल्या घटना, प्रसंग व दैनंदिन अनुभव यांबाबत सुसंगतपणे मत व्यक्त करतो." },
+    26: { topic: "", experience: "", tools: "", materials: "", outcome: "", isHolidayText: "राजर्षी शाहू महाराज जयंती व मोहरम" },
+    27: { topic: "माझा पतंग", experience: "चित्र पहा, वाचा व सांगा.", tools: "तोंडीकाम", materials: "चित्र", outcome: "२.१.२ मजकुरातील मुख्य घटना व पात्रे यांविषयी बोलतो." },
+    29: { topic: "माझा पतंग", experience: "चित्र कथेच्या आधारे संवाद लिहितात.", tools: "तोंडीकाम", materials: "चित्र", outcome: "३.१.२ परिसरात घडलेल्या घटनांचा क्रम लावून स्वानुभवावर आधारित परिच्छेद तयार करतो, स्व-मतासह समारोप करतो." },
+    30: { topic: "माझा पतंग", experience: "खेळताना घडलेल्या प्रसंगाचे वर्णन करतात.", tools: "तोंडीकाम", materials: "चित्र", outcome: "३.३.४ स्वतःच्या अनुभवाचे संवाद रूपात लेखन करतो." }
   },
-  गणित: {
-    15: {
-      topic: "संख्याज्ञान",
-      experience: "१०० ते ९९९ अंकाचे वाचन करतात.",
-      tools: "प्रात्यक्षिक",
-      materials: "तक्ता",
-      outcome: "C-1.1 ९९९९ पर्यंतच्या संख्या ओळखतो. संख्या अक्षरांत लिहितो.",
-    },
-    16: {
-      topic: "संख्याज्ञान",
-      experience: "१०० ते ९९९ अंकाचे अक्षरात लेखन करा.",
-      tools: "प्रात्यक्षिक",
-      materials: "तक्ता",
-      outcome: "C-1.1 ९९९९ पर्यंतच्या संख्या ओळखतो. संख्या अक्षरांत लिहितो.",
-    },
-    17: {
-      topic: "बेरीज",
-      experience: "तीन अंकी संख्यांची बेरीज करतात.",
-      tools: "प्रात्यक्षिक",
-      materials: "तक्ता",
-      outcome:
-        "C-1.3 बेरीज आणि वजाबाकीची उदाहरणे तयार करतो; ती मांडतो आणि सोडवतो.",
-    },
-    18: {
-      topic: "वजाबाकी",
-      experience: "तीन अंकी संख्यांची वजाबाकी करतात.",
-      tools: "प्रात्यक्षिक",
-      materials: "तक्ता",
-      outcome:
-        "C-1.3 बेरीज आणि वजाबाकीची उदाहरणे तयार करतो; ती मांडतो आणि सोडवतो.",
-    },
-    19: {
-      topic: "भौमितिक आकृत्या",
-      experience: "त्रिकोण, चौकोन, आयत, वर्तुळ संपूर्ण उजळणी करतात.",
-      tools: "प्रात्यक्षिक",
-      materials: "सारणी",
-      outcome:
-        "C-2.1 विविध आकार ओळखतो आणि त्यांची यादी करतो. कडा, कोपरे आणि पृष्ठभाग मोजतो.",
-    },
-    20: {
-      topic: "भौमितिक आकृत्या",
-      experience: "भौमितिक आकृत्यांची उजळणी करतात.",
-      tools: "प्रात्यक्षिक",
-      materials: "सारणी",
-      outcome:
-        "C-2.1 विविध आकार ओळखतो आणि त्यांची यादी करतो. कडा, कोपरे आणि पृष्ठभाग मोजतो.",
-    },
-    22: {
-      topic: "खेळूया संख्यांशी",
-      experience: "हजाराची ओळख करून घेतात.",
-      tools: "प्रात्यक्षिक",
-      materials: "तक्ता",
-      outcome:
-        "C-1.1 'हजार' ही संकल्पना समजून घेतो आणि 'हजार' ही संख्या विविध प्रकारे दर्शवितो.",
-    },
-    23: {
-      topic: "खेळूया संख्यांशी",
-      experience: "वेगवेगळ्या उदाहरणाद्वारे हजाराची ओळख",
-      tools: "प्रात्यक्षिक",
-      materials: "तक्ता",
-      outcome:
-        "C-1.1 'हजार' ही संकल्पना समजून घेतो आणि 'हजार' ही संख्या विविध प्रकारे दर्शवितो.",
-    },
-    24: {
-      topic: "खेळूया संख्यांशी",
-      experience: "हजार ही संख्या कशी बनते समजून घेतात.",
-      tools: "प्रात्यक्षिक",
-      materials: "तक्ता",
-      outcome:
-        "C-1.1 'हजार' ही संकल्पना समजून घेतो आणि 'हजार' ही संख्या विविध प्रकारे दर्शवितो.",
-    },
-    25: {
-      topic: "खेळूया संख्यांशी",
-      experience: "वेगवेगळ्या पद्धतीने हजार ही संख्या कशी बनते ते समजून घेतात.",
-      tools: "प्रात्यक्षिक",
-      materials: "तक्ता",
-      outcome:
-        "C-1.1 'हजार' ही संकल्पना समजून घेतो आणि 'हजार' ही संख्या विविध प्रकारे दर्शवितो.",
-    },
-    26: {
-      topic: "",
-      experience: "",
-      tools: "",
-      materials: "",
-      outcome: "",
-      isHolidayText: "राजर्षी शाहू महाराज जयंती व मोहरम",
-    },
-    27: {
-      topic: "खेळूया संख्यांशी",
-      experience: "वेगवेगळ्या पद्धतीने हजार संख्या बनवितात.",
-      tools: "प्रात्यक्षिक",
-      materials: "तक्ता",
-      outcome:
-        "C-1.1 'हजार' ही संकल्पना समजून घेतो आणि 'हजार' ही संख्या विविध प्रकारे दर्शवितो.",
-    },
-    29: {
-      topic: "खेळूया संख्यांशी",
-      experience: "चार अंकी संख्येची ओळख होते.",
-      tools: "प्रात्यक्षिक",
-      materials: "तक्ता",
-      outcome:
-        "C-1.1 'हजार' ही संकल्पना समजून घेतो आणि 'हजार' ही संख्या विविध प्रकारे दर्शवितो.",
-    },
-    30: {
-      topic: "खेळूया संख्यांशी",
-      experience: "चार अंकी संख्येचे वाचन करतात.",
-      tools: "प्रात्यक्षिक",
-      materials: "तक्ता",
-      outcome:
-        "C-1.1 'हजार' ही संकल्पना समजून घेतो आणि 'हजार' ही संख्या विविध प्रकारे दर्शवितो.",
-    },
+  "गणित": {
+    15: { topic: "संख्याज्ञान", experience: "१०० ते ९९९ अंकाचे वाचन करतात.", tools: "प्रात्यक्षिक", materials: "तक्ता", outcome: "C-1.1 ९९९९ पर्यंतच्या संख्या ओळखतो. संख्या अक्षरांत लिहितो." },
+    16: { topic: "संख्याज्ञान", experience: "१०० ते ९९९ अंकाचे अक्षरात लेखन करा.", tools: "प्रात्यक्षिक", materials: "तक्ता", outcome: "C-1.1 ९९९९ पर्यंतच्या संख्या ओळखतो. संख्या अक्षरांत लिहितो." },
+    17: { topic: "बेरीज", experience: "तीन अंकी संख्यांची बेरीज करतात.", tools: "प्रात्यक्षिक", materials: "तक्ता", outcome: "C-1.3 बेरीज आणि वजाबाकीची उदाहरणे तयार करतो; ती मांडतो आणि सोडवतो." },
+    18: { topic: "वजाबाकी", experience: "तीन अंकी संख्यांची वजाबाकी करतात.", tools: "प्रात्यक्षिक", materials: "तक्ता", outcome: "C-1.3 बेरीज आणि वजाबाकीची उदाहरणे तयार करतो; ती मांडतो आणि सोडवतो." },
+    19: { topic: "भौमितिक आकृत्या", experience: "त्रिकोण, चौकोन, आयत, वर्तुळ संपूर्ण उजळणी करतात.", tools: "प्रात्यक्षिक", materials: "सारणी", outcome: "C-2.1 विविध आकार ओळखतो आणि त्यांची यादी करतो. कडा, कोपरे आणि पृष्ठभाग मोजतो." },
+    20: { topic: "भौमितिक आकृत्या", experience: "भौमितिक आकृत्यांची उजळणी करतात.", tools: "प्रात्यक्षिक", materials: "सारणी", outcome: "C-2.1 विविध आकार ओळखतो आणि त्यांची यादी करतो. कडा, कोपरे आणि पृष्ठभाग मोजतो." },
+    22: { topic: "खेळूया संख्यांशी", experience: "हजाराची ओळख करून घेतात.", tools: "प्रात्यक्षिक", materials: "तक्ता", outcome: "C-1.1 'हजार' ही संकल्पना समजून घेतो आणि 'हजार' ही संख्या विविध प्रकारे दर्शवितो." },
+    23: { topic: "खेळूया संख्यांशी", experience: "वेगवेगळ्या उदाहरणाद्वारे हजाराची ओळख", tools: "प्रात्यक्षिक", materials: "तक्ता", outcome: "C-1.1 'हजार' ही संकल्पना समजून घेतो आणि 'हजार' ही संख्या विविध प्रकारे दर्शवितो." },
+    24: { topic: "खेळूया संख्यांशी", experience: "हजार ही संख्या कशी बनते समजून घेतात.", tools: "प्रात्यक्षिक", materials: "तक्ता", outcome: "C-1.1 'हजार' ही संकल्पना समजून घेतो आणि 'हजार' ही संख्या विविध प्रकारे दर्शवितो." },
+    25: { topic: "खेळूया संख्यांशी", experience: "वेगवेगळ्या पद्धतीने हजार ही संख्या कशी बनते ते समजून घेतात.", tools: "प्रात्यक्षिक", materials: "तक्ता", outcome: "C-1.1 'हजार' ही संकल्पना समजून घेतो आणि 'हजार' ही संख्या विविध प्रकारे दर्शवितो." },
+    26: { topic: "", experience: "", tools: "", materials: "", outcome: "", isHolidayText: "राजर्षी शाहू महाराज जयंती व मोहरम" },
+    27: { topic: "खेळूया संख्यांशी", experience: "वेगवेगळ्या पद्धतीने हजार संख्या बनवितात.", tools: "प्रात्यक्षिक", materials: "तक्ता", outcome: "C-1.1 'हजार' ही संकल्पना समजून घेतो आणि 'हजार' ही संख्या विविध प्रकारे दर्शवितो." },
+    29: { topic: "खेळूया संख्यांशी", experience: "चार अंकी संख्येची ओळख होते.", tools: "प्रात्यक्षिक", materials: "तक्ता", outcome: "C-1.1 'हजार' ही संकल्पना समजून घेतो आणि 'हजार' ही संख्या विविध प्रकारे दर्शवितो." },
+    30: { topic: "खेळूया संख्यांशी", experience: "चार अंकी संख्येचे वाचन करतात.", tools: "प्रात्यक्षिक", materials: "तक्ता", outcome: "C-1.1 'हजार' ही संकल्पना समजून घेतो आणि 'हजार' ही संख्या विविध प्रकारे दर्शवितो." }
   },
-  इंग्रजी: {
-    15: {
-      topic: "Poem",
-      experience: "Sing a poem in rhythm",
-      tools: "Oral",
-      materials: "video",
-      outcome: "04.01 Recognises and explains the central ideas of the poem",
-    },
-    16: {
-      topic: "Poem",
-      experience: "Sing a poem with action",
-      tools: "Oral",
-      materials: "video",
-      outcome: "04.01 Recognises and explains the central ideas of the poem",
-    },
-    17: {
-      topic: "Conversation",
-      experience: "Participate in conversation",
-      tools: "Oral",
-      materials: "video",
-      outcome: "04.09 Participates in conversations by attentive listening.",
-    },
-    18: {
-      topic: "Conversation",
-      experience: "Tell about given topic",
-      tools: "Oral",
-      materials: "video",
-      outcome: "04.09 Participates in conversations by attentive listening.",
-    },
-    19: {
-      topic: "Read Story",
-      experience: "Read aloud story",
-      tools: "Practical",
-      materials: "picture",
-      outcome:
-        "04.17 Reads age appropriate stories with proper pauses and fluency.",
-    },
-    20: {
-      topic: "Read Story",
-      experience: "Read aloud story",
-      tools: "Practical",
-      materials: "picture",
-      outcome:
-        "04.17 Reads age appropriate stories with proper pauses and fluency.",
-    },
-    22: {
-      topic: "Back to school",
-      experience: "Listen and sing",
-      tools: "Oral",
-      materials: "video",
-      outcome: "04.01 Recognises and explains the central ideas of the poem",
-    },
-    23: {
-      topic: "Back to school",
-      experience: "Sing a poem in rhythm",
-      tools: "Oral",
-      materials: "video",
-      outcome: "04.01 Recognises and explains the central ideas of the poem",
-    },
-    24: {
-      topic: "Back to school",
-      experience: "Sing a poem with action.",
-      tools: "Oral",
-      materials: "video",
-      outcome: "04.01 Recognises and explains the central ideas of the poem",
-    },
-    25: {
-      topic: "Back to school",
-      experience: "Listen and repeat.",
-      tools: "Oral",
-      materials: "video",
-      outcome:
-        "04.11 Follows the proper manners of group discussion like attentive listening, active response, respects other's opinion, etc.",
-    },
-    26: {
-      topic: "",
-      experience: "",
-      tools: "",
-      materials: "",
-      outcome: "",
-      isHolidayText: "राजर्षी शाहू महाराज जयंती व मोहरम",
-    },
-    27: {
-      topic: "Back to school",
-      experience: "Look at the picture and find their names.",
-      tools: "Oral",
-      materials: "video",
-      outcome:
-        "04.11 Follows the proper manners of group discussion like attentive listening, active response, respects other's opinion, etc.",
-    },
-    29: {
-      topic: "Back to school",
-      experience: "Look at the pictures and name the actions",
-      tools: "Oral",
-      materials: "video",
-      outcome:
-        "04.11 Follows the proper manners of group discussion like attentive listening, active response, respects other's opinion, etc.",
-    },
-    30: {
-      topic: "Back to school",
-      experience: "Look at the pictures and find answers of riddles.",
-      tools: "Oral",
-      materials: "video",
-      outcome: "04.10 Presents orally in the class on the given topics.",
-    },
+  "इंग्रजी": {
+    15: { topic: "Poem", experience: "Sing a poem in rhythm", tools: "Oral", materials: "video", outcome: "04.01 Recognises and explains the central ideas of the poem" },
+    16: { topic: "Poem", experience: "Sing a poem with action", tools: "Oral", materials: "video", outcome: "04.01 Recognises and explains the central ideas of the poem" },
+    17: { topic: "Conversation", experience: "Participate in conversation", tools: "Oral", materials: "video", outcome: "04.09 Participates in conversations by attentive listening." },
+    18: { topic: "Conversation", experience: "Tell about given topic", tools: "Oral", materials: "video", outcome: "04.09 Participates in conversations by attentive listening." },
+    19: { topic: "Read Story", experience: "Read aloud story", tools: "Practical", materials: "picture", outcome: "04.17 Reads age appropriate stories with proper pauses and fluency." },
+    20: { topic: "Read Story", experience: "Read aloud story", tools: "Practical", materials: "picture", outcome: "04.17 Reads age appropriate stories with proper pauses and fluency." },
+    22: { topic: "Back to school", experience: "Listen and sing", tools: "Oral", materials: "video", outcome: "04.01 Recognises and explains the central ideas of the poem" },
+    23: { topic: "Back to school", experience: "Sing a poem in rhythm", tools: "Oral", materials: "video", outcome: "04.01 Recognises and explains the central ideas of the poem" },
+    24: { topic: "Back to school", experience: "Sing a poem with action.", tools: "Oral", materials: "video", outcome: "04.01 Recognises and explains the central ideas of the poem" },
+    25: { topic: "Back to school", experience: "Listen and repeat.", tools: "Oral", materials: "video", outcome: "04.11 Follows the proper manners of group discussion like attentive listening, active response, respects other's opinion, etc." },
+    26: { topic: "", experience: "", tools: "", materials: "", outcome: "", isHolidayText: "राजर्षी शाहू महाराज जयंती व मोहरम" },
+    27: { topic: "Back to school", experience: "Look at the picture and find their names.", tools: "Oral", materials: "video", outcome: "04.11 Follows the proper manners of group discussion like attentive listening, active response, respects other's opinion, etc." },
+    29: { topic: "Back to school", experience: "Look at the pictures and name the actions", tools: "Oral", materials: "video", outcome: "04.11 Follows the proper manners of group discussion like attentive listening, active response, respects other's opinion, etc." },
+    30: { topic: "Back to school", experience: "Look at the pictures and find answers of riddles.", tools: "Oral", materials: "video", outcome: "04.10 Presents orally in the class on the given topics." }
   },
   "परिसर अभ्यास १": {
-    15: {
-      topic: "सूर्यमाला",
-      experience: "सूर्यमालेतील ग्रहांची नावे सांगा.",
-      tools: "तोंडीकाम",
-      materials: "चित्र",
-      outcome: "C-1.1 सूर्यमालेतील ग्रहांचा योग्य क्रम सांगती.",
-    },
-    16: {
-      topic: "सूर्यमाला",
-      experience: "सूर्यमालेतील ग्रह योग्य क्रमाने सांगा.",
-      tools: "तोंडीकाम",
-      materials: "चित्र",
-      outcome: "C-1.1 सूर्यमालेतील ग्रहांचा योग्य क्रम सांगती.",
-    },
-    17: {
-      topic: "सूर्यमाला",
-      experience: "सूर्यमालेतील ग्रहांची नावे लिहा.",
-      tools: "तोंडीकाम",
-      materials: "चित्र",
-      outcome: "C-1.1 सूर्यमालेतील ग्रहांचा योग्य क्रम सांगती.",
-    },
+    15: { topic: "सूर्यमाला", experience: "सूर्यमालेतील ग्रहांची नावे सांगा.", tools: "तोंडीकाम", materials: "चित्र", outcome: "C-1.1 सूर्यमालेतील ग्रहांचा योग्य क्रम सांगती." },
+    16: { topic: "सूर्यमाला", experience: "सूर्यमालेतील ग्रह योग्य क्रमाने सांगा.", tools: "तोंडीकाम", materials: "चित्र", outcome: "C-1.1 सूर्यमालेतील ग्रहांचा योग्य क्रम सांगती." },
+    17: { topic: "सूर्यमाला", experience: "सूर्यमालेतील ग्रहांची नावे लिहा.", tools: "तोंडीकाम", materials: "चित्र", outcome: "C-1.1 सूर्यमालेतील ग्रहांचा योग्य क्रम सांगती." },
     18: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     19: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     20: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
-    22: {
-      topic: "ठेवा निसर्गाचा",
-      experience: "आठवा आणि सांगा.",
-      tools: "तोंडीकाम",
-      materials: "चित्र",
-      outcome:
-        "C – 2.1 पाण्याचे विविध स्रोत सांगून, त्यांच्या स्वच्छतेचे महत्त्व सांगतो.",
-    },
-    23: {
-      topic: "ठेवा निसर्गाचा",
-      experience: "पाण्याचे स्रोत सांगा व माहिती समजून घेतात.",
-      tools: "तोंडीकाम",
-      materials: "चित्र",
-      outcome:
-        "C – 2.1 पाण्याचे विविध स्रोत सांगून, त्यांच्या स्वच्छतेचे महत्त्व सांगतो.",
-    },
-    24: {
-      topic: "ठेवा निसर्गाचा",
-      experience: "पाणी साठवण माहिती समजून घेतात..",
-      tools: "तोंडीकाम",
-      materials: "चित्र",
-      outcome:
-        "C – 2.1 पाण्याचे विविध स्रोत सांगून, त्यांच्या स्वच्छतेचे महत्त्व सांगतो.",
-    },
+    22: { topic: "ठेवा निसर्गाचा", experience: "आठवा आणि सांगा.", tools: "तोंडीकाम", materials: "चित्र", outcome: "C – 2.1 पाण्याचे विविध स्रोत सांगून, त्यांच्या स्वच्छतेचे महत्त्व सांगतो." },
+    23: { topic: "ठेवा निसर्गाचा", experience: "पाण्याचे स्रोत सांगा व माहिती समजून घेतात.", tools: "तोंडीकाम", materials: "चित्र", outcome: "C – 2.1 पाण्याचे विविध स्रोत सांगून, त्यांच्या स्वच्छतेचे महत्त्व सांगतो." },
+    24: { topic: "ठेवा निसर्गाचा", experience: "पाणी साठवण माहिती समजून घेतात..", tools: "तोंडीकाम", materials: "चित्र", outcome: "C – 2.1 पाण्याचे विविध स्रोत सांगून, त्यांच्या स्वच्छतेचे महत्त्व सांगतो." },
     25: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
-    26: {
-      topic: "",
-      experience: "",
-      tools: "",
-      materials: "",
-      outcome: "",
-      isHolidayText: "राजर्षी शाहू महाराज जयंती व मोहरम",
-    },
+    26: { topic: "", experience: "", tools: "", materials: "", outcome: "", isHolidayText: "राजर्षी शाहू महाराज जयंती व मोहरम" },
     27: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
-    29: {
-      topic: "ठेवा निसर्गाचा",
-      experience: "निरीक्षण करा व सांगतात.",
-      tools: "तोंडीकाम",
-      materials: "चित्र",
-      outcome:
-        "C – 2.1 पाण्याचे विविध स्रोत सांगून, त्यांच्या स्वच्छतेचे महत्त्व सांगतो.",
-    },
-    30: {
-      topic: "ठेवा निसर्गाचा",
-      experience: "वाचा व समजून घेतात.",
-      tools: "तोंडीकाम",
-      materials: "चित्र",
-      outcome:
-        "C – 2.1 पाण्याचे विविध स्रोत सांगून, त्यांच्या स्वच्छतेचे महत्त्व सांगतो.",
-    },
+    29: { topic: "ठेवा निसर्गाचा", experience: "निरीक्षण करा व सांगतात.", tools: "तोंडीकाम", materials: "चित्र", outcome: "C – 2.1 पाण्याचे विविध स्रोत सांगून, त्यांच्या स्वच्छतेचे महत्त्व सांगतो." },
+    30: { topic: "ठेवा निसर्गाचा", experience: "वाचा व समजून घेतात.", tools: "तोंडीकाम", materials: "चित्र", outcome: "C – 2.1 पाण्याचे विविध स्रोत सांगून, त्यांच्या स्वच्छतेचे महत्त्व सांगतो." }
   },
   "परिसर अभ्यास २": {
     15: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     16: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     17: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
-    18: {
-      topic: "कुटुंब",
-      experience: "कुटुंबातील सदस्यांची नावे सांगा.",
-      tools: "तोंडीकाम",
-      materials: "विविध चित्रे",
-      outcome:
-        "04.958.01 विस्तारित कुटुंबातील सदस्यांचे एकमेकांशी असलेले नातेसंबंध ओळखतात.",
-    },
-    19: {
-      topic: "कुटुंब",
-      experience: "कुटुंबातील सदस्यांची माहिती सांगा.",
-      tools: "तोंडीकाम",
-      materials: "विविध चित्रे",
-      outcome:
-        "04.958.01 विस्तारित कुटुंबातील सदस्यांचे एकमेकांशी असलेले नातेसंबंध ओळखतात.",
-    },
+    18: { topic: "कुटुंब", experience: "कुटुंबातील सदस्यांची नावे सांगा.", tools: "तोंडीकाम", materials: "विविध चित्रे", outcome: "04.958.01 विस्तारित कुटुंबातील सदस्यांचे एकमेकांशी असलेले नातेसंबंध ओळखतात." },
+    19: { topic: "कुटुंब", experience: "कुटुंबातील सदस्यांची माहिती सांगा.", tools: "तोंडीकाम", materials: "विविध चित्रे", outcome: "04.958.01 विस्तारित कुटुंबातील सदस्यांचे एकमेकांशी असलेले नातेसंबंध ओळखतात." },
     20: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     22: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     23: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     24: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
-    25: {
-      topic: "अनुभव कथन",
-      experience: "अनुभवलेल्या समस्या मांडतात.",
-      tools: "तोंडीकाम",
-      materials: "विविध चित्रे",
-      outcome:
-        "04.958.02 कुटुंब / शाळा / शेजार या ठिकाणी निरीक्षण केलेल्या / अनुभवलेल्या समस्यांवर स्वतःचे मत मांडतात",
-    },
-    26: {
-      topic: "",
-      experience: "",
-      tools: "",
-      materials: "",
-      outcome: "",
-      isHolidayText: "राजर्षी शाहू महाराज जयंती व मोहरम",
-    },
+    25: { topic: "अनुभव कथन", experience: "अनुभवलेल्या समस्या मांडतात.", tools: "तोंडीकाम", materials: "विविध चित्रे", outcome: "04.958.02 कुटुंब / शाळा / शेजार या ठिकाणी निरीक्षण केलेल्या / अनुभवलेल्या समस्यांवर स्वतःचे मत मांडतात" },
+    26: { topic: "", experience: "", tools: "", materials: "", outcome: "", isHolidayText: "राजर्षी शाहू महाराज जयंती व मोहरम" },
     27: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     29: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
-    30: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
+    30: { topic: "", experience: "", tools: "", materials: "", outcome: "" }
   },
-  कला: {
+  "कला": {
     15: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     16: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
-    17: {
-      topic: "बडबड गीत",
-      experience: "बडबड गीत गायन करतात.",
-      tools: "तोंडीकाम",
-      materials: "ध्वनीफीत",
-      outcome: "बडबडगीत, समूहगीत तालासुरात म्हणतो.",
-    },
-    18: {
-      topic: "चित्र काढणे",
-      experience: "रेषांच्या सहाय्याने चित्र काढतात व रंगवितात.",
-      tools: "प्रात्यक्षिक",
-      materials: "चित्र",
-      outcome:
-        "रेषांच्या विविध आकारांपासून सोपे आकार काढतो तसेच नक्षीकाम करतो.",
-    },
+    17: { topic: "बडबड गीत", experience: "बडबड गीत गायन करतात.", tools: "तोंडीकाम", materials: "ध्वनीफीत", outcome: "बडबडगीत, समूहगीत तालासुरात म्हणतो." },
+    18: { topic: "चित्र काढणे", experience: "रेषांच्या सहाय्याने चित्र काढतात व रंगवितात.", tools: "प्रात्यक्षिक", materials: "चित्र", outcome: "रेषांच्या विविध आकारांपासून सोपे आकार काढतो तसेच नक्षीकाम करतो." },
     19: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     20: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     22: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     23: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
-    24: {
-      topic: "प्रार्थना गायन",
-      experience: "प्रार्थना गायन करतात.",
-      tools: "तोंडीकाम",
-      materials: "ध्वनीफीत",
-      outcome: "बडबडगीत, समूहगीत तालासुरात म्हणतो.",
-    },
-    25: {
-      topic: "कविता गायन",
-      experience: "कविता गायन तालासुरात करतात.",
-      tools: "प्रात्यक्षिक",
-      materials: "चित्र",
-      outcome:
-        "रेषांच्या विविध आकारांपासून सोपे आकार काढतो तसेच नक्षीकाम करतो.",
-    },
-    26: {
-      topic: "",
-      experience: "",
-      tools: "",
-      materials: "",
-      outcome: "",
-      isHolidayText: "राजर्षी शाहू महाराज जयंती व मोहरम",
-    },
+    24: { topic: "प्रार्थना गायन", experience: "प्रार्थना गायन करतात.", tools: "तोंडीकाम", materials: "ध्वनीफीत", outcome: "बडबडगीत, समूहगीत तालासुरात म्हणतो." },
+    25: { topic: "कविता गायन", experience: "कविता गायन तालासुरात करतात.", tools: "प्रात्यक्षिक", materials: "चित्र", outcome: "रेषांच्या विविध आकारांपासून सोपे आकार काढतो तसेच नक्षीकाम करतो." },
+    26: { topic: "", experience: "", tools: "", materials: "", outcome: "", isHolidayText: "राजर्षी शाहू महाराज जयंती व मोहरम" },
     27: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     29: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
-    30: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
+    30: { topic: "", experience: "", tools: "", materials: "", outcome: "" }
   },
-  कार्यानुभव: {
-    15: {
-      topic: "पाण्याचा वापर",
-      experience: "पाण्याचे उपयोग सांगा.",
-      tools: "तोंडीकाम",
-      materials: "चित्र",
-      outcome:
-        "पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो.",
-    },
-    16: {
-      topic: "पाण्याचा वापर",
-      experience: "पाण्याचा वापर व बचत यावर चर्चा",
-      tools: "तोंडीकाम",
-      materials: "चित्र",
-      outcome:
-        "पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो.",
-    },
+  "कार्यानुभव": {
+    15: { topic: "पाण्याचा वापर", experience: "पाण्याचे उपयोग सांगा.", tools: "तोंडीकाम", materials: "चित्र", outcome: "पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो." },
+    16: { topic: "पाण्याचा वापर", experience: "पाण्याचा वापर व बचत यावर चर्चा", tools: "तोंडीकाम", materials: "चित्र", outcome: "पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो." },
     17: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     18: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     19: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     20: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
-    22: {
-      topic: "पाण्याचा वापर",
-      experience: "पाण्याविषयी घोषवाक्ये सांगा.",
-      tools: "उपक्रम",
-      materials: "-",
-      outcome:
-        "पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो.",
-    },
-    23: {
-      topic: "पाण्याचा वापर",
-      experience: "पाण्याविषयी घोषवाक्ये लिहा.",
-      tools: "तोंडीकाम",
-      materials: "चित्र",
-      outcome:
-        "पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो.",
-    },
+    22: { topic: "पाण्याचा वापर", experience: "पाण्याविषयी घोषवाक्ये सांगा.", tools: "उपक्रम", materials: "-", outcome: "पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो." },
+    23: { topic: "पाण्याचा वापर", experience: "पाण्याविषयी घोषवाक्ये लिहा.", tools: "तोंडीकाम", materials: "चित्र", outcome: "पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो." },
     24: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     25: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
-    26: {
-      topic: "",
-      experience: "",
-      tools: "",
-      materials: "",
-      outcome: "",
-      isHolidayText: "राजर्षी शाहू महाराज जयंती व मोहरम",
-    },
+    26: { topic: "", experience: "", tools: "", materials: "", outcome: "", isHolidayText: "राजर्षी शाहू महाराज जयंती व मोहरम" },
     27: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
-    29: {
-      topic: "बचतपेटी",
-      experience: "कागदी बचतपेटी तयार करा.",
-      tools: "उपक्रम",
-      materials: "कागद",
-      outcome:
-        "गरजा आणि समस्या यांच्याशी निगडित कौशल्यपूर्ण समाजोपयोगी साहित्य निर्माण करतो.",
-    },
-    30: {
-      topic: "वर्ग सुशोभन",
-      experience: "सुशोभनासाठी सोपे साहित्य सांगा.",
-      tools: "वर्गकार्य",
-      materials: "-",
-      outcome:
-        "वर्गाचे सुशोभन करून दिनविशेष व परिसरातील लघु उद्योगांची माहिती सांगतो.",
-    },
+    29: { topic: "बचतपेटी", experience: "कागदी बचतपेटी तयार करा.", tools: "उपक्रम", materials: "कागद", outcome: "गरजा आणि समस्या यांच्याशी निगडित कौशल्यपूर्ण समाजोपयोगी साहित्य निर्माण करतो." },
+    30: { topic: "वर्ग सुशोभन", experience: "सुशोभनासाठी सोपे साहित्य सांगा.", tools: "वर्गकार्य", materials: "-", outcome: "वर्गाचे सुशोभन करून दिनविशेष व परिसरातील लघु उद्योगांची माहिती सांगतो." }
   },
   "शारीरिक शिक्षण": {
     15: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     16: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     17: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     18: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
-    19: {
-      topic: "शारीरिक स्वच्छता",
-      experience: "वैयक्तिक स्वच्छता तपासणे",
-      tools: "वर्गकार्य",
-      materials: "तक्ता",
-      outcome: "आरोग्याच्या चांगल्या सवयी समजून घेऊन त्यांचे पालन करतो.",
-    },
-    20: {
-      topic: "खेळ",
-      experience: "कबड्डी खेळ खेळणे.",
-      tools: "प्रात्यक्षिक",
-      materials: "वस्तू",
-      outcome: "विविध प्रकारच्या खेळांत रुची घेतो. शर्यतीत सहभागी होतो.",
-    },
+    19: { topic: "शारीरिक स्वच्छता", experience: "वैयक्तिक स्वच्छता तपासणे", tools: "वर्गकार्य", materials: "तक्ता", outcome: "आरोग्याच्या चांगल्या सवयी समजून घेऊन त्यांचे पालन करतो." },
+    20: { topic: "खेळ", experience: "कबड्डी खेळ खेळणे.", tools: "प्रात्यक्षिक", materials: "वस्तू", outcome: "विविध प्रकारच्या खेळांत रुची घेतो. शर्यतीत सहभागी होतो." },
     22: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     23: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     24: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     25: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
-    26: {
-      topic: "",
-      experience: "",
-      tools: "",
-      materials: "",
-      outcome: "",
-      isHolidayText: "राजर्षी शाहू महाराज जयंती व मोहरम",
-    },
-    27: {
-      topic: "खेळ",
-      experience: "मनोरंजनात्मक खेळ खेळणे.",
-      tools: "प्रात्यक्षिक",
-      materials: "वस्तू",
-      outcome: "विविध प्रकारच्या खेळांत रुची घेतो. शर्यतीत सहभागी होतो.",
-    },
+    26: { topic: "", experience: "", tools: "", materials: "", outcome: "", isHolidayText: "राजर्षी शाहू महाराज जयंती व मोहरम" },
+    27: { topic: "खेळ", experience: "मनोरंजनात्मक खेळ खेळणे.", tools: "प्रात्यक्षिक", materials: "वस्तू", outcome: "विविध प्रकारच्या खेळांत रुची घेतो. शर्यतीत सहभागी होतो." },
     29: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
-    30: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
-  },
+    30: { topic: "", experience: "", tools: "", materials: "", outcome: "" }
+  }
 };
 
 const getDatesForMonth = (monthEn: string, year: number = 2026) => {
   const monthMap: Record<string, number> = {
-    June: 5,
-    July: 6,
-    August: 7,
-    September: 8,
-    October: 9,
-    November: 10,
-    December: 11,
-    January: 0,
-    February: 1,
-    March: 2,
-    April: 3,
-    May: 4,
+    June: 5, July: 6, August: 7, September: 8, October: 9, November: 10, December: 11,
+    January: 0, February: 1, March: 2, April: 3, May: 4
   };
   const monthIndex = monthMap[monthEn];
   if (monthIndex === undefined) return [];
-  const actualYear =
-    monthEn === "January" ||
-    monthEn === "February" ||
-    monthEn === "March" ||
-    monthEn === "April" ||
-    monthEn === "May"
-      ? year + 1
-      : year;
-
-  const startDay = monthEn === "June" ? 15 : 1;
+  const actualYear = (monthEn === "January" || monthEn === "February" || monthEn === "March" || monthEn === "April" || monthEn === "May") ? year + 1 : year;
+  
+  const startDay = (monthEn === "June") ? 15 : 1;
   const tempDate = new Date(actualYear, monthIndex + 1, 0);
   const endDay = tempDate.getDate();
-
+  
   const dates: { dateNum: number; dayMr: string; isSunday: boolean }[] = [];
   const daysMr = ["रवि", "सोम", "मंगळ", "बुध", "गुरु", "शुक्र", "शनि"];
-
+  
   for (let d = startDay; d <= endDay; d++) {
     const dateObj = new Date(actualYear, monthIndex, d);
     const dayName = daysMr[dateObj.getDay()];
     dates.push({
       dateNum: d,
       dayMr: dayName,
-      isSunday: dateObj.getDay() === 0,
+      isSunday: dateObj.getDay() === 0
     });
   }
   return dates;
 };
 
 const getDefaultDailyPlan = (
-  classVal: string,
-  mediumVal: string,
-  subject: string,
-  monthEn: string,
+  classVal: string, 
+  mediumVal: string, 
+  subject: string, 
+  monthEn: string, 
   dateNum: number,
-  dayMr: string,
+  dayMr: string
 ) => {
   const isClass4 = classVal === "4th";
-  const isMarathiOrSemi =
-    mediumVal === "Marathi" || mediumVal === "Semi English";
-
+  const isMarathiOrSemi = mediumVal === "Marathi" || mediumVal === "Semi English";
+  
   if (isClass4 && isMarathiOrSemi && monthEn === "June") {
     let lookupSubject = subject;
-    if (
-      subject.includes("Math") ||
-      subject.includes("गणित") ||
-      subject.includes("Mathematics")
-    ) {
+    if (subject.includes("Math") || subject.includes("गणित") || subject.includes("Mathematics")) {
       lookupSubject = "गणित";
     }
     const subjectPlan = CLASS4_JUNE_PLAN[lookupSubject];
@@ -3753,28 +2615,22 @@ const getDefaultDailyPlan = (
       return subjectPlan[dateNum];
     }
   }
-
+  
   if (dayMr === "रवि" || dayMr === "रवी") {
-    return {
-      topic: "-",
-      experience: "-",
-      tools: "-",
-      materials: "-",
-      outcome: "-",
-    };
+    return { topic: "-", experience: "-", tools: "-", materials: "-", outcome: "-" };
   }
-
+  
   return { topic: "", experience: "", tools: "", materials: "", outcome: "" };
 };
 
 const renderMonthlyCoverPage = (
-  m: { en: string; mr: string },
-  actualYear: number,
-  selectedClass: string | null,
+  m: { en: string; mr: string }, 
+  actualYear: number, 
+  selectedClass: string | null, 
   classNames: Record<string, { mr: string; en: string }>,
-  safeData: { schoolName: string; academicYear: string; classTeacher: string },
+  safeData: { schoolName: string; academicYear: string; classTeacher: string }
 ) => {
-  const classMrName = selectedClass ? classNames[selectedClass]?.mr || "" : "";
+  const classMrName = selectedClass ? (classNames[selectedClass]?.mr || "") : "";
   return (
     <div className="monthly-pdf-page">
       <div className="w-full my-auto flex flex-col justify-center items-center text-center space-y-12">
@@ -3790,7 +2646,7 @@ const renderMonthlyCoverPage = (
         <h3 className="text-3xl font-bold text-slate-800 font-devanagari">
           {m.mr} – {actualYear}
         </h3>
-
+        
         <div className="w-full max-w-lg mx-auto pt-16 space-y-6 text-left">
           <div className="flex items-center gap-3 text-lg font-bold">
             <span className="shrink-0 font-devanagari">• वर्गशिक्षक नाव :</span>
@@ -3806,7 +2662,7 @@ const renderMonthlyCoverPage = (
           </div>
         </div>
       </div>
-
+      
       <div className="mt-12 pt-3 border-t-2 border-amber-900 flex justify-between items-center text-[10px] text-slate-650 font-bold font-devanagari">
         <span>ukguruji app हे play store वरून डाऊनलोड करा.</span>
         <span>Page 1</span>
@@ -3824,174 +2680,65 @@ function AnnualMonthlyPlanningEditor({
 }) {
   const class1WorkingDays: Record<string, number> = {
     June: 13,
-    July: 26,
-    August: 19,
-    September: 20,
-    October: 13,
-    November: 23,
-    December: 23,
+    July: 27,
+    August: 22,
+    September: 14,
+    October: 25,
+    November: 17,
+    December: 24,
     January: 25,
     February: 22,
-    March: 23,
+    March: 24,
     April: 21,
-    May: 0,
+    May: 0
   };
 
   const class1Periods: Record<string, Record<string, number>> = {
-    मराठी: {
-      June: 32,
-      July: 70,
-      August: 58,
-      September: 62,
-      October: 40,
-      November: 64,
-      December: 64,
-      January: 66,
-      February: 56,
-      March: 60,
-      April: 58,
-      May: 0,
+    "मराठी": {
+      June: 35, July: 69, August: 51, September: 53, October: 35,
+      November: 61, December: 61, January: 67, February: 59, March: 61, April: 56, May: 0
     },
-    गणित: {
-      June: 32,
-      July: 70,
-      August: 58,
-      September: 62,
-      October: 40,
-      November: 64,
-      December: 64,
-      January: 66,
-      February: 56,
-      March: 60,
-      April: 58,
-      May: 0,
+    "गणित": {
+      June: 28, July: 56, August: 41, September: 43, October: 28,
+      November: 50, December: 50, January: 54, February: 48, March: 50, April: 46, May: 0
     },
-    Mathematics: {
-      June: 32,
-      July: 70,
-      August: 58,
-      September: 62,
-      October: 40,
-      November: 64,
-      December: 64,
-      January: 66,
-      February: 56,
-      March: 60,
-      April: 58,
-      May: 0,
+    "Mathematics": {
+      June: 28, July: 56, August: 41, September: 43, October: 28,
+      November: 50, December: 50, January: 54, February: 48, March: 50, April: 46, May: 0
     },
-    इंग्रजी: {
-      June: 32,
-      July: 70,
-      August: 58,
-      September: 62,
-      October: 40,
-      November: 64,
-      December: 64,
-      January: 66,
-      February: 56,
-      March: 60,
-      April: 58,
-      May: 0,
+    "इंग्रजी": {
+      June: 15, July: 30, August: 22, September: 23, October: 15,
+      November: 27, December: 27, January: 29, February: 26, March: 27, April: 25, May: 0
     },
-    English: {
-      June: 32,
-      July: 70,
-      August: 58,
-      September: 62,
-      October: 40,
-      November: 64,
-      December: 64,
-      January: 66,
-      February: 56,
-      March: 60,
-      April: 58,
-      May: 0,
+    "English": {
+      June: 15, July: 30, August: 22, September: 23, October: 15,
+      November: 27, December: 27, January: 29, February: 26, March: 27, April: 25, May: 0
     },
-    "कलाशिक्षण (शिकू)": {
-      June: 32,
-      July: 70,
-      August: 58,
-      September: 62,
-      October: 40,
-      November: 64,
-      December: 64,
-      January: 66,
-      February: 56,
-      March: 60,
-      April: 58,
-      May: 0,
-    },
-    "कार्यशिक्षण (करू)": {
-      June: 32,
-      July: 70,
-      August: 58,
-      September: 62,
-      October: 40,
-      November: 64,
-      December: 64,
-      January: 66,
-      February: 56,
-      March: 60,
-      April: 58,
-      May: 0,
-    },
-    "शारीरिक शिक्षण व निरामयता": {
-      June: 32,
-      July: 70,
-      August: 58,
-      September: 62,
-      October: 40,
-      November: 64,
-      December: 64,
-      January: 66,
-      February: 56,
-      March: 60,
-      April: 58,
-      May: 0,
-    },
+    "खेळू करू शिकू": {
+      June: 15, July: 30, August: 22, September: 23, October: 15,
+      November: 27, December: 27, January: 29, February: 26, March: 27, April: 25, May: 0
+    }
   };
 
   const getWeeklyPeriods = (subj: string, cls: string): number => {
     const isMr = subj.includes("मराठी");
-    const isMath =
-      subj.includes("Math") ||
-      subj.includes("गणित") ||
-      subj.includes("Mathematics");
+    const isMath = subj.includes("Math") || subj.includes("गणित") || subj.includes("Mathematics");
     const isEng = subj.includes("इंग्रजी") || subj.includes("English");
     const isHindi = subj.includes("हिंदी") || subj.includes("Hindi");
-    const isSci =
-      subj.includes("विज्ञान") ||
-      subj.includes("Science") ||
-      subj.includes("परिसर अभ्यास १") ||
-      subj.includes("Environmental Studies 1");
-    const isSoc =
-      subj.includes("समाजशास्त्र") ||
-      subj.includes("Social Sciences") ||
-      subj.includes("परिसर अभ्यास २") ||
-      subj.includes("Environmental Studies 2") ||
-      subj.includes("इतिहास") ||
-      subj.includes("भूगोल");
-
+    const isSci = subj.includes("विज्ञान") || subj.includes("Science") || subj.includes("परिसर अभ्यास १") || subj.includes("Environmental Studies 1");
+    const isSoc = subj.includes("समाजशास्त्र") || subj.includes("Social Sciences") || subj.includes("परिसर अभ्यास २") || subj.includes("Environmental Studies 2") || subj.includes("इतिहास") || subj.includes("भूगोल");
+    
     if (isMr) {
       if (cls === "1st" || cls === "2nd") return 16;
       if (cls === "3rd" || cls === "4th") return 12;
       return 6;
     }
     if (isHindi) {
-      if (cls === "1st" || cls === "2nd" || cls === "3rd" || cls === "4th")
-        return 0;
+      if (cls === "1st" || cls === "2nd" || cls === "3rd" || cls === "4th") return 0;
       return 6;
     }
     if (isEng) {
-      if (
-        cls === "1st" ||
-        cls === "2nd" ||
-        cls === "3rd" ||
-        cls === "4th" ||
-        cls === "5th"
-      )
-        return 7;
+      if (cls === "1st" || cls === "2nd" || cls === "3rd" || cls === "4th" || cls === "5th") return 7;
       return 6;
     }
     if (isMath) {
@@ -4023,8 +2770,7 @@ function AnnualMonthlyPlanningEditor({
       return 4;
     }
     if (subj.includes("कार्यानुभव")) {
-      if (cls === "1st" || cls === "2nd" || cls === "3rd" || cls === "4th")
-        return 4;
+      if (cls === "1st" || cls === "2nd" || cls === "3rd" || cls === "4th") return 4;
       if (cls === "5th") return 3;
       return 2;
     }
@@ -4036,41 +2782,11 @@ function AnnualMonthlyPlanningEditor({
     return 3;
   };
 
-  const getPeriodsForMonth = (
-    subj: string,
-    cls: string,
-    monthEn: string,
-  ): number => {
+  const getPeriodsForMonth = (subj: string, cls: string, monthEn: string): number => {
     const weekly = getWeeklyPeriods(subj, cls);
-    const class1Weekly = subj.includes("मराठी")
-      ? 16
-      : subj.includes("Math") ||
-          subj.includes("गणित") ||
-          subj.includes("Mathematics")
-        ? 13
-        : 7;
-    const lookupSubject = subj.includes("मराठी")
-      ? "मराठी"
-      : subj.includes("Math") ||
-          subj.includes("गणित") ||
-          subj.includes("Mathematics")
-        ? "गणित"
-        : subj.includes("इंग्रजी") || subj.includes("English")
-          ? "इंग्रजी"
-          : subj.includes("कलाशिक्षण")
-            ? "कलाशिक्षण (शिकू)"
-            : subj.includes("कार्यशिक्षण")
-              ? "कार्यशिक्षण (करू)"
-              : "शारीरिक शिक्षण व निरामयता";
+    const class1Weekly = subj.includes("मराठी") ? 16 : (subj.includes("Math") || subj.includes("गणित") || subj.includes("Mathematics")) ? 13 : 7;
+    const lookupSubject = subj.includes("मराठी") ? "मराठी" : (subj.includes("Math") || subj.includes("गणित") || subj.includes("Mathematics")) ? "गणित" : "इंग्रजी";
     const class1Val = class1Periods[lookupSubject]?.[monthEn] || 30;
-    if (
-      cls === "1st" ||
-      cls === "2nd" ||
-      cls === "3rd" ||
-      cls === "4th" ||
-      cls === "5th"
-    )
-      return class1Val;
     return Math.round(class1Val * (weekly / class1Weekly));
   };
 
@@ -4078,21 +2794,16 @@ function AnnualMonthlyPlanningEditor({
     return `text-center ${selectedClass === colClass ? "font-black bg-[#D6B97A]/15 text-slate-900 border-x border-[#D6B97A]/30" : ""}`;
   };
 
-  const [step, setStep] = useState<
-    "class" | "medium" | "planType" | "selectMonth"
-  >("class");
+  const [step, setStep] = useState<"class" | "medium" | "planType" | "selectMonth">("class");
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
   const [selectedMedium, setSelectedMedium] = useState<string | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [viewingPlan, setViewingPlan] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
-  const [planningData, setPlanningData] = useState<Record<string, string>>(
-    () => {
-      if (data && typeof data === "object" && data.planningData)
-        return data.planningData;
-      return { schoolName: "", academicYear: "2026-27", classTeacher: "" };
-    },
-  );
+  const [planningData, setPlanningData] = useState<Record<string, string>>(() => {
+    if (data && typeof data === "object" && data.planningData) return data.planningData;
+    return { schoolName: "", academicYear: "2026-27", classTeacher: "" };
+  });
 
   const safeData = {
     schoolName: planningData.schoolName || "",
@@ -4106,10 +2817,7 @@ function AnnualMonthlyPlanningEditor({
     onChange({ ...data, planningData: updated });
   };
 
-  const syllabus =
-    selectedClass && selectedMedium
-      ? getSyllabusData(selectedClass, selectedMedium)
-      : null;
+  const syllabus = selectedClass && selectedMedium ? getSyllabusData(selectedClass, selectedMedium) : null;
   const subjects = syllabus?.subjects || [];
 
   const classes = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"];
@@ -4124,67 +2832,29 @@ function AnnualMonthlyPlanningEditor({
     "8th": { mr: "आठवी", en: "Class 8th" },
   };
   const mediums = [
-    {
-      id: "Marathi",
-      title: "Marathi",
-      sub: "मराठी माध्यम",
-      desc: "मराठी माध्यमाचे वार्षिक/मासिक नियोजन",
-    },
-    {
-      id: "Semi English",
-      title: "Semi English",
-      sub: "सेमी इंग्रजी",
-      desc: "Semi English medium annual/monthly planning",
-    },
+    { id: "Marathi", title: "Marathi", sub: "मराठी माध्यम", desc: "मराठी माध्यमाचे वार्षिक/मासिक नियोजन" },
+    { id: "Semi English", title: "Semi English", sub: "सेमी इंग्रजी", desc: "Semi English medium annual/monthly planning" },
   ];
 
   const handleDownloadPDF = async (planType: string) => {
-    setIsExporting(true);
-    // Give React time to mount the hidden nodes to the DOM
-    await new Promise((resolve) => setTimeout(resolve, 200));
-
-    // Find all elements with the matching ID, and prefer the one that is visible (not inside the hidden absolute div)
-    const elements = document.querySelectorAll(`[id="planning-pdf-content-${planType}"]`);
-    let element: HTMLElement | null = null;
-    if (elements.length > 0) {
-      for (let i = 0; i < elements.length; i++) {
-        const el = elements[i] as HTMLElement;
-        const rect = el.getBoundingClientRect();
-        // check if it's not inside a hidden container (rect.width > 0 or rect.left >= 0)
-        if (rect.width > 0 || rect.left >= 0) {
-          element = el;
-          break;
-        }
-      }
-    }
-    if (!element && elements.length > 0) {
-      element = elements[0] as HTMLElement;
-    }
-
+    const element = document.getElementById(`planning-pdf-content-${planType}`);
     if (!element) {
       toast.error("Failed to generate PDF: content element not found.");
-      setIsExporting(false);
       return;
     }
+    setIsExporting(true);
     let tempWrapper: HTMLDivElement | null = null;
     try {
       // @ts-ignore
       let html2pdfFn = html2pdf;
       // @ts-ignore
-      if (html2pdfFn && (html2pdfFn as any).default) {
-        html2pdfFn = (html2pdfFn as any).default;
-      }
-      if (typeof html2pdfFn !== "function") {
-        if (
-          typeof window !== "undefined" &&
-          typeof (window as any).html2pdf === "function"
-        ) {
+      if (html2pdfFn && html2pdfFn.default) { html2pdfFn = html2pdfFn.default; }
+      if (typeof html2pdfFn !== 'function') {
+        if (typeof window !== 'undefined' && typeof (window as any).html2pdf === 'function') {
           html2pdfFn = (window as any).html2pdf;
         }
       }
-      if (typeof html2pdfFn !== "function") {
-        throw new Error("html2pdf library is not loaded properly.");
-      }
+      if (typeof html2pdfFn !== 'function') { throw new Error("html2pdf library is not loaded properly."); }
 
       // Clone the element into a properly-sized off-screen container so html2canvas
       // can measure and render it with correct full dimensions
@@ -4224,16 +2894,16 @@ function AnnualMonthlyPlanningEditor({
         }
       });
 
-      tempWrapper = document.createElement("div");
-      tempWrapper.setAttribute("data-pdf-temp", "true");
-      tempWrapper.style.position = "fixed";
-      tempWrapper.style.top = "-99999px";
-      tempWrapper.style.left = "0px";
-      tempWrapper.style.width = "794px";
-      tempWrapper.style.background = "white";
-      tempWrapper.style.zIndex = "-9999";
-      tempWrapper.style.overflow = "visible";
-      tempWrapper.style.pointerEvents = "none";
+      tempWrapper = document.createElement('div');
+      tempWrapper.setAttribute('data-pdf-temp', 'true');
+      tempWrapper.style.position = 'fixed';
+      tempWrapper.style.top = '-99999px';
+      tempWrapper.style.left = '0px';
+      tempWrapper.style.width = '794px';
+      tempWrapper.style.background = 'white';
+      tempWrapper.style.zIndex = '-9999';
+      tempWrapper.style.overflow = 'visible';
+      tempWrapper.style.pointerEvents = 'none';
       tempWrapper.appendChild(clone);
       document.body.appendChild(tempWrapper);
 
@@ -4243,7 +2913,7 @@ function AnnualMonthlyPlanningEditor({
       const opt = {
         margin: 0,
         filename: `${planType === "annual" ? "Annual" : "Monthly"}_Planning_${selectedClass}_${selectedMedium?.replace(" ", "_")}.pdf`,
-        image: { type: "jpeg" as const, quality: 1.0 },
+        image: { type: 'jpeg' as const, quality: 1.0 },
         html2canvas: {
           scale: 2.5,
           useCORS: true,
@@ -4251,17 +2921,12 @@ function AnnualMonthlyPlanningEditor({
           width: 794,
           windowWidth: 794,
         },
-        jsPDF: {
-          unit: "mm",
-          format: "a4",
-          orientation: "portrait" as const,
-          compress: true,
-        },
-        pagebreak: { mode: ["css" as const, "legacy" as const] },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const, compress: true },
+        pagebreak: { mode: ['css' as const, 'legacy' as const] },
       };
 
       await html2pdfFn().set(opt).from(clone).save();
-      toast.success("PDF Downloaded Successfully!");
+      toast.success('PDF Downloaded Successfully!');
     } catch (err: any) {
       toast.error(`Failed to download PDF: ${err?.message || String(err)}`);
     } finally {
@@ -4280,18 +2945,13 @@ function AnnualMonthlyPlanningEditor({
         className={`pdf-portrait-layout ${planType !== "annual" ? "no-wrapper-style" : ""} rounded shadow-2xl relative`}
       >
         {/* School Letterhead Header */}
-        {!(
-          (selectedMedium === "Marathi" || selectedMedium === "Semi English") &&
-          planType === "annual"
-        ) ? (
+        {!((selectedMedium === "Marathi" || selectedMedium === "Semi English") && planType === "annual") ? (
           <div className="border-b-4 border-slate-950 pb-4 mb-6 text-center space-y-2">
             <h1 className="text-xl font-black text-slate-900 tracking-tight">
               {safeData.schoolName}
             </h1>
             <h2 className="text-sm font-bold text-slate-655">
-              {planType === "annual"
-                ? "वार्षिक अभ्यासक्रम नियोजन आराखडा (सत्र १ व सत्र २)"
-                : "मासिक अभ्यासक्रम नियोजन व उद्दिष्टे"}
+              {planType === "annual" ? "वार्षिक अभ्यासक्रम नियोजन आराखडा (सत्र १ व सत्र २)" : "मासिक अभ्यासक्रम नियोजन व उद्दिष्टे"}
             </h2>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
               Academic Session: {safeData.academicYear}
@@ -4299,15 +2959,9 @@ function AnnualMonthlyPlanningEditor({
           </div>
         ) : (
           <div className="text-center space-y-2 mb-8 border-b-4 border-slate-950 pb-4">
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-              वार्षिक नियोजन
-            </h1>
-            <h2 className="text-base font-bold text-slate-800">
-              शैक्षणिक वर्ष २०२६ – २०२७
-            </h2>
-            <h3 className="text-sm font-bold text-slate-800">
-              इयत्ता – {classNames[selectedClass]?.mr}
-            </h3>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">वार्षिक नियोजन</h1>
+            <h2 className="text-base font-bold text-slate-800">शैक्षणिक वर्ष २०२६ – २०२७</h2>
+            <h3 className="text-sm font-bold text-slate-800">इयत्ता – {classNames[selectedClass]?.mr}</h3>
             <div className="flex justify-between text-xs font-bold text-slate-800 px-4 pt-4">
               <div>वर्गशिक्षक नाव – {safeData.classTeacher}</div>
               <div>शाळा - {safeData.schoolName}</div>
@@ -4316,35 +2970,22 @@ function AnnualMonthlyPlanningEditor({
         )}
 
         {/* Metadata tags */}
-        {!(
-          (selectedMedium === "Marathi" || selectedMedium === "Semi English") &&
-          planType === "annual"
-        ) && (
+        {!((selectedMedium === "Marathi" || selectedMedium === "Semi English") && planType === "annual") && (
           <div className="grid grid-cols-4 gap-4 p-4 bg-slate-50 border border-slate-200 rounded-xl mb-6 text-[11px] font-medium text-slate-700">
             <div>
-              <span className="font-bold text-slate-400 uppercase text-[9px] block">
-                Standard
-              </span>
-              {classNames[selectedClass]?.en} (इयत्ता{" "}
-              {classNames[selectedClass]?.mr})
+              <span className="font-bold text-slate-400 uppercase text-[9px] block">Standard</span>
+              {classNames[selectedClass]?.en} (इयत्ता {classNames[selectedClass]?.mr})
             </div>
             <div>
-              <span className="font-bold text-slate-400 uppercase text-[9px] block">
-                Medium
-              </span>
-              {selectedMedium} (
-              {selectedMedium === "Semi English" ? "सेमी इंग्रजी" : "मराठी"})
+              <span className="font-bold text-slate-400 uppercase text-[9px] block">Medium</span>
+              {selectedMedium} ({selectedMedium === "Semi English" ? "सेमी इंग्रजी" : "मराठी"})
             </div>
             <div>
-              <span className="font-bold text-slate-400 uppercase text-[9px] block">
-                Teacher
-              </span>
+              <span className="font-bold text-slate-400 uppercase text-[9px] block">Teacher</span>
               {safeData.classTeacher || "—"}
             </div>
             <div>
-              <span className="font-bold text-slate-400 uppercase text-[9px] block">
-                Updated At
-              </span>
+              <span className="font-bold text-slate-400 uppercase text-[9px] block">Updated At</span>
               {new Date().toLocaleDateString("en-GB")}
             </div>
           </div>
@@ -4354,634 +2995,550 @@ function AnnualMonthlyPlanningEditor({
         {planType === "annual" ? (
           <div className="space-y-10">
             {/* Prefix tables for 1st Class Marathi Medium */}
-            {(selectedMedium === "Marathi" ||
-              selectedMedium === "Semi English") &&
-              selectedClass !== "1st" &&
-              selectedClass !== "2nd" &&
-              selectedClass !== "3rd" &&
-              selectedClass !== "4th" &&
-              selectedClass !== "5th" && (
-                <div className="space-y-10">
-                  {/* Table 1: वार्षिक कामाचे दिवस */}
-                  <div className="space-y-3">
-                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider border-b border-slate-300 pb-1 text-center">
-                      वार्षिक कामाचे दिवस ( सन -२०२६/२०२७ )
-                    </h3>
-                    <table>
-                      <thead>
-                        <tr>
-                          <th className="text-center">महिना</th>
-                          <th className="text-center">सोमवार</th>
-                          <th className="text-center">मंगळवार</th>
-                          <th className="text-center">बुधवार</th>
-                          <th className="text-center">गुरुवार</th>
-                          <th className="text-center">शुक्रवार</th>
-                          <th className="text-center">शनिवार</th>
-                          <th className="text-center">एकूण</th>
-                          <th className="text-center">रविवार व सुट्टी</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td className="font-bold text-center">जून</td>
-                          <td className="text-center">३</td>
-                          <td className="text-center">३</td>
-                          <td className="text-center">२</td>
-                          <td className="text-center">२</td>
-                          <td className="text-center">१</td>
-                          <td className="text-center">२</td>
-                          <td className="text-center font-bold">१३</td>
-                          <td className="text-center">४ व १३</td>
-                        </tr>
-                        <tr>
-                          <td className="font-bold text-center">जुलै</td>
-                          <td className="text-center">४</td>
-                          <td className="text-center">४</td>
-                          <td className="text-center">५</td>
-                          <td className="text-center">५</td>
-                          <td className="text-center">५</td>
-                          <td className="text-center">४</td>
-                          <td className="text-center font-bold">२७</td>
-                          <td className="text-center">४</td>
-                        </tr>
-                        <tr>
-                          <td className="font-bold text-center">ऑगस्ट</td>
-                          <td className="text-center">४</td>
-                          <td className="text-center">४</td>
-                          <td className="text-center">३</td>
-                          <td className="text-center">४</td>
-                          <td className="text-center">३</td>
-                          <td className="text-center">४</td>
-                          <td className="text-center font-bold">२२</td>
-                          <td className="text-center">५ व ४</td>
-                        </tr>
-                        <tr>
-                          <td className="font-bold text-center">सप्टेंबर</td>
-                          <td className="text-center">३</td>
-                          <td className="text-center">३</td>
-                          <td className="text-center">३</td>
-                          <td className="text-center">२</td>
-                          <td className="text-center">२</td>
-                          <td className="text-center">१</td>
-                          <td className="text-center font-bold">१४</td>
-                          <td className="text-center">४ व १२</td>
-                        </tr>
-                        <tr>
-                          <td className="font-bold text-center">ऑक्टोबर</td>
-                          <td className="text-center">४</td>
-                          <td className="text-center">३</td>
-                          <td className="text-center">४</td>
-                          <td className="text-center">५</td>
-                          <td className="text-center">४</td>
-                          <td className="text-center">५</td>
-                          <td className="text-center font-bold">२५</td>
-                          <td className="text-center">४ व २</td>
-                        </tr>
-                        <tr>
-                          <td className="font-bold text-center">नोव्हेंबर</td>
-                          <td className="text-center">४</td>
-                          <td className="text-center">२</td>
-                          <td className="text-center">३</td>
-                          <td className="text-center">३</td>
-                          <td className="text-center">२</td>
-                          <td className="text-center">२</td>
-                          <td className="text-center font-bold">१७</td>
-                          <td className="text-center">५ व ९</td>
-                        </tr>
-                        <tr>
-                          <td className="font-bold text-center">डिसेंबर</td>
-                          <td className="text-center">४</td>
-                          <td className="text-center">५</td>
-                          <td className="text-center">४</td>
-                          <td className="text-center">५</td>
-                          <td className="text-center">३</td>
-                          <td className="text-center">३</td>
-                          <td className="text-center font-bold">२४</td>
-                          <td className="text-center">४ व ३</td>
-                        </tr>
-                        <tr>
-                          <td className="font-bold text-center">जानेवारी</td>
-                          <td className="text-center">४</td>
-                          <td className="text-center">४</td>
-                          <td className="text-center">४</td>
-                          <td className="text-center">३</td>
-                          <td className="text-center">५</td>
-                          <td className="text-center">५</td>
-                          <td className="text-center font-bold">२५</td>
-                          <td className="text-center">५ व १</td>
-                        </tr>
-                        <tr>
-                          <td className="font-bold text-center">फेब्रुवारी</td>
-                          <td className="text-center">४</td>
-                          <td className="text-center">४</td>
-                          <td className="text-center">४</td>
-                          <td className="text-center">३</td>
-                          <td className="text-center">४</td>
-                          <td className="text-center">४</td>
-                          <td className="text-center font-bold">२२</td>
-                          <td className="text-center">४ व २</td>
-                        </tr>
-                        <tr>
-                          <td className="font-bold text-center">मार्च</td>
-                          <td className="text-center">५</td>
-                          <td className="text-center">४</td>
-                          <td className="text-center">४</td>
-                          <td className="text-center">४</td>
-                          <td className="text-center">३</td>
-                          <td className="text-center">४</td>
-                          <td className="text-center font-bold">२४</td>
-                          <td className="text-center">४ व ३</td>
-                        </tr>
-                        <tr>
-                          <td className="font-bold text-center">एप्रिल</td>
-                          <td className="text-center">५</td>
-                          <td className="text-center">३</td>
-                          <td className="text-center">३</td>
-                          <td className="text-center">३</td>
-                          <td className="text-center">३</td>
-                          <td className="text-center">४</td>
-                          <td className="text-center font-bold">२१</td>
-                          <td className="text-center">५ व ४</td>
-                        </tr>
-                        <tr className="bg-slate-100 font-bold">
-                          <td className="text-center">एकूण</td>
-                          <td className="text-center">४४</td>
-                          <td className="text-center">३९</td>
-                          <td className="text-center">३९</td>
-                          <td className="text-center">३९</td>
-                          <td className="text-center">३५</td>
-                          <td className="text-center">३८</td>
-                          <td className="text-center text-[#D6B97A]">२३४</td>
-                          <td className="text-center">५२ व ८५</td>
-                        </tr>
-                        <tr className="bg-slate-150 font-bold">
-                          <td colSpan={7} className="text-right">
-                            प्राप्त आठवडे
-                          </td>
-                          <td
-                            colSpan={2}
-                            className="text-center text-[#D6B97A]"
-                          >
-                            ३८.००
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Table 2: साप्ताहिक तासिका */}
-                  <div className="space-y-3">
-                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider border-b border-slate-300 pb-1 text-center">
-                      साप्ताहिक तासिका – २०२६/२०२७
-                    </h3>
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>विषय</th>
-                          <th className="text-center">१ ली</th>
-                          <th className="text-center">२ री</th>
-                          <th className="text-center">३ री</th>
-                          <th className="text-center">४ थी</th>
-                          <th className="text-center">५ वी</th>
-                          <th className="text-center">६ वी</th>
-                          <th className="text-center">७ वी</th>
-                          <th className="text-center">८ वी</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td className="font-bold">मराठी</td>
-                          <td className={getCellClass("1st")}>१६</td>
-                          <td className={getCellClass("2nd")}>१६</td>
-                          <td className={getCellClass("3rd")}>१२</td>
-                          <td className={getCellClass("4th")}>१२</td>
-                          <td className={getCellClass("5th")}>६</td>
-                          <td className={getCellClass("6th")}>६</td>
-                          <td className={getCellClass("7th")}>६</td>
-                          <td className={getCellClass("8th")}>६</td>
-                        </tr>
-                        <tr>
-                          <td className="font-bold">हिंदी</td>
-                          <td className={getCellClass("1st")}>०</td>
-                          <td className={getCellClass("2nd")}>०</td>
-                          <td className={getCellClass("3rd")}>०</td>
-                          <td className={getCellClass("4th")}>०</td>
-                          <td className={getCellClass("5th")}>६</td>
-                          <td className={getCellClass("6th")}>६</td>
-                          <td className={getCellClass("7th")}>६</td>
-                          <td className={getCellClass("8th")}>६</td>
-                        </tr>
-                        <tr>
-                          <td className="font-bold">इंग्रजी</td>
-                          <td className={getCellClass("1st")}>७</td>
-                          <td className={getCellClass("2nd")}>७</td>
-                          <td className={getCellClass("3rd")}>७</td>
-                          <td className={getCellClass("4th")}>७</td>
-                          <td className={getCellClass("5th")}>७</td>
-                          <td className={getCellClass("6th")}>६</td>
-                          <td className={getCellClass("7th")}>६</td>
-                          <td className={getCellClass("8th")}>६</td>
-                        </tr>
-                        <tr>
-                          <td className="font-bold">गणित</td>
-                          <td className={getCellClass("1st")}>१३</td>
-                          <td className={getCellClass("2nd")}>१३</td>
-                          <td className={getCellClass("3rd")}>९</td>
-                          <td className={getCellClass("4th")}>९</td>
-                          <td className={getCellClass("5th")}>८</td>
-                          <td className={getCellClass("6th")}>७</td>
-                          <td className={getCellClass("7th")}>७</td>
-                          <td className={getCellClass("8th")}>७</td>
-                        </tr>
-                        <tr>
-                          <td className="font-bold">विज्ञान</td>
-                          <td className={getCellClass("1st")}>०</td>
-                          <td className={getCellClass("2nd")}>०</td>
-                          <td className={getCellClass("3rd")}>६</td>
-                          <td className={getCellClass("4th")}>६</td>
-                          <td className={getCellClass("5th")}>६</td>
-                          <td className={getCellClass("6th")}>७</td>
-                          <td className={getCellClass("7th")}>७</td>
-                          <td className={getCellClass("8th")}>७</td>
-                        </tr>
-                        <tr>
-                          <td className="font-bold">समाजशास्त्र</td>
-                          <td className={getCellClass("1st")}>०</td>
-                          <td className={getCellClass("2nd")}>०</td>
-                          <td className={getCellClass("3rd")}>४</td>
-                          <td className={getCellClass("4th")}>४</td>
-                          <td className={getCellClass("5th")}>४</td>
-                          <td className={getCellClass("6th")}>६</td>
-                          <td className={getCellClass("7th")}>६</td>
-                          <td className={getCellClass("8th")}>६</td>
-                        </tr>
-                        <tr>
-                          <td className="font-bold">कला</td>
-                          <td className={getCellClass("1st")}>४</td>
-                          <td className={getCellClass("2nd")}>४</td>
-                          <td className={getCellClass("3rd")}>३</td>
-                          <td className={getCellClass("4th")}>३</td>
-                          <td className={getCellClass("5th")}>३</td>
-                          <td className={getCellClass("6th")}>४</td>
-                          <td className={getCellClass("7th")}>४</td>
-                          <td className={getCellClass("8th")}>४</td>
-                        </tr>
-                        <tr>
-                          <td className="font-bold">कार्यानुभव</td>
-                          <td className={getCellClass("1st")}>४</td>
-                          <td className={getCellClass("2nd")}>४</td>
-                          <td className={getCellClass("3rd")}>४</td>
-                          <td className={getCellClass("4th")}>४</td>
-                          <td className={getCellClass("5th")}>३</td>
-                          <td className={getCellClass("6th")}>२</td>
-                          <td className={getCellClass("7th")}>२</td>
-                          <td className={getCellClass("8th")}>२</td>
-                        </tr>
-                        <tr>
-                          <td className="font-bold">शा.शिक्षण</td>
-                          <td className={getCellClass("1st")}>४</td>
-                          <td className={getCellClass("2nd")}>४</td>
-                          <td className={getCellClass("3rd")}>३</td>
-                          <td className={getCellClass("4th")}>३</td>
-                          <td className={getCellClass("5th")}>३</td>
-                          <td className={getCellClass("6th")}>४</td>
-                          <td className={getCellClass("7th")}>४</td>
-                          <td className={getCellClass("8th")}>४</td>
-                        </tr>
-                        <tr className="bg-slate-100 font-black">
-                          <td>एकूण</td>
-                          <td className={getCellClass("1st")}>४८</td>
-                          <td className={getCellClass("2nd")}>४८</td>
-                          <td className={getCellClass("3rd")}>४८</td>
-                          <td className={getCellClass("4th")}>४८</td>
-                          <td className={getCellClass("5th")}>४८</td>
-                          <td className={getCellClass("6th")}>४८</td>
-                          <td className={getCellClass("7th")}>४८</td>
-                          <td className={getCellClass("8th")}>४८</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Table 3: अध्ययन निष्पत्ती संख्या */}
-                  <div className="space-y-3">
-                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider border-b border-slate-300 pb-1 text-center">
-                      अध्ययन निष्पत्ती संख्या ( 1 ली ते ८ वी )
-                    </h3>
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>विषय</th>
-                          <th className="text-center">विषय कोड</th>
-                          <th className="text-center">1 ली</th>
-                          <th className="text-center">२ री</th>
-                          <th className="text-center">३ री</th>
-                          <th className="text-center">४ थी</th>
-                          <th className="text-center">५ वी</th>
-                          <th className="text-center">६ वी</th>
-                          <th className="text-center">७ वी</th>
-                          <th className="text-center">८ वी</th>
-                          <th className="text-center">एकूण</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td className="font-bold">मराठी</td>
-                          <td className="text-center">1</td>
-                          <td className={getCellClass("1st")}>14</td>
-                          <td className={getCellClass("2nd")}>17</td>
-                          <td className={getCellClass("3rd")}>14</td>
-                          <td className={getCellClass("4th")}>18</td>
-                          <td className={getCellClass("5th")}>15</td>
-                          <td className={getCellClass("6th")}>28</td>
-                          <td className={getCellClass("7th")}>27</td>
-                          <td className={getCellClass("8th")}>18</td>
-                          <td className="text-center font-bold">151</td>
-                        </tr>
-                        <tr>
-                          <td className="font-bold">हिंदी</td>
-                          <td className="text-center">15</td>
-                          <td className={getCellClass("1st")}>--</td>
-                          <td className={getCellClass("2nd")}>--</td>
-                          <td className={getCellClass("3rd")}>--</td>
-                          <td className={getCellClass("4th")}>--</td>
-                          <td className={getCellClass("5th")}>15</td>
-                          <td className={getCellClass("6th")}>13</td>
-                          <td className={getCellClass("7th")}>12</td>
-                          <td className={getCellClass("8th")}>14</td>
-                          <td className="text-center font-bold">54</td>
-                        </tr>
-                        <tr>
-                          <td className="font-bold">इंग्रजी</td>
-                          <td className="text-center">17</td>
-                          <td className={getCellClass("1st")}>19</td>
-                          <td className={getCellClass("2nd")}>16</td>
-                          <td className={getCellClass("3rd")}>22</td>
-                          <td className={getCellClass("4th")}>23</td>
-                          <td className={getCellClass("5th")}>24</td>
-                          <td className={getCellClass("6th")}>37</td>
-                          <td className={getCellClass("7th")}>73</td>
-                          <td className={getCellClass("8th")}>39</td>
-                          <td className="text-center font-bold">243</td>
-                        </tr>
-                        <tr>
-                          <td className="font-bold">गणित</td>
-                          <td className="text-center">71</td>
-                          <td className={getCellClass("1st")}>13</td>
-                          <td className={getCellClass("2nd")}>10</td>
-                          <td className={getCellClass("3rd")}>13</td>
-                          <td className={getCellClass("4th")}>20</td>
-                          <td className={getCellClass("5th")}>12</td>
-                          <td className={getCellClass("6th")}>31</td>
-                          <td className={getCellClass("7th")}>31</td>
-                          <td className={getCellClass("8th")}>24</td>
-                          <td className="text-center font-bold">154</td>
-                        </tr>
-                        <tr>
-                          <td className="font-bold">प.अभ्यास भाग ०१</td>
-                          <td className="text-center">95 A</td>
-                          <td className={getCellClass("1st")}>--</td>
-                          <td className={getCellClass("2nd")}>--</td>
-                          <td className={getCellClass("3rd")}>10</td>
-                          <td className={getCellClass("4th")}>18</td>
-                          <td className={getCellClass("5th")}>14</td>
-                          <td className={getCellClass("6th")}>--</td>
-                          <td className={getCellClass("7th")}>--</td>
-                          <td className={getCellClass("8th")}>--</td>
-                          <td className="text-center font-bold">42</td>
-                        </tr>
-                        <tr>
-                          <td className="font-bold">प.अभ्यास भाग ०२</td>
-                          <td className="text-center">95 B</td>
-                          <td className={getCellClass("1st")}>--</td>
-                          <td className={getCellClass("2nd")}>--</td>
-                          <td className={getCellClass("3rd")}>--</td>
-                          <td className={getCellClass("4th")}>6</td>
-                          <td className={getCellClass("5th")}>5</td>
-                          <td className={getCellClass("6th")}>--</td>
-                          <td className={getCellClass("7th")}>--</td>
-                          <td className={getCellClass("8th")}>--</td>
-                          <td className="text-center font-bold">11</td>
-                        </tr>
-                        <tr>
-                          <td className="font-bold">विज्ञान</td>
-                          <td className="text-center">72</td>
-                          <td className={getCellClass("1st")}>--</td>
-                          <td className={getCellClass("2nd")}>--</td>
-                          <td className={getCellClass("3rd")}>--</td>
-                          <td className={getCellClass("4th")}>--</td>
-                          <td className={getCellClass("5th")}>--</td>
-                          <td className={getCellClass("6th")}>15</td>
-                          <td className={getCellClass("7th")}>23</td>
-                          <td className={getCellClass("8th")}>18</td>
-                          <td className="text-center font-bold">56</td>
-                        </tr>
-                        <tr>
-                          <td className="font-bold">इतिहास</td>
-                          <td className="text-center">73 H</td>
-                          <td className={getCellClass("1st")}>--</td>
-                          <td className={getCellClass("2nd")}>--</td>
-                          <td className={getCellClass("3rd")}>--</td>
-                          <td className={getCellClass("4th")}>--</td>
-                          <td className={getCellClass("5th")}>--</td>
-                          <td className={getCellClass("6th")}>12</td>
-                          <td className={getCellClass("7th")}>12</td>
-                          <td className={getCellClass("8th")}>13</td>
-                          <td className="text-center font-bold">37</td>
-                        </tr>
-                        <tr>
-                          <td className="font-bold">ना.शास्त्र</td>
-                          <td className="text-center">73 H</td>
-                          <td className={getCellClass("1st")}>--</td>
-                          <td className={getCellClass("2nd")}>--</td>
-                          <td className={getCellClass("3rd")}>--</td>
-                          <td className={getCellClass("4th")}>--</td>
-                          <td className={getCellClass("5th")}>--</td>
-                          <td className={getCellClass("6th")}>12</td>
-                          <td className={getCellClass("7th")}>10</td>
-                          <td className={getCellClass("8th")}>10</td>
-                          <td className="text-center font-bold">32</td>
-                        </tr>
-                        <tr>
-                          <td className="font-bold">भूगोल</td>
-                          <td className="text-center">73 G</td>
-                          <td className={getCellClass("1st")}>--</td>
-                          <td className={getCellClass("2nd")}>--</td>
-                          <td className={getCellClass("3rd")}>--</td>
-                          <td className={getCellClass("4th")}>--</td>
-                          <td className={getCellClass("5th")}>--</td>
-                          <td className={getCellClass("6th")}>23</td>
-                          <td className={getCellClass("7th")}>23</td>
-                          <td className={getCellClass("8th")}>28</td>
-                          <td className="text-center font-bold">74</td>
-                        </tr>
-                        <tr className="bg-slate-100 font-black text-center">
-                          <td className="font-bold text-left">एकूण</td>
-                          <td></td>
-                          <td className={getCellClass("1st")}>४६</td>
-                          <td className={getCellClass("2nd")}>४३</td>
-                          <td className={getCellClass("3rd")}>५९</td>
-                          <td className={getCellClass("4th")}>८५</td>
-                          <td className={getCellClass("5th")}>८५</td>
-                          <td className={getCellClass("6th")}>१७१</td>
-                          <td className={getCellClass("7th")}>२११</td>
-                          <td className={getCellClass("8th")}>१५४</td>
-                          <td className="font-bold text-[#D6B97A]">८५४</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Force a page break for the detailed planning subject tables */}
-                  <div className="pdf-page-break" />
+            {(selectedMedium === "Marathi" || selectedMedium === "Semi English") && (
+              <div className="space-y-10">
+                {/* Table 1: वार्षिक कामाचे दिवस */}
+                <div className="space-y-3">
+                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider border-b border-slate-300 pb-1 text-center">
+                    वार्षिक कामाचे दिवस ( सन -२०२६/२०२७ )
+                  </h3>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th className="text-center">महिना</th>
+                        <th className="text-center">सोमवार</th>
+                        <th className="text-center">मंगळवार</th>
+                        <th className="text-center">बुधवार</th>
+                        <th className="text-center">गुरुवार</th>
+                        <th className="text-center">शुक्रवार</th>
+                        <th className="text-center">शनिवार</th>
+                        <th className="text-center">एकूण</th>
+                        <th className="text-center">रविवार व सुट्टी</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td className="font-bold text-center">जून</td>
+                        <td className="text-center">३</td>
+                        <td className="text-center">३</td>
+                        <td className="text-center">२</td>
+                        <td className="text-center">२</td>
+                        <td className="text-center">१</td>
+                        <td className="text-center">२</td>
+                        <td className="text-center font-bold">१३</td>
+                        <td className="text-center">४ व १३</td>
+                      </tr>
+                      <tr>
+                        <td className="font-bold text-center">जुलै</td>
+                        <td className="text-center">४</td>
+                        <td className="text-center">४</td>
+                        <td className="text-center">५</td>
+                        <td className="text-center">५</td>
+                        <td className="text-center">५</td>
+                        <td className="text-center">४</td>
+                        <td className="text-center font-bold">२७</td>
+                        <td className="text-center">४</td>
+                      </tr>
+                      <tr>
+                        <td className="font-bold text-center">ऑगस्ट</td>
+                        <td className="text-center">४</td>
+                        <td className="text-center">४</td>
+                        <td className="text-center">३</td>
+                        <td className="text-center">४</td>
+                        <td className="text-center">३</td>
+                        <td className="text-center">४</td>
+                        <td className="text-center font-bold">२२</td>
+                        <td className="text-center">५ व ४</td>
+                      </tr>
+                      <tr>
+                        <td className="font-bold text-center">सप्टेंबर</td>
+                        <td className="text-center">३</td>
+                        <td className="text-center">३</td>
+                        <td className="text-center">३</td>
+                        <td className="text-center">२</td>
+                        <td className="text-center">२</td>
+                        <td className="text-center">१</td>
+                        <td className="text-center font-bold">१४</td>
+                        <td className="text-center">४ व १२</td>
+                      </tr>
+                      <tr>
+                        <td className="font-bold text-center">ऑक्टोबर</td>
+                        <td className="text-center">४</td>
+                        <td className="text-center">३</td>
+                        <td className="text-center">४</td>
+                        <td className="text-center">५</td>
+                        <td className="text-center">४</td>
+                        <td className="text-center">५</td>
+                        <td className="text-center font-bold">२५</td>
+                        <td className="text-center">४ व २</td>
+                      </tr>
+                      <tr>
+                        <td className="font-bold text-center">नोव्हेंबर</td>
+                        <td className="text-center">४</td>
+                        <td className="text-center">२</td>
+                        <td className="text-center">३</td>
+                        <td className="text-center">३</td>
+                        <td className="text-center">२</td>
+                        <td className="text-center">२</td>
+                        <td className="text-center font-bold">१७</td>
+                        <td className="text-center">५ व ९</td>
+                      </tr>
+                      <tr>
+                        <td className="font-bold text-center">डिसेंबर</td>
+                        <td className="text-center">४</td>
+                        <td className="text-center">५</td>
+                        <td className="text-center">४</td>
+                        <td className="text-center">५</td>
+                        <td className="text-center">३</td>
+                        <td className="text-center">३</td>
+                        <td className="text-center font-bold">२४</td>
+                        <td className="text-center">४ व ३</td>
+                      </tr>
+                      <tr>
+                        <td className="font-bold text-center">जानेवारी</td>
+                        <td className="text-center">४</td>
+                        <td className="text-center">४</td>
+                        <td className="text-center">४</td>
+                        <td className="text-center">३</td>
+                        <td className="text-center">५</td>
+                        <td className="text-center">५</td>
+                        <td className="text-center font-bold">२५</td>
+                        <td className="text-center">५ व १</td>
+                      </tr>
+                      <tr>
+                        <td className="font-bold text-center">फेब्रुवारी</td>
+                        <td className="text-center">४</td>
+                        <td className="text-center">४</td>
+                        <td className="text-center">४</td>
+                        <td className="text-center">३</td>
+                        <td className="text-center">४</td>
+                        <td className="text-center">४</td>
+                        <td className="text-center font-bold">२२</td>
+                        <td className="text-center">४ व २</td>
+                      </tr>
+                      <tr>
+                        <td className="font-bold text-center">मार्च</td>
+                        <td className="text-center">५</td>
+                        <td className="text-center">४</td>
+                        <td className="text-center">४</td>
+                        <td className="text-center">४</td>
+                        <td className="text-center">३</td>
+                        <td className="text-center">४</td>
+                        <td className="text-center font-bold">२४</td>
+                        <td className="text-center">४ व ३</td>
+                      </tr>
+                      <tr>
+                        <td className="font-bold text-center">एप्रिल</td>
+                        <td className="text-center">५</td>
+                        <td className="text-center">३</td>
+                        <td className="text-center">३</td>
+                        <td className="text-center">३</td>
+                        <td className="text-center">३</td>
+                        <td className="text-center">४</td>
+                        <td className="text-center font-bold">२१</td>
+                        <td className="text-center">५ व ४</td>
+                      </tr>
+                      <tr className="bg-slate-100 font-bold">
+                        <td className="text-center">एकूण</td>
+                        <td className="text-center">४४</td>
+                        <td className="text-center">३९</td>
+                        <td className="text-center">३९</td>
+                        <td className="text-center">३९</td>
+                        <td className="text-center">३५</td>
+                        <td className="text-center">३८</td>
+                        <td className="text-center text-[#D6B97A]">२३४</td>
+                        <td className="text-center">५२ व ८५</td>
+                      </tr>
+                      <tr className="bg-slate-150 font-bold">
+                        <td colSpan={7} className="text-right">प्राप्त आठवडे</td>
+                        <td colSpan={2} className="text-center text-[#D6B97A]">३८.००</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
-              )}
+
+                {/* Table 2: साप्ताहिक तासिका */}
+                <div className="space-y-3">
+                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider border-b border-slate-300 pb-1 text-center">
+                    साप्ताहिक तासिका – २०२६/२०२७
+                  </h3>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>विषय</th>
+                        <th className="text-center">१ ली</th>
+                        <th className="text-center">२ री</th>
+                        <th className="text-center">३ री</th>
+                        <th className="text-center">४ थी</th>
+                        <th className="text-center">५ वी</th>
+                        <th className="text-center">६ वी</th>
+                        <th className="text-center">७ वी</th>
+                        <th className="text-center">८ वी</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td className="font-bold">मराठी</td>
+                        <td className={getCellClass("1st")}>१६</td>
+                        <td className={getCellClass("2nd")}>१६</td>
+                        <td className={getCellClass("3rd")}>१२</td>
+                        <td className={getCellClass("4th")}>१२</td>
+                        <td className={getCellClass("5th")}>६</td>
+                        <td className={getCellClass("6th")}>६</td>
+                        <td className={getCellClass("7th")}>६</td>
+                        <td className={getCellClass("8th")}>६</td>
+                      </tr>
+                      <tr>
+                        <td className="font-bold">हिंदी</td>
+                        <td className={getCellClass("1st")}>०</td>
+                        <td className={getCellClass("2nd")}>०</td>
+                        <td className={getCellClass("3rd")}>०</td>
+                        <td className={getCellClass("4th")}>०</td>
+                        <td className={getCellClass("5th")}>६</td>
+                        <td className={getCellClass("6th")}>६</td>
+                        <td className={getCellClass("7th")}>६</td>
+                        <td className={getCellClass("8th")}>६</td>
+                      </tr>
+                      <tr>
+                        <td className="font-bold">इंग्रजी</td>
+                        <td className={getCellClass("1st")}>७</td>
+                        <td className={getCellClass("2nd")}>७</td>
+                        <td className={getCellClass("3rd")}>७</td>
+                        <td className={getCellClass("4th")}>७</td>
+                        <td className={getCellClass("5th")}>७</td>
+                        <td className={getCellClass("6th")}>६</td>
+                        <td className={getCellClass("7th")}>६</td>
+                        <td className={getCellClass("8th")}>६</td>
+                      </tr>
+                      <tr>
+                        <td className="font-bold">गणित</td>
+                        <td className={getCellClass("1st")}>१३</td>
+                        <td className={getCellClass("2nd")}>१३</td>
+                        <td className={getCellClass("3rd")}>९</td>
+                        <td className={getCellClass("4th")}>९</td>
+                        <td className={getCellClass("5th")}>८</td>
+                        <td className={getCellClass("6th")}>७</td>
+                        <td className={getCellClass("7th")}>७</td>
+                        <td className={getCellClass("8th")}>७</td>
+                      </tr>
+                      <tr>
+                        <td className="font-bold">विज्ञान</td>
+                        <td className={getCellClass("1st")}>०</td>
+                        <td className={getCellClass("2nd")}>०</td>
+                        <td className={getCellClass("3rd")}>६</td>
+                        <td className={getCellClass("4th")}>६</td>
+                        <td className={getCellClass("5th")}>६</td>
+                        <td className={getCellClass("6th")}>७</td>
+                        <td className={getCellClass("7th")}>७</td>
+                        <td className={getCellClass("8th")}>७</td>
+                      </tr>
+                      <tr>
+                        <td className="font-bold">समाजशास्त्र</td>
+                        <td className={getCellClass("1st")}>०</td>
+                        <td className={getCellClass("2nd")}>०</td>
+                        <td className={getCellClass("3rd")}>४</td>
+                        <td className={getCellClass("4th")}>४</td>
+                        <td className={getCellClass("5th")}>४</td>
+                        <td className={getCellClass("6th")}>६</td>
+                        <td className={getCellClass("7th")}>६</td>
+                        <td className={getCellClass("8th")}>६</td>
+                      </tr>
+                      <tr>
+                        <td className="font-bold">कला</td>
+                        <td className={getCellClass("1st")}>४</td>
+                        <td className={getCellClass("2nd")}>४</td>
+                        <td className={getCellClass("3rd")}>३</td>
+                        <td className={getCellClass("4th")}>३</td>
+                        <td className={getCellClass("5th")}>३</td>
+                        <td className={getCellClass("6th")}>४</td>
+                        <td className={getCellClass("7th")}>४</td>
+                        <td className={getCellClass("8th")}>४</td>
+                      </tr>
+                      <tr>
+                        <td className="font-bold">कार्यानुभव</td>
+                        <td className={getCellClass("1st")}>४</td>
+                        <td className={getCellClass("2nd")}>४</td>
+                        <td className={getCellClass("3rd")}>४</td>
+                        <td className={getCellClass("4th")}>४</td>
+                        <td className={getCellClass("5th")}>३</td>
+                        <td className={getCellClass("6th")}>२</td>
+                        <td className={getCellClass("7th")}>२</td>
+                        <td className={getCellClass("8th")}>२</td>
+                      </tr>
+                      <tr>
+                        <td className="font-bold">शा.शिक्षण</td>
+                        <td className={getCellClass("1st")}>४</td>
+                        <td className={getCellClass("2nd")}>४</td>
+                        <td className={getCellClass("3rd")}>३</td>
+                        <td className={getCellClass("4th")}>३</td>
+                        <td className={getCellClass("5th")}>३</td>
+                        <td className={getCellClass("6th")}>४</td>
+                        <td className={getCellClass("7th")}>४</td>
+                        <td className={getCellClass("8th")}>४</td>
+                      </tr>
+                      <tr className="bg-slate-100 font-black">
+                        <td>एकूण</td>
+                        <td className={getCellClass("1st")}>४८</td>
+                        <td className={getCellClass("2nd")}>४८</td>
+                        <td className={getCellClass("3rd")}>४८</td>
+                        <td className={getCellClass("4th")}>४८</td>
+                        <td className={getCellClass("5th")}>४८</td>
+                        <td className={getCellClass("6th")}>४८</td>
+                        <td className={getCellClass("7th")}>४८</td>
+                        <td className={getCellClass("8th")}>४८</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Table 3: अध्ययन निष्पत्ती संख्या */}
+                <div className="space-y-3">
+                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider border-b border-slate-300 pb-1 text-center">
+                    अध्ययन निष्पत्ती संख्या ( 1 ली ते ८ वी )
+                  </h3>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>विषय</th>
+                        <th className="text-center">विषय कोड</th>
+                        <th className="text-center">1 ली</th>
+                        <th className="text-center">२ री</th>
+                        <th className="text-center">३ री</th>
+                        <th className="text-center">४ थी</th>
+                        <th className="text-center">५ वी</th>
+                        <th className="text-center">६ वी</th>
+                        <th className="text-center">७ वी</th>
+                        <th className="text-center">८ वी</th>
+                        <th className="text-center">एकूण</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td className="font-bold">मराठी</td>
+                        <td className="text-center">1</td>
+                        <td className={getCellClass("1st")}>14</td>
+                        <td className={getCellClass("2nd")}>17</td>
+                        <td className={getCellClass("3rd")}>14</td>
+                        <td className={getCellClass("4th")}>18</td>
+                        <td className={getCellClass("5th")}>15</td>
+                        <td className={getCellClass("6th")}>28</td>
+                        <td className={getCellClass("7th")}>27</td>
+                        <td className={getCellClass("8th")}>18</td>
+                        <td className="text-center font-bold">151</td>
+                      </tr>
+                      <tr>
+                        <td className="font-bold">हिंदी</td>
+                        <td className="text-center">15</td>
+                        <td className={getCellClass("1st")}>--</td>
+                        <td className={getCellClass("2nd")}>--</td>
+                        <td className={getCellClass("3rd")}>--</td>
+                        <td className={getCellClass("4th")}>--</td>
+                        <td className={getCellClass("5th")}>15</td>
+                        <td className={getCellClass("6th")}>13</td>
+                        <td className={getCellClass("7th")}>12</td>
+                        <td className={getCellClass("8th")}>14</td>
+                        <td className="text-center font-bold">54</td>
+                      </tr>
+                      <tr>
+                        <td className="font-bold">इंग्रजी</td>
+                        <td className="text-center">17</td>
+                        <td className={getCellClass("1st")}>19</td>
+                        <td className={getCellClass("2nd")}>16</td>
+                        <td className={getCellClass("3rd")}>22</td>
+                        <td className={getCellClass("4th")}>23</td>
+                        <td className={getCellClass("5th")}>24</td>
+                        <td className={getCellClass("6th")}>37</td>
+                        <td className={getCellClass("7th")}>73</td>
+                        <td className={getCellClass("8th")}>39</td>
+                        <td className="text-center font-bold">243</td>
+                      </tr>
+                      <tr>
+                        <td className="font-bold">गणित</td>
+                        <td className="text-center">71</td>
+                        <td className={getCellClass("1st")}>13</td>
+                        <td className={getCellClass("2nd")}>10</td>
+                        <td className={getCellClass("3rd")}>13</td>
+                        <td className={getCellClass("4th")}>20</td>
+                        <td className={getCellClass("5th")}>12</td>
+                        <td className={getCellClass("6th")}>31</td>
+                        <td className={getCellClass("7th")}>31</td>
+                        <td className={getCellClass("8th")}>24</td>
+                        <td className="text-center font-bold">154</td>
+                      </tr>
+                      <tr>
+                        <td className="font-bold">प.अभ्यास भाग ०१</td>
+                        <td className="text-center">95 A</td>
+                        <td className={getCellClass("1st")}>--</td>
+                        <td className={getCellClass("2nd")}>--</td>
+                        <td className={getCellClass("3rd")}>10</td>
+                        <td className={getCellClass("4th")}>18</td>
+                        <td className={getCellClass("5th")}>14</td>
+                        <td className={getCellClass("6th")}>--</td>
+                        <td className={getCellClass("7th")}>--</td>
+                        <td className={getCellClass("8th")}>--</td>
+                        <td className="text-center font-bold">42</td>
+                      </tr>
+                      <tr>
+                        <td className="font-bold">प.अभ्यास भाग ०२</td>
+                        <td className="text-center">95 B</td>
+                        <td className={getCellClass("1st")}>--</td>
+                        <td className={getCellClass("2nd")}>--</td>
+                        <td className={getCellClass("3rd")}>--</td>
+                        <td className={getCellClass("4th")}>6</td>
+                        <td className={getCellClass("5th")}>5</td>
+                        <td className={getCellClass("6th")}>--</td>
+                        <td className={getCellClass("7th")}>--</td>
+                        <td className={getCellClass("8th")}>--</td>
+                        <td className="text-center font-bold">11</td>
+                      </tr>
+                      <tr>
+                        <td className="font-bold">विज्ञान</td>
+                        <td className="text-center">72</td>
+                        <td className={getCellClass("1st")}>--</td>
+                        <td className={getCellClass("2nd")}>--</td>
+                        <td className={getCellClass("3rd")}>--</td>
+                        <td className={getCellClass("4th")}>--</td>
+                        <td className={getCellClass("5th")}>--</td>
+                        <td className={getCellClass("6th")}>15</td>
+                        <td className={getCellClass("7th")}>23</td>
+                        <td className={getCellClass("8th")}>18</td>
+                        <td className="text-center font-bold">56</td>
+                      </tr>
+                      <tr>
+                        <td className="font-bold">इतिहास</td>
+                        <td className="text-center">73 H</td>
+                        <td className={getCellClass("1st")}>--</td>
+                        <td className={getCellClass("2nd")}>--</td>
+                        <td className={getCellClass("3rd")}>--</td>
+                        <td className={getCellClass("4th")}>--</td>
+                        <td className={getCellClass("5th")}>--</td>
+                        <td className={getCellClass("6th")}>12</td>
+                        <td className={getCellClass("7th")}>12</td>
+                        <td className={getCellClass("8th")}>13</td>
+                        <td className="text-center font-bold">37</td>
+                      </tr>
+                      <tr>
+                        <td className="font-bold">ना.शास्त्र</td>
+                        <td className="text-center">73 H</td>
+                        <td className={getCellClass("1st")}>--</td>
+                        <td className={getCellClass("2nd")}>--</td>
+                        <td className={getCellClass("3rd")}>--</td>
+                        <td className={getCellClass("4th")}>--</td>
+                        <td className={getCellClass("5th")}>--</td>
+                        <td className={getCellClass("6th")}>12</td>
+                        <td className={getCellClass("7th")}>10</td>
+                        <td className={getCellClass("8th")}>10</td>
+                        <td className="text-center font-bold">32</td>
+                      </tr>
+                      <tr>
+                        <td className="font-bold">भूगोल</td>
+                        <td className="text-center">73 G</td>
+                        <td className={getCellClass("1st")}>--</td>
+                        <td className={getCellClass("2nd")}>--</td>
+                        <td className={getCellClass("3rd")}>--</td>
+                        <td className={getCellClass("4th")}>--</td>
+                        <td className={getCellClass("5th")}>--</td>
+                        <td className={getCellClass("6th")}>23</td>
+                        <td className={getCellClass("7th")}>23</td>
+                        <td className={getCellClass("8th")}>28</td>
+                        <td className="text-center font-bold">74</td>
+                      </tr>
+                      <tr className="bg-slate-100 font-black text-center">
+                        <td className="font-bold text-left">एकूण</td>
+                        <td></td>
+                        <td className={getCellClass("1st")}>४६</td>
+                        <td className={getCellClass("2nd")}>४३</td>
+                        <td className={getCellClass("3rd")}>५९</td>
+                        <td className={getCellClass("4th")}>८५</td>
+                        <td className={getCellClass("5th")}>८५</td>
+                        <td className={getCellClass("6th")}>१७१</td>
+                        <td className={getCellClass("7th")}>२११</td>
+                        <td className={getCellClass("8th")}>१५४</td>
+                        <td className="font-bold text-[#D6B97A]">८५४</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Force a page break for the detailed planning subject tables */}
+                <div className="pdf-page-break" />
+              </div>
+            )}
 
             {syllabus?.subjects
-              .filter(
-                (subject) => !selectedSubject || subject === selectedSubject,
-              )
-              .map((subject) => {
-                const isClass1Mr =
-                  selectedMedium === "Marathi" ||
-                  selectedMedium === "Semi English";
+              .filter(subject => !selectedSubject || subject === selectedSubject)
+              .map(subject => {
+                const isClass1Mr = selectedMedium === "Marathi" || selectedMedium === "Semi English";
                 return (
                   <div key={subject} className="space-y-3">
                     <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider border-b-2 border-slate-300 pb-1">
-                      {isClass1Mr
+                      {isClass1Mr 
                         ? `वार्षिक नियोजन सन - २०२६/२०२७ (इयत्ता – ${classNames[selectedClass]?.mr} | विषय – ${subject})`
-                        : `विषय (Subject) — ${subject}`}
+                        : `विषय (Subject) — ${subject}`
+                      }
                     </h3>
                     <table>
                       <thead>
                         <tr>
-                          <th className="text-center">
+                          <th className="w-[100px] text-center">
                             {isClass1Mr ? "महिना" : "महिना (Month)"}
                           </th>
-                          <th className="text-center">
+                          <th className="w-[70px] text-center">
                             {isClass1Mr ? "कामाचे दिवस" : "कामाचे दिवस (Days)"}
                           </th>
-                          <th className="text-center">
-                            {isClass1Mr
-                              ? "प्राप्त तासिका"
-                              : "प्राप्त तासिका (Periods)"}
+                          <th className="w-[70px] text-center">
+                            {isClass1Mr ? "प्राप्त तासिका" : "प्राप्त तासिका (Periods)"}
                           </th>
-                          <th>{isClass1Mr ? "घटक" : "घटक (Topics)"}</th>
-                          <th className="text-center">
+                          <th>
+                            {isClass1Mr ? "घटक" : "घटक (Topics)"}
+                          </th>
+                          <th className="w-[70px] text-center">
                             {isClass1Mr ? "पुरा /अपुरा" : "पुर्ण / अपुर्ण"}
                           </th>
-                          <th className="text-center">
-                            {isClass1Mr
-                              ? "शिक्षक स्वाक्षरी"
-                              : "शिक्षक स्वाक्षरी"}
+                          <th className="w-[85px] text-center">
+                            {isClass1Mr ? "शिक्षक स्वाक्षरी" : "शिक्षक स्वाक्षरी"}
                           </th>
-                          <th className="text-center">
-                            {isClass1Mr
-                              ? "मुख्याध्यापक स्वाक्षरी"
-                              : "मुख्याध्यापक स्वाक्षरी"}
+                          <th className="w-[100px] text-center">
+                            {isClass1Mr ? "मुख्याध्यापक स्वाक्षरी" : "मुख्याध्यापक स्वाक्षरी"}
                           </th>
                         </tr>
                       </thead>
                       <tbody>
-                        {syllabus.months.map((m) => {
-                          const monthData = (syllabus.syllabusBySubject[
-                            subject
-                          ]?.[m.en] || {
-                            topic: "—",
-                            objectives: "—",
-                            activity: "—",
-                          }) as any;
-                          const workingDays = isClass1Mr
-                            ? class1WorkingDays[m.en]
-                            : monthData.workingDays ||
-                              (m.en === "June"
-                                ? 13
-                                : m.en === "September"
-                                  ? 14
-                                  : m.en === "November"
-                                    ? 17
-                                    : m.en === "April"
-                                      ? 21
-                                      : m.en === "February"
-                                        ? 22
-                                        : m.en === "December" ||
-                                            m.en === "March"
-                                          ? 24
-                                          : 25);
-                          const defaultPeriods = subject.includes("मराठी")
-                            ? 60
-                            : subject.includes("Math") ||
-                                subject.includes("गणित") ||
-                                subject.includes("Mathematics")
-                              ? 50
-                              : 30;
-                          const periods = isClass1Mr
-                            ? getPeriodsForMonth(
-                                subject,
-                                selectedClass,
-                                m.en,
-                              ) || 30
-                            : monthData.periods || defaultPeriods;
-
-                          const extraRow =
-                            m.en === "November" && isClass1Mr ? (
-                              <tr key="diwali-holiday">
-                                <td
-                                  colSpan={7}
-                                  className="bg-slate-50 text-center font-bold text-slate-800 text-xs py-3"
-                                >
-                                  सराव व प्रथम सत्र संकलित मूल्यमापन – दिवाळी
-                                  सुट्टी
-                                </td>
-                              </tr>
-                            ) : null;
+                        {syllabus.months.map(m => {
+                          const monthData = (syllabus.syllabusBySubject[subject]?.[m.en] || { topic: "—", objectives: "—", activity: "—" }) as any;
+                          const workingDays = isClass1Mr ? class1WorkingDays[m.en] : (monthData.workingDays || (m.en === "June" ? 13 : m.en === "September" ? 14 : m.en === "November" ? 17 : m.en === "April" ? 21 : m.en === "February" ? 22 : (m.en === "December" || m.en === "March") ? 24 : 25));
+                          const defaultPeriods = subject.includes("मराठी") ? 60 : (subject.includes("Math") || subject.includes("गणित") || subject.includes("Mathematics")) ? 50 : 30;
+                          const periods = isClass1Mr ? (getPeriodsForMonth(subject, selectedClass, m.en) || 30) : (monthData.periods || defaultPeriods);
+                          
+                          const extraRow = (m.en === "November" && isClass1Mr) ? (
+                            <tr key="diwali-holiday">
+                              <td colSpan={7} className="bg-slate-50 text-center font-bold text-slate-800 text-xs py-3">
+                                सराव व प्रथम सत्र संकलित मूल्यमापन – दिवाळी सुट्टी
+                              </td>
+                            </tr>
+                          ) : null;
 
                           const monthKeyTopic = `${selectedClass}_${selectedMedium}_${subject}_${m.en}_topic`;
                           const monthKeyDays = `${selectedClass}_${selectedMedium}_${subject}_${m.en}_workingDays`;
                           const monthKeyPeriods = `${selectedClass}_${selectedMedium}_${subject}_${m.en}_periods`;
 
-                          const currentTopic =
-                            planningData[monthKeyTopic] !== undefined
-                              ? planningData[monthKeyTopic]
-                              : monthData.topic;
-                          const currentWorkingDays =
-                            planningData[monthKeyDays] !== undefined
-                              ? planningData[monthKeyDays]
-                              : workingDays;
-                          const currentPeriods =
-                            planningData[monthKeyPeriods] !== undefined
-                              ? planningData[monthKeyPeriods]
-                              : periods;
+                          const currentTopic = planningData[monthKeyTopic] !== undefined ? planningData[monthKeyTopic] : monthData.topic;
+                          const currentWorkingDays = planningData[monthKeyDays] !== undefined ? planningData[monthKeyDays] : workingDays;
+                          const currentPeriods = planningData[monthKeyPeriods] !== undefined ? planningData[monthKeyPeriods] : periods;
 
                           return (
                             <React.Fragment key={m.en}>
                               {extraRow}
                               <tr>
                                 <td className="font-bold text-slate-900 text-center">
-                                  {m.mr}{" "}
-                                  {isClass1Mr
-                                    ? m.en === "June" ||
-                                      m.en === "July" ||
-                                      m.en === "August" ||
-                                      m.en === "September" ||
-                                      m.en === "October" ||
-                                      m.en === "November" ||
-                                      m.en === "December"
-                                      ? "२०२६"
-                                      : "२०२७"
-                                    : ""}
+                                  {m.mr} {isClass1Mr ? (m.en === "June" || m.en === "July" || m.en === "August" || m.en === "September" || m.en === "October" || m.en === "November" || m.en === "December" ? "२०२६" : "२०२७") : ""}
                                 </td>
                                 <td className="text-center font-bold text-slate-700 p-1">
                                   <input
                                     type="text"
                                     className="w-full bg-transparent border-0 focus:ring-0 focus:outline-none text-center font-bold text-slate-700 p-0 m-0"
                                     value={currentWorkingDays}
-                                    onChange={(e) =>
-                                      handleDataChange(
-                                        monthKeyDays,
-                                        e.target.value,
-                                      )
-                                    }
+                                    onChange={(e) => handleDataChange(monthKeyDays, e.target.value)}
                                   />
                                 </td>
                                 <td className="text-center font-bold text-slate-700 p-1">
@@ -4989,33 +3546,15 @@ function AnnualMonthlyPlanningEditor({
                                     type="text"
                                     className="w-full bg-transparent border-0 focus:ring-0 focus:outline-none text-center font-bold text-slate-700 p-0 m-0"
                                     value={currentPeriods}
-                                    onChange={(e) =>
-                                      handleDataChange(
-                                        monthKeyPeriods,
-                                        e.target.value,
-                                      )
-                                    }
+                                    onChange={(e) => handleDataChange(monthKeyPeriods, e.target.value)}
                                   />
                                 </td>
                                 <td className="text-slate-750 font-medium p-1">
                                   <textarea
-                                    rows={1}
-                                    className="w-full bg-transparent border-0 focus:ring-0 focus:outline-none text-slate-750 font-medium resize-none p-0 m-0 overflow-hidden"
+                                    rows={2}
+                                    className="w-full bg-transparent border-0 focus:ring-0 focus:outline-none text-slate-750 font-medium resize-none p-0 m-0"
                                     value={currentTopic}
-                                    onChange={(e) => {
-                                      handleDataChange(
-                                        monthKeyTopic,
-                                        e.target.value,
-                                      );
-                                      e.target.style.height = "auto";
-                                      e.target.style.height = e.target.scrollHeight + "px";
-                                    }}
-                                    ref={(el) => {
-                                      if (el) {
-                                        el.style.height = "auto";
-                                        el.style.height = el.scrollHeight + "px";
-                                      }
-                                    }}
+                                    onChange={(e) => handleDataChange(monthKeyTopic, e.target.value)}
                                   />
                                 </td>
                                 <td className="text-slate-450 text-center"></td>
@@ -5030,24 +3569,9 @@ function AnnualMonthlyPlanningEditor({
                         <tfoot>
                           <tr className="bg-slate-100 font-bold">
                             <td className="text-center">एकूण</td>
-                            <td className="text-center">
-                              {selectedClass === "1st" ||
-                              selectedClass === "2nd" ||
-                              selectedClass === "3rd" ||
-                              selectedClass === "4th" ||
-                              selectedClass === "5th"
-                                ? "२२८"
-                                : "२३४"}
-                            </td>
+                            <td className="text-center">२३४</td>
                             <td className="text-center text-[#D6B97A]">
-                              {selectedClass === "1st" ||
-                              selectedClass === "2nd" ||
-                              selectedClass === "3rd" ||
-                              selectedClass === "4th" ||
-                              selectedClass === "5th"
-                                ? "२६३"
-                                : getWeeklyPeriods(subject, selectedClass) *
-                                    38 || "—"}
+                              {getWeeklyPeriods(subject, selectedClass) * 38 || "—"}
                             </td>
                             <td colSpan={4}></td>
                           </tr>
@@ -5063,39 +3587,21 @@ function AnnualMonthlyPlanningEditor({
             {syllabus?.months
               .filter((m) => planType === "monthly" || m.en === planType)
               .map((m) => {
-                const actualYear =
-                  m.en === "January" ||
-                  m.en === "February" ||
-                  m.en === "March" ||
-                  m.en === "April"
-                    ? 2027
-                    : 2026;
+                const actualYear = (m.en === "January" || m.en === "February" || m.en === "March" || m.en === "April") ? 2027 : 2026;
                 const dates = getDatesForMonth(m.en, actualYear);
 
                 return (
                   <React.Fragment key={m.en}>
                     {/* Page 1: Cover Page */}
-                    {renderMonthlyCoverPage(
-                      m,
-                      actualYear,
-                      selectedClass,
-                      classNames,
-                      safeData,
-                    )}
+                    {renderMonthlyCoverPage(m, actualYear, selectedClass, classNames, safeData)}
 
                     {/* Subsequent pages: one for each subject */}
                     {subjects
-                      .filter(
-                        (subject) =>
-                          !selectedSubject || subject === selectedSubject,
-                      )
+                      .filter((subject) => !selectedSubject || subject === selectedSubject)
                       .map((subject, sIdx) => {
                         const pageNum = sIdx + 2;
                         return (
-                          <div
-                            key={subject}
-                            className="monthly-pdf-page font-devanagari"
-                          >
+                          <div key={subject} className="monthly-pdf-page font-devanagari">
                             <div className="w-full flex flex-col space-y-4 mb-auto">
                               {/* Page Header */}
                               <div className="flex justify-between items-center border-b-2 border-slate-900 pb-2">
@@ -5104,8 +3610,7 @@ function AnnualMonthlyPlanningEditor({
                                     दैनिक टाचण / नियोजन
                                   </h2>
                                   <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">
-                                    विषय – {subject} | वर्ग –{" "}
-                                    {classNames[selectedClass]?.mr}
+                                    विषय – {subject} | वर्ग – {classNames[selectedClass]?.mr}
                                   </p>
                                 </div>
                                 <div className="text-right">
@@ -5123,44 +3628,20 @@ function AnnualMonthlyPlanningEditor({
                                 <table className="monthly-planning-table">
                                   <thead>
                                     <tr>
-                                      <th className="w-[45px] text-center">
-                                        दि.
-                                      </th>
-                                      <th className="w-[35px] text-center">
-                                        वार
-                                      </th>
-                                      <th className="w-[155px]">
-                                        अध्ययन मुद्दा / पाठ्यांश
-                                      </th>
-                                      <th className="w-[175px]">
-                                        अध्ययन अनुभव स्वरूप
-                                      </th>
-                                      <th className="w-[90px]">
-                                        मूल्यमापनाची साधन तंत्रे
-                                      </th>
-                                      <th className="w-[90px]">
-                                        आवश्यक साहित्य
-                                      </th>
-                                      <th className="w-[144px]">
-                                        अध्ययन निष्पत्ती
-                                      </th>
+                                      <th className="w-[45px] text-center">दि.</th>
+                                      <th className="w-[35px] text-center">वार</th>
+                                      <th className="w-[155px]">अध्ययन मुद्दा / पाठ्यांश</th>
+                                      <th className="w-[175px]">अध्ययन अनुभव स्वरूप</th>
+                                      <th className="w-[90px]">मूल्यमापनाची साधन तंत्रे</th>
+                                      <th className="w-[90px]">आवश्यक साहित्य</th>
+                                      <th className="w-[144px]">अध्ययन निष्पत्ती</th>
                                     </tr>
                                   </thead>
                                   <tbody>
                                     {dates.map((date) => {
-                                      const plan = getDefaultDailyPlan(
-                                        selectedClass,
-                                        selectedMedium,
-                                        subject,
-                                        m.en,
-                                        date.dateNum,
-                                        date.dayMr,
-                                      );
-                                      const isHoliday =
-                                        !!plan.isHolidayText || date.isSunday;
-                                      const holidayText = date.isSunday
-                                        ? "रविवार सुट्टी"
-                                        : plan.isHolidayText;
+                                      const plan = getDefaultDailyPlan(selectedClass, selectedMedium, subject, m.en, date.dateNum, date.dayMr);
+                                      const isHoliday = !!plan.isHolidayText || date.isSunday;
+                                      const holidayText = date.isSunday ? "रविवार सुट्टी" : plan.isHolidayText;
 
                                       const tKey = `${selectedClass}_${selectedMedium}_${subject}_${m.en}_${date.dateNum}_topic`;
                                       const eKey = `${selectedClass}_${selectedMedium}_${subject}_${m.en}_${date.dateNum}_experience`;
@@ -5168,71 +3649,30 @@ function AnnualMonthlyPlanningEditor({
                                       const mKey = `${selectedClass}_${selectedMedium}_${subject}_${m.en}_${date.dateNum}_materials`;
                                       const oKey = `${selectedClass}_${selectedMedium}_${subject}_${m.en}_${date.dateNum}_outcome`;
 
-                                      const valTopic =
-                                        planningData[tKey] !== undefined
-                                          ? planningData[tKey]
-                                          : plan.topic;
-                                      const valExperience =
-                                        planningData[eKey] !== undefined
-                                          ? planningData[eKey]
-                                          : plan.experience;
-                                      const valTools =
-                                        planningData[tlKey] !== undefined
-                                          ? planningData[tlKey]
-                                          : plan.tools;
-                                      const valMaterials =
-                                        planningData[mKey] !== undefined
-                                          ? planningData[mKey]
-                                          : plan.materials;
-                                      const valOutcome =
-                                        planningData[oKey] !== undefined
-                                          ? planningData[oKey]
-                                          : plan.outcome;
+                                      const valTopic = planningData[tKey] !== undefined ? planningData[tKey] : plan.topic;
+                                      const valExperience = planningData[eKey] !== undefined ? planningData[eKey] : plan.experience;
+                                      const valTools = planningData[tlKey] !== undefined ? planningData[tlKey] : plan.tools;
+                                      const valMaterials = planningData[mKey] !== undefined ? planningData[mKey] : plan.materials;
+                                      const valOutcome = planningData[oKey] !== undefined ? planningData[oKey] : plan.outcome;
 
-                                      const dateStr = `${date.dateNum < 10 ? "०" : ""}${date.dateNum}/${
-                                        m.en === "June"
-                                          ? "०६"
-                                          : m.en === "July"
-                                            ? "०७"
-                                            : m.en === "August"
-                                              ? "०८"
-                                              : m.en === "September"
-                                                ? "०९"
-                                                : m.en === "October"
-                                                  ? "१०"
-                                                  : m.en === "November"
-                                                    ? "११"
-                                                    : m.en === "December"
-                                                      ? "१२"
-                                                      : m.en === "January"
-                                                        ? "०१"
-                                                        : m.en === "February"
-                                                          ? "०२"
-                                                          : m.en === "March"
-                                                            ? "०३"
-                                                            : m.en === "April"
-                                                              ? "०४"
-                                                              : "०५"
-                                      }`;
+                                      const dateStr = `${date.dateNum < 10 ? "०" : ""}${date.dateNum}/${m.en === "June" ? "०६" : 
+                                                       m.en === "July" ? "०७" : 
+                                                       m.en === "August" ? "०८" : 
+                                                       m.en === "September" ? "०९" : 
+                                                       m.en === "October" ? "१०" : 
+                                                       m.en === "November" ? "११" : 
+                                                       m.en === "December" ? "१२" : 
+                                                       m.en === "January" ? "०१" : 
+                                                       m.en === "February" ? "०२" : 
+                                                       m.en === "March" ? "०३" : 
+                                                       m.en === "April" ? "०४" : "०५"}`;
 
                                       return (
-                                        <tr
-                                          key={date.dateNum}
-                                          className={
-                                            date.isSunday ? "bg-red-50/20" : ""
-                                          }
-                                        >
-                                          <td className="text-center font-bold text-slate-800">
-                                            {dateStr}
-                                          </td>
-                                          <td className="text-center font-bold text-slate-700">
-                                            {date.dayMr}
-                                          </td>
+                                        <tr key={date.dateNum} className={date.isSunday ? "bg-red-50/20" : ""}>
+                                          <td className="text-center font-bold text-slate-800">{dateStr}</td>
+                                          <td className="text-center font-bold text-slate-700">{date.dayMr}</td>
                                           {isHoliday ? (
-                                            <td
-                                              colSpan={5}
-                                              className="text-center font-bold text-red-600 bg-red-50/10 py-1 font-devanagari"
-                                            >
+                                            <td colSpan={5} className="text-center font-bold text-red-600 bg-red-50/10 py-1 font-devanagari">
                                               {holidayText}
                                             </td>
                                           ) : (
@@ -5241,12 +3681,7 @@ function AnnualMonthlyPlanningEditor({
                                                 <textarea
                                                   rows={2}
                                                   value={valTopic}
-                                                  onChange={(e) =>
-                                                    handleDataChange(
-                                                      tKey,
-                                                      e.target.value,
-                                                    )
-                                                  }
+                                                  onChange={(e) => handleDataChange(tKey, e.target.value)}
                                                   className="w-full bg-transparent border-0 focus:ring-0 focus:outline-none p-0 m-0 resize-none font-devanagari text-[10px] leading-tight"
                                                 />
                                               </td>
@@ -5254,12 +3689,7 @@ function AnnualMonthlyPlanningEditor({
                                                 <textarea
                                                   rows={2}
                                                   value={valExperience}
-                                                  onChange={(e) =>
-                                                    handleDataChange(
-                                                      eKey,
-                                                      e.target.value,
-                                                    )
-                                                  }
+                                                  onChange={(e) => handleDataChange(eKey, e.target.value)}
                                                   className="w-full bg-transparent border-0 focus:ring-0 focus:outline-none p-0 m-0 resize-none font-devanagari text-[10px] leading-tight"
                                                 />
                                               </td>
@@ -5267,12 +3697,7 @@ function AnnualMonthlyPlanningEditor({
                                                 <textarea
                                                   rows={2}
                                                   value={valTools}
-                                                  onChange={(e) =>
-                                                    handleDataChange(
-                                                      tlKey,
-                                                      e.target.value,
-                                                    )
-                                                  }
+                                                  onChange={(e) => handleDataChange(tlKey, e.target.value)}
                                                   className="w-full bg-transparent border-0 focus:ring-0 focus:outline-none p-0 m-0 resize-none font-devanagari text-[10px] leading-tight"
                                                 />
                                               </td>
@@ -5280,12 +3705,7 @@ function AnnualMonthlyPlanningEditor({
                                                 <textarea
                                                   rows={2}
                                                   value={valMaterials}
-                                                  onChange={(e) =>
-                                                    handleDataChange(
-                                                      mKey,
-                                                      e.target.value,
-                                                    )
-                                                  }
+                                                  onChange={(e) => handleDataChange(mKey, e.target.value)}
                                                   className="w-full bg-transparent border-0 focus:ring-0 focus:outline-none p-0 m-0 resize-none font-devanagari text-[10px] leading-tight"
                                                 />
                                               </td>
@@ -5293,12 +3713,7 @@ function AnnualMonthlyPlanningEditor({
                                                 <textarea
                                                   rows={2}
                                                   value={valOutcome}
-                                                  onChange={(e) =>
-                                                    handleDataChange(
-                                                      oKey,
-                                                      e.target.value,
-                                                    )
-                                                  }
+                                                  onChange={(e) => handleDataChange(oKey, e.target.value)}
                                                   className="w-full bg-transparent border-0 focus:ring-0 focus:outline-none p-0 m-0 resize-none font-devanagari text-[10px] leading-tight"
                                                 />
                                               </td>
@@ -5319,9 +3734,7 @@ function AnnualMonthlyPlanningEditor({
                                 <div>मुख्याध्यापक स्वाक्षरी</div>
                               </div>
                               <div className="pt-2 border-t border-amber-900 flex justify-between items-center text-[10px] text-slate-650 font-bold">
-                                <span>
-                                  ukguruji app हे play store वरून डाऊनलोड करा.
-                                </span>
+                                <span>ukguruji app हे play store वरून डाऊनलोड करा.</span>
                                 <span>Page {pageNum}</span>
                               </div>
                             </div>
@@ -5353,43 +3766,41 @@ function AnnualMonthlyPlanningEditor({
         }
 
         .pdf-portrait-layout {
-          width: 100% !important;
-          max-width: 100% !important;
-          padding: 40px !important;
+          width: 794px !important;
+          max-width: 794px !important;
+          padding: 30px !important;
           background-color: white !important;
-          color: #0f172a !important;
-          border: 4px double #d6b97a !important;
-          box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1) !important;
-          border-radius: 1.5rem !important;
+          color: black !important;
+          border: none !important;
+          box-shadow: none !important;
           font-family: 'Inter', 'Noto Sans Devanagari', sans-serif !important;
         }
         .pdf-portrait-layout.no-wrapper-style {
           background: transparent !important;
           padding: 0 !important;
           box-shadow: none !important;
-          border: none !important;
-          width: 100% !important;
-          max-width: 100% !important;
+          width: 794px !important;
+          max-width: 794px !important;
         }
         .pdf-portrait-layout table {
           width: 100% !important;
           border-collapse: collapse !important;
-          margin-bottom: 24px !important;
+          margin-bottom: 20px !important;
         }
         .pdf-portrait-layout th, .pdf-portrait-layout td {
           border: 1px solid #cbd5e1 !important;
-          padding: 12px 14px !important;
-          font-size: 14px !important;
-          line-height: 1.5 !important;
+          padding: 8px 10px !important;
+          font-size: 11px !important;
+          line-height: 1.4 !important;
           text-align: left !important;
-          color: #334155 !important;
+          color: #1e293b !important;
         }
         .pdf-portrait-layout td.text-center, .pdf-portrait-layout th.text-center {
           text-align: center !important;
         }
         .pdf-portrait-layout th {
-          background-color: #f8fafc !important;
-          font-weight: 700 !important;
+          background-color: #f1f5f9 !important;
+          font-weight: bold !important;
           color: #0f172a !important;
         }
         .pdf-portrait-layout td input, .pdf-portrait-layout td textarea {
@@ -5405,7 +3816,6 @@ function AnnualMonthlyPlanningEditor({
           resize: none !important;
           box-shadow: none !important;
           outline: none !important;
-          overflow: hidden !important;
         }
         .pdf-portrait-layout td input:hover, .pdf-portrait-layout td textarea:hover {
           background-color: rgba(214, 185, 122, 0.05) !important;
@@ -5413,72 +3823,28 @@ function AnnualMonthlyPlanningEditor({
         .pdf-portrait-layout td input:focus, .pdf-portrait-layout td textarea:focus {
           background-color: rgba(214, 185, 122, 0.1) !important;
         }
-
-        /* Screen-specific Column Widths (Wider) */
-        .pdf-portrait-layout th:nth-child(1) { width: 140px !important; }
-        .pdf-portrait-layout th:nth-child(2) { width: 120px !important; }
-        .pdf-portrait-layout th:nth-child(3) { width: 120px !important; }
-        .pdf-portrait-layout th:nth-child(4) { min-width: 320px !important; }
-        .pdf-portrait-layout th:nth-child(5) { width: 120px !important; }
-        .pdf-portrait-layout th:nth-child(6) { width: 140px !important; }
-        .pdf-portrait-layout th:nth-child(7) { width: 170px !important; }
         .pdf-page-break {
           page-break-before: always !important;
           break-before: page !important;
         }
 
-        /* PDF Export Overrides for Annual Planning */
-        [data-pdf-temp="true"] .pdf-portrait-layout,
-        div[data-pdf-temp="true"] .pdf-portrait-layout.no-wrapper-style {
-          width: 794px !important;
-          max-width: 794px !important;
-          padding: 30px !important;
-          background-color: white !important;
-          border: none !important;
-          box-shadow: none !important;
-          border-radius: 0px !important;
-        }
-        [data-pdf-temp="true"] .pdf-portrait-layout table {
-          margin-bottom: 20px !important;
-        }
-        [data-pdf-temp="true"] .pdf-portrait-layout th,
-        [data-pdf-temp="true"] .pdf-portrait-layout td {
-          border: 1px solid #cbd5e1 !important;
-          padding: 8px 10px !important;
-          font-size: 11px !important;
-          line-height: 1.4 !important;
-          color: #1e293b !important;
-        }
-        [data-pdf-temp="true"] .pdf-portrait-layout th {
-          background-color: #f1f5f9 !important;
-          color: #0f172a !important;
-        }
-        
-        /* PDF Download Column Widths (A4 optimized) */
-        [data-pdf-temp="true"] .pdf-portrait-layout th:nth-child(1) { width: 100px !important; }
-        [data-pdf-temp="true"] .pdf-portrait-layout th:nth-child(2) { width: 70px !important; }
-        [data-pdf-temp="true"] .pdf-portrait-layout th:nth-child(3) { width: 70px !important; }
-        [data-pdf-temp="true"] .pdf-portrait-layout th:nth-child(4) { min-width: auto !important; }
-        [data-pdf-temp="true"] .pdf-portrait-layout th:nth-child(5) { width: 70px !important; }
-        [data-pdf-temp="true"] .pdf-portrait-layout th:nth-child(6) { width: 85px !important; }
-        [data-pdf-temp="true"] .pdf-portrait-layout th:nth-child(7) { width: 100px !important; }
-
         /* Monthly Daily Planning PDF Page Styles */
         .monthly-pdf-page {
-          width: 100% !important;
-          max-width: 100% !important;
-          padding: 40px !important;
+          width: 794px !important;
+          min-height: 1123px !important;
+          padding: 30px !important;
           box-sizing: border-box !important;
-          border: 4px double #d6b97a !important;
+          border: 4px double black !important;
           background-color: white !important;
-          color: #0f172a !important;
+          color: black !important;
           display: flex !important;
           flex-direction: column !important;
           justify-content: space-between !important;
+          page-break-after: always !important;
+          break-after: page !important;
           position: relative !important;
           margin-bottom: 30px !important;
-          box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1) !important;
-          border-radius: 1.5rem !important;
+          box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
         }
         @media print {
           .monthly-pdf-page {
@@ -5488,48 +3854,23 @@ function AnnualMonthlyPlanningEditor({
             box-shadow: none !important;
           }
         }
-        
-        /* PDF Export Overrides for Monthly Planning */
-        [data-pdf-temp="true"] .monthly-pdf-page {
-          width: 794px !important;
-          max-width: 794px !important;
-          min-height: 1123px !important;
-          padding: 30px !important;
-          border: 4px double black !important;
-          box-shadow: none !important;
-          border-radius: 0px !important;
-          page-break-after: always !important;
-          break-after: page !important;
-        }
-        
         .monthly-planning-table {
           width: 100% !important;
           border-collapse: collapse !important;
           table-layout: fixed !important;
         }
         .monthly-planning-table th, .monthly-planning-table td {
-          border: 1px solid #cbd5e1 !important;
-          font-size: 13px !important;
-          padding: 10px 12px !important;
-          line-height: 1.4 !important;
-          vertical-align: top !important;
-        }
-        .monthly-planning-table th {
-          background-color: #f8fafc !important;
-          font-weight: 700 !important;
-          text-align: center !important;
-          color: #0f172a !important;
-        }
-        
-        [data-pdf-temp="true"] .monthly-planning-table th,
-        [data-pdf-temp="true"] .monthly-planning-table td {
           border: 1px solid black !important;
           font-size: 10px !important;
           padding: 3px 4px !important;
           line-height: 1.25 !important;
-          color: black !important;
+          vertical-align: top !important;
         }
-        
+        .monthly-planning-table th {
+          background-color: #f8fafc !important;
+          font-weight: bold !important;
+          text-align: center !important;
+        }
         .monthly-planning-table td textarea {
           width: 100% !important;
           border: none !important;
@@ -5556,14 +3897,10 @@ function AnnualMonthlyPlanningEditor({
             <BookCheck className="size-5" />
           </div>
           <div>
-            <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider">
-              Planning Progress
-            </h4>
+            <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider">Planning Progress</h4>
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
               {step === "class" && "Selecting Standard"}
-              {step === "medium" &&
-                selectedClass &&
-                `Class: ${classNames[selectedClass as string]?.mr} | Selecting Medium`}
+              {step === "medium" && selectedClass && `Class: ${classNames[selectedClass as string]?.mr} | Selecting Medium`}
             </p>
           </div>
         </div>
@@ -5575,15 +3912,12 @@ function AnnualMonthlyPlanningEditor({
             const stepIndex = stepsOrder.indexOf(step);
             const thisIndex = stepsOrder.indexOf(s.id);
             const isCompleted = thisIndex < stepIndex;
-            const isActive =
-              s.id === step || (s.id === "planType" && step === "selectMonth");
+            const isActive = s.id === step || (s.id === "planType" && step === "selectMonth");
 
             return (
               <React.Fragment key={s.id}>
                 {idx > 0 && (
-                  <div
-                    className={`h-1 w-6 sm:w-12 rounded ${isCompleted ? "bg-[#8b5cf6]" : "bg-slate-200"}`}
-                  />
+                  <div className={`h-1 w-6 sm:w-12 rounded ${isCompleted ? "bg-[#8b5cf6]" : "bg-slate-200"}`} />
                 )}
                 <button
                   disabled={thisIndex > stepIndex && !selectedClass}
@@ -5597,10 +3931,10 @@ function AnnualMonthlyPlanningEditor({
                     }
                   }}
                   className={`size-10 rounded-full flex items-center justify-center text-xs font-black transition-all ${
-                    isActive
-                      ? "bg-[#8b5cf6] text-white ring-4 ring-[#8b5cf6]/20 scale-110 shadow-lg"
-                      : isCompleted
-                        ? "bg-indigo-900 text-white hover:bg-indigo-800"
+                    isActive 
+                      ? "bg-[#8b5cf6] text-white ring-4 ring-[#8b5cf6]/20 scale-110 shadow-lg" 
+                      : isCompleted 
+                        ? "bg-indigo-900 text-white hover:bg-indigo-800" 
                         : "bg-slate-100 text-slate-400 cursor-not-allowed"
                   }`}
                   title={s.en}
@@ -5615,6 +3949,7 @@ function AnnualMonthlyPlanningEditor({
 
       {/* Wizard Content */}
       <AnimatePresence mode="wait">
+
         {step === "class" && (
           <motion.div
             key="class"
@@ -5624,12 +3959,8 @@ function AnnualMonthlyPlanningEditor({
             className="space-y-8"
           >
             <div className="text-center space-y-2">
-              <h2 className="text-3xl font-black text-slate-900 tracking-tight">
-                Select Class / इयत्ता निवडा
-              </h2>
-              <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest">
-                Step 2: Choose the target standard
-              </p>
+              <h2 className="text-3xl font-black text-slate-900 tracking-tight">Select Class / इयत्ता निवडा</h2>
+              <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest">Step 2: Choose the target standard</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
@@ -5646,24 +3977,14 @@ function AnnualMonthlyPlanningEditor({
                       setStep("medium");
                     }}
                     className={`group p-8 rounded-[2.5rem] border text-center transition-all duration-500 shadow-md hover:shadow-[0_20px_45px_rgba(139,92,246,0.3)] cursor-pointer relative overflow-hidden flex flex-col items-center gap-4 ${
-                      isSelected
-                        ? "bg-gradient-to-br from-[#7c3aed] to-[#5b21b6] text-white border-2 border-white ring-4 ring-indigo-400 scale-[1.03] shadow-[0_25px_50px_rgba(139,92,246,0.45)]"
+                      isSelected 
+                        ? "bg-gradient-to-br from-[#7c3aed] to-[#5b21b6] text-white border-2 border-white ring-4 ring-indigo-400 scale-[1.03] shadow-[0_25px_50px_rgba(139,92,246,0.45)]" 
                         : "bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white border-[#7c3aed]/30 hover:scale-[1.02]"
                     }`}
                   >
                     <div className="absolute -bottom-6 -right-6 size-24 text-white/5 pointer-events-none group-hover:scale-110 transition-transform duration-700">
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        className="w-full h-full"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
-                        />
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-full h-full">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
                       </svg>
                     </div>
 
@@ -5671,18 +3992,13 @@ function AnnualMonthlyPlanningEditor({
                       {cls}
                     </div>
                     <div>
-                      <h4 className="font-black text-lg text-white">
-                        इयत्ता {classNames[cls]?.mr}
-                      </h4>
+                      <h4 className="font-black text-lg text-white">इयत्ता {classNames[cls]?.mr}</h4>
                       <p className="text-[10px] text-violet-100/70 font-black uppercase tracking-widest mt-1">
                         {classNames[cls]?.en}
                       </p>
                     </div>
                     <div className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-violet-200 mt-2 opacity-80 group-hover:opacity-100 transition-opacity">
-                      प्रवेश करा{" "}
-                      <span className="transform group-hover:translate-x-1 transition-transform">
-                        →
-                      </span>
+                      प्रवेश करा <span className="transform group-hover:translate-x-1 transition-transform">→</span>
                     </div>
                   </motion.button>
                 );
@@ -5700,14 +4016,9 @@ function AnnualMonthlyPlanningEditor({
             className="space-y-8"
           >
             <div className="text-center space-y-2">
-              <h2 className="text-3xl font-black text-slate-900 tracking-tight">
-                Select Medium / माध्यम निवडा
-              </h2>
+              <h2 className="text-3xl font-black text-slate-900 tracking-tight">Select Medium / माध्यम निवडा</h2>
               <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest">
-                Class:{" "}
-                {selectedClass
-                  ? `${classNames[selectedClass as string]?.mr} (${classNames[selectedClass as string]?.en})`
-                  : ""}
+                Class: {selectedClass ? `${classNames[selectedClass as string]?.mr} (${classNames[selectedClass as string]?.en})` : ""}
               </p>
             </div>
 
@@ -5722,8 +4033,8 @@ function AnnualMonthlyPlanningEditor({
                       setStep("planType");
                     }}
                     className={`group p-10 rounded-[3rem] border text-left transition-all duration-500 shadow-md hover:shadow-[0_20px_45px_rgba(139,92,246,0.3)] cursor-pointer relative overflow-hidden flex items-start gap-6 ${
-                      isSelected
-                        ? "bg-gradient-to-br from-[#7c3aed] to-[#5b21b6] text-white border-2 border-white ring-4 ring-indigo-400 scale-[1.02] shadow-[0_25px_50px_rgba(139,92,246,0.45)]"
+                      isSelected 
+                        ? "bg-gradient-to-br from-[#7c3aed] to-[#5b21b6] text-white border-2 border-white ring-4 ring-indigo-400 scale-[1.02] shadow-[0_25px_50px_rgba(139,92,246,0.45)]" 
                         : "bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white border-[#7c3aed]/30 hover:scale-[1.01]"
                     }`}
                   >
@@ -5755,6 +4066,7 @@ function AnnualMonthlyPlanningEditor({
           </motion.div>
         )}
 
+
         {step === "planType" && (
           <motion.div
             key="planType"
@@ -5764,22 +4076,14 @@ function AnnualMonthlyPlanningEditor({
             className="space-y-8"
           >
             <div className="text-center space-y-2">
-              <h2 className="text-3xl font-black text-slate-900 tracking-tight">
-                Select Type / प्रकार निवडा
-              </h2>
+              <h2 className="text-3xl font-black text-slate-900 tracking-tight">Select Type / प्रकार निवडा</h2>
               <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest">
-                Class:{" "}
-                {selectedClass
-                  ? `${classNames[selectedClass as string]?.mr}`
-                  : ""}{" "}
-                | Medium: {selectedMedium}
+                Class: {selectedClass ? `${classNames[selectedClass as string]?.mr}` : ""} | Medium: {selectedMedium}
               </p>
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="size-7 rounded-full bg-[#8b5cf6] text-white flex items-center justify-center font-black text-xs">
-                3
-              </div>
+              <div className="size-7 rounded-full bg-[#8b5cf6] text-white flex items-center justify-center font-black text-xs">3</div>
               <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-800">
                 PLANNING FILES / नियोजन फाइल्स
               </h3>
@@ -5789,18 +4093,8 @@ function AnnualMonthlyPlanningEditor({
               {/* Annual Planning Card */}
               <div className="flex flex-col justify-between p-8 bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white rounded-[2.5rem] border border-[#7c3aed]/30 shadow-md hover:shadow-[0_20px_45px_rgba(139,92,246,0.3)] hover:scale-[1.02] transition-all duration-300 relative overflow-hidden group">
                 <div className="absolute -bottom-6 -right-6 size-24 text-white/5 pointer-events-none group-hover:scale-110 transition-transform duration-700">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    className="w-full h-full"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
-                    />
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-full h-full">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
                   </svg>
                 </div>
 
@@ -5809,13 +4103,8 @@ function AnnualMonthlyPlanningEditor({
                     <BookOpen className="size-6 text-white" />
                   </div>
                   <div>
-                    <p className="text-xl font-black text-white leading-snug">
-                      Annual Planning
-                    </p>
-                    <p className="text-[11px] text-violet-100/70 font-semibold mt-1">
-                      वार्षिक नियोजन | इयत्ता{" "}
-                      {classNames[selectedClass as string]?.mr}
-                    </p>
+                    <p className="text-xl font-black text-white leading-snug">Annual Planning</p>
+                    <p className="text-[11px] text-violet-100/70 font-semibold mt-1">वार्षिक नियोजन | इयत्ता {classNames[selectedClass as string]?.mr}</p>
                   </div>
                 </div>
 
@@ -5841,18 +4130,8 @@ function AnnualMonthlyPlanningEditor({
               {/* Monthly Planning Card */}
               <div className="flex flex-col justify-between p-8 bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white rounded-[2.5rem] border border-[#7c3aed]/30 shadow-md hover:shadow-[0_20px_45px_rgba(139,92,246,0.3)] hover:scale-[1.02] transition-all duration-300 relative overflow-hidden group">
                 <div className="absolute -bottom-6 -right-6 size-24 text-white/5 pointer-events-none group-hover:scale-110 transition-transform duration-700">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    className="w-full h-full"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
-                    />
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-full h-full">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
                   </svg>
                 </div>
 
@@ -5861,13 +4140,8 @@ function AnnualMonthlyPlanningEditor({
                     <BookOpen className="size-6 text-white" />
                   </div>
                   <div>
-                    <p className="text-xl font-black text-white leading-snug">
-                      Monthly Planning
-                    </p>
-                    <p className="text-[11px] text-violet-100/70 font-semibold mt-1">
-                      मासिक नियोजन | इयत्ता{" "}
-                      {classNames[selectedClass as string]?.mr}
-                    </p>
+                    <p className="text-xl font-black text-white leading-snug">Monthly Planning</p>
+                    <p className="text-[11px] text-violet-100/70 font-semibold mt-1">मासिक नियोजन | इयत्ता {classNames[selectedClass as string]?.mr}</p>
                   </div>
                 </div>
 
@@ -5886,18 +4160,8 @@ function AnnualMonthlyPlanningEditor({
               {/* Question Bank Card */}
               <div className="flex flex-col justify-between p-8 bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white rounded-[2.5rem] border border-[#7c3aed]/30 shadow-md hover:shadow-[0_20px_45px_rgba(139,92,246,0.3)] hover:scale-[1.02] transition-all duration-300 relative overflow-hidden group">
                 <div className="absolute -bottom-6 -right-6 size-24 text-white/5 pointer-events-none group-hover:scale-110 transition-transform duration-700">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    className="w-full h-full"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
-                    />
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-full h-full">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
                   </svg>
                 </div>
 
@@ -5906,31 +4170,22 @@ function AnnualMonthlyPlanningEditor({
                     <BookOpen className="size-6 text-white" />
                   </div>
                   <div>
-                    <p className="text-xl font-black text-white leading-snug">
-                      Question Bank
-                    </p>
-                    <p className="text-[11px] text-violet-100/70 font-semibold mt-1">
-                      प्रश्नपेढी | इयत्ता{" "}
-                      {classNames[selectedClass as string]?.mr}
-                    </p>
+                    <p className="text-xl font-black text-white leading-snug">Question Bank</p>
+                    <p className="text-[11px] text-violet-100/70 font-semibold mt-1">प्रश्नपेढी | इयत्ता {classNames[selectedClass as string]?.mr}</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 mt-6 relative z-10">
                   <button
                     type="button"
-                    onClick={() =>
-                      (window.location.href = `/teacher/modules/question-bank?class=${selectedClass}&medium=${selectedMedium}`)
-                    }
+                    onClick={() => window.location.href = `/teacher/modules/question-bank?class=${selectedClass}&medium=${selectedMedium}`}
                     className="py-3 px-4 bg-white/10 border border-white/20 text-white rounded-2xl text-[10px] font-black uppercase tracking-wider hover:bg-white hover:text-indigo-900 transition-all cursor-pointer text-center backdrop-blur-sm"
                   >
                     View
                   </button>
                   <button
                     type="button"
-                    onClick={() =>
-                      (window.location.href = `/teacher/modules/question-bank?class=${selectedClass}&medium=${selectedMedium}`)
-                    }
+                    onClick={() => window.location.href = `/teacher/modules/question-bank?class=${selectedClass}&medium=${selectedMedium}`}
                     className="py-3 px-4 bg-white text-indigo-900 rounded-2xl text-[10px] font-black uppercase tracking-wider hover:bg-violet-100 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <FileText className="size-3.5" />
@@ -5940,23 +4195,19 @@ function AnnualMonthlyPlanningEditor({
               </div>
             </div>
 
-            {/* Hidden elements for direct PDF download without viewing */}
             {isExporting && (
-              <div
-                className="hidden absolute opacity-0 pointer-events-none w-0 h-0 overflow-hidden"
-                style={{ zIndex: -9999 }}
-              >
-                {selectedClass && selectedMedium && (
-                  <>
-                    {renderPlanningPDFContent("annual")}
-                    {renderPlanningPDFContent("monthly")}
-                    {syllabus?.months.map((m) => (
-                      <React.Fragment key={m.en}>
-                        {renderPlanningPDFContent(m.en)}
-                      </React.Fragment>
-                    ))}
-                  </>
-                )}
+              <div className="hidden absolute opacity-0 pointer-events-none w-0 h-0 overflow-hidden" style={{ zIndex: -9999 }}>
+                 {selectedClass && selectedMedium && (
+                   <>
+                     {renderPlanningPDFContent("annual")}
+                     {renderPlanningPDFContent("monthly")}
+                     {syllabus?.months.map((m) => (
+                       <React.Fragment key={m.en}>
+                         {renderPlanningPDFContent(m.en)}
+                       </React.Fragment>
+                     ))}
+                   </>
+                 )}
               </div>
             )}
 
@@ -5980,15 +4231,9 @@ function AnnualMonthlyPlanningEditor({
             className="space-y-8"
           >
             <div className="text-center space-y-2">
-              <h2 className="text-3xl font-black text-slate-900 tracking-tight">
-                Select Month / महिना निवडा
-              </h2>
+              <h2 className="text-3xl font-black text-slate-900 tracking-tight">Select Month / महिना निवडा</h2>
               <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest">
-                Class:{" "}
-                {selectedClass
-                  ? `${classNames[selectedClass as string]?.mr}`
-                  : ""}{" "}
-                | Medium: {selectedMedium}
+                Class: {selectedClass ? `${classNames[selectedClass as string]?.mr}` : ""} | Medium: {selectedMedium}
               </p>
             </div>
 
@@ -5999,12 +4244,8 @@ function AnnualMonthlyPlanningEditor({
                   className="bg-white border border-slate-200 p-4 rounded-3xl shadow-sm flex flex-col justify-between items-center text-center gap-3 hover:shadow-md transition-all duration-300 transform hover:scale-[1.03]"
                 >
                   <div>
-                    <h4 className="font-black text-sm text-slate-900">
-                      {m.mr}
-                    </h4>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                      {m.en}
-                    </p>
+                    <h4 className="font-black text-sm text-slate-900">{m.mr}</h4>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{m.en}</p>
                   </div>
                   <div className="grid grid-cols-2 gap-2 w-full">
                     <button
@@ -6036,6 +4277,7 @@ function AnnualMonthlyPlanningEditor({
             </div>
           </motion.div>
         )}
+
       </AnimatePresence>
 
       {/* Modal viewer for PDF preview */}
@@ -6044,7 +4286,7 @@ function AnnualMonthlyPlanningEditor({
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 30 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="bg-white border border-slate-200 rounded-[3rem] max-w-[90vw] w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl text-slate-800 font-sans"
+            className="bg-white border border-slate-200 rounded-[3rem] max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl text-slate-800 font-sans"
           >
             {/* Modal Controls header */}
             <div className="flex items-center justify-between p-6 md:p-8 border-b border-slate-200 bg-white/85 sticky top-0 backdrop-blur z-10">
@@ -6054,16 +4296,10 @@ function AnnualMonthlyPlanningEditor({
                 </div>
                 <div>
                   <h3 className="font-black text-base text-[#D6B97A]">
-                    {viewingPlan === "annual"
-                      ? "Annual Planning Preview (वार्षिक नियोजन)"
-                      : "Monthly Planning Preview (मासिक नियोजन)"}
+                    {viewingPlan === "annual" ? "Annual Planning Preview (वार्षिक नियोजन)" : "Monthly Planning Preview (मासिक नियोजन)"}
                   </h3>
                   <p className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">
-                    Class:{" "}
-                    {selectedClass
-                      ? classNames[selectedClass as string]?.mr
-                      : ""}{" "}
-                    | Medium: {selectedMedium}
+                    Class: {selectedClass ? classNames[selectedClass as string]?.mr : ""} | Medium: {selectedMedium}
                   </p>
                 </div>
               </div>
@@ -6088,43 +4324,31 @@ function AnnualMonthlyPlanningEditor({
             {/* Config panel / Dynamic Editor inputs */}
             <div className="bg-slate-50 p-6 md:p-8 border-b border-slate-200 grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-2">
-                <label className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em]">
-                  School Name / शाळेचे नाव
-                </label>
+                <label className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em]">School Name / शाळेचे नाव</label>
                 <input
                   type="text"
                   value={safeData.schoolName}
-                  onChange={(e) =>
-                    handleDataChange("schoolName", e.target.value)
-                  }
+                  onChange={(e) => handleDataChange("schoolName", e.target.value)}
                   className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:border-[#D6B97A] outline-none"
                   placeholder="Enter School Name"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em]">
-                  Academic Year / शैक्षणिक वर्ष
-                </label>
+                <label className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em]">Academic Year / शैक्षणिक वर्ष</label>
                 <input
                   type="text"
                   value={safeData.academicYear}
-                  onChange={(e) =>
-                    handleDataChange("academicYear", e.target.value)
-                  }
+                  onChange={(e) => handleDataChange("academicYear", e.target.value)}
                   className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:border-[#D6B97A] outline-none"
                   placeholder="Enter Year"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em]">
-                  Class Teacher / वर्गशिक्षक
-                </label>
+                <label className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em]">Class Teacher / वर्गशिक्षक</label>
                 <input
                   type="text"
                   value={safeData.classTeacher}
-                  onChange={(e) =>
-                    handleDataChange("classTeacher", e.target.value)
-                  }
+                  onChange={(e) => handleDataChange("classTeacher", e.target.value)}
                   className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:border-[#D6B97A] outline-none"
                   placeholder="Enter Teacher Name"
                 />
@@ -6139,23 +4363,22 @@ function AnnualMonthlyPlanningEditor({
         </div>
       )}
 
-      {/* Off-screen/hidden container for direct PDF downloads */}
       {isExporting && (
-        <div
-          style={{
-            position: "absolute",
-            left: "-9999px",
-            top: "-9999px",
-            width: "0px",
-            height: "0px",
+        <div 
+          style={{ 
+            position: "absolute", 
+            left: "-9999px", 
+            top: "-9999px", 
+            width: "0px", 
+            height: "0px", 
             overflow: "hidden",
-            pointerEvents: "none",
+            pointerEvents: "none"
           }}
         >
           {selectedClass && selectedMedium && syllabus && (
             <>
               {renderPlanningPDFContent("annual")}
-              {syllabus.months.map((m) => (
+              {syllabus.months.map(m => (
                 <React.Fragment key={m.en}>
                   {renderPlanningPDFContent(m.en)}
                 </React.Fragment>
@@ -6175,9 +4398,7 @@ function TeachingDiaryManager({
   data: any;
   onChange: (val: any) => void;
 }) {
-  const [step, setStep] = useState<"hub" | "classes" | "months" | "files">(
-    "hub",
-  );
+  const [step, setStep] = useState<"hub" | "classes" | "months" | "files">("hub");
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [diaries, setDiaries] = useState<any[]>([]);
@@ -6214,12 +4435,13 @@ function TeachingDiaryManager({
       const fetchDiaries = async () => {
         setLoading(true);
         try {
-          const { collection, getDocs, query, where } =
-            await import("firebase/firestore");
+          const { collection, getDocs, query, where } = await import(
+            "firebase/firestore"
+          );
           const q = query(
             collection(db, "admin_teaching_diaries"),
             where("className", "==", selectedClass),
-            where("month", "==", selectedMonth),
+            where("month", "==", selectedMonth)
           );
           const snapshot = await getDocs(q);
           const list = snapshot.docs.map((doc) => ({
@@ -6286,16 +4508,14 @@ function TeachingDiaryManager({
                 Teaching Diary Workspace
               </h3>
               <p className="text-slate-500 font-medium max-w-md mx-auto">
-                शिक्षकांची दैनिक अध्यापन टाचनवही (Teaching Diary) वर्गाप्रमाणे व
-                महिन्याप्रमाणे व्यवस्थापन करण्यासाठी पुढे जा.
+                शिक्षकांची दैनिक अध्यापन टाचनवही (Teaching Diary) वर्गाप्रमाणे व महिन्याप्रमाणे व्यवस्थापन करण्यासाठी पुढे जा.
               </p>
             </div>
             <button
               onClick={() => setStep("classes")}
               className="px-10 py-5 bg-[#1A1A1A] hover:bg-[#D6B97A] text-white rounded-full text-[10px] font-black uppercase tracking-[0.3em] transition-all shadow-xl flex items-center gap-3 active:scale-95 cursor-pointer"
             >
-              Enter Teaching Diary{" "}
-              <ArrowRight className="size-4 text-[#D6B97A] group-hover:translate-x-1" />
+              Enter Teaching Diary <ArrowRight className="size-4 text-[#D6B97A] group-hover:translate-x-1" />
             </button>
           </motion.div>
         )}
@@ -6310,8 +4530,7 @@ function TeachingDiaryManager({
           >
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <h3 className="text-xl font-black text-slate-800 flex items-center gap-2">
-                <BookOpen className="size-6 text-[#D6B97A]" /> Select Class /
-                वर्ग निवडा
+                <BookOpen className="size-6 text-[#D6B97A]" /> Select Class / वर्ग निवडा
               </h3>
               <button
                 onClick={() => setStep("hub")}
@@ -6343,12 +4562,8 @@ function TeachingDiaryManager({
                         Select
                       </span>
                       <div>
-                        <h4 className="text-lg font-black tracking-tight">
-                          {cls}
-                        </h4>
-                        <p className="text-[10px] text-white/80 font-bold uppercase tracking-wider mt-1">
-                          अध्यापन नोंद वही
-                        </p>
+                        <h4 className="text-lg font-black tracking-tight">{cls}</h4>
+                        <p className="text-[10px] text-white/80 font-bold uppercase tracking-wider mt-1">अध्यापन नोंद वही</p>
                       </div>
                     </button>
                   </motion.div>
@@ -6369,8 +4584,7 @@ function TeachingDiaryManager({
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
                 <h3 className="text-xl font-black text-slate-800 flex items-center gap-2">
-                  <BookOpen className="size-6 text-[#D6B97A]" /> Select Month /
-                  महिना निवडा
+                  <BookOpen className="size-6 text-[#D6B97A]" /> Select Month / महिना निवडा
                 </h3>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
                   Selected Class: {selectedClass}
@@ -6402,9 +4616,7 @@ function TeachingDiaryManager({
                     className={`p-6 rounded-2xl bg-gradient-to-br ${colorClass} border text-center flex flex-col justify-center items-center gap-2 shadow-sm transition-all duration-300 cursor-pointer h-28`}
                   >
                     <Calendar className="size-5 opacity-70" />
-                    <span className="font-black text-sm tracking-tight">
-                      {m.mr}
-                    </span>
+                    <span className="font-black text-sm tracking-tight">{m.mr}</span>
                     <span className="text-[9px] uppercase tracking-wider font-bold opacity-60">
                       {m.en}
                     </span>
@@ -6426,8 +4638,7 @@ function TeachingDiaryManager({
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
                 <h3 className="text-xl font-black text-slate-800 flex items-center gap-2">
-                  <BookOpen className="size-6 text-[#D6B97A]" /> {selectedClass}{" "}
-                  — {selectedMonthMarathi} ({selectedMonth})
+                  <BookOpen className="size-6 text-[#D6B97A]" /> {selectedClass} — {selectedMonthMarathi} ({selectedMonth})
                 </h3>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
                   Teaching Diaries Catalog / दैनिक अध्यापन टाचण वह्या
@@ -6457,12 +4668,9 @@ function TeachingDiaryManager({
                   <BookOpen className="size-8" />
                 </div>
                 <div>
-                  <h4 className="text-slate-700 font-bold">
-                    कोणतीही फाईल आढळली नाही
-                  </h4>
+                  <h4 className="text-slate-700 font-bold">कोणतीही फाईल आढळली नाही</h4>
                   <p className="text-slate-400 text-xs mt-1">
-                    या वर्ग आणि महिन्यासाठी अद्याप कोणतीही अध्यापन टाचनवही फाईल
-                    अपलोड केलेली नाही.
+                    या वर्ग आणि महिन्यासाठी अद्याप कोणतीही अध्यापन टाचनवही फाईल अपलोड केलेली नाही.
                   </p>
                 </div>
               </div>
@@ -6478,10 +4686,7 @@ function TeachingDiaryManager({
                         <FileText className="size-6" />
                       </div>
                       <div className="overflow-hidden">
-                        <div
-                          className="font-bold text-slate-800 text-sm truncate max-w-[200px] sm:max-w-xs"
-                          title={file.name}
-                        >
+                        <div className="font-bold text-slate-800 text-sm truncate max-w-[200px] sm:max-w-xs" title={file.name}>
                           {file.name}
                         </div>
                         <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
@@ -6489,7 +4694,7 @@ function TeachingDiaryManager({
                         </div>
                       </div>
                     </div>
-
+                    
                     <div className="flex items-center gap-2">
                       <a
                         href={file.url}

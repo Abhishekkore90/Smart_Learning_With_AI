@@ -61,8 +61,7 @@ const CULTURAL_TEMPLATES = [
     icon: Palette,
     quote: "Let your colors tell a story. Express your artistic soul!",
     quoteMr: "तुमच्या रंगांना एक कथा सांगू द्या. तुमची कला व्यक्त करा!",
-    quoteHi:
-      "अपने रंगों को एक कहानी बयां करने दें। अपनी कलात्मक आत्मा को व्यक्त करें!",
+    quoteHi: "अपने रंगों को एक कहानी बयां करने दें। अपनी कलात्मक आत्मा को व्यक्त करें!",
   },
   {
     id: 2,
@@ -156,17 +155,9 @@ function CulturalTemplatesPage() {
                       : "Cultural Command Center"}
                 </motion.div>
                 <h2 className="text-6xl md:text-7xl font-black tracking-tighter leading-none">
-                  {lang === "mr"
-                    ? "सर्जनशील"
-                    : lang === "hi"
-                      ? "सृजनात्मक"
-                      : "Creative"}{" "}
+                  {lang === "mr" ? "सर्जनशील" : lang === "hi" ? "सृजनात्मक" : "Creative"}{" "}
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-indigo-400 italic">
-                    {lang === "mr"
-                      ? "नैपुण्य"
-                      : lang === "hi"
-                        ? "महारत"
-                        : "Mastery"}
+                    {lang === "mr" ? "नैपुण्य" : lang === "hi" ? "महारत" : "Mastery"}
                   </span>
                 </h2>
                 <p className="text-slate-400 font-medium max-w-2xl text-xl leading-relaxed">
@@ -182,11 +173,7 @@ function CulturalTemplatesPage() {
                 className="group flex items-center gap-4 px-10 py-6 bg-white text-slate-900 rounded-[2.5rem] font-black text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-2xl"
               >
                 <ArrowLeft className="size-5 group-hover:-translate-x-1 transition-transform" />{" "}
-                {lang === "mr"
-                  ? "टेम्प्लेट्स"
-                  : lang === "hi"
-                    ? "टेम्प्लेट्स"
-                    : "Templates"}
+                {lang === "mr" ? "टेम्प्लेट्स" : lang === "hi" ? "टेम्प्लेट्स" : "Templates"}
               </Link>
             </div>
           </motion.div>
@@ -296,13 +283,11 @@ function CulturalTemplatesPage() {
                             : template.name}
                       </p>
                       <p className="text-xs font-bold text-slate-400 italic leading-snug">
-                        "
-                        {lang === "mr"
+                        "{lang === "mr"
                           ? template.quoteMr
                           : lang === "hi"
                             ? template.quoteHi
-                            : template.quote}
-                        "
+                            : template.quote}"
                       </p>
                     </div>
                     <div className="flex gap-3">
@@ -320,19 +305,11 @@ function CulturalTemplatesPage() {
                       className="flex-1 py-3.5 bg-slate-950 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-slate-800 transition-all shadow-md text-center font-black"
                     >
                       <Edit3 className="size-4" />{" "}
-                      {lang === "mr"
-                        ? "संपादन"
-                        : lang === "hi"
-                          ? "संपादन"
-                          : "Edit"}
+                      {lang === "mr" ? "संपादन" : lang === "hi" ? "संपादन" : "Edit"}
                     </Link>
                     <button className="flex-1 py-3.5 bg-blue-600 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-blue-700 transition-all shadow-md font-black">
                       <Download className="size-4" />{" "}
-                      {lang === "mr"
-                        ? "डाउनलोड"
-                        : lang === "hi"
-                          ? "डाउनलोड"
-                          : "Download"}
+                      {lang === "mr" ? "डाउनलोड" : lang === "hi" ? "डाउनलोड" : "Download"}
                     </button>
                   </div>
                 </div>

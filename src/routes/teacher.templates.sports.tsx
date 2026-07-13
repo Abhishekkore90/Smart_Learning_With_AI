@@ -58,8 +58,7 @@ const SPORTS_TEMPLATES = [
     icon: Flag,
     quote: "Join us for a day of speed, strength, and school spirit!",
     quoteMr: "वेग, ताकद आणि शालेय उत्साहाच्या सोहळ्यात सहभागी व्हा!",
-    quoteHi:
-      "गति, शक्ति और विद्यालय की खेल भावना से भरे इस दिन में हमारे साथ जुड़ें!",
+    quoteHi: "गति, शक्ति और विद्यालय की खेल भावना से भरे इस दिन में हमारे साथ जुड़ें!",
   },
   {
     id: 2,
@@ -73,8 +72,7 @@ const SPORTS_TEMPLATES = [
     accent: "linear-gradient(to right, #818cf8, #c084fc, #e879f9)",
     icon: Calendar,
     quote: "Celebrating our athletes' incredible journey and achievements.",
-    quoteMr:
-      "आमच्या क्रीडापटूंच्या अविश्वसनीय प्रवासाचे आणि यशाचे कौतुक सोहळा.",
+    quoteMr: "आमच्या क्रीडापटूंच्या अविश्वसनीय प्रवासाचे आणि यशाचे कौतुक सोहळा.",
     quoteHi: "हमारे एथलीटों की अविश्वसनीय यात्रा और उपलब्धियों का उत्सव।",
   },
   {
@@ -104,10 +102,8 @@ const SPORTS_TEMPLATES = [
     accent: "linear-gradient(to right, #34d399, #6ee7b7, #10b981)",
     icon: Trophy,
     quote: "You've set the bar high. A true inspiration to the whole school.",
-    quoteMr:
-      "तुम्ही एक नवा आदर्श प्रस्थापित केला आहे. संपूर्ण शाळेसाठी एक खरी प्रेरणा.",
-    quoteHi:
-      "आपने एक नया मानदंड स्थापित किया है। पूरे स्कूल के लिए एक सच्ची प्रेरणा।",
+    quoteMr: "तुम्ही एक नवा आदर्श प्रस्थापित केला आहे. संपूर्ण शाळेसाठी एक खरी प्रेरणा.",
+    quoteHi: "आपने एक नया मानदंड स्थापित किया है। पूरे स्कूल के लिए एक सच्ची प्रेरणा।",
   },
 ];
 
@@ -158,11 +154,7 @@ function SportsTemplatesPage() {
                 <h2 className="text-6xl md:text-7xl font-black tracking-tighter leading-none">
                   {lang === "mr" ? "क्रीडा" : lang === "hi" ? "खेल" : "Athlete"}{" "}
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-orange-400 italic">
-                    {lang === "mr"
-                      ? "नैपुण्य"
-                      : lang === "hi"
-                        ? "उत्कृष्टता"
-                        : "Excellence"}
+                    {lang === "mr" ? "नैपुण्य" : lang === "hi" ? "उत्कृष्टता" : "Excellence"}
                   </span>
                 </h2>
                 <p className="text-slate-400 font-medium max-w-2xl text-xl leading-relaxed">
@@ -178,11 +170,7 @@ function SportsTemplatesPage() {
                 className="group flex items-center gap-4 px-10 py-6 bg-white text-slate-900 rounded-[2.5rem] font-black text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-2xl"
               >
                 <ArrowLeft className="size-5 group-hover:-translate-x-1 transition-transform" />{" "}
-                {lang === "mr"
-                  ? "टेम्प्लेट्स"
-                  : lang === "hi"
-                    ? "टेम्प्लेट्स"
-                    : "Templates"}
+                {lang === "mr" ? "टेम्प्लेट्स" : lang === "hi" ? "टेम्प्लेट्स" : "Templates"}
               </Link>
             </div>
           </motion.div>
@@ -309,13 +297,11 @@ function SportsTemplatesPage() {
                             : template.name}
                       </p>
                       <p className="text-xs font-bold text-slate-400 italic leading-snug">
-                        "
-                        {lang === "mr"
+                        "{lang === "mr"
                           ? template.quoteMr
                           : lang === "hi"
                             ? template.quoteHi
-                            : template.quote}
-                        "
+                            : template.quote}"
                       </p>
                     </div>
                     <div className="flex gap-3">
@@ -331,19 +317,11 @@ function SportsTemplatesPage() {
                       className="flex-1 py-3.5 bg-slate-950 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-slate-800 transition-all shadow-md text-center font-black"
                     >
                       <Edit3 className="size-4" />{" "}
-                      {lang === "mr"
-                        ? "संपादन"
-                        : lang === "hi"
-                          ? "संपादन"
-                          : "Edit"}
+                      {lang === "mr" ? "संपादन" : lang === "hi" ? "संपादन" : "Edit"}
                     </Link>
                     <button className="flex-1 py-3.5 bg-blue-600 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-blue-700 transition-all shadow-md font-black">
                       <Download className="size-4" />{" "}
-                      {lang === "mr"
-                        ? "डाउनलोड"
-                        : lang === "hi"
-                          ? "डाउनलोड"
-                          : "Download"}
+                      {lang === "mr" ? "डाउनलोड" : lang === "hi" ? "डाउनलोड" : "Download"}
                     </button>
                   </div>
                 </div>
