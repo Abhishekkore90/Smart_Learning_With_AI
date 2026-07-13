@@ -602,7 +602,7 @@ function TemplateEditorPage() {
               : templateId?.includes("achievement")
                 ? "Achievement"
                 : "Birthday";
-      
+
       await addDoc(collection(db, "shared_cards"), {
         templateId,
         studentName,
@@ -648,17 +648,17 @@ function TemplateEditorPage() {
       link.href = dataUrl;
       link.click();
       toast.success(
-        lang === "mr" ? "टेम्पलेट यशस्वीरित्या डाउनलोड झाले!" : 
-        lang === "hi" ? "टेम्पलेट सफलतापूर्वक डाउनलोड किया गया!" : 
-        "Template downloaded successfully!"
+        lang === "mr" ? "टेम्पलेट यशस्वीरित्या डाउनलोड झाले!" :
+          lang === "hi" ? "टेम्पलेट सफलतापूर्वक डाउनलोड किया गया!" :
+            "Template downloaded successfully!"
       );
     } catch (error) {
       console.error("Error downloading template:", error);
       const errMsg = error instanceof Error ? error.message : String(error);
       toast.error(
-        lang === "mr" ? `टेम्पलेट डाउनलोड करण्यात त्रुटी: ${errMsg}` : 
-        lang === "hi" ? `टेम्पलेट डाउनलोड करने में त्रुटि: ${errMsg}` : 
-        `Failed to download template: ${errMsg}`
+        lang === "mr" ? `टेम्पलेट डाउनलोड करण्यात त्रुटी: ${errMsg}` :
+          lang === "hi" ? `टेम्पलेट डाउनलोड करने में त्रुटि: ${errMsg}` :
+            `Failed to download template: ${errMsg}`
       );
     } finally {
       setIsDownloading(false);
@@ -928,91 +928,91 @@ function TemplateEditorPage() {
                     </div>
                   </motion.div>
 
-                <motion.h1
-                  key={configToUse.title}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-5xl font-black text-white tracking-tighter mb-4 italic drop-shadow-2xl"
-                >
-                  {configToUse.title}
-                </motion.h1>
-
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: "80px" }}
-                  className="h-1.5 bg-white/30 rounded-full mb-10 shadow-glow"
-                  style={{ background: configToUse.accent }}
-                />
-
-                <div className="space-y-4 mb-10">
-                  <p className="text-white/40 font-black uppercase tracking-[0.8em] text-[10px]">
-                    {lang === "mr" ? "नाव" : lang === "hi" ? "नाम" : "Presented To"}
-                  </p>
-                  <motion.h2
-                    key={studentName}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="text-5xl md:text-6xl font-black tracking-tighter leading-none"
-                    style={{
-                      backgroundImage: isDownloading ? "none" : configToUse.accent,
-                      WebkitBackgroundClip: isDownloading ? "unset" : "text",
-                      WebkitTextFillColor: isDownloading ? "#ffffff" : "transparent",
-                      color: isDownloading ? "#ffffff" : undefined,
-                      filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.4))",
-                    }}
+                  <motion.h1
+                    key={configToUse.title}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-5xl font-black text-white tracking-tighter mb-4 italic drop-shadow-2xl"
                   >
-                    {studentName}
-                  </motion.h2>
-                </div>
+                    {configToUse.title}
+                  </motion.h1>
 
-                <div className="max-w-[90%] mx-auto mb-12">
-                  <motion.p
-                    key={configToUse.quote}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-white/90 font-bold text-lg italic leading-relaxed"
-                  >
-                    "{configToUse.quote}"
-                  </motion.p>
-                </div>
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: "80px" }}
+                    className="h-1.5 bg-white/30 rounded-full mb-10 shadow-glow"
+                    style={{ background: configToUse.accent }}
+                  />
 
-                <motion.div
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  className={`bg-black/30 px-10 py-4 rounded-[1.5rem] border border-white/10 shadow-2xl flex items-center gap-3 ${isDownloading ? "" : "backdrop-blur-xl"}`}
-                >
-                  {isAnnual ? (
-                    <Theater className="size-5 text-white/70" />
-                  ) : isCultural ? (
-                    <PaletteIcon className="size-5 text-white/70" />
-                  ) : isAchievement ? (
-                    <Trophy className="size-5 text-white/70" />
-                  ) : (
-                    <GraduationCap className="size-5 text-white/70" />
-                  )}
-                  <span className="text-white font-black text-sm tracking-[0.2em] uppercase italic">
-                    {studentClass}
-                  </span>
-                </motion.div>
-
-                {/* Footer Branding */}
-                <div className="absolute bottom-16 left-0 right-0 px-16 flex justify-between items-end opacity-50">
-                  <div className="text-left">
-                    <p className="text-[10px] font-black text-white uppercase tracking-widest">
-                      {lang === "mr" ? "प्रीमियम कार्ड" : lang === "hi" ? "प्रीमियम कार्ड" : "Premium Card"}
+                  <div className="space-y-4 mb-10">
+                    <p className="text-white/40 font-black uppercase tracking-[0.8em] text-[10px]">
+                      {lang === "mr" ? "नाव" : lang === "hi" ? "नाम" : "Presented To"}
                     </p>
-                    <p className="text-[8px] font-bold text-white/60">
-                      ID: {templateId?.toUpperCase()}
-                    </p>
+                    <motion.h2
+                      key={studentName}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="text-5xl md:text-6xl font-black tracking-tighter leading-none"
+                      style={{
+                        backgroundImage: isDownloading ? "none" : configToUse.accent,
+                        WebkitBackgroundClip: isDownloading ? "unset" : "text",
+                        WebkitTextFillColor: isDownloading ? "#ffffff" : "transparent",
+                        color: isDownloading ? "#ffffff" : undefined,
+                        filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.4))",
+                      }}
+                    >
+                      {studentName}
+                    </motion.h2>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="size-8 bg-white/10 rounded-lg flex items-center justify-center border border-white/20">
-                      <Star className="size-4 text-white" />
+
+                  <div className="max-w-[90%] mx-auto mb-12">
+                    <motion.p
+                      key={configToUse.quote}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-white/90 font-bold text-lg italic leading-relaxed"
+                    >
+                      "{configToUse.quote}"
+                    </motion.p>
+                  </div>
+
+                  <motion.div
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    className={`bg-black/30 px-10 py-4 rounded-[1.5rem] border border-white/10 shadow-2xl flex items-center gap-3 ${isDownloading ? "" : "backdrop-blur-xl"}`}
+                  >
+                    {isAnnual ? (
+                      <Theater className="size-5 text-white/70" />
+                    ) : isCultural ? (
+                      <PaletteIcon className="size-5 text-white/70" />
+                    ) : isAchievement ? (
+                      <Trophy className="size-5 text-white/70" />
+                    ) : (
+                      <GraduationCap className="size-5 text-white/70" />
+                    )}
+                    <span className="text-white font-black text-sm tracking-[0.2em] uppercase italic">
+                      {studentClass}
+                    </span>
+                  </motion.div>
+
+                  {/* Footer Branding */}
+                  <div className="absolute bottom-16 left-0 right-0 px-16 flex justify-between items-end opacity-50">
+                    <div className="text-left">
+                      <p className="text-[10px] font-black text-white uppercase tracking-widest">
+                        {lang === "mr" ? "प्रीमियम कार्ड" : lang === "hi" ? "प्रीमियम कार्ड" : "Premium Card"}
+                      </p>
+                      <p className="text-[8px] font-bold text-white/60">
+                        ID: {templateId?.toUpperCase()}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="size-8 bg-white/10 rounded-lg flex items-center justify-center border border-white/20">
+                        <Star className="size-4 text-white" />
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
 
               {/* Shimmer Effect */}
               <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 to-white/0 pointer-events-none group-hover:translate-x-full transition-transform duration-1500 ease-in-out" />

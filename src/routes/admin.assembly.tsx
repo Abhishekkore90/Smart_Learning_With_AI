@@ -347,56 +347,48 @@ function AssemblyBookAdmin() {
                 <Book className="size-5 text-[#6C63FF]" /> Uploaded Assembly Books
               </h3>
               <span className="px-3.5 py-1 bg-blue-100 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-wider">
-                {books.length} Files
+                {books.length} Books
               </span>
             </div>
 
             {loading ? (
-              <div className="flex flex-col items-center justify-center py-20 space-y-4">
-                <Loader2 className="size-10 text-[#6C63FF] animate-spin" />
-                <p className="text-xs font-black uppercase tracking-widest text-slate-400 animate-pulse">
-                  Synchronizing Books Catalog...
-                </p>
+              <div className="flex flex-col items-center justify-center py-20 gap-4 text-slate-400">
+                <Loader2 className="size-8 animate-spin text-[#6C63FF]" />
+                <span className="text-xs font-black uppercase tracking-widest">Loading books...</span>
               </div>
             ) : books.length === 0 ? (
-              <div className="py-20 text-center border border-dashed border-slate-200 rounded-3xl space-y-4">
-                <div className="size-16 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 mx-auto">
-                  <Book className="size-8" />
-                </div>
-                <div>
-                  <h4 className="text-slate-700 font-bold">No assembly books uploaded yet</h4>
-                  <p className="text-slate-400 text-xs mt-1">
-                    Upload a book PDF on the left.
-                  </p>
-                </div>
+              <div className="text-center py-20 border border-dashed border-slate-100 rounded-[2rem] text-slate-400 space-y-3">
+                <Book className="size-10 mx-auto text-slate-300" />
+                <p className="text-xs font-black uppercase tracking-widest">No books uploaded yet</p>
               </div>
             ) : (
-              <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 no-scrollbar">
-                <AnimatePresence>
+              <div className="space-y-4">
+                <AnimatePresence mode="popLayout">
                   {books.map((book) => (
                     <motion.div
                       key={book.id}
+                      layout
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }}
-                      className="p-5 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-between group hover:border-[#6C63FF]/30 transition-all shadow-sm"
+                      className="p-5 border border-slate-100 rounded-2xl flex items-center justify-between gap-4 hover:border-slate-200 transition-all bg-slate-50/20 group"
                     >
-                      <div className="flex items-center gap-4 overflow-hidden">
-                        <div className="size-12 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 group-hover:text-[#6C63FF] group-hover:border-[#6C63FF]/20 transition-all flex-shrink-0">
-                          <FileText className="size-6" />
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div className="size-11 bg-white border border-slate-100 rounded-xl flex items-center justify-center text-slate-400 group-hover:text-[#6C63FF] shadow-sm transition-colors">
+                          <FileText className="size-5.5" />
                         </div>
-                        <div className="overflow-hidden">
-                          <div className="font-bold text-slate-800 text-sm truncate max-w-[250px] sm:max-w-md" title={book.name}>
+                        <div className="min-w-0">
+                          <h4 className="font-bold text-sm text-slate-800 truncate max-w-[200px] md:max-w-md">
                             {book.name}
-                          </div>
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                          </h4>
+                          <div className="flex items-center gap-3 text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
                             <span>{book.size}</span>
+                            <span>•</span>
                             <span>{book.date}</span>
                           </div>
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleView(book)}
                           className="size-9 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:border-indigo-200 transition-all cursor-pointer shadow-sm"
