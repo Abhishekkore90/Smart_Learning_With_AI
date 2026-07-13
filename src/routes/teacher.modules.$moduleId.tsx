@@ -1955,7 +1955,7 @@ function DailyAssemblyContent() {
       {/* Assembly Start Items (Anthem, State Song, Pledge, Preamble, Prayer) */}
       <SectionCard
         id="assembly-start"
-        emoji="🇮🇳"
+        emoji="🌅"
         title={t.assemblyStart}
         icon={Flag}
         gradient="from-green-100/80 via-emerald-50/60 to-teal-100/80"
