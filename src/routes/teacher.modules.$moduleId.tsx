@@ -1821,44 +1821,44 @@ function DailyAssemblyContent() {
     return (
       <motion.div
         variants={itemVariants}
-        whileHover={{ y: -8, scale: 1.01 }}
-        transition={{ type: "spring", stiffness: 300, damping: 20 }}
-        className="bg-white/40 backdrop-blur-3xl border border-white/60 rounded-[3rem] overflow-hidden shadow-2xl shadow-indigo-900/5 hover:shadow-indigo-900/20 relative"
+        whileHover={{ y: -10, scale: 1.02 }}
+        transition={{ type: "spring", stiffness: 400, damping: 25 }}
+        className="group relative rounded-[3rem] overflow-hidden bg-white/20 backdrop-blur-3xl border border-white/50 shadow-[0_8px_32px_0_rgba(31,38,135,0.05)] hover:shadow-[0_16px_64px_0_rgba(31,38,135,0.15)] transition-all duration-500"
       >
-        <motion.div 
-          animate={{ rotate: 360 }} 
-          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute -top-32 -right-32 w-64 h-64 bg-white/20 rounded-full blur-[80px] pointer-events-none" 
-        />
-        <div className="absolute inset-0 bg-gradient-to-br from-white/60 to-white/10 pointer-events-none" />
+        <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-40 group-hover:opacity-70 transition-opacity duration-700 pointer-events-none mix-blend-overlay`} />
+        
+        {/* Animated glowing border */}
+        <div className="absolute inset-0 rounded-[3rem] border-2 border-transparent bg-clip-border group-hover:border-white/50 transition-colors duration-500 pointer-events-none" />
+
         <button
           onClick={() => toggleSection(id)}
-          className={`w-full flex items-center justify-between p-6 md:p-8 bg-gradient-to-r ${gradient} cursor-pointer group relative z-10 border-b border-white/30 overflow-hidden`}
+          className="w-full flex items-center justify-between p-6 md:p-8 cursor-pointer relative z-10 border-b border-white/20"
         >
-          <div className="absolute inset-0 bg-white/0 group-hover:bg-white/20 transition-colors duration-500" />
-          <div className="flex items-center gap-4 md:gap-6 relative z-10">
+          <div className="flex items-center gap-5 md:gap-8">
             <motion.div 
-              whileHover={{ scale: 1.15, rotate: 10 }}
-              className="size-14 md:size-16 rounded-3xl bg-white/80 backdrop-blur-md flex items-center justify-center text-3xl shadow-xl shadow-black/5 transition-all duration-300 border border-white"
+              whileHover={{ scale: 1.2, rotate: [0, -10, 10, 0] }}
+              transition={{ duration: 0.5 }}
+              className="size-16 md:size-20 rounded-[2rem] bg-gradient-to-br from-white/90 to-white/40 backdrop-blur-xl flex items-center justify-center text-4xl md:text-5xl shadow-[0_8px_16px_rgba(0,0,0,0.1)] border border-white/60 group-hover:shadow-[0_0_30px_rgba(255,255,255,0.8)] transition-all duration-500"
             >
               <motion.span
-                animate={{ y: [0, -5, 0] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                animate={{ y: [0, -8, 0], scale: [1, 1.05, 1] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
               >
                 {emoji}
               </motion.span>
             </motion.div>
-            <div className="text-left">
-              <h3 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight drop-shadow-sm group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-slate-800 group-hover:to-indigo-600 transition-all duration-300">
+            <div className="text-left flex flex-col justify-center">
+              <h3 className="text-2xl md:text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-indigo-900 drop-shadow-[0_2px_2px_rgba(255,255,255,0.8)] group-hover:from-indigo-600 group-hover:to-purple-600 transition-all duration-500 tracking-tight">
                 {title}
               </h3>
             </div>
           </div>
           <motion.div 
-            whileHover={{ scale: 1.2 }}
-            className="size-12 rounded-full bg-white/60 backdrop-blur-md flex items-center justify-center text-slate-600 shadow-md border border-white group-hover:bg-white group-hover:text-indigo-600 transition-all duration-300 relative z-10"
+            whileHover={{ scale: 1.2, rotate: 180 }}
+            transition={{ duration: 0.3 }}
+            className="size-14 rounded-full bg-white/40 backdrop-blur-md flex items-center justify-center text-slate-700 shadow-lg border border-white/60 group-hover:bg-white group-hover:text-indigo-600 transition-all duration-300 relative z-10"
           >
-            {isExpanded ? <ChevronUp className="size-6" /> : <ChevronDown className="size-6" />}
+            {isExpanded ? <ChevronUp className="size-8" /> : <ChevronDown className="size-8" />}
           </motion.div>
         </button>
         <AnimatePresence>
@@ -1867,11 +1867,14 @@ function DailyAssemblyContent() {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.5, type: "spring", bounce: 0.2 }}
+              transition={{ duration: 0.6, type: "spring", bounce: 0.3 }}
               className="overflow-hidden relative z-10"
             >
-              <div className="p-6 md:p-10">
-                {children}
+              <div className="p-8 md:p-12 relative">
+                <div className="absolute inset-4 bg-white/30 backdrop-blur-xl border border-white/40 rounded-[2rem] pointer-events-none" />
+                <div className="relative z-10">
+                  {children}
+                </div>
               </div>
             </motion.div>
           )}
@@ -1885,18 +1888,27 @@ function DailyAssemblyContent() {
       variants={containerVariants}
       initial="hidden"
       animate="show"
-      className="space-y-8 relative"
+      className="p-6 md:p-10 space-y-12 relative rounded-[3rem] overflow-hidden"
     >
-      {/* Floating Animated Background Orbs */}
+      {/* Immersive Mesh Gradient Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 via-purple-50/50 to-emerald-50/50 -z-20" />
       <motion.div 
-        animate={{ x: [0, 50, 0], y: [0, 30, 0] }}
-        transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-        className="absolute top-0 left-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none -z-10" 
+        animate={{ 
+          scale: [1, 1.2, 1], 
+          x: [0, 100, -100, 0], 
+          y: [0, -100, 100, 0] 
+        }}
+        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+        className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] bg-gradient-to-br from-indigo-400/20 to-purple-400/20 rounded-full blur-[120px] pointer-events-none -z-10 mix-blend-multiply" 
       />
       <motion.div 
-        animate={{ x: [0, -50, 0], y: [0, -30, 0] }}
-        transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-        className="absolute bottom-0 right-0 w-96 h-96 bg-violet-500/10 rounded-full blur-[100px] pointer-events-none -z-10" 
+        animate={{ 
+          scale: [1, 1.3, 1], 
+          x: [0, -100, 100, 0], 
+          y: [0, 100, -100, 0] 
+        }}
+        transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+        className="absolute -bottom-[20%] -right-[10%] w-[60%] h-[60%] bg-gradient-to-br from-emerald-400/20 to-teal-400/20 rounded-full blur-[120px] pointer-events-none -z-10 mix-blend-multiply" 
       />
       {/* Header with Language Toggle */}
       <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-8 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-[3rem] shadow-2xl shadow-indigo-900/20 border border-white/10 relative overflow-hidden group">
