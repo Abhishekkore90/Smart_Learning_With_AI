@@ -36,12 +36,14 @@ import {
   Palette,
   Award,
 } from "lucide-react";
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import { showToast as toast } from "@/lib/custom-toast";
 import { useLanguage } from "@/hooks/use-language";
 import html2canvas from "html2canvas-pro";
+import { db } from "@/lib/firebase";
+import { collection, addDoc } from "firebase/firestore";
 
 export const Route = createFileRoute("/teacher/templates/edit/$templateId")({
   component: TemplateEditorPage,
@@ -342,6 +344,7 @@ function TemplateEditorPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [studentPhoto, setStudentPhoto] = useState<string | null>(null);
   const templateRef = useRef<HTMLDivElement>(null);
+  const [customQuote, setCustomQuote] = useState("");
 
   const config = useMemo(() => {
     if (TEMPLATE_CONFIGS[templateId]) return TEMPLATE_CONFIGS[templateId];
@@ -545,6 +548,29 @@ function TemplateEditorPage() {
           return "तुमच्यातील लपलेला तारा शोधा. चमकण्याची वेळ आता आली आहे!";
         return "तुमच्या अद्भुत कथांनी आम्हाला मंत्रमुग्ध करा आणि एका वेगळ्या जगात घेऊन जा.";
       }
+      if (templateId?.startsWith("achievement")) {
+        if (templateId === "achievement-1")
+          return "उत्कृष्टता हे कौशल्य नाही, तर ती एक वृत्ती आहे. खूप खूप अभिनंदन!";
+        if (templateId === "achievement-2")
+          return "तुमची सातत्यता हीच तुमच्या यशाचा पाया आहे. खूप छान!";
+        if (templateId === "achievement-3")
+          return "तुम्हाला वाढताना आणि यशस्वी होताना पाहणे हाच आमचा सर्वात मोठा पुरस्कार आहे.";
+        return "प्रामाणिकपणा आणि चारित्र्य हे एका खऱ्या नेत्याचे लक्षण आहे. आम्हाला तुमचा सार्थ अभिमान आहे!";
+      }
+    } else if (lang === "hi") {
+      if (templateId?.startsWith("birthday")) {
+        if (templateId === "birthday-1")
+          return "आपका जीवन आपके भविष्य की तरह ही शाही और सुनहरा हो।";
+        if (templateId === "birthday-2")
+          return "अपने इस विशेष दिन पर सफलता की नई ऊंचाइयों को छुएं। सदैव चमकते रहें!";
+        if (templateId === "birthday-3")
+          return "आपको प्राकृतिक आनंद और निरंतर प्रगति से समृद्ध जीवन मिले।";
+        if (templateId === "birthday-4")
+          return "अपनी क्षमता को पहचानें। आज का दिन आपके सबसे अच्छे वर्ष की शुरुआत करे।";
+        if (templateId === "birthday-5")
+          return "आपकी ऊर्जा पूरी दुनिया को रोशन करे। जन्मदिन की हार्दिक शुभकामनाएं!";
+        return "आप एक बहुमूल्य रत्न हैं। आपकी चमक हर राह को आसान करे।";
+      }
       if (templateId?.startsWith("admission")) {
         if (templateId === "admission-1")
           return "बधाई हो! हमारे स्कूल परिवार में आपका स्वागत करते हुए हमें बेहद खुशी है।";
@@ -602,9 +628,14 @@ function TemplateEditorPage() {
     return config.quote;
   }, [config.quote, templateId, lang]);
 
+  // Sync customQuote with translatedQuote initially or when template/language changes
+  useEffect(() => {
+    setCustomQuote(translatedQuote);
+  }, [translatedQuote]);
+
   const configTrans = useMemo(() => {
-    return { ...config, title: translatedTitle, quote: translatedQuote };
-  }, [config, translatedTitle, translatedQuote]);
+    return { ...config, title: translatedTitle, quote: customQuote };
+  }, [config, translatedTitle, customQuote]);
 
   const configToUse = configTrans;
 
@@ -612,10 +643,9 @@ function TemplateEditorPage() {
   const isCultural = templateId?.includes("cultural");
   const isAchievement = templateId?.includes("achievement");
 
-  const handleShareToStudent = () => {
+  const handleShareToStudent = async () => {
     setIsSaving(true);
-    setTimeout(() => {
-      setIsSaving(false);
+    try {
       const type = templateId?.includes("admission")
         ? "Welcome"
         : templateId?.includes("sports")
@@ -627,32 +657,145 @@ function TemplateEditorPage() {
               : templateId?.includes("achievement")
                 ? "Achievement"
                 : "Birthday";
-      toast.success(`${type} card published to ${studentName}'s dashboard!`);
-    }, 2000);
+
+      await addDoc(collection(db, "shared_cards"), {
+        templateId: templateId || "",
+        studentName: studentName || "",
+        studentClass: studentClass || "",
+        title: configToUse.title || "",
+        quote: configToUse.quote || "",
+        photoUrl: studentPhoto || "",
+        type: type,
+        createdAt: new Date().toISOString(),
+      });
+
+      toast.success(
+        lang === "mr"
+          ? `${type} कार्ड विद्यार्थ्याच्या डॅशबोर्डवर यशस्वीरित्या शेअर केले!`
+          : lang === "hi"
+            ? `${type} कार्ड छात्र के डैशबोर्ड पर सफलतापूर्वक साझा किया गया!`
+            : `${type} card published to ${studentName}'s dashboard!`
+      );
+    } catch (e) {
+      console.error("Error sharing to dashboard:", e);
+      toast.error("Failed to share card to dashboard.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleWhatsAppShare = () => {
-    const isAdmission = templateId?.includes("admission");
-    const isSports = templateId?.includes("sports");
-    const isAnnual = templateId?.includes("annual");
-    const isCultural = templateId?.includes("cultural");
-    const isAchievement = templateId?.includes("achievement");
+  const handleWhatsAppShare = async () => {
+    if (!templateRef.current) return;
+    try {
+      toast.success(
+        lang === "mr"
+          ? "व्हाट्सॲप शेअर तयार करत आहे..."
+          : lang === "hi"
+            ? "व्हाट्सएप शेयर तैयार किया जा रहा है..."
+            : "Preparing WhatsApp share..."
+      );
+      
+      const canvas = await html2canvas(templateRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "transparent",
+        ignoreElements: (element) => {
+          if (
+            element.classList.contains("blur-[120px]") ||
+            element.classList.contains("blur-[1px]") ||
+            element.classList.contains("pointer-events-none")
+          ) {
+            return true;
+          }
+          return false;
+        }
+      });
 
-    let message = `🎉 *Special Message from School* 🎓\n\nDear Parent, we are celebrating ${studentName}'s achievements! \n\n"${configToUse.quote}"\n\n— From School Management ❤️`;
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+      if (!blob) throw new Error("Failed to generate image blob");
 
-    if (isAdmission) {
-      message = `🎉 *Congratulations & Welcome to Our School!* 🎓\n\nDear Parent, we are delighted to welcome ${studentName} to our school family in ${studentClass}!\n\n"${configToUse.quote}"\n\n— From School Management ❤️`;
-    } else if (isSports) {
-      message = `🏆 *Sports Excellence News!* 🏅\n\nDear Parent, we are proud to share a special update regarding ${studentName}'s sports performance!\n\n"${configToUse.quote}"\n\n— School Sports Department ⚡`;
-    } else if (isAnnual) {
-      message = `🎭 *Grand Annual Function 2026* 🌟\n\nDear Parent, you are cordially invited to witness ${studentName}'s performance in the Annual Gala!\n\n✨ *Role/Item:* ${studentClass}\n\n"${configToUse.quote}"\n\n— School Events Team 🎭`;
-    } else if (isCultural) {
-      message = `🎨 *Cultural Achievement News* ✨\n\nDear Parent, we are proud to celebrate ${studentName}'s creative participation in our Cultural Events!\n\n✨ *Activity:* ${studentClass}\n\n"${configToUse.quote}"\n\n— School Arts Council 🎨`;
-    } else if (isAchievement) {
-      message = `🏆 *Achievement Celebration* 🏅\n\nDear Parent, we are thrilled to celebrate ${studentName}'s victory in ${studentClass}!\n\n"${configToUse.quote}"\n\n— Proud School Management ❤️`;
+      const file = new File([blob], `${studentName || "Card"}.png`, { type: "image/png" });
+
+      const isAdmission = templateId?.includes("admission");
+      const isSports = templateId?.includes("sports");
+      const isAnnual = templateId?.includes("annual");
+      const isCultural = templateId?.includes("cultural");
+      const isAchievement = templateId?.includes("achievement");
+
+      let message = `🎉 *Special Message from School* 🎓\n\nDear Parent, we are celebrating ${studentName}'s achievements! \n\n"${configToUse.quote}"\n\n— From School Management ❤️`;
+
+      if (isAdmission) {
+        message = `🎉 *Congratulations & Welcome to Our School!* 🎓\n\nDear Parent, we are delighted to welcome ${studentName} to our school family in ${studentClass}!\n\n"${configToUse.quote}"\n\n— From School Management ❤️`;
+      } else if (isSports) {
+        message = `🏆 *Sports Excellence News!* 🏅\n\nDear Parent, we are proud to share a special update regarding ${studentName}'s sports performance!\n\n"${configToUse.quote}"\n\n— School Sports Department ⚡`;
+      } else if (isAnnual) {
+        message = `🎭 *Grand Annual Function 2026* 🌟\n\nDear Parent, you are cordially invited to witness ${studentName}'s performance in the Annual Gala!\n\n✨ *Role/Item:* ${studentClass}\n\n"${configToUse.quote}"\n\n— School Events Team 🎭`;
+      } else if (isCultural) {
+        message = `🎨 *Cultural Achievement News* ✨\n\nDear Parent, we are proud to celebrate ${studentName}'s creative participation in our Cultural Events!\n\n✨ *Activity:* ${studentClass}\n\n"${configToUse.quote}"\n\n— School Arts Council 🎨`;
+      } else if (isAchievement) {
+        message = `🏆 *Achievement Celebration* 🏅\n\nDear Parent, we are thrilled to celebrate ${studentName}'s victory in ${studentClass}!\n\n"${configToUse.quote}"\n\n— Proud School Management ❤️`;
+      }
+
+      // Check if native sharing of files is supported (mobile)
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: "School Card",
+            text: message,
+          });
+          return;
+        } catch (shareError) {
+          console.error("Native share cancelled or failed:", shareError);
+        }
+      }
+
+      // Fallback for Desktop/Non-supporting browsers:
+      // 1. Copy image to Clipboard
+      try {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            [blob.type]: blob,
+          }),
+        ]);
+        toast.success(
+          lang === "mr"
+            ? "कार्ड कॉपी झाले आहे! चॅटमध्ये पेस्ट (Ctrl+V) करा."
+            : lang === "hi"
+              ? "कार्ड कॉपी हो गया है! चैट में पेस्ट (Ctrl+V) करें।"
+              : "Card copied to clipboard! Paste (Ctrl+V) directly into chat."
+        );
+      } catch (clipboardError) {
+        console.error("Clipboard copy failed:", clipboardError);
+        // Fallback: download the image first
+        const link = document.createElement("a");
+        link.href = canvas.toDataURL("image/png");
+        link.download = `${studentName || "Template"}_${templateId || "Card"}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.info(
+          lang === "mr"
+            ? "कार्ड गॅलरीमध्ये सेव्ह झाले आहे. तुम्ही ते थेट पाठवू शकता."
+            : lang === "hi"
+              ? "कार्ड गैलरी में सहेजा गया है। आप इसे सीधे भेज सकते हैं।"
+              : "Card saved to gallery. You can send it directly."
+        );
+      }
+
+      // 2. Open WhatsApp Web/App
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`, "_blank");
+    } catch (e) {
+      console.error("WhatsApp share error:", e);
+      toast.error(
+        lang === "mr"
+          ? "शेअर करताना त्रुटी आली!"
+          : lang === "hi"
+            ? "साझा करते समय त्रुटि हुई!"
+            : "Failed to share on WhatsApp!"
+      );
     }
-
-    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
   };
 
   const handleDownloadTemplate = async () => {
@@ -838,6 +981,31 @@ function TemplateEditorPage() {
                                   ? "उदा. प्रथम स्थान"
                                   : "E.G. CLASS TOPPER"
                               : "CLASS 5-A"
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2 group">
+                  <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">
+                    {lang === "mr"
+                      ? "विशेष संदेश / शुभेच्छा संदेश"
+                      : lang === "hi"
+                        ? "विशेष संदेश / बधाई संदेश"
+                        : "Special Message / Quote"}
+                  </label>
+                  <div className="bg-slate-50 rounded-[2rem] flex items-start gap-4 px-8 py-5 border-2 border-transparent focus-within:bg-white focus-within:border-pink-500/20 transition-all shadow-inner">
+                    <MessageCircle className="size-5 text-slate-300 group-focus-within:text-pink-500 mt-1" />
+                    <textarea
+                      value={customQuote}
+                      onChange={(e) => setCustomQuote(e.target.value)}
+                      className="bg-transparent outline-none w-full text-sm font-black text-slate-900 resize-none h-20"
+                      placeholder={
+                        lang === "mr"
+                          ? "संदेश प्रविष्ट करा..."
+                          : lang === "hi"
+                            ? "संदेश दर्ज करें..."
+                            : "Enter message..."
                       }
                     />
                   </div>

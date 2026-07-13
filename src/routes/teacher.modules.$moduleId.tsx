@@ -4139,12 +4139,33 @@ function AnnualMonthlyPlanningEditor({
   ];
 
   const handleDownloadPDF = async (planType: string) => {
-    const element = document.getElementById(`planning-pdf-content-${planType}`);
+    setIsExporting(true);
+    // Give React time to mount the hidden nodes to the DOM
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    // Find all elements with the matching ID, and prefer the one that is visible (not inside the hidden absolute div)
+    const elements = document.querySelectorAll(`[id="planning-pdf-content-${planType}"]`);
+    let element: HTMLElement | null = null;
+    if (elements.length > 0) {
+      for (let i = 0; i < elements.length; i++) {
+        const el = elements[i] as HTMLElement;
+        const rect = el.getBoundingClientRect();
+        // check if it's not inside a hidden container (rect.width > 0 or rect.left >= 0)
+        if (rect.width > 0 || rect.left >= 0) {
+          element = el;
+          break;
+        }
+      }
+    }
+    if (!element && elements.length > 0) {
+      element = elements[0] as HTMLElement;
+    }
+
     if (!element) {
       toast.error("Failed to generate PDF: content element not found.");
+      setIsExporting(false);
       return;
     }
-    setIsExporting(true);
     let tempWrapper: HTMLDivElement | null = null;
     try {
       // @ts-ignore
@@ -4169,6 +4190,40 @@ function AnnualMonthlyPlanningEditor({
       // can measure and render it with correct full dimensions
       // (not zero-size hidden parent which causes bad layout)
       const clone = element.cloneNode(true) as HTMLElement;
+
+      // Replace inputs with spans containing their actual values
+      const originalInputs = element.querySelectorAll("input");
+      const clonedInputs = clone.querySelectorAll("input");
+      originalInputs.forEach((input, index) => {
+        const clonedInput = clonedInputs[index];
+        if (clonedInput) {
+          const span = document.createElement("span");
+          span.className = clonedInput.className;
+          span.textContent = input.value || "";
+          span.style.display = "inline-block";
+          span.style.width = "100%";
+          span.style.textAlign = window.getComputedStyle(input).textAlign;
+          clonedInput.parentNode?.replaceChild(span, clonedInput);
+        }
+      });
+
+      // Replace textareas with divs containing their actual values (spans/divs render perfectly)
+      const originalTextareas = element.querySelectorAll("textarea");
+      const clonedTextareas = clone.querySelectorAll("textarea");
+      originalTextareas.forEach((textarea, index) => {
+        const clonedTextarea = clonedTextareas[index];
+        if (clonedTextarea) {
+          const div = document.createElement("div");
+          div.className = clonedTextarea.className;
+          div.textContent = textarea.value || "";
+          div.style.whiteSpace = "pre-wrap";
+          div.style.wordBreak = "break-word";
+          div.style.width = "100%";
+          div.style.textAlign = window.getComputedStyle(textarea).textAlign;
+          clonedTextarea.parentNode?.replaceChild(div, clonedTextarea);
+        }
+      });
+
       tempWrapper = document.createElement("div");
       tempWrapper.setAttribute("data-pdf-temp", "true");
       tempWrapper.style.position = "fixed";
@@ -4800,27 +4855,27 @@ function AnnualMonthlyPlanningEditor({
                     <table>
                       <thead>
                         <tr>
-                          <th className="w-[100px] text-center">
+                          <th className="text-center">
                             {isClass1Mr ? "महिना" : "महिना (Month)"}
                           </th>
-                          <th className="w-[70px] text-center">
+                          <th className="text-center">
                             {isClass1Mr ? "कामाचे दिवस" : "कामाचे दिवस (Days)"}
                           </th>
-                          <th className="w-[70px] text-center">
+                          <th className="text-center">
                             {isClass1Mr
                               ? "प्राप्त तासिका"
                               : "प्राप्त तासिका (Periods)"}
                           </th>
                           <th>{isClass1Mr ? "घटक" : "घटक (Topics)"}</th>
-                          <th className="w-[70px] text-center">
+                          <th className="text-center">
                             {isClass1Mr ? "पुरा /अपुरा" : "पुर्ण / अपुर्ण"}
                           </th>
-                          <th className="w-[85px] text-center">
+                          <th className="text-center">
                             {isClass1Mr
                               ? "शिक्षक स्वाक्षरी"
                               : "शिक्षक स्वाक्षरी"}
                           </th>
-                          <th className="w-[100px] text-center">
+                          <th className="text-center">
                             {isClass1Mr
                               ? "मुख्याध्यापक स्वाक्षरी"
                               : "मुख्याध्यापक स्वाक्षरी"}
@@ -4944,15 +4999,23 @@ function AnnualMonthlyPlanningEditor({
                                 </td>
                                 <td className="text-slate-750 font-medium p-1">
                                   <textarea
-                                    rows={2}
-                                    className="w-full bg-transparent border-0 focus:ring-0 focus:outline-none text-slate-750 font-medium resize-none p-0 m-0"
+                                    rows={1}
+                                    className="w-full bg-transparent border-0 focus:ring-0 focus:outline-none text-slate-750 font-medium resize-none p-0 m-0 overflow-hidden"
                                     value={currentTopic}
-                                    onChange={(e) =>
+                                    onChange={(e) => {
                                       handleDataChange(
                                         monthKeyTopic,
                                         e.target.value,
-                                      )
-                                    }
+                                      );
+                                      e.target.style.height = "auto";
+                                      e.target.style.height = e.target.scrollHeight + "px";
+                                    }}
+                                    ref={(el) => {
+                                      if (el) {
+                                        el.style.height = "auto";
+                                        el.style.height = el.scrollHeight + "px";
+                                      }
+                                    }}
                                   />
                                 </td>
                                 <td className="text-slate-450 text-center"></td>
@@ -5290,41 +5353,43 @@ function AnnualMonthlyPlanningEditor({
         }
 
         .pdf-portrait-layout {
-          width: 794px !important;
-          max-width: 794px !important;
-          padding: 30px !important;
+          width: 100% !important;
+          max-width: 100% !important;
+          padding: 40px !important;
           background-color: white !important;
-          color: black !important;
-          border: none !important;
-          box-shadow: none !important;
+          color: #0f172a !important;
+          border: 4px double #d6b97a !important;
+          box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1) !important;
+          border-radius: 1.5rem !important;
           font-family: 'Inter', 'Noto Sans Devanagari', sans-serif !important;
         }
         .pdf-portrait-layout.no-wrapper-style {
           background: transparent !important;
           padding: 0 !important;
           box-shadow: none !important;
-          width: 794px !important;
-          max-width: 794px !important;
+          border: none !important;
+          width: 100% !important;
+          max-width: 100% !important;
         }
         .pdf-portrait-layout table {
           width: 100% !important;
           border-collapse: collapse !important;
-          margin-bottom: 20px !important;
+          margin-bottom: 24px !important;
         }
         .pdf-portrait-layout th, .pdf-portrait-layout td {
           border: 1px solid #cbd5e1 !important;
-          padding: 8px 10px !important;
-          font-size: 11px !important;
-          line-height: 1.4 !important;
+          padding: 12px 14px !important;
+          font-size: 14px !important;
+          line-height: 1.5 !important;
           text-align: left !important;
-          color: #1e293b !important;
+          color: #334155 !important;
         }
         .pdf-portrait-layout td.text-center, .pdf-portrait-layout th.text-center {
           text-align: center !important;
         }
         .pdf-portrait-layout th {
-          background-color: #f1f5f9 !important;
-          font-weight: bold !important;
+          background-color: #f8fafc !important;
+          font-weight: 700 !important;
           color: #0f172a !important;
         }
         .pdf-portrait-layout td input, .pdf-portrait-layout td textarea {
@@ -5340,6 +5405,7 @@ function AnnualMonthlyPlanningEditor({
           resize: none !important;
           box-shadow: none !important;
           outline: none !important;
+          overflow: hidden !important;
         }
         .pdf-portrait-layout td input:hover, .pdf-portrait-layout td textarea:hover {
           background-color: rgba(214, 185, 122, 0.05) !important;
@@ -5347,28 +5413,72 @@ function AnnualMonthlyPlanningEditor({
         .pdf-portrait-layout td input:focus, .pdf-portrait-layout td textarea:focus {
           background-color: rgba(214, 185, 122, 0.1) !important;
         }
+
+        /* Screen-specific Column Widths (Wider) */
+        .pdf-portrait-layout th:nth-child(1) { width: 140px !important; }
+        .pdf-portrait-layout th:nth-child(2) { width: 120px !important; }
+        .pdf-portrait-layout th:nth-child(3) { width: 120px !important; }
+        .pdf-portrait-layout th:nth-child(4) { min-width: 320px !important; }
+        .pdf-portrait-layout th:nth-child(5) { width: 120px !important; }
+        .pdf-portrait-layout th:nth-child(6) { width: 140px !important; }
+        .pdf-portrait-layout th:nth-child(7) { width: 170px !important; }
         .pdf-page-break {
           page-break-before: always !important;
           break-before: page !important;
         }
 
+        /* PDF Export Overrides for Annual Planning */
+        [data-pdf-temp="true"] .pdf-portrait-layout,
+        div[data-pdf-temp="true"] .pdf-portrait-layout.no-wrapper-style {
+          width: 794px !important;
+          max-width: 794px !important;
+          padding: 30px !important;
+          background-color: white !important;
+          border: none !important;
+          box-shadow: none !important;
+          border-radius: 0px !important;
+        }
+        [data-pdf-temp="true"] .pdf-portrait-layout table {
+          margin-bottom: 20px !important;
+        }
+        [data-pdf-temp="true"] .pdf-portrait-layout th,
+        [data-pdf-temp="true"] .pdf-portrait-layout td {
+          border: 1px solid #cbd5e1 !important;
+          padding: 8px 10px !important;
+          font-size: 11px !important;
+          line-height: 1.4 !important;
+          color: #1e293b !important;
+        }
+        [data-pdf-temp="true"] .pdf-portrait-layout th {
+          background-color: #f1f5f9 !important;
+          color: #0f172a !important;
+        }
+        
+        /* PDF Download Column Widths (A4 optimized) */
+        [data-pdf-temp="true"] .pdf-portrait-layout th:nth-child(1) { width: 100px !important; }
+        [data-pdf-temp="true"] .pdf-portrait-layout th:nth-child(2) { width: 70px !important; }
+        [data-pdf-temp="true"] .pdf-portrait-layout th:nth-child(3) { width: 70px !important; }
+        [data-pdf-temp="true"] .pdf-portrait-layout th:nth-child(4) { min-width: auto !important; }
+        [data-pdf-temp="true"] .pdf-portrait-layout th:nth-child(5) { width: 70px !important; }
+        [data-pdf-temp="true"] .pdf-portrait-layout th:nth-child(6) { width: 85px !important; }
+        [data-pdf-temp="true"] .pdf-portrait-layout th:nth-child(7) { width: 100px !important; }
+
         /* Monthly Daily Planning PDF Page Styles */
         .monthly-pdf-page {
-          width: 794px !important;
-          min-height: 1123px !important;
-          padding: 30px !important;
+          width: 100% !important;
+          max-width: 100% !important;
+          padding: 40px !important;
           box-sizing: border-box !important;
-          border: 4px double black !important;
+          border: 4px double #d6b97a !important;
           background-color: white !important;
-          color: black !important;
+          color: #0f172a !important;
           display: flex !important;
           flex-direction: column !important;
           justify-content: space-between !important;
-          page-break-after: always !important;
-          break-after: page !important;
           position: relative !important;
           margin-bottom: 30px !important;
-          box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
+          box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1) !important;
+          border-radius: 1.5rem !important;
         }
         @media print {
           .monthly-pdf-page {
@@ -5378,23 +5488,48 @@ function AnnualMonthlyPlanningEditor({
             box-shadow: none !important;
           }
         }
+        
+        /* PDF Export Overrides for Monthly Planning */
+        [data-pdf-temp="true"] .monthly-pdf-page {
+          width: 794px !important;
+          max-width: 794px !important;
+          min-height: 1123px !important;
+          padding: 30px !important;
+          border: 4px double black !important;
+          box-shadow: none !important;
+          border-radius: 0px !important;
+          page-break-after: always !important;
+          break-after: page !important;
+        }
+        
         .monthly-planning-table {
           width: 100% !important;
           border-collapse: collapse !important;
           table-layout: fixed !important;
         }
         .monthly-planning-table th, .monthly-planning-table td {
-          border: 1px solid black !important;
-          font-size: 10px !important;
-          padding: 3px 4px !important;
-          line-height: 1.25 !important;
+          border: 1px solid #cbd5e1 !important;
+          font-size: 13px !important;
+          padding: 10px 12px !important;
+          line-height: 1.4 !important;
           vertical-align: top !important;
         }
         .monthly-planning-table th {
           background-color: #f8fafc !important;
-          font-weight: bold !important;
+          font-weight: 700 !important;
           text-align: center !important;
+          color: #0f172a !important;
         }
+        
+        [data-pdf-temp="true"] .monthly-planning-table th,
+        [data-pdf-temp="true"] .monthly-planning-table td {
+          border: 1px solid black !important;
+          font-size: 10px !important;
+          padding: 3px 4px !important;
+          line-height: 1.25 !important;
+          color: black !important;
+        }
+        
         .monthly-planning-table td textarea {
           width: 100% !important;
           border: none !important;
@@ -5806,22 +5941,24 @@ function AnnualMonthlyPlanningEditor({
             </div>
 
             {/* Hidden elements for direct PDF download without viewing */}
-            <div
-              className="hidden absolute opacity-0 pointer-events-none w-0 h-0 overflow-hidden"
-              style={{ zIndex: -9999 }}
-            >
-              {selectedClass && selectedMedium && (
-                <>
-                  {renderPlanningPDFContent("annual")}
-                  {renderPlanningPDFContent("monthly")}
-                  {syllabus?.months.map((m) => (
-                    <React.Fragment key={m.en}>
-                      {renderPlanningPDFContent(m.en)}
-                    </React.Fragment>
-                  ))}
-                </>
-              )}
-            </div>
+            {isExporting && (
+              <div
+                className="hidden absolute opacity-0 pointer-events-none w-0 h-0 overflow-hidden"
+                style={{ zIndex: -9999 }}
+              >
+                {selectedClass && selectedMedium && (
+                  <>
+                    {renderPlanningPDFContent("annual")}
+                    {renderPlanningPDFContent("monthly")}
+                    {syllabus?.months.map((m) => (
+                      <React.Fragment key={m.en}>
+                        {renderPlanningPDFContent(m.en)}
+                      </React.Fragment>
+                    ))}
+                  </>
+                )}
+              </div>
+            )}
 
             <div className="flex justify-center gap-6 pt-4">
               <button
@@ -5907,7 +6044,7 @@ function AnnualMonthlyPlanningEditor({
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 30 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="bg-white border border-slate-200 rounded-[3rem] max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl text-slate-800 font-sans"
+            className="bg-white border border-slate-200 rounded-[3rem] max-w-[90vw] w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl text-slate-800 font-sans"
           >
             {/* Modal Controls header */}
             <div className="flex items-center justify-between p-6 md:p-8 border-b border-slate-200 bg-white/85 sticky top-0 backdrop-blur z-10">
@@ -6003,28 +6140,30 @@ function AnnualMonthlyPlanningEditor({
       )}
 
       {/* Off-screen/hidden container for direct PDF downloads */}
-      <div
-        style={{
-          position: "absolute",
-          left: "-9999px",
-          top: "-9999px",
-          width: "0px",
-          height: "0px",
-          overflow: "hidden",
-          pointerEvents: "none",
-        }}
-      >
-        {selectedClass && selectedMedium && syllabus && (
-          <>
-            {renderPlanningPDFContent("annual")}
-            {syllabus.months.map((m) => (
-              <React.Fragment key={m.en}>
-                {renderPlanningPDFContent(m.en)}
-              </React.Fragment>
-            ))}
-          </>
-        )}
-      </div>
+      {isExporting && (
+        <div
+          style={{
+            position: "absolute",
+            left: "-9999px",
+            top: "-9999px",
+            width: "0px",
+            height: "0px",
+            overflow: "hidden",
+            pointerEvents: "none",
+          }}
+        >
+          {selectedClass && selectedMedium && syllabus && (
+            <>
+              {renderPlanningPDFContent("annual")}
+              {syllabus.months.map((m) => (
+                <React.Fragment key={m.en}>
+                  {renderPlanningPDFContent(m.en)}
+                </React.Fragment>
+              ))}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

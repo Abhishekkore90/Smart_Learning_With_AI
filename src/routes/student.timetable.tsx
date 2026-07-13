@@ -420,15 +420,18 @@ function StudentTimetablePage() {
                         style={{
                           borderCollapse: "collapse",
                           border: "1px solid black",
+                          tableLayout: "fixed",
                         }}
                       >
                         <thead>
                           <tr className="text-slate-800 font-bold text-[9px] h-8">
-                            <th
+                             <th
                               style={{
                                 backgroundColor: "#C6E0B4",
                                 border: "1px solid black",
                                 width: "4%",
+                                textAlign: "center",
+                                verticalAlign: "middle",
                               }}
                             >
                               तासिका
@@ -438,6 +441,8 @@ function StudentTimetablePage() {
                                 backgroundColor: "#FFF2CC",
                                 border: "1px solid black",
                                 width: "8%",
+                                textAlign: "center",
+                                verticalAlign: "middle",
                               }}
                             >
                               वेळ
@@ -447,6 +452,8 @@ function StudentTimetablePage() {
                                 backgroundColor: "#FFF2CC",
                                 border: "1px solid black",
                                 width: "9%",
+                                textAlign: "center",
+                                verticalAlign: "middle",
                               }}
                             >
                               सोमवार
@@ -456,6 +463,8 @@ function StudentTimetablePage() {
                                 backgroundColor: "#FFF2CC",
                                 border: "1px solid black",
                                 width: "9%",
+                                textAlign: "center",
+                                verticalAlign: "middle",
                               }}
                             >
                               मंगळवार
@@ -465,6 +474,8 @@ function StudentTimetablePage() {
                                 backgroundColor: "#FFF2CC",
                                 border: "1px solid black",
                                 width: "9%",
+                                textAlign: "center",
+                                verticalAlign: "middle",
                               }}
                             >
                               बुधवार
@@ -474,6 +485,8 @@ function StudentTimetablePage() {
                                 backgroundColor: "#FFF2CC",
                                 border: "1px solid black",
                                 width: "9%",
+                                textAlign: "center",
+                                verticalAlign: "middle",
                               }}
                             >
                               गुरुवार
@@ -484,6 +497,8 @@ function StudentTimetablePage() {
                                 backgroundColor: "#C6E0B4",
                                 border: "1px solid black",
                                 width: "4%",
+                                textAlign: "center",
+                                verticalAlign: "middle",
                               }}
                             >
                               तासिका
@@ -493,6 +508,8 @@ function StudentTimetablePage() {
                                 backgroundColor: "#FFF2CC",
                                 border: "1px solid black",
                                 width: "8%",
+                                textAlign: "center",
+                                verticalAlign: "middle",
                               }}
                             >
                               वेळ
@@ -502,6 +519,8 @@ function StudentTimetablePage() {
                                 backgroundColor: "#FFF2CC",
                                 border: "1px solid black",
                                 width: "10%",
+                                textAlign: "center",
+                                verticalAlign: "middle",
                               }}
                             >
                               शुक्रवार
@@ -512,6 +531,8 @@ function StudentTimetablePage() {
                                 backgroundColor: "#C6E0B4",
                                 border: "1px solid black",
                                 width: "4%",
+                                textAlign: "center",
+                                verticalAlign: "middle",
                               }}
                             >
                               तासिका
@@ -521,6 +542,8 @@ function StudentTimetablePage() {
                                 backgroundColor: "#FFF2CC",
                                 border: "1px solid black",
                                 width: "8%",
+                                textAlign: "center",
+                                verticalAlign: "middle",
                               }}
                             >
                               वेळ
@@ -530,6 +553,8 @@ function StudentTimetablePage() {
                                 backgroundColor: "#FFF2CC",
                                 border: "1px solid black",
                                 width: "10%",
+                                textAlign: "center",
+                                verticalAlign: "middle",
                               }}
                             >
                               शनिवार
@@ -622,18 +647,23 @@ function StudentTimetablePage() {
                                     {row.monThuTime}
                                   </td>
                                   {isMonThuRecess ? (
-                                    <td
-                                      className="font-bold text-center py-0.5"
-                                      style={{
-                                        ...getRecessStyle(
-                                          monThuRecessVal || "",
-                                        ),
-                                        border: "1px solid black",
-                                      }}
-                                      colSpan={4}
-                                    >
-                                      {monThuRecessVal}
-                                    </td>
+                                    <>
+                                      {["monday", "tuesday", "wednesday", "thursday"].map((day) => (
+                                        <td
+                                          key={day}
+                                          className="font-bold text-center py-0.5"
+                                          style={{
+                                            ...getRecessStyle(
+                                              monThuRecessVal || "",
+                                            ),
+                                            border: "1px solid black",
+                                            width: "9%",
+                                          }}
+                                        >
+                                          {row[day] || monThuRecessVal}
+                                        </td>
+                                      ))}
+                                    </>
                                   ) : (
                                     <>
                                       <td

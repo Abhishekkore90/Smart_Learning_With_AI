@@ -1491,15 +1491,18 @@ function ClassTimetablePage() {
                         style={{
                           borderCollapse: "collapse",
                           border: "1px solid black",
+                          tableLayout: "fixed",
                         }}
                       >
                         <thead>
                           <tr className="text-slate-800 font-bold text-[9px] h-8">
-                            <th
+                             <th
                               style={{
                                 backgroundColor: "#C6E0B4",
                                 border: "1px solid black",
                                 width: "4%",
+                                textAlign: "center",
+                                verticalAlign: "middle",
                               }}
                             >
                               तासिका
@@ -1509,6 +1512,8 @@ function ClassTimetablePage() {
                                 backgroundColor: "#FFF2CC",
                                 border: "1px solid black",
                                 width: "8%",
+                                textAlign: "center",
+                                verticalAlign: "middle",
                               }}
                             >
                               वेळ
@@ -1518,6 +1523,8 @@ function ClassTimetablePage() {
                                 backgroundColor: "#FFF2CC",
                                 border: "1px solid black",
                                 width: "9%",
+                                textAlign: "center",
+                                verticalAlign: "middle",
                               }}
                             >
                               सोमवार
@@ -1527,6 +1534,8 @@ function ClassTimetablePage() {
                                 backgroundColor: "#FFF2CC",
                                 border: "1px solid black",
                                 width: "9%",
+                                textAlign: "center",
+                                verticalAlign: "middle",
                               }}
                             >
                               मंगळवार
@@ -1536,6 +1545,8 @@ function ClassTimetablePage() {
                                 backgroundColor: "#FFF2CC",
                                 border: "1px solid black",
                                 width: "9%",
+                                textAlign: "center",
+                                verticalAlign: "middle",
                               }}
                             >
                               बुधवार
@@ -1545,6 +1556,8 @@ function ClassTimetablePage() {
                                 backgroundColor: "#FFF2CC",
                                 border: "1px solid black",
                                 width: "9%",
+                                textAlign: "center",
+                                verticalAlign: "middle",
                               }}
                             >
                               गुरुवार
@@ -1555,6 +1568,8 @@ function ClassTimetablePage() {
                                 backgroundColor: "#C6E0B4",
                                 border: "1px solid black",
                                 width: "4%",
+                                textAlign: "center",
+                                verticalAlign: "middle",
                               }}
                             >
                               तासिका
@@ -1564,6 +1579,8 @@ function ClassTimetablePage() {
                                 backgroundColor: "#FFF2CC",
                                 border: "1px solid black",
                                 width: "8%",
+                                textAlign: "center",
+                                verticalAlign: "middle",
                               }}
                             >
                               वेळ
@@ -1573,6 +1590,8 @@ function ClassTimetablePage() {
                                 backgroundColor: "#FFF2CC",
                                 border: "1px solid black",
                                 width: "10%",
+                                textAlign: "center",
+                                verticalAlign: "middle",
                               }}
                             >
                               शुक्रवार
@@ -1583,6 +1602,8 @@ function ClassTimetablePage() {
                                 backgroundColor: "#C6E0B4",
                                 border: "1px solid black",
                                 width: "4%",
+                                textAlign: "center",
+                                verticalAlign: "middle",
                               }}
                             >
                               तासिका
@@ -1592,6 +1613,8 @@ function ClassTimetablePage() {
                                 backgroundColor: "#FFF2CC",
                                 border: "1px solid black",
                                 width: "8%",
+                                textAlign: "center",
+                                verticalAlign: "middle",
                               }}
                             >
                               वेळ
@@ -1601,6 +1624,8 @@ function ClassTimetablePage() {
                                 backgroundColor: "#FFF2CC",
                                 border: "1px solid black",
                                 width: "10%",
+                                textAlign: "center",
+                                verticalAlign: "middle",
                               }}
                             >
                               शनिवार
@@ -1715,30 +1740,35 @@ function ClassTimetablePage() {
                                     />
                                   </td>
                                   {isMonThuRecess ? (
-                                    <td
-                                      className="font-bold text-center py-0.5"
-                                      style={{
-                                        ...getRecessStyle(
-                                          monThuRecessVal || "",
-                                        ),
-                                        border: "1px solid black",
-                                      }}
-                                      colSpan={4}
-                                    >
-                                      <input
-                                        type="text"
-                                        value={monThuRecessVal || ""}
-                                        onChange={(e) =>
-                                          handleCellChange(
-                                            idx,
-                                            "monday",
-                                            e.target.value,
-                                          )
-                                        }
-                                        style={cellInputStyle}
-                                        className="font-bold text-[9px] text-center outline-none bg-transparent"
-                                      />
-                                    </td>
+                                    <>
+                                      {["monday", "tuesday", "wednesday", "thursday"].map((day) => (
+                                        <td
+                                          key={day}
+                                          className="font-bold text-center py-0.5"
+                                          style={{
+                                            ...getRecessStyle(
+                                              monThuRecessVal || "",
+                                            ),
+                                            border: "1px solid black",
+                                            width: "9%",
+                                          }}
+                                        >
+                                          <input
+                                            type="text"
+                                            value={row[day] || monThuRecessVal || ""}
+                                            onChange={(e) =>
+                                              handleCellChange(
+                                                idx,
+                                                day,
+                                                e.target.value,
+                                              )
+                                            }
+                                            style={cellInputStyle}
+                                            className="font-bold text-[9px] text-center outline-none bg-transparent"
+                                          />
+                                        </td>
+                                      ))}
+                                    </>
                                   ) : (
                                     <>
                                       <td

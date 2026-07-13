@@ -59,6 +59,8 @@ function StudentDashboard() {
   const [mounted, setMounted] = useState(false);
   const [notices, setNotices] = useState<any[]>([]);
   const [homework, setHomework] = useState<any[]>([]);
+  const [sharedCards, setSharedCards] = useState<any[]>([]);
+  const [selectedCard, setSelectedCard] = useState<any | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -94,9 +96,24 @@ function StudentDashboard() {
       setHomework(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
     });
 
+    const qCards = query(
+      collection(db, "shared_cards"),
+      orderBy("createdAt", "desc"),
+    );
+    const unsubCards = onSnapshot(qCards, (snapshot) => {
+      const allCards = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      const studentNameLower = profile?.fullName?.toLowerCase().trim() || "";
+      const filtered = allCards.filter((c: any) => {
+        const cNameLower = c.studentName?.toLowerCase().trim() || "";
+        return cNameLower && (cNameLower === studentNameLower || studentNameLower.includes(cNameLower) || cNameLower.includes(studentNameLower));
+      });
+      setSharedCards(filtered);
+    });
+
     return () => {
       unsubNotices();
       unsubHomework();
+      unsubCards();
     };
   }, [user, profile, authLoading, navigate]);
 
@@ -355,6 +372,85 @@ function StudentDashboard() {
             </div>
           </div>
 
+          {/* Received Greetings & Achievements */}
+          {sharedCards.length > 0 && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-2">
+                <Sparkles className="size-5 text-indigo-600 animate-pulse" />
+                <h2 className="text-2xl font-black text-slate-900 tracking-tight italic">
+                  Greetings & Awards / प्राप्त शुभेच्छा व सन्मान
+                </h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                {sharedCards.map((card) => (
+                  <motion.div
+                    whileHover={{ scale: 1.03 }}
+                    key={card.id}
+                    className="p-6 rounded-[2.5rem] text-white flex flex-col justify-between h-72 shadow-lg relative overflow-hidden border border-white/10"
+                    style={{
+                      background:
+                        card.templateId?.includes("birthday")
+                          ? "linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)"
+                          : card.templateId?.includes("admission")
+                            ? "linear-gradient(135deg, #064e3b 0%, #022c22 100%)"
+                            : card.templateId?.includes("sports")
+                              ? "linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%)"
+                              : card.templateId?.includes("cultural")
+                                ? "linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%)"
+                                : card.templateId?.includes("annual")
+                                  ? "linear-gradient(135deg, #1f2937 0%, #111827 100%)"
+                                  : "linear-gradient(135deg, #1e3a8a 0%, #1e1b4b 100%)",
+                    }}
+                  >
+                    {/* Floating Icons */}
+                    <div className="absolute right-[-10%] bottom-[-10%] opacity-10 pointer-events-none">
+                      {card.templateId?.includes("birthday") ? (
+                        <Gift className="size-44" />
+                      ) : card.templateId?.includes("sports") ? (
+                        <Trophy className="size-44" />
+                      ) : card.templateId?.includes("admission") ? (
+                        <GraduationCap className="size-44" />
+                      ) : (
+                        <Star className="size-44" />
+                      )}
+                    </div>
+
+                    <div className="flex justify-between items-start z-10">
+                      <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-[9px] font-black uppercase tracking-widest border border-white/10">
+                        {card.type} Card
+                      </span>
+                      <span className="text-[9px] font-bold opacity-60">
+                        {card.createdAt ? new Date(card.createdAt).toLocaleDateString() : ""}
+                      </span>
+                    </div>
+
+                    <div className="space-y-3 my-auto z-10 pt-4">
+                      <h3 className="text-2xl font-black tracking-tight italic uppercase leading-none">
+                        {card.title}
+                      </h3>
+                      <p className="text-[11px] font-bold opacity-90 line-clamp-3 leading-relaxed italic">
+                        "{card.quote}"
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between z-10 pt-4 border-t border-white/10">
+                      <div>
+                        <p className="text-[8px] font-black uppercase opacity-60 tracking-wider">Student</p>
+                        <p className="text-xs font-bold leading-none">{card.studentName}</p>
+                      </div>
+                      <button
+                        onClick={() => setSelectedCard(card)}
+                        className="px-4 py-2 bg-white text-slate-900 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-indigo-400 hover:text-white transition-all shadow-md cursor-pointer"
+                      >
+                        View Card
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Bottom Interaction Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {/* Notices Board */}
@@ -475,6 +571,85 @@ function StudentDashboard() {
           <div className="h-10" />
         </div>
       </main>
+
+      {/* Greeting Modal Overlay */}
+      <AnimatePresence>
+        {selectedCard && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-lg rounded-[3rem] p-10 text-white relative shadow-2xl overflow-hidden border border-white/20"
+              style={{
+                background:
+                  selectedCard.templateId?.includes("birthday")
+                    ? "linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)"
+                    : selectedCard.templateId?.includes("admission")
+                      ? "linear-gradient(135deg, #064e3b 0%, #022c22 100%)"
+                      : selectedCard.templateId?.includes("sports")
+                        ? "linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%)"
+                        : selectedCard.templateId?.includes("cultural")
+                          ? "linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%)"
+                          : selectedCard.templateId?.includes("annual")
+                            ? "linear-gradient(135deg, #1f2937 0%, #111827 100%)"
+                            : "linear-gradient(135deg, #1e3a8a 0%, #1e1b4b 100%)",
+              }}
+            >
+              {/* Card Watermark */}
+              <div className="absolute right-[-10%] bottom-[-10%] opacity-10 pointer-events-none">
+                {selectedCard.templateId?.includes("birthday") ? (
+                  <Gift className="size-64" />
+                ) : selectedCard.templateId?.includes("sports") ? (
+                  <Trophy className="size-64" />
+                ) : selectedCard.templateId?.includes("admission") ? (
+                  <GraduationCap className="size-64" />
+                ) : (
+                  <Star className="size-64" />
+                )}
+              </div>
+
+              <div className="flex justify-between items-center mb-8 border-b border-white/10 pb-4">
+                <span className="px-4 py-1.5 bg-white/20 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-widest border border-white/10">
+                  {selectedCard.type} Greeting Card
+                </span>
+                <button
+                  onClick={() => setSelectedCard(null)}
+                  className="size-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white text-xs font-black transition-all cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-6 text-center my-10 relative z-10">
+                {selectedCard.photoUrl && (
+                  <div className="size-36 mx-auto rounded-3xl border-4 border-white/20 overflow-hidden shadow-xl">
+                    <img src={selectedCard.photoUrl} className="w-full h-full object-cover" />
+                  </div>
+                )}
+                
+                <h3 className="text-4xl md:text-5xl font-black tracking-tighter italic uppercase leading-none bg-gradient-to-r from-amber-200 to-yellow-300 bg-clip-text text-transparent">
+                  {selectedCard.title}
+                </h3>
+                <p className="text-base font-bold leading-relaxed max-w-md mx-auto italic text-slate-100">
+                  "{selectedCard.quote}"
+                </p>
+              </div>
+
+              <div className="mt-8 border-t border-white/10 pt-6 flex justify-between items-center text-xs opacity-80">
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-wider">Student Name</p>
+                  <p className="font-bold text-white text-sm">{selectedCard.studentName}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[9px] font-black uppercase tracking-wider">Class / Grade</p>
+                  <p className="font-bold text-white text-sm">{selectedCard.studentClass}</p>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
