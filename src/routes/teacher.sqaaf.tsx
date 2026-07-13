@@ -5259,17 +5259,9 @@ function TeacherSqaafPage() {
             totalPossibleMarks += 4;
           } else {
             if (selectedIdx !== undefined && selectedIdx !== null) {
-              const opts = getGroupedOptions(i, selectedLang);
-              const optText = opts[selectedIdx]?.text?.trim() || "";
-              const isNotApplicable = optText === "लागू नाही" || optText === "Not applicable";
-
-              if (!isNotApplicable) {
-                if (selectedIdx >= 0 && selectedIdx <= 3) {
-                  obtainedMarks_ += (selectedIdx + 1);
-                  totalPossibleMarks += 4;
-                } else {
-                  totalPossibleMarks += 4;
-                }
+              if (selectedIdx >= 0 && selectedIdx <= 3) {
+                obtainedMarks_ += (selectedIdx + 1);
+                totalPossibleMarks += 4;
               }
             } else {
               totalPossibleMarks += 4;
@@ -5723,17 +5715,9 @@ function TeacherSqaafPage() {
             totalPossibleMarks += 4;
           } else {
             if (selectedIdx !== undefined && selectedIdx !== null) {
-              const opts = getGroupedOptions(i, selectedLang);
-              const optText = opts[selectedIdx]?.text?.trim() || "";
-              const isNotApplicable = optText === "लागू नाही" || optText === "Not applicable";
-
-              if (!isNotApplicable) {
-                if (selectedIdx >= 0 && selectedIdx <= 3) {
-                  obtainedMarks_ += (selectedIdx + 1);
-                  totalPossibleMarks += 4;
-                } else {
-                  totalPossibleMarks += 4;
-                }
+              if (selectedIdx >= 0 && selectedIdx <= 3) {
+                obtainedMarks_ += (selectedIdx + 1);
+                totalPossibleMarks += 4;
               }
             } else {
               totalPossibleMarks += 4;
@@ -6103,17 +6087,9 @@ function TeacherSqaafPage() {
             totalPossible += 4;
           } else {
             if (selectedIdx !== undefined && selectedIdx !== null) {
-              const opts = getGroupedOptions(i, selectedLang);
-              const optText = opts[selectedIdx]?.text?.trim() || "";
-              const isNotApplicable = optText === "लागू नाही" || optText === "Not applicable";
-
-              if (!isNotApplicable) {
-                if (selectedIdx >= 0 && selectedIdx <= 3) {
-                  obtainedMarks += (selectedIdx + 1);
-                  totalPossible += 4;
-                } else {
-                  totalPossible += 4;
-                }
+              if (selectedIdx >= 0 && selectedIdx <= 3) {
+                obtainedMarks += (selectedIdx + 1);
+                totalPossible += 4;
               }
             } else {
               totalPossible += 4;
@@ -6564,7 +6540,7 @@ function TeacherSqaafPage() {
   const completedCount = completedStandards.size;
   const uncompletedCount = totalStandards - completedCount;
 
-    const { obtainedMarks, totalMarks, applicableCount, notApplicableCount } = useMemo(() => {
+  const { obtainedMarks, totalMarks, applicableCount, notApplicableCount } = useMemo(() => {
     let obtained = 0;
     let total = 0;
     let applicable = 0;
@@ -6582,7 +6558,7 @@ function TeacherSqaafPage() {
 
           if (isNotApplicable) {
             notApplicable++;
-            // We do NOT add to total when it's Not Applicable
+            total += 4;
           } else {
             applicable++;
             // We only add marks if it's one of the 0-3 indices

@@ -50,6 +50,15 @@ import {
   Check,
   Trash2,
   AlertCircle,
+  Sunrise,
+  Sunset,
+  Music,
+  Quote,
+  HelpCircle,
+  BookMarked,
+  Flag,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
@@ -62,6 +71,7 @@ import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import { TeacherStatisticsEditor } from "@/components/teacher/TeacherStatisticsEditor";
 import { PinGate } from "@/components/teacher/PinGate";
 import class1SyllabusData from "./class1_syllabus.json";
+import { DEFAULT_FORM_DATA, ASSEMBLY_TRANSLATIONS, DEFAULT_ASSEMBLY_ITEMS } from "@/lib/assemblyTranslations";
 
 export const Route = createFileRoute("/teacher/modules/$moduleId")({
   component: ModulePage,
@@ -1579,7 +1589,17 @@ function AssemblyBookViewer() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {/* Daily Assembly Structured Content at Center */}
+      <DailyAssemblyContent />
+
+      {/* Divider */}
+      <div className="flex items-center gap-4 py-2">
+        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#D6B97A]/30 to-transparent" />
+        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[#D6B97A]/50">Reference Books</span>
+        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#D6B97A]/30 to-transparent" />
+      </div>
+
       {loading ? (
         <div className="h-60 flex flex-col items-center justify-center text-slate-400 gap-4">
           <Loader2 className="size-10 text-[#D6B97A] animate-spin" />
@@ -1735,6 +1755,399 @@ function AssemblyBookViewer() {
           </AnimatePresence>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DailyAssemblyContent — Full Paripath / परीपाठ Structured View
+   ═══════════════════════════════════════════════════════════════ */
+function DailyAssemblyContent() {
+  const [lang, setLang] = useState<"mr" | "en" | "hi">("mr");
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+  const [dbFormData, setDbFormData] = useState<any>(null);
+
+  useEffect(() => {
+    // Fetch live parapith data from Firestore
+    const fetchParipath = async () => {
+      try {
+        const docRef = doc(db, "admin_daily_paripath", "current");
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setDbFormData(docSnap.data());
+        }
+      } catch (err) {
+        console.error("Error fetching live paripath data:", err);
+      }
+    };
+    fetchParipath();
+  }, []);
+
+  const t = ASSEMBLY_TRANSLATIONS[lang];
+  // Use DB data for Marathi if available, else fallback to defaults
+  const formData = (lang === "mr" && dbFormData) ? dbFormData : DEFAULT_FORM_DATA[lang];
+  const assemblyItems = DEFAULT_ASSEMBLY_ITEMS[lang];
+
+  const toggleSection = (id: string) => {
+    setExpandedSections((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const SectionCard = ({ id, emoji, title, icon: Icon, gradient, children }: {
+    id: string;
+    emoji: string;
+    title: string;
+    icon: any;
+    gradient: string;
+    children: React.ReactNode;
+  }) => {
+    const isExpanded = expandedSections[id] !== false; // default expanded
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white/90 backdrop-blur-xl border border-[#E8DFD1]/40 rounded-[2rem] overflow-hidden shadow-sm hover:shadow-lg transition-all duration-500"
+      >
+        <button
+          onClick={() => toggleSection(id)}
+          className={`w-full flex items-center justify-between p-5 md:p-6 bg-gradient-to-r ${gradient} cursor-pointer group`}
+        >
+          <div className="flex items-center gap-3 md:gap-4">
+            <div className="size-10 md:size-12 rounded-2xl bg-white/80 backdrop-blur-sm flex items-center justify-center text-lg shadow-sm group-hover:scale-110 transition-transform duration-300">
+              {emoji}
+            </div>
+            <div className="text-left">
+              <h3 className="text-sm md:text-base font-black text-[#1A1A1A] tracking-tight">
+                {title}
+              </h3>
+            </div>
+          </div>
+          <div className="size-8 rounded-full bg-white/50 flex items-center justify-center text-[#D6B97A]">
+            {isExpanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+          </div>
+        </button>
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="overflow-hidden"
+            >
+              <div className="p-5 md:p-6 border-t border-[#E8DFD1]/30">
+                {children}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header with Language Toggle */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 bg-gradient-to-r from-[#1A1A1A] to-[#2D2D2D] rounded-[2rem] shadow-2xl">
+        <div className="flex items-center gap-4">
+          <div className="size-12 rounded-2xl bg-[#D6B97A] flex items-center justify-center text-white shadow-lg">
+            <BookMarked className="size-6" />
+          </div>
+          <div>
+            <h2 className="text-lg md:text-xl font-black text-white tracking-tight">
+              {lang === "mr" ? "दैनिक परीपाठ" : lang === "hi" ? "दैनिक प्रार्थना सभा" : "Daily Assembly"}
+            </h2>
+            <p className="text-[10px] font-bold text-[#D6B97A] uppercase tracking-[0.3em] mt-0.5">
+              {lang === "mr" ? "आजचा परिपाठ" : lang === "hi" ? "आज की सभा" : "Today's Assembly"}
+            </p>
+          </div>
+        </div>
+        <div className="flex bg-white/10 p-1.5 rounded-2xl border border-white/10">
+          {(["mr", "en", "hi"] as const).map((l) => (
+            <button
+              key={l}
+              onClick={() => setLang(l)}
+              className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] transition-all duration-300 ${
+                lang === l
+                  ? "bg-[#D6B97A] text-white shadow-lg"
+                  : "text-white/40 hover:text-white/70"
+              }`}
+            >
+              {l === "mr" ? "मराठी" : l === "hi" ? "हिंदी" : "English"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Assembly Start Items (Anthem, State Song, Pledge, Preamble, Prayer) */}
+      <SectionCard
+        id="assembly-start"
+        emoji="🇮🇳"
+        title={t.assemblyStart}
+        icon={Flag}
+        gradient="from-orange-50/80 via-white/60 to-green-50/80"
+      >
+        <div className="space-y-6">
+          {[
+            { key: 'nationalAnthem', fallbackIdx: 0 },
+            { key: 'stateAnthem', fallbackIdx: 1 },
+            { key: 'pledge', fallbackIdx: 2 },
+            { key: 'preamble', fallbackIdx: 3 },
+            { key: 'prayer', fallbackIdx: 4 },
+          ].map((itemDef, idx) => {
+            const fallbackItem = assemblyItems[itemDef.fallbackIdx];
+            const content = formData[itemDef.key] || fallbackItem.content;
+            
+            return (
+              <div key={idx} className="bg-[#FAFAF7] border border-[#E8DFD1]/30 rounded-2xl p-5 shadow-sm">
+                <div className="flex items-center gap-3 mb-3 border-b border-[#E8DFD1]/40 pb-2">
+                  <span className="text-xl">{fallbackItem.emoji}</span>
+                  <h4 className="font-black text-lg text-[#1A1A1A]">{fallbackItem.label}</h4>
+                  <span className="text-[10px] font-black text-[#D6B97A]/60 uppercase tracking-widest ml-auto">{fallbackItem.sub}</span>
+                </div>
+                <pre className="whitespace-pre-wrap text-sm text-[#333] font-medium leading-relaxed font-sans">
+                  {content}
+                </pre>
+              </div>
+            );
+          })}
+        </div>
+      </SectionCard>
+
+      {/* Panchang */}
+      <SectionCard
+        id="panchang"
+        emoji="🪀"
+        title={t.panchang}
+        icon={Calendar}
+        gradient="from-amber-50/80 to-orange-50/60"
+      >
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { label: t.day, value: formData.day, icon: Calendar },
+            { label: t.month, value: formData.month, icon: Clock },
+            { label: t.paksha, value: formData.paksha, icon: Star },
+            { label: t.tithi, value: formData.tithi, icon: Star },
+            { label: t.nakshatra, value: formData.nakshatra, icon: Sparkles },
+            { label: t.yog, value: formData.yog, icon: Sparkles },
+            { label: t.sunrise, value: formData.sunrise, icon: Sunrise },
+            { label: t.sunset, value: formData.sunset, icon: Sunset },
+          ].map((item, i) => (
+            <div
+              key={i}
+              className="p-3 md:p-4 bg-gradient-to-br from-white to-amber-50/30 border border-amber-100/50 rounded-2xl text-center hover:shadow-md transition-all duration-300"
+            >
+              <item.icon className="size-4 text-[#D6B97A] mx-auto mb-1.5" />
+              <div className="text-[9px] font-black text-[#D6B97A]/60 uppercase tracking-wider mb-1">
+                {item.label}
+              </div>
+              <div className="text-sm font-bold text-[#1A1A1A]">{item.value}</div>
+            </div>
+          ))}
+        </div>
+      </SectionCard>
+
+      {/* Suvichar */}
+      <SectionCard
+        id="thought"
+        emoji="🪀"
+        title={t.thought}
+        icon={Quote}
+        gradient="from-violet-50/80 to-purple-50/60"
+      >
+        <div className="p-5 bg-gradient-to-br from-violet-50/50 to-purple-50/30 border border-violet-100/40 rounded-2xl">
+          <div className="flex items-start gap-3">
+            <Quote className="size-6 text-violet-400/50 flex-shrink-0 mt-1" />
+            <p className="text-base md:text-lg font-semibold text-[#1A1A1A] leading-relaxed italic">
+              {formData.thought}
+            </p>
+          </div>
+        </div>
+      </SectionCard>
+
+      {/* M'han & Arth */}
+      <SectionCard
+        id="proverb"
+        emoji="🪀"
+        title={t.proverbTitle}
+        icon={BookOpen}
+        gradient="from-teal-50/80 to-emerald-50/60"
+      >
+        <div className="space-y-3">
+          <div className="p-4 bg-gradient-to-br from-teal-50/50 to-emerald-50/30 border border-teal-100/40 rounded-2xl">
+            <div className="text-[10px] font-black text-teal-600/60 uppercase tracking-wider mb-2">{t.proverb}</div>
+            <p className="text-base font-bold text-[#1A1A1A]">{formData.proverb}</p>
+          </div>
+          <div className="p-4 bg-white border border-[#E8DFD1]/30 rounded-2xl">
+            <div className="text-[10px] font-black text-[#D6B97A]/60 uppercase tracking-wider mb-2">{t.proverbMeaning}</div>
+            <p className="text-sm font-medium text-[#555] leading-relaxed">{formData.proverbMeaning}</p>
+          </div>
+        </div>
+      </SectionCard>
+
+      {/* Dinvishesh */}
+      <SectionCard
+        id="events"
+        emoji="🪀"
+        title={`${formData.dateMonth} ${t.eventsTitle}`}
+        icon={Calendar}
+        gradient="from-blue-50/80 to-indigo-50/60"
+      >
+        <div className="space-y-4">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-100/50 rounded-full">
+            <Calendar className="size-3.5 text-blue-500" />
+            <span className="text-[10px] font-black text-blue-600 uppercase tracking-wider">
+              {t.yearDayStr.replace("${yearDay}", formData.yearDay)}
+            </span>
+          </div>
+
+          {/* Important Events */}
+          <div className="space-y-2">
+            <h4 className="text-xs font-black text-blue-600/70 uppercase tracking-wider flex items-center gap-2">
+              <Star className="size-3.5" /> {t.importantEvents}
+            </h4>
+            <div className="space-y-1.5">
+              {formData.events.split("\n").map((event: string, i: number) => (
+                <div key={i} className="flex items-start gap-2 p-2.5 bg-blue-50/40 border border-blue-50 rounded-xl">
+                  <div className="size-1.5 rounded-full bg-blue-400 mt-2 flex-shrink-0" />
+                  <span className="text-sm font-medium text-[#333] leading-relaxed">{event}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Birthdays */}
+          <div className="space-y-2">
+            <h4 className="text-xs font-black text-emerald-600/70 uppercase tracking-wider flex items-center gap-2">
+              <Gift className="size-3.5" /> {t.birthdays}
+            </h4>
+            <div className="space-y-1.5">
+              {formData.birthdays.split("\n").map((b: string, i: number) => (
+                <div key={i} className="flex items-start gap-2 p-2.5 bg-emerald-50/40 border border-emerald-50 rounded-xl">
+                  <div className="size-1.5 rounded-full bg-emerald-400 mt-2 flex-shrink-0" />
+                  <span className="text-sm font-medium text-[#333] leading-relaxed">{b}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Deaths */}
+          <div className="space-y-2">
+            <h4 className="text-xs font-black text-rose-600/70 uppercase tracking-wider flex items-center gap-2">
+              <Star className="size-3.5" /> {t.deaths}
+            </h4>
+            <div className="space-y-1.5">
+              {formData.deaths.split("\n").map((d: string, i: number) => (
+                <div key={i} className="flex items-start gap-2 p-2.5 bg-rose-50/40 border border-rose-50 rounded-xl">
+                  <div className="size-1.5 rounded-full bg-rose-400 mt-2 flex-shrink-0" />
+                  <span className="text-sm font-medium text-[#333] leading-relaxed">{d}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </SectionCard>
+
+      {/* Patriotic Song */}
+      <SectionCard
+        id="song"
+        emoji="🪀"
+        title={t.patrioticSongTitle}
+        icon={Music}
+        gradient="from-orange-50/80 to-amber-50/60"
+      >
+        <div className="space-y-3">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-50 border border-orange-100/50 rounded-full">
+            <Music className="size-3.5 text-orange-500" />
+            <span className="text-sm font-bold text-orange-700">{formData.songTitle}</span>
+          </div>
+          <div className="p-5 bg-gradient-to-br from-orange-50/40 to-amber-50/30 border border-orange-100/30 rounded-2xl">
+            <pre className="whitespace-pre-wrap text-sm font-medium text-[#333] leading-relaxed font-sans">
+              {formData.patrioticSong}
+            </pre>
+          </div>
+        </div>
+      </SectionCard>
+
+      {/* Moral Story */}
+      <SectionCard
+        id="story"
+        emoji="🪀"
+        title={t.storyTitle}
+        icon={BookOpen}
+        gradient="from-indigo-50/80 to-blue-50/60"
+      >
+        <div className="space-y-4">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-100/50 rounded-full">
+            <BookOpen className="size-3.5 text-indigo-500" />
+            <span className="text-sm font-bold text-indigo-700">{formData.storyTitle}</span>
+          </div>
+          <div className="p-5 bg-gradient-to-br from-indigo-50/30 to-blue-50/20 border border-indigo-100/30 rounded-2xl">
+            <p className="text-sm font-medium text-[#333] leading-relaxed whitespace-pre-wrap">
+              {formData.story}
+            </p>
+          </div>
+          <div className="p-4 bg-amber-50/50 border border-amber-200/40 rounded-2xl flex items-start gap-3">
+            <Star className="size-5 text-amber-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <div className="text-[10px] font-black text-amber-600/60 uppercase tracking-wider mb-1">{t.moral}</div>
+              <p className="text-sm font-bold text-amber-800">{formData.moral}</p>
+            </div>
+          </div>
+        </div>
+      </SectionCard>
+
+      {/* General Knowledge */}
+      <SectionCard
+        id="gk"
+        emoji="🪀"
+        title={t.gkTitle}
+        icon={HelpCircle}
+        gradient="from-cyan-50/80 to-teal-50/60"
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {[
+            { q: formData.gkQ1, a: formData.gkA1, label: t.q1, aLabel: t.a1 },
+            { q: formData.gkQ2, a: formData.gkA2, label: t.q2, aLabel: t.a2 },
+            { q: formData.gkQ3, a: formData.gkA3, label: t.q3, aLabel: t.a3 },
+            { q: formData.gkQ4, a: formData.gkA4, label: t.q4, aLabel: t.a4 },
+          ].map((item, i) => (
+            <div
+              key={i}
+              className="p-4 bg-gradient-to-br from-white to-cyan-50/30 border border-cyan-100/40 rounded-2xl hover:shadow-md transition-all duration-300"
+            >
+              <div className="flex items-start gap-2 mb-2">
+                <HelpCircle className="size-4 text-cyan-500 flex-shrink-0 mt-0.5" />
+                <p className="text-sm font-semibold text-[#1A1A1A]">{item.q}</p>
+              </div>
+              <div className="ml-6 px-3 py-1.5 bg-cyan-50 border border-cyan-100/50 rounded-xl inline-block">
+                <span className="text-[9px] font-black text-cyan-600/60 uppercase tracking-wider">{t.ans} : </span>
+                <span className="text-sm font-bold text-cyan-700">{item.a}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </SectionCard>
+
+      {/* Personality */}
+      <SectionCard
+        id="personality"
+        emoji="🪀"
+        title={t.personalityTitle}
+        icon={User}
+        gradient="from-rose-50/80 to-pink-50/60"
+      >
+        <div className="space-y-3">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-rose-50 border border-rose-100/50 rounded-full">
+            <User className="size-3.5 text-rose-500" />
+            <span className="text-sm font-bold text-rose-700">{formData.personalityTitle}</span>
+          </div>
+          <div className="p-5 bg-gradient-to-br from-rose-50/30 to-pink-50/20 border border-rose-100/30 rounded-2xl">
+            <p className="text-sm font-medium text-[#333] leading-relaxed whitespace-pre-wrap">
+              {formData.personality}
+            </p>
+          </div>
+        </div>
+      </SectionCard>
     </div>
   );
 }
@@ -1898,6 +2311,15 @@ function SpecialDayEditor({
       gradient: "from-emerald-50 to-white",
     },
     {
+      id: "daily-assembly",
+      label: lang === "en" ? "Daily Assembly" : "दैनिक परीपाठ",
+      sub: lang === "en" ? "Full Paripath" : "संपूर्ण परिपाठ",
+      icon: BookMarked,
+      color: "text-orange-500",
+      bg: "bg-orange-50",
+      gradient: "from-orange-50 to-white",
+    },
+    {
       id: "assembly-book",
       label: lang === "en" ? "Assembly Book" : "परिपाठ पुस्तक",
       sub: lang === "en" ? "Reference Guide" : "मार्गदर्शिका",
@@ -2012,7 +2434,9 @@ function SpecialDayEditor({
           </header>
 
           <div className="flex-1 p-12 space-y-8">
-            {activeSection === "assembly-book" ? (
+            {activeSection === "daily-assembly" ? (
+              <DailyAssemblyContent />
+            ) : activeSection === "assembly-book" ? (
               <AssemblyBookViewer />
             ) : (
               <>
@@ -2860,40 +3284,6 @@ function AnnualMonthlyPlanningEditor({
       // can measure and render it with correct full dimensions
       // (not zero-size hidden parent which causes bad layout)
       const clone = element.cloneNode(true) as HTMLElement;
-
-      // Replace inputs with spans containing their actual values
-      const originalInputs = element.querySelectorAll("input");
-      const clonedInputs = clone.querySelectorAll("input");
-      originalInputs.forEach((input, index) => {
-        const clonedInput = clonedInputs[index];
-        if (clonedInput) {
-          const span = document.createElement("span");
-          span.className = clonedInput.className;
-          span.textContent = input.value || "";
-          span.style.display = "inline-block";
-          span.style.width = "100%";
-          span.style.textAlign = window.getComputedStyle(input).textAlign;
-          clonedInput.parentNode?.replaceChild(span, clonedInput);
-        }
-      });
-
-      // Replace textareas with divs containing their actual values (spans/divs render perfectly)
-      const originalTextareas = element.querySelectorAll("textarea");
-      const clonedTextareas = clone.querySelectorAll("textarea");
-      originalTextareas.forEach((textarea, index) => {
-        const clonedTextarea = clonedTextareas[index];
-        if (clonedTextarea) {
-          const div = document.createElement("div");
-          div.className = clonedTextarea.className;
-          div.textContent = textarea.value || "";
-          div.style.whiteSpace = "pre-wrap";
-          div.style.wordBreak = "break-word";
-          div.style.width = "100%";
-          div.style.textAlign = window.getComputedStyle(textarea).textAlign;
-          clonedTextarea.parentNode?.replaceChild(div, clonedTextarea);
-        }
-      });
-
       tempWrapper = document.createElement('div');
       tempWrapper.setAttribute('data-pdf-temp', 'true');
       tempWrapper.style.position = 'fixed';
@@ -4195,21 +4585,20 @@ function AnnualMonthlyPlanningEditor({
               </div>
             </div>
 
-            {isExporting && (
-              <div className="hidden absolute opacity-0 pointer-events-none w-0 h-0 overflow-hidden" style={{ zIndex: -9999 }}>
-                 {selectedClass && selectedMedium && (
-                   <>
-                     {renderPlanningPDFContent("annual")}
-                     {renderPlanningPDFContent("monthly")}
-                     {syllabus?.months.map((m) => (
-                       <React.Fragment key={m.en}>
-                         {renderPlanningPDFContent(m.en)}
-                       </React.Fragment>
-                     ))}
-                   </>
-                 )}
-              </div>
-            )}
+            {/* Hidden elements for direct PDF download without viewing */}
+            <div className="hidden absolute opacity-0 pointer-events-none w-0 h-0 overflow-hidden" style={{ zIndex: -9999 }}>
+               {selectedClass && selectedMedium && (
+                 <>
+                   {renderPlanningPDFContent("annual")}
+                   {renderPlanningPDFContent("monthly")}
+                   {syllabus?.months.map((m) => (
+                     <React.Fragment key={m.en}>
+                       {renderPlanningPDFContent(m.en)}
+                     </React.Fragment>
+                   ))}
+                 </>
+               )}
+            </div>
 
             <div className="flex justify-center gap-6 pt-4">
               <button
@@ -4363,30 +4752,29 @@ function AnnualMonthlyPlanningEditor({
         </div>
       )}
 
-      {isExporting && (
-        <div 
-          style={{ 
-            position: "absolute", 
-            left: "-9999px", 
-            top: "-9999px", 
-            width: "0px", 
-            height: "0px", 
-            overflow: "hidden",
-            pointerEvents: "none"
-          }}
-        >
-          {selectedClass && selectedMedium && syllabus && (
-            <>
-              {renderPlanningPDFContent("annual")}
-              {syllabus.months.map(m => (
-                <React.Fragment key={m.en}>
-                  {renderPlanningPDFContent(m.en)}
-                </React.Fragment>
-              ))}
-            </>
-          )}
-        </div>
-      )}
+      {/* Off-screen/hidden container for direct PDF downloads */}
+      <div 
+        style={{ 
+          position: "absolute", 
+          left: "-9999px", 
+          top: "-9999px", 
+          width: "0px", 
+          height: "0px", 
+          overflow: "hidden",
+          pointerEvents: "none"
+        }}
+      >
+        {selectedClass && selectedMedium && syllabus && (
+          <>
+            {renderPlanningPDFContent("annual")}
+            {syllabus.months.map(m => (
+              <React.Fragment key={m.en}>
+                {renderPlanningPDFContent(m.en)}
+              </React.Fragment>
+            ))}
+          </>
+        )}
+      </div>
     </div>
   );
 }

@@ -139,8 +139,7 @@ function StudentTimetablePage() {
   useEffect(() => {
     const handleResize = () => {
       if (!containerRef.current) return;
-      const parentWidth =
-        containerRef.current.parentElement?.clientWidth || window.innerWidth;
+      const parentWidth = containerRef.current.parentElement?.clientWidth || window.innerWidth;
       const targetWidth = 1000;
       if (parentWidth < targetWidth) {
         setScale(parentWidth / targetWidth);
@@ -163,34 +162,18 @@ function StudentTimetablePage() {
 
     // Subscribe to class_timetables/${selectedClass}
     const docRef = doc(db, "class_timetables", selectedClass);
-    const unsubscribe = onSnapshot(
-      docRef,
-      (snapshot) => {
-        if (snapshot.exists()) {
-          const data = snapshot.data();
-          if (data) {
-            if (data.district === "सोलापूर") {
-              data.district = "";
-            }
-            if (data.teacherName === "वर्गशिक्षक") {
-              data.teacherName = "शिक्षकाचे नाव टाईप करा";
-            }
-            if (data.headmasterName === "ZP Headmaster") {
-              data.headmasterName = "मुख्याध्यापकाचे नाव टाईप करा";
-            }
-          }
-          setGridData(data);
-        } else {
-          setGridData(null);
-        }
-        setLoading(false);
-      },
-      (error) => {
-        console.error("Firestore loading error:", error);
-        toast.error("Failed to load timetable");
-        setLoading(false);
-      },
-    );
+    const unsubscribe = onSnapshot(docRef, (snapshot) => {
+      if (snapshot.exists()) {
+        setGridData(snapshot.data());
+      } else {
+        setGridData(null);
+      }
+      setLoading(false);
+    }, (error) => {
+      console.error("Firestore loading error:", error);
+      toast.error("Failed to load timetable");
+      setLoading(false);
+    });
 
     return () => unsubscribe();
   }, [selectedClass]);
@@ -210,10 +193,10 @@ function StudentTimetablePage() {
         letterRendering: true,
         windowWidth: 1050,
         scrollX: 0,
-        scrollY: 0,
+        scrollY: 0
       },
       jsPDF: { unit: "in", format: "a4", orientation: "landscape" },
-      pagebreak: { mode: ["css"] },
+      pagebreak: { mode: ['css'] }
     };
 
     toast.success(lang === "mr" ? "PDF तयार होत आहे..." : "Generating PDF...");
@@ -222,10 +205,10 @@ function StudentTimetablePage() {
     const prevWebkitZoom = (element.style as any).WebkitZoom;
 
     try {
-      element.style.zoom = "1";
-      (element.style as any).WebkitZoom = "1";
-      element.style.transform = "scale(0.90)";
-      element.style.transformOrigin = "top center";
+      element.style.zoom = '1';
+      (element.style as any).WebkitZoom = '1';
+      element.style.transform = 'scale(0.90)';
+      element.style.transformOrigin = 'top center';
 
       await html2pdf().set(opt).from(element).save();
     } catch (err) {
@@ -234,15 +217,13 @@ function StudentTimetablePage() {
     } finally {
       element.style.zoom = prevZoom;
       (element.style as any).WebkitZoom = prevWebkitZoom;
-      element.style.transform = "";
-      element.style.transformOrigin = "";
+      element.style.transform = '';
+      element.style.transformOrigin = '';
     }
   };
 
-  const selectedClassNameMr =
-    CLASS_NAME_MAP[selectedClass]?.mr || selectedClass;
-  const selectedClassNameEn =
-    CLASS_NAME_MAP[selectedClass]?.en || selectedClass;
+  const selectedClassNameMr = CLASS_NAME_MAP[selectedClass]?.mr || selectedClass;
+  const selectedClassNameEn = CLASS_NAME_MAP[selectedClass]?.en || selectedClass;
 
   return (
     <div className="min-h-screen bg-slate-50/50 font-sans flex flex-col">
@@ -277,9 +258,7 @@ function StudentTimetablePage() {
                       : "bg-slate-50 text-slate-400 hover:bg-slate-100"
                   }`}
                 >
-                  {lang === "mr"
-                    ? `इयत्ता ${CLASS_NAME_MAP[cls]?.mr || cls}`
-                    : `Class ${cls}`}
+                  {lang === "mr" ? `इयत्ता ${CLASS_NAME_MAP[cls]?.mr || cls}` : `Class ${cls}`}
                 </button>
               ))}
             </div>
@@ -288,9 +267,7 @@ function StudentTimetablePage() {
               <div className="h-96 flex flex-col items-center justify-center text-slate-400 gap-4">
                 <div className="size-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin" />
                 <p className="text-xs font-black uppercase tracking-wider animate-pulse">
-                  {lang === "mr"
-                    ? "वेळापत्रक लोड होत आहे..."
-                    : "Loading timetable..."}
+                  {lang === "mr" ? "वेळापत्रक लोड होत आहे..." : "Loading timetable..."}
                 </p>
               </div>
             ) : gridData ? (
@@ -298,31 +275,25 @@ function StudentTimetablePage() {
                 {/* Download action button */}
                 <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200/60 shadow-sm">
                   <span className="text-xs font-bold text-slate-500 text-center sm:text-left">
-                    {lang === "mr"
-                      ? "वेळापत्रक खालील तक्त्यामध्ये उपलब्ध आहे."
-                      : "The official timetable is listed below."}
+                    {lang === "mr" ? "वेळापत्रक खालील तक्त्यामध्ये उपलब्ध आहे." : "The official timetable is listed below."}
                   </span>
                   <button
                     onClick={handleDownloadPDF}
                     className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md active:scale-95"
                   >
                     <Download className="size-4" />
-                    <span>
-                      {lang === "mr" ? "PDF डाउनलोड" : "Download PDF"}
-                    </span>
+                    <span>{lang === "mr" ? "PDF डाउनलोड" : "Download PDF"}</span>
                   </button>
                 </div>
 
                 <div className="block lg:hidden text-center text-[11px] font-bold text-indigo-500 animate-pulse pb-1">
-                  {lang === "mr"
-                    ? "← पूर्ण वेळापत्रक पाहण्यासाठी डावीकडे/उजवीकडे स्क्रोल करा →"
-                    : "← Scroll horizontally to view full timetable →"}
+                  {lang === "mr" ? "← पूर्ण वेळापत्रक पाहण्यासाठी डावीकडे/उजवीकडे स्क्रोल करा →" : "← Scroll horizontally to view full timetable →"}
                 </div>
 
                 {/* Unified beautiful read-only ZP timetable grid */}
                 <div className="w-full overflow-x-auto pb-4" ref={containerRef}>
-                  <div
-                    id="student-timetable-container"
+                  <div 
+                    id="student-timetable-container" 
                     className="p-4 bg-white text-slate-900 border border-black shadow-sm font-sans space-y-2 w-[1000px] mx-auto overflow-hidden origin-top"
                     style={{
                       ["zoom" as any]: scale,
@@ -331,36 +302,21 @@ function StudentTimetablePage() {
                     }}
                   >
                     {/* Header bar */}
-                    <div
+                    <div 
                       className="flex items-center justify-between p-2 border border-black rounded-lg"
                       style={{
-                        background:
-                          "linear-gradient(to right, #00d2ff, #0072ff)",
+                        background: "linear-gradient(to right, #00d2ff, #0072ff)"
                       }}
                     >
+
                       <div className="flex-1 flex justify-center whitespace-nowrap overflow-visible mx-4">
-                        <div
-                          className="px-6 py-1.5 text-center rounded-lg shadow-sm whitespace-nowrap flex items-center justify-center gap-1"
-                          style={{
-                            background:
-                              "linear-gradient(to bottom, #ffffff, #e6f7ff)",
-                            border: "1px solid black",
-                          }}
-                        >
+                        <div className="px-6 py-1.5 text-center rounded-lg shadow-sm whitespace-nowrap flex items-center justify-center gap-1" style={{ background: 'linear-gradient(to bottom, #ffffff, #e6f7ff)', border: '1px solid black' }}>
                           <span className="text-sm md:text-base font-black text-slate-800 tracking-wider whitespace-nowrap">
-                            वेळापत्रक ( इयत्ता :-{" "}
-                            {gridData.classNameMr || selectedClassNameMr} )
+                            वेळापत्रक ( इयत्ता :- {gridData.classNameMr || selectedClassNameMr} )
                           </span>
                         </div>
                       </div>
-                      <div
-                        className="px-4 py-1.5 text-center rounded-lg whitespace-nowrap flex-shrink-0"
-                        style={{
-                          background:
-                            "linear-gradient(to bottom, #ffffff, #e6f7ff)",
-                          border: "1px solid black",
-                        }}
-                      >
+                      <div className="px-4 py-1.5 text-center rounded-lg whitespace-nowrap flex-shrink-0" style={{ background: 'linear-gradient(to bottom, #ffffff, #e6f7ff)', border: '1px solid black' }}>
                         <span className="text-xs font-black text-slate-800 whitespace-nowrap">
                           सन {gridData.academicYear}
                         </span>
@@ -369,423 +325,109 @@ function StudentTimetablePage() {
 
                     {/* ZP Info bar */}
                     <div className="border border-black text-[10px] font-bold grid grid-cols-12 bg-white">
-                      <div
-                        className="col-span-5 flex items-center gap-1 p-1.5 bg-white"
-                        style={{ borderRight: "1px solid black" }}
-                      >
+                      <div className="col-span-5 flex items-center gap-1 p-1.5 bg-white" style={{ borderRight: '1px solid black' }}>
                         <span>जिल्हा परिषद प्राथमिक शाळा :</span>
-                        <span className="font-bold text-slate-800 px-1">
-                          {gridData.schoolName}
-                        </span>
+                        <span className="font-bold text-slate-800 px-1">{gridData.schoolName}</span>
                       </div>
-                      <div
-                        className="col-span-2 flex items-center gap-1 p-1.5"
-                        style={{
-                          backgroundColor: "#C6E0B4",
-                          borderRight: "1px solid black",
-                        }}
-                      >
-                        <span className="shrink-0">केंद्र :-</span>
-                        <span className="flex-1 min-w-0 font-bold text-slate-800 px-1 truncate">
-                          {gridData.center}
-                        </span>
+                      <div className="col-span-2 flex items-center gap-1 p-1.5" style={{ backgroundColor: '#C6E0B4', borderRight: '1px solid black' }}>
+                        <span>केंद्र :-</span>
+                        <span className="font-bold text-slate-800 px-1">{gridData.center}</span>
                       </div>
-                      <div
-                        className="col-span-2 flex items-center gap-1 p-1.5"
-                        style={{
-                          backgroundColor: "#C6E0B4",
-                          borderRight: "1px solid black",
-                        }}
-                      >
-                        <span className="shrink-0">तालुका :-</span>
-                        <span className="flex-1 min-w-0 font-bold text-slate-800 px-1 truncate">
-                          {gridData.taluka}
-                        </span>
+                      <div className="col-span-2 flex items-center gap-1 p-1.5" style={{ backgroundColor: '#C6E0B4', borderRight: '1px solid black' }}>
+                        <span>तालुका :-</span>
+                        <span className="font-bold text-slate-800 px-1">{gridData.taluka}</span>
                       </div>
-                      <div
-                        className="col-span-3 flex items-center gap-1 p-1.5"
-                        style={{ backgroundColor: "#F2DCDB" }}
-                      >
-                        <span className="shrink-0">जिल्हा :-</span>
-                        <span className="flex-1 min-w-0 font-bold text-slate-800 px-1 truncate">
-                          {gridData.district}
-                        </span>
+                      <div className="col-span-3 flex items-center gap-1 p-1.5" style={{ backgroundColor: '#F2DCDB' }}>
+                        <span>जिल्हा :-</span>
+                        <span className="font-bold text-slate-800 px-1">{gridData.district}</span>
                       </div>
                     </div>
 
                     {/* Unified 12-column table grid */}
                     <div className="w-full">
-                      <table
-                        className="w-full text-center"
-                        style={{
-                          borderCollapse: "collapse",
-                          border: "1px solid black",
-                          tableLayout: "fixed",
-                        }}
-                      >
+                      <table className="w-full text-center" style={{ borderCollapse: 'collapse', border: '1px solid black' }}>
                         <thead>
                           <tr className="text-slate-800 font-bold text-[9px] h-8">
-                             <th
-                              style={{
-                                backgroundColor: "#C6E0B4",
-                                border: "1px solid black",
-                                width: "4%",
-                                textAlign: "center",
-                                verticalAlign: "middle",
-                              }}
-                            >
-                              तासिका
-                            </th>
-                            <th
-                              style={{
-                                backgroundColor: "#FFF2CC",
-                                border: "1px solid black",
-                                width: "8%",
-                                textAlign: "center",
-                                verticalAlign: "middle",
-                              }}
-                            >
-                              वेळ
-                            </th>
-                            <th
-                              style={{
-                                backgroundColor: "#FFF2CC",
-                                border: "1px solid black",
-                                width: "9%",
-                                textAlign: "center",
-                                verticalAlign: "middle",
-                              }}
-                            >
-                              सोमवार
-                            </th>
-                            <th
-                              style={{
-                                backgroundColor: "#FFF2CC",
-                                border: "1px solid black",
-                                width: "9%",
-                                textAlign: "center",
-                                verticalAlign: "middle",
-                              }}
-                            >
-                              मंगळवार
-                            </th>
-                            <th
-                              style={{
-                                backgroundColor: "#FFF2CC",
-                                border: "1px solid black",
-                                width: "9%",
-                                textAlign: "center",
-                                verticalAlign: "middle",
-                              }}
-                            >
-                              बुधवार
-                            </th>
-                            <th
-                              style={{
-                                backgroundColor: "#FFF2CC",
-                                border: "1px solid black",
-                                width: "9%",
-                                textAlign: "center",
-                                verticalAlign: "middle",
-                              }}
-                            >
-                              गुरुवार
-                            </th>
-
-                            <th
-                              style={{
-                                backgroundColor: "#C6E0B4",
-                                border: "1px solid black",
-                                width: "4%",
-                                textAlign: "center",
-                                verticalAlign: "middle",
-                              }}
-                            >
-                              तासिका
-                            </th>
-                            <th
-                              style={{
-                                backgroundColor: "#FFF2CC",
-                                border: "1px solid black",
-                                width: "8%",
-                                textAlign: "center",
-                                verticalAlign: "middle",
-                              }}
-                            >
-                              वेळ
-                            </th>
-                            <th
-                              style={{
-                                backgroundColor: "#FFF2CC",
-                                border: "1px solid black",
-                                width: "10%",
-                                textAlign: "center",
-                                verticalAlign: "middle",
-                              }}
-                            >
-                              शुक्रवार
-                            </th>
-
-                            <th
-                              style={{
-                                backgroundColor: "#C6E0B4",
-                                border: "1px solid black",
-                                width: "4%",
-                                textAlign: "center",
-                                verticalAlign: "middle",
-                              }}
-                            >
-                              तासिका
-                            </th>
-                            <th
-                              style={{
-                                backgroundColor: "#FFF2CC",
-                                border: "1px solid black",
-                                width: "8%",
-                                textAlign: "center",
-                                verticalAlign: "middle",
-                              }}
-                            >
-                              वेळ
-                            </th>
-                            <th
-                              style={{
-                                backgroundColor: "#FFF2CC",
-                                border: "1px solid black",
-                                width: "10%",
-                                textAlign: "center",
-                                verticalAlign: "middle",
-                              }}
-                            >
-                              शनिवार
-                            </th>
+                            <th style={{ backgroundColor: '#C6E0B4', border: '1px solid black', width: '4%' }}>तासिका</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '8%' }}>वेळ</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '9%' }}>सोमवार</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '9%' }}>मंगळवार</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '9%' }}>बुधवार</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '9%' }}>गुरुवार</th>
+                            
+                            <th style={{ backgroundColor: '#C6E0B4', border: '1px solid black', width: '4%' }}>तासिका</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '8%' }}>वेळ</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '10%' }}>शुक्रवार</th>
+                            
+                            <th style={{ backgroundColor: '#C6E0B4', border: '1px solid black', width: '4%' }}>तासिका</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '8%' }}>वेळ</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '10%' }}>शनिवार</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {gridData.rows &&
-                            gridData.rows.map((row: any, idx: number) => {
-                              const isRecessValue = (val: string) => {
-                                if (!val) return false;
-                                const clean = val.trim();
-                                return (
-                                  clean === "लहान सुट्टी" ||
-                                  clean === "मोठी सुट्टी" ||
-                                  clean === "सफाई" ||
-                                  clean === "परिपाठ"
-                                );
-                              };
+                          {gridData.rows && gridData.rows.map((row: any, idx: number) => {
+                            const isRecessValue = (val: string) => {
+                              if (!val) return false;
+                              const clean = val.trim();
+                              return clean === "लहान सुट्टी" || clean === "मोठी सुट्टी" || clean === "सफाई" || clean === "परिपाठ";
+                            };
+                            
+                            const getRecessStyle = (val: string) => {
+                              if (val.includes("परिपाठ")) return { backgroundColor: '#F2DCDB' };
+                              return { backgroundColor: '#C6E0B4' };
+                            };
 
-                              const getRecessStyle = (val: string) => {
-                                if (val.includes("परिपाठ"))
-                                  return { backgroundColor: "#F2DCDB" };
-                                return { backgroundColor: "#C6E0B4" };
-                              };
+                            const hasMonThu = row.monThuPeriod && row.monThuPeriod.trim() !== "";
+                            const monThuPeriodBg = hasMonThu ? "#C6E0B4" : "white";
+                            const monThuTimeBg = row.monThuTime && row.monThuTime.trim() !== "" ? "#F2DCDB" : "white";
+                            
+                            const getMonThuRecessValue = (r: any) => {
+                              if (isRecessValue(r.monday)) return r.monday;
+                              if (isRecessValue(r.tuesday)) return r.tuesday;
+                              if (isRecessValue(r.wednesday)) return r.wednesday;
+                              if (isRecessValue(r.thursday)) return r.thursday;
+                              return null;
+                            };
+                            const monThuRecessVal = getMonThuRecessValue(row);
+                            const isMonThuRecess = monThuRecessVal !== null;
 
-                              const hasMonThu =
-                                row.monThuPeriod &&
-                                row.monThuPeriod.trim() !== "";
-                              const monThuPeriodBg = hasMonThu
-                                ? "#C6E0B4"
-                                : "white";
-                              const monThuTimeBg =
-                                row.monThuTime && row.monThuTime.trim() !== ""
-                                  ? "#F2DCDB"
-                                  : "white";
+                            const hasFri = row.friPeriod && row.friPeriod.trim() !== "";
+                            const friPeriodBg = hasFri ? "#C6E0B4" : "white";
+                            const friTimeBg = row.friTime && row.friTime.trim() !== "" ? "#F2DCDB" : "white";
+                            const isFriRecess = isRecessValue(row.friday);
 
-                              const getMonThuRecessValue = (r: any) => {
-                                if (isRecessValue(r.monday)) return r.monday;
-                                if (isRecessValue(r.tuesday)) return r.tuesday;
-                                if (isRecessValue(r.wednesday))
-                                  return r.wednesday;
-                                if (isRecessValue(r.thursday))
-                                  return r.thursday;
-                                return null;
-                              };
-                              const monThuRecessVal = getMonThuRecessValue(row);
-                              const isMonThuRecess = monThuRecessVal !== null;
+                            const hasSat = row.satPeriod && row.satPeriod.trim() !== "";
+                            const satPeriodBg = hasSat ? "#C6E0B4" : "white";
+                            const satTimeBg = row.satTime && row.satTime.trim() !== "" ? "#F2DCDB" : "white";
+                            const isSatRecess = isRecessValue(row.saturday);
 
-                              const hasFri =
-                                row.friPeriod && row.friPeriod.trim() !== "";
-                              const friPeriodBg = hasFri ? "#C6E0B4" : "white";
-                              const friTimeBg =
-                                row.friTime && row.friTime.trim() !== ""
-                                  ? "#F2DCDB"
-                                  : "white";
-                              const isFriRecess = isRecessValue(row.friday);
-
-                              const hasSat =
-                                row.satPeriod && row.satPeriod.trim() !== "";
-                              const satPeriodBg = hasSat ? "#C6E0B4" : "white";
-                              const satTimeBg =
-                                row.satTime && row.satTime.trim() !== ""
-                                  ? "#F2DCDB"
-                                  : "white";
-                              const isSatRecess = isRecessValue(row.saturday);
-
-                              return (
-                                <tr key={idx} className="text-[9px] h-7">
-                                  <td
-                                    className="font-black py-0.5"
-                                    style={{
-                                      backgroundColor: monThuPeriodBg,
-                                      border: "1px solid black",
-                                      width: "4%",
-                                    }}
-                                  >
-                                    {row.monThuPeriod}
-                                  </td>
-                                  <td
-                                    className="py-0.5"
-                                    style={{
-                                      backgroundColor: monThuTimeBg,
-                                      border: "1px solid black",
-                                      width: "8%",
-                                      color: "#C00000",
-                                      fontWeight: "600",
-                                    }}
-                                  >
-                                    {row.monThuTime}
-                                  </td>
-                                  {isMonThuRecess ? (
-                                    <>
-                                      {["monday", "tuesday", "wednesday", "thursday"].map((day) => (
-                                        <td
-                                          key={day}
-                                          className="font-bold text-center py-0.5"
-                                          style={{
-                                            ...getRecessStyle(
-                                              monThuRecessVal || "",
-                                            ),
-                                            border: "1px solid black",
-                                            width: "9%",
-                                          }}
-                                        >
-                                          {row[day] || monThuRecessVal}
-                                        </td>
-                                      ))}
-                                    </>
-                                  ) : (
-                                    <>
-                                      <td
-                                        className="py-0.5 bg-white font-bold"
-                                        style={{
-                                          border: "1px solid black",
-                                          width: "9%",
-                                        }}
-                                      >
-                                        {row.monday}
-                                      </td>
-                                      <td
-                                        className="py-0.5 bg-white font-bold"
-                                        style={{
-                                          border: "1px solid black",
-                                          width: "9%",
-                                        }}
-                                      >
-                                        {row.tuesday}
-                                      </td>
-                                      <td
-                                        className="py-0.5 bg-white font-bold"
-                                        style={{
-                                          border: "1px solid black",
-                                          width: "9%",
-                                        }}
-                                      >
-                                        {row.wednesday}
-                                      </td>
-                                      <td
-                                        className="py-0.5 bg-white font-bold"
-                                        style={{
-                                          border: "1px solid black",
-                                          width: "9%",
-                                        }}
-                                      >
-                                        {row.thursday}
-                                      </td>
-                                    </>
-                                  )}
-                                  <td
-                                    className="font-black py-0.5"
-                                    style={{
-                                      backgroundColor: friPeriodBg,
-                                      border: "1px solid black",
-                                      width: "4%",
-                                    }}
-                                  >
-                                    {row.friPeriod}
-                                  </td>
-                                  <td
-                                    className="py-0.5"
-                                    style={{
-                                      backgroundColor: friTimeBg,
-                                      border: "1px solid black",
-                                      width: "8%",
-                                      color: "#C00000",
-                                      fontWeight: "600",
-                                    }}
-                                  >
-                                    {row.friTime}
-                                  </td>
-                                  <td
-                                    className="py-0.5 font-bold"
-                                    style={{
-                                      ...(isFriRecess
-                                        ? getRecessStyle(row.friday)
-                                        : { backgroundColor: "white" }),
-                                      border: "1px solid black",
-                                      width: "10%",
-                                    }}
-                                  >
-                                    {row.friday}
-                                  </td>
-                                  <td
-                                    className="font-black py-0.5"
-                                    style={{
-                                      backgroundColor: satPeriodBg,
-                                      border: "1px solid black",
-                                      width: "4%",
-                                    }}
-                                  >
-                                    {row.satPeriod}
-                                  </td>
-                                  <td
-                                    className="py-0.5"
-                                    style={{
-                                      backgroundColor: satTimeBg,
-                                      border: "1px solid black",
-                                      width: "8%",
-                                      color: "#C00000",
-                                      fontWeight: "600",
-                                    }}
-                                  >
-                                    {row.satTime}
-                                  </td>
-                                  {idx === 14 ? (
-                                    <td
-                                      className="py-0.5"
-                                      style={{
-                                        backgroundColor: "#FF0000",
-                                        border: "1px solid black",
-                                        width: "10%",
-                                      }}
-                                    ></td>
-                                  ) : (
-                                    <td
-                                      className="py-0.5 font-bold"
-                                      style={{
-                                        ...(isSatRecess
-                                          ? getRecessStyle(row.saturday)
-                                          : { backgroundColor: "white" }),
-                                        border: "1px solid black",
-                                        width: "10%",
-                                      }}
-                                    >
-                                      {row.saturday}
-                                    </td>
-                                  )}
-                                </tr>
-                              );
-                            })}
+                            return (
+                              <tr key={idx} className="text-[9px] h-7">
+                                <td className="font-black py-0.5" style={{ backgroundColor: monThuPeriodBg, border: '1px solid black', width: '4%' }}>{row.monThuPeriod}</td>
+                                <td className="py-0.5" style={{ backgroundColor: monThuTimeBg, border: '1px solid black', width: '8%', color: '#C00000', fontWeight: '600' }}>{row.monThuTime}</td>
+                                {isMonThuRecess ? (
+                                  <td className="font-bold text-center py-0.5" style={{ ...getRecessStyle(monThuRecessVal || ""), border: '1px solid black' }} colSpan={4}>{monThuRecessVal}</td>
+                                ) : (
+                                  <>
+                                    <td className="py-0.5 bg-white font-bold" style={{ border: '1px solid black', width: '9%' }}>{row.monday}</td>
+                                    <td className="py-0.5 bg-white font-bold" style={{ border: '1px solid black', width: '9%' }}>{row.tuesday}</td>
+                                    <td className="py-0.5 bg-white font-bold" style={{ border: '1px solid black', width: '9%' }}>{row.wednesday}</td>
+                                    <td className="py-0.5 bg-white font-bold" style={{ border: '1px solid black', width: '9%' }}>{row.thursday}</td>
+                                  </>
+                                )}
+                                <td className="font-black py-0.5" style={{ backgroundColor: friPeriodBg, border: '1px solid black', width: '4%' }}>{row.friPeriod}</td>
+                                <td className="py-0.5" style={{ backgroundColor: friTimeBg, border: '1px solid black', width: '8%', color: '#C00000', fontWeight: '600' }}>{row.friTime}</td>
+                                <td className="py-0.5 font-bold" style={{ ...(isFriRecess ? getRecessStyle(row.friday) : { backgroundColor: 'white' }), border: '1px solid black', width: '10%' }}>{row.friday}</td>
+                                <td className="font-black py-0.5" style={{ backgroundColor: satPeriodBg, border: '1px solid black', width: '4%' }}>{row.satPeriod}</td>
+                                <td className="py-0.5" style={{ backgroundColor: satTimeBg, border: '1px solid black', width: '8%', color: '#C00000', fontWeight: '600' }}>{row.satTime}</td>
+                                {idx === 14 ? (
+                                  <td className="py-0.5" style={{ backgroundColor: '#FF0000', border: '1px solid black', width: '10%' }}></td>
+                                ) : (
+                                  <td className="py-0.5 font-bold" style={{ ...(isSatRecess ? getRecessStyle(row.saturday) : { backgroundColor: 'white' }), border: '1px solid black', width: '10%' }}>{row.saturday}</td>
+                                )}
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -794,113 +436,43 @@ function StudentTimetablePage() {
                     <div className="grid grid-cols-12 gap-4 items-end pt-2 border-t border-black">
                       <div className="col-span-7 space-y-1.5 text-left">
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-black text-slate-800 tracking-widest">
-                            तासिका विभागणी :
-                          </span>
-                          <svg
-                            viewBox="0 0 100 40"
-                            className="w-12 h-5 select-none inline-block align-middle"
-                          >
-                            <path
-                              d="M 5,12 L 60,12 L 60,4 L 95,20 L 60,36 L 60,28 L 5,28 Z"
-                              fill="#2E75B6"
-                              stroke="black"
-                              strokeWidth="1.5"
-                            />
+                          <span className="text-[10px] font-black text-slate-800 tracking-widest">तासिका विभागणी :</span>
+                          <svg viewBox="0 0 100 40" className="w-12 h-5 select-none inline-block align-middle">
+                            <path d="M 5,12 L 60,12 L 60,4 L 95,20 L 60,36 L 60,28 L 5,28 Z" fill="#2E75B6" stroke="black" strokeWidth="1.5" />
                           </svg>
                         </div>
-                        <table
-                          className="text-[9px] text-center w-full"
-                          style={{
-                            borderCollapse: "collapse",
-                            border: "1px solid black",
-                          }}
-                        >
+                        <table className="text-[9px] text-center w-full" style={{ borderCollapse: 'collapse', border: '1px solid black' }}>
                           <thead>
                             <tr className="font-bold">
-                              {(
-                                CLASS_SUBJECTS_MAP[selectedClass] ||
-                                CLASS_SUBJECTS_MAP["8th"]
-                              ).map((subj) => (
-                                <th
-                                  key={subj.key}
-                                  style={{
-                                    backgroundColor: "white",
-                                    border: "1px solid black",
-                                    padding: "2px 6px",
-                                  }}
-                                >
-                                  {subj.label}
-                                </th>
+                              {(CLASS_SUBJECTS_MAP[selectedClass] || CLASS_SUBJECTS_MAP["8th"]).map((subj) => (
+                                <th key={subj.key} style={{ backgroundColor: 'white', border: '1px solid black', padding: '2px 6px' }}>{subj.label}</th>
                               ))}
-                              <th
-                                style={{
-                                  backgroundColor: "white",
-                                  border: "1px solid black",
-                                  padding: "2px 6px",
-                                }}
-                                className="font-black"
-                              >
-                                एकूण
-                              </th>
+                              <th style={{ backgroundColor: 'white', border: '1px solid black', padding: '2px 6px' }} className="font-black">एकूण</th>
                             </tr>
                           </thead>
                           <tbody>
-                            <tr style={{ backgroundColor: "#FFFF00" }}>
-                              {(
-                                CLASS_SUBJECTS_MAP[selectedClass] ||
-                                CLASS_SUBJECTS_MAP["8th"]
-                              ).map((subj) => (
-                                <td
-                                  key={subj.key}
-                                  style={{
-                                    backgroundColor: "#FFFF00",
-                                    border: "1px solid black",
-                                    padding: "2px",
-                                    fontWeight: "bold",
-                                  }}
-                                >
-                                  {gridData.subjectDistribution?.[subj.key] ||
-                                    "0"}
+                            <tr style={{ backgroundColor: '#FFFF00' }}>
+                              {(CLASS_SUBJECTS_MAP[selectedClass] || CLASS_SUBJECTS_MAP["8th"]).map((subj) => (
+                                <td key={subj.key} style={{ backgroundColor: '#FFFF00', border: '1px solid black', padding: '2px', fontWeight: 'bold' }}>
+                                  {gridData.subjectDistribution?.[subj.key] || "0"}
                                 </td>
                               ))}
-                              <td
-                                style={{
-                                  backgroundColor: "#FFFF00",
-                                  border: "1px solid black",
-                                  padding: "2px",
-                                }}
-                                className="font-black"
-                              >
+                              <td style={{ backgroundColor: '#FFFF00', border: '1px solid black', padding: '2px' }} className="font-black">
                                 {gridData.subjectDistribution?.total || "48"}
                               </td>
                             </tr>
                           </tbody>
                         </table>
                       </div>
-                      <div
-                        className="col-span-5 p-3 flex justify-between items-center h-16 rounded-lg"
-                        style={{
-                          backgroundColor: "#FCE4D6",
-                          border: "1px solid black",
-                        }}
-                      >
+                      <div className="col-span-5 p-3 flex justify-between items-center h-16 rounded-lg" style={{ backgroundColor: '#FCE4D6', border: '1px solid black' }}>
                         <div className="text-center flex-1 flex flex-col justify-between h-full">
-                          <span className="font-black text-slate-800 text-[8px]">
-                            {gridData.teacherName}
-                          </span>
-                          <div className="border-t border-dashed border-black mt-1 pt-1 text-[8px] font-black text-slate-700 text-center uppercase tracking-wider">
-                            वर्गशिक्षक
-                          </div>
+                          <span className="font-black text-slate-800 text-[10px]">{gridData.teacherName}</span>
+                          <div className="border-t border-dashed border-black mt-1 pt-1 text-[8px] font-black text-slate-700 text-center uppercase tracking-wider">वर्गशिक्षक</div>
                         </div>
                         <div className="h-full w-px bg-black/20 mx-4" />
                         <div className="text-center flex-1 flex flex-col justify-between h-full">
-                          <span className="font-black text-slate-800 text-[8px]">
-                            {gridData.headmasterName}
-                          </span>
-                          <div className="border-t border-dashed border-black mt-1 pt-1 text-[8px] font-black text-slate-700 text-center uppercase tracking-wider">
-                            मुख्याध्यापक
-                          </div>
+                          <span className="font-black text-slate-800 text-[10px]">{gridData.headmasterName}</span>
+                          <div className="border-t border-dashed border-black mt-1 pt-1 text-[8px] font-black text-slate-700 text-center uppercase tracking-wider">मुख्याध्यापक</div>
                         </div>
                       </div>
                     </div>
@@ -914,14 +486,10 @@ function StudentTimetablePage() {
                 </div>
                 <div className="space-y-2 px-4">
                   <h4 className="text-slate-800 font-extrabold text-lg">
-                    {lang === "mr"
-                      ? "वेळापत्रक अद्याप उपलब्ध नाही"
-                      : "Timetable has not been updated yet."}
+                    {lang === "mr" ? "वेळापत्रक अद्याप उपलब्ध नाही" : "Timetable has not been updated yet."}
                   </h4>
                   <p className="text-slate-500 text-xs font-bold leading-relaxed">
-                    {lang === "mr"
-                      ? "कृपया वर्गशिक्षक किंवा प्रशासकाद्वारे जतन होण्याची वाट पहा."
-                      : "Please wait for the class teacher or administrator to save the timetable details."}
+                    {lang === "mr" ? "कृपया वर्गशिक्षक किंवा प्रशासकाद्वारे जतन होण्याची वाट पहा." : "Please wait for the class teacher or administrator to save the timetable details."}
                   </p>
                 </div>
               </div>

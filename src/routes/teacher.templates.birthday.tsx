@@ -27,13 +27,12 @@ import {
   BellRing,
   Save,
   Loader2,
-  Trash2,
 } from "lucide-react";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
-import { doc, getDoc, updateDoc, collection, query, orderBy, onSnapshot, deleteDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { showToast as toast } from "@/lib/custom-toast";
 import { useLanguage } from "@/hooks/use-language";
@@ -134,36 +133,6 @@ function BirthdayTemplatesPage() {
     "May your life be filled with happiness, success and joy. Have a wonderful day!",
   );
   const [isSaving, setIsSaving] = useState(false);
-  const [sharedCards, setSharedCards] = useState<any[]>([]);
-
-  useEffect(() => {
-    const q = query(
-      collection(db, "shared_cards"),
-      orderBy("createdAt", "desc")
-    );
-    const unsub = onSnapshot(q, (snapshot) => {
-      const all = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      const filtered = all.filter((c: any) => c.templateId?.startsWith("birthday"));
-      setSharedCards(filtered);
-    });
-    return () => unsub();
-  }, []);
-
-  const handleDeleteSharedCard = async (cardId: string) => {
-    try {
-      await deleteDoc(doc(db, "shared_cards", cardId));
-      toast.success(
-        lang === "mr"
-          ? "कार्ड यशस्वीरित्या हटवले!"
-          : lang === "hi"
-            ? "कार्ड सफलतापूर्वक हटा दिया गया!"
-            : "Card removed successfully!"
-      );
-    } catch (error) {
-      console.error("Error deleting card:", error);
-      toast.error("Failed to delete card.");
-    }
-  };
 
   const handleSaveSettings = () => {
     setIsSaving(true);
@@ -325,74 +294,6 @@ function BirthdayTemplatesPage() {
               </motion.div>
             ))}
           </div>
-
-          {/* Shared Birthday Cards Section */}
-          {sharedCards.length > 0 && (
-            <div className="space-y-6 pt-10">
-              <div className="flex items-center gap-2">
-                <Sparkles className="size-5 text-pink-500 animate-pulse" />
-                <h3 className="text-2xl font-black text-slate-900 tracking-tight italic">
-                  {lang === "mr"
-                    ? "डॅशबोर्डवर शेअर केलेली वाढदिवस कार्डे"
-                    : lang === "hi"
-                      ? "डैशबोर्ड पर साझा किए गए जन्मदिन कार्ड"
-                      : "Shared Birthday Cards on Dashboard"}
-                </h3>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
-                {sharedCards.map((card) => (
-                  <motion.div
-                    key={card.id}
-                    className="p-6 rounded-[2.5rem] text-white flex flex-col justify-between h-64 shadow-xl relative overflow-hidden border border-white/10"
-                    style={{
-                      background: "linear-gradient(135deg, #2d1b0f 0%, #1a0f0a 100%)",
-                    }}
-                  >
-                    <div className="absolute right-[-10%] bottom-[-10%] opacity-15 pointer-events-none">
-                      <Gift className="size-40" />
-                    </div>
-
-                    <div className="flex justify-between items-start z-10 w-full">
-                      <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-[9px] font-black uppercase tracking-widest border border-white/10">
-                        {card.studentClass}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[9px] font-bold opacity-60">
-                          {card.createdAt ? new Date(card.createdAt).toLocaleDateString() : ""}
-                        </span>
-                        <button
-                          onClick={() => handleDeleteSharedCard(card.id)}
-                          className="p-1.5 bg-red-500/20 hover:bg-red-500/40 text-red-300 rounded-lg transition-all border border-red-500/30 cursor-pointer flex items-center justify-center"
-                          title="Remove Card"
-                        >
-                          <Trash2 className="size-3" />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2 my-auto z-10 pt-4">
-                      <h4 className="text-xl font-black tracking-tight italic uppercase leading-none bg-gradient-to-r from-amber-200 to-yellow-300 bg-clip-text text-transparent">
-                        {card.title}
-                      </h4>
-                      <p className="text-[10px] font-bold opacity-90 line-clamp-3 leading-relaxed italic">
-                        "{card.quote}"
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between z-10 pt-4 border-t border-white/10">
-                      <div>
-                        <p className="text-[7px] font-black uppercase opacity-60 tracking-wider">Student Name</p>
-                        <p className="text-xs font-bold leading-none">{card.studentName}</p>
-                      </div>
-                      <span className="px-3 py-1 bg-emerald-500/20 text-emerald-300 rounded-full text-[8px] font-black uppercase tracking-widest border border-emerald-500/30">
-                        Shared / शेअर केले
-                      </span>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </main>
     </div>

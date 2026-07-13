@@ -11,9 +11,13 @@ import {
   FileText,
   Loader2,
   Book,
+  Edit3,
+  Save,
+  MessageSquare,
 } from "lucide-react";
-import { collection, addDoc, getDocs, deleteDoc, doc, getDoc } from "firebase/firestore";
+import { collection, addDoc, getDocs, deleteDoc, doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { DEFAULT_FORM_DATA } from "@/lib/assemblyTranslations";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { showToast as toast } from "@/lib/custom-toast";
@@ -38,6 +42,9 @@ function AssemblyBookAdmin() {
   const [books, setBooks] = useState<AssemblyBookFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [activeTab, setActiveTab] = useState<"pdf" | "paripath">("paripath");
+  const [paripathData, setParipathData] = useState<any>(DEFAULT_FORM_DATA.mr);
+  const [savingParipath, setSavingParipath] = useState(false);
 
   useEffect(() => {
     const isAdmin = sessionStorage.getItem("is_super_admin");
@@ -50,7 +57,36 @@ function AssemblyBookAdmin() {
     }
 
     fetchBooks();
+    fetchParipath();
   }, [navigate]);
+
+  const fetchParipath = async () => {
+    try {
+      const docRef = doc(db, "admin_daily_paripath", "current");
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setParipathData(docSnap.data());
+      } else {
+        setParipathData(DEFAULT_FORM_DATA.mr); // Fallback to template
+      }
+    } catch (err) {
+      console.error("Error fetching paripath:", err);
+      toast.error("Failed to load today's Paripath.");
+    }
+  };
+
+  const handleSaveParipath = async () => {
+    setSavingParipath(true);
+    try {
+      await setDoc(doc(db, "admin_daily_paripath", "current"), paripathData);
+      toast.success("Paripath updated successfully! 🎉");
+    } catch (err) {
+      console.error("Error saving paripath:", err);
+      toast.error("Failed to save Paripath.");
+    } finally {
+      setSavingParipath(false);
+    }
+  };
 
   const fetchBooks = async () => {
     setLoading(true);
@@ -233,13 +269,38 @@ function AssemblyBookAdmin() {
                 Daily Assembly Book <span className="text-[#6C63FF]">Uploader.</span>
               </h1>
               <p className="text-[#6B7280] max-w-xl text-lg font-medium leading-relaxed">
-                Upload and manage Daily Assembly (Paripath) guidebooks and reference PDFs.
+                Manage the daily structure (Paripath) and upload reference guidebooks.
               </p>
             </div>
           </div>
+
+          {/* Tabs */}
+          <div className="flex bg-white p-1.5 rounded-2xl border border-slate-200 w-fit">
+            <button
+              onClick={() => setActiveTab("paripath")}
+              className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-2 ${
+                activeTab === "paripath"
+                  ? "bg-[#6C63FF] text-white shadow-lg"
+                  : "text-slate-400 hover:text-slate-600"
+              }`}
+            >
+              <Edit3 className="size-4" /> Edit Today's Paripath
+            </button>
+            <button
+              onClick={() => setActiveTab("pdf")}
+              className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-2 ${
+                activeTab === "pdf"
+                  ? "bg-[#6C63FF] text-white shadow-lg"
+                  : "text-slate-400 hover:text-slate-600"
+              }`}
+            >
+              <FileText className="size-4" /> PDF Guidebooks
+            </button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        {activeTab === "pdf" ? (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           {/* Upload Card */}
           <div className="bg-white border border-black/5 rounded-[3rem] p-8 shadow-sm space-y-6">
             <h3 className="text-xl font-black tracking-tight text-stone-900">
@@ -365,6 +426,245 @@ function AssemblyBookAdmin() {
             )}
           </div>
         </div>
+        ) : (
+          /* Paripath Form Editor */
+          <div className="bg-white border border-black/5 rounded-[3rem] p-8 md:p-12 shadow-sm space-y-8">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border-b border-stone-100 pb-6">
+              <div>
+                <h3 className="text-2xl font-black tracking-tight text-stone-900 flex items-center gap-3">
+                  <MessageSquare className="size-6 text-[#6C63FF]" /> Today's Paripath Data
+                </h3>
+                <p className="text-slate-500 mt-2">Edit the structured text below. It will automatically update in the teacher's Daily Assembly module.</p>
+              </div>
+              <button
+                onClick={handleSaveParipath}
+                disabled={savingParipath}
+                className="px-8 py-4 bg-[#6C63FF] text-white text-sm font-black uppercase tracking-widest rounded-2xl hover:bg-indigo-600 transition-all shadow-xl hover:shadow-indigo-500/20 flex items-center gap-2 disabled:opacity-50"
+              >
+                {savingParipath ? <Loader2 className="size-5 animate-spin" /> : <Save className="size-5" />}
+                Save Paripath
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-8">
+              {/* Assembly Start Section */}
+              <div className="space-y-6 lg:col-span-2 p-6 bg-green-50/50 border border-green-100 rounded-3xl">
+                <h4 className="text-lg font-bold text-green-900 flex items-center gap-2 mb-4">
+                  🇮🇳 सुरुवातीचा परिपाठ (Assembly Start)
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {[
+                    { key: 'nationalAnthem', label: '🇮🇳 राष्ट्रगीत (National Anthem)', rows: 4 },
+                    { key: 'stateAnthem', label: '🚩 राज्यगीत (State Anthem)', rows: 4 },
+                    { key: 'pledge', label: '🇮🇳 प्रतिज्ञा (Pledge)', rows: 4 },
+                    { key: 'preamble', label: '🇪🇺 संविधान (Preamble)', rows: 4 },
+                    { key: 'prayer', label: '👏🏻 प्रार्थना (Prayer)', rows: 4 },
+                  ].map((field) => (
+                    <div key={field.key} className={field.key === 'prayer' ? "md:col-span-2" : ""}>
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-green-700 mb-2">{field.label}</label>
+                      <textarea
+                        rows={field.rows}
+                        value={paripathData[field.key] || ''}
+                        onChange={(e) => setParipathData({ ...paripathData, [field.key]: e.target.value })}
+                        className="w-full px-5 py-4 bg-white border border-green-200 rounded-2xl focus:outline-none focus:border-green-400 focus:ring-4 focus:ring-green-400/10 transition-all resize-none"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Panchang Section */}
+              <div className="space-y-6 lg:col-span-2 p-6 bg-amber-50/50 border border-amber-100 rounded-3xl">
+                <h4 className="text-lg font-bold text-amber-900 flex items-center gap-2 mb-4">
+                  🪀 पंचांग (Panchang)
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {['day', 'month', 'paksha', 'tithi', 'nakshatra', 'yog', 'sunrise', 'sunset'].map((field) => (
+                    <div key={field}>
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-amber-700 mb-2">{field}</label>
+                      <input
+                        type="text"
+                        value={paripathData[field] || ''}
+                        onChange={(e) => setParipathData({ ...paripathData, [field]: e.target.value })}
+                        className="w-full px-4 py-3 bg-white border border-amber-200 rounded-xl focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-400/10 transition-all"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Suvichar & Proverb */}
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">🪀 सुविचार (Thought)</label>
+                  <textarea
+                    rows={3}
+                    value={paripathData.thought || ''}
+                    onChange={(e) => setParipathData({ ...paripathData, thought: e.target.value })}
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all resize-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">🪀 म्हण (Proverb)</label>
+                  <input
+                    type="text"
+                    value={paripathData.proverb || ''}
+                    onChange={(e) => setParipathData({ ...paripathData, proverb: e.target.value })}
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all mb-4"
+                  />
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">अर्थ (Meaning)</label>
+                  <textarea
+                    rows={2}
+                    value={paripathData.proverbMeaning || ''}
+                    onChange={(e) => setParipathData({ ...paripathData, proverbMeaning: e.target.value })}
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all resize-none"
+                  />
+                </div>
+              </div>
+
+              {/* Dinvishesh */}
+              <div className="space-y-6">
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Date (e.g. ०९ जुलै)</label>
+                    <input
+                      type="text"
+                      value={paripathData.dateMonth || ''}
+                      onChange={(e) => setParipathData({ ...paripathData, dateMonth: e.target.value })}
+                      className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Day Number (e.g. १९०)</label>
+                    <input
+                      type="text"
+                      value={paripathData.yearDay || ''}
+                      onChange={(e) => setParipathData({ ...paripathData, yearDay: e.target.value })}
+                      className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">🪀 महत्त्वाच्या घटना (Events - line separated)</label>
+                  <textarea
+                    rows={4}
+                    value={paripathData.events || ''}
+                    onChange={(e) => setParipathData({ ...paripathData, events: e.target.value })}
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all resize-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">🪀 जन्मदिवस (Birthdays - line separated)</label>
+                  <textarea
+                    rows={3}
+                    value={paripathData.birthdays || ''}
+                    onChange={(e) => setParipathData({ ...paripathData, birthdays: e.target.value })}
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all resize-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">🪀 मृत्यू / पुण्यतिथी (Deaths - line separated)</label>
+                  <textarea
+                    rows={3}
+                    value={paripathData.deaths || ''}
+                    onChange={(e) => setParipathData({ ...paripathData, deaths: e.target.value })}
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all resize-none"
+                  />
+                </div>
+              </div>
+
+              {/* Story */}
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">🪀 बोधकथा (Story Title)</label>
+                  <input
+                    type="text"
+                    value={paripathData.storyTitle || ''}
+                    onChange={(e) => setParipathData({ ...paripathData, storyTitle: e.target.value })}
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all mb-4"
+                  />
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Story Content</label>
+                  <textarea
+                    rows={6}
+                    value={paripathData.story || ''}
+                    onChange={(e) => setParipathData({ ...paripathData, story: e.target.value })}
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all resize-none mb-4"
+                  />
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">तात्पर्य (Moral)</label>
+                  <input
+                    type="text"
+                    value={paripathData.moral || ''}
+                    onChange={(e) => setParipathData({ ...paripathData, moral: e.target.value })}
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Patriotic Song & GK */}
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">🪀 देशभक्ती गीत (Song Title)</label>
+                  <input
+                    type="text"
+                    value={paripathData.songTitle || ''}
+                    onChange={(e) => setParipathData({ ...paripathData, songTitle: e.target.value })}
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all mb-4"
+                  />
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Lyrics</label>
+                  <textarea
+                    rows={6}
+                    value={paripathData.patrioticSong || ''}
+                    onChange={(e) => setParipathData({ ...paripathData, patrioticSong: e.target.value })}
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all resize-none"
+                  />
+                </div>
+                
+                <div className="p-6 bg-slate-50 rounded-3xl border border-slate-200">
+                  <h4 className="text-sm font-bold text-slate-800 mb-4">🪀 सामान्य ज्ञान (GK)</h4>
+                  {[1, 2, 3, 4].map((num) => (
+                    <div key={`gk${num}`} className="mb-4">
+                      <input
+                        type="text"
+                        placeholder={`Question ${num}`}
+                        value={paripathData[`gkQ${num}`] || ''}
+                        onChange={(e) => setParipathData({ ...paripathData, [`gkQ${num}`]: e.target.value })}
+                        className="w-full px-4 py-2 bg-white border border-slate-200 rounded-t-xl text-sm focus:outline-none focus:border-[#6C63FF] transition-all"
+                      />
+                      <input
+                        type="text"
+                        placeholder={`Answer ${num}`}
+                        value={paripathData[`gkA${num}`] || ''}
+                        onChange={(e) => setParipathData({ ...paripathData, [`gkA${num}`]: e.target.value })}
+                        className="w-full px-4 py-2 bg-slate-100 border border-slate-200 border-t-0 rounded-b-xl text-sm font-bold focus:outline-none focus:border-[#6C63FF] transition-all"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Personality */}
+              <div className="space-y-6 lg:col-span-2">
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">🪀 थोरव्यक्ती परिचय (Name & Dates)</label>
+                  <input
+                    type="text"
+                    value={paripathData.personalityTitle || ''}
+                    onChange={(e) => setParipathData({ ...paripathData, personalityTitle: e.target.value })}
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all mb-4"
+                  />
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Biography</label>
+                  <textarea
+                    rows={6}
+                    value={paripathData.personality || ''}
+                    onChange={(e) => setParipathData({ ...paripathData, personality: e.target.value })}
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all resize-none"
+                  />
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
       </main>
       <Footer />
     </div>
