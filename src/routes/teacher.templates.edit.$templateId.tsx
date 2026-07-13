@@ -35,13 +35,16 @@ import {
   Music,
   Palette,
   Award,
+  FileText,
 } from "lucide-react";
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import { showToast as toast } from "@/lib/custom-toast";
 import { useLanguage } from "@/hooks/use-language";
 import html2canvas from "html2canvas-pro";
+import { db } from "@/lib/firebase";
+import { collection, addDoc } from "firebase/firestore";
 
 export const Route = createFileRoute("/teacher/templates/edit/$templateId")({
   component: TemplateEditorPage,
@@ -339,6 +342,8 @@ function TemplateEditorPage() {
   const { lang } = useLanguage();
   const [studentName, setStudentName] = useState("ADITYA SHINDE");
   const [studentClass, setStudentClass] = useState("CLASS 5-A");
+  const [cardTitle, setCardTitle] = useState("");
+  const [cardQuote, setCardQuote] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const templateRef = useRef<HTMLDivElement>(null);
@@ -560,20 +565,33 @@ function TemplateEditorPage() {
     return config.quote;
   }, [config.quote, templateId, lang]);
 
+  useEffect(() => {
+    setCardTitle(translatedTitle);
+  }, [translatedTitle]);
+
+  useEffect(() => {
+    setCardQuote(translatedQuote);
+  }, [translatedQuote]);
+
   const configTrans = useMemo(() => {
     return { ...config, title: translatedTitle, quote: translatedQuote };
   }, [config, translatedTitle, translatedQuote]);
 
-  const configToUse = configTrans;
+  const configToUse = useMemo(() => {
+    return {
+      ...configTrans,
+      title: cardTitle,
+      quote: cardQuote,
+    };
+  }, [configTrans, cardTitle, cardQuote]);
 
   const isAnnual = templateId?.includes("annual");
   const isCultural = templateId?.includes("cultural");
   const isAchievement = templateId?.includes("achievement");
 
-  const handleShareToStudent = () => {
+  const handleShareToStudent = async () => {
     setIsSaving(true);
-    setTimeout(() => {
-      setIsSaving(false);
+    try {
       const type = templateId?.includes("admission")
         ? "Welcome"
         : templateId?.includes("sports")
@@ -585,8 +603,30 @@ function TemplateEditorPage() {
               : templateId?.includes("achievement")
                 ? "Achievement"
                 : "Birthday";
-      toast.success(`${type} card published to ${studentName}'s dashboard!`);
-    }, 2000);
+      
+      await addDoc(collection(db, "shared_cards"), {
+        templateId,
+        studentName,
+        studentClass,
+        title: cardTitle,
+        quote: cardQuote,
+        createdAt: new Date().toISOString(),
+        type,
+      });
+
+      toast.success(
+        lang === "mr"
+          ? `कार्ड यशस्वीरित्या ${studentName} च्या डॅशबोर्डवर शेअर केले!`
+          : lang === "hi"
+            ? `कार्ड सफलतापूर्वक ${studentName} के डैशबोर्ड पर साझा किया गया!`
+            : `${type} card published to ${studentName}'s dashboard!`
+      );
+    } catch (error) {
+      console.error("Error sharing card:", error);
+      toast.error("Failed to share card to dashboard.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDownloadTemplate = async () => {
@@ -747,6 +787,36 @@ function TemplateEditorPage() {
                               ? (lang === "mr" ? "उदा. प्रथम क्रमांक" : lang === "hi" ? "उदा. प्रथम स्थान" : "E.G. CLASS TOPPER")
                               : "CLASS 5-A"
                       }
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2 group">
+                  <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">
+                    {lang === "mr" ? "कार्ड मथळा (Title)" : lang === "hi" ? "कार्ड का शीर्षक" : "Card Title"}
+                  </label>
+                  <div className="bg-slate-50 rounded-[2rem] flex items-center gap-4 px-8 border-2 border-transparent focus-within:bg-white focus-within:border-indigo-500/20 transition-all shadow-inner">
+                    <FileText className="size-5 text-slate-300 group-focus-within:text-indigo-500" />
+                    <input
+                      type="text"
+                      value={cardTitle}
+                      onChange={(e) => setCardTitle(e.target.value)}
+                      className="bg-transparent outline-none w-full py-6 text-sm font-black text-slate-900"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2 group">
+                  <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">
+                    {lang === "mr" ? "शुभेच्छा संदेश (Quote)" : lang === "hi" ? "शुभकामना संदेश (Quote)" : "Wishing Message / Quote"}
+                  </label>
+                  <div className="bg-slate-50 rounded-[2.5rem] flex items-start gap-4 px-8 py-4 border-2 border-transparent focus-within:bg-white focus-within:border-indigo-500/20 transition-all shadow-inner">
+                    <MessageCircle className="size-5 text-slate-300 mt-2 group-focus-within:text-indigo-500" />
+                    <textarea
+                      value={cardQuote}
+                      onChange={(e) => setCardQuote(e.target.value)}
+                      rows={3}
+                      className="bg-transparent outline-none w-full py-2 text-sm font-black text-slate-900 resize-none"
                     />
                   </div>
                 </div>

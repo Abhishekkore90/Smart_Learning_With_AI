@@ -1742,7 +1742,7 @@ export const standardsDetailData: Record<number, {
       }, {
         text: "३.१ वाचन साक्षरता आणि गणित साक्षरतेसाठी कथा पुस्तके, व्हिडिओ गेम, फ्लॅशकार्ड, चित्र पुस्तके, ॲप्स इत्यादी अध्ययन-अध्यापन साहित्य (TLM) प्रादेशिक भाषेत तसेच मुलांची स्थानिक भाषेत/मातृभाषेत ऑफलाइन तसेच ऑनलाइन पद्धतीने उपलब्धता आहे.\n३.२ शाळेत डिजिटल आणि पुस्तकांच्या प्रती असणारे (भौतिक) ग्रंथालये उपलब्ध आहेत."
       }, {
-        text: "१. पायाभूत आणि पूर्वतयारी वर्गातील (इयत्ता पहिली ते पाचवी) शंभर टक्के विद्यार्थ्यांना प्रादेशिक/स्थानिक भाषेतील इयत्ता निहाय पूरक अध्यापन साहित्य वापरण्यासाठी उपलब्ध आहे.",
+        text: "४.१ पायाभूत आणि पूर्वतयारी वर्गातील (इयत्ता पहिली ते पाचवी) शंभर टक्के विद्यार्थ्यांना प्रादेशिक/स्थानिक भाषेतील इयत्ता निहाय पूरक अध्यापन साहित्य वापरण्यासाठी उपलब्ध आहे.",
         isGreen: true
       }, {
         text: "लागू नाही"
@@ -1758,7 +1758,7 @@ export const standardsDetailData: Record<number, {
       }, {
         text: "3.1 Teaching-learning material (TLM) like storybooks, video games, flashcards, picture books, apps etc. for reading literacy and mathematical literacy is available offline and online in regional/local/mother tongue of children.\n3.2 Digital and physical libraries with book copies are available in the school."
       }, {
-        text: "1. One hundred percent of students in foundational and preparatory stages (grades I to V) have access to grade-wise supplementary teaching learning materials in regional/local languages.",
+        text: "4.1 One hundred percent of students in foundational and preparatory stages (grades I to V) have access to grade-wise supplementary teaching learning materials in regional/local languages.",
         isGreen: true
       }, {
         text: "Not Applicable"
@@ -2808,7 +2808,7 @@ export const standardsDetailData: Record<number, {
       }, {
         text: "३.१ दैनिक स्वच्छता व इतर जबाबदाऱ्या शासकीय निर्देशानुसार नेमून दिल्या आहेत.\n३.२ अभ्यागत व अतिथीसाठी गेस्ट रूम उपलब्ध आहे.\n३.३ वसतिगृहातील खोल्या, स्वयंपाक घर, स्वच्छतागृह,धान्याचे कोठार,परिसर यांची देखभाल दुरूस्ती केली जाते."
       }, {
-        text: "१. वसतिगृहामध्ये विद्यार्थ्यांसाठी टी.व्ही. कॉर्नर, ग्रंथालय ,खेळासाठी सामूहिक खोली उपलब्ध आहे.\n२. इंटरनेट वापरासह संसाधन कक्ष उपलब्ध आहे.\n३. अतिथिगृह, Loundri Room, आणि दैनिक वापरतील सुविधा उपलब्ध आहे.\n४. सर्व सुविधा वापरत असून त्या सुस्थितीत आहेत.\n५. सोलर सिस्टिम उपलब्ध असून ती वापरात आहे."
+        text: "४.१ वसतिगृहामध्ये विद्यार्थ्यांसाठी टी.व्ही. कॉर्नर, ग्रंथालय ,खेळासाठी सामूहिक खोली उपलब्ध आहे.\n४.२ इंटरनेट वापरासह संसाधन कक्ष उपलब्ध आहे.\n४.३ अतिथिगृह, Loundri Room, आणि दैनिक वापरतील सुविधा उपलब्ध आहे.\n४.४ सर्व सुविधा वापरत असून त्या सुस्थितीत आहेत.\n४.५ सोलर सिस्टिम उपलब्ध असून ती वापरात आहे."
       }, {
         text: "लागू नाही",
         isGreen: true
@@ -2823,10 +2823,42 @@ export const standardsDetailData: Record<number, {
       }, {
         text: "3.1 Daily cleaning and other responsibilities are assigned as per government guidelines.\n3.2 Guest room is available for visitors and guests.\n3.3 Hostel rooms, kitchen, toilets, grain store, and premises are maintained and repaired."
       }, {
-        text: "1. TV corner, library, and common room for games are available for students in the hostel.\n2. Resource room with internet access is available.\n3. Guest house, laundry room, and daily use facilities are available.\n4. All facilities are in use and in good condition.\n5. Solar system is available and in use."
+        text: "4.1 TV corner, library, and common room for games are available for students in the hostel.\n4.2 Resource room with internet access is available.\n4.3 Guest house, laundry room, and daily use facilities are available.\n4.4 All facilities are in use and in good condition.\n4.5 Solar system is available and in use."
       }, {
         text: "Not Applicable",
         isGreen: true
+      }]
+    }
+  },
+  64: {
+    mr: {
+      orangeDesc: "२.९.२ मुलींच्या वसतिगृहामध्ये Sanitary Pad, Vending Machine, Incinerator सुविधा उपलब्ध असून स्वच्छता संस्कृती जोपासली जाते.",
+      options: [{
+        text: "१.१ नियमितपणे पाण्याच्या टाक्या साफ करतात .\n१.२ स्वच्छ पाणीपुरवठा उपलब्ध आहे.\n१.३ संपूर्ण वर्षाचे वसतिगृहातील स्वच्छतेचे वेळापत्रक तयार आहे.\n१.४ मनोरंजक मोकळी जागा, अभ्यागतखोली, व्हरांडा, शौचालय, बाथरूम, स्वयंपाकघर आणि जेवणाची जागा स्वच्छ ठेवली जाते.\n१.५ पिण्याच्या पाण्याची जागा स्वच्छ व कोरडी ठेवली जाते.\n१.६ कपडे व भांडी धुण्याची जागा नियमितपणे स्वच्छ व कोरडी ठेवली जाते.\n१.७ वर्षातून एकदा पिण्याच्या पाण्याची तपासणी केली जाते.\n१.८ शाळेत Sanitary Pad उपलब्ध आहेत."
+      }, {
+        text: "२.१ सफाई कामगाराकडून स्वच्छता देखरेखीचे वेळापत्रक (दैनिक, साप्ताहिक, मासिक) तयार करतात.\n२.२ शयनगृह, मनोरंजक हॉल, अभ्यागत खोली, कार्यालय, पिण्याचे पाणी क्षेत्र, बेसिन, मुतारी, Sanitary Fitings, फरशी, मजले, भिंती, कोपरे, डस्टबिन, दरवाजे, खिडक्या इ.चे सफाई कामगारामार्फत स्वच्छता ठेवली जातात.\n२.३ प्रत्येकाच्या भूमिका व जबाबदाऱ्यांचे चार्ट तयार आहेत.\n२.४ देखभाल रजिस्टर तयार आहे.\n२.५ आरोग्य तपासणी अभिलेखे उपलब्ध आहेत.\n२.६ स्वच्छता विषयक कर्मचाऱ्यांसाठी क्षमता वृद्धी कार्यक्रम राबविला जातो.\n२.७ कर्मचारी कार्य व जबाबदारीचे जाणीवपूर्वक पालन करतात."
+      }, {
+        text: "३.१ ऋतुनुसार स्वच्छ व सुरक्षित पाण्याचे नियोजन केले जाते.\n३.२ सुरक्षा व सुरक्षितता समितीद्वारे देखभालीचे निरीक्षण केले जाते, पुनरावलोकन नियमितपणे केले जाते.\n३.३ नियमितपणे कचऱ्याची विल्हेवाट लावली जाते.\n३.४ प्रशिक्षित सफाई कर्मचारी यांची निवड केली जाते.\n३.५ सफाई कामगारांना संरक्षणात्मक साधनासह प्रशिक्षण दिले जाते.\n३.६ इको फ्रेंडली द्वारे कचऱ्याचे व्यवस्थापन केले जाते.\n३.७ स्वच्छता विषयक समित्यांचे रजिस्टर अद्ययावत केले जाते.\n३.८ दैनंदिन स्वच्छता विषयक अहवाल ठेवले जातात.\n३.९ विद्यार्थी व कर्मचारी यांच्यासाठी स्वच्छता विषयक विविध उपक्रमांची आखणी केली जाते."
+      }, {
+        text: "४.१ निवासी शाळा /वसतिगृहात स्वच्छता संदर्भातील धोरणाद्वारे देखभाल व पुनरावलोकन केले जाते.\n४.२ विद्यार्थी व कर्मचारी पर्यावरण पूरक स्वच्छता कार्यक्रमाचे महत्व जाणून उपयोजन करतात.\n४.३ विद्यार्थी, स्टाफ व सफाई कर्मचारी स्वयंप्रेरणेने सभोवतालची स्वच्छता संस्कृती जोपासतात.\n४.४ स्वच्छता विषयक व दूरूस्तीविषयक वेळापत्रक, सूचनाफलक, घोषवाक्ये इ. दर्शनी भागात प्रदर्शित केलेले आहेत.\n४.५ Sanitary Pad वाटप रजिस्टर आहे.\n४.६ अभिप्राय/प्रत्याभरण,नोंद पुस्तिका उपलब्ध आहे.\n४.७ दैनंदिन स्वच्छता-विषयक वेळापत्रक ठेवले आहे.\n४.८ सर्व विद्यार्थ्यांना फिल्टर/RO चे पाणी पुरविले जाते.",
+        isGreen: true
+      }, {
+        text: "लागू नाही"
+      }]
+    },
+    en: {
+      orangeDesc: "2.9.2 In the girls' hostel, Sanitary Pad, Vending Machine, and Incinerator facilities are available, and a culture of cleanliness is nurtured.",
+      options: [{
+        text: "1.1 Water tanks are cleaned regularly.\n1.2 Clean water supply is available.\n1.3 A cleanliness schedule for the entire year is prepared for the hostel.\n1.4 Recreational open space, visitor room, veranda, toilet, bathroom, kitchen, and dining area are kept clean.\n1.5 Drinking water area is kept clean and dry.\n1.6 Clothes and utensil washing areas are cleaned and kept dry regularly.\n1.7 Drinking water is tested once a year.\n1.8 Sanitary Pads are available in the school."
+      }, {
+        text: "2.1 A schedule for cleanliness supervision (daily, weekly, monthly) is prepared by the sanitation workers.\n2.2 Dormitory, recreation hall, visitor room, office, drinking water area, basin, urinal, Sanitary Fittings, tiles, floors, walls, corners, dustbins, doors, windows, etc., are kept clean by sanitation workers.\n2.3 Charts detailing everyone's roles and responsibilities are prepared.\n2.4 A maintenance register is available.\n2.5 Health check-up records are available.\n2.6 Capacity building programs are conducted for sanitation workers.\n2.7 Employees consciously follow their duties and responsibilities."
+      }, {
+        text: "3.1 Planning for clean and safe water is done according to the season.\n3.2 Maintenance is monitored by the safety and security committee, and regular reviews are conducted.\n3.3 Waste is disposed of regularly.\n3.4 Trained sanitation workers are selected.\n3.5 Sanitation workers are provided with training along with protective gear.\n3.6 Waste is managed in an eco-friendly manner.\n3.7 Registers of cleanliness committees are kept updated.\n3.8 Daily cleanliness reports are maintained.\n3.9 Various cleanliness-related activities are planned for students and staff."
+      }, {
+        text: "4.1 Maintenance and review are carried out through cleanliness policies in the residential school/hostel.\n4.2 Students and staff understand the importance of eco-friendly cleanliness programs and implement them.\n4.3 Students, staff, and sanitation workers voluntarily cultivate a culture of cleanliness in the surroundings.\n4.4 Cleanliness and repair schedules, notice boards, slogans, etc., are displayed in prominent areas.\n4.5 A Sanitary Pad distribution register is maintained.\n4.6 Feedback/review and record books are available.\n4.7 A daily cleanliness schedule is maintained.\n4.8 Filtered/RO water is provided to all students.",
+        isGreen: true
+      }, {
+        text: "Not Applicable"
       }]
     }
   },
@@ -4105,8 +4137,10 @@ export const standardsDetailData: Record<number, {
       }, {
         text: "३.१ प्रति विद्यार्थी खर्चाचे शाळा वार्षिक विश्लेषण करते."
       }, {
-        text: "१ शाळा केंद्र व राज्य शासनाच्या धोरणानुसार प्रति विद्यार्थी खर्चाचे विवरणपत्र तयार करून पालकांसाठी व अंतर्गत उपयोगासाठी प्रकाशित करते.\n२ विद्यार्थी लाभाच्या योजना व आर्थिक व्यवहार PFMS प्रणाली, DBT द्वारे केले जातात.",
+        text: "४.१ शाळा केंद्र व राज्य शासनाच्या धोरणानुसार प्रति विद्यार्थी खर्चाचे विवरणपत्र तयार करून पालकांसाठी व अंतर्गत उपयोगासाठी प्रकाशित करते.\n४.२ विद्यार्थी लाभाच्या योजना व आर्थिक व्यवहार PFMS प्रणाली, DBT द्वारे केले जातात.",
         isGreen: true
+      }, {
+        text: "लागू नाही"
       }]
     },
     en: {
@@ -4118,8 +4152,10 @@ export const standardsDetailData: Record<number, {
       }, {
         text: "3.1 The school conducts annual analysis of per student expenditure."
       }, {
-        text: "1. The school prepares per student expenditure statements as per central and state government policies and publishes them for parents and internal use.\n2. Student benefit schemes and financial transactions are done through PFMS system, DBT.",
+        text: "4.1 The school prepares per student expenditure statements as per central and state government policies and publishes them for parents and internal use.\n4.2 Student benefit schemes and financial transactions are done through PFMS system, DBT.",
         isGreen: true
+      }, {
+        text: "Not Applicable"
       }]
     }
   },
@@ -4995,15 +5031,20 @@ function TeacherSqaafPage() {
         if (gridRef.current) {
           gridRef.current.scrollTop = savedScrollPosition;
         }
-        window.scrollTo(0, savedWindowScrollPosition);
+        window.scrollTo({ top: savedWindowScrollPosition, behavior: "instant" });
       };
+      
+      // Try multiple times as framer-motion layout expands the container
       restore();
-      const rAF = requestAnimationFrame(restore);
-      const tO = setTimeout(restore, 100);
+      const delays = [50, 100, 200, 300, 500];
+      const timeouts = delays.map(delay => setTimeout(restore, delay));
+      
       return () => {
-        cancelAnimationFrame(rAF);
-        clearTimeout(tO);
+        timeouts.forEach(clearTimeout);
       };
+    } else if (!wasInDetails && activeStandardDetails !== null) {
+      // Scroll to top when entering a standard's detail page
+      window.scrollTo({ top: 0, behavior: "instant" });
     }
   }, [activeStandardDetails, view, savedScrollPosition, savedWindowScrollPosition]);
 
@@ -5081,17 +5122,14 @@ function TeacherSqaafPage() {
 
 
   const handleDownloadPdf = async (formatOverride?: "table" | "responses", action: "view" | "download" = "download") => {
-    let newTab: Window | null = null;
-    if (action === "view") {
-      newTab = window.open("", "_blank");
-      if (newTab) {
-        newTab.document.write(`<html><head><title>SQAAF PDF Viewer</title></head><body style="font-family:sans-serif;text-align:center;margin-top:20%;color:#475569;">${pdfLang === 'mr' ? 'PDF तयार होत आहे, कृपया प्रतीक्षा करा...' : 'Generating PDF, please wait...'}</body></html>`);
-      }
-    }
-    
+    let toastId: string | undefined;
     try {
       const currentFormat = formatOverride || pdfFormat;
-      const toastId = toast.loading(pdfLang === "mr" ? "PDF तयार करत आहे..." : "Generating PDF...");
+      toastId = toast.loading(
+        pdfLang === "mr" 
+          ? (action === "download" ? "PDF तयार करत आहे..." : "PDF उघडत आहे, कृपया प्रतीक्षा करा...")
+          : (action === "download" ? "Generating PDF..." : "Opening PDF, please wait...")
+      );
 
       // Load school info
       const schoolInfo = (() => {
@@ -6064,7 +6102,7 @@ function TeacherSqaafPage() {
         const { default: html2canvas } = await import("html2canvas");
         const { default: jsPDF } = await import("jspdf");
         
-        const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a3" });
+        const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
         
         const savedCompletedStds = localStorage.getItem("sqaaf_completed_standards");
         let completedStdsSet = new Set<number>();
@@ -6097,14 +6135,14 @@ function TeacherSqaafPage() {
           }
         }
         
-        const A3_WIDTH_PX = 1587; 
-        const A3_HEIGHT_PX = 1122; 
+        const A4_WIDTH_PX = 1122; 
+        const A4_HEIGHT_PX = 793; 
         
         const renderContainer = document.createElement("div");
         renderContainer.style.position = "fixed";
         renderContainer.style.top = "0";
         renderContainer.style.left = "-9999px";
-        renderContainer.style.width = `${A3_WIDTH_PX}px`;
+        renderContainer.style.width = `${A4_WIDTH_PX}px`;
         renderContainer.style.backgroundColor = "white";
         document.body.appendChild(renderContainer);
 
@@ -6181,7 +6219,7 @@ function TeacherSqaafPage() {
            const canvas = await html2canvas(renderContainer, { scale: 2, useCORS: true, logging: false });
            const imgData = canvas.toDataURL("image/jpeg", 1.0);
            if (pageCount > 0) doc.addPage();
-           const pdfWidth = 420;
+           const pdfWidth = 297;
            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
            doc.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
            pageCount++;
@@ -6202,7 +6240,7 @@ function TeacherSqaafPage() {
            currentTable.style.width = "100%";
            currentTable.style.borderCollapse = "collapse";
            currentTable.style.fontFamily = "sans-serif";
-           currentTable.style.fontSize = "13px";
+           currentTable.style.fontSize = "14px";
            
            if (thead) {
               const cloneThead = thead.cloneNode(true) as HTMLTableSectionElement;
@@ -6235,7 +6273,7 @@ function TeacherSqaafPage() {
               });
               currentTbody.appendChild(row);
               
-              if (renderContainer.offsetHeight > A3_HEIGHT_PX) {
+              if (renderContainer.offsetHeight > A4_HEIGHT_PX) {
                  currentTbody.removeChild(row);
                  await saveCurrentPageToPdf();
                  
@@ -6244,7 +6282,7 @@ function TeacherSqaafPage() {
                  currentTable.style.width = "100%";
                  currentTable.style.borderCollapse = "collapse";
                  currentTable.style.fontFamily = "sans-serif";
-                 currentTable.style.fontSize = "13px";
+                 currentTable.style.fontSize = "14px";
                  
                  if (thead) {
                     const cloneThead = thead.cloneNode(true) as HTMLTableSectionElement;
@@ -6292,7 +6330,7 @@ function TeacherSqaafPage() {
            const clonedSummary = summaryTable.cloneNode(true) as HTMLElement;
            currentPage.appendChild(clonedSummary);
            
-           if (renderContainer.offsetHeight > A3_HEIGHT_PX) {
+           if (renderContainer.offsetHeight > A4_HEIGHT_PX) {
                currentPage.removeChild(clonedSummary);
                currentPage.removeChild(spacing);
                await saveCurrentPageToPdf();
@@ -6308,17 +6346,12 @@ function TeacherSqaafPage() {
         
         if (action === "download") {
           doc.save(filename);
-          toast.dismiss(toastId);
+          if (toastId) toast.dismiss(toastId);
           toast.success(pdfLang === "mr" ? "PDF डाउनलोड झाली!" : "PDF downloaded!");
         } else {
           const url = URL.createObjectURL(doc.output("blob"));
-          if (newTab) {
-            newTab.location.href = url;
-          } else {
-            window.open(url, "_blank");
-          }
-          toast.dismiss(toastId);
-          toast.success(pdfLang === "mr" ? "PDF उघडली आहे." : "PDF opened.");
+          setPreviewPdfUrl(url);
+          if (toastId) toast.dismiss(toastId);
         }
 
       } else {
@@ -6342,30 +6375,24 @@ function TeacherSqaafPage() {
          if (action === "download") {
             await html2pdf().set(pdfOptions).from(container).save();
             document.body.removeChild(container);
-            toast.dismiss(toastId);
+            if (toastId) toast.dismiss(toastId);
             toast.success(pdfLang === "mr" ? "PDF डाउनलोड झाली!" : "PDF downloaded!");
          } else {
             html2pdf().set(pdfOptions).from(container).output('bloburl').then((url: any) => {
-              if (newTab) {
-                newTab.location.href = url;
-              } else {
-                window.open(url as string, "_blank");
-              }
+              setPreviewPdfUrl(url);
               document.body.removeChild(container);
-              toast.dismiss(toastId);
-              toast.success(pdfLang === "mr" ? "PDF उघडली आहे." : "PDF opened.");
+              if (toastId) toast.dismiss(toastId);
             }).catch((err: any) => {
               console.error("PDF View Error:", err);
-              if (newTab) newTab.close();
               document.body.removeChild(container);
-              toast.dismiss(toastId);
+              if (toastId) toast.dismiss(toastId);
               toast.error(pdfLang === "mr" ? "PDF उघडताना त्रुटी आली." : "Error opening PDF.");
             });
          }
       }
     } catch (err) {
       console.error("PDF generation error:", err);
-      if (newTab) newTab.close();
+      if (toastId) toast.dismiss(toastId);
       toast.error(pdfLang === "mr" ? "PDF बनवताना त्रुटी आली." : "Error generating PDF.");
     }
   };
@@ -8042,7 +8069,7 @@ function TeacherSqaafPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm flex flex-col"
+            className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm flex flex-col p-4 sm:p-6 lg:p-8"
             onClick={() => {
               URL.revokeObjectURL(previewPdfUrl);
               setPreviewPdfUrl(null);
@@ -8053,7 +8080,7 @@ function TeacherSqaafPage() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.92, y: 30 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="bg-white shadow-2xl w-full h-full flex flex-col overflow-hidden"
+              className="bg-white rounded-2xl shadow-2xl w-full h-full flex flex-col overflow-hidden border border-slate-200/50 ring-1 ring-black/5"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Modal Header */}
@@ -8117,10 +8144,10 @@ function TeacherSqaafPage() {
                 </div>
               </div>
               {/* PDF iframe */}
-              <div className="flex-1 bg-slate-100">
+              <div className="flex-1 bg-slate-200/50 p-2 sm:p-4">
                 <iframe
-                  src={`${previewPdfUrl}#toolbar=1&zoom=100`}
-                  className="w-full h-full border-0 bg-white"
+                  src={`${previewPdfUrl}#toolbar=1&view=FitH`}
+                  className="w-full h-full border-0 bg-white rounded-xl shadow-sm ring-1 ring-slate-200"
                   title="PDF Preview"
                 />
               </div>
