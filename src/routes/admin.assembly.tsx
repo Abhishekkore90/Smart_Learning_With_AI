@@ -446,7 +446,7 @@ function AssemblyBookAdmin() {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-8">
+            <div className="flex flex-col space-y-12 max-w-4xl mx-auto w-full">
               {/* Assembly Start Section */}
               <div className="space-y-6 lg:col-span-2 p-6 md:p-10 bg-green-50/50 border border-green-100 rounded-[2.5rem]">
                 <h4 className="text-xl font-black text-green-900 flex items-center justify-center gap-3 mb-8 text-center uppercase tracking-widest">
@@ -474,19 +474,19 @@ function AssemblyBookAdmin() {
               </div>
 
               {/* Panchang Section */}
-              <div className="space-y-6 lg:col-span-2 p-6 bg-amber-50/50 border border-amber-100 rounded-3xl">
-                <h4 className="text-lg font-bold text-amber-900 flex items-center gap-2 mb-4">
+              <div className="space-y-6 p-6 md:p-10 bg-amber-50/50 border border-amber-100 rounded-[2.5rem]">
+                <h4 className="text-xl font-black text-amber-900 flex items-center justify-center gap-3 mb-8 text-center uppercase tracking-widest">
                   🪀 पंचांग (Panchang)
                 </h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                   {['day', 'month', 'paksha', 'tithi', 'nakshatra', 'yog', 'sunrise', 'sunset'].map((field) => (
-                    <div key={field}>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-amber-700 mb-2">{field}</label>
+                    <div key={field} className="text-center bg-white p-4 rounded-2xl border border-amber-200/50 shadow-sm">
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-amber-700 mb-3">{field}</label>
                       <input
                         type="text"
                         value={paripathData[field] || ''}
                         onChange={(e) => setParipathData({ ...paripathData, [field]: e.target.value })}
-                        className="w-full px-4 py-3 bg-white border border-amber-200 rounded-xl focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-400/10 transition-all"
+                        className="w-full px-4 py-3 bg-amber-50/30 border border-amber-200 rounded-xl focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-400/10 transition-all text-center font-bold text-slate-800"
                       />
                     </div>
                   ))}
@@ -494,171 +494,191 @@ function AssemblyBookAdmin() {
               </div>
 
               {/* Suvichar & Proverb */}
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">🪀 सुविचार (Thought)</label>
+              <div className="space-y-8 p-6 md:p-10 bg-violet-50/50 border border-violet-100 rounded-[2.5rem]">
+                <div className="bg-white p-6 rounded-3xl border border-violet-200/50 shadow-sm text-center">
+                  <label className="block text-sm font-black uppercase tracking-widest text-violet-800 mb-4">🪀 सुविचार (Thought)</label>
                   <textarea
                     rows={3}
                     value={paripathData.thought || ''}
                     onChange={(e) => setParipathData({ ...paripathData, thought: e.target.value })}
-                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all resize-none"
+                    className="w-full px-5 py-4 bg-violet-50/30 border border-violet-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all resize-none text-center font-bold text-slate-800 leading-relaxed"
                   />
                 </div>
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">🪀 म्हण (Proverb)</label>
-                  <input
-                    type="text"
-                    value={paripathData.proverb || ''}
-                    onChange={(e) => setParipathData({ ...paripathData, proverb: e.target.value })}
-                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all mb-4"
-                  />
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">अर्थ (Meaning)</label>
-                  <textarea
-                    rows={2}
-                    value={paripathData.proverbMeaning || ''}
-                    onChange={(e) => setParipathData({ ...paripathData, proverbMeaning: e.target.value })}
-                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all resize-none"
-                  />
+                <div className="bg-white p-6 rounded-3xl border border-violet-200/50 shadow-sm text-center space-y-6">
+                  <div>
+                    <label className="block text-sm font-black uppercase tracking-widest text-violet-800 mb-4">🪀 म्हण (Proverb)</label>
+                    <input
+                      type="text"
+                      value={paripathData.proverb || ''}
+                      onChange={(e) => setParipathData({ ...paripathData, proverb: e.target.value })}
+                      className="w-full px-5 py-4 bg-violet-50/30 border border-violet-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all text-center font-bold text-slate-800"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-black uppercase tracking-widest text-violet-800 mb-4">अर्थ (Meaning)</label>
+                    <textarea
+                      rows={2}
+                      value={paripathData.proverbMeaning || ''}
+                      onChange={(e) => setParipathData({ ...paripathData, proverbMeaning: e.target.value })}
+                      className="w-full px-5 py-4 bg-violet-50/30 border border-violet-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all resize-none text-center font-bold text-slate-800 leading-relaxed"
+                    />
+                  </div>
                 </div>
               </div>
 
               {/* Dinvishesh */}
-              <div className="space-y-6">
-                <div className="flex gap-4">
-                  <div className="flex-1">
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Date (e.g. ०९ जुलै)</label>
+              <div className="space-y-8 p-6 md:p-10 bg-blue-50/50 border border-blue-100 rounded-[2.5rem]">
+                <div className="flex flex-col md:flex-row gap-6">
+                  <div className="flex-1 bg-white p-6 rounded-3xl border border-blue-200/50 shadow-sm text-center">
+                    <label className="block text-sm font-black uppercase tracking-widest text-blue-800 mb-4">Date (e.g. ०९ जुलै)</label>
                     <input
                       type="text"
                       value={paripathData.dateMonth || ''}
                       onChange={(e) => setParipathData({ ...paripathData, dateMonth: e.target.value })}
-                      className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all"
+                      className="w-full px-5 py-4 bg-blue-50/30 border border-blue-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all text-center font-bold text-slate-800"
                     />
                   </div>
-                  <div className="flex-1">
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Day Number (e.g. १९०)</label>
+                  <div className="flex-1 bg-white p-6 rounded-3xl border border-blue-200/50 shadow-sm text-center">
+                    <label className="block text-sm font-black uppercase tracking-widest text-blue-800 mb-4">Day Number (e.g. १९०)</label>
                     <input
                       type="text"
                       value={paripathData.yearDay || ''}
                       onChange={(e) => setParipathData({ ...paripathData, yearDay: e.target.value })}
-                      className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all"
+                      className="w-full px-5 py-4 bg-blue-50/30 border border-blue-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all text-center font-bold text-slate-800"
                     />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">🪀 महत्त्वाच्या घटना (Events - line separated)</label>
+                <div className="bg-white p-6 rounded-3xl border border-blue-200/50 shadow-sm text-center">
+                  <label className="block text-sm font-black uppercase tracking-widest text-blue-800 mb-4">🪀 महत्त्वाच्या घटना (Events)</label>
                   <textarea
                     rows={4}
                     value={paripathData.events || ''}
                     onChange={(e) => setParipathData({ ...paripathData, events: e.target.value })}
-                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all resize-none"
+                    className="w-full px-5 py-4 bg-blue-50/30 border border-blue-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all resize-none text-center font-bold text-slate-800 leading-relaxed"
                   />
                 </div>
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">🪀 जन्मदिवस (Birthdays - line separated)</label>
+                <div className="bg-white p-6 rounded-3xl border border-blue-200/50 shadow-sm text-center">
+                  <label className="block text-sm font-black uppercase tracking-widest text-emerald-800 mb-4">🪀 जन्मदिवस (Birthdays)</label>
                   <textarea
                     rows={3}
                     value={paripathData.birthdays || ''}
                     onChange={(e) => setParipathData({ ...paripathData, birthdays: e.target.value })}
-                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all resize-none"
+                    className="w-full px-5 py-4 bg-emerald-50/30 border border-emerald-200 rounded-2xl focus:outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/10 transition-all resize-none text-center font-bold text-slate-800 leading-relaxed"
                   />
                 </div>
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">🪀 मृत्यू / पुण्यतिथी (Deaths - line separated)</label>
+                <div className="bg-white p-6 rounded-3xl border border-blue-200/50 shadow-sm text-center">
+                  <label className="block text-sm font-black uppercase tracking-widest text-rose-800 mb-4">🪀 मृत्यू / पुण्यतिथी (Deaths)</label>
                   <textarea
                     rows={3}
                     value={paripathData.deaths || ''}
                     onChange={(e) => setParipathData({ ...paripathData, deaths: e.target.value })}
-                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all resize-none"
+                    className="w-full px-5 py-4 bg-rose-50/30 border border-rose-200 rounded-2xl focus:outline-none focus:border-rose-400 focus:ring-4 focus:ring-rose-400/10 transition-all resize-none text-center font-bold text-slate-800 leading-relaxed"
                   />
                 </div>
               </div>
 
               {/* Story */}
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">🪀 बोधकथा (Story Title)</label>
-                  <input
-                    type="text"
-                    value={paripathData.storyTitle || ''}
-                    onChange={(e) => setParipathData({ ...paripathData, storyTitle: e.target.value })}
-                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all mb-4"
-                  />
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Story Content</label>
-                  <textarea
-                    rows={6}
-                    value={paripathData.story || ''}
-                    onChange={(e) => setParipathData({ ...paripathData, story: e.target.value })}
-                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all resize-none mb-4"
-                  />
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">तात्पर्य (Moral)</label>
-                  <input
-                    type="text"
-                    value={paripathData.moral || ''}
-                    onChange={(e) => setParipathData({ ...paripathData, moral: e.target.value })}
-                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all"
-                  />
+              <div className="space-y-8 p-6 md:p-10 bg-orange-50/50 border border-orange-100 rounded-[2.5rem]">
+                <div className="bg-white p-6 rounded-3xl border border-orange-200/50 shadow-sm text-center space-y-6">
+                  <div>
+                    <label className="block text-sm font-black uppercase tracking-widest text-orange-800 mb-4">🪀 बोधकथा (Story Title)</label>
+                    <input
+                      type="text"
+                      value={paripathData.storyTitle || ''}
+                      onChange={(e) => setParipathData({ ...paripathData, storyTitle: e.target.value })}
+                      className="w-full px-5 py-4 bg-orange-50/30 border border-orange-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all text-center font-bold text-slate-800"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-black uppercase tracking-widest text-orange-800 mb-4">Story Content</label>
+                    <textarea
+                      rows={6}
+                      value={paripathData.story || ''}
+                      onChange={(e) => setParipathData({ ...paripathData, story: e.target.value })}
+                      className="w-full px-5 py-4 bg-orange-50/30 border border-orange-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all resize-none text-center font-bold text-slate-800 leading-relaxed"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-black uppercase tracking-widest text-orange-800 mb-4">तात्पर्य (Moral)</label>
+                    <input
+                      type="text"
+                      value={paripathData.moral || ''}
+                      onChange={(e) => setParipathData({ ...paripathData, moral: e.target.value })}
+                      className="w-full px-5 py-4 bg-orange-50/30 border border-orange-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all text-center font-bold text-slate-800"
+                    />
+                  </div>
                 </div>
               </div>
 
               {/* Patriotic Song & GK */}
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">🪀 देशभक्ती गीत (Song Title)</label>
-                  <input
-                    type="text"
-                    value={paripathData.songTitle || ''}
-                    onChange={(e) => setParipathData({ ...paripathData, songTitle: e.target.value })}
-                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all mb-4"
-                  />
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Lyrics</label>
-                  <textarea
-                    rows={6}
-                    value={paripathData.patrioticSong || ''}
-                    onChange={(e) => setParipathData({ ...paripathData, patrioticSong: e.target.value })}
-                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all resize-none"
-                  />
+              <div className="space-y-8 p-6 md:p-10 bg-indigo-50/50 border border-indigo-100 rounded-[2.5rem]">
+                <div className="bg-white p-6 rounded-3xl border border-indigo-200/50 shadow-sm text-center space-y-6">
+                  <div>
+                    <label className="block text-sm font-black uppercase tracking-widest text-indigo-800 mb-4">🪀 देशभक्ती गीत (Song Title)</label>
+                    <input
+                      type="text"
+                      value={paripathData.songTitle || ''}
+                      onChange={(e) => setParipathData({ ...paripathData, songTitle: e.target.value })}
+                      className="w-full px-5 py-4 bg-indigo-50/30 border border-indigo-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all text-center font-bold text-slate-800"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-black uppercase tracking-widest text-indigo-800 mb-4">Lyrics</label>
+                    <textarea
+                      rows={6}
+                      value={paripathData.patrioticSong || ''}
+                      onChange={(e) => setParipathData({ ...paripathData, patrioticSong: e.target.value })}
+                      className="w-full px-5 py-4 bg-indigo-50/30 border border-indigo-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all resize-none text-center font-bold text-slate-800 leading-relaxed"
+                    />
+                  </div>
                 </div>
                 
-                <div className="p-6 bg-slate-50 rounded-3xl border border-slate-200">
-                  <h4 className="text-sm font-bold text-slate-800 mb-4">🪀 सामान्य ज्ञान (GK)</h4>
-                  {[1, 2, 3, 4].map((num) => (
-                    <div key={`gk${num}`} className="mb-4">
-                      <input
-                        type="text"
-                        placeholder={`Question ${num}`}
-                        value={paripathData[`gkQ${num}`] || ''}
-                        onChange={(e) => setParipathData({ ...paripathData, [`gkQ${num}`]: e.target.value })}
-                        className="w-full px-4 py-2 bg-white border border-slate-200 rounded-t-xl text-sm focus:outline-none focus:border-[#6C63FF] transition-all"
-                      />
-                      <input
-                        type="text"
-                        placeholder={`Answer ${num}`}
-                        value={paripathData[`gkA${num}`] || ''}
-                        onChange={(e) => setParipathData({ ...paripathData, [`gkA${num}`]: e.target.value })}
-                        className="w-full px-4 py-2 bg-slate-100 border border-slate-200 border-t-0 rounded-b-xl text-sm font-bold focus:outline-none focus:border-[#6C63FF] transition-all"
-                      />
-                    </div>
-                  ))}
+                <div className="bg-white p-6 rounded-3xl border border-indigo-200/50 shadow-sm text-center">
+                  <h4 className="text-xl font-black text-indigo-900 flex items-center justify-center gap-3 mb-8 text-center uppercase tracking-widest">🪀 सामान्य ज्ञान (GK)</h4>
+                  <div className="space-y-4">
+                    {[1, 2, 3, 4].map((num) => (
+                      <div key={`gk${num}`} className="flex flex-col">
+                        <input
+                          type="text"
+                          placeholder={`Question ${num}`}
+                          value={paripathData[`gkQ${num}`] || ''}
+                          onChange={(e) => setParipathData({ ...paripathData, [`gkQ${num}`]: e.target.value })}
+                          className="w-full px-5 py-4 bg-indigo-50/30 border border-indigo-200 rounded-t-2xl focus:outline-none focus:border-[#6C63FF] transition-all text-center font-bold text-slate-800"
+                        />
+                        <input
+                          type="text"
+                          placeholder={`Answer ${num}`}
+                          value={paripathData[`gkA${num}`] || ''}
+                          onChange={(e) => setParipathData({ ...paripathData, [`gkA${num}`]: e.target.value })}
+                          className="w-full px-5 py-3 bg-indigo-100/50 border border-indigo-200 border-t-0 rounded-b-2xl focus:outline-none focus:border-[#6C63FF] transition-all text-center font-black text-indigo-900"
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
 
               {/* Personality */}
-              <div className="space-y-6 lg:col-span-2">
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">🪀 थोरव्यक्ती परिचय (Name & Dates)</label>
-                  <input
-                    type="text"
-                    value={paripathData.personalityTitle || ''}
-                    onChange={(e) => setParipathData({ ...paripathData, personalityTitle: e.target.value })}
-                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all mb-4"
-                  />
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Biography</label>
-                  <textarea
-                    rows={6}
-                    value={paripathData.personality || ''}
-                    onChange={(e) => setParipathData({ ...paripathData, personality: e.target.value })}
-                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all resize-none"
-                  />
+              <div className="space-y-8 p-6 md:p-10 bg-teal-50/50 border border-teal-100 rounded-[2.5rem]">
+                <div className="bg-white p-6 rounded-3xl border border-teal-200/50 shadow-sm text-center space-y-6">
+                  <div>
+                    <label className="block text-sm font-black uppercase tracking-widest text-teal-800 mb-4">🪀 थोरव्यक्ती परिचय (Name & Dates)</label>
+                    <input
+                      type="text"
+                      value={paripathData.personalityTitle || ''}
+                      onChange={(e) => setParipathData({ ...paripathData, personalityTitle: e.target.value })}
+                      className="w-full px-5 py-4 bg-teal-50/30 border border-teal-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all text-center font-bold text-slate-800"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-black uppercase tracking-widest text-teal-800 mb-4">Biography</label>
+                    <textarea
+                      rows={6}
+                      value={paripathData.personality || ''}
+                      onChange={(e) => setParipathData({ ...paripathData, personality: e.target.value })}
+                      className="w-full px-5 py-4 bg-teal-50/30 border border-teal-200 rounded-2xl focus:outline-none focus:border-[#6C63FF] focus:ring-4 focus:ring-[#6C63FF]/10 transition-all resize-none text-center font-bold text-slate-800 leading-relaxed"
+                    />
+                  </div>
                 </div>
               </div>
 

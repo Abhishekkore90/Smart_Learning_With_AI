@@ -1954,13 +1954,11 @@ function DailyAssemblyContent() {
         icon={Quote}
         gradient="from-violet-50/80 to-purple-50/60"
       >
-        <div className="p-5 bg-gradient-to-br from-violet-50/50 to-purple-50/30 border border-violet-100/40 rounded-2xl">
-          <div className="flex items-start gap-3">
-            <Quote className="size-6 text-violet-400/50 flex-shrink-0 mt-1" />
-            <p className="text-base md:text-lg font-semibold text-[#1A1A1A] leading-relaxed italic">
-              {formData.thought}
-            </p>
-          </div>
+        <div className="p-6 md:p-8 bg-gradient-to-br from-violet-50/50 to-purple-50/30 border border-violet-100/40 rounded-3xl flex flex-col items-center justify-center text-center">
+          <Quote className="size-8 text-violet-400/80 mb-4" />
+          <p className="text-lg md:text-2xl font-black text-[#1A1A1A] leading-relaxed italic">
+            {formData.thought}
+          </p>
         </div>
       </SectionCard>
 
@@ -1972,14 +1970,14 @@ function DailyAssemblyContent() {
         icon={BookOpen}
         gradient="from-teal-50/80 to-emerald-50/60"
       >
-        <div className="space-y-3">
-          <div className="p-4 bg-gradient-to-br from-teal-50/50 to-emerald-50/30 border border-teal-100/40 rounded-2xl">
-            <div className="text-[10px] font-black text-teal-600/60 uppercase tracking-wider mb-2">{t.proverb}</div>
-            <p className="text-base font-bold text-[#1A1A1A]">{formData.proverb}</p>
+        <div className="space-y-4">
+          <div className="p-6 bg-gradient-to-br from-teal-50/50 to-emerald-50/30 border border-teal-100/40 rounded-3xl text-center">
+            <div className="text-[10px] font-black text-teal-600/80 uppercase tracking-widest mb-3">{t.proverb}</div>
+            <p className="text-lg md:text-2xl font-black text-[#1A1A1A]">{formData.proverb}</p>
           </div>
-          <div className="p-4 bg-white border border-[#E8DFD1]/30 rounded-2xl">
-            <div className="text-[10px] font-black text-[#D6B97A]/60 uppercase tracking-wider mb-2">{t.proverbMeaning}</div>
-            <p className="text-sm font-medium text-[#555] leading-relaxed">{formData.proverbMeaning}</p>
+          <div className="p-6 bg-white border border-[#E8DFD1]/30 rounded-3xl text-center">
+            <div className="text-[10px] font-black text-[#D6B97A]/80 uppercase tracking-widest mb-3">{t.proverbMeaning}</div>
+            <p className="text-base md:text-lg font-bold text-[#333] leading-relaxed">{formData.proverbMeaning}</p>
           </div>
         </div>
       </SectionCard>
@@ -1992,54 +1990,53 @@ function DailyAssemblyContent() {
         icon={Calendar}
         gradient="from-blue-50/80 to-indigo-50/60"
       >
-        <div className="space-y-4">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-100/50 rounded-full">
-            <Calendar className="size-3.5 text-blue-500" />
-            <span className="text-[10px] font-black text-blue-600 uppercase tracking-wider">
-              {t.yearDayStr.replace("${yearDay}", formData.yearDay)}
-            </span>
+        <div className="space-y-6">
+          <div className="flex justify-center">
+            <div className="inline-flex items-center justify-center gap-2 px-6 py-2 bg-blue-50 border border-blue-100/50 rounded-full">
+              <Calendar className="size-4 text-blue-500" />
+              <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">
+                {t.yearDayStr.replace("${yearDay}", formData.yearDay)}
+              </span>
+            </div>
           </div>
 
           {/* Important Events */}
-          <div className="space-y-2">
-            <h4 className="text-xs font-black text-blue-600/70 uppercase tracking-wider flex items-center gap-2">
-              <Star className="size-3.5" /> {t.importantEvents}
+          <div className="space-y-3">
+            <h4 className="text-xs font-black text-blue-600/80 uppercase tracking-widest flex items-center justify-center gap-2 text-center">
+              <Star className="size-4" /> {t.importantEvents}
             </h4>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {formData.events.split("\n").map((event: string, i: number) => (
-                <div key={i} className="flex items-start gap-2 p-2.5 bg-blue-50/40 border border-blue-50 rounded-xl">
-                  <div className="size-1.5 rounded-full bg-blue-400 mt-2 flex-shrink-0" />
-                  <span className="text-sm font-medium text-[#333] leading-relaxed">{event}</span>
+                <div key={i} className="flex flex-col items-center justify-center p-4 bg-blue-50/40 border border-blue-100/50 rounded-2xl text-center shadow-sm">
+                  <span className="text-base md:text-lg font-bold text-[#1A1A1A] leading-relaxed">{event}</span>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Birthdays */}
-          <div className="space-y-2">
-            <h4 className="text-xs font-black text-emerald-600/70 uppercase tracking-wider flex items-center gap-2">
-              <Gift className="size-3.5" /> {t.birthdays}
+          <div className="space-y-3">
+            <h4 className="text-xs font-black text-emerald-600/80 uppercase tracking-widest flex items-center justify-center gap-2 text-center mt-6">
+              <Gift className="size-4" /> {t.birthdays}
             </h4>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {formData.birthdays.split("\n").map((b: string, i: number) => (
-                <div key={i} className="flex items-start gap-2 p-2.5 bg-emerald-50/40 border border-emerald-50 rounded-xl">
-                  <div className="size-1.5 rounded-full bg-emerald-400 mt-2 flex-shrink-0" />
-                  <span className="text-sm font-medium text-[#333] leading-relaxed">{b}</span>
+                <div key={i} className="flex flex-col items-center justify-center p-4 bg-emerald-50/40 border border-emerald-100/50 rounded-2xl text-center shadow-sm">
+                  <span className="text-base md:text-lg font-bold text-[#1A1A1A] leading-relaxed">{b}</span>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Deaths */}
-          <div className="space-y-2">
-            <h4 className="text-xs font-black text-rose-600/70 uppercase tracking-wider flex items-center gap-2">
-              <Star className="size-3.5" /> {t.deaths}
+          <div className="space-y-3">
+            <h4 className="text-xs font-black text-rose-600/80 uppercase tracking-widest flex items-center justify-center gap-2 text-center mt-6">
+              <Star className="size-4" /> {t.deaths}
             </h4>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {formData.deaths.split("\n").map((d: string, i: number) => (
-                <div key={i} className="flex items-start gap-2 p-2.5 bg-rose-50/40 border border-rose-50 rounded-xl">
-                  <div className="size-1.5 rounded-full bg-rose-400 mt-2 flex-shrink-0" />
-                  <span className="text-sm font-medium text-[#333] leading-relaxed">{d}</span>
+                <div key={i} className="flex flex-col items-center justify-center p-4 bg-rose-50/40 border border-rose-100/50 rounded-2xl text-center shadow-sm">
+                  <span className="text-base md:text-lg font-bold text-[#1A1A1A] leading-relaxed">{d}</span>
                 </div>
               ))}
             </div>
@@ -2055,13 +2052,15 @@ function DailyAssemblyContent() {
         icon={Music}
         gradient="from-orange-50/80 to-amber-50/60"
       >
-        <div className="space-y-3">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-50 border border-orange-100/50 rounded-full">
-            <Music className="size-3.5 text-orange-500" />
-            <span className="text-sm font-bold text-orange-700">{formData.songTitle}</span>
+        <div className="space-y-4">
+          <div className="flex justify-center">
+            <div className="inline-flex items-center gap-3 px-6 py-2.5 bg-orange-50 border border-orange-100/50 rounded-full">
+              <Music className="size-5 text-orange-500" />
+              <span className="text-base font-black text-orange-700 uppercase tracking-widest">{formData.songTitle}</span>
+            </div>
           </div>
-          <div className="p-5 bg-gradient-to-br from-orange-50/40 to-amber-50/30 border border-orange-100/30 rounded-2xl">
-            <pre className="whitespace-pre-wrap text-sm font-medium text-[#333] leading-relaxed font-sans">
+          <div className="p-6 md:p-10 bg-gradient-to-br from-orange-50/40 to-amber-50/30 border border-orange-100/30 rounded-[2rem] text-center shadow-sm">
+            <pre className="whitespace-pre-wrap text-base md:text-xl font-bold text-[#1A1A1A] leading-relaxed font-sans">
               {formData.patrioticSong}
             </pre>
           </div>
@@ -2077,20 +2076,22 @@ function DailyAssemblyContent() {
         gradient="from-indigo-50/80 to-blue-50/60"
       >
         <div className="space-y-4">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-100/50 rounded-full">
-            <BookOpen className="size-3.5 text-indigo-500" />
-            <span className="text-sm font-bold text-indigo-700">{formData.storyTitle}</span>
+          <div className="flex justify-center">
+            <div className="inline-flex items-center gap-3 px-6 py-2.5 bg-indigo-50 border border-indigo-100/50 rounded-full">
+              <BookOpen className="size-5 text-indigo-500" />
+              <span className="text-base font-black text-indigo-700 uppercase tracking-widest">{formData.storyTitle}</span>
+            </div>
           </div>
-          <div className="p-5 bg-gradient-to-br from-indigo-50/30 to-blue-50/20 border border-indigo-100/30 rounded-2xl">
-            <p className="text-sm font-medium text-[#333] leading-relaxed whitespace-pre-wrap">
+          <div className="p-6 md:p-10 bg-gradient-to-br from-indigo-50/30 to-blue-50/20 border border-indigo-100/30 rounded-[2rem] text-center shadow-sm">
+            <p className="text-base md:text-xl font-bold text-[#1A1A1A] leading-relaxed whitespace-pre-wrap">
               {formData.story}
             </p>
           </div>
-          <div className="p-4 bg-amber-50/50 border border-amber-200/40 rounded-2xl flex items-start gap-3">
-            <Star className="size-5 text-amber-500 flex-shrink-0 mt-0.5" />
+          <div className="p-6 bg-amber-50/50 border border-amber-200/40 rounded-[2rem] flex flex-col items-center text-center gap-3 shadow-sm">
+            <Star className="size-8 text-amber-500" />
             <div>
-              <div className="text-[10px] font-black text-amber-600/60 uppercase tracking-wider mb-1">{t.moral}</div>
-              <p className="text-sm font-bold text-amber-800">{formData.moral}</p>
+              <div className="text-[10px] font-black text-amber-600/80 uppercase tracking-widest mb-2">{t.moral}</div>
+              <p className="text-lg md:text-xl font-black text-amber-900 leading-relaxed">{formData.moral}</p>
             </div>
           </div>
         </div>
@@ -2104,7 +2105,7 @@ function DailyAssemblyContent() {
         icon={HelpCircle}
         gradient="from-cyan-50/80 to-teal-50/60"
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="flex flex-col gap-6">
           {[
             { q: formData.gkQ1, a: formData.gkA1, label: t.q1, aLabel: t.a1 },
             { q: formData.gkQ2, a: formData.gkA2, label: t.q2, aLabel: t.a2 },
@@ -2113,15 +2114,13 @@ function DailyAssemblyContent() {
           ].map((item, i) => (
             <div
               key={i}
-              className="p-4 bg-gradient-to-br from-white to-cyan-50/30 border border-cyan-100/40 rounded-2xl hover:shadow-md transition-all duration-300"
+              className="p-6 md:p-8 bg-gradient-to-br from-white to-cyan-50/30 border border-cyan-100/40 rounded-[2rem] hover:shadow-md transition-all duration-300 text-center flex flex-col items-center justify-center shadow-sm"
             >
-              <div className="flex items-start gap-2 mb-2">
-                <HelpCircle className="size-4 text-cyan-500 flex-shrink-0 mt-0.5" />
-                <p className="text-sm font-semibold text-[#1A1A1A]">{item.q}</p>
-              </div>
-              <div className="ml-6 px-3 py-1.5 bg-cyan-50 border border-cyan-100/50 rounded-xl inline-block">
-                <span className="text-[9px] font-black text-cyan-600/60 uppercase tracking-wider">{t.ans} : </span>
-                <span className="text-sm font-bold text-cyan-700">{item.a}</span>
+              <HelpCircle className="size-8 text-cyan-500 mb-4" />
+              <p className="text-lg md:text-xl font-black text-[#1A1A1A] mb-5">{item.q}</p>
+              <div className="px-6 py-3 bg-cyan-50 border border-cyan-100/50 rounded-2xl inline-block">
+                <span className="text-[10px] font-black text-cyan-600/80 uppercase tracking-widest mr-2">{t.ans} : </span>
+                <span className="text-base md:text-lg font-black text-cyan-800">{item.a}</span>
               </div>
             </div>
           ))}
@@ -2136,13 +2135,15 @@ function DailyAssemblyContent() {
         icon={User}
         gradient="from-rose-50/80 to-pink-50/60"
       >
-        <div className="space-y-3">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-rose-50 border border-rose-100/50 rounded-full">
-            <User className="size-3.5 text-rose-500" />
-            <span className="text-sm font-bold text-rose-700">{formData.personalityTitle}</span>
+        <div className="space-y-4">
+          <div className="flex justify-center">
+            <div className="inline-flex items-center gap-3 px-6 py-2.5 bg-rose-50 border border-rose-100/50 rounded-full">
+              <User className="size-5 text-rose-500" />
+              <span className="text-base font-black text-rose-700 uppercase tracking-widest">{formData.personalityTitle}</span>
+            </div>
           </div>
-          <div className="p-5 bg-gradient-to-br from-rose-50/30 to-pink-50/20 border border-rose-100/30 rounded-2xl">
-            <p className="text-sm font-medium text-[#333] leading-relaxed whitespace-pre-wrap">
+          <div className="p-6 md:p-10 bg-gradient-to-br from-rose-50/30 to-pink-50/20 border border-rose-100/30 rounded-[2rem] text-center shadow-sm">
+            <p className="text-base md:text-xl font-bold text-[#1A1A1A] leading-relaxed whitespace-pre-wrap">
               {formData.personality}
             </p>
           </div>
