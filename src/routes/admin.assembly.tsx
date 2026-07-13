@@ -266,14 +266,16 @@ function AssemblyBookAdmin() {
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
             <div className="space-y-2">
               <h1 className="text-5xl font-black tracking-tight">
-                Daily Assembly Book <span className="text-[#6C63FF]">Uploader.</span>
+                Daily Assembly <span className="text-[#6C63FF]">Paripath.</span>
               </h1>
               <p className="text-[#6B7280] max-w-xl text-lg font-medium leading-relaxed">
                 Manage the daily structure (Paripath).
               </p>
             </div>
           </div>
-          /* Paripath Form Editor */
+        </div>
+        
+        {/* Paripath Form Editor */}
           <div className="bg-white border border-black/5 rounded-[3rem] p-8 md:p-12 shadow-sm space-y-8">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border-b border-stone-100 pb-6">
               <div>
