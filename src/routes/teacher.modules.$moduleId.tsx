@@ -1768,19 +1768,16 @@ function DailyAssemblyContent() {
   const [dbFormData, setDbFormData] = useState<any>(null);
 
   useEffect(() => {
-    // Fetch live parapith data from Firestore
-    const fetchParipath = async () => {
-      try {
-        const docRef = doc(db, "admin_daily_paripath", "current");
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setDbFormData(docSnap.data());
-        }
-      } catch (err) {
-        console.error("Error fetching live paripath data:", err);
+    const docRef = doc(db, "admin_daily_paripath", "current");
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setDbFormData(docSnap.data());
       }
-    };
-    fetchParipath();
+    }, (err) => {
+      console.error("Error fetching live paripath data:", err);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const t = ASSEMBLY_TRANSLATIONS[lang];
