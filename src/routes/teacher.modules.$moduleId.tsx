@@ -1789,6 +1789,26 @@ function DailyAssemblyContent() {
     setExpandedSections((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.15
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 40, scale: 0.95 },
+    show: { 
+      opacity: 1, 
+      y: 0, 
+      scale: 1,
+      transition: { type: "spring", stiffness: 100, damping: 15 }
+    }
+  };
+
   const SectionCard = ({ id, emoji, title, icon: Icon, gradient, children }: {
     id: string;
     emoji: string;
@@ -1800,28 +1820,46 @@ function DailyAssemblyContent() {
     const isExpanded = expandedSections[id] !== false; // default expanded
     return (
       <motion.div
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white/40 backdrop-blur-3xl border border-white/60 rounded-[3rem] overflow-hidden shadow-2xl shadow-indigo-900/5 hover:shadow-indigo-900/10 transition-all duration-500 relative"
+        variants={itemVariants}
+        whileHover={{ y: -8, scale: 1.01 }}
+        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+        className="bg-white/40 backdrop-blur-3xl border border-white/60 rounded-[3rem] overflow-hidden shadow-2xl shadow-indigo-900/5 hover:shadow-indigo-900/20 relative"
       >
+        <motion.div 
+          animate={{ rotate: 360 }} 
+          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+          className="absolute -top-32 -right-32 w-64 h-64 bg-white/20 rounded-full blur-[80px] pointer-events-none" 
+        />
         <div className="absolute inset-0 bg-gradient-to-br from-white/60 to-white/10 pointer-events-none" />
         <button
           onClick={() => toggleSection(id)}
-          className={`w-full flex items-center justify-between p-6 md:p-8 bg-gradient-to-r ${gradient} cursor-pointer group relative z-10 border-b border-white/30`}
+          className={`w-full flex items-center justify-between p-6 md:p-8 bg-gradient-to-r ${gradient} cursor-pointer group relative z-10 border-b border-white/30 overflow-hidden`}
         >
-          <div className="flex items-center gap-4 md:gap-6">
-            <div className="size-14 md:size-16 rounded-3xl bg-white/80 backdrop-blur-md flex items-center justify-center text-3xl shadow-xl shadow-black/5 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 border border-white">
-              {emoji}
-            </div>
+          <div className="absolute inset-0 bg-white/0 group-hover:bg-white/20 transition-colors duration-500" />
+          <div className="flex items-center gap-4 md:gap-6 relative z-10">
+            <motion.div 
+              whileHover={{ scale: 1.15, rotate: 10 }}
+              className="size-14 md:size-16 rounded-3xl bg-white/80 backdrop-blur-md flex items-center justify-center text-3xl shadow-xl shadow-black/5 transition-all duration-300 border border-white"
+            >
+              <motion.span
+                animate={{ y: [0, -5, 0] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              >
+                {emoji}
+              </motion.span>
+            </motion.div>
             <div className="text-left">
-              <h3 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight drop-shadow-sm">
+              <h3 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight drop-shadow-sm group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-slate-800 group-hover:to-indigo-600 transition-all duration-300">
                 {title}
               </h3>
             </div>
           </div>
-          <div className="size-12 rounded-full bg-white/60 backdrop-blur-md flex items-center justify-center text-slate-600 shadow-md border border-white group-hover:bg-white transition-colors duration-300">
+          <motion.div 
+            whileHover={{ scale: 1.2 }}
+            className="size-12 rounded-full bg-white/60 backdrop-blur-md flex items-center justify-center text-slate-600 shadow-md border border-white group-hover:bg-white group-hover:text-indigo-600 transition-all duration-300 relative z-10"
+          >
             {isExpanded ? <ChevronUp className="size-6" /> : <ChevronDown className="size-6" />}
-          </div>
+          </motion.div>
         </button>
         <AnimatePresence>
           {isExpanded && (
@@ -1829,7 +1867,7 @@ function DailyAssemblyContent() {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.4, ease: "easeInOut" }}
+              transition={{ duration: 0.5, type: "spring", bounce: 0.2 }}
               className="overflow-hidden relative z-10"
             >
               <div className="p-6 md:p-10">
@@ -1843,11 +1881,35 @@ function DailyAssemblyContent() {
   };
 
   return (
-    <div className="space-y-6">
+    <motion.div 
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className="space-y-8 relative"
+    >
+      {/* Floating Animated Background Orbs */}
+      <motion.div 
+        animate={{ x: [0, 50, 0], y: [0, 30, 0] }}
+        transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+        className="absolute top-0 left-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none -z-10" 
+      />
+      <motion.div 
+        animate={{ x: [0, -50, 0], y: [0, -30, 0] }}
+        transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+        className="absolute bottom-0 right-0 w-96 h-96 bg-violet-500/10 rounded-full blur-[100px] pointer-events-none -z-10" 
+      />
       {/* Header with Language Toggle */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-8 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-[3rem] shadow-2xl shadow-indigo-900/20 border border-white/10 relative overflow-hidden">
-        <div className="absolute -top-24 -right-24 size-64 bg-indigo-500/30 blur-[80px] rounded-full" />
-        <div className="absolute -bottom-24 -left-24 size-64 bg-violet-500/20 blur-[80px] rounded-full" />
+      <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-8 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-[3rem] shadow-2xl shadow-indigo-900/20 border border-white/10 relative overflow-hidden group">
+        <motion.div 
+          animate={{ scale: [1, 1.2, 1], rotate: [0, 90, 0] }}
+          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+          className="absolute -top-24 -right-24 size-64 bg-indigo-500/30 blur-[80px] rounded-full" 
+        />
+        <motion.div 
+          animate={{ scale: [1, 1.3, 1], rotate: [0, -90, 0] }}
+          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+          className="absolute -bottom-24 -left-24 size-64 bg-violet-500/20 blur-[80px] rounded-full" 
+        />
         <div className="flex items-center gap-5 relative z-10">
           <div className="size-16 rounded-3xl bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white shadow-xl shadow-indigo-500/30 border border-white/20">
             <BookMarked className="size-8" />
@@ -2184,7 +2246,7 @@ function DailyAssemblyContent() {
           </div>
         </div>
       </SectionCard>
-    </div>
+    </motion.div>
   );
 }
 
