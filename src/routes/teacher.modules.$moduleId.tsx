@@ -1805,7 +1805,7 @@ function DailyAssemblyContent() {
       opacity: 1, 
       y: 0, 
       scale: 1,
-      transition: { type: "spring", stiffness: 100, damping: 15 }
+      transition: { type: "spring" as const, stiffness: 100, damping: 15 }
     }
   };
 
@@ -1938,7 +1938,7 @@ function DailyAssemblyContent() {
             </button>
           ))}
         </div>
-      </div>
+      </motion.div>
 
       {/* Assembly Start Items (Anthem, State Song, Pledge, Preamble, Prayer) */}
       <SectionCard
