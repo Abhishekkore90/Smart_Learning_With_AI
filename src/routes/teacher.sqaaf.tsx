@@ -7893,10 +7893,10 @@ function TeacherSqaafPage() {
                   </div>
                 </div>
 
-                <div className="p-6 md:p-8 flex flex-col lg:flex-row gap-8 flex-1 w-full">
-                  {/* Left Column: Premium Summary Analytics Card */}
-                  <div className="w-full lg:w-[420px] flex-shrink-0">
-                    <div className="bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-[2.5rem] p-8 space-y-8 shadow-xl relative overflow-hidden border border-orange-400/20 sticky top-24">
+                <div className="p-6 md:p-8 flex flex-col gap-10 flex-1 w-full">
+                  {/* Top Section: Premium Summary Analytics Card */}
+                  <div className="w-full flex justify-center">
+                    <div className="w-full max-w-lg bg-gradient-to-br from-orange-500 to-amber-500 text-white rounded-[2.5rem] p-8 space-y-8 shadow-xl relative overflow-hidden border border-orange-400/20">
                       <div className="absolute top-0 right-0 size-32 bg-white/10 rounded-full blur-2xl" />
                       <div className="absolute -bottom-10 -left-10 size-40 bg-black/10 rounded-full blur-2xl" />
 
@@ -7934,10 +7934,10 @@ function TeacherSqaafPage() {
                     </div>
                   </div>
 
-                  {/* Right Column: Premium Interactive Grid for 128 Standards */}
-                  <div className="flex-1 space-y-6">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-3">
+                  {/* Bottom Section: Premium Interactive Grid for 128 Standards */}
+                  <div className="w-full space-y-6">
+                    <div className="space-y-1 text-center md:text-left">
+                      <div className="flex items-center justify-center md:justify-start gap-3">
                         <h3 className="text-3xl font-black text-slate-900 tracking-tight">{t.standards}</h3>
                         <span className="bg-teal-500 text-white font-black text-xs px-3.5 py-1 rounded-full shadow-md shadow-teal-500/20">{standards.length}</span>
                       </div>
@@ -7947,7 +7947,7 @@ function TeacherSqaafPage() {
                     {/* Desktop Premium Grid Layout */}
                     <div 
                       ref={gridRef}
-                      className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5 max-h-[62vh] overflow-y-auto pr-3 scrollbar-thin"
+                      className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5"
                     >
                       {standards.map((num, i) => {
                         const isCompleted = completedStandards.has(num);
