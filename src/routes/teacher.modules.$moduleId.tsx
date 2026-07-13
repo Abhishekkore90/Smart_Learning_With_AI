@@ -296,7 +296,7 @@ function ModulePage() {
 
       <TeacherSidebar />
 
-      <main className="flex-1 lg:pl-64 pt-24 max-w-[1400px] mx-auto w-full px-6 py-12 md:py-20 relative z-10">
+      <main className="flex-1 lg:pl-64 pt-24 max-w-[1800px] mx-auto w-full px-4 md:px-8 py-12 md:py-20 relative z-10">
         <PinGate sectionKey="planning" enabled={moduleId === "annual-monthly-planning"}>
           <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -306,7 +306,7 @@ function ModulePage() {
           {/* Canvas Decoration */}
           <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-[#D6B97A]/30 to-transparent" />
 
-          <div className="p-4 md:p-16">
+          <div className={`p-4 ${moduleId === 'special-day' ? 'md:p-8 lg:p-10' : 'md:p-16'}`}>
             <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none group-hover:scale-110 transition-transform duration-1000">
               <config.icon className="size-32 md:size-64 text-[#D6B97A]" />
             </div>
