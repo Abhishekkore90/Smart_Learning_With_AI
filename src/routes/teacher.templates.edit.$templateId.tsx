@@ -42,6 +42,7 @@ import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import { showToast as toast } from "@/lib/custom-toast";
 import { useLanguage } from "@/hooks/use-language";
+import html2canvas from "html2canvas-pro";
 import { db } from "@/lib/firebase";
 import { collection, addDoc } from "firebase/firestore";
 
@@ -344,6 +345,7 @@ function TemplateEditorPage() {
   const [cardTitle, setCardTitle] = useState("");
   const [cardQuote, setCardQuote] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const templateRef = useRef<HTMLDivElement>(null);
 
   const config = useMemo(() => {
@@ -627,6 +629,37 @@ function TemplateEditorPage() {
     }
   };
 
+  const handleDownloadTemplate = async () => {
+    if (!templateRef.current) return;
+    setIsDownloading(true);
+    try {
+      const canvas = await html2canvas(templateRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: null,
+      });
+      const dataUrl = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.download = `${studentName.replace(/\s+/g, '_')}_${configToUse.title.replace(/\s+/g, '_')}.png`;
+      link.href = dataUrl;
+      link.click();
+      toast.success(
+        lang === "mr" ? "टेम्पलेट यशस्वीरित्या डाउनलोड झाले!" : 
+        lang === "hi" ? "टेम्पलेट सफलतापूर्वक डाउनलोड किया गया!" : 
+        "Template downloaded successfully!"
+      );
+    } catch (error) {
+      console.error("Error downloading template:", error);
+      toast.error(
+        lang === "mr" ? "टेम्पलेट डाउनलोड करण्यात त्रुटी!" : 
+        lang === "hi" ? "टेम्पलेट डाउनलोड करने में त्रुटि!" : 
+        "Failed to download template!"
+      );
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   const handleWhatsAppShare = () => {
     const isAdmission = templateId?.includes("admission");
     const isSports = templateId?.includes("sports");
@@ -806,6 +839,18 @@ function TemplateEditorPage() {
                     className="w-full bg-emerald-600 text-white py-6 rounded-[2rem] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-500/20"
                   >
                     <MessageCircle className="size-5" /> {lang === "mr" ? "व्हॉट्सॲपवर पाठवा" : lang === "hi" ? "व्हाट्सएप पर भेजें" : "Send to WhatsApp"}
+                  </button>
+                  <button
+                    onClick={handleDownloadTemplate}
+                    disabled={isDownloading}
+                    className="w-full bg-blue-600 text-white py-6 rounded-[2rem] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20"
+                  >
+                    {isDownloading ? (
+                      <Loader2 className="size-5 animate-spin" />
+                    ) : (
+                      <Download className="size-5" />
+                    )}{" "}
+                    {lang === "mr" ? "टेम्पलेट डाउनलोड करा" : lang === "hi" ? "टेम्पलेट डाउनलोड करें" : "Download Template"}
                   </button>
                 </div>
               </div>

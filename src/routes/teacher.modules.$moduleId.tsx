@@ -296,7 +296,7 @@ function ModulePage() {
 
       <TeacherSidebar />
 
-      <main className="flex-1 lg:pl-64 pt-24 max-w-[1400px] mx-auto w-full px-6 py-12 md:py-20 relative z-10">
+      <main className="flex-1 lg:pl-64 pt-24 max-w-[1800px] mx-auto w-full px-4 md:px-8 py-12 md:py-20 relative z-10">
         <PinGate sectionKey="planning" enabled={moduleId === "annual-monthly-planning"}>
           <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -306,7 +306,7 @@ function ModulePage() {
           {/* Canvas Decoration */}
           <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-[#D6B97A]/30 to-transparent" />
 
-          <div className="p-4 md:p-16">
+          <div className={`p-4 ${moduleId === 'special-day' ? 'md:p-8 lg:p-10' : 'md:p-16'}`}>
             <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none group-hover:scale-110 transition-transform duration-1000">
               <config.icon className="size-32 md:size-64 text-[#D6B97A]" />
             </div>
@@ -1789,6 +1789,26 @@ function DailyAssemblyContent() {
     setExpandedSections((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.15
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 40, scale: 0.95 },
+    show: { 
+      opacity: 1, 
+      y: 0, 
+      scale: 1,
+      transition: { type: "spring" as const, stiffness: 100, damping: 15 }
+    }
+  };
+
   const SectionCard = ({ id, emoji, title, icon: Icon, gradient, children }: {
     id: string;
     emoji: string;
@@ -1800,27 +1820,46 @@ function DailyAssemblyContent() {
     const isExpanded = expandedSections[id] !== false; // default expanded
     return (
       <motion.div
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white/90 backdrop-blur-xl border border-[#E8DFD1]/40 rounded-[2rem] overflow-hidden shadow-sm hover:shadow-lg transition-all duration-500"
+        variants={itemVariants}
+        whileHover={{ y: -10, scale: 1.02 }}
+        transition={{ type: "spring", stiffness: 400, damping: 25 }}
+        className="group relative rounded-[3rem] overflow-hidden bg-white/20 backdrop-blur-3xl border border-white/50 shadow-[0_8px_32px_0_rgba(31,38,135,0.05)] hover:shadow-[0_16px_64px_0_rgba(31,38,135,0.15)] transition-all duration-500"
       >
+        <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-40 group-hover:opacity-70 transition-opacity duration-700 pointer-events-none mix-blend-overlay`} />
+        
+        {/* Animated glowing border */}
+        <div className="absolute inset-0 rounded-[3rem] border-2 border-transparent bg-clip-border group-hover:border-white/50 transition-colors duration-500 pointer-events-none" />
+
         <button
           onClick={() => toggleSection(id)}
-          className={`w-full flex items-center justify-between p-5 md:p-6 bg-gradient-to-r ${gradient} cursor-pointer group`}
+          className="w-full flex items-center justify-between p-6 md:p-8 cursor-pointer relative z-10 border-b border-white/20"
         >
-          <div className="flex items-center gap-3 md:gap-4">
-            <div className="size-10 md:size-12 rounded-2xl bg-white/80 backdrop-blur-sm flex items-center justify-center text-lg shadow-sm group-hover:scale-110 transition-transform duration-300">
-              {emoji}
-            </div>
-            <div className="text-left">
-              <h3 className="text-sm md:text-base font-black text-[#1A1A1A] tracking-tight">
+          <div className="flex items-center gap-5 md:gap-8">
+            <motion.div 
+              whileHover={{ scale: 1.2, rotate: [0, -10, 10, 0] }}
+              transition={{ duration: 0.5 }}
+              className="size-16 md:size-20 rounded-[2rem] bg-gradient-to-br from-white/90 to-white/40 backdrop-blur-xl flex items-center justify-center text-4xl md:text-5xl shadow-[0_8px_16px_rgba(0,0,0,0.1)] border border-white/60 group-hover:shadow-[0_0_30px_rgba(255,255,255,0.8)] transition-all duration-500"
+            >
+              <motion.span
+                animate={{ y: [0, -8, 0], scale: [1, 1.05, 1] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              >
+                {emoji}
+              </motion.span>
+            </motion.div>
+            <div className="text-left flex flex-col justify-center">
+              <h3 className="text-2xl md:text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-indigo-900 drop-shadow-[0_2px_2px_rgba(255,255,255,0.8)] group-hover:from-indigo-600 group-hover:to-purple-600 transition-all duration-500 tracking-tight">
                 {title}
               </h3>
             </div>
           </div>
-          <div className="size-8 rounded-full bg-white/50 flex items-center justify-center text-[#D6B97A]">
-            {isExpanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
-          </div>
+          <motion.div 
+            whileHover={{ scale: 1.2, rotate: 180 }}
+            transition={{ duration: 0.3 }}
+            className="size-14 rounded-full bg-white/40 backdrop-blur-md flex items-center justify-center text-slate-700 shadow-lg border border-white/60 group-hover:bg-white group-hover:text-indigo-600 transition-all duration-300 relative z-10"
+          >
+            {isExpanded ? <ChevronUp className="size-8" /> : <ChevronDown className="size-8" />}
+          </motion.div>
         </button>
         <AnimatePresence>
           {isExpanded && (
@@ -1828,11 +1867,14 @@ function DailyAssemblyContent() {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="overflow-hidden"
+              transition={{ duration: 0.6, type: "spring", bounce: 0.3 }}
+              className="overflow-hidden relative z-10"
             >
-              <div className="p-5 md:p-6 border-t border-[#E8DFD1]/30">
-                {children}
+              <div className="p-8 md:p-12 relative">
+                <div className="absolute inset-4 bg-white/30 backdrop-blur-xl border border-white/40 rounded-[2rem] pointer-events-none" />
+                <div className="relative z-10">
+                  {children}
+                </div>
               </div>
             </motion.div>
           )}
@@ -1842,48 +1884,83 @@ function DailyAssemblyContent() {
   };
 
   return (
-    <div className="space-y-6">
+    <motion.div 
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className="p-6 md:p-10 space-y-12 relative rounded-[3rem] overflow-hidden"
+    >
+      {/* Immersive Mesh Gradient Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 via-purple-50/50 to-emerald-50/50 -z-20" />
+      <motion.div 
+        animate={{ 
+          scale: [1, 1.2, 1], 
+          x: [0, 100, -100, 0], 
+          y: [0, -100, 100, 0] 
+        }}
+        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+        className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] bg-gradient-to-br from-indigo-400/20 to-purple-400/20 rounded-full blur-[120px] pointer-events-none -z-10 mix-blend-multiply" 
+      />
+      <motion.div 
+        animate={{ 
+          scale: [1, 1.3, 1], 
+          x: [0, -100, 100, 0], 
+          y: [0, 100, -100, 0] 
+        }}
+        transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+        className="absolute -bottom-[20%] -right-[10%] w-[60%] h-[60%] bg-gradient-to-br from-emerald-400/20 to-teal-400/20 rounded-full blur-[120px] pointer-events-none -z-10 mix-blend-multiply" 
+      />
       {/* Header with Language Toggle */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 bg-gradient-to-r from-[#1A1A1A] to-[#2D2D2D] rounded-[2rem] shadow-2xl">
-        <div className="flex items-center gap-4">
-          <div className="size-12 rounded-2xl bg-[#D6B97A] flex items-center justify-center text-white shadow-lg">
-            <BookMarked className="size-6" />
+      <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-8 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-[3rem] shadow-2xl shadow-indigo-900/20 border border-white/10 relative overflow-hidden group">
+        <motion.div 
+          animate={{ scale: [1, 1.2, 1], rotate: [0, 90, 0] }}
+          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+          className="absolute -top-24 -right-24 size-64 bg-indigo-500/30 blur-[80px] rounded-full" 
+        />
+        <motion.div 
+          animate={{ scale: [1, 1.3, 1], rotate: [0, -90, 0] }}
+          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+          className="absolute -bottom-24 -left-24 size-64 bg-violet-500/20 blur-[80px] rounded-full" 
+        />
+        <div className="flex items-center gap-5 relative z-10">
+          <div className="size-16 rounded-3xl bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white shadow-xl shadow-indigo-500/30 border border-white/20">
+            <BookMarked className="size-8" />
           </div>
           <div>
-            <h2 className="text-lg md:text-xl font-black text-white tracking-tight">
+            <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight drop-shadow-md">
               {lang === "mr" ? "दैनिक परीपाठ" : lang === "hi" ? "दैनिक प्रार्थना सभा" : "Daily Assembly"}
             </h2>
-            <p className="text-[10px] font-bold text-[#D6B97A] uppercase tracking-[0.3em] mt-0.5">
+            <p className="text-xs font-black text-indigo-200 uppercase tracking-[0.3em] mt-1.5 opacity-80">
               {lang === "mr" ? "आजचा परिपाठ" : lang === "hi" ? "आज की सभा" : "Today's Assembly"}
             </p>
           </div>
         </div>
-        <div className="flex bg-white/10 p-1.5 rounded-2xl border border-white/10">
+        <div className="flex bg-white/5 p-2 rounded-2xl border border-white/10 backdrop-blur-xl relative z-10">
           {(["mr", "en", "hi"] as const).map((l) => (
             <button
               key={l}
               onClick={() => setLang(l)}
-              className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] transition-all duration-300 ${
+              className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-[0.15em] transition-all duration-300 ${
                 lang === l
-                  ? "bg-[#D6B97A] text-white shadow-lg"
-                  : "text-white/40 hover:text-white/70"
+                  ? "bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-lg shadow-indigo-500/25 border border-white/20 scale-105"
+                  : "text-white/50 hover:text-white hover:bg-white/5"
               }`}
             >
               {l === "mr" ? "मराठी" : l === "hi" ? "हिंदी" : "English"}
             </button>
           ))}
         </div>
-      </div>
+      </motion.div>
 
       {/* Assembly Start Items (Anthem, State Song, Pledge, Preamble, Prayer) */}
       <SectionCard
         id="assembly-start"
-        emoji="🇮🇳"
+        emoji="🌅"
         title={t.assemblyStart}
         icon={Flag}
-        gradient="from-orange-50/80 via-white/60 to-green-50/80"
+        gradient="from-green-100/80 via-emerald-50/60 to-teal-100/80"
       >
-        <div className="space-y-6">
+        <div className="space-y-8">
           {[
             { key: 'nationalAnthem', fallbackIdx: 0 },
             { key: 'stateAnthem', fallbackIdx: 1 },
@@ -1895,13 +1972,15 @@ function DailyAssemblyContent() {
             const content = formData[itemDef.key] || fallbackItem.content;
             
             return (
-              <div key={idx} className="bg-[#FAFAF7] border border-[#E8DFD1]/30 rounded-2xl p-6 md:p-8 shadow-sm">
-                <div className="flex flex-col items-center justify-center gap-2 mb-6 border-b border-[#E8DFD1]/40 pb-4">
-                  <span className="text-3xl mb-1">{fallbackItem.emoji}</span>
-                  <h4 className="font-black text-xl text-[#1A1A1A] text-center uppercase tracking-wider">{fallbackItem.label}</h4>
-                  <span className="text-[10px] font-black text-[#D6B97A]/80 uppercase tracking-widest text-center">{fallbackItem.sub}</span>
+              <div key={idx} className="bg-white/60 backdrop-blur-xl border border-white rounded-[2.5rem] p-8 md:p-10 shadow-xl shadow-green-900/5 hover:shadow-2xl hover:shadow-green-900/10 transition-all duration-500 group">
+                <div className="flex flex-col items-center justify-center gap-3 mb-8 border-b border-green-900/5 pb-6">
+                  <span className="text-4xl mb-2 group-hover:scale-110 transition-transform duration-300 drop-shadow-md">{fallbackItem.emoji}</span>
+                  <h4 className="font-black text-2xl text-slate-800 text-center uppercase tracking-widest">{fallbackItem.label}</h4>
+                  <div className="px-4 py-1.5 rounded-full bg-green-100/50 border border-green-200 text-[10px] font-black text-green-700 uppercase tracking-widest text-center mt-1">
+                    {fallbackItem.sub}
+                  </div>
                 </div>
-                <pre className="whitespace-pre-wrap text-base md:text-lg text-[#1A1A1A] font-bold leading-relaxed font-sans text-center">
+                <pre className="whitespace-pre-wrap text-lg md:text-xl text-slate-700 font-bold leading-loose font-sans text-center">
                   {content}
                 </pre>
               </div>
@@ -1916,28 +1995,31 @@ function DailyAssemblyContent() {
         emoji="🪀"
         title={t.panchang}
         icon={Calendar}
-        gradient="from-amber-50/80 to-orange-50/60"
+        gradient="from-amber-100/80 via-orange-50/60 to-yellow-100/80"
       >
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
           {[
-            { label: t.day, value: formData.day, icon: Calendar },
-            { label: t.month, value: formData.month, icon: Clock },
-            { label: t.paksha, value: formData.paksha, icon: Star },
-            { label: t.tithi, value: formData.tithi, icon: Star },
-            { label: t.nakshatra, value: formData.nakshatra, icon: Sparkles },
-            { label: t.yog, value: formData.yog, icon: Sparkles },
-            { label: t.sunrise, value: formData.sunrise, icon: Sunrise },
-            { label: t.sunset, value: formData.sunset, icon: Sunset },
+            { label: t.day, value: formData.day, icon: Calendar, color: "text-amber-500", bg: "bg-amber-50", border: "border-amber-100" },
+            { label: t.month, value: formData.month, icon: Clock, color: "text-orange-500", bg: "bg-orange-50", border: "border-orange-100" },
+            { label: t.paksha, value: formData.paksha, icon: Star, color: "text-yellow-500", bg: "bg-yellow-50", border: "border-yellow-100" },
+            { label: t.tithi, value: formData.tithi, icon: Star, color: "text-red-400", bg: "bg-red-50", border: "border-red-100" },
+            { label: t.nakshatra, value: formData.nakshatra, icon: Sparkles, color: "text-rose-500", bg: "bg-rose-50", border: "border-rose-100" },
+            { label: t.yog, value: formData.yog, icon: Sparkles, color: "text-pink-500", bg: "bg-pink-50", border: "border-pink-100" },
+            { label: t.sunrise, value: formData.sunrise, icon: Sunrise, color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-100" },
+            { label: t.sunset, value: formData.sunset, icon: Sunset, color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-100" },
           ].map((item, i) => (
             <div
               key={i}
-              className="p-3 md:p-4 bg-gradient-to-br from-white to-amber-50/30 border border-amber-100/50 rounded-2xl text-center hover:shadow-md transition-all duration-300"
+              className={`p-6 bg-white/80 backdrop-blur-xl border border-white rounded-[2rem] text-center shadow-xl shadow-amber-900/5 hover:scale-105 hover:shadow-2xl hover:shadow-amber-900/10 transition-all duration-300 relative overflow-hidden group`}
             >
-              <item.icon className="size-4 text-[#D6B97A] mx-auto mb-1.5" />
-              <div className="text-[9px] font-black text-[#D6B97A]/60 uppercase tracking-wider mb-1">
+              <div className={`absolute -right-4 -top-4 size-20 ${item.bg} rounded-full blur-2xl opacity-50 group-hover:opacity-100 transition-opacity`} />
+              <div className={`size-12 rounded-2xl ${item.bg} ${item.border} border flex items-center justify-center mx-auto mb-4 relative z-10 group-hover:rotate-6 transition-transform`}>
+                <item.icon className={`size-6 ${item.color}`} />
+              </div>
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 relative z-10">
                 {item.label}
               </div>
-              <div className="text-sm font-bold text-[#1A1A1A]">{item.value}</div>
+              <div className="text-lg font-black text-slate-800 relative z-10">{item.value}</div>
             </div>
           ))}
         </div>
@@ -1949,12 +2031,17 @@ function DailyAssemblyContent() {
         emoji="🪀"
         title={t.thought}
         icon={Quote}
-        gradient="from-violet-50/80 to-purple-50/60"
+        gradient="from-violet-100/80 via-fuchsia-50/60 to-purple-100/80"
       >
-        <div className="p-6 md:p-8 bg-gradient-to-br from-violet-50/50 to-purple-50/30 border border-violet-100/40 rounded-3xl flex flex-col items-center justify-center text-center">
-          <Quote className="size-8 text-violet-400/80 mb-4" />
-          <p className="text-lg md:text-2xl font-black text-[#1A1A1A] leading-relaxed italic">
-            {formData.thought}
+        <div className="p-10 md:p-14 bg-white/60 backdrop-blur-xl border border-white rounded-[3rem] flex flex-col items-center justify-center text-center shadow-xl shadow-violet-900/5 hover:shadow-2xl hover:shadow-violet-900/10 transition-all duration-500 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-violet-200/40 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 group-hover:bg-violet-300/40 transition-colors" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-fuchsia-200/40 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/2 group-hover:bg-fuchsia-300/40 transition-colors" />
+          
+          <div className="size-20 rounded-full bg-violet-100 border border-violet-200 flex items-center justify-center mb-8 relative z-10 shadow-inner">
+            <Quote className="size-10 text-violet-500" />
+          </div>
+          <p className="text-2xl md:text-4xl font-black text-slate-800 leading-normal italic relative z-10 drop-shadow-sm">
+            "{formData.thought}"
           </p>
         </div>
       </SectionCard>
@@ -1965,16 +2052,21 @@ function DailyAssemblyContent() {
         emoji="🪀"
         title={t.proverbTitle}
         icon={BookOpen}
-        gradient="from-teal-50/80 to-emerald-50/60"
+        gradient="from-teal-100/80 via-emerald-50/60 to-cyan-100/80"
       >
-        <div className="space-y-4">
-          <div className="p-6 bg-gradient-to-br from-teal-50/50 to-emerald-50/30 border border-teal-100/40 rounded-3xl text-center">
-            <div className="text-[10px] font-black text-teal-600/80 uppercase tracking-widest mb-3">{t.proverb}</div>
-            <p className="text-lg md:text-2xl font-black text-[#1A1A1A]">{formData.proverb}</p>
+        <div className="space-y-6">
+          <div className="p-8 md:p-12 bg-white/60 backdrop-blur-xl border border-white rounded-[2.5rem] text-center shadow-xl shadow-teal-900/5 hover:shadow-teal-900/10 transition-all relative overflow-hidden group">
+            <div className="absolute right-0 top-0 w-32 h-32 bg-teal-200/30 blur-[50px] rounded-full" />
+            <div className="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-[10px] font-black text-teal-600 uppercase tracking-widest mb-6 relative z-10">
+              {t.proverb}
+            </div>
+            <p className="text-2xl md:text-3xl font-black text-slate-800 relative z-10 leading-relaxed">"{formData.proverb}"</p>
           </div>
-          <div className="p-6 bg-white border border-[#E8DFD1]/30 rounded-3xl text-center">
-            <div className="text-[10px] font-black text-[#D6B97A]/80 uppercase tracking-widest mb-3">{t.proverbMeaning}</div>
-            <p className="text-base md:text-lg font-bold text-[#333] leading-relaxed">{formData.proverbMeaning}</p>
+          <div className="p-8 md:p-10 bg-white border border-white/80 rounded-[2.5rem] text-center shadow-lg shadow-slate-200/50">
+            <div className="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-slate-50 border border-slate-200 text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">
+              {t.proverbMeaning}
+            </div>
+            <p className="text-lg md:text-xl font-bold text-slate-600 leading-relaxed max-w-3xl mx-auto">{formData.proverbMeaning}</p>
           </div>
         </div>
       </SectionCard>
@@ -1985,57 +2077,64 @@ function DailyAssemblyContent() {
         emoji="🪀"
         title={`${formData.dateMonth} ${t.eventsTitle}`}
         icon={Calendar}
-        gradient="from-blue-50/80 to-indigo-50/60"
+        gradient="from-blue-100/80 via-indigo-50/60 to-sky-100/80"
       >
-        <div className="space-y-6">
+        <div className="space-y-8">
           <div className="flex justify-center">
-            <div className="inline-flex items-center justify-center gap-2 px-6 py-2 bg-blue-50 border border-blue-100/50 rounded-full">
-              <Calendar className="size-4 text-blue-500" />
-              <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">
+            <div className="inline-flex items-center justify-center gap-3 px-8 py-3 bg-white/80 backdrop-blur-xl border border-white shadow-xl shadow-blue-900/5 rounded-full">
+              <div className="size-8 rounded-full bg-blue-100 flex items-center justify-center">
+                <Calendar className="size-4 text-blue-600" />
+              </div>
+              <span className="text-sm font-black text-blue-700 uppercase tracking-widest">
                 {t.yearDayStr.replace("${yearDay}", formData.yearDay)}
               </span>
             </div>
           </div>
 
-          {/* Important Events */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-black text-blue-600/80 uppercase tracking-widest flex items-center justify-center gap-2 text-center">
-              <Star className="size-4" /> {t.importantEvents}
-            </h4>
-            <div className="space-y-2">
-              {formData.events.split("\n").map((event: string, i: number) => (
-                <div key={i} className="flex flex-col items-center justify-center p-4 bg-blue-50/40 border border-blue-100/50 rounded-2xl text-center shadow-sm">
-                  <span className="text-base md:text-lg font-bold text-[#1A1A1A] leading-relaxed">{event}</span>
-                </div>
-              ))}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Important Events */}
+            <div className="bg-white/60 backdrop-blur-xl border border-white rounded-[2.5rem] p-6 shadow-xl shadow-blue-900/5">
+              <div className="flex items-center justify-center gap-3 mb-6 bg-blue-50/50 py-3 rounded-2xl border border-blue-100/50">
+                <Star className="size-5 text-blue-500" /> 
+                <h4 className="text-sm font-black text-blue-800 uppercase tracking-widest">{t.importantEvents}</h4>
+              </div>
+              <div className="space-y-3">
+                {formData.events.split("\n").map((event: string, i: number) => (
+                  <div key={i} className="flex flex-col justify-center p-5 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                    <span className="text-base font-bold text-slate-700 leading-relaxed text-center">{event}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Birthdays */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-black text-emerald-600/80 uppercase tracking-widest flex items-center justify-center gap-2 text-center mt-6">
-              <Gift className="size-4" /> {t.birthdays}
-            </h4>
-            <div className="space-y-2">
-              {formData.birthdays.split("\n").map((b: string, i: number) => (
-                <div key={i} className="flex flex-col items-center justify-center p-4 bg-emerald-50/40 border border-emerald-100/50 rounded-2xl text-center shadow-sm">
-                  <span className="text-base md:text-lg font-bold text-[#1A1A1A] leading-relaxed">{b}</span>
-                </div>
-              ))}
+            {/* Birthdays */}
+            <div className="bg-white/60 backdrop-blur-xl border border-white rounded-[2.5rem] p-6 shadow-xl shadow-emerald-900/5">
+              <div className="flex items-center justify-center gap-3 mb-6 bg-emerald-50/50 py-3 rounded-2xl border border-emerald-100/50">
+                <Gift className="size-5 text-emerald-500" /> 
+                <h4 className="text-sm font-black text-emerald-800 uppercase tracking-widest">{t.birthdays}</h4>
+              </div>
+              <div className="space-y-3">
+                {formData.birthdays.split("\n").map((b: string, i: number) => (
+                  <div key={i} className="flex flex-col justify-center p-5 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                    <span className="text-base font-bold text-slate-700 leading-relaxed text-center">{b}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Deaths */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-black text-rose-600/80 uppercase tracking-widest flex items-center justify-center gap-2 text-center mt-6">
-              <Star className="size-4" /> {t.deaths}
-            </h4>
-            <div className="space-y-2">
-              {formData.deaths.split("\n").map((d: string, i: number) => (
-                <div key={i} className="flex flex-col items-center justify-center p-4 bg-rose-50/40 border border-rose-100/50 rounded-2xl text-center shadow-sm">
-                  <span className="text-base md:text-lg font-bold text-[#1A1A1A] leading-relaxed">{d}</span>
-                </div>
-              ))}
+            {/* Deaths */}
+            <div className="bg-white/60 backdrop-blur-xl border border-white rounded-[2.5rem] p-6 shadow-xl shadow-rose-900/5">
+              <div className="flex items-center justify-center gap-3 mb-6 bg-rose-50/50 py-3 rounded-2xl border border-rose-100/50">
+                <Star className="size-5 text-rose-500" /> 
+                <h4 className="text-sm font-black text-rose-800 uppercase tracking-widest">{t.deaths}</h4>
+              </div>
+              <div className="space-y-3">
+                {formData.deaths.split("\n").map((d: string, i: number) => (
+                  <div key={i} className="flex flex-col justify-center p-5 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                    <span className="text-base font-bold text-slate-700 leading-relaxed text-center">{d}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -2047,17 +2146,20 @@ function DailyAssemblyContent() {
         emoji="🪀"
         title={t.patrioticSongTitle}
         icon={Music}
-        gradient="from-orange-50/80 to-amber-50/60"
+        gradient="from-orange-100/80 via-red-50/60 to-amber-100/80"
       >
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="flex justify-center">
-            <div className="inline-flex items-center gap-3 px-6 py-2.5 bg-orange-50 border border-orange-100/50 rounded-full">
-              <Music className="size-5 text-orange-500" />
-              <span className="text-base font-black text-orange-700 uppercase tracking-widest">{formData.songTitle}</span>
+            <div className="inline-flex items-center justify-center gap-3 px-8 py-3 bg-white/80 backdrop-blur-xl border border-white shadow-xl shadow-orange-900/5 rounded-full">
+              <div className="size-8 rounded-full bg-orange-100 flex items-center justify-center">
+                <Music className="size-4 text-orange-600" />
+              </div>
+              <span className="text-sm font-black text-orange-700 uppercase tracking-widest">{formData.songTitle}</span>
             </div>
           </div>
-          <div className="p-6 md:p-10 bg-gradient-to-br from-orange-50/40 to-amber-50/30 border border-orange-100/30 rounded-[2rem] text-center shadow-sm">
-            <pre className="whitespace-pre-wrap text-base md:text-xl font-bold text-[#1A1A1A] leading-relaxed font-sans">
+          <div className="p-8 md:p-12 bg-white/60 backdrop-blur-xl border border-white rounded-[3rem] text-center shadow-xl shadow-orange-900/5 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-b from-orange-50/30 to-transparent pointer-events-none" />
+            <pre className="whitespace-pre-wrap text-lg md:text-2xl font-bold text-slate-800 leading-relaxed font-sans relative z-10">
               {formData.patrioticSong}
             </pre>
           </div>
@@ -2070,25 +2172,30 @@ function DailyAssemblyContent() {
         emoji="🪀"
         title={t.storyTitle}
         icon={BookOpen}
-        gradient="from-indigo-50/80 to-blue-50/60"
+        gradient="from-pink-100/80 via-rose-50/60 to-red-100/80"
       >
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="flex justify-center">
-            <div className="inline-flex items-center gap-3 px-6 py-2.5 bg-indigo-50 border border-indigo-100/50 rounded-full">
-              <BookOpen className="size-5 text-indigo-500" />
-              <span className="text-base font-black text-indigo-700 uppercase tracking-widest">{formData.storyTitle}</span>
+            <div className="inline-flex items-center justify-center gap-3 px-8 py-3 bg-white/80 backdrop-blur-xl border border-white shadow-xl shadow-pink-900/5 rounded-full">
+              <div className="size-8 rounded-full bg-pink-100 flex items-center justify-center">
+                <BookOpen className="size-4 text-pink-600" />
+              </div>
+              <span className="text-sm font-black text-pink-700 uppercase tracking-widest">{formData.storyTitle}</span>
             </div>
           </div>
-          <div className="p-6 md:p-10 bg-gradient-to-br from-indigo-50/30 to-blue-50/20 border border-indigo-100/30 rounded-[2rem] text-center shadow-sm">
-            <p className="text-base md:text-xl font-bold text-[#1A1A1A] leading-relaxed whitespace-pre-wrap">
+          <div className="p-8 md:p-12 bg-white/60 backdrop-blur-xl border border-white rounded-[3rem] text-center shadow-xl shadow-pink-900/5">
+            <p className="text-lg md:text-2xl font-bold text-slate-800 leading-loose whitespace-pre-wrap">
               {formData.story}
             </p>
           </div>
-          <div className="p-6 bg-amber-50/50 border border-amber-200/40 rounded-[2rem] flex flex-col items-center text-center gap-3 shadow-sm">
-            <Star className="size-8 text-amber-500" />
-            <div>
-              <div className="text-[10px] font-black text-amber-600/80 uppercase tracking-widest mb-2">{t.moral}</div>
-              <p className="text-lg md:text-xl font-black text-amber-900 leading-relaxed">{formData.moral}</p>
+          <div className="p-8 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/60 rounded-[3rem] flex flex-col items-center text-center gap-4 shadow-lg shadow-amber-900/5 relative overflow-hidden group">
+            <div className="absolute inset-0 bg-white/40 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="size-16 rounded-full bg-amber-100 flex items-center justify-center shadow-inner relative z-10">
+              <Star className="size-8 text-amber-500" />
+            </div>
+            <div className="relative z-10">
+              <div className="inline-block px-4 py-1 rounded-full bg-amber-200/50 text-[10px] font-black text-amber-700 uppercase tracking-widest mb-4">{t.moral}</div>
+              <p className="text-xl md:text-3xl font-black text-amber-900 leading-relaxed">{formData.moral}</p>
             </div>
           </div>
         </div>
@@ -2100,24 +2207,27 @@ function DailyAssemblyContent() {
         emoji="🪀"
         title={t.gkTitle}
         icon={HelpCircle}
-        gradient="from-cyan-50/80 to-teal-50/60"
+        gradient="from-cyan-100/80 via-sky-50/60 to-blue-100/80"
       >
-        <div className="flex flex-col gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {[
-            { q: formData.gkQ1, a: formData.gkA1, label: t.q1, aLabel: t.a1 },
-            { q: formData.gkQ2, a: formData.gkA2, label: t.q2, aLabel: t.a2 },
-            { q: formData.gkQ3, a: formData.gkA3, label: t.q3, aLabel: t.a3 },
-            { q: formData.gkQ4, a: formData.gkA4, label: t.q4, aLabel: t.a4 },
+            { q: formData.gkQ1, a: formData.gkA1, label: t.q1, aLabel: t.a1, iconColor: "text-cyan-500", bg: "bg-cyan-50", border: "border-cyan-200" },
+            { q: formData.gkQ2, a: formData.gkA2, label: t.q2, aLabel: t.a2, iconColor: "text-sky-500", bg: "bg-sky-50", border: "border-sky-200" },
+            { q: formData.gkQ3, a: formData.gkA3, label: t.q3, aLabel: t.a3, iconColor: "text-blue-500", bg: "bg-blue-50", border: "border-blue-200" },
+            { q: formData.gkQ4, a: formData.gkA4, label: t.q4, aLabel: t.a4, iconColor: "text-indigo-500", bg: "bg-indigo-50", border: "border-indigo-200" },
           ].map((item, i) => (
             <div
               key={i}
-              className="p-6 md:p-8 bg-gradient-to-br from-white to-cyan-50/30 border border-cyan-100/40 rounded-[2rem] hover:shadow-md transition-all duration-300 text-center flex flex-col items-center justify-center shadow-sm"
+              className="p-8 bg-white/80 backdrop-blur-xl border border-white rounded-[3rem] shadow-xl shadow-cyan-900/5 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 text-center flex flex-col items-center relative overflow-hidden group"
             >
-              <HelpCircle className="size-8 text-cyan-500 mb-4" />
-              <p className="text-lg md:text-xl font-black text-[#1A1A1A] mb-5">{item.q}</p>
-              <div className="px-6 py-3 bg-cyan-50 border border-cyan-100/50 rounded-2xl inline-block">
-                <span className="text-[10px] font-black text-cyan-600/80 uppercase tracking-widest mr-2">{t.ans} : </span>
-                <span className="text-base md:text-lg font-black text-cyan-800">{item.a}</span>
+              <div className={`absolute inset-0 ${item.bg} opacity-30 group-hover:opacity-60 transition-opacity`} />
+              <div className={`size-14 rounded-full bg-white border ${item.border} flex items-center justify-center mb-6 shadow-sm relative z-10`}>
+                <HelpCircle className={`size-6 ${item.iconColor}`} />
+              </div>
+              <p className="text-lg md:text-xl font-black text-slate-800 mb-8 relative z-10 flex-grow leading-relaxed">{item.q}</p>
+              <div className={`w-full px-6 py-4 bg-white border ${item.border} rounded-2xl relative z-10 shadow-sm`}>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">{t.ans}</span>
+                <span className={`text-base md:text-lg font-black ${item.iconColor} drop-shadow-sm`}>{item.a}</span>
               </div>
             </div>
           ))}
@@ -2130,23 +2240,25 @@ function DailyAssemblyContent() {
         emoji="🪀"
         title={t.personalityTitle}
         icon={User}
-        gradient="from-rose-50/80 to-pink-50/60"
+        gradient="from-fuchsia-100/80 via-purple-50/60 to-pink-100/80"
       >
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="flex justify-center">
-            <div className="inline-flex items-center gap-3 px-6 py-2.5 bg-rose-50 border border-rose-100/50 rounded-full">
-              <User className="size-5 text-rose-500" />
-              <span className="text-base font-black text-rose-700 uppercase tracking-widest">{formData.personalityTitle}</span>
+            <div className="inline-flex items-center justify-center gap-3 px-8 py-3 bg-white/80 backdrop-blur-xl border border-white shadow-xl shadow-fuchsia-900/5 rounded-full">
+              <div className="size-8 rounded-full bg-fuchsia-100 flex items-center justify-center">
+                <User className="size-4 text-fuchsia-600" />
+              </div>
+              <span className="text-sm font-black text-fuchsia-700 uppercase tracking-widest">{formData.personalityTitle}</span>
             </div>
           </div>
-          <div className="p-6 md:p-10 bg-gradient-to-br from-rose-50/30 to-pink-50/20 border border-rose-100/30 rounded-[2rem] text-center shadow-sm">
-            <p className="text-base md:text-xl font-bold text-[#1A1A1A] leading-relaxed whitespace-pre-wrap">
+          <div className="p-8 md:p-12 bg-white/60 backdrop-blur-xl border border-white rounded-[3rem] text-center shadow-xl shadow-fuchsia-900/5">
+            <p className="text-lg md:text-2xl font-bold text-slate-800 leading-loose whitespace-pre-wrap">
               {formData.personality}
             </p>
           </div>
         </div>
       </SectionCard>
-    </div>
+    </motion.div>
   );
 }
 
