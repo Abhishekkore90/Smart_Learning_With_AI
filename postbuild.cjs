@@ -103,11 +103,11 @@ if (fs.existsSync(clientPath)) {
   const writeVercelJson = (dir) => {
     const vercelJsonPath = path.join(dir, 'vercel.json');
     const vercelConfig = {
-      framework: "vite",
-      cleanUrls: true,
-      routes: [
-        { handle: "filesystem" },
-        { src: "/(.*)", dest: "/" }
+      rewrites: [
+        { source: "/api/bunny-stream/:path*", destination: "https://video.bunnycdn.com/:path*" },
+        { source: "/api/bunny-storage/:path*", destination: "https://storage.bunnycdn.com/:path*" },
+        { source: "/api/anthropic/:path*", destination: "https://api.anthropic.com/:path*" },
+        { source: "/((?!api/).*)", destination: "/index.html" }
       ]
     };
     fs.writeFileSync(vercelJsonPath, JSON.stringify(vercelConfig, null, 2), 'utf-8');
