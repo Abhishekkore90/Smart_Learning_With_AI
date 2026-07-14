@@ -635,7 +635,7 @@ function TemplateEditorPage() {
       const { default: html2canvas } = await import("html2canvas");
       const canvas = await html2canvas(templateRef.current, {
         scale: 2,
-        useCORS: false,
+        useCORS: true,
         allowTaint: false,
         logging: true,
         backgroundColor: null,
