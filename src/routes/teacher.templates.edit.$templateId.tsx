@@ -877,6 +877,7 @@ function TemplateEditorPage() {
               <div
                 ref={templateRef}
                 className="w-full h-full relative overflow-hidden"
+                style={{ fontFamily: isDownloading ? "system-ui, -apple-system, sans-serif" : undefined }}
               >
                 {/* Dynamic Background */}
                 <div
