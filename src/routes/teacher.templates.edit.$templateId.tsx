@@ -642,6 +642,85 @@ function TemplateEditorPage() {
           allowTaint: false,
           logging: true,
           backgroundColor: null,
+          onclone: (clonedDoc) => {
+            // Remove cross-origin stylesheets/fonts to prevent canvas tainting
+            const links = Array.from(clonedDoc.getElementsByTagName("link"));
+            links.forEach((link) => {
+              if (
+                link.href &&
+                (link.href.includes("fonts.googleapis.com") ||
+                  link.href.includes("fonts.gstatic.com") ||
+                  link.href.includes("use.typekit.net") ||
+                  (!link.href.startsWith(window.location.origin) && !link.href.startsWith("/")))
+              ) {
+                link.parentNode?.removeChild(link);
+              }
+            });
+
+            // Clean style tags: remove all @import statements to prevent loading cross-origin fonts
+            const styles = Array.from(clonedDoc.getElementsByTagName("style"));
+            styles.forEach((style) => {
+              if (style.textContent && style.textContent.includes("@import")) {
+                style.textContent = style.textContent.replace(/@import\s+url\([^)]+\);?/g, "");
+                style.textContent = style.textContent.replace(/@import\s+['"][^'"]+['"];?/g, "");
+              }
+            });
+
+            // Convert SVGs to base64 images to prevent inline SVGs from tainting the canvas
+            const svgs = Array.from(clonedDoc.getElementsByTagName("svg"));
+            svgs.forEach((svg) => {
+              try {
+                // Inline styles from CSS classes (like text-white) need to be explicitly set as attributes
+                // to survive serialization when rendering as a static image in <img>
+                const docView = svg.ownerDocument?.defaultView || window;
+                const computed = docView.getComputedStyle(svg);
+                const color = computed.color || "white";
+                const stroke = computed.stroke && computed.stroke !== "none" ? computed.stroke : null;
+                const fill = computed.fill && computed.fill !== "none" ? computed.fill : null;
+
+                if (color) svg.setAttribute("color", color);
+                
+                if (stroke) {
+                  if (stroke === "currentColor") {
+                    svg.setAttribute("stroke", color);
+                  } else {
+                    svg.setAttribute("stroke", stroke);
+                  }
+                }
+                
+                if (fill) {
+                  if (fill === "currentColor") {
+                    svg.setAttribute("fill", color);
+                  } else {
+                    svg.setAttribute("fill", fill);
+                  }
+                }
+
+                const xml = new XMLSerializer().serializeToString(svg);
+                const base64 = window.btoa(unescape(encodeURIComponent(xml)));
+                const img = clonedDoc.createElement("img");
+                img.src = `data:image/svg+xml;base64,${base64}`;
+                img.className = svg.className.baseVal || svg.getAttribute("class") || "";
+                img.style.cssText = svg.style.cssText;
+                
+                if (svg.hasAttribute("width")) img.setAttribute("width", svg.getAttribute("width")!);
+                if (svg.hasAttribute("height")) img.setAttribute("height", svg.getAttribute("height")!);
+                
+                svg.parentNode?.replaceChild(img, svg);
+              } catch (e) {
+                console.error("Error converting SVG in clone:", e);
+              }
+            });
+
+            // Prevent any images from tainting the canvas
+            const imgs = Array.from(clonedDoc.getElementsByTagName("img"));
+            imgs.forEach((img) => {
+              img.setAttribute("crossorigin", "anonymous");
+              const src = img.src;
+              img.src = "";
+              img.src = src;
+            });
+          },
         });
         const dataUrl = canvas.toDataURL("image/png");
         const link = document.createElement("a");

@@ -303,12 +303,76 @@ function AIChatWorkspace() {
     let response = "";
 
     try {
-      const result = await generateAIResponseCallable({
-        model: activeModel,
-        systemPrompt,
-        userText: cleanText
-      });
-      response = (result.data as any).text || "No response received.";
+      if (activeModel === "chatgpt" && OPENAI_API_KEY) {
+        const res = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${OPENAI_API_KEY}`
+          },
+          body: JSON.stringify({
+            model: "gpt-4o-mini",
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: cleanText }
+            ],
+            max_tokens: 1500,
+            temperature: 0.7,
+          })
+        });
+        if (!res.ok) {
+          throw new Error(`OpenAI API returned status ${res.status} ${res.statusText}`);
+        }
+        const data = await res.json();
+        response = data.choices?.[0]?.message?.content || "No response received.";
+      } 
+      else if (activeModel === "claude" && CLAUDE_API_KEY) {
+        // Use the local Vite proxy `/api/anthropic` to bypass CORS in dev mode
+        const res = await fetch("/api/anthropic/v1/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": CLAUDE_API_KEY,
+            "anthropic-version": "2023-06-01",
+          },
+          body: JSON.stringify({
+            model: "claude-3-5-sonnet-20241022",
+            max_tokens: 1500,
+            system: systemPrompt,
+            messages: [{ role: "user", content: cleanText }],
+          })
+        });
+        if (!res.ok) {
+          throw new Error(`Claude API returned status ${res.status} ${res.statusText}`);
+        }
+        const data = await res.json();
+        response = data.content?.[0]?.text || "No response received.";
+      } 
+      else if (activeModel === "gemini" && GEMINI_API_KEY) {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            system_instruction: { parts: [{ text: systemPrompt }] },
+            contents: [{ role: "user", parts: [{ text: cleanText }] }],
+            generationConfig: { maxOutputTokens: 1500, temperature: 0.7 },
+          })
+        });
+        if (!res.ok) {
+          throw new Error(`Gemini API returned status ${res.status} ${res.statusText}`);
+        }
+        const data = await res.json();
+        response = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response received.";
+      } 
+      else {
+        // Fallback to Cloud Function if key is not configured locally
+        const result = await generateAIResponseCallable({
+          model: activeModel,
+          systemPrompt,
+          userText: cleanText
+        });
+        response = (result.data as any).text || "No response received.";
+      }
     } catch (err: any) {
       console.error("AI API error:", err);
       response = `⚠️ **API Error:** ${err?.message || "Failed to fetch AI response. Please try again."}\n\nIf the issue persists, please check your API key or network connection.`;
