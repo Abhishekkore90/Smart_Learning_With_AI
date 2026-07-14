@@ -631,38 +631,42 @@ function TemplateEditorPage() {
   const handleDownloadTemplate = async () => {
     if (!templateRef.current) return;
     setIsDownloading(true);
-    try {
-      const { default: html2canvas } = await import("html2canvas");
-      const canvas = await html2canvas(templateRef.current, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: false,
-        logging: true,
-        backgroundColor: null,
-      });
-      const dataUrl = canvas.toDataURL("image/png");
-      const link = document.createElement("a");
-      const safeStudentName = (studentName || "student").replace(/\s+/g, '_');
-      const safeTitle = (configToUse.title || "template").replace(/\s+/g, '_');
-      link.download = `${safeStudentName}_${safeTitle}.png`;
-      link.href = dataUrl;
-      link.click();
-      toast.success(
-        lang === "mr" ? "टेम्पलेट यशस्वीरित्या डाउनलोड झाले!" :
-          lang === "hi" ? "टेम्पलेट सफलतापूर्वक डाउनलोड किया गया!" :
-            "Template downloaded successfully!"
-      );
-    } catch (error) {
-      console.error("Error downloading template:", error);
-      const errMsg = error instanceof Error ? error.message : String(error);
-      toast.error(
-        lang === "mr" ? `टेम्पलेट डाउनलोड करण्यात त्रुटी: ${errMsg}` :
-          lang === "hi" ? `टेम्पलेट डाउनलोड करने में त्रुटि: ${errMsg}` :
-            `Failed to download template: ${errMsg}`
-      );
-    } finally {
-      setIsDownloading(false);
-    }
+    
+    // Wait for React to re-render the DOM with isDownloading = true
+    setTimeout(async () => {
+      try {
+        const { default: html2canvas } = await import("html2canvas");
+        const canvas = await html2canvas(templateRef.current!, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: false,
+          logging: true,
+          backgroundColor: null,
+        });
+        const dataUrl = canvas.toDataURL("image/png");
+        const link = document.createElement("a");
+        const safeStudentName = (studentName || "student").replace(/\s+/g, '_');
+        const safeTitle = (configToUse.title || "template").replace(/\s+/g, '_');
+        link.download = `${safeStudentName}_${safeTitle}.png`;
+        link.href = dataUrl;
+        link.click();
+        toast.success(
+          lang === "mr" ? "टेम्पलेट यशस्वीरित्या डाउनलोड झाले!" :
+            lang === "hi" ? "टेम्पलेट सफलतापूर्वक डाउनलोड किया गया!" :
+              "Template downloaded successfully!"
+        );
+      } catch (error) {
+        console.error("Error downloading template:", error);
+        const errMsg = error instanceof Error ? error.message : String(error);
+        toast.error(
+          lang === "mr" ? `टेम्पलेट डाउनलोड करण्यात त्रुटी: ${errMsg}` :
+            lang === "hi" ? `टेम्पलेट डाउनलोड करने में त्रुटि: ${errMsg}` :
+              `Failed to download template: ${errMsg}`
+        );
+      } finally {
+        setIsDownloading(false);
+      }
+    }, 150);
   };
 
   const handleWhatsAppShare = () => {
@@ -909,8 +913,12 @@ function TemplateEditorPage() {
                 )}
 
                 {/* Decorative Glows */}
-                <div className="absolute -top-32 -right-32 size-96 bg-white/10 rounded-full blur-[120px] animate-pulse" />
-                <div className="absolute -bottom-32 -left-32 size-96 bg-black/40 rounded-full blur-[120px]" />
+                {!isDownloading && (
+                  <>
+                    <div className="absolute -top-32 -right-32 size-96 bg-white/10 rounded-full blur-[120px] animate-pulse" />
+                    <div className="absolute -bottom-32 -left-32 size-96 bg-black/40 rounded-full blur-[120px]" />
+                  </>
+                )}
 
                 {/* Card Content */}
                 <div className="relative h-full flex flex-col items-center justify-center p-16 text-center">
@@ -920,7 +928,7 @@ function TemplateEditorPage() {
                     transition={{ type: "spring", damping: 12 }}
                     className={`size-28 bg-white/10 rounded-[2.5rem] flex items-center justify-center mb-10 border border-white/20 shadow-2xl relative ${isDownloading ? "" : "backdrop-blur-2xl"}`}
                   >
-                    <configToUse.icon className="size-14 text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]" />
+                    <configToUse.icon className={`size-14 text-white ${isDownloading ? "" : "drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]"}`} />
                     <div
                       className="absolute -top-4 -right-4 size-10 bg-pink-500 rounded-2xl flex items-center justify-center shadow-lg rotate-12 animate-pulse"
                     >
@@ -958,7 +966,7 @@ function TemplateEditorPage() {
                         WebkitBackgroundClip: isDownloading ? "unset" : "text",
                         WebkitTextFillColor: isDownloading ? "#ffffff" : "transparent",
                         color: isDownloading ? "#ffffff" : undefined,
-                        filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.4))",
+                        filter: isDownloading ? "none" : "drop-shadow(0 10px 20px rgba(0,0,0,0.4))",
                       }}
                     >
                       {studentName}
