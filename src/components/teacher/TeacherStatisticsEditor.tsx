@@ -295,7 +295,7 @@ export function TeacherStatisticsEditor({
 
   const renderSingleA4Page = (pageNum: number) => {
     return (
-      <div className="pdf-a4-page relative p-12 flex flex-col justify-between">
+      <div className="pdf-a4-page relative px-[60px] py-[40px] flex flex-col justify-between">
 
         {/* Page Inner Content */}
         {pageNum === 1 && (
@@ -1301,8 +1301,11 @@ export function TeacherStatisticsEditor({
       `}</style>
 
       {/* Stack of all 18 A4 sheets scrollable vertically */}
-      <div className="flex flex-col items-center gap-8 w-full py-6 bg-slate-800 rounded-[2.5rem] p-6 shadow-inner overflow-x-auto">
-        <div id="teacher-portfolio-pdf-content" className="is-exporting-pdf flex flex-col gap-8">
+      <div 
+        className="bg-[#0d1b4b]/30 p-4 md:p-6 pb-4 rounded-3xl border border-[#c9a227]/20 shadow-inner flex flex-col items-center relative mx-auto overflow-x-auto"
+        style={{ width: "100%", maxWidth: "930px", height: "fit-content" }}
+      >
+        <div id="teacher-portfolio-pdf-content" className="is-exporting-pdf flex flex-col items-center gap-8 w-full">
           {Array(18)
             .fill(null)
             .map((_, i) => (

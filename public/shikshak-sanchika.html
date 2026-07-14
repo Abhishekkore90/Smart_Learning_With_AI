@@ -119,8 +119,8 @@
     }
 
     .pages-wrapper {
-      padding-top: 72px;
-      padding-bottom: 0;
+      padding-top: 90px;
+      padding-bottom: 40px;
       width: 100%;
       display: flex;
       flex-direction: column;
@@ -1730,8 +1730,8 @@ function adjustPageScale() {
   // Scale to fill full viewport width
   const scale = viewportWidth / targetWidth;
   
-  // Clamp between 0.35 and 2.0
-  const clampedScale = Math.min(Math.max(scale, 0.35), 2.0);
+  // Clamp between 0.35 and 1.05 (matches student portfolio centering)
+  const clampedScale = Math.min(Math.max(scale, 0.35), 1.05);
   
   document.documentElement.style.setProperty('--page-scale', clampedScale);
   

@@ -1701,6 +1701,119 @@ function Page5() {
 }
 
 /* ════════════════════════════════════════════════════
+   PAGE 6 – इ) विविध शासकीय योजनांचा लाभ
+════════════════════════════════════════════════════ */
+function Page6() {
+  const ROW_H = "42px";
+  const FONT = "calc(var(--sanchika-font-size, 12pt) - 1.5pt)";
+  
+  const schemes = [
+    "मोफत पाठ्यपुस्तक",
+    "मोफत गणवेश",
+    "शिष्यवृत्ती",
+    "सायकल",
+    "मोफत प्रवास",
+    "लेखन साहित्य",
+    "विकलांगांना उपकरणे व वैद्यकीय मदत",
+    "सावित्रीबाई फुले दत्तक पालक योजना",
+    "उपस्थिती भत्ता",
+    "",
+    "",
+    "",
+  ];
+
+  return (
+    <div className="a4-sheet-card" style={{ ...A4, padding: "24px 16px" }}>
+      <PageHeader title="इ) विविध शासकीय योजनांचा लाभ" />
+
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          width: "100%",
+          paddingTop: "10px",
+        }}
+      >
+        <table style={{ ...TBL, tableLayout: "fixed", fontSize: FONT }}>
+          <colgroup>
+            <col style={{ width: "8%" }} />
+            <col style={{ width: "28%" }} />
+            {CLASSES_MR.map((c) => (
+              <col key={c} style={{ width: "8%" }} />
+            ))}
+          </colgroup>
+          <thead>
+            <tr>
+              <th style={TH({ padding: "6px" })}>अ.क्र.</th>
+              <th style={TH({ textAlign: "left", padding: "6px 8px" })}>योजना</th>
+              {CLASSES_MR.map((c) => (
+                <th key={c} style={TH({ padding: "4px" })}>{c}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {schemes.map((scheme, i) => (
+              <tr key={i} className="hover:bg-[#fdf3d0]/30 transition-colors">
+                <td style={TD({ height: ROW_H, fontWeight: "bold" })}>{["१","२","३","४","५","६","७","८","९","१०","११","१२"][i]}</td>
+                <td style={TD({ textAlign: "left", padding: "4px 8px" })}>
+                  {scheme || (
+                    <span
+                      contentEditable={true}
+                      suppressContentEditableWarning={true}
+                      style={{ display: "block", minHeight: "20px", outline: "none" }}
+                    ></span>
+                  )}
+                </td>
+                {CLASSES_MR.map((c) => (
+                  <td
+                    key={`${c}-${i}`}
+                    contentEditable={true}
+                    suppressContentEditableWarning={true}
+                    style={TD({ height: ROW_H, outline: "none" })}
+                  ></td>
+                ))}
+              </tr>
+            ))}
+            {/* Row 13 */}
+            <tr className="hover:bg-[#fdf3d0]/30 transition-colors">
+              <td style={TD({ height: "55px", fontWeight: "bold" })}>१३</td>
+              <td style={TD({ textAlign: "center", padding: "4px 8px", fontWeight: "bold" })}>
+                वर्ग शिक्षकाचे नाव व स्वाक्षरी
+              </td>
+              {CLASSES_MR.map((c) => (
+                <td
+                  key={`sign1-${c}`}
+                  contentEditable={true}
+                  suppressContentEditableWarning={true}
+                  style={TD({ height: "55px", outline: "none" })}
+                ></td>
+              ))}
+            </tr>
+            {/* Row 14 */}
+            <tr className="hover:bg-[#fdf3d0]/30 transition-colors">
+              <td style={TD({ height: "55px", fontWeight: "bold" })}>१४</td>
+              <td style={TD({ textAlign: "center", padding: "4px 8px", fontWeight: "bold" })}>
+                मुख्याध्यापकाचे नाव व स्वाक्षरी
+              </td>
+              {CLASSES_MR.map((c) => (
+                <td
+                  key={`sign2-${c}`}
+                  contentEditable={true}
+                  suppressContentEditableWarning={true}
+                  style={TD({ height: "55px", outline: "none" })}
+                ></td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <PageFooter pageNum={6} />
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════
    PAGE 7A – फ) वर्तनविषयक मूल्यमापन (भाग १)
 ════════════════════════════════════════════════════ */
 function Page7A() {
@@ -2444,6 +2557,7 @@ function StudentPortfolioPage() {
     "ब) कौटुंबिक माहिती",
     "क) शाळाबाबतची माहिती",
     "ड) प्रगती नोंद (१ ते ८)",
+    "इ) विविध शासकीय योजनांचा लाभ",
     "फ) वर्तन मूल्यमापन (भाग १)",
     "फ) वर्तन मूल्यमापन (भाग २)",
     "प्रमाणपत्र (Certificate)",
@@ -2707,26 +2821,14 @@ function StudentPortfolioPage() {
               {currentTab > 0 && (
                 <button
                   onClick={() => setCurrentTab((prev) => Math.max(0, prev - 1))}
-                  className="nav-arrow prev-arrow flex"
+                  className="nav-arrow prev-arrow flex fixed left-5 lg:left-[276px] top-1/2 -translate-y-1/2 z-50 w-14 h-14 rounded-full items-center justify-center cursor-pointer transition-all duration-300"
                   style={{
-                    position: "absolute",
-                    top: "30%",
-                    left: "20px",
-                    transform: "translateY(-50%)",
-                    width: "56px",
-                    height: "56px",
                     background: "rgba(13, 27, 75, 0.8)",
                     border: "2px solid #c9a227",
                     color: "#f5d060",
                     fontSize: "20px",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: "50%",
-                    cursor: "pointer",
-                    zIndex: 40,
                     boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
                     backdropFilter: "blur(8px)",
-                    transition: "all 0.3s ease",
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = "rgba(13, 27, 75, 0.95)";
@@ -2753,26 +2855,14 @@ function StudentPortfolioPage() {
                       Math.min(pageNames.length - 1, prev + 1),
                     )
                   }
-                  className="nav-arrow next-arrow flex"
+                  className="nav-arrow next-arrow flex fixed right-5 top-1/2 -translate-y-1/2 z-50 w-14 h-14 rounded-full items-center justify-center cursor-pointer transition-all duration-300"
                   style={{
-                    position: "absolute",
-                    top: "30%",
-                    right: "20px",
-                    transform: "translateY(-50%)",
-                    width: "56px",
-                    height: "56px",
                     background: "rgba(13, 27, 75, 0.8)",
                     border: "2px solid #c9a227",
                     color: "#f5d060",
                     fontSize: "20px",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: "50%",
-                    cursor: "pointer",
-                    zIndex: 40,
                     boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
                     backdropFilter: "blur(8px)",
-                    transition: "all 0.3s ease",
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = "rgba(13, 27, 75, 0.95)";
@@ -2883,7 +2973,7 @@ function StudentPortfolioPage() {
                   : "w-full"
               }
             >
-              <Page7A />
+              <Page6 />
             </div>
             <div
               style={{
@@ -2896,7 +2986,7 @@ function StudentPortfolioPage() {
                   : "w-full"
               }
             >
-              <Page7B />
+              <Page7A />
             </div>
             <div
               style={{
@@ -2909,14 +2999,27 @@ function StudentPortfolioPage() {
                   : "w-full"
               }
             >
-              <Page8 />
+              <Page7B />
             </div>
             <div
               style={{
                 display: isPrinting || currentTab === 8 ? "block" : "none",
+                pageBreakAfter: isPrinting ? "always" : "auto",
               }}
               className={
                 !isPrinting && currentTab === 8
+                  ? "active-slide-animate"
+                  : "w-full"
+              }
+            >
+              <Page8 />
+            </div>
+            <div
+              style={{
+                display: isPrinting || currentTab === 9 ? "block" : "none",
+              }}
+              className={
+                !isPrinting && currentTab === 9
                   ? "active-slide-animate"
                   : "w-full"
               }
@@ -2925,7 +3028,7 @@ function StudentPortfolioPage() {
             </div>
 
             {customPages.map((page, index) => {
-              const tabIndex = 9 + index;
+              const tabIndex = 10 + index;
               return (
                 <div
                   key={page.id}

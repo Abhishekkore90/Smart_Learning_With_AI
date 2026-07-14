@@ -125,9 +125,9 @@ const MOCK_NAMES = [
   // SMC
   "श्री. रमेश तांबे", "सौ. सुनीता पाटील", "श्री. संजय कदम", "सौ. विद्या जोशी", "श्री. अनिल गायकवाड", "सौ. मीना शेलार",
   // Safety
-  "श्री. बाबासाहेब तुकाराम कोले", "सौ. पुनम नंदकुमार जाधव", "श्री. विशाल विष्णू खाडे", "सौ. कविता हरिभाऊ जाधव",
-  "श्री. नारायण बाळकृष्ण जाधव", "सौ. आशाराणी प्रविण जाधव", "श्री. राजाराम सुखदेव हातेकर", "सौ. चित्राताई नारायण जाधव",
-  "श्री. पांडुरंग दिनकर जाधव", "श्री. युवराज धोंडीराम जाधव", "श्री. मंगलसिंग भगवान जाधव", "श्री. शंकर वसंत कोकरे",
+  "श्री. बाबासाहेब तुकाराम कोले", "सौ. पुनम नंदकुमार जाधव", "श्री. विशाल विष्णू खाडे", "सौ. कविता हरिभाऊ जाधव", 
+  "श्री. नारायण बाळकृष्ण जाधव", "सौ. आशाराणी प्रविण जाधव", "श्री. राजाराम सुखदेव हातेकर", "सौ. चित्राताई नारायण जाधव", 
+  "श्री. पांडुरंग दिनकर जाधव", "श्री. युवराज धोंडीराम जाधव", "श्री. मंगलसिंग भगवान जाधव", "श्री. शंकर वसंत कोकरे", 
   "श्री. अमोल नारायण केंगार", "श्री. बाबासाहेब रामकिशन केंद्रे",
   // Women
   "सौ. पुनम जाधव", "सौ. आशा जाधव",
@@ -174,9 +174,6 @@ const SMC_DESIGNATIONS = [
   "शिक्षण तज्ज्ञ",
   "महिला आरक्षण",
   "मुख्याध्यापक",
-  "विद्यार्थी प्रतिनिधी",
-  "विद्यार्थिनी प्रतिनिधी ",
-  "महिला प्रतिनिधी",
 ];
 
 const SAFETY_DESIGNATIONS = [
@@ -323,9 +320,9 @@ function TeacherMeetingPage() {
     const parts = englishYearStr.split("-");
     const startYear = parseInt(parts[0]);
     if (isNaN(startYear)) return new Date().getFullYear();
-
+    
     if (monthVal === "sem1" || monthVal === "sem2") return startYear;
-
+    
     const monthNum = parseInt(monthVal);
     if (monthNum >= 6 && monthNum <= 12) {
       return startYear;
@@ -1194,13 +1191,13 @@ function TeacherMeetingPage() {
       toast.info("PDF तयार होत आहे, कृपया प्रतीक्षा करा...");
 
       const html2pdf = (await import("html2pdf.js")).default;
-
+      
       const opt = {
         margin: [10, 0, 10, 0], // top, left, bottom, right (0 for sides to use container's own padding)
         filename: `meeting_report.pdf`,
         image: { type: 'jpeg', quality: 1 },
-        html2canvas: {
-          scale: 2,
+        html2canvas: { 
+          scale: 2, 
           useCORS: true,
           windowWidth: 800 // Force consistent width for A4 aspect ratio
         },
@@ -1236,363 +1233,385 @@ function TeacherMeetingPage() {
       <main className="lg:pl-64 pt-16 min-h-screen">
         <PinGate sectionKey="meeting">
           <div className="p-4 md:p-8 space-y-8 max-w-[1600px] mx-auto print:p-0 print:pl-0">
-            {/* Header section (Hidden on print) */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 print:hidden">
-              <div>
-                <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-                  <Users className="size-8 text-blue-600" />
-                  मासिक सभा <span className="text-blue-600">समित्या</span>
-                </h1>
-                <p className="text-slate-500 text-sm font-medium mt-1">
-                  शाळेतील विविध मासिक सभा आणि समित्यांचे इतिवृत्त, सदस्य आणि ठराव
-                  व्यवस्थापन करा.
-                </p>
-              </div>
-              <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl border border-blue-100">
-                <div className="size-2 bg-blue-600 rounded-full animate-pulse" />
-                <span className="text-[10px] font-black uppercase tracking-widest">
-                  स्वयंचलित संचयन (Auto-Sync)
-                </span>
-              </div>
+          {/* Header section (Hidden on print) */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 print:hidden">
+            <div>
+              <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                <Users className="size-8 text-blue-600" />
+                मासिक सभा <span className="text-blue-600">समित्या</span>
+              </h1>
+              <p className="text-slate-500 text-sm font-medium mt-1">
+                शाळेतील विविध मासिक सभा आणि समित्यांचे इतिवृत्त, सदस्य आणि ठराव
+                व्यवस्थापन करा.
+              </p>
             </div>
+            <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl border border-blue-100">
+              <div className="size-2 bg-blue-600 rounded-full animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-widest">
+                स्वयंचलित संचयन (Auto-Sync)
+              </span>
+            </div>
+          </div>
 
-            {/* Core Content Layout Area */}
-            <AnimatePresence mode="wait">
-              {!selectedCommittee ? (
-                // Option 1: Card Grid View (No Committee Selected)
-                <motion.div
-                  key="grid-view"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className="space-y-6 print:hidden"
-                >
-                  <div className="bg-gradient-to-r from-violet-50 to-indigo-50/50 p-4 sm:p-8 rounded-2xl sm:rounded-[2rem] border border-indigo-100/50 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div className="space-y-1">
-                      <h2 className="text-base sm:text-lg font-black text-slate-800 flex items-center gap-2">
-                        <Sparkles className="size-5 text-indigo-600" /> समिती निवड
-                      </h2>
-                      <p className="text-[11px] sm:text-xs font-bold text-slate-500">
-                        माहिती भरण्यासाठी किंवा मागील अहवाल पाहण्यासाठी खालीलपैकी
-                        कोणतीही एक समिती निवडा.
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 text-[10px] sm:text-xs font-black text-indigo-600 bg-indigo-50 border border-indigo-100 px-4 py-2 rounded-xl self-start md:self-auto">
-                      <span>एकूण ६ सक्रिय समित्या</span>
-                    </div>
+          {/* Core Content Layout Area */}
+          <AnimatePresence mode="wait">
+            {!selectedCommittee ? (
+              // Option 1: Card Grid View (No Committee Selected)
+              <motion.div
+                key="grid-view"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-6 print:hidden"
+              >
+                <div className="bg-gradient-to-r from-violet-50 to-indigo-50/50 p-4 sm:p-8 rounded-2xl sm:rounded-[2rem] border border-indigo-100/50 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div className="space-y-1">
+                    <h2 className="text-base sm:text-lg font-black text-slate-800 flex items-center gap-2">
+                      <Sparkles className="size-5 text-indigo-600" /> समिती निवड
+                    </h2>
+                    <p className="text-[11px] sm:text-xs font-bold text-slate-500">
+                      माहिती भरण्यासाठी किंवा मागील अहवाल पाहण्यासाठी खालीलपैकी
+                      कोणतीही एक समिती निवडा.
+                    </p>
                   </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pt-4">
-                    {COMMITTEES.map((comm) => {
-                      const CommIcon = comm.icon;
-                      return (
-                        <motion.button
-                          whileHover={{ scale: 1.04, y: -6 }}
-                          whileTap={{ scale: 0.98 }}
-                          key={comm.id}
-                          onClick={() =>
-                            navigate({
-                              search: (prev) => ({
-                                ...prev,
-                                committeeId: comm.id,
-                                tab: "form",
-                                edit: undefined,
-                              }),
-                            })
-                          }
-                          className="min-h-[15rem] bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-8 shadow-md hover:shadow-[0_20px_45px_rgba(139,92,246,0.3)] text-left flex flex-col justify-between transition-all border border-[#7c3aed]/30 relative overflow-hidden group cursor-pointer w-full"
-                        >
-                          {/* Watermark background icon */}
-                          <div className="absolute right-[-10%] bottom-[-10%] opacity-10 group-hover:opacity-20 transition-opacity duration-300 pointer-events-none">
-                            <CommIcon className="size-36 sm:size-48" strokeWidth={1} />
-                          </div>
-
-                          {/* Small Icon Badge */}
-                          <div className="size-10 sm:size-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20 backdrop-blur-sm group-hover:scale-110 transition-transform">
-                            <CommIcon className="size-5 sm:size-6 text-white" />
-                          </div>
-
-                          {/* Committee Name */}
-                          <div className="space-y-2 mt-4">
-                            <h3 className="text-lg sm:text-xl font-black leading-tight tracking-tight pr-4">
-                              {comm.name}
-                            </h3>
-                            <p className="text-[10px] sm:text-[11px] text-violet-100/70 font-semibold line-clamp-2 leading-relaxed">
-                              {comm.description}
-                            </p>
-                          </div>
-
-                          {/* Footer Arrow Action */}
-                          <div className="flex items-center gap-1.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-violet-200 mt-6 pt-2 border-t border-white/10">
-                            प्रवेश करा{" "}
-                            <ArrowRight className="size-3 group-hover:translate-x-1.5 transition-transform duration-300" />
-                          </div>
-                        </motion.button>
-                      );
-                    })}
+                  <div className="flex items-center gap-2 text-[10px] sm:text-xs font-black text-indigo-600 bg-indigo-50 border border-indigo-100 px-4 py-2 rounded-xl self-start md:self-auto">
+                    <span>एकूण ६ सक्रिय समित्या</span>
                   </div>
-                </motion.div>
-              ) : (
-                // Option 2: Active Committee Form & History View (Full Width)
-                <motion.div
-                  key="form-view"
-                  initial={{ opacity: 0, scale: 0.98 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.98 }}
-                  className="w-full bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden print:border-0 print:shadow-none"
-                >
-                  {/* Header/Tab Navigation (Hidden on print) */}
-                  <div className="bg-slate-50 border-b border-slate-200 px-6 py-5 flex flex-col md:flex-row md:items-center justify-between gap-6 print:hidden">
-                    <div className="flex flex-wrap items-center gap-4">
-                      <button
-                        onClick={() => {
-                          if (activeTab === "form" && formStep === 2 && !selectedPastMeeting) {
-                            setFormStep(1);
-                          } else {
-                            navigate({
-                              search: (prev) => ({
-                                ...prev,
-                                committeeId: undefined,
-                                tab: undefined,
-                                meetingId: undefined,
-                                edit: undefined,
-                              }),
-                            });
-                          }
-                        }}
-                        className="flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-black rounded-xl text-[10px] uppercase tracking-wider transition-all duration-300 shadow-sm active:scale-95 cursor-pointer"
-                      >
-                        ← मागे जा
-                      </button>
-                      <div className="h-8 w-px bg-slate-200 hidden sm:block" />
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-100 text-blue-600 rounded-xl">
-                          <selectedCommittee.icon className="size-5" />
-                        </div>
-                        <div>
-                          <h2 className="text-lg font-black text-slate-800 leading-tight">
-                            {selectedCommittee.name}
-                          </h2>
-                          <p className="text-[10.5px] font-bold text-slate-400 mt-0.5">
-                            {selectedCommittee.description}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+                </div>
 
-                    <div className="flex bg-slate-200/60 p-1 rounded-xl shrink-0 self-start md:self-center">
-                      <button
-                        onClick={() => {
-                          setFormStep(1);
-                          navigate({
-                            search: (prev) => ({
-                              ...prev,
-                              tab: "form",
-                              meetingId: undefined,
-                              edit: undefined,
-                            }),
-                          });
-                        }}
-                        className={`px-5 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === "form" && !selectedPastMeeting
-                          ? "bg-white text-slate-900 shadow-sm font-black"
-                          : "text-slate-500 hover:text-slate-950"
-                          }`}
-                      >
-                        नवीन बैठक नोंदवा
-                      </button>
-                      <button
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pt-4">
+                  {COMMITTEES.map((comm) => {
+                    const CommIcon = comm.icon;
+                    return (
+                      <motion.button
+                        whileHover={{ scale: 1.04, y: -6 }}
+                        whileTap={{ scale: 0.98 }}
+                        key={comm.id}
                         onClick={() =>
                           navigate({
                             search: (prev) => ({
                               ...prev,
-                              tab: "history",
+                              committeeId: comm.id,
+                              tab: "form",
                               edit: undefined,
                             }),
                           })
                         }
-                        className={`px-5 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === "history" || selectedPastMeeting
-                          ? "bg-white text-slate-900 shadow-sm font-black"
-                          : "text-slate-500 hover:text-slate-950"
-                          }`}
+                        className="min-h-[15rem] bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-8 shadow-md hover:shadow-[0_20px_45px_rgba(139,92,246,0.3)] text-left flex flex-col justify-between transition-all border border-[#7c3aed]/30 relative overflow-hidden group cursor-pointer w-full"
                       >
-                        मागील अहवाल ({savedMeetings.length})
-                      </button>
+                        {/* Watermark background icon */}
+                        <div className="absolute right-[-10%] bottom-[-10%] opacity-10 group-hover:opacity-20 transition-opacity duration-300 pointer-events-none">
+                          <CommIcon className="size-36 sm:size-48" strokeWidth={1} />
+                        </div>
+
+                        {/* Small Icon Badge */}
+                        <div className="size-10 sm:size-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20 backdrop-blur-sm group-hover:scale-110 transition-transform">
+                          <CommIcon className="size-5 sm:size-6 text-white" />
+                        </div>
+
+                        {/* Committee Name */}
+                        <div className="space-y-2 mt-4">
+                          <h3 className="text-lg sm:text-xl font-black leading-tight tracking-tight pr-4">
+                            {comm.name}
+                          </h3>
+                          <p className="text-[10px] sm:text-[11px] text-violet-100/70 font-semibold line-clamp-2 leading-relaxed">
+                            {comm.description}
+                          </p>
+                        </div>
+
+                        {/* Footer Arrow Action */}
+                        <div className="flex items-center gap-1.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-violet-200 mt-6 pt-2 border-t border-white/10">
+                          प्रवेश करा{" "}
+                          <ArrowRight className="size-3 group-hover:translate-x-1.5 transition-transform duration-300" />
+                        </div>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            ) : (
+              // Option 2: Active Committee Form & History View (Full Width)
+              <motion.div
+                key="form-view"
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+                className="w-full bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden print:border-0 print:shadow-none"
+              >
+                {/* Header/Tab Navigation (Hidden on print) */}
+                <div className="bg-slate-50 border-b border-slate-200 px-6 py-5 flex flex-col md:flex-row md:items-center justify-between gap-6 print:hidden">
+                  <div className="flex flex-wrap items-center gap-4">
+                    <button
+                      onClick={() => {
+                        if (activeTab === "form" && formStep === 2 && !selectedPastMeeting) {
+                          setFormStep(1);
+                        } else {
+                          navigate({
+                            search: (prev) => ({
+                              ...prev,
+                              committeeId: undefined,
+                              tab: undefined,
+                              meetingId: undefined,
+                              edit: undefined,
+                            }),
+                          });
+                        }
+                      }}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-black rounded-xl text-[10px] uppercase tracking-wider transition-all duration-300 shadow-sm active:scale-95 cursor-pointer"
+                    >
+                      ← मागे जा
+                    </button>
+                    <div className="h-8 w-px bg-slate-200 hidden sm:block" />
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-100 text-blue-600 rounded-xl">
+                        <selectedCommittee.icon className="size-5" />
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-black text-slate-800 leading-tight">
+                          {selectedCommittee.name}
+                        </h2>
+                        <p className="text-[10.5px] font-bold text-slate-400 mt-0.5">
+                          {selectedCommittee.description}
+                        </p>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Tab Content - View 1: History & Details View */}
-                  {activeTab === "history" && (
-                    <div className="p-6 md:p-10">
-                      {selectedPastMeeting ? (
-                        // Detail Report View / Print View
-                        <div className="space-y-8 register-print-area">
-                          {/* Action Bar (Hidden on print) */}
-                          <div className="flex items-center justify-between border-b border-slate-100 pb-6 print:hidden">
-                            <button
-                              onClick={() => {
-                                if (isEditing) {
-                                  navigate({
-                                    search: (prev) => ({
-                                      ...prev,
-                                      edit: undefined,
-                                    }),
-                                  });
-                                } else {
-                                  navigate({
-                                    search: (prev) => ({
-                                      ...prev,
-                                      meetingId: undefined,
-                                    }),
-                                  });
-                                }
-                              }}
-                              className="flex items-center gap-2 px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs transition-colors"
-                            >
-                              <X className="size-4" /> मागे जा
-                            </button>
-                            <div className="flex items-center gap-3">
-                              {isEditing ? (
-                                <>
-                                  <button
-                                    onClick={handleUpdateMeetingRecord}
-                                    disabled={isSubmitting}
-                                    className="flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white font-black rounded-xl text-xs tracking-wider transition-colors shadow-md disabled:opacity-50"
-                                  >
-                                    <Save className="size-4" /> बदल जतन करा
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      navigate({
-                                        search: (prev) => ({
-                                          ...prev,
-                                          edit: undefined,
-                                        }),
-                                      });
-                                    }}
-                                    className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs transition-colors"
-                                  >
-                                    रद्द करा
-                                  </button>
-                                </>
-                              ) : (
-                                <>
-                                  <button
-                                    onClick={() => {
-                                      navigate({
-                                        search: (prev) => ({
-                                          ...prev,
-                                          edit: true,
-                                        }),
-                                      });
-                                    }}
-                                    className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl text-xs tracking-wider transition-colors shadow-md cursor-pointer"
-                                  >
-                                    <Edit2 className="size-4" /> संपादन करा
-                                  </button>
-                                  <button
-                                    onClick={handlePrint}
-                                    className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl text-xs tracking-wider transition-colors shadow-md cursor-pointer"
-                                  >
-                                    <Download className="size-4" /> PDF डाउनलोड करा
-                                  </button>
-                                  <button
-                                    onClick={() =>
-                                      handleDeleteMeeting(selectedPastMeeting.id)
-                                    }
-                                    className="flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-black rounded-xl text-xs tracking-wider transition-colors shadow-md cursor-pointer"
-                                  >
-                                    <Trash2 className="size-4" /> डिलीट करा
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </div>
+                  <div className="flex bg-slate-200/60 p-1 rounded-xl shrink-0 self-start md:self-center">
+                    <button
+                      onClick={() => {
+                        setFormStep(1);
+                        navigate({
+                          search: (prev) => ({
+                            ...prev,
+                            tab: "form",
+                            meetingId: undefined,
+                            edit: undefined,
+                          }),
+                        });
+                      }}
+                      className={`px-5 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === "form" && !selectedPastMeeting
+                        ? "bg-white text-slate-900 shadow-sm font-black"
+                        : "text-slate-500 hover:text-slate-950"
+                        }`}
+                    >
+                      नवीन बैठक नोंदवा
+                    </button>
+                    <button
+                      onClick={() =>
+                        navigate({
+                          search: (prev) => ({
+                            ...prev,
+                            tab: "history",
+                            edit: undefined,
+                          }),
+                        })
+                      }
+                      className={`px-5 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === "history" || selectedPastMeeting
+                        ? "bg-white text-slate-900 shadow-sm font-black"
+                        : "text-slate-500 hover:text-slate-950"
+                        }`}
+                    >
+                      मागील अहवाल ({savedMeetings.length})
+                    </button>
+                  </div>
+                </div>
 
-                          {/* Register notebook styling */}
-                          <style>{`
+                {/* Tab Content - View 1: History & Details View */}
+                {activeTab === "history" && (
+                  <div className="p-6 md:p-10">
+                    {selectedPastMeeting ? (
+                      // Detail Report View / Print View
+                      <div className="space-y-8 register-print-area">
+                        {/* Action Bar (Hidden on print) */}
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-6 print:hidden">
+                          <button
+                            onClick={() => {
+                              if (isEditing) {
+                                navigate({
+                                  search: (prev) => ({
+                                    ...prev,
+                                    edit: undefined,
+                                  }),
+                                });
+                              } else {
+                                navigate({
+                                  search: (prev) => ({
+                                    ...prev,
+                                    meetingId: undefined,
+                                  }),
+                                });
+                              }
+                            }}
+                            className="flex items-center gap-2 px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs transition-colors"
+                          >
+                            <X className="size-4" /> मागे जा
+                          </button>
+                          <div className="flex items-center gap-3">
+                            {isEditing ? (
+                              <>
+                                <button
+                                  onClick={handleUpdateMeetingRecord}
+                                  disabled={isSubmitting}
+                                  className="flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white font-black rounded-xl text-xs tracking-wider transition-colors shadow-md disabled:opacity-50"
+                                >
+                                  <Save className="size-4" /> बदल जतन करा
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    navigate({
+                                      search: (prev) => ({
+                                        ...prev,
+                                        edit: undefined,
+                                      }),
+                                    });
+                                  }}
+                                  className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs transition-colors"
+                                >
+                                  रद्द करा
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    navigate({
+                                      search: (prev) => ({
+                                        ...prev,
+                                        edit: true,
+                                      }),
+                                    });
+                                  }}
+                                  className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl text-xs tracking-wider transition-colors shadow-md cursor-pointer"
+                                >
+                                  <Edit2 className="size-4" /> संपादन करा
+                                </button>
+                                <button
+                                  onClick={handlePrint}
+                                  className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-xl text-xs tracking-wider transition-colors shadow-md cursor-pointer"
+                                >
+                                  <Download className="size-4" /> PDF डाउनलोड करा
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    handleDeleteMeeting(selectedPastMeeting.id)
+                                  }
+                                  className="flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-black rounded-xl text-xs tracking-wider transition-colors shadow-md cursor-pointer"
+                                >
+                                  <Trash2 className="size-4" /> डिलीट करा
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Register notebook styling */}
+                        <style>{`
+                          @import url('https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap');
+                          
                           .register-container {
-                            background-color: white;
-                            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-                            font-family: 'Inter', sans-serif;
+                            background-color: #fdfcf7; /* Ledger Cream background */
+                            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+                            font-family: 'Kalam', cursive, 'Inter', sans-serif;
                             position: relative;
-                            padding: 3rem;
+                            border-left: 2px solid #ef4444; /* double red margin */
+                            padding: 3rem 2.5rem 3rem 4.5rem;
                             min-height: 1000px;
-                            border-radius: 0.5rem;
-                            border: 1px solid #e2e8f0;
-                            color: black;
+                            border-radius: 1.5rem;
+                          }
+                          
+                          .register-container::before {
+                            content: '';
+                            position: absolute;
+                            top: 0;
+                            bottom: 0;
+                            left: 3.5rem;
+                            width: 3px;
+                            border-left: 1px solid #ef4444;
+                            border-right: 1px solid #ef4444;
+                            height: 100%;
+                            pointer-events: none;
+                          }
+
+                          /* Ledger notebook page grid background */
+                          .register-page-bg {
+                            background-image: linear-gradient(rgba(59, 130, 246, 0.08) 1px, transparent 1px);
+                            background-size: 100% 2.4rem;
+                            line-height: 2.4rem;
                           }
 
                           .register-header-text {
-                            font-size: 1.1rem;
-                            color: black;
-                            line-height: 1.8rem;
+                            font-size: 1.3rem;
+                            color: #1e293b;
+                            line-height: 2.4rem;
+                            text-indent: 3rem;
                             text-align: justify;
                             margin-bottom: 2rem;
-                            font-weight: 500;
+                            font-weight: 600;
                           }
 
                           .register-table {
                             width: 100%;
                             border-collapse: collapse;
                             margin-bottom: 2rem;
-                            font-size: 1rem;
+                            font-size: 1.2rem;
                           }
 
                           .register-table th, .register-table td {
-                            border: 1px solid black;
+                            border: 1px solid #475569;
                             padding: 0.5rem 0.8rem;
                             text-align: left;
                           }
 
                           .register-table th {
-                            background-color: #f8f9fa;
-                            font-weight: bold;
-                            color: black;
+                            background-color: rgba(71, 85, 105, 0.05);
+                            font-weight: 700;
+                            color: #0f172a;
                           }
 
                           .register-table td {
-                            color: black;
+                            color: #334155;
                           }
 
                           .register-res-section {
-                            margin-top: 2rem;
-                            padding-top: 1rem;
+                            margin-top: 3rem;
+                            border-top: 1px dashed #94a3b8;
+                            padding-top: 2rem;
                           }
 
                           .register-res-item {
-                            margin-bottom: 2rem;
-                            font-size: 1.1rem;
-                            line-height: 1.8rem;
-                            padding-bottom: 1rem;
-                            border-bottom: 1px solid #e2e8f0;
+                            margin-bottom: 3rem;
+                            font-size: 1.25rem;
+                            line-height: 2.6rem;
+                            border-bottom: 1px dotted #cbd5e1;
+                            padding-bottom: 1.5rem;
                           }
 
                           .register-res-title {
-                            font-weight: bold;
-                            color: black;
+                            font-weight: 700;
+                            color: #0f172a;
                             display: inline-block;
                             min-width: 6.5rem;
                           }
 
                           .register-signature-area {
-                            margin-top: 4rem;
+                            margin-top: 6rem;
                             display: grid;
                             grid-template-columns: repeat(2, 1fr);
                             gap: 2rem;
                             text-align: center;
-                            font-size: 1.1rem;
-                            font-weight: bold;
-                            color: black;
+                            font-size: 1.15rem;
+                            font-weight: 700;
                           }
                           
                           .ledger-input {
                             background: transparent;
                             border: none;
-                            border-bottom: 1px solid #94a3b8;
-                            color: black;
-                            font-family: 'Inter', sans-serif;
+                            border-bottom: 1px dashed rgba(59, 130, 246, 0.4);
+                            color: #1e3a8a; /* Blue handwriting ink */
+                            font-family: 'Kalam', cursive, 'Inter', sans-serif;
                             font-size: inherit;
-                            font-weight: 600;
+                            font-weight: 700;
                             outline: none;
                             padding: 0 4px;
                             transition: all 0.2s ease;
@@ -1600,7 +1619,13 @@ function TeacherMeetingPage() {
                           
                           .ledger-input:focus {
                             border-bottom: 2px solid #2563eb;
-                            background-color: #f8fafc;
+                            background-color: rgba(59, 130, 246, 0.03);
+                          }
+                          
+                          .ledger-input::placeholder {
+                            color: #94a3b8;
+                            font-weight: 400;
+                            font-style: italic;
                           }
 
                           @media print {
@@ -1624,1366 +1649,1509 @@ function TeacherMeetingPage() {
                             .register-container {
                               box-shadow: none !important;
                               border: none !important;
-                              padding: 0 !important;
-                              background-color: white !important;
+                              padding: 1.5rem 1rem 1.5rem 3.5rem !important;
+                              background-color: #fdfcf7 !important;
                               -webkit-print-color-adjust: exact;
                               print-color-adjust: exact;
                               width: 100% !important;
                               border-radius: 0 !important;
                             }
+                            .register-container::before {
+                              left: 2.5rem !important;
+                            }
                           }
                         `}</style>
 
-                          {/* Notebook Ledger Sheet */}
-                          <div id="meeting-pdf-content" className="register-container">
-                            {isEditing ? (
-                              // --- EDITING MODE IN-PLACE LEDGER VIEW ---
-                              <div className="space-y-8 select-text">
-                                {/* Meeting Ledger Letterhead */}
-                                <div className="text-center pb-4 pt-2">
-                                  <h1 className="text-3xl font-black text-slate-900 border-b-2 border-slate-800 pb-2 tracking-wide inline-block px-8">
-                                    मासिक सभा इतिवृत्त नोंदवही
-                                  </h1>
-                                </div>
+                        {/* Notebook Ledger Sheet */}
+                        <div id="meeting-pdf-content" className="register-container register-page-bg">
+                          {isEditing ? (
+                            // --- EDITING MODE IN-PLACE LEDGER VIEW ---
+                            <div className="space-y-8 select-text">
+                              {/* Meeting Ledger Letterhead */}
+                              <div className="text-center pb-4 pt-2">
+                                <h1 className="text-3xl font-black text-slate-900 border-b-2 border-slate-800 pb-2 tracking-wide inline-block px-8">
+                                  मासिक सभा इतिवृत्त नोंदवही
+                                </h1>
+                              </div>
 
-                                {/* Meeting Metadata Header (Editable) */}
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 border-b-2 border-slate-300 pb-4 mb-4 text-[13px] md:text-sm font-bold text-slate-800 tracking-tight font-sans">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-slate-500 font-black text-[10px] uppercase tracking-wider shrink-0">
-                                      शैक्षणिक वर्ष:
-                                    </span>
-                                    <input
-                                      type="text"
-                                      value={editAcademicYear}
-                                      onChange={(e) =>
-                                        setEditAcademicYear(e.target.value)
-                                      }
-                                      className="bg-transparent border-none outline-none underline decoration-dotted decoration-slate-400 font-extrabold text-slate-900 w-full"
-                                    />
-                                  </div>
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-slate-500 font-black text-[10px] uppercase tracking-wider shrink-0">
-                                      सचिव/मुख्याध्यापक:
-                                    </span>
-                                    <input
-                                      type="text"
-                                      value={editHeadmasterName}
-                                      onChange={(e) =>
-                                        setEditHeadmasterName(e.target.value)
-                                      }
-                                      className="bg-transparent border-none outline-none underline decoration-dotted decoration-slate-400 font-extrabold text-slate-900 w-full"
-                                    />
-                                  </div>
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-slate-500 font-black text-[10px] uppercase tracking-wider shrink-0">
-                                      शाळेचे नाव:
-                                    </span>
-                                    <input
-                                      type="text"
-                                      value={editSchoolName}
-                                      onChange={(e) =>
-                                        setEditSchoolName(e.target.value)
-                                      }
-                                      className="bg-transparent border-none outline-none underline decoration-dotted decoration-slate-400 font-extrabold text-slate-900 w-full"
-                                    />
-                                  </div>
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-slate-500 font-black text-[10px] uppercase tracking-wider shrink-0">
-                                      समिती अध्यक्षांचे नाव:
-                                    </span>
-                                    <input
-                                      type="text"
-                                      value={editPresidentName}
-                                      onChange={(e) =>
-                                        setEditPresidentName(e.target.value)
-                                      }
-                                      className="bg-transparent border-none outline-none underline decoration-dotted decoration-slate-400 font-extrabold text-slate-900 w-full"
-                                    />
-                                  </div>
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-slate-500 font-black text-[10px] uppercase tracking-wider shrink-0">
-                                      समितीचे नाव:
-                                    </span>
-                                    <input
-                                      type="text"
-                                      value={editCommitteeName}
-                                      onChange={(e) =>
-                                        setEditCommitteeName(e.target.value)
-                                      }
-                                      className="bg-transparent border-none outline-none underline decoration-dotted decoration-slate-400 font-extrabold text-slate-900 w-full"
-                                    />
-                                  </div>
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-slate-500 font-black text-[10px] uppercase tracking-wider shrink-0">
-                                      सभा दिनांक:
-                                    </span>
-                                    <input
-                                      type="date"
-                                      value={editMeetingDate}
-                                      onChange={(e) =>
-                                        setEditMeetingDate(e.target.value)
-                                      }
-                                      className="bg-transparent border-none outline-none underline decoration-dotted decoration-slate-400 font-extrabold text-slate-900 w-full cursor-pointer"
-                                    />
-                                  </div>
-                                </div>
-
-                                {/* Introductory Paragraph (Editable) */}
-                                <p className="register-header-text">
-                                  <textarea
-                                    value={editIntroText}
+                              {/* Meeting Metadata Header (Editable) */}
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 border-b-2 border-slate-300 pb-4 mb-4 text-[13px] md:text-sm font-bold text-slate-800 tracking-tight font-sans">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-slate-500 font-black text-[10px] uppercase tracking-wider shrink-0">
+                                    शैक्षणिक वर्ष:
+                                  </span>
+                                  <input
+                                    type="text"
+                                    value={editAcademicYear}
                                     onChange={(e) =>
-                                      setEditIntroText(e.target.value)
+                                      setEditAcademicYear(e.target.value)
                                     }
-                                    className="bg-transparent border-none outline-none w-full resize-y min-h-[120px]"
-                                    rows={3}
+                                    className="bg-transparent border-none outline-none underline decoration-dotted decoration-slate-400 font-extrabold text-slate-900 w-full"
                                   />
-                                </p>
-
-                                {/* Committee Members Table (Editable) */}
-                                <div className="space-y-4">
-                                  <div className="flex items-center justify-between border-b border-slate-300 pb-2">
-                                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">
-                                      समिती सदस्य यादी
-                                    </h3>
-                                    <button
-                                      type="button"
-                                      onClick={handleAddMemberRow}
-                                      className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg text-xs font-bold font-sans transition-colors cursor-pointer"
-                                    >
-                                      <UserPlus className="size-4" /> सदस्य जोडा
-                                    </button>
-                                  </div>
-
-                                  <div className="w-full overflow-x-auto no-scrollbar">
-                                    <table className="register-table min-w-[600px] w-full">
-                                      <thead>
-                                        <tr className="bg-slate-100 whitespace-nowrap">
-                                          <th className="w-10 text-center px-2 py-2">अ.क्र.</th>
-                                          <th className="text-left px-2 py-2">सदस्याचे नाव</th>
-                                          <th className="text-left px-2 py-2">पदनाम</th>
-                                          <th className="text-left px-2 py-2">पद</th>
-                                          <th className="w-24 text-center px-2 py-2">स्वाक्षरी</th>
-                                          <th className="w-10 text-center px-2 py-2">कृती</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        {editMembers.map(
-                                          (member: any, index: number) => (
-                                            <tr
-                                              key={index}
-                                              className="hover:bg-slate-50/30 whitespace-nowrap"
-                                            >
-                                              <td className="text-center w-10 px-2 py-2">
-                                                {index + 1}
-                                              </td>
-                                              <td className="px-2 py-2">
-                                                <input
-                                                  type="text"
-                                                  value={member.name}
-                                                  onChange={(e) =>
-                                                    handleUpdateMemberField(
-                                                      index,
-                                                      "name",
-                                                      e.target.value,
-                                                    )
-                                                  }
-                                                  placeholder="सदस्याचे नाव..."
-                                                  className="bg-transparent border-none outline-none font-bold text-slate-900 w-full"
-                                                />
-                                              </td>
-                                              <td className="px-2 py-2">
-                                                <input
-                                                  list={`designations-list-${selectedCommittee?.id}`}
-                                                  value={member.post}
-                                                  onChange={(e) =>
-                                                    handleUpdateMemberField(
-                                                      index,
-                                                      "post",
-                                                      e.target.value,
-                                                    )
-                                                  }
-                                                  placeholder="पदनाम निवडा किंवा लिहा..."
-                                                  className="bg-transparent border-none outline-none font-bold text-slate-900 w-full"
-                                                />
-                                              </td>
-                                              <td className="px-2 py-2">
-                                                <input
-                                                  list="roles-list"
-                                                  value={member.role}
-                                                  onChange={(e) =>
-                                                    handleUpdateMemberField(
-                                                      index,
-                                                      "role",
-                                                      e.target.value,
-                                                    )
-                                                  }
-                                                  placeholder="पद निवडा किंवा लिहा..."
-                                                  className="bg-transparent border-none outline-none font-bold text-slate-900 w-full"
-                                                />
-                                              </td>
-                                              <td className="text-center w-24 px-2 py-2">
-                                                <div className="h-6 w-full" />
-                                              </td>
-                                              <td className="text-center w-10 px-2 py-2">
-                                                <button
-                                                  type="button"
-                                                  onClick={() =>
-                                                    handleRemoveMemberRow(index)
-                                                  }
-                                                  className="text-red-500 hover:text-red-700 cursor-pointer"
-                                                  title="काढून टाका"
-                                                >
-                                                  <Trash2 className="size-4" />
-                                                </button>
-                                              </td>
-                                            </tr>
-                                          ),
-                                        )}
-                                      </tbody>
-                                    </table>
-                                  </div>
                                 </div>
-
-                                {/* Resolutions Section (Editable) */}
-                                <div className="register-res-section space-y-8">
-                                  <div className="flex items-center justify-between border-b border-slate-300 pb-2">
-                                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">
-                                      विषय आणि ठराव तपशील
-                                    </h3>
-                                    <button
-                                      type="button"
-                                      onClick={handleAddResolutionRow}
-                                      className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg text-xs font-bold font-sans transition-colors cursor-pointer"
-                                    >
-                                      <Plus className="size-4" /> विषय व ठराव जोडा
-                                    </button>
-                                  </div>
-
-                                  {editResolutions.map(
-                                    (res: any, index: number) => (
-                                      <div
-                                        key={index}
-                                        className="register-res-item relative group/res"
-                                      >
-                                        <button
-                                          type="button"
-                                          onClick={() =>
-                                            handleRemoveResolutionRow(index)
-                                          }
-                                          className="absolute top-0 right-0 p-1 text-red-500 hover:bg-red-50 rounded opacity-0 group-hover/res:opacity-100 transition-opacity font-sans text-xs flex items-center gap-1 cursor-pointer"
-                                        >
-                                          <Trash2 className="size-3.5" /> काढून
-                                          टाका
-                                        </button>
-
-                                        <div className="flex gap-4 items-start">
-                                          <div className="flex items-center register-res-title shrink-0 whitespace-nowrap">
-                                            विषय -
-                                            <input
-                                              type="number"
-                                              value={res.subjectNo}
-                                              onChange={(e) =>
-                                                handleUpdateResolutionField(
-                                                  index,
-                                                  "subjectNo",
-                                                  Number(e.target.value),
-                                                )
-                                              }
-                                              className="bg-transparent border-none outline-none w-8 text-center mx-1 font-bold text-slate-800"
-                                            />{" "}
-                                            :
-                                          </div>
-                                          <textarea
-                                            value={res.subject}
-                                            onChange={(e) =>
-                                              handleUpdateResolutionField(
-                                                index,
-                                                "subject",
-                                                e.target.value,
-                                              )
-                                            }
-                                            placeholder="विषयाचा तपशील प्रविष्ट करा..."
-                                            className="bg-transparent border-none outline-none underline decoration-dotted decoration-slate-400 font-bold text-slate-800 w-full resize-y min-h-[4rem]"
-                                          />
-                                        </div>
-
-
-
-                                        <div className="flex gap-4 items-start mt-2">
-                                          <div className="flex items-center register-res-title shrink-0 whitespace-nowrap">
-                                            ठराव -
-                                            <input
-                                              type="number"
-                                              value={res.resolutionNo}
-                                              onChange={(e) =>
-                                                handleUpdateResolutionField(
-                                                  index,
-                                                  "resolutionNo",
-                                                  Number(e.target.value),
-                                                )
-                                              }
-                                              className="bg-transparent border-none outline-none w-8 text-center mx-1 font-bold text-slate-800"
-                                            />{" "}
-                                            :
-                                          </div>
-                                          <textarea
-                                            value={res.resolution}
-                                            onChange={(e) =>
-                                              handleUpdateResolutionField(
-                                                index,
-                                                "resolution",
-                                                e.target.value,
-                                              )
-                                            }
-                                            placeholder="ठरावाचा सविस्तर तपशील प्रविष्ट करा..."
-                                            className="bg-transparent border-none outline-none text-slate-700 text-justify w-full resize-y min-h-[6rem]"
-                                          />
-                                        </div>
-
-                                        <div className="pl-[6.5rem] mt-3 space-y-2 font-bold text-slate-700">
-                                          <div className="flex items-center gap-2">
-                                            <span>• सूचक :</span>
-                                            <select
-                                              value={res.proposer}
-                                              onChange={(e) =>
-                                                handleUpdateResolutionField(
-                                                  index,
-                                                  "proposer",
-                                                  e.target.value,
-                                                )
-                                              }
-                                              className="ledger-input bg-transparent py-0.5 max-w-xs"
-                                            >
-                                              <option
-                                                value=""
-                                                className="text-slate-800 bg-white"
-                                              >
-                                                -- सूचक निवडा --
-                                              </option>
-                                              {editMembers.map(
-                                                (m, mIdx) =>
-                                                  m.name && (
-                                                    <option
-                                                      key={mIdx}
-                                                      value={m.name}
-                                                      className="text-slate-800 bg-white"
-                                                    >
-                                                      {m.name} ({m.post})
-                                                    </option>
-                                                  ),
-                                              )}
-                                            </select>
-                                          </div>
-
-                                          <div className="flex items-center gap-2">
-                                            <span>• अनुमोदक :</span>
-                                            <select
-                                              value={res.seconder}
-                                              onChange={(e) =>
-                                                handleUpdateResolutionField(
-                                                  index,
-                                                  "seconder",
-                                                  e.target.value,
-                                                )
-                                              }
-                                              className="ledger-input bg-transparent py-0.5 max-w-xs"
-                                            >
-                                              <option
-                                                value=""
-                                                className="text-slate-800 bg-white"
-                                              >
-                                                -- अनुमोदक निवडा --
-                                              </option>
-                                              {editMembers.map(
-                                                (m, mIdx) =>
-                                                  m.name && (
-                                                    <option
-                                                      key={mIdx}
-                                                      value={m.name}
-                                                      className="text-slate-800 bg-white"
-                                                    >
-                                                      {m.name} ({m.post})
-                                                    </option>
-                                                  ),
-                                              )}
-                                            </select>
-                                          </div>
-
-                                        </div>
-                                      </div>
-                                    ),
-                                  )}
-
-                                  {/* ऐन वेळेचे आभार प्रदर्शन व सभा सांगता परिच्छेद (Editable) */}
-                                  <div className="mt-8 pt-4 border-t border-dashed border-slate-350">
-                                    <textarea
-                                      value={editOutroText}
-                                      onChange={(e) => setEditOutroText(e.target.value)}
-                                      className="bg-transparent border-none outline-none text-slate-900 font-bold text-justify leading-relaxed text-[16px] sm:text-lg pl-4 w-full resize-y min-h-[100px]"
-                                      rows={3}
-                                      placeholder="आभार प्रदर्शन व सभा सांगता परिच्छेद..."
-                                    />
-                                  </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-slate-500 font-black text-[10px] uppercase tracking-wider shrink-0">
+                                    सचिव/मुख्याध्यापक:
+                                  </span>
+                                  <input
+                                    type="text"
+                                    value={editHeadmasterName}
+                                    onChange={(e) =>
+                                      setEditHeadmasterName(e.target.value)
+                                    }
+                                    className="bg-transparent border-none outline-none underline decoration-dotted decoration-slate-400 font-extrabold text-slate-900 w-full"
+                                  />
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-slate-500 font-black text-[10px] uppercase tracking-wider shrink-0">
+                                    शाळेचे नाव:
+                                  </span>
+                                  <input
+                                    type="text"
+                                    value={editSchoolName}
+                                    onChange={(e) =>
+                                      setEditSchoolName(e.target.value)
+                                    }
+                                    className="bg-transparent border-none outline-none underline decoration-dotted decoration-slate-400 font-extrabold text-slate-900 w-full"
+                                  />
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-slate-500 font-black text-[10px] uppercase tracking-wider shrink-0">
+                                    समिती अध्यक्षांचे नाव:
+                                  </span>
+                                  <input
+                                    type="text"
+                                    value={editPresidentName}
+                                    onChange={(e) =>
+                                      setEditPresidentName(e.target.value)
+                                    }
+                                    className="bg-transparent border-none outline-none underline decoration-dotted decoration-slate-400 font-extrabold text-slate-900 w-full"
+                                  />
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-slate-500 font-black text-[10px] uppercase tracking-wider shrink-0">
+                                    समितीचे नाव:
+                                  </span>
+                                  <input
+                                    type="text"
+                                    value={editCommitteeName}
+                                    onChange={(e) =>
+                                      setEditCommitteeName(e.target.value)
+                                    }
+                                    className="bg-transparent border-none outline-none underline decoration-dotted decoration-slate-400 font-extrabold text-slate-900 w-full"
+                                  />
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-slate-500 font-black text-[10px] uppercase tracking-wider shrink-0">
+                                    सभा दिनांक:
+                                  </span>
+                                  <input
+                                    type="date"
+                                    value={editMeetingDate}
+                                    onChange={(e) =>
+                                      setEditMeetingDate(e.target.value)
+                                    }
+                                    className="bg-transparent border-none outline-none underline decoration-dotted decoration-slate-400 font-extrabold text-slate-900 w-full cursor-pointer"
+                                  />
                                 </div>
                               </div>
-                            ) : (
-                              // --- READ / PRINT REGISTER NOTEBOOK VIEW ---
-                              <div className="space-y-8 select-text">
-                                {/* Meeting Ledger Letterhead */}
-                                <div className="text-center pb-4 pt-2">
-                                  <h1 className="text-3xl font-black text-slate-900 border-b-2 border-slate-800 pb-2 tracking-wide inline-block px-8">
-                                    मासिक सभा इतिवृत्त नोंदवही
-                                  </h1>
+
+                              {/* Introductory Paragraph (Editable) */}
+                              <p className="register-header-text">
+                                <textarea
+                                  value={editIntroText}
+                                  onChange={(e) =>
+                                    setEditIntroText(e.target.value)
+                                  }
+                                  className="bg-transparent border-none outline-none w-full resize-y min-h-[120px]"
+                                  rows={3}
+                                />
+                              </p>
+
+                              {/* Committee Members Table (Editable) */}
+                              <div className="space-y-4">
+                                <div className="flex items-center justify-between border-b border-slate-300 pb-2">
+                                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">
+                                    समिती सदस्य यादी
+                                  </h3>
+                                  <button
+                                    type="button"
+                                    onClick={handleAddMemberRow}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg text-xs font-bold font-sans transition-colors cursor-pointer"
+                                  >
+                                    <UserPlus className="size-4" /> सदस्य जोडा
+                                  </button>
                                 </div>
 
-                                {/* Meeting Metadata Header (Read/Print View) */}
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 border-b-2 border-slate-300 pb-4 mb-4 text-[13px] md:text-sm font-bold text-slate-800 tracking-tight font-sans">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-slate-500 font-black text-[10px] uppercase tracking-wider shrink-0">
-                                      शैक्षणिक वर्ष:
-                                    </span>
-                                    <span className="underline decoration-dotted decoration-slate-400 font-extrabold text-slate-900">
-                                      {selectedPastMeeting.academicYear || "________"}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-slate-500 font-black text-[10px] uppercase tracking-wider shrink-0">
-                                      सचिव/मुख्याध्यापक:
-                                    </span>
-                                    <span className="underline decoration-dotted decoration-slate-400 font-extrabold text-slate-900">
-                                      {selectedPastMeeting.headmasterName || "________"}
-                                    </span>
-                                  </div>
-                                </div>
-
-                                {/* Introductory Paragraph styled like handwritten ledger */}
-                                <p className="register-header-text">
-                                  {selectedPastMeeting.introText ||
-                                    `आज दि. ${selectedPastMeeting.date ? selectedPastMeeting.date.split("-").reverse().join(".") : "________"} रोजी ${selectedPastMeeting.schoolName || "________"} येथे ${selectedPastMeeting.committeeName || "________"} चे अध्यक्ष ${selectedPastMeeting.presidentName || "________"} यांच्या अध्यक्षतेखाली सभा घेण्यात आली. सदर सभेस खालील प्रमाणे सदस्य उपस्थित होते.`}
-                                </p>
-
-                                {/* Committee Members Present table with blank signature column */}
-                                {selectedPastMeeting.members &&
-                                  selectedPastMeeting.members.length > 0 && (
-                                    <div className="space-y-4">
-                                      <div className="w-full overflow-x-auto no-scrollbar">
-                                        <table className="register-table min-w-[600px] w-full">
-                                          <thead>
-                                            <tr className="bg-slate-100 whitespace-nowrap">
-                                              <th className="w-10 text-center px-2 py-2">
-                                                अ.क्र.
-                                              </th>
-                                              <th className="text-left px-2 py-2">सदस्याचे नाव</th>
-                                              <th className="text-left px-2 py-2">पदनाम</th>
-                                              <th className="text-left px-2 py-2">पद</th>
-                                              <th className="w-24 text-center px-2 py-2">
-                                                स्वाक्षरी
-                                              </th>
-                                            </tr>
-                                          </thead>
-                                          <tbody>
-                                            {selectedPastMeeting.members
-                                              .filter((member: any) => member.name?.trim() || member.post?.trim())
-                                              .map((member: any, index: number) => (
-                                                <tr
-                                                  key={index}
-                                                  className="hover:bg-slate-50/30 whitespace-nowrap"
-                                                >
-                                                  <td className="text-center w-10 px-2 py-2">
-                                                    {index + 1}
-                                                  </td>
-                                                  <td className="font-bold text-slate-900 px-2 py-2">
-                                                    {member.name}
-                                                  </td>
-                                                  <td className="px-2 py-2">{member.post}</td>
-                                                  <td className="px-2 py-2">{member.role || "सदस्य"}</td>
-                                                  <td className="text-center w-24 px-2 py-2">
-                                                    {/* Left blank for physical signing as requested */}
-                                                    <div className="h-6 w-full" />
-                                                  </td>
-                                                </tr>
-                                              ),
-                                              )}
-                                          </tbody>
-                                        </table>
-                                      </div>
-                                    </div>
-                                  )}
-
-                                {/* Resolutions Section */}
-                                {selectedPastMeeting.resolutions &&
-                                  selectedPastMeeting.resolutions.length > 0 && (
-                                    <div className="register-res-section space-y-6">
-                                      {selectedPastMeeting.resolutions.map(
-                                        (res: any, index: number) => (
-                                          <div
+                                <div className="w-full overflow-x-auto no-scrollbar">
+                                  <table className="register-table min-w-[600px] w-full">
+                                    <thead>
+                                      <tr className="bg-slate-100 whitespace-nowrap">
+                                        <th className="w-10 text-center px-2 py-2">अ.क्र.</th>
+                                        <th className="text-left px-2 py-2">सदस्याचे नाव</th>
+                                        <th className="text-left px-2 py-2">पदनाम</th>
+                                        <th className="text-left px-2 py-2">पद</th>
+                                        <th className="w-24 text-center px-2 py-2">स्वाक्षरी</th>
+                                        <th className="w-10 text-center px-2 py-2">कृती</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {editMembers.map(
+                                        (member: any, index: number) => (
+                                          <tr
                                             key={index}
-                                            className="register-res-item"
+                                            className="hover:bg-slate-50/30 whitespace-nowrap"
                                           >
-                                            <div className="flex gap-4 items-start">
-                                              <span className="register-res-title shrink-0">
-                                                विषय - {res.subjectNo} :
-                                              </span>
-                                              <span className="font-bold text-slate-800 underline decoration-dotted decoration-slate-400">
-                                                {res.subject}
-                                              </span>
-                                            </div>
-                                            <div className="flex gap-4 items-start mt-2">
-                                              <span className="register-res-title shrink-0">
-                                                ठराव - {res.resolutionNo} :
-                                              </span>
-                                              <span className="text-slate-700 text-justify">
-                                                {res.resolution}
-                                              </span>
-                                            </div>
-                                            <div className="pl-[6.5rem] mt-3 space-y-1 font-bold text-slate-700">
-                                              <p>
-                                                • सूचक :{" "}
-                                                <span className="text-slate-900">
-                                                  {res.proposer || "________"}
-                                                </span>
-                                              </p>
-                                              <p>
-                                                • अनुमोदक :{" "}
-                                                <span className="text-slate-900">
-                                                  {res.seconder || "________"}
-                                                </span>
-                                              </p>
-
-                                            </div>
-                                          </div>
+                                            <td className="text-center w-10 px-2 py-2">
+                                              {index + 1}
+                                            </td>
+                                            <td className="px-2 py-2">
+                                              <input
+                                                type="text"
+                                                value={member.name}
+                                                onChange={(e) =>
+                                                  handleUpdateMemberField(
+                                                    index,
+                                                    "name",
+                                                    e.target.value,
+                                                  )
+                                                }
+                                                placeholder="सदस्याचे नाव..."
+                                                className="bg-transparent border-none outline-none font-bold text-slate-900 w-full"
+                                              />
+                                            </td>
+                                            <td className="px-2 py-2">
+                                              <input
+                                                list={`designations-list-${selectedCommittee?.id}`}
+                                                value={member.post}
+                                                onChange={(e) =>
+                                                  handleUpdateMemberField(
+                                                    index,
+                                                    "post",
+                                                    e.target.value,
+                                                  )
+                                                }
+                                                placeholder="पदनाम निवडा किंवा लिहा..."
+                                                className="bg-transparent border-none outline-none font-bold text-slate-900 w-full"
+                                              />
+                                            </td>
+                                            <td className="px-2 py-2">
+                                              <input
+                                                list="roles-list"
+                                                value={member.role}
+                                                onChange={(e) =>
+                                                  handleUpdateMemberField(
+                                                    index,
+                                                    "role",
+                                                    e.target.value,
+                                                  )
+                                                }
+                                                placeholder="पद निवडा किंवा लिहा..."
+                                                className="bg-transparent border-none outline-none font-bold text-slate-900 w-full"
+                                              />
+                                            </td>
+                                            <td className="text-center w-24 px-2 py-2">
+                                              <div className="h-6 w-full" />
+                                            </td>
+                                            <td className="text-center w-10 px-2 py-2">
+                                              <button
+                                                type="button"
+                                                onClick={() =>
+                                                  handleRemoveMemberRow(index)
+                                                }
+                                                className="text-red-500 hover:text-red-700 cursor-pointer"
+                                                title="काढून टाका"
+                                              >
+                                                <Trash2 className="size-4" />
+                                              </button>
+                                            </td>
+                                          </tr>
                                         ),
                                       )}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
 
-                                      {/* ऐन वेळेचे आभार प्रदर्शन व सभा सांगता परिच्छेद */}
-                                      <div className="mt-8 pt-4 border-t border-dashed border-slate-350">
-                                        <p className="text-slate-900 font-bold text-justify leading-relaxed text-[16px] sm:text-lg pl-4">
-                                          {selectedPastMeeting.outroText || "ऐन वेळेस उपस्थित होणाऱ्या विषयांवर चर्चा करून समितीचे सचिव यांनी सभेत उपस्थित सर्व सदस्यांचे आभार व्यक्त केले व अध्यक्ष यांच्या संमतीने सभा संपन्न झाली असे घोषीत केले."}
-                                        </p>
+                              {/* Resolutions Section (Editable) */}
+                              <div className="register-res-section space-y-8">
+                                <div className="flex items-center justify-between border-b border-slate-300 pb-2">
+                                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">
+                                    विषय आणि ठराव तपशील
+                                  </h3>
+                                  <button
+                                    type="button"
+                                    onClick={handleAddResolutionRow}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg text-xs font-bold font-sans transition-colors cursor-pointer"
+                                  >
+                                    <Plus className="size-4" /> विषय व ठराव जोडा
+                                  </button>
+                                </div>
+
+                                {editResolutions.map(
+                                  (res: any, index: number) => (
+                                    <div
+                                      key={index}
+                                      className="register-res-item relative group/res"
+                                    >
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          handleRemoveResolutionRow(index)
+                                        }
+                                        className="absolute top-0 right-0 p-1 text-red-500 hover:bg-red-50 rounded opacity-0 group-hover/res:opacity-100 transition-opacity font-sans text-xs flex items-center gap-1 cursor-pointer"
+                                      >
+                                        <Trash2 className="size-3.5" /> काढून
+                                        टाका
+                                      </button>
+
+                                      <div className="flex gap-4 items-start">
+                                        <div className="flex items-center register-res-title shrink-0 whitespace-nowrap">
+                                          विषय -
+                                          <input
+                                            type="number"
+                                            value={res.subjectNo}
+                                            onChange={(e) =>
+                                              handleUpdateResolutionField(
+                                                index,
+                                                "subjectNo",
+                                                Number(e.target.value),
+                                              )
+                                            }
+                                            className="bg-transparent border-none outline-none w-8 text-center mx-1 font-bold text-slate-800"
+                                          />{" "}
+                                          :
+                                        </div>
+                                        <textarea
+                                          value={res.subject}
+                                          onChange={(e) =>
+                                            handleUpdateResolutionField(
+                                              index,
+                                              "subject",
+                                              e.target.value,
+                                            )
+                                          }
+                                          placeholder="विषयाचा तपशील प्रविष्ट करा..."
+                                          className="bg-transparent border-none outline-none underline decoration-dotted decoration-slate-400 font-bold text-slate-800 w-full resize-y min-h-[4rem]"
+                                        />
+                                      </div>
+
+
+
+                                      <div className="flex gap-4 items-start mt-2">
+                                        <div className="flex items-center register-res-title shrink-0 whitespace-nowrap">
+                                          ठराव -
+                                          <input
+                                            type="number"
+                                            value={res.resolutionNo}
+                                            onChange={(e) =>
+                                              handleUpdateResolutionField(
+                                                index,
+                                                "resolutionNo",
+                                                Number(e.target.value),
+                                              )
+                                            }
+                                            className="bg-transparent border-none outline-none w-8 text-center mx-1 font-bold text-slate-800"
+                                          />{" "}
+                                          :
+                                        </div>
+                                        <textarea
+                                          value={res.resolution}
+                                          onChange={(e) =>
+                                            handleUpdateResolutionField(
+                                              index,
+                                              "resolution",
+                                              e.target.value,
+                                            )
+                                          }
+                                          placeholder="ठरावाचा सविस्तर तपशील प्रविष्ट करा..."
+                                          className="bg-transparent border-none outline-none text-slate-700 text-justify w-full resize-y min-h-[6rem]"
+                                        />
+                                      </div>
+
+                                      <div className="pl-[6.5rem] mt-3 space-y-2 font-bold text-slate-700">
+                                        <div className="flex items-center gap-2">
+                                          <span>• सूचक :</span>
+                                          <select
+                                            value={res.proposer}
+                                            onChange={(e) =>
+                                              handleUpdateResolutionField(
+                                                index,
+                                                "proposer",
+                                                e.target.value,
+                                              )
+                                            }
+                                            className="ledger-input bg-transparent py-0.5 max-w-xs"
+                                          >
+                                            <option
+                                              value=""
+                                              className="text-slate-800 bg-white"
+                                            >
+                                              -- सूचक निवडा --
+                                            </option>
+                                            {editMembers.map(
+                                              (m, mIdx) =>
+                                                m.name && (
+                                                  <option
+                                                    key={mIdx}
+                                                    value={m.name}
+                                                    className="text-slate-800 bg-white"
+                                                  >
+                                                    {m.name} ({m.post})
+                                                  </option>
+                                                ),
+                                            )}
+                                          </select>
+                                        </div>
+
+                                        <div className="flex items-center gap-2">
+                                          <span>• अनुमोदक :</span>
+                                          <select
+                                            value={res.seconder}
+                                            onChange={(e) =>
+                                              handleUpdateResolutionField(
+                                                index,
+                                                "seconder",
+                                                e.target.value,
+                                              )
+                                            }
+                                            className="ledger-input bg-transparent py-0.5 max-w-xs"
+                                          >
+                                            <option
+                                              value=""
+                                              className="text-slate-800 bg-white"
+                                            >
+                                              -- अनुमोदक निवडा --
+                                            </option>
+                                            {editMembers.map(
+                                              (m, mIdx) =>
+                                                m.name && (
+                                                  <option
+                                                    key={mIdx}
+                                                    value={m.name}
+                                                    className="text-slate-800 bg-white"
+                                                  >
+                                                    {m.name} ({m.post})
+                                                  </option>
+                                                ),
+                                            )}
+                                          </select>
+                                        </div>
+
                                       </div>
                                     </div>
-                                  )}
+                                  ),
+                                )}
 
-                                {/* Bottom Signatures Block */}
-                                <div className="register-signature-area pt-16">
-                                  <div className="space-y-12">
-                                    <p>समिती अध्यक्ष स्वाक्षरी</p>
-                                    <div className="w-32 border-b border-slate-600 mx-auto" />
+                                {/* ऐन वेळेचे आभार प्रदर्शन व सभा सांगता परिच्छेद (Editable) */}
+                                <div className="mt-8 pt-4 border-t border-dashed border-slate-350">
+                                  <textarea
+                                    value={editOutroText}
+                                    onChange={(e) => setEditOutroText(e.target.value)}
+                                    className="bg-transparent border-none outline-none text-slate-900 font-bold text-justify leading-relaxed text-[16px] sm:text-lg pl-4 w-full resize-y min-h-[100px]"
+                                    rows={3}
+                                    placeholder="आभार प्रदर्शन व सभा सांगता परिच्छेद..."
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            // --- READ / PRINT REGISTER NOTEBOOK VIEW ---
+                            <div className="space-y-8 select-text">
+                              {/* Meeting Ledger Letterhead */}
+                              <div className="text-center pb-4 pt-2">
+                                <h1 className="text-3xl font-black text-slate-900 border-b-2 border-slate-800 pb-2 tracking-wide inline-block px-8">
+                                  मासिक सभा इतिवृत्त नोंदवही
+                                </h1>
+                              </div>
+
+                              {/* Meeting Metadata Header (Read/Print View) */}
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 border-b-2 border-slate-300 pb-4 mb-4 text-[13px] md:text-sm font-bold text-slate-800 tracking-tight font-sans">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-slate-500 font-black text-[10px] uppercase tracking-wider shrink-0">
+                                    शैक्षणिक वर्ष:
+                                  </span>
+                                  <span className="underline decoration-dotted decoration-slate-400 font-extrabold text-slate-900">
+                                    {selectedPastMeeting.academicYear || "________"}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-slate-500 font-black text-[10px] uppercase tracking-wider shrink-0">
+                                    सचिव/मुख्याध्यापक:
+                                  </span>
+                                  <span className="underline decoration-dotted decoration-slate-400 font-extrabold text-slate-900">
+                                    {selectedPastMeeting.headmasterName || "________"}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Introductory Paragraph styled like handwritten ledger */}
+                              <p className="register-header-text">
+                                {selectedPastMeeting.introText ||
+                                  `आज दि. ${selectedPastMeeting.date ? selectedPastMeeting.date.split("-").reverse().join(".") : "________"} रोजी ${selectedPastMeeting.schoolName || "________"} येथे ${selectedPastMeeting.committeeName || "________"} चे अध्यक्ष ${selectedPastMeeting.presidentName || "________"} यांच्या अध्यक्षतेखाली सभा घेण्यात आली. सदर सभेस खालील प्रमाणे सदस्य उपस्थित होते.`}
+                              </p>
+
+                              {/* Committee Members Present table with blank signature column */}
+                              {selectedPastMeeting.members &&
+                                selectedPastMeeting.members.length > 0 && (
+                                  <div className="space-y-4">
+                                    <div className="w-full">
+                                      <table className="register-table w-full table-fixed">
+                                        <thead>
+                                          <tr className="bg-slate-100">
+                                            <th className="w-12 text-center px-1 py-2">
+                                              अ.क्र.
+                                            </th>
+                                            <th className="w-[45%] text-left px-2 py-2">सदस्याचे नाव</th>
+                                            <th className="w-[25%] text-left px-2 py-2">पदनाम</th>
+                                            <th className="w-[15%] text-left px-2 py-2">पद</th>
+                                            <th className="w-32 text-center px-2 py-2">
+                                              स्वाक्षरी
+                                            </th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {selectedPastMeeting.members
+                                            .filter((member: any) => member.name?.trim() || member.post?.trim())
+                                            .map((member: any, index: number) => (
+                                              <tr
+                                                key={index}
+                                                className="hover:bg-slate-50/30"
+                                              >
+                                                <td className="text-center px-1 py-2">
+                                                  {index + 1}
+                                                </td>
+                                                <td className="font-bold text-slate-900 px-2 py-2 whitespace-normal break-words">
+                                                  {member.name}
+                                                </td>
+                                                <td className="px-2 py-2 whitespace-normal break-words">{member.post}</td>
+                                                <td className="px-2 py-2 whitespace-normal break-words">{member.role || "सदस्य"}</td>
+                                                <td className="text-center px-2 py-2">
+                                                  {/* Left blank for physical signing as requested */}
+                                                  <div className="h-6 w-full" />
+                                                </td>
+                                              </tr>
+                                            ),
+                                          )}
+                                        </tbody>
+                                      </table>
+                                    </div>
                                   </div>
-                                  <div className="space-y-12">
-                                    <p>सचिव / मुख्याध्यापक स्वाक्षरी</p>
-                                    <div className="w-32 border-b border-slate-600 mx-auto" />
+                                )}
+
+                              {/* Resolutions Section */}
+                              {selectedPastMeeting.resolutions &&
+                                selectedPastMeeting.resolutions.length > 0 && (
+                                  <div className="register-res-section space-y-6">
+                                    {selectedPastMeeting.resolutions.map(
+                                      (res: any, index: number) => (
+                                        <div
+                                          key={index}
+                                          className="register-res-item"
+                                        >
+                                          <div className="flex gap-4 items-start">
+                                            <span className="register-res-title shrink-0">
+                                              विषय - {res.subjectNo} :
+                                            </span>
+                                            <span className="font-bold text-slate-800 underline decoration-dotted decoration-slate-400">
+                                              {res.subject}
+                                            </span>
+                                          </div>
+                                          <div className="flex gap-4 items-start mt-2">
+                                            <span className="register-res-title shrink-0">
+                                              ठराव - {res.resolutionNo} :
+                                            </span>
+                                            <span className="text-slate-700 text-justify">
+                                              {res.resolution}
+                                            </span>
+                                          </div>
+                                          <div className="pl-[6.5rem] mt-3 space-y-1 font-bold text-slate-700">
+                                            <p>
+                                              • सूचक :{" "}
+                                              <span className="text-slate-900">
+                                                {res.proposer || "________"}
+                                              </span>
+                                            </p>
+                                            <p>
+                                              • अनुमोदक :{" "}
+                                              <span className="text-slate-900">
+                                                {res.seconder || "________"}
+                                              </span>
+                                            </p>
+
+                                          </div>
+                                        </div>
+                                      ),
+                                    )}
+
+                                    {/* ऐन वेळेचे आभार प्रदर्शन व सभा सांगता परिच्छेद */}
+                                    <div className="mt-8 pt-4 border-t border-dashed border-slate-350">
+                                      <p className="text-slate-900 font-bold text-justify leading-relaxed text-[16px] sm:text-lg pl-4">
+                                        {selectedPastMeeting.outroText || "ऐन वेळेस उपस्थित होणाऱ्या विषयांवर चर्चा करून समितीचे सचिव यांनी सभेत उपस्थित सर्व सदस्यांचे आभार व्यक्त केले व अध्यक्ष यांच्या संमतीने सभा संपन्न झाली असे घोषीत केले."}
+                                      </p>
+                                    </div>
+                                  </div>
+                                )}
+
+                              {/* Bottom Signatures Block */}
+                              <div className="register-signature-area pt-16">
+                                <div className="space-y-12">
+                                  <p>समिती अध्यक्ष स्वाक्षरी</p>
+                                  <div className="w-32 border-b border-slate-600 mx-auto" />
+                                </div>
+                                <div className="space-y-12">
+                                  <p>सचिव / मुख्याध्यापक स्वाक्षरी</p>
+                                  <div className="w-32 border-b border-slate-600 mx-auto" />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      // List of past meetings
+                      <div className="space-y-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">
+                            नोंदवलेले बैठक अहवाल ({savedMeetings.length})
+                          </h3>
+                        </div>
+
+                        {savedMeetings.length > 0 ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {savedMeetings.map((mt) => (
+                              <div
+                                key={mt.id}
+                                className="bg-white border border-slate-200 hover:border-blue-500/50 p-6 rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-6 group relative overflow-hidden"
+                              >
+                                <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50/50 rounded-bl-full -z-10 group-hover:bg-blue-50 transition-colors" />
+                                <div className="space-y-3">
+                                  <div className="flex items-center gap-2">
+                                    <span className="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-100 rounded-lg text-[9px] font-black uppercase tracking-widest">
+                                      सभा दिनांक: {mt.date}
+                                    </span>
+                                    {mt.time && (
+                                      <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
+                                        <Clock size={10} /> {mt.time} वा.
+                                      </span>
+                                    )}
+                                  </div>
+                                  <h4 className="font-black text-slate-900 text-base group-hover:text-blue-600 transition-colors">
+                                    {mt.committeeName}
+                                  </h4>
+                                  <div className="space-y-1 text-xs text-slate-500 font-bold">
+                                    <p>शाळा: {mt.schoolName}</p>
+                                    <p>मुख्याध्यापक: {mt.headmasterName}</p>
                                   </div>
                                 </div>
+
+                                <div className="flex items-center justify-between border-t border-slate-100 pt-4 mt-2">
+                                  <button
+                                    onClick={() =>
+                                      navigate({
+                                        search: (prev) => ({
+                                          ...prev,
+                                          meetingId: mt.id,
+                                          tab: "history",
+                                          edit: undefined,
+                                        }),
+                                      })
+                                    }
+                                    className="text-[11px] font-black text-blue-600 hover:text-blue-700 hover:underline uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
+                                  >
+                                    पूर्ण अहवाल पहा <Printer size={12} />
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteMeeting(mt.id);
+                                    }}
+                                    className="text-[11px] font-black text-red-600 hover:text-red-700 hover:underline uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
+                                  >
+                                    डिलीट करा <Trash2 size={12} />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="p-20 text-center border-2 border-dashed border-slate-200 rounded-[2rem]">
+                            <div className="size-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-300">
+                              <FileText size={40} />
+                            </div>
+                            <h3 className="text-slate-400 font-black uppercase tracking-widest text-xs">
+                              कोणतेही अहवाल आढळले नाहीत
+                            </h3>
+                            <p className="text-slate-300 text-[10px] font-bold mt-2 italic">
+                              या समितीची पहिली बैठक नोंदवण्यासाठी वरील 'नवीन
+                              बैठक नोंदवा' बटणावर क्लिक करा.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Tab Content - View 2: Form to Fill New Meeting */}
+                {activeTab === "form" && (
+                  <div className="p-4 sm:p-8 md:p-12 space-y-8 md:space-y-12">
+                    {/* Basic Details Form Section */}
+                    {formStep === 1 && (
+                      <>
+                        <div className="space-y-8">
+                          <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest border-b-2 border-slate-100 pb-3">
+                          १. बैठकीची प्राथमिक माहिती
+                        </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-2.5">
+                          <label className="text-lg font-black text-slate-800 block">
+                            शाळेचे नाव
+                          </label>
+                          <input
+                            type="text"
+                            value={schoolName}
+                            onChange={(e) => setSchoolName(e.target.value)}
+                            placeholder="शाळेचे नाव प्रविष्ट करा..."
+                            className="w-full px-6 py-4.5 bg-white border-2 border-slate-300 rounded-xl text-lg font-extrabold outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 transition-all text-slate-950 shadow-md"
+                          />
+                        </div>
+                        <div className="space-y-2.5">
+                          <label className="text-lg font-black text-slate-800 block">
+                            मुख्याध्यापकांचे नाव
+                          </label>
+                          <input
+                            type="text"
+                            value={headmasterName}
+                            onChange={(e) => setHeadmasterName(e.target.value)}
+                            placeholder="मुख्याध्यापकांचे नाव..."
+                            className="w-full px-6 py-4.5 bg-white border-2 border-slate-300 rounded-xl text-lg font-extrabold outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 transition-all text-slate-950 shadow-md"
+                          />
+                        </div>
+                        <div className="space-y-2.5">
+                          <label className="text-lg font-black text-slate-800 block">
+                            समिती अध्यक्षांचे नाव
+                          </label>
+                          <input
+                            type="text"
+                            value={presidentName}
+                            onChange={(e) => setPresidentName(e.target.value)}
+                            placeholder="समिती अध्यक्षांचे नाव प्रविष्ट करा..."
+                            className="w-full px-6 py-4.5 bg-white border-2 border-slate-300 rounded-xl text-lg font-extrabold outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 transition-all text-slate-950 shadow-md"
+                          />
+                        </div>
+                        <div className="space-y-2.5">
+                          <label className="text-lg font-black text-slate-800 block">
+                            समितीचे नाव (Committee Name)
+                          </label>
+                          <input
+                            type="text"
+                            value={committeeName}
+                            onChange={(e) => setCommitteeName(e.target.value)}
+                            placeholder="उदा. शाळा व्यवस्थापन समिती..."
+                            className="w-full px-6 py-4.5 bg-white border-2 border-slate-300 rounded-xl text-lg font-extrabold outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 transition-all text-slate-950 shadow-md"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Committee Members List Section */}
+                    <div className="space-y-6 pt-8 border-t border-slate-100">
+                      <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
+                        <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest">
+                          २. समिती सदस्यांची नावे
+                        </h3>
+                        <button
+                          type="button"
+                          onClick={handleAddFormMemberRow}
+                          className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-black uppercase tracking-wider transition-all shadow-md"
+                        >
+                          <UserPlus className="size-4" /> सदस्य जोडा
+                        </button>
+                      </div>
+
+                      <div className="overflow-x-auto border-2 border-slate-300 rounded-2xl bg-white shadow-sm">
+                        <table className="w-full text-left border-collapse text-base">
+                          <thead>
+                            <tr className="bg-slate-100 text-slate-800 font-extrabold border-b-2 border-slate-300">
+                              <th className="px-2 py-4 text-center w-12">
+                                अ.क्र.
+                              </th>
+                              <th className="px-4 py-4 w-[35%] min-w-[250px]">सदस्याचे नाव</th>
+                              <th className="px-6 py-4">पदनाम (Designation)</th>
+                              <th className="px-6 py-4">पद (Post)</th>
+                              <th className="px-6 py-4 text-center w-24">स्वाक्षरी</th>
+                              <th className="px-6 py-4 text-center w-24">
+                                कृती
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-200 font-extrabold text-slate-950">
+                            {formMembers.map((m: any, idx: number) => (
+                              <tr key={idx} className="hover:bg-slate-50/50">
+                                <td className="px-2 py-4 text-center text-slate-500 font-extrabold text-lg">
+                                  {idx + 1}
+                                </td>
+                                <td className="px-4 py-4">
+                                  <input
+                                    type="text"
+                                    value={m.name}
+                                    onChange={(e) =>
+                                      handleUpdateFormMemberField(
+                                        idx,
+                                        "name",
+                                        e.target.value,
+                                      )
+                                    }
+                                    placeholder="सदस्याचे नाव प्रविष्ट करा..."
+                                    className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-lg"
+                                  />
+                                </td>
+                                <td className="px-6 py-4">
+                                  {m.isCustomPost ? (
+                                    <div className="flex gap-2">
+                                      <input
+                                        type="text"
+                                        value={m.post}
+                                        onChange={(e) => handleUpdateFormMemberField(idx, "post", e.target.value)}
+                                        placeholder="स्वतः लिहा..."
+                                        autoFocus
+                                        className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-lg"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUpdateFormMemberField(idx, "isCustomPost", false)}
+                                        className="p-3 text-slate-500 hover:bg-slate-100 rounded-xl transition-colors border border-transparent hover:border-slate-300"
+                                        title="ड्रॉपडाऊनवर परत जा"
+                                      >
+                                        <X className="size-5" />
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <select
+                                      value={m.post}
+                                      onChange={(e) => {
+                                        if (e.target.value === "__CUSTOM__") {
+                                          handleUpdateFormMemberField(idx, "isCustomPost", true);
+                                          handleUpdateFormMemberField(idx, "post", "");
+                                        } else {
+                                          handleUpdateFormMemberField(idx, "post", e.target.value);
+                                        }
+                                      }}
+                                      className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-lg cursor-pointer"
+                                    >
+                                      <option value="">-- पदनाम निवडा --</option>
+                                      {selectedCommittee && getCommitteeDesignations(selectedCommittee.id).map((designation, dIdx) => (
+                                        <option key={dIdx} value={designation}>{designation}</option>
+                                      ))}
+                                      {m.post && selectedCommittee && !getCommitteeDesignations(selectedCommittee.id).includes(m.post) && (
+                                        <option value={m.post}>{m.post}</option>
+                                      )}
+                                      <option value="__CUSTOM__" className="font-bold text-blue-600">-- स्वतः लिहा --</option>
+                                    </select>
+                                  )}
+                                </td>
+                                <td className="px-6 py-4">
+                                  {m.isCustomRole ? (
+                                    <div className="flex gap-2">
+                                      <input
+                                        type="text"
+                                        value={m.role}
+                                        onChange={(e) => handleUpdateFormMemberField(idx, "role", e.target.value)}
+                                        placeholder="स्वतः लिहा..."
+                                        autoFocus
+                                        className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-lg"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUpdateFormMemberField(idx, "isCustomRole", false)}
+                                        className="p-3 text-slate-500 hover:bg-slate-100 rounded-xl transition-colors border border-transparent hover:border-slate-300"
+                                        title="ड्रॉपडाऊनवर परत जा"
+                                      >
+                                        <X className="size-5" />
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <select
+                                      value={m.role}
+                                      onChange={(e) => {
+                                        if (e.target.value === "__CUSTOM__") {
+                                          handleUpdateFormMemberField(idx, "isCustomRole", true);
+                                          handleUpdateFormMemberField(idx, "role", "");
+                                        } else {
+                                          handleUpdateFormMemberField(idx, "role", e.target.value);
+                                        }
+                                      }}
+                                      className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-lg cursor-pointer"
+                                    >
+                                      <option value="">-- पद निवडा --</option>
+                                      {COMMITTEE_ROLES.map((roleOpt, rIdx) => (
+                                        <option key={rIdx} value={roleOpt}>{roleOpt}</option>
+                                      ))}
+                                      {m.role && !COMMITTEE_ROLES.includes(m.role) && (
+                                        <option value={m.role}>{m.role}</option>
+                                      )}
+                                      <option value="__CUSTOM__" className="font-bold text-blue-600">-- स्वतः लिहा --</option>
+                                    </select>
+                                  )}
+                                </td>
+                                <td className="px-6 py-4"></td>
+                                <td className="px-6 py-4 text-center">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleRemoveFormMemberRow(idx)
+                                    }
+                                    className="p-2 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-xl transition-colors border border-transparent hover:border-red-200"
+                                  >
+                                    <Trash2 className="size-5" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Save Primary Details Button */}
+                      <div className="flex justify-end pt-4">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            await handleSaveCommitteeProfile();
+                            setFormStep(2);
+                          }}
+                          disabled={isSavingProfile}
+                          className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-black uppercase tracking-wider transition-all shadow-md disabled:opacity-50"
+                        >
+                          <Save className="size-4" /> 
+                          {isSavingProfile ? "सेव्ह होत आहे..." : "सेव्ह करा आणि पुढे जा"}
+                        </button>
+                      </div>
+
+                      {/* Datalists for Comboboxes */}
+                      {/* Removed datalists as we are now using select elements */}
+                    </div>
+                      </>
+                    )}
+
+                    {formStep === 2 && (
+                      <div className="space-y-12">
+                        <div className="flex items-center">
+                          <button type="button" onClick={() => setFormStep(1)} className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors w-fit">
+                            <ArrowLeft className="size-4" /> मागे जा (प्राथमिक माहिती)
+                          </button>
+                        </div>
+                        {/* Month Selection Navbar & Metadata */}
+                        <div className="bg-slate-50 border border-slate-200/80 p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-[2rem] space-y-6">
+                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div className="space-y-1">
+                              <label className="text-sm font-black text-slate-800 uppercase tracking-wider block">
+                                मासिक सभा महिना निवडा (Select Meeting Month)
+                              </label>
+                              <p className="text-xs text-slate-500 font-bold">
+                                प्रत्येक महिन्यासाठी पूर्व-निर्धारित विषय आणि ठराव लोड करण्यासाठी महिना निवडा.
+                              </p>
+                            </div>
+                            {loadingTemplate && (
+                              <div className="flex items-center gap-2 text-xs font-black text-blue-600 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-xl self-start md:self-auto animate-pulse">
+                                <div className="size-3.5 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin" />
+                                <span>टेम्पलेट लोड होत आहे...</span>
                               </div>
                             )}
                           </div>
-                        </div>
-                      ) : (
-                        // List of past meetings
-                        <div className="space-y-6">
-                          <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">
-                              नोंदवलेले बैठक अहवाल ({savedMeetings.length})
-                            </h3>
+
+                          {/* Horizontal Month Navbar */}
+                          <div className="flex overflow-x-auto gap-2.5 pb-2 pt-1 -mx-2 px-2 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
+                            {(selectedCommittee?.id === "alumni" ? ALUMNI_MEETINGS : ACADEMIC_MONTHS).map((m) => {
+                              const isSelected = selectedMonth === m.id;
+                              const currentIdx = ACADEMIC_MONTHS.findIndex(x => x.id === currentMonth);
+                              const mIdx = ACADEMIC_MONTHS.findIndex(x => x.id === m.id);
+                              const isFuture = selectedCommittee?.id !== "alumni" && mIdx > currentIdx && currentIdx !== -1;
+                              return (
+                                <button
+                                  key={m.id}
+                                  type="button"
+                                  disabled={loadingTemplate || isFuture}
+                                  onClick={() => handleMonthChange(m.id)}
+                                  className={`px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wider transition-all duration-300 shrink-0 cursor-pointer ${isSelected
+                                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25 scale-[1.03]"
+                                    : "bg-white text-slate-600 hover:text-slate-955 border border-slate-200 hover:bg-slate-50 hover:border-slate-300 active:scale-95 disabled:opacity-50"
+                                    }`}
+                                >
+                                  {m.name} ({m.english}) {isFuture && "(येणार)"}
+                                </button>
+                              );
+                            })}
                           </div>
 
-                          {savedMeetings.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                              {savedMeetings.map((mt) => (
-                                <div
-                                  key={mt.id}
-                                  className="bg-white border border-slate-200 hover:border-blue-500/50 p-6 rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-6 group relative overflow-hidden"
+                          {/* Year & Date Selection options appearing after month selection */}
+                          <AnimatePresence>
+                            {selectedMonth && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: "auto" }}
+                                exit={{ opacity: 0, height: 0 }}
+                                transition={{ duration: 0.3 }}
+                                className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-slate-200 overflow-hidden"
+                              >
+                                <div className="space-y-2">
+                                  <label className="text-sm font-black text-slate-800 block">
+                                    शैक्षणिक वर्ष निवडा (Select Academic Year)
+                                  </label>
+                                  <select
+                                    value={academicYear}
+                                    onChange={(e) => setAcademicYear(e.target.value)}
+                                    className="w-full px-5 py-4 bg-white border-2 border-slate-300 rounded-xl text-base font-extrabold outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 text-slate-950 shadow-md cursor-pointer transition-all"
+                                  >
+                                    <option value="२०२४-२५">२०२४-२५</option>
+                                    <option value="२०२५-२६">२०२५-२६</option>
+                                    <option value="२०२६-२७">२०२६-२७</option>
+                                    <option value="२०२७-२८">२०२७-२८</option>
+                                  </select>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <label className="text-sm font-black text-slate-800 block">
+                                    सभा दिनांक निवडा (Select Meeting Date)
+                                  </label>
+                                  <div className="relative">
+                                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 size-5 pointer-events-none" />
+                                    <input
+                                      type="date"
+                                      value={meetingDate}
+                                      onChange={(e) => handleDateChange(e.target.value)}
+                                      className="w-full pl-12 pr-5 py-3.5 bg-white border-2 border-slate-300 rounded-xl text-base font-extrabold outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 text-slate-955 cursor-pointer shadow-md transition-all"
+                                    />
+                                  </div>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+
+                        {/* Introductory Paragraph Preview */}
+                        {selectedMonth && (
+                          <div className="pt-8 pb-4 font-sans">
+                            <div className="bg-white border-2 border-slate-300 p-8 rounded-2xl relative space-y-4 shadow-sm">
+                              <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest border-b-2 border-slate-100 pb-3">
+                                २. प्रास्ताविक (Introductory Paragraph)
+                              </h3>
+                              <textarea
+                                value={customIntroText}
+                                onChange={(e) => {
+                                  setCustomIntroText(e.target.value);
+                                  setIsIntroEdited(true);
+                                }}
+                                className="w-full h-32 px-6 py-5 border-2 border-slate-300 rounded-xl bg-slate-50 font-extrabold text-slate-950 text-lg leading-relaxed shadow-inner outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 resize-y"
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                    {/* Dynamic Subjects and Resolutions Section */}
+                    {selectedMonth && formResolutions.length === 0 ? (
+                      <div className="pt-8 border-t border-slate-100 space-y-6">
+                        <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-8 text-center space-y-4">
+                          <div className="size-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto">
+                            <Info className="size-8 text-amber-600" />
+                          </div>
+                          <h3 className="text-lg font-black text-amber-800">
+                            या महिन्यासाठी पूर्व-निर्धारित विषय उपलब्ध नाहीत
+                          </h3>
+                          <p className="text-sm font-bold text-amber-600 max-w-lg mx-auto">
+                            तुम्हाला हवे असल्यास तुमचे स्वतःचे विषय आणि ठराव जोडू शकता.
+                            जतन केल्यानंतर ते फक्त तुमच्यासाठी उपलब्ध राहतील.
+                          </p>
+                          {!showCustomForm && (
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                // Calculate cumulative start resolution number from admin templates
+                                if (selectedCommittee && selectedMonth) {
+                                  try {
+                                    const adminQ = query(
+                                      collection(db, "meeting_templates"),
+                                      where("committeeId", "==", selectedCommittee.id)
+                                    );
+                                    const adminSnap = await getDocs(adminQ);
+                                    const tMap: Record<string, any[]> = {};
+                                    adminSnap.docs.forEach((d) => {
+                                      const data = d.data();
+                                      tMap[data.month] = data.subjects || [];
+                                    });
+                                    const monthsList = ["06", "07", "08", "09", "10", "11", "12", "01", "02", "03", "04", "05"];
+                                    const targetIdx = monthsList.indexOf(selectedMonth);
+                                    let calcStartNo = 1;
+                                    if (targetIdx > 0) {
+                                      const preceding = monthsList.slice(0, targetIdx);
+                                      const totalPreceding = preceding.reduce((sum, m) => sum + (tMap[m]?.length || 0), 0);
+                                      calcStartNo = 1 + totalPreceding;
+                                    }
+                                    setStartResolutionNo(calcStartNo);
+                                    // Directly create first resolution with correct number (avoid stale state)
+                                    if (formResolutions.length === 0) {
+                                      setFormResolutions([{
+                                        subjectNo: 1,
+                                        resolutionNo: calcStartNo,
+                                        subject: "",
+                                        discussion: "",
+                                        resolution: "",
+                                        remark: "",
+                                        proposer: "",
+                                        seconder: "",
+                                        statusText: "ठराव सर्वानुमते मंजूर करण्यात आला.",
+                                      }]);
+                                    }
+                                  } catch (e) {
+                                    console.error("Error calculating start resolution no:", e);
+                                    if (formResolutions.length === 0) {
+                                      handleAddFormResolutionRow();
+                                    }
+                                  }
+                                } else {
+                                  if (formResolutions.length === 0) {
+                                    handleAddFormResolutionRow();
+                                  }
+                                }
+                                setShowCustomForm(true);
+                              }}
+                              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl text-sm font-black uppercase tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-95 cursor-pointer mt-2"
+                            >
+                              <Plus className="size-4" /> विषय आणि ठराव जोडा
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Custom Resolutions Form for non-current month */}
+                        {showCustomForm && (
+                          <div className="space-y-6 font-sans">
+                            <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
+                              <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest">
+                                ३. तुमचे विषय आणि ठराव
+                              </h3>
+                              <div className="flex items-center gap-3">
+                                <button
+                                  type="button"
+                                  onClick={handleAddFormResolutionRow}
+                                  className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-black uppercase tracking-wider transition-all shadow-md cursor-pointer"
                                 >
-                                  <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50/50 rounded-bl-full -z-10 group-hover:bg-blue-50 transition-colors" />
-                                  <div className="space-y-3">
-                                    <div className="flex items-center gap-2">
-                                      <span className="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-100 rounded-lg text-[9px] font-black uppercase tracking-widest">
-                                        सभा दिनांक: {mt.date}
-                                      </span>
-                                      {mt.time && (
-                                        <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
-                                          <Clock size={10} /> {mt.time} वा.
-                                        </span>
-                                      )}
+                                  <Plus className="size-4" /> विषय व ठराव जोडा
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={saveTeacherCustomTemplate}
+                                  disabled={savingCustomTemplate || formResolutions.length === 0}
+                                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl text-sm font-black uppercase tracking-wider transition-all shadow-md disabled:opacity-50 cursor-pointer"
+                                >
+                                  {savingCustomTemplate ? (
+                                    <>
+                                      <div className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                      जतन होत आहे...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Save className="size-4" /> विषय व ठराव जतन करा
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="space-y-6">
+                              {formResolutions.map((res: any, index: number) => (
+                                <div
+                                  key={index}
+                                  className="bg-white border-2 border-slate-300 p-8 rounded-2xl relative space-y-6 shadow-sm"
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleRemoveFormResolutionRow(index)
+                                    }
+                                    className="absolute top-6 right-6 p-2 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-xl transition-colors border border-transparent hover:border-red-200 cursor-pointer"
+                                    title="Delete this block"
+                                  >
+                                    <Trash2 className="size-5" />
+                                  </button>
+
+                                  <div className="grid grid-cols-2 gap-6 w-5/6">
+                                    <div className="space-y-1.5">
+                                      <label className="text-xs font-black text-slate-500 uppercase tracking-wider block">
+                                        विषय क्रमांक
+                                      </label>
+                                      <input
+                                        type="number"
+                                        value={res.subjectNo}
+                                        onChange={(e) =>
+                                          handleUpdateFormResolutionField(
+                                            index,
+                                            "subjectNo",
+                                            Number(e.target.value),
+                                          )
+                                        }
+                                        className="w-24 px-4 py-3 border-2 border-slate-300 rounded-lg outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-lg text-slate-900 bg-white"
+                                      />
                                     </div>
-                                    <h4 className="font-black text-slate-900 text-base group-hover:text-blue-600 transition-colors">
-                                      {mt.committeeName}
-                                    </h4>
-                                    <div className="space-y-1 text-xs text-slate-500 font-bold">
-                                      <p>शाळा: {mt.schoolName}</p>
-                                      <p>मुख्याध्यापक: {mt.headmasterName}</p>
+                                    <div className="space-y-1.5">
+                                      <label className="text-xs font-black text-slate-500 uppercase tracking-wider block">
+                                        ठराव क्रमांक
+                                      </label>
+                                      <input
+                                        type="number"
+                                        value={res.resolutionNo}
+                                        onChange={(e) =>
+                                          handleUpdateFormResolutionField(
+                                            index,
+                                            "resolutionNo",
+                                            Number(e.target.value),
+                                          )
+                                        }
+                                        className="w-24 px-4 py-3 border-2 border-slate-300 rounded-lg outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-lg text-slate-900 bg-white"
+                                      />
                                     </div>
                                   </div>
 
-                                  <div className="flex items-center justify-between border-t border-slate-100 pt-4 mt-2">
-                                    <button
-                                      onClick={() =>
-                                        navigate({
-                                          search: (prev) => ({
-                                            ...prev,
-                                            meetingId: mt.id,
-                                            tab: "history",
-                                            edit: undefined,
-                                          }),
-                                        })
+                                  <div className="space-y-2">
+                                    <label className="text-base font-black text-slate-800 tracking-wider block">
+                                      विषय (Subject Title)
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={res.subject}
+                                      onChange={(e) =>
+                                        handleUpdateFormResolutionField(
+                                          index,
+                                          "subject",
+                                          e.target.value,
+                                        )
                                       }
-                                      className="text-[11px] font-black text-blue-600 hover:text-blue-700 hover:underline uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
-                                    >
-                                      पूर्ण अहवाल पहा <Printer size={12} />
-                                    </button>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDeleteMeeting(mt.id);
-                                      }}
-                                      className="text-[11px] font-black text-red-600 hover:text-red-700 hover:underline uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
-                                    >
-                                      डिलीट करा <Trash2 size={12} />
-                                    </button>
+                                      placeholder="उदा. मागील सभेचे इतिवृत्त वाचून मंजूर करणेबाबत."
+                                      className="w-full px-5 py-3.5 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-lg placeholder-slate-400"
+                                    />
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <label className="text-base font-black text-slate-800 tracking-wider block">
+                                      ठराव तपशील (Resolution Details)
+                                    </label>
+                                    <textarea
+                                      value={res.resolution || ""}
+                                      onChange={(e) =>
+                                        handleUpdateFormResolutionField(
+                                          index,
+                                          "resolution",
+                                          e.target.value,
+                                        )
+                                      }
+                                      placeholder="ठरावाचा सविस्तर तपशील लिहा..."
+                                      className="w-full h-40 px-5 py-4 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-lg placeholder-slate-400 resize-y leading-relaxed"
+                                    />
+                                  </div>
+
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                                    <div className="space-y-2">
+                                      <label className="text-base font-black text-slate-800 tracking-wider block">
+                                        सूचक (Proposer)
+                                      </label>
+                                      <select
+                                        value={res.proposer}
+                                        onChange={(e) =>
+                                          handleUpdateFormResolutionField(
+                                            index,
+                                            "proposer",
+                                            e.target.value,
+                                          )
+                                        }
+                                        className="w-full px-5 py-3.5 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 bg-white font-extrabold text-slate-950 text-lg cursor-pointer shadow-sm"
+                                      >
+                                        <option value="">-- सूचक निवडा --</option>
+                                        {formMembers.map(
+                                          (m: any, mIdx: number) =>
+                                            m.name && (
+                                              <option key={mIdx} value={m.name}>
+                                                {m.name} ({m.post})
+                                              </option>
+                                            ),
+                                        )}
+                                      </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                      <label className="text-base font-black text-slate-800 tracking-wider block">
+                                        अनुमोदक (Seconder)
+                                      </label>
+                                      <select
+                                        value={res.seconder}
+                                        onChange={(e) =>
+                                          handleUpdateFormResolutionField(
+                                            index,
+                                            "seconder",
+                                            e.target.value,
+                                          )
+                                        }
+                                        className="w-full px-5 py-3.5 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 bg-white font-extrabold text-slate-950 text-lg cursor-pointer shadow-sm"
+                                      >
+                                        <option value="">-- अनुमोदक निवडा --</option>
+                                        {formMembers.map(
+                                          (m: any, mIdx: number) =>
+                                            m.name && (
+                                              <option key={mIdx} value={m.name}>
+                                                {m.name} ({m.post})
+                                              </option>
+                                            ),
+                                        )}
+                                      </select>
+                                    </div>
                                   </div>
                                 </div>
                               ))}
                             </div>
-                          ) : (
-                            <div className="p-20 text-center border-2 border-dashed border-slate-200 rounded-[2rem]">
-                              <div className="size-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-300">
-                                <FileText size={40} />
-                              </div>
-                              <h3 className="text-slate-400 font-black uppercase tracking-widest text-xs">
-                                कोणतेही अहवाल आढळले नाहीत
-                              </h3>
-                              <p className="text-slate-300 text-[10px] font-bold mt-2 italic">
-                                या समितीची पहिली बैठक नोंदवण्यासाठी वरील 'नवीन
-                                बैठक नोंदवा' बटणावर क्लिक करा.
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
 
-                  {/* Tab Content - View 2: Form to Fill New Meeting */}
-                  {activeTab === "form" && (
-                    <div className="p-4 sm:p-8 md:p-12 space-y-8 md:space-y-12">
-                      {/* Basic Details Form Section */}
-                      {formStep === 1 && (
-                        <>
-                          <div className="space-y-8">
-                            <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest border-b-2 border-slate-100 pb-3">
-                              १. बैठकीची प्राथमिक माहिती
-                            </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                              <div className="space-y-2.5">
-                                <label className="text-lg font-black text-slate-800 block">
-                                  शाळेचे नाव
-                                </label>
-                                <input
-                                  type="text"
-                                  value={schoolName}
-                                  onChange={(e) => setSchoolName(e.target.value)}
-                                  placeholder="शाळेचे नाव प्रविष्ट करा..."
-                                  className="w-full px-6 py-4.5 bg-white border-2 border-slate-300 rounded-xl text-lg font-extrabold outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 transition-all text-slate-950 shadow-md"
-                                />
-                              </div>
-                              <div className="space-y-2.5">
-                                <label className="text-lg font-black text-slate-800 block">
-                                  मुख्याध्यापकांचे नाव
-                                </label>
-                                <input
-                                  type="text"
-                                  value={headmasterName}
-                                  onChange={(e) => setHeadmasterName(e.target.value)}
-                                  placeholder="मुख्याध्यापकांचे नाव..."
-                                  className="w-full px-6 py-4.5 bg-white border-2 border-slate-300 rounded-xl text-lg font-extrabold outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 transition-all text-slate-950 shadow-md"
-                                />
-                              </div>
-                              <div className="space-y-2.5">
-                                <label className="text-lg font-black text-slate-800 block">
-                                  समिती अध्यक्षांचे नाव
-                                </label>
-                                <input
-                                  type="text"
-                                  value={presidentName}
-                                  onChange={(e) => setPresidentName(e.target.value)}
-                                  placeholder="समिती अध्यक्षांचे नाव प्रविष्ट करा..."
-                                  className="w-full px-6 py-4.5 bg-white border-2 border-slate-300 rounded-xl text-lg font-extrabold outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 transition-all text-slate-950 shadow-md"
-                                />
-                              </div>
-                              <div className="space-y-2.5">
-                                <label className="text-lg font-black text-slate-800 block">
-                                  समितीचे नाव (Committee Name)
-                                </label>
-                                <input
-                                  type="text"
-                                  value={committeeName}
-                                  onChange={(e) => setCommitteeName(e.target.value)}
-                                  placeholder="उदा. शाळा व्यवस्थापन समिती..."
-                                  className="w-full px-6 py-4.5 bg-white border-2 border-slate-300 rounded-xl text-lg font-extrabold outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 transition-all text-slate-950 shadow-md"
-                                />
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Committee Members List Section */}
-                          <div className="space-y-6 pt-8 border-t border-slate-100">
-                            <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
-                              <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest">
-                                २. समिती सदस्यांची नावे
-                              </h3>
-                              <button
-                                type="button"
-                                onClick={handleAddFormMemberRow}
-                                className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-black uppercase tracking-wider transition-all shadow-md"
-                              >
-                                <UserPlus className="size-4" /> सदस्य जोडा
-                              </button>
-                            </div>
-
-                            <div className="overflow-x-auto border-2 border-slate-300 rounded-2xl bg-white shadow-sm">
-                              <table className="w-full text-left border-collapse text-base">
-                                <thead>
-                                  <tr className="bg-slate-100 text-slate-800 font-extrabold border-b-2 border-slate-300">
-                                    <th className="px-2 py-4 text-center w-12">
-                                      अ.क्र.
-                                    </th>
-                                    <th className="px-4 py-4 w-[35%] min-w-[250px]">सदस्याचे नाव</th>
-                                    <th className="px-6 py-4">पदनाम (Designation)</th>
-                                    <th className="px-6 py-4">पद (Post)</th>
-                                    <th className="px-6 py-4 text-center w-24">स्वाक्षरी</th>
-                                    <th className="px-6 py-4 text-center w-24">
-                                      कृती
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-200 font-extrabold text-slate-950">
-                                  {formMembers.map((m: any, idx: number) => (
-                                    <tr key={idx} className="hover:bg-slate-50/50">
-                                      <td className="px-2 py-4 text-center text-slate-500 font-extrabold text-lg">
-                                        {idx + 1}
-                                      </td>
-                                      <td className="px-4 py-4">
-                                        <input
-                                          type="text"
-                                          value={m.name}
-                                          onChange={(e) =>
-                                            handleUpdateFormMemberField(
-                                              idx,
-                                              "name",
-                                              e.target.value,
-                                            )
-                                          }
-                                          placeholder="सदस्याचे नाव प्रविष्ट करा..."
-                                          className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-lg"
-                                        />
-                                      </td>
-                                      <td className="px-6 py-4">
-                                        {m.isCustomPost ? (
-                                          <div className="flex gap-2">
-                                            <input
-                                              type="text"
-                                              value={m.post}
-                                              onChange={(e) => handleUpdateFormMemberField(idx, "post", e.target.value)}
-                                              placeholder="स्वतः लिहा..."
-                                              autoFocus
-                                              className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-lg"
-                                            />
-                                            <button
-                                              type="button"
-                                              onClick={() => handleUpdateFormMemberField(idx, "isCustomPost", false)}
-                                              className="p-3 text-slate-500 hover:bg-slate-100 rounded-xl transition-colors border border-transparent hover:border-slate-300"
-                                              title="ड्रॉपडाऊनवर परत जा"
-                                            >
-                                              <X className="size-5" />
-                                            </button>
-                                          </div>
-                                        ) : (
-                                          <select
-                                            value={m.post}
-                                            onChange={(e) => {
-                                              if (e.target.value === "__CUSTOM__") {
-                                                handleUpdateFormMemberField(idx, "isCustomPost", true);
-                                                handleUpdateFormMemberField(idx, "post", "");
-                                              } else {
-                                                handleUpdateFormMemberField(idx, "post", e.target.value);
-                                              }
-                                            }}
-                                            className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-lg cursor-pointer"
-                                          >
-                                            <option value="">-- पदनाम निवडा --</option>
-                                            {selectedCommittee && getCommitteeDesignations(selectedCommittee.id).map((designation, dIdx) => (
-                                              <option key={dIdx} value={designation}>{designation}</option>
-                                            ))}
-                                            {m.post && selectedCommittee && !getCommitteeDesignations(selectedCommittee.id).includes(m.post) && (
-                                              <option value={m.post}>{m.post}</option>
-                                            )}
-                                            <option value="__CUSTOM__" className="font-bold text-blue-600">-- स्वतः लिहा --</option>
-                                          </select>
-                                        )}
-                                      </td>
-                                      <td className="px-6 py-4">
-                                        {m.isCustomRole ? (
-                                          <div className="flex gap-2">
-                                            <input
-                                              type="text"
-                                              value={m.role}
-                                              onChange={(e) => handleUpdateFormMemberField(idx, "role", e.target.value)}
-                                              placeholder="स्वतः लिहा..."
-                                              autoFocus
-                                              className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-lg"
-                                            />
-                                            <button
-                                              type="button"
-                                              onClick={() => handleUpdateFormMemberField(idx, "isCustomRole", false)}
-                                              className="p-3 text-slate-500 hover:bg-slate-100 rounded-xl transition-colors border border-transparent hover:border-slate-300"
-                                              title="ड्रॉपडाऊनवर परत जा"
-                                            >
-                                              <X className="size-5" />
-                                            </button>
-                                          </div>
-                                        ) : (
-                                          <select
-                                            value={m.role}
-                                            onChange={(e) => {
-                                              if (e.target.value === "__CUSTOM__") {
-                                                handleUpdateFormMemberField(idx, "isCustomRole", true);
-                                                handleUpdateFormMemberField(idx, "role", "");
-                                              } else {
-                                                handleUpdateFormMemberField(idx, "role", e.target.value);
-                                              }
-                                            }}
-                                            className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-lg cursor-pointer"
-                                          >
-                                            <option value="">-- पद निवडा --</option>
-                                            {COMMITTEE_ROLES.map((roleOpt, rIdx) => (
-                                              <option key={rIdx} value={roleOpt}>{roleOpt}</option>
-                                            ))}
-                                            {m.role && !COMMITTEE_ROLES.includes(m.role) && (
-                                              <option value={m.role}>{m.role}</option>
-                                            )}
-                                            <option value="__CUSTOM__" className="font-bold text-blue-600">-- स्वतः लिहा --</option>
-                                          </select>
-                                        )}
-                                      </td>
-                                      <td className="px-6 py-4"></td>
-                                      <td className="px-6 py-4 text-center">
-                                        <button
-                                          type="button"
-                                          onClick={() =>
-                                            handleRemoveFormMemberRow(idx)
-                                          }
-                                          className="p-2 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-xl transition-colors border border-transparent hover:border-red-200"
-                                        >
-                                          <Trash2 className="size-5" />
-                                        </button>
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-
-                            {/* Save Primary Details Button */}
-                            <div className="flex justify-end pt-4">
-                              <button
-                                type="button"
-                                onClick={async () => {
-                                  await handleSaveCommitteeProfile();
-                                  setFormStep(2);
-                                }}
-                                disabled={isSavingProfile}
-                                className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-black uppercase tracking-wider transition-all shadow-md disabled:opacity-50"
-                              >
-                                <Save className="size-4" />
-                                {isSavingProfile ? "सेव्ह होत आहे..." : "सेव्ह करा आणि पुढे जा"}
-                              </button>
-                            </div>
-
-                            {/* Datalists for Comboboxes */}
-                            {/* Removed datalists as we are now using select elements */}
-                          </div>
-                        </>
-                      )}
-
-                      {formStep === 2 && (
-                        <div className="space-y-12">
-                          <div className="flex items-center">
-                            <button type="button" onClick={() => setFormStep(1)} className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors w-fit">
-                              <ArrowLeft className="size-4" /> मागे जा (प्राथमिक माहिती)
-                            </button>
-                          </div>
-                          {/* Month Selection Navbar & Metadata */}
-                          <div className="bg-slate-50 border border-slate-200/80 p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-[2rem] space-y-6">
-                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                              <div className="space-y-1">
-                                <label className="text-sm font-black text-slate-800 uppercase tracking-wider block">
-                                  मासिक सभा महिना निवडा (Select Meeting Month)
-                                </label>
-                                <p className="text-xs text-slate-500 font-bold">
-                                  प्रत्येक महिन्यासाठी पूर्व-निर्धारित विषय आणि ठराव लोड करण्यासाठी महिना निवडा.
-                                </p>
-                              </div>
-                              {loadingTemplate && (
-                                <div className="flex items-center gap-2 text-xs font-black text-blue-600 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-xl self-start md:self-auto animate-pulse">
-                                  <div className="size-3.5 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin" />
-                                  <span>टेम्पलेट लोड होत आहे...</span>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Horizontal Month Navbar */}
-                            <div className="flex overflow-x-auto gap-2.5 pb-2 pt-1 -mx-2 px-2 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
-                              {(selectedCommittee?.id === "alumni" ? ALUMNI_MEETINGS : ACADEMIC_MONTHS).map((m) => {
-                                const isSelected = selectedMonth === m.id;
-                                const currentIdx = ACADEMIC_MONTHS.findIndex(x => x.id === currentMonth);
-                                const mIdx = ACADEMIC_MONTHS.findIndex(x => x.id === m.id);
-                                const isFuture = selectedCommittee?.id !== "alumni" && mIdx > currentIdx && currentIdx !== -1;
-                                return (
-                                  <button
-                                    key={m.id}
-                                    type="button"
-                                    disabled={loadingTemplate || isFuture}
-                                    onClick={() => handleMonthChange(m.id)}
-                                    className={`px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wider transition-all duration-300 shrink-0 cursor-pointer ${isSelected
-                                      ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25 scale-[1.03]"
-                                      : "bg-white text-slate-600 hover:text-slate-955 border border-slate-200 hover:bg-slate-50 hover:border-slate-300 active:scale-95 disabled:opacity-50"
-                                      }`}
-                                  >
-                                    {m.name} ({m.english}) {isFuture && "(येणार)"}
-                                  </button>
-                                );
-                              })}
-                            </div>
-
-                            {/* Year & Date Selection options appearing after month selection */}
-                            <AnimatePresence>
-                              {selectedMonth && (
-                                <motion.div
-                                  initial={{ opacity: 0, height: 0 }}
-                                  animate={{ opacity: 1, height: "auto" }}
-                                  exit={{ opacity: 0, height: 0 }}
-                                  transition={{ duration: 0.3 }}
-                                  className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-slate-200 overflow-hidden"
-                                >
-                                  <div className="space-y-2">
-                                    <label className="text-sm font-black text-slate-800 block">
-                                      शैक्षणिक वर्ष निवडा (Select Academic Year)
-                                    </label>
-                                    <select
-                                      value={academicYear}
-                                      onChange={(e) => setAcademicYear(e.target.value)}
-                                      className="w-full px-5 py-4 bg-white border-2 border-slate-300 rounded-xl text-base font-extrabold outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 text-slate-950 shadow-md cursor-pointer transition-all"
-                                    >
-                                      <option value="२०२४-२५">२०२४-२५</option>
-                                      <option value="२०२५-२६">२०२५-२६</option>
-                                      <option value="२०२६-२७">२०२६-२७</option>
-                                      <option value="२०२७-२८">२०२७-२८</option>
-                                    </select>
-                                  </div>
-
-                                  <div className="space-y-2">
-                                    <label className="text-sm font-black text-slate-800 block">
-                                      सभा दिनांक निवडा (Select Meeting Date)
-                                    </label>
-                                    <div className="relative">
-                                      <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 size-5 pointer-events-none" />
-                                      <input
-                                        type="date"
-                                        value={meetingDate}
-                                        onChange={(e) => handleDateChange(e.target.value)}
-                                        className="w-full pl-12 pr-5 py-3.5 bg-white border-2 border-slate-300 rounded-xl text-base font-extrabold outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 text-slate-955 cursor-pointer shadow-md transition-all"
-                                      />
-                                    </div>
-                                  </div>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
-                          </div>
-
-                          {/* Introductory Paragraph Preview */}
-                          {selectedMonth && (
-                            <div className="pt-8 pb-4 font-sans">
-                              <div className="bg-white border-2 border-slate-300 p-8 rounded-2xl relative space-y-4 shadow-sm">
-                                <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest border-b-2 border-slate-100 pb-3">
-                                  २. प्रास्ताविक (Introductory Paragraph)
-                                </h3>
-                                <textarea
-                                  value={customIntroText}
-                                  onChange={(e) => {
-                                    setCustomIntroText(e.target.value);
-                                    setIsIntroEdited(true);
-                                  }}
-                                  className="w-full h-32 px-6 py-5 border-2 border-slate-300 rounded-xl bg-slate-50 font-extrabold text-slate-950 text-lg leading-relaxed shadow-inner outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 resize-y"
-                                />
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Dynamic Subjects and Resolutions Section */}
-                          {selectedMonth && formResolutions.length === 0 ? (
-                            <div className="pt-8 border-t border-slate-100 space-y-6">
-                              <div className="bg-amber-50 border-2 border-amber-200 rounded-2xl p-8 text-center space-y-4">
-                                <div className="size-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto">
-                                  <Info className="size-8 text-amber-600" />
-                                </div>
-                                <h3 className="text-lg font-black text-amber-800">
-                                  या महिन्यासाठी पूर्व-निर्धारित विषय उपलब्ध नाहीत
-                                </h3>
-                                <p className="text-sm font-bold text-amber-600 max-w-lg mx-auto">
-                                  तुम्हाला हवे असल्यास तुमचे स्वतःचे विषय आणि ठराव जोडू शकता.
-                                  जतन केल्यानंतर ते फक्त तुमच्यासाठी उपलब्ध राहतील.
-                                </p>
-                                {!showCustomForm && (
-                                  <button
-                                    type="button"
-                                    onClick={async () => {
-                                      // Calculate cumulative start resolution number from admin templates
-                                      if (selectedCommittee && selectedMonth) {
-                                        try {
-                                          const adminQ = query(
-                                            collection(db, "meeting_templates"),
-                                            where("committeeId", "==", selectedCommittee.id)
-                                          );
-                                          const adminSnap = await getDocs(adminQ);
-                                          const tMap: Record<string, any[]> = {};
-                                          adminSnap.docs.forEach((d) => {
-                                            const data = d.data();
-                                            tMap[data.month] = data.subjects || [];
-                                          });
-                                          const monthsList = ["06", "07", "08", "09", "10", "11", "12", "01", "02", "03", "04", "05"];
-                                          const targetIdx = monthsList.indexOf(selectedMonth);
-                                          let calcStartNo = 1;
-                                          if (targetIdx > 0) {
-                                            const preceding = monthsList.slice(0, targetIdx);
-                                            const totalPreceding = preceding.reduce((sum, m) => sum + (tMap[m]?.length || 0), 0);
-                                            calcStartNo = 1 + totalPreceding;
-                                          }
-                                          setStartResolutionNo(calcStartNo);
-                                          // Directly create first resolution with correct number (avoid stale state)
-                                          if (formResolutions.length === 0) {
-                                            setFormResolutions([{
-                                              subjectNo: 1,
-                                              resolutionNo: calcStartNo,
-                                              subject: "",
-                                              discussion: "",
-                                              resolution: "",
-                                              remark: "",
-                                              proposer: "",
-                                              seconder: "",
-                                              statusText: "ठराव सर्वानुमते मंजूर करण्यात आला.",
-                                            }]);
-                                          }
-                                        } catch (e) {
-                                          console.error("Error calculating start resolution no:", e);
-                                          if (formResolutions.length === 0) {
-                                            handleAddFormResolutionRow();
-                                          }
-                                        }
-                                      } else {
-                                        if (formResolutions.length === 0) {
-                                          handleAddFormResolutionRow();
-                                        }
-                                      }
-                                      setShowCustomForm(true);
-                                    }}
-                                    className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl text-sm font-black uppercase tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-95 cursor-pointer mt-2"
-                                  >
-                                    <Plus className="size-4" /> विषय आणि ठराव जोडा
-                                  </button>
-                                )}
-                              </div>
-
-                              {/* Custom Resolutions Form for non-current month */}
-                              {showCustomForm && (
-                                <div className="space-y-6 font-sans">
-                                  <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
-                                    <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest">
-                                      ३. तुमचे विषय आणि ठराव
-                                    </h3>
-                                    <div className="flex items-center gap-3">
-                                      <button
-                                        type="button"
-                                        onClick={handleAddFormResolutionRow}
-                                        className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-black uppercase tracking-wider transition-all shadow-md cursor-pointer"
-                                      >
-                                        <Plus className="size-4" /> विषय व ठराव जोडा
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={saveTeacherCustomTemplate}
-                                        disabled={savingCustomTemplate || formResolutions.length === 0}
-                                        className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl text-sm font-black uppercase tracking-wider transition-all shadow-md disabled:opacity-50 cursor-pointer"
-                                      >
-                                        {savingCustomTemplate ? (
-                                          <>
-                                            <div className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                            जतन होत आहे...
-                                          </>
-                                        ) : (
-                                          <>
-                                            <Save className="size-4" /> विषय व ठराव जतन करा
-                                          </>
-                                        )}
-                                      </button>
-                                    </div>
-                                  </div>
-
-                                  <div className="overflow-x-auto bg-white rounded-xl border-2 border-slate-300 shadow-sm">
-                                    <table className="w-full border-collapse min-w-[800px]">
-                                      <thead>
-                                        <tr className="bg-slate-100 border-b-2 border-slate-300">
-                                          <th className="p-3 text-center font-black text-slate-800 border-r-2 border-slate-300 w-24">अ.क्र.</th>
-                                          <th className="p-3 text-left font-black text-slate-800 border-r-2 border-slate-300 w-1/4">विषय</th>
-                                          <th className="p-3 text-left font-black text-slate-800 border-r-2 border-slate-300 w-[40%]">ठराव तपशील</th>
-                                          <th className="p-3 text-left font-black text-slate-800 border-r-2 border-slate-300 w-1/5">सूचक व अनुमोदक</th>
-                                          <th className="p-3 text-center font-black text-slate-800 w-16">कृती</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        {formResolutions.map((res: any, index: number) => (
-                                          <tr key={index} className="border-b-2 border-slate-200 hover:bg-slate-50 transition-colors">
-                                            <td className="p-3 align-top border-r-2 border-slate-300 bg-slate-50/50">
-                                              <div className="space-y-4">
-                                                <div>
-                                                  <label className="text-[10px] text-slate-500 font-bold mb-1 block uppercase tracking-wider text-center">विषय क्र.</label>
-                                                  <input type="number" value={res.subjectNo} onChange={(e) => handleUpdateFormResolutionField(index, "subjectNo", Number(e.target.value))} className="w-full px-2 py-1.5 border-2 border-slate-300 rounded focus:ring-2 focus:ring-blue-600 outline-none font-bold text-center" />
-                                                </div>
-                                                <div>
-                                                  <label className="text-[10px] text-slate-500 font-bold mb-1 block uppercase tracking-wider text-center">ठराव क्र.</label>
-                                                  <input type="number" value={res.resolutionNo} onChange={(e) => handleUpdateFormResolutionField(index, "resolutionNo", Number(e.target.value))} className="w-full px-2 py-1.5 border-2 border-slate-300 rounded focus:ring-2 focus:ring-blue-600 outline-none font-bold text-center" />
-                                                </div>
-                                              </div>
-                                            </td>
-                                            <td className="p-3 align-top border-r-2 border-slate-300">
-                                              <textarea
-                                                value={res.subject}
-                                                onChange={(e) => handleUpdateFormResolutionField(index, "subject", e.target.value)}
-                                                placeholder="उदा. सभेचे इतिवृत्त..."
-                                                className="w-full h-full min-h-[160px] p-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none resize-y font-bold text-slate-800 leading-relaxed bg-white"
-                                              />
-                                            </td>
-                                            <td className="p-3 align-top border-r-2 border-slate-300">
-                                              <textarea
-                                                value={res.resolution || ""}
-                                                onChange={(e) => handleUpdateFormResolutionField(index, "resolution", e.target.value)}
-                                                placeholder="ठरावाचा सविस्तर तपशील लिहा..."
-                                                className="w-full h-full min-h-[160px] p-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none resize-y font-bold text-slate-800 leading-relaxed bg-white"
-                                              />
-                                            </td>
-                                            <td className="p-3 align-top border-r-2 border-slate-300 bg-slate-50/50">
-                                              <div className="space-y-4">
-                                                <div>
-                                                  <label className="text-xs text-slate-500 font-bold mb-1.5 block">सूचक</label>
-                                                  <select value={res.proposer} onChange={(e) => handleUpdateFormResolutionField(index, "proposer", e.target.value)} className="w-full p-2 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none text-sm font-bold text-slate-800 cursor-pointer bg-white">
-                                                    <option value="">-- निवडा --</option>
-                                                    {formMembers.map((m: any, mIdx: number) => m.name && (<option key={mIdx} value={m.name}>{m.name}</option>))}
-                                                  </select>
-                                                </div>
-                                                <div>
-                                                  <label className="text-xs text-slate-500 font-bold mb-1.5 block">अनुमोदक</label>
-                                                  <select value={res.seconder} onChange={(e) => handleUpdateFormResolutionField(index, "seconder", e.target.value)} className="w-full p-2 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none text-sm font-bold text-slate-800 cursor-pointer bg-white">
-                                                    <option value="">-- निवडा --</option>
-                                                    {formMembers.map((m: any, mIdx: number) => m.name && (<option key={mIdx} value={m.name}>{m.name}</option>))}
-                                                  </select>
-                                                </div>
-                                              </div>
-                                            </td>
-                                            <td className="p-3 align-middle text-center">
-                                              <button
-                                                type="button"
-                                                onClick={() => handleRemoveFormResolutionRow(index)}
-                                                className="p-2.5 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-xl transition-colors border-2 border-transparent hover:border-red-200 shadow-sm hover:shadow"
-                                                title="Delete this block"
-                                              >
-                                                <Trash2 className="size-5 mx-auto" />
-                                              </button>
-                                            </td>
-                                          </tr>
-                                        ))}
-                                      </tbody>
-                                    </table>
-                                    {formResolutions.length === 0 && (
-                                      <div className="text-center p-8 text-slate-500 font-bold bg-white">
-                                        कोणतेही विषय जोडलेले नाहीत. कृपया 'विषय व ठराव जोडा' वर क्लिक करा.
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  {/* Save Custom Template Button (bottom) */}
-                                  {formResolutions.length > 0 && (
-                                    <div className="flex items-center justify-end pt-4">
-                                      <button
-                                        type="button"
-                                        onClick={saveTeacherCustomTemplate}
-                                        disabled={savingCustomTemplate}
-                                        className="flex items-center gap-2 px-8 py-3.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl text-sm font-black uppercase tracking-wider transition-all shadow-lg hover:shadow-xl disabled:opacity-50 cursor-pointer"
-                                      >
-                                        {savingCustomTemplate ? (
-                                          <>
-                                            <div className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                            जतन होत आहे...
-                                          </>
-                                        ) : (
-                                          <>
-                                            <Save className="size-4" /> विषय व ठराव जतन करा
-                                          </>
-                                        )}
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <div className="space-y-6 pt-8 border-t border-slate-100 font-sans">
-                              <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
-                                <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest">
-                                  ३. विषय आणि ठराव तपशील
-                                </h3>
+                            {/* Save Custom Template Button (bottom) */}
+                            {formResolutions.length > 0 && (
+                              <div className="flex items-center justify-end pt-4">
                                 <button
                                   type="button"
-                                  onClick={handleAddFormResolutionRow}
-                                  className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-black uppercase tracking-wider transition-all shadow-md"
+                                  onClick={saveTeacherCustomTemplate}
+                                  disabled={savingCustomTemplate}
+                                  className="flex items-center gap-2 px-8 py-3.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl text-sm font-black uppercase tracking-wider transition-all shadow-lg hover:shadow-xl disabled:opacity-50 cursor-pointer"
                                 >
-                                  <Plus className="size-4" /> विषय व ठराव जोडा
+                                  {savingCustomTemplate ? (
+                                    <>
+                                      <div className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                      जतन होत आहे...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Save className="size-4" /> विषय व ठराव जतन करा
+                                    </>
+                                  )}
                                 </button>
                               </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-6 pt-8 border-t border-slate-100 font-sans">
+                        <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
+                          <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest">
+                            ३. विषय आणि ठराव तपशील
+                          </h3>
+                          <button
+                            type="button"
+                            onClick={handleAddFormResolutionRow}
+                            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-black uppercase tracking-wider transition-all shadow-md"
+                          >
+                            <Plus className="size-4" /> विषय व ठराव जोडा
+                          </button>
+                        </div>
 
-                              <div className="overflow-x-auto bg-white rounded-xl border-2 border-slate-300 shadow-sm">
-                                <table className="w-full border-collapse min-w-[800px]">
-                                  <thead>
-                                    <tr className="bg-slate-100 border-b-2 border-slate-300">
-                                      <th className="p-3 text-center font-black text-slate-800 border-r-2 border-slate-300 w-24">अ.क्र.</th>
-                                      <th className="p-3 text-left font-black text-slate-800 border-r-2 border-slate-300 w-1/4">विषय</th>
-                                      <th className="p-3 text-left font-black text-slate-800 border-r-2 border-slate-300 w-[40%]">ठराव तपशील</th>
-                                      <th className="p-3 text-left font-black text-slate-800 border-r-2 border-slate-300 w-1/5">सूचक व अनुमोदक</th>
-                                      <th className="p-3 text-center font-black text-slate-800 w-16">कृती</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {formResolutions.map((res: any, index: number) => (
-                                      <tr key={index} className="border-b-2 border-slate-200 hover:bg-slate-50 transition-colors">
-                                        <td className="p-3 align-top border-r-2 border-slate-300 bg-slate-50/50">
-                                          <div className="space-y-4">
-                                            <div>
-                                              <label className="text-[10px] text-slate-500 font-bold mb-1 block uppercase tracking-wider text-center">विषय क्र.</label>
-                                              <input type="number" value={res.subjectNo} onChange={(e) => handleUpdateFormResolutionField(index, "subjectNo", Number(e.target.value))} className="w-full px-2 py-1.5 border-2 border-slate-300 rounded focus:ring-2 focus:ring-blue-600 outline-none font-bold text-center" />
-                                            </div>
-                                            <div>
-                                              <label className="text-[10px] text-slate-500 font-bold mb-1 block uppercase tracking-wider text-center">ठराव क्र.</label>
-                                              <input type="number" value={res.resolutionNo} onChange={(e) => handleUpdateFormResolutionField(index, "resolutionNo", Number(e.target.value))} className="w-full px-2 py-1.5 border-2 border-slate-300 rounded focus:ring-2 focus:ring-blue-600 outline-none font-bold text-center" />
-                                            </div>
-                                          </div>
-                                        </td>
-                                        <td className="p-3 align-top border-r-2 border-slate-300">
-                                          <textarea
-                                            value={res.subject}
-                                            onChange={(e) => handleUpdateFormResolutionField(index, "subject", e.target.value)}
-                                            placeholder="उदा. सभेचे इतिवृत्त..."
-                                            className="w-full h-full min-h-[160px] p-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none resize-y font-bold text-slate-800 leading-relaxed bg-white"
-                                          />
-                                        </td>
-                                        <td className="p-3 align-top border-r-2 border-slate-300">
-                                          <textarea
-                                            value={res.resolution || ""}
-                                            onChange={(e) => handleUpdateFormResolutionField(index, "resolution", e.target.value)}
-                                            placeholder="ठरावाचा सविस्तर तपशील लिहा..."
-                                            className="w-full h-full min-h-[160px] p-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none resize-y font-bold text-slate-800 leading-relaxed bg-white"
-                                          />
-                                        </td>
-                                        <td className="p-3 align-top border-r-2 border-slate-300 bg-slate-50/50">
-                                          <div className="space-y-4">
-                                            <div>
-                                              <label className="text-xs text-slate-500 font-bold mb-1.5 block">सूचक</label>
-                                              <select value={res.proposer} onChange={(e) => handleUpdateFormResolutionField(index, "proposer", e.target.value)} className="w-full p-2 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none text-sm font-bold text-slate-800 cursor-pointer bg-white">
-                                                <option value="">-- निवडा --</option>
-                                                {formMembers.map((m: any, mIdx: number) => m.name && (<option key={mIdx} value={m.name}>{m.name}</option>))}
-                                              </select>
-                                            </div>
-                                            <div>
-                                              <label className="text-xs text-slate-500 font-bold mb-1.5 block">अनुमोदक</label>
-                                              <select value={res.seconder} onChange={(e) => handleUpdateFormResolutionField(index, "seconder", e.target.value)} className="w-full p-2 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none text-sm font-bold text-slate-800 cursor-pointer bg-white">
-                                                <option value="">-- निवडा --</option>
-                                                {formMembers.map((m: any, mIdx: number) => m.name && (<option key={mIdx} value={m.name}>{m.name}</option>))}
-                                              </select>
-                                            </div>
-                                          </div>
-                                        </td>
-                                        <td className="p-3 align-middle text-center">
-                                          <button
-                                            type="button"
-                                            onClick={() => handleRemoveFormResolutionRow(index)}
-                                            className="p-2.5 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-xl transition-colors border-2 border-transparent hover:border-red-200 shadow-sm hover:shadow"
-                                            title="Delete this block"
-                                          >
-                                            <Trash2 className="size-5 mx-auto" />
-                                          </button>
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                                {formResolutions.length === 0 && (
-                                  <div className="text-center p-8 text-slate-500 font-bold bg-white">
-                                    कोणतेही विषय जोडलेले नाहीत. कृपया 'विषय व ठराव जोडा' वर क्लिक करा.
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          )}
+                        <div className="space-y-6">
+                          {formResolutions.map((res: any, index: number) => (
+                            <div
+                              key={index}
+                              className="bg-white border-2 border-slate-300 p-8 rounded-2xl relative space-y-6 shadow-sm"
+                            >
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleRemoveFormResolutionRow(index)
+                                }
+                                className="absolute top-6 right-6 p-2 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-xl transition-colors border border-transparent hover:border-red-200"
+                                title="Delete this block"
+                              >
+                                <Trash2 className="size-5" />
+                              </button>
 
-                          {/* Outro Paragraph Section */}
-                          {selectedMonth && (
-                            <div className="space-y-6 pt-8 border-t border-slate-100 font-sans">
-                              <div className="border-b-2 border-slate-100 pb-3">
-                                <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest">
-                                  ४. आभार प्रदर्शन व सभा सांगता परिच्छेद
-                                </h3>
+                              <div className="grid grid-cols-2 gap-6 w-5/6">
+                                <div className="space-y-1.5">
+                                  <label className="text-xs font-black text-slate-500 uppercase tracking-wider block">
+                                    विषय क्रमांक
+                                  </label>
+                                  <input
+                                    type="number"
+                                    value={res.subjectNo}
+                                    onChange={(e) =>
+                                      handleUpdateFormResolutionField(
+                                        index,
+                                        "subjectNo",
+                                        Number(e.target.value),
+                                      )
+                                    }
+                                    className="w-24 px-4 py-3 border-2 border-slate-300 rounded-lg outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-lg text-slate-900 bg-white"
+                                  />
+                                </div>
+                                <div className="space-y-1.5">
+                                  <label className="text-xs font-black text-slate-500 uppercase tracking-wider block">
+                                    ठराव क्रमांक
+                                  </label>
+                                  <input
+                                    type="number"
+                                    value={res.resolutionNo}
+                                    onChange={(e) =>
+                                      handleUpdateFormResolutionField(
+                                        index,
+                                        "resolutionNo",
+                                        Number(e.target.value),
+                                      )
+                                    }
+                                    className="w-24 px-4 py-3 border-2 border-slate-300 rounded-lg outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-lg text-slate-900 bg-white"
+                                  />
+                                </div>
                               </div>
 
-                              <div className="bg-white border-2 border-slate-300 p-8 rounded-2xl shadow-sm space-y-4">
+                              <div className="space-y-2">
                                 <label className="text-base font-black text-slate-800 tracking-wider block">
-                                  परिच्छेद मजकूर (Paragraph Details)
+                                  विषय (Subject Title)
                                 </label>
-                                <textarea
-                                  value={formOutroText}
-                                  onChange={(e) => setFormOutroText(e.target.value)}
-                                  placeholder="उदा. ऐन वेळेस उपस्थित होणाऱ्या विषयांवर चर्चा करून..."
-                                  className="w-full h-32 px-5 py-4 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-lg placeholder-slate-400 resize-y leading-relaxed"
+                                <input
+                                  type="text"
+                                  value={res.subject}
+                                  onChange={(e) =>
+                                    handleUpdateFormResolutionField(
+                                      index,
+                                      "subject",
+                                      e.target.value,
+                                    )
+                                  }
+                                  placeholder="उदा. मागील सभेचे इतिवृत्त वाचून मंजूर करणेबाबत."
+                                  className="w-full px-5 py-3.5 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-lg placeholder-slate-400"
                                 />
                               </div>
-                            </div>
-                          )}
 
-                          {/* Form Submission Button */}
-                          <div className="border-t border-slate-100 pt-8 flex items-center justify-end">
-                            <button
-                              type="button"
-                              onClick={handleSaveMeeting}
-                              disabled={isSubmitting}
-                              className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl px-16 py-5 shadow-xl hover:shadow-2xl hover:opacity-95 disabled:opacity-50 transition-all text-sm font-black uppercase tracking-widest flex items-center gap-2"
-                            >
-                              {isSubmitting ? (
-                                <>
-                                  <div className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                  जतन होत आहे...
-                                </>
-                              ) : (
-                                <>
-                                  <CheckCircle2 size={18} /> बैठक नोंद जतन करा
-                                </>
-                              )}
-                            </button>
-                          </div>
+
+
+                              <div className="space-y-2">
+                                <label className="text-base font-black text-slate-800 tracking-wider block">
+                                  ठराव तपशील (Resolution Details)
+                                </label>
+                                <textarea
+                                  value={res.resolution || ""}
+                                  onChange={(e) =>
+                                    handleUpdateFormResolutionField(
+                                      index,
+                                      "resolution",
+                                      e.target.value,
+                                    )
+                                  }
+                                  placeholder="ठरावाचा सविस्तर तपशील लिहा..."
+                                  className="w-full h-40 px-5 py-4 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-lg placeholder-slate-400 resize-y leading-relaxed"
+                                />
+                              </div>
+
+
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                                <div className="space-y-2">
+                                  <label className="text-base font-black text-slate-800 tracking-wider block">
+                                    सूचक (Proposer)
+                                  </label>
+                                  <select
+                                    value={res.proposer}
+                                    onChange={(e) =>
+                                      handleUpdateFormResolutionField(
+                                        index,
+                                        "proposer",
+                                        e.target.value,
+                                      )
+                                    }
+                                    className="w-full px-5 py-3.5 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 bg-white font-extrabold text-slate-950 text-lg cursor-pointer shadow-sm"
+                                  >
+                                    <option value="">-- सूचक निवडा --</option>
+                                    {formMembers.map(
+                                      (m: any, mIdx: number) =>
+                                        m.name && (
+                                          <option key={mIdx} value={m.name}>
+                                            {m.name} ({m.post})
+                                          </option>
+                                        ),
+                                    )}
+                                  </select>
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-base font-black text-slate-800 tracking-wider block">
+                                    अनुमोदक (Seconder)
+                                  </label>
+                                  <select
+                                    value={res.seconder}
+                                    onChange={(e) =>
+                                      handleUpdateFormResolutionField(
+                                        index,
+                                        "seconder",
+                                        e.target.value,
+                                      )
+                                    }
+                                    className="w-full px-5 py-3.5 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 bg-white font-extrabold text-slate-950 text-lg cursor-pointer shadow-sm"
+                                  >
+                                    <option value="">-- अनुमोदक निवडा --</option>
+                                    {formMembers.map(
+                                      (m: any, mIdx: number) =>
+                                        m.name && (
+                                          <option key={mIdx} value={m.name}>
+                                            {m.name} ({m.post})
+                                          </option>
+                                        ),
+                                    )}
+                                  </select>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      )}
+                      </div>
+                    )}
+
+                    {/* Outro Paragraph Section */}
+                    {selectedMonth && (
+                      <div className="space-y-6 pt-8 border-t border-slate-100 font-sans">
+                        <div className="border-b-2 border-slate-100 pb-3">
+                          <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest">
+                            ४. आभार प्रदर्शन व सभा सांगता परिच्छेद
+                          </h3>
+                        </div>
+                        
+                        <div className="bg-white border-2 border-slate-300 p-8 rounded-2xl shadow-sm space-y-4">
+                          <label className="text-base font-black text-slate-800 tracking-wider block">
+                            परिच्छेद मजकूर (Paragraph Details)
+                          </label>
+                          <textarea
+                            value={formOutroText}
+                            onChange={(e) => setFormOutroText(e.target.value)}
+                            placeholder="उदा. ऐन वेळेस उपस्थित होणाऱ्या विषयांवर चर्चा करून..."
+                            className="w-full h-32 px-5 py-4 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-lg placeholder-slate-400 resize-y leading-relaxed"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Form Submission Button */}
+                    <div className="border-t border-slate-100 pt-8 flex items-center justify-end">
+                      <button
+                        type="button"
+                        onClick={handleSaveMeeting}
+                        disabled={isSubmitting}
+                        className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl px-16 py-5 shadow-xl hover:shadow-2xl hover:opacity-95 disabled:opacity-50 transition-all text-sm font-black uppercase tracking-widest flex items-center gap-2"
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <div className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            जतन होत आहे...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 size={18} /> बैठक नोंद जतन करा
+                          </>
+                        )}
+                      </button>
                     </div>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  </div>
+                )}
+              </div>
+            )}
+          </motion.div>
+            )}
+          </AnimatePresence>
           </div>
         </PinGate>
       </main>
