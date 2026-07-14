@@ -118,56 +118,69 @@ function AssemblyBookAdmin() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 1024 * 1024 * 10) { // Limit to 10MB
+    if (file.size > 1024 * 1024 * 10) {
       toast.error(`File is too large (${formatSize(file.size)}). Maximum allowed size is 10MB.`);
       return;
     }
 
+    const storageApiKey = import.meta.env.VITE_BUNNY_STORAGE_API_KEY;
+    const storageZone = import.meta.env.VITE_BUNNY_STORAGE_ZONE;
+    const cdnHostname = import.meta.env.VITE_BUNNY_STORAGE_CDN_HOSTNAME;
+
+    if (!storageApiKey || !storageZone || !cdnHostname) {
+      toast.error("Bunny Storage configuration is missing in .env.");
+      return;
+    }
+
     setUploading(true);
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      try {
-        const base64 = reader.result as string;
-        const formattedDate = new Date().toLocaleDateString("en-IN");
-        
-        // Chunk the base64 string to bypass 1MB Firestore limit
-        const base64Chunks = chunkString(base64, 800000); // 800KB chunks
-        
-        const chunkUploadPromises = base64Chunks.map((chunk) =>
-          addDoc(collection(db, "admin_assembly_chunks"), { data: chunk })
-        );
-        
-        const chunkRefs = await Promise.all(chunkUploadPromises);
-        const chunkIds = chunkRefs.map((ref) => ref.id);
+    try {
+      const formattedDate = new Date().toLocaleDateString("en-IN");
+      const uniqueId = Math.random().toString(36).substring(2, 9) + "_" + Date.now();
+      const cleanFileName = uniqueId + "_" + file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
 
-        const newBook: any = {
-          name: file.name,
-          size: formatSize(file.size),
-          type: file.type || "application/pdf",
-          date: formattedDate,
-          chunks: chunkIds,
-        };
+      // Upload file directly to Bunny Storage via proxy
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.addEventListener("load", () => {
+          if (xhr.status >= 200 && xhr.status < 300) resolve();
+          else reject(new Error(`Upload failed (Status: ${xhr.status})`));
+        });
+        xhr.addEventListener("error", () => reject(new Error("Network error during upload.")));
 
-        const docRef = await addDoc(
-          collection(db, "admin_assembly_books"),
-          newBook,
-        );
+        xhr.open("PUT", `/api/bunny-storage/${storageZone}/documents/${cleanFileName}`);
+        xhr.setRequestHeader("AccessKey", storageApiKey);
+        xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+        xhr.send(file);
+      });
 
-        setBooks((prev) => [
-          ...prev,
-          { id: docRef.id, ...newBook } as AssemblyBookFile,
-        ]);
-        
-        toast.success(`"${file.name}" uploaded successfully! 🎉`);
-      } catch (err: any) {
-        console.error("Upload error:", err);
-        toast.error(err?.message || "Failed to save file details.");
-      } finally {
-        setUploading(false);
-        if (e.target) e.target.value = ''; // Reset input
-      }
-    };
-    reader.readAsDataURL(file);
+      const fileUrl = `https://${cdnHostname}/documents/${cleanFileName}`;
+
+      const newBook: any = {
+        name: file.name,
+        size: formatSize(file.size),
+        type: file.type || "application/pdf",
+        date: formattedDate,
+        url: fileUrl,
+      };
+
+      const docRef = await addDoc(
+        collection(db, "admin_assembly_books"),
+        newBook,
+      );
+
+      setBooks((prev) => [
+        ...prev,
+        { id: docRef.id, ...newBook } as AssemblyBookFile,
+      ]);
+      
+      toast.success(`"${file.name}" uploaded successfully! 🎉`);
+    } catch (err: any) {
+      console.error("Upload error:", err);
+      toast.error(err?.message || "Failed to upload file to Bunny Storage.");
+    } finally {
+      setUploading(false);
+      if (e.target) e.target.value = ''; // Reset input
+    }
   };
 
   const handleDelete = async (book: AssemblyBookFile) => {
@@ -177,6 +190,22 @@ function AssemblyBookAdmin() {
       if (book.chunks) {
         for (const chunkId of book.chunks) {
           await deleteDoc(doc(db, "admin_assembly_chunks", chunkId)).catch(() => {});
+        }
+      }
+
+      // Delete from Bunny Storage if it exists
+      if (book.url && book.url.includes("b-cdn.net")) {
+        const storageApiKey = import.meta.env.VITE_BUNNY_STORAGE_API_KEY;
+        const storageZone = import.meta.env.VITE_BUNNY_STORAGE_ZONE;
+        if (storageApiKey && storageZone) {
+          const urlParts = book.url.split("/");
+          const fileName = urlParts[urlParts.length - 1];
+          await fetch(`/api/bunny-storage/${storageZone}/documents/${fileName}`, {
+            method: "DELETE",
+            headers: {
+              "AccessKey": storageApiKey
+            }
+          }).catch((e) => console.error("Failed to delete from Bunny Storage:", e));
         }
       }
 
@@ -266,16 +295,160 @@ function AssemblyBookAdmin() {
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
             <div className="space-y-2">
               <h1 className="text-5xl font-black tracking-tight">
-                Daily Assembly <span className="text-[#6C63FF]">Paripath.</span>
+                Daily Assembly Book <span className="text-[#6C63FF]">Uploader.</span>
               </h1>
               <p className="text-[#6B7280] max-w-xl text-lg font-medium leading-relaxed">
-                Manage the daily structure (Paripath).
+                Manage the daily structure (Paripath) and upload reference guidebooks.
               </p>
             </div>
           </div>
+
+          {/* Tabs */}
+          <div className="flex bg-white p-1.5 rounded-2xl border border-slate-200 w-fit">
+            <button
+              onClick={() => setActiveTab("paripath")}
+              className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-2 ${
+                activeTab === "paripath"
+                  ? "bg-[#6C63FF] text-white shadow-lg"
+                  : "text-slate-400 hover:text-slate-600"
+              }`}
+            >
+              <Edit3 className="size-4" /> Edit Today's Paripath
+            </button>
+            <button
+              onClick={() => setActiveTab("pdf")}
+              className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-2 ${
+                activeTab === "pdf"
+                  ? "bg-[#6C63FF] text-white shadow-lg"
+                  : "text-slate-400 hover:text-slate-600"
+              }`}
+            >
+              <FileText className="size-4" /> PDF Guidebooks
+            </button>
+          </div>
         </div>
-        
-        {/* Paripath Form Editor */}
+
+        {activeTab === "pdf" ? (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+          {/* Upload Card */}
+          <div className="bg-white border border-black/5 rounded-[3rem] p-8 shadow-sm space-y-6">
+            <h3 className="text-xl font-black tracking-tight text-stone-900">
+              Upload PDF Book
+            </h3>
+            
+            <div className="space-y-4">
+              <div className="relative group border-2 border-dashed border-slate-200 hover:border-[#6C63FF]/50 rounded-[2rem] p-8 text-center transition-all bg-slate-50/50 hover:bg-white cursor-pointer overflow-hidden">
+                <input
+                  type="file"
+                  onChange={handleFileUpload}
+                  accept=".pdf,image/*"
+                  className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                  disabled={uploading}
+                />
+                {uploading ? (
+                  <div className="space-y-4 py-4">
+                    <Loader2 className="size-10 text-[#6C63FF] animate-spin mx-auto" />
+                    <div className="text-xs font-black uppercase tracking-widest text-[#6C63FF] animate-pulse">
+                      Uploading book...
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="size-12 rounded-full bg-white border border-slate-100 flex items-center justify-center text-slate-400 group-hover:text-[#6C63FF] mx-auto shadow-sm transition-transform duration-500 group-hover:scale-110">
+                      <Plus className="size-6" />
+                    </div>
+                    <div className="text-xs font-bold text-slate-700">
+                      Click to choose or drag book file
+                    </div>
+                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      PDF or Images up to 10MB
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* List of Files Card */}
+          <div className="lg:col-span-2 bg-white border border-black/5 rounded-[3rem] p-8 shadow-sm space-y-6">
+            <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+              <h3 className="text-xl font-black tracking-tight text-stone-900 flex items-center gap-2">
+                <Book className="size-5 text-[#6C63FF]" /> Uploaded Assembly Books
+              </h3>
+              <span className="px-3.5 py-1 bg-blue-100 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-wider">
+                {books.length} Books
+              </span>
+            </div>
+
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-20 gap-4 text-slate-400">
+                <Loader2 className="size-8 animate-spin text-[#6C63FF]" />
+                <span className="text-xs font-black uppercase tracking-widest">Loading books...</span>
+              </div>
+            ) : books.length === 0 ? (
+              <div className="text-center py-20 border border-dashed border-slate-100 rounded-[2rem] text-slate-400 space-y-3">
+                <Book className="size-10 mx-auto text-slate-300" />
+                <p className="text-xs font-black uppercase tracking-widest">No books uploaded yet</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <AnimatePresence mode="popLayout">
+                  {books.map((book) => (
+                    <motion.div
+                      key={book.id}
+                      layout
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className="p-5 border border-slate-100 rounded-2xl flex items-center justify-between gap-4 hover:border-slate-200 transition-all bg-slate-50/20 group"
+                    >
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div className="size-11 bg-white border border-slate-100 rounded-xl flex items-center justify-center text-slate-400 group-hover:text-[#6C63FF] shadow-sm transition-colors">
+                          <FileText className="size-5.5" />
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="font-bold text-sm text-slate-800 truncate max-w-[200px] md:max-w-md">
+                            {book.name}
+                          </h4>
+                          <div className="flex items-center gap-3 text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
+                            <span>{book.size}</span>
+                            <span>•</span>
+                            <span>{book.date}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleView(book)}
+                          className="size-9 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:border-indigo-200 transition-all cursor-pointer shadow-sm"
+                          title="View"
+                        >
+                          <Eye className="size-4.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDownload(book)}
+                          className="size-9 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-emerald-600 hover:border-emerald-200 transition-all cursor-pointer shadow-sm"
+                          title="Download"
+                        >
+                          <Download className="size-4.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(book)}
+                          className="size-9 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-red-600 hover:border-red-200 transition-all cursor-pointer shadow-sm"
+                          title="Delete"
+                        >
+                          <Trash2 className="size-4.5" />
+                        </button>
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            )}
+          </div>
+        </div>
+        ) : (
+          /* Paripath Form Editor */
           <div className="bg-white border border-black/5 rounded-[3rem] p-8 md:p-12 shadow-sm space-y-8">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border-b border-stone-100 pb-6">
               <div>
@@ -597,6 +770,7 @@ function AssemblyBookAdmin() {
 
             </div>
           </div>
+        )}
       </main>
       <Footer />
     </div>

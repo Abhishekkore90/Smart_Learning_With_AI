@@ -42,7 +42,6 @@ import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import { showToast as toast } from "@/lib/custom-toast";
 import { useLanguage } from "@/hooks/use-language";
-import html2canvas from "html2canvas-pro";
 import { db } from "@/lib/firebase";
 import { collection, addDoc } from "firebase/firestore";
 
@@ -603,7 +602,7 @@ function TemplateEditorPage() {
               : templateId?.includes("achievement")
                 ? "Achievement"
                 : "Birthday";
-      
+
       await addDoc(collection(db, "shared_cards"), {
         templateId,
         studentName,
@@ -632,32 +631,121 @@ function TemplateEditorPage() {
   const handleDownloadTemplate = async () => {
     if (!templateRef.current) return;
     setIsDownloading(true);
-    try {
-      const canvas = await html2canvas(templateRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: null,
-      });
-      const dataUrl = canvas.toDataURL("image/png");
-      const link = document.createElement("a");
-      link.download = `${studentName.replace(/\s+/g, '_')}_${configToUse.title.replace(/\s+/g, '_')}.png`;
-      link.href = dataUrl;
-      link.click();
-      toast.success(
-        lang === "mr" ? "टेम्पलेट यशस्वीरित्या डाउनलोड झाले!" : 
-        lang === "hi" ? "टेम्पलेट सफलतापूर्वक डाउनलोड किया गया!" : 
-        "Template downloaded successfully!"
-      );
-    } catch (error) {
-      console.error("Error downloading template:", error);
-      toast.error(
-        lang === "mr" ? "टेम्पलेट डाउनलोड करण्यात त्रुटी!" : 
-        lang === "hi" ? "टेम्पलेट डाउनलोड करने में त्रुटि!" : 
-        "Failed to download template!"
-      );
-    } finally {
-      setIsDownloading(false);
-    }
+    
+    // Wait for React to re-render the DOM with isDownloading = true
+    setTimeout(async () => {
+      try {
+        const { default: html2canvas } = await import("html2canvas");
+        const canvas = await html2canvas(templateRef.current!, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: false,
+          logging: true,
+          backgroundColor: null,
+          onclone: (clonedDoc) => {
+            // Remove cross-origin stylesheets/fonts to prevent canvas tainting
+            const links = Array.from(clonedDoc.getElementsByTagName("link"));
+            links.forEach((link) => {
+              if (
+                link.href &&
+                (link.href.includes("fonts.googleapis.com") ||
+                  link.href.includes("fonts.gstatic.com") ||
+                  link.href.includes("use.typekit.net") ||
+                  (!link.href.startsWith(window.location.origin) && !link.href.startsWith("/")))
+              ) {
+                link.parentNode?.removeChild(link);
+              }
+            });
+
+            // Clean style tags: remove all @import statements to prevent loading cross-origin fonts
+            const styles = Array.from(clonedDoc.getElementsByTagName("style"));
+            styles.forEach((style) => {
+              if (style.textContent && style.textContent.includes("@import")) {
+                style.textContent = style.textContent.replace(/@import\s+url\([^)]+\);?/g, "");
+                style.textContent = style.textContent.replace(/@import\s+['"][^'"]+['"];?/g, "");
+              }
+            });
+
+            // Convert SVGs to base64 images to prevent inline SVGs from tainting the canvas
+            const svgs = Array.from(clonedDoc.getElementsByTagName("svg"));
+            svgs.forEach((svg) => {
+              try {
+                // Inline styles from CSS classes (like text-white) need to be explicitly set as attributes
+                // to survive serialization when rendering as a static image in <img>
+                const docView = svg.ownerDocument?.defaultView || window;
+                const computed = docView.getComputedStyle(svg);
+                const color = computed.color || "white";
+                const stroke = computed.stroke && computed.stroke !== "none" ? computed.stroke : null;
+                const fill = computed.fill && computed.fill !== "none" ? computed.fill : null;
+
+                if (color) svg.setAttribute("color", color);
+                
+                if (stroke) {
+                  if (stroke === "currentColor") {
+                    svg.setAttribute("stroke", color);
+                  } else {
+                    svg.setAttribute("stroke", stroke);
+                  }
+                }
+                
+                if (fill) {
+                  if (fill === "currentColor") {
+                    svg.setAttribute("fill", color);
+                  } else {
+                    svg.setAttribute("fill", fill);
+                  }
+                }
+
+                const xml = new XMLSerializer().serializeToString(svg);
+                const base64 = window.btoa(unescape(encodeURIComponent(xml)));
+                const img = clonedDoc.createElement("img");
+                img.src = `data:image/svg+xml;base64,${base64}`;
+                img.className = svg.className.baseVal || svg.getAttribute("class") || "";
+                img.style.cssText = svg.style.cssText;
+                
+                if (svg.hasAttribute("width")) img.setAttribute("width", svg.getAttribute("width")!);
+                if (svg.hasAttribute("height")) img.setAttribute("height", svg.getAttribute("height")!);
+                
+                svg.parentNode?.replaceChild(img, svg);
+              } catch (e) {
+                console.error("Error converting SVG in clone:", e);
+              }
+            });
+
+            // Prevent any images from tainting the canvas
+            const imgs = Array.from(clonedDoc.getElementsByTagName("img"));
+            imgs.forEach((img) => {
+              img.setAttribute("crossorigin", "anonymous");
+              const src = img.src;
+              img.src = "";
+              img.src = src;
+            });
+          },
+        });
+        const dataUrl = canvas.toDataURL("image/png");
+        const link = document.createElement("a");
+        const safeStudentName = (studentName || "student").replace(/\s+/g, '_');
+        const safeTitle = (configToUse.title || "template").replace(/\s+/g, '_');
+        link.download = `${safeStudentName}_${safeTitle}.png`;
+        link.href = dataUrl;
+        link.click();
+        toast.success(
+          lang === "mr" ? "टेम्पलेट यशस्वीरित्या डाउनलोड झाले!" :
+            lang === "hi" ? "टेम्पलेट सफलतापूर्वक डाउनलोड किया गया!" :
+              "Template downloaded successfully!"
+        );
+      } catch (error) {
+        console.error("Error downloading template:", error);
+        const errMsg = error instanceof Error ? error.message : String(error);
+        toast.error(
+          lang === "mr" ? `टेम्पलेट डाउनलोड करण्यात त्रुटी: ${errMsg}` :
+            lang === "hi" ? `टेम्पलेट डाउनलोड करने में त्रुटि: ${errMsg}` :
+              `Failed to download template: ${errMsg}`
+        );
+      } finally {
+        setIsDownloading(false);
+      }
+    }, 150);
   };
 
   const handleWhatsAppShare = () => {
@@ -864,141 +952,151 @@ function TemplateEditorPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               className="w-full aspect-[3/4] rounded-[4rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] overflow-hidden relative group border-[12px] border-white"
-              ref={templateRef}
             >
-              {/* Dynamic Background */}
               <div
-                className="absolute inset-0"
-                style={{ background: configToUse.bg }}
-              />
-
-              {/* Animated Floating Elements */}
-              <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                {[...Array(8)].map((_, i) => (
-                  <motion.div
-                    key={i}
-                    animate={{
-                      y: [0, -100, 0],
-                      x: [0, Math.sin(i) * 20, 0],
-                      rotate: [0, 180, 360],
-                      opacity: [0.1, 0.3, 0.1],
-                    }}
-                    transition={{
-                      duration: 8 + i,
-                      repeat: Infinity,
-                      delay: i * 0.5,
-                    }}
-                    className="absolute size-4 rounded-lg blur-[1px]"
-                    style={{
-                      background: configToUse.particleColor,
-                      left: `${(i + 1) * 12}%`,
-                      bottom: "-5%",
-                    }}
-                  />
-                ))}
-              </div>
-
-              {/* Decorative Glows */}
-              <div className="absolute -top-32 -right-32 size-96 bg-white/10 rounded-full blur-[120px] animate-pulse" />
-              <div className="absolute -bottom-32 -left-32 size-96 bg-black/40 rounded-full blur-[120px]" />
-
-              {/* Card Content */}
-              <div className="relative h-full flex flex-col items-center justify-center p-16 text-center">
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", damping: 12 }}
-                  className="size-28 bg-white/10 backdrop-blur-2xl rounded-[2.5rem] flex items-center justify-center mb-10 border border-white/20 shadow-2xl relative"
-                >
-                  <configToUse.icon className="size-14 text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]" />
-                  <motion.div
-                    animate={{ scale: [1, 1.2, 1] }}
-                    transition={{ repeat: Infinity, duration: 2 }}
-                    className="absolute -top-4 -right-4 size-10 bg-pink-500 rounded-2xl flex items-center justify-center shadow-lg rotate-12"
-                  >
-                    <Heart className="size-5 text-white" fill="white" />
-                  </motion.div>
-                </motion.div>
-
-                <motion.h1
-                  key={configToUse.title}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-5xl font-black text-white tracking-tighter mb-4 italic drop-shadow-2xl"
-                >
-                  {configToUse.title}
-                </motion.h1>
-
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: "80px" }}
-                  className="h-1.5 bg-white/30 rounded-full mb-10 shadow-glow"
-                  style={{ background: configToUse.accent }}
+                ref={templateRef}
+                className="w-full h-full relative overflow-hidden"
+                style={{ fontFamily: isDownloading ? "system-ui, -apple-system, sans-serif" : undefined }}
+              >
+                {/* Dynamic Background */}
+                <div
+                  className="absolute inset-0"
+                  style={{ background: configToUse.bg }}
                 />
 
-                <div className="space-y-4 mb-10">
-                  <p className="text-white/40 font-black uppercase tracking-[0.8em] text-[10px]">
-                    {lang === "mr" ? "नाव" : lang === "hi" ? "नाम" : "Presented To"}
-                  </p>
-                  <motion.h2
-                    key={studentName}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="text-5xl md:text-6xl font-black tracking-tighter leading-none"
-                    style={{
-                      backgroundImage: configToUse.accent,
-                      WebkitBackgroundClip: "text",
-                      WebkitTextFillColor: "transparent",
-                      filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.4))",
-                    }}
-                  >
-                    {studentName}
-                  </motion.h2>
-                </div>
-
-                <div className="max-w-[90%] mx-auto mb-12">
-                  <motion.p
-                    key={configToUse.quote}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-white/90 font-bold text-lg italic leading-relaxed"
-                  >
-                    "{configToUse.quote}"
-                  </motion.p>
-                </div>
-
-                <motion.div
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  className="bg-black/30 backdrop-blur-xl px-10 py-4 rounded-[1.5rem] border border-white/10 shadow-2xl flex items-center gap-3"
-                >
-                  {isAnnual ? (
-                    <Theater className="size-5 text-white/70" />
-                  ) : isCultural ? (
-                    <PaletteIcon className="size-5 text-white/70" />
-                  ) : isAchievement ? (
-                    <Trophy className="size-5 text-white/70" />
-                  ) : (
-                    <GraduationCap className="size-5 text-white/70" />
-                  )}
-                  <span className="text-white font-black text-sm tracking-[0.2em] uppercase italic">
-                    {studentClass}
-                  </span>
-                </motion.div>
-
-                {/* Footer Branding */}
-                <div className="absolute bottom-16 left-0 right-0 px-16 flex justify-between items-end opacity-50">
-                  <div className="text-left">
-                    <p className="text-[10px] font-black text-white uppercase tracking-widest">
-                      {lang === "mr" ? "प्रीमियम कार्ड" : lang === "hi" ? "प्रीमियम कार्ड" : "Premium Card"}
-                    </p>
-                    <p className="text-[8px] font-bold text-white/60">
-                      ID: {templateId?.toUpperCase()}
-                    </p>
+                {/* Animated Floating Elements */}
+                {!isDownloading && (
+                  <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                    {[...Array(8)].map((_, i) => (
+                      <motion.div
+                        key={i}
+                        animate={{
+                          y: [0, -100, 0],
+                          x: [0, Math.sin(i) * 20, 0],
+                          rotate: [0, 180, 360],
+                          opacity: [0.1, 0.3, 0.1],
+                        }}
+                        transition={{
+                          duration: 8 + i,
+                          repeat: Infinity,
+                          delay: i * 0.5,
+                        }}
+                        className="absolute size-4 rounded-lg blur-[1px]"
+                        style={{
+                          background: configToUse.particleColor,
+                          left: `${(i + 1) * 12}%`,
+                          bottom: "-5%",
+                        }}
+                      />
+                    ))}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="size-8 bg-white/10 rounded-lg flex items-center justify-center border border-white/20">
-                      <Star className="size-4 text-white" />
+                )}
+
+                {/* Decorative Glows */}
+                {!isDownloading && (
+                  <>
+                    <div className="absolute -top-32 -right-32 size-96 bg-white/10 rounded-full blur-[120px] animate-pulse" />
+                    <div className="absolute -bottom-32 -left-32 size-96 bg-black/40 rounded-full blur-[120px]" />
+                  </>
+                )}
+
+                {/* Card Content */}
+                <div className="relative h-full flex flex-col items-center justify-center p-16 text-center">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", damping: 12 }}
+                    className={`size-28 bg-white/10 rounded-[2.5rem] flex items-center justify-center mb-10 border border-white/20 shadow-2xl relative ${isDownloading ? "" : "backdrop-blur-2xl"}`}
+                  >
+                    <configToUse.icon className={`size-14 text-white ${isDownloading ? "" : "drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]"}`} />
+                    <div
+                      className="absolute -top-4 -right-4 size-10 bg-pink-500 rounded-2xl flex items-center justify-center shadow-lg rotate-12 animate-pulse"
+                    >
+                      <Heart className="size-5 text-white" fill="white" />
+                    </div>
+                  </motion.div>
+
+                  <motion.h1
+                    key={configToUse.title}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-5xl font-black text-white tracking-tighter mb-4 italic drop-shadow-2xl"
+                  >
+                    {configToUse.title}
+                  </motion.h1>
+
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: "80px" }}
+                    className="h-1.5 bg-white/30 rounded-full mb-10 shadow-glow"
+                    style={{ background: configToUse.accent }}
+                  />
+
+                  <div className="space-y-4 mb-10">
+                    <p className="text-white/40 font-black uppercase tracking-[0.8em] text-[10px]">
+                      {lang === "mr" ? "नाव" : lang === "hi" ? "नाम" : "Presented To"}
+                    </p>
+                    <motion.h2
+                      key={studentName}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="text-5xl md:text-6xl font-black tracking-tighter leading-none"
+                      style={{
+                        backgroundImage: isDownloading ? "none" : configToUse.accent,
+                        WebkitBackgroundClip: isDownloading ? "unset" : "text",
+                        WebkitTextFillColor: isDownloading ? "#ffffff" : "transparent",
+                        color: isDownloading ? "#ffffff" : undefined,
+                        filter: isDownloading ? "none" : "drop-shadow(0 10px 20px rgba(0,0,0,0.4))",
+                      }}
+                    >
+                      {studentName}
+                    </motion.h2>
+                  </div>
+
+                  <div className="max-w-[90%] mx-auto mb-12">
+                    <motion.p
+                      key={configToUse.quote}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-white/90 font-bold text-lg italic leading-relaxed"
+                    >
+                      "{configToUse.quote}"
+                    </motion.p>
+                  </div>
+
+                  <motion.div
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    className={`bg-black/30 px-10 py-4 rounded-[1.5rem] border border-white/10 shadow-2xl flex items-center gap-3 ${isDownloading ? "" : "backdrop-blur-xl"}`}
+                  >
+                    {isAnnual ? (
+                      <Theater className="size-5 text-white/70" />
+                    ) : isCultural ? (
+                      <PaletteIcon className="size-5 text-white/70" />
+                    ) : isAchievement ? (
+                      <Trophy className="size-5 text-white/70" />
+                    ) : (
+                      <GraduationCap className="size-5 text-white/70" />
+                    )}
+                    <span className="text-white font-black text-sm tracking-[0.2em] uppercase italic">
+                      {studentClass}
+                    </span>
+                  </motion.div>
+
+                  {/* Footer Branding */}
+                  <div className="absolute bottom-16 left-0 right-0 px-16 flex justify-between items-end opacity-50">
+                    <div className="text-left">
+                      <p className="text-[10px] font-black text-white uppercase tracking-widest">
+                        {lang === "mr" ? "प्रीमियम कार्ड" : lang === "hi" ? "प्रीमियम कार्ड" : "Premium Card"}
+                      </p>
+                      <p className="text-[8px] font-bold text-white/60">
+                        ID: {templateId?.toUpperCase()}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="size-8 bg-white/10 rounded-lg flex items-center justify-center border border-white/20">
+                        <Star className="size-4 text-white" />
+                      </div>
                     </div>
                   </div>
                 </div>

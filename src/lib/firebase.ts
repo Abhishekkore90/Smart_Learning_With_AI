@@ -7,13 +7,13 @@ import { getStorage } from "firebase/storage";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyCfVSQggxj-kZ2yJAW2xB0BcupzfCJsowU",
-  authDomain: "education-89c54.firebaseapp.com",
-  projectId: "education-89c54",
-  storageBucket: "education-89c54.firebasestorage.app",
-  messagingSenderId: "292663641725",
-  appId: "1:292663641725:web:076b161074bb891513d314",
-  measurementId: "G-S4WJTJZ4XC",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
 // Initialize Firebase safely to avoid duplicate app errors in HMR/SSR
@@ -25,8 +25,8 @@ export const storage = getStorage(app);
 // Use explicit region us-central1
 export const functions = getFunctions(app, "us-central1");
 
-// Connect to emulator in development
-if (import.meta.env.DEV) {
+// Connect to emulator in development if specified
+if (import.meta.env.DEV && import.meta.env.VITE_USE_FIREBASE_EMULATOR === "true") {
   connectFunctionsEmulator(functions, "127.0.0.1", 5001);
 }
 
