@@ -2537,88 +2537,233 @@ function TeacherMeetingPage() {
 
                     {formStep === 2 && (
                       <div className="space-y-12">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border-2 border-slate-300 p-6 sm:p-8 rounded-2xl shadow-sm">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-lg text-xs font-black uppercase tracking-wider">
-                                प्राथमिक माहिती सेव्ह झाली
-                              </span>
+                        {/* Complete Primary Info, Intro Paragraph & Committee Members Table Structure (Fully Editable) */}
+                        <div className="bg-white border-2 border-slate-300 p-6 sm:p-8 rounded-2xl space-y-8 shadow-sm">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b-2 border-slate-100 pb-4">
+                            <div>
+                              <h3 className="text-xl font-black text-slate-900">
+                                १. शाळा व समिती प्राथमिक माहिती
+                              </h3>
+                              <p className="text-xs font-bold text-slate-500 mt-1">
+                                खालील सर्व प्राथमिक माहिती व सदस्यांची यादी थेट संपादित (Edit) करता येईल.
+                              </p>
                             </div>
-                            <h2 className="text-2xl font-black text-slate-900 mt-2">
-                              {schoolName || "शाळेचे नाव प्रविष्ट केलेले नाही"}
-                            </h2>
-                            <p className="text-base font-extrabold text-blue-600 mt-1">
-                              {committeeName || selectedCommittee?.name}
-                            </p>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                await handleSaveCommitteeProfile();
+                                toast.success(lang === "mr" ? "प्राथमिक माहिती व सदस्य यादी जतन झाली!" : "Primary details and members saved!");
+                              }}
+                              disabled={isSavingProfile}
+                              className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-sm disabled:opacity-50 self-start sm:self-auto cursor-pointer"
+                            >
+                              <Save className="size-4" />
+                              {isSavingProfile ? "सेव्ह होत आहे..." : "बदल जतन करा"}
+                            </button>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => setFormStep(1)}
-                            className="flex items-center gap-2 px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-black uppercase tracking-wider transition-all border border-slate-300 shadow-sm self-start sm:self-auto cursor-pointer"
-                          >
-                            <ArrowLeft className="size-4 text-blue-600" /> प्राथमिक माहिती संपादित करा
-                          </button>
-                        </div>
 
-                        {/* Complete Primary Info & Committee Members Table Structure */}
-                        <div className="bg-white border-2 border-slate-300 p-6 sm:p-8 rounded-2xl space-y-6 shadow-sm">
-                          <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest border-b-2 border-slate-100 pb-3 flex items-center justify-between">
-                            <span>१. शाळा व समिती सदस्यांचा माहिती तक्ता</span>
-                          </h3>
+                          {/* Editable Primary Info Fields Box */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 p-5 rounded-2xl border-2 border-slate-200">
+                            <div className="space-y-1.5">
+                              <label className="text-slate-700 font-black block text-xs">शाळेचे नाव:</label>
+                              <input
+                                type="text"
+                                value={schoolName}
+                                onChange={(e) => setSchoolName(e.target.value)}
+                                placeholder="शाळेचे नाव..."
+                                className="w-full px-4 py-2.5 bg-white border-2 border-slate-300 rounded-xl text-sm font-extrabold text-slate-900 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 shadow-sm"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-slate-700 font-black block text-xs">समितीचे नाव:</label>
+                              <input
+                                type="text"
+                                value={committeeName}
+                                onChange={(e) => setCommitteeName(e.target.value)}
+                                placeholder="समितीचे नाव..."
+                                className="w-full px-4 py-2.5 bg-white border-2 border-slate-300 rounded-xl text-sm font-extrabold text-blue-700 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 shadow-sm"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-slate-700 font-black block text-xs">मुख्याध्यापक:</label>
+                              <input
+                                type="text"
+                                value={headmasterName}
+                                onChange={(e) => setHeadmasterName(e.target.value)}
+                                placeholder="मुख्याध्यापक नाव..."
+                                className="w-full px-4 py-2.5 bg-white border-2 border-slate-300 rounded-xl text-sm font-extrabold text-slate-900 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 shadow-sm"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-slate-700 font-black block text-xs">समिती अध्यक्ष:</label>
+                              <input
+                                type="text"
+                                value={presidentName}
+                                onChange={(e) => setPresidentName(e.target.value)}
+                                placeholder="अध्यक्ष नाव..."
+                                className="w-full px-4 py-2.5 bg-white border-2 border-slate-300 rounded-xl text-sm font-extrabold text-slate-900 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 shadow-sm"
+                              />
+                            </div>
+                          </div>
 
-                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 p-5 rounded-xl border border-slate-200">
-                            <div>
-                              <span className="text-slate-500 font-extrabold block text-xs">शाळेचे नाव:</span>
-                              <span className="text-base font-black text-slate-900">{schoolName || "—"}</span>
-                            </div>
-                            <div>
-                              <span className="text-slate-500 font-extrabold block text-xs">समितीचे नाव:</span>
-                              <span className="text-base font-black text-blue-700">{committeeName || selectedCommittee?.name || "—"}</span>
-                            </div>
-                            <div>
-                              <span className="text-slate-500 font-extrabold block text-xs">मुख्याध्यापक:</span>
-                              <span className="text-base font-black text-slate-900">{headmasterName || "—"}</span>
-                            </div>
-                            <div>
-                              <span className="text-slate-500 font-extrabold block text-xs">समिती अध्यक्ष:</span>
-                              <span className="text-base font-black text-slate-900">{presidentName || "—"}</span>
+                          {/* Introductory Paragraph Box (Positioned directly between top info box and members table) */}
+                          <div className="space-y-3 pt-2">
+                            <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center justify-between border-b-2 border-slate-100 pb-2">
+                              <span>२. प्रास्ताविक (INTRODUCTORY PARAGRAPH)</span>
+                            </h4>
+                            <div className="bg-slate-50 border-2 border-slate-200 p-4 sm:p-5 rounded-2xl relative space-y-2">
+                              <textarea
+                                value={customIntroText}
+                                onChange={(e) => {
+                                  setCustomIntroText(e.target.value);
+                                  setIsIntroEdited(true);
+                                }}
+                                placeholder="प्रास्ताविक मजकूर प्रविष्ट करा..."
+                                className="w-full h-28 px-5 py-4 border-2 border-slate-300 rounded-xl bg-white font-extrabold text-slate-950 text-base leading-relaxed outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 resize-y shadow-inner"
+                              />
                             </div>
                           </div>
 
                           {/* Committee Members Table */}
                           <div className="space-y-3 pt-2">
-                            <h4 className="text-sm font-black text-slate-700 uppercase tracking-widest flex items-center justify-between">
-                              <span>समिती सदस्यांची नावे ({formMembers.filter((m: any) => m.name?.trim()).length} सदस्य भरलेले)</span>
-                            </h4>
-                            <div className="overflow-x-auto border-2 border-slate-200 rounded-xl bg-white">
-                              <table className="w-full text-left border-collapse text-sm">
+                            <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
+                              <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">
+                                ३. समिती सदस्यांची नावे ({formMembers.filter((m: any) => m.name?.trim()).length} सदस्य भरलेले)
+                              </h4>
+                              <button
+                                type="button"
+                                onClick={handleAddFormMemberRow}
+                                className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-sm cursor-pointer"
+                              >
+                                <UserPlus className="size-4" /> सदस्य जोडा
+                              </button>
+                            </div>
+
+                            <div className="overflow-x-auto border-2 border-slate-300 rounded-2xl bg-white shadow-sm">
+                              <table className="w-full text-left border-collapse text-base">
                                 <thead>
-                                  <tr className="bg-slate-100 text-slate-800 font-black border-b-2 border-slate-200">
+                                  <tr className="bg-slate-100 text-slate-800 font-black border-b-2 border-slate-300">
                                     <th className="px-3 py-3.5 text-center w-12 border-r border-slate-200">अ.क्र.</th>
-                                    <th className="px-4 py-3.5 border-r border-slate-200">सदस्याचे नाव</th>
-                                    <th className="px-4 py-3.5 border-r border-slate-200">पदनाम (Designation)</th>
-                                    <th className="px-4 py-3.5 border-r border-slate-200">पद (Post)</th>
-                                    <th className="px-4 py-3.5 text-center w-24">स्वाक्षरी</th>
+                                    <th className="px-4 py-3.5 border-r border-slate-200 w-[35%] min-w-[220px]">सदस्याचे नाव</th>
+                                    <th className="px-4 py-3.5 border-r border-slate-200 min-w-[200px]">पदनाम (Designation)</th>
+                                    <th className="px-4 py-3.5 border-r border-slate-200 min-w-[180px]">पद (Post)</th>
+                                    <th className="px-4 py-3.5 text-center w-24 border-r border-slate-200">स्वाक्षरी</th>
+                                    <th className="px-4 py-3.5 text-center w-20">कृती</th>
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-200 font-extrabold text-slate-950">
-                                  {formMembers.filter((m: any) => m.name?.trim() !== "" || m.post?.trim() !== "" || m.role?.trim() !== "").length > 0 ? (
-                                    formMembers.filter((m: any) => m.name?.trim() !== "" || m.post?.trim() !== "" || m.role?.trim() !== "").map((m: any, idx: number) => (
-                                      <tr key={idx} className="hover:bg-slate-50">
-                                        <td className="px-3 py-3.5 text-center text-slate-500 font-extrabold border-r border-slate-200">{idx + 1}</td>
-                                        <td className="px-4 py-3.5 border-r border-slate-200 font-black text-slate-900">{m.name || "—"}</td>
-                                        <td className="px-4 py-3.5 border-r border-slate-200 text-slate-700">{m.post || "—"}</td>
-                                        <td className="px-4 py-3.5 border-r border-slate-200 text-blue-700 font-black">{m.role || "—"}</td>
-                                        <td className="px-4 py-3.5 text-center text-slate-400 font-bold italic">स्वाक्षरी</td>
-                                      </tr>
-                                    ))
-                                  ) : (
-                                    <tr>
-                                      <td colSpan={5} className="px-4 py-6 text-center text-slate-400 font-bold italic">
-                                        कोणतेही सदस्य प्रविष्ट केलेले नाहीत.
+                                  {formMembers.map((m: any, idx: number) => (
+                                    <tr key={idx} className="hover:bg-slate-50/50">
+                                      <td className="px-3 py-3 text-center text-slate-500 font-extrabold text-lg border-r border-slate-200">
+                                        {idx + 1}
+                                      </td>
+                                      <td className="px-4 py-3 border-r border-slate-200">
+                                        <input
+                                          type="text"
+                                          value={m.name}
+                                          onChange={(e) => handleUpdateFormMemberField(idx, "name", e.target.value)}
+                                          placeholder="सदस्याचे नाव प्रविष्ट करा..."
+                                          className="w-full px-4 py-2.5 border-2 border-slate-300 rounded-lg outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-base shadow-sm"
+                                        />
+                                      </td>
+                                      <td className="px-4 py-3 border-r border-slate-200">
+                                        {m.isCustomPost ? (
+                                          <div className="flex gap-2">
+                                            <input
+                                              type="text"
+                                              value={m.post}
+                                              onChange={(e) => handleUpdateFormMemberField(idx, "post", e.target.value)}
+                                              placeholder="स्वतः लिहा..."
+                                              className="w-full px-4 py-2.5 border-2 border-slate-300 rounded-lg outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-base shadow-sm"
+                                            />
+                                            <button
+                                              type="button"
+                                              onClick={() => handleUpdateFormMemberField(idx, "isCustomPost", false)}
+                                              className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg"
+                                            >
+                                              <X className="size-4" />
+                                            </button>
+                                          </div>
+                                        ) : (
+                                          <select
+                                            value={m.post}
+                                            onChange={(e) => {
+                                              if (e.target.value === "__CUSTOM__") {
+                                                handleUpdateFormMemberField(idx, "isCustomPost", true);
+                                                handleUpdateFormMemberField(idx, "post", "");
+                                              } else {
+                                                handleUpdateFormMemberField(idx, "post", e.target.value);
+                                              }
+                                            }}
+                                            className="w-full px-4 py-2.5 border-2 border-slate-300 rounded-lg outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-base cursor-pointer shadow-sm"
+                                          >
+                                            <option value="">-- पदनाम निवडा --</option>
+                                            {selectedCommittee && getCommitteeDesignations(selectedCommittee.id).map((designation, dIdx) => (
+                                              <option key={dIdx} value={designation}>{designation}</option>
+                                            ))}
+                                            {m.post && selectedCommittee && !getCommitteeDesignations(selectedCommittee.id).includes(m.post) && (
+                                              <option value={m.post}>{m.post}</option>
+                                            )}
+                                            <option value="__CUSTOM__" className="font-bold text-blue-600">-- स्वतः लिहा --</option>
+                                          </select>
+                                        )}
+                                      </td>
+                                      <td className="px-4 py-3 border-r border-slate-200">
+                                        {m.isCustomRole ? (
+                                          <div className="flex gap-2">
+                                            <input
+                                              type="text"
+                                              value={m.role}
+                                              onChange={(e) => handleUpdateFormMemberField(idx, "role", e.target.value)}
+                                              placeholder="स्वतः लिहा..."
+                                              className="w-full px-4 py-2.5 border-2 border-slate-300 rounded-lg outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-base shadow-sm"
+                                            />
+                                            <button
+                                              type="button"
+                                              onClick={() => handleUpdateFormMemberField(idx, "isCustomRole", false)}
+                                              className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg"
+                                            >
+                                              <X className="size-4" />
+                                            </button>
+                                          </div>
+                                        ) : (
+                                          <select
+                                            value={m.role}
+                                            onChange={(e) => {
+                                              if (e.target.value === "__CUSTOM__") {
+                                                handleUpdateFormMemberField(idx, "isCustomRole", true);
+                                                handleUpdateFormMemberField(idx, "role", "");
+                                              } else {
+                                                handleUpdateFormMemberField(idx, "role", e.target.value);
+                                              }
+                                            }}
+                                            className="w-full px-4 py-2.5 border-2 border-slate-300 rounded-lg outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-base cursor-pointer shadow-sm"
+                                          >
+                                            <option value="">-- पद निवडा --</option>
+                                            {COMMITTEE_ROLES.map((roleOpt, rIdx) => (
+                                              <option key={rIdx} value={roleOpt}>{roleOpt}</option>
+                                            ))}
+                                            {m.role && !COMMITTEE_ROLES.includes(m.role) && (
+                                              <option value={m.role}>{m.role}</option>
+                                            )}
+                                            <option value="__CUSTOM__" className="font-bold text-blue-600">-- स्वतः लिहा --</option>
+                                          </select>
+                                        )}
+                                      </td>
+                                      <td className="px-4 py-3 text-center text-slate-400 font-bold italic border-r border-slate-200">
+                                        स्वाक्षरी
+                                      </td>
+                                      <td className="px-4 py-3 text-center">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleRemoveFormMemberRow(idx)}
+                                          className="p-2 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-xl transition-colors"
+                                        >
+                                          <Trash2 className="size-5" />
+                                        </button>
                                       </td>
                                     </tr>
-                                  )}
+                                  ))}
                                 </tbody>
                               </table>
                             </div>
