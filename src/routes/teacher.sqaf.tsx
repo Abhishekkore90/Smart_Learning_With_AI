@@ -149,6 +149,28 @@ const PhotoUploader = ({ standardId, lang, evidenceUrl }: { standardId: number; 
     reader.readAsDataURL(file);
   };
 
+  const handleOptionFileClear = (idx: number) => {
+    setFileNames(prev => {
+      const copy = { ...prev };
+      delete copy[idx];
+      return copy;
+    });
+    setFilePreviews(prev => {
+      const copy = { ...prev };
+      delete copy[idx];
+      return copy;
+    });
+    setFileTypes(prev => {
+      const copy = { ...prev };
+      delete copy[idx];
+      return copy;
+    });
+
+    localStorage.removeItem(`sqaf_evidence_file_name_${standardId}_${idx}`);
+    localStorage.removeItem(`sqaf_evidence_file_preview_${standardId}_${idx}`);
+    localStorage.removeItem(`sqaf_evidence_file_type_${standardId}_${idx}`);
+  };
+
   const handleFallbackFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
