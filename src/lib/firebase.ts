@@ -5,41 +5,34 @@ import { Firestore, getFirestore } from "firebase/firestore";
 import { getFunctions, httpsCallable, connectFunctionsEmulator } from "firebase/functions";
 import { getStorage } from "firebase/storage";
 
-// Your web app's Firebase configuration
+// Your web app's Firebase configuration with fallback values for production resilience
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyCfVSQggxj-kZ2yJAW2xB0BcupzfCJsowU",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "education-89c54.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "education-89c54",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "education-89c54.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "292663641725",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:292663641725:web:076b161074bb891513d314",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-S4WJTJZ4XC",
 };
 
-// Guard: only initialize Firebase if we have the required config (prevents SSR prerender failure)
-const hasFirebaseConfig = !!firebaseConfig.apiKey && !!firebaseConfig.projectId;
-
 // Initialize Firebase safely to avoid duplicate app errors in HMR/SSR
-export const app: FirebaseApp = hasFirebaseConfig
-  ? (!getApps().length ? initializeApp(firebaseConfig) : getApp())
-  : ({} as FirebaseApp); // SSR-safe stub during prerender
+export const app: FirebaseApp = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-export const auth: Auth = hasFirebaseConfig ? getAuth(app) : ({} as Auth);
-export const db: Firestore = hasFirebaseConfig ? getFirestore(app) : ({} as Firestore);
-export const storage = hasFirebaseConfig ? getStorage(app) : null;
+export const auth: Auth = getAuth(app);
+export const db: Firestore = getFirestore(app);
+export const storage = getStorage(app);
 
 // Use explicit region us-central1
-export const functions = hasFirebaseConfig ? getFunctions(app, "us-central1") : null;
+export const functions = getFunctions(app, "us-central1");
 
 // Connect to emulator in development if specified
-if (hasFirebaseConfig && import.meta.env.DEV && import.meta.env.VITE_USE_FIREBASE_EMULATOR === "true") {
-  connectFunctionsEmulator(functions!, "127.0.0.1", 5001);
+if (import.meta.env.DEV && import.meta.env.VITE_USE_FIREBASE_EMULATOR === "true") {
+  connectFunctionsEmulator(functions, "127.0.0.1", 5001);
 }
 
 // Pre-bind the Firebase Callable Function wrapper
-export const generateAIResponseCallable = hasFirebaseConfig && functions
-  ? httpsCallable(functions, "generateAIResponse")
-  : null;
+export const generateAIResponseCallable = httpsCallable(functions, "generateAIResponse");
 
 export let analytics: Analytics | null = null;
 

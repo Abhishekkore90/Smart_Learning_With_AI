@@ -1,8 +1,9 @@
 {
+  "cleanUrls": true,
   "rewrites": [
     { "source": "/api/bunny-stream/:path*", "destination": "https://video.bunnycdn.com/:path*" },
     { "source": "/api/bunny-storage/:path*", "destination": "https://storage.bunnycdn.com/:path*" },
     { "source": "/api/anthropic/:path*", "destination": "https://api.anthropic.com/:path*" },
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    { "source": "/:path*", "destination": "/index.html" }
   ]
 }
