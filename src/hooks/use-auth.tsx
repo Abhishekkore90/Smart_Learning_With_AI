@@ -93,6 +93,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    if (!auth) {
+      console.warn("Auth service is not initialized. User will not be logged in.");
+      setLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setLoading(true);

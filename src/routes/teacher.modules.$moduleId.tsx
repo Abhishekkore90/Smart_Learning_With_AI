@@ -266,31 +266,31 @@ function ModulePage() {
             </div>
           </div>
 
-           <div className="flex items-center gap-2 md:gap-4">
-             {moduleId === "teacher-statistics" && (
-               <button
-                 onClick={() => window.dispatchEvent(new Event("download-teacher-portfolio-pdf"))}
-                 className="group flex items-center gap-2 md:gap-4 px-6 md:px-12 py-3 md:py-5 bg-white text-slate-800 text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] rounded-full hover:bg-[#D6B97A] hover:text-white hover:border-[#D6B97A] border border-slate-200 transition-all duration-700 shadow-xl cursor-pointer"
-               >
-                 <Download className="size-3 md:size-4 text-[#D6B97A] group-hover:text-white" />
-                 <span className="hidden sm:inline">Download PDF</span>
-                 <span className="sm:hidden">PDF</span>
-               </button>
-             )}
-             <button
-               onClick={handleSave}
-               disabled={saving}
-               className="group flex items-center gap-2 md:gap-4 px-6 md:px-12 py-3 md:py-5 bg-[#1A1A1A] text-white text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] rounded-full hover:bg-[#D6B97A] transition-all duration-700 shadow-2xl disabled:opacity-50"
-             >
-               {saving ? (
-                 <Loader2 className="size-3 md:size-4 animate-spin" />
-               ) : (
-                 <Save className="size-3 md:size-4 group-hover:rotate-12 transition-transform text-[#D6B97A] group-hover:text-white" />
-               )}
-               <span className="hidden sm:inline">Commit Sync</span>
-               <span className="sm:hidden">Save</span>
-             </button>
-           </div>
+          <div className="flex items-center gap-2 md:gap-4">
+            {moduleId === "teacher-statistics" && (
+              <button
+                onClick={() => window.dispatchEvent(new Event("download-teacher-portfolio-pdf"))}
+                className="group flex items-center gap-2 md:gap-4 px-6 md:px-12 py-3 md:py-5 bg-white text-slate-800 text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] rounded-full hover:bg-[#D6B97A] hover:text-white hover:border-[#D6B97A] border border-slate-200 transition-all duration-700 shadow-xl cursor-pointer"
+              >
+                <Download className="size-3 md:size-4 text-[#D6B97A] group-hover:text-white" />
+                <span className="hidden sm:inline">Download PDF</span>
+                <span className="sm:hidden">PDF</span>
+              </button>
+            )}
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="group flex items-center gap-2 md:gap-4 px-6 md:px-12 py-3 md:py-5 bg-[#1A1A1A] text-white text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] rounded-full hover:bg-[#D6B97A] transition-all duration-700 shadow-2xl disabled:opacity-50"
+            >
+              {saving ? (
+                <Loader2 className="size-3 md:size-4 animate-spin" />
+              ) : (
+                <Save className="size-3 md:size-4 group-hover:rotate-12 transition-transform text-[#D6B97A] group-hover:text-white" />
+              )}
+              <span className="hidden sm:inline">Commit Sync</span>
+              <span className="sm:hidden">Save</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -299,117 +299,117 @@ function ModulePage() {
       <main className="flex-1 lg:pl-64 pt-24 max-w-[1800px] mx-auto w-full px-4 md:px-8 py-12 md:py-20 relative z-10">
         <PinGate sectionKey="planning" enabled={moduleId === "annual-monthly-planning"}>
           <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white/80 backdrop-blur-3xl rounded-[4rem] border border-white/50 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.1)] relative overflow-hidden"
-        >
-          {/* Canvas Decoration */}
-          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-[#D6B97A]/30 to-transparent" />
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white/80 backdrop-blur-3xl rounded-[4rem] border border-white/50 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.1)] relative overflow-hidden"
+          >
+            {/* Canvas Decoration */}
+            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-[#D6B97A]/30 to-transparent" />
 
-          <div className={`p-4 ${moduleId === 'special-day' ? 'md:p-8 lg:p-10' : 'md:p-16'}`}>
-            <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none group-hover:scale-110 transition-transform duration-1000">
-              <config.icon className="size-32 md:size-64 text-[#D6B97A]" />
-            </div>
+            <div className={`p-4 ${moduleId === 'special-day' ? 'md:p-8 lg:p-10' : 'md:p-16'}`}>
+              <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none group-hover:scale-110 transition-transform duration-1000">
+                <config.icon className="size-32 md:size-64 text-[#D6B97A]" />
+              </div>
 
 
-            {moduleId === "timetable" && (
-              <>
-                <div className="md:hidden flex items-center justify-center gap-2 mb-6 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] animate-pulse">
-                  <ArrowRight className="size-3" /> Swipe left to see more{" "}
-                  <ArrowRight className="size-3" />
-                </div>
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-100 rounded-[2rem] mb-12 overflow-x-auto no-scrollbar shadow-sm"
-                >
-                  {["5th", "6th", "7th", "8th", "9th", "10th"].map((cls) => (
-                    <button
-                      key={cls}
-                      onClick={() => setSelectedClass(cls)}
-                      className={`px-10 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all duration-500 ${selectedClass === cls
+              {moduleId === "timetable" && (
+                <>
+                  <div className="md:hidden flex items-center justify-center gap-2 mb-6 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] animate-pulse">
+                    <ArrowRight className="size-3" /> Swipe left to see more{" "}
+                    <ArrowRight className="size-3" />
+                  </div>
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-100 rounded-[2rem] mb-12 overflow-x-auto no-scrollbar shadow-sm"
+                  >
+                    {["5th", "6th", "7th", "8th", "9th", "10th"].map((cls) => (
+                      <button
+                        key={cls}
+                        onClick={() => setSelectedClass(cls)}
+                        className={`px-10 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all duration-500 ${selectedClass === cls
                           ? "bg-slate-900 text-white shadow-2xl translate-y-[-2px]"
                           : "text-slate-400 hover:text-slate-900 hover:bg-white"
-                        }`}
-                    >
-                      Class {cls}
-                    </button>
-                  ))}
-                </motion.div>
-              </>
-            )}
-            {loading ? (
-              <div className="h-96 flex flex-col items-center justify-center text-slate-400 gap-6">
-                <Loader2 className="size-10 animate-spin text-indigo-600" />
-                <p className="text-[12px] font-black uppercase tracking-[0.3em] animate-pulse">
-                  Synchronizing Data...
-                </p>
-              </div>
-            ) : moduleId === "timetable" ? (
-              <TimetableEditor
-                data={data}
-                selectedClass={selectedClass}
-                onChange={(val: any) => setData(val)}
-              />
-            ) : moduleId === "special-day" ? (
-              <AssemblyBookViewer />
-            ) : moduleId === "template" ? (
-              <TemplateVisualHub data={data} onChange={setData} />
+                          }`}
+                      >
+                        Class {cls}
+                      </button>
+                    ))}
+                  </motion.div>
+                </>
+              )}
+              {loading ? (
+                <div className="h-96 flex flex-col items-center justify-center text-slate-400 gap-6">
+                  <Loader2 className="size-10 animate-spin text-indigo-600" />
+                  <p className="text-[12px] font-black uppercase tracking-[0.3em] animate-pulse">
+                    Synchronizing Data...
+                  </p>
+                </div>
+              ) : moduleId === "timetable" ? (
+                <TimetableEditor
+                  data={data}
+                  selectedClass={selectedClass}
+                  onChange={(val: any) => setData(val)}
+                />
+              ) : moduleId === "special-day" ? (
+                <AssemblyBookViewer />
+              ) : moduleId === "template" ? (
+                <TemplateVisualHub data={data} onChange={setData} />
 
-            ) : moduleId === "mid-day-meal-(mdm)" ? (
-              <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-6">
-                <div className="size-20 rounded-full bg-[#D6B97A]/10 text-[#D6B97A] flex items-center justify-center shadow-inner">
-                  <Utensils className="size-10" />
+              ) : moduleId === "mid-day-meal-(mdm)" ? (
+                <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-6">
+                  <div className="size-20 rounded-full bg-[#D6B97A]/10 text-[#D6B97A] flex items-center justify-center shadow-inner">
+                    <Utensils className="size-10" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-2xl font-black text-[#1A1A1A] italic">
+                      Mid-Day Meal (MDM) Portal
+                    </h3>
+                    <p className="text-slate-500 font-medium max-w-md mx-auto">
+                      Access the interactive meal distribution registers, food
+                      stock inventory ledgers, helper records, and autogenerated
+                      reports.
+                    </p>
+                  </div>
+                  <Link
+                    to="/teacher/mdm"
+                    className="px-10 py-5 bg-[#1A1A1A] hover:bg-[#D6B97A] text-white rounded-full text-[10px] font-black uppercase tracking-[0.3em] transition-all shadow-xl"
+                  >
+                    Access MDM Workspace
+                  </Link>
                 </div>
-                <div className="space-y-2">
-                  <h3 className="text-2xl font-black text-[#1A1A1A] italic">
-                    Mid-Day Meal (MDM) Portal
-                  </h3>
-                  <p className="text-slate-500 font-medium max-w-md mx-auto">
-                    Access the interactive meal distribution registers, food
-                    stock inventory ledgers, helper records, and autogenerated
-                    reports.
-                  </p>
+              ) : moduleId === "annual-monthly-planning" ? (
+                <AnnualMonthlyPlanningEditor
+                  data={data}
+                  onChange={(val: any) => setData(val)}
+                />
+              ) : moduleId === "teaching-record-notebook" ? (
+                <TeachingDiaryManager
+                  data={data}
+                  onChange={(val: any) => setData(val)}
+                />
+              ) : moduleId === "teacher-statistics" ? (
+                <TeacherStatisticsEditor
+                  data={data}
+                  onChange={(val: any) => setData(val)}
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-6">
+                  <div className="size-20 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+                    <Grid className="size-10" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-black text-slate-900">
+                      Module Under Construction
+                    </h3>
+                    <p className="text-slate-500 font-medium">
+                      We're building something amazing here. Please check back
+                      soon.
+                    </p>
+                  </div>
                 </div>
-                <Link
-                  to="/teacher/mdm"
-                  className="px-10 py-5 bg-[#1A1A1A] hover:bg-[#D6B97A] text-white rounded-full text-[10px] font-black uppercase tracking-[0.3em] transition-all shadow-xl"
-                >
-                  Access MDM Workspace
-                </Link>
-              </div>
-            ) : moduleId === "annual-monthly-planning" ? (
-              <AnnualMonthlyPlanningEditor
-                data={data}
-                onChange={(val: any) => setData(val)}
-              />
-            ) : moduleId === "teaching-record-notebook" ? (
-              <TeachingDiaryManager
-                data={data}
-                onChange={(val: any) => setData(val)}
-              />
-            ) : moduleId === "teacher-statistics" ? (
-              <TeacherStatisticsEditor
-                data={data}
-                onChange={(val: any) => setData(val)}
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-6">
-                <div className="size-20 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
-                  <Grid className="size-10" />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-xl font-black text-slate-900">
-                    Module Under Construction
-                  </h3>
-                  <p className="text-slate-500 font-medium">
-                    We're building something amazing here. Please check back
-                    soon.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
           </motion.div>
         </PinGate>
       </main>
@@ -805,8 +805,8 @@ function TemplateVisualHub({
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 whitespace-nowrap border-2 ${activeTab === tab
-                  ? "bg-[#111827] text-white border-[#111827] shadow-2xl scale-105"
-                  : "bg-white text-[#111827]/40 border-transparent hover:border-[#E8DFD1]/50 hover:text-[#111827]"
+                ? "bg-[#111827] text-white border-[#111827] shadow-2xl scale-105"
+                : "bg-white text-[#111827]/40 border-transparent hover:border-[#E8DFD1]/50 hover:text-[#111827]"
                 }`}
             >
               {tab}
@@ -1500,7 +1500,7 @@ function AssemblyBookViewer() {
   useEffect(() => {
     const htmlLang = document.documentElement.lang || "en";
     setLang(htmlLang.startsWith("mr") ? "mr" : "en");
-    
+
     setLoading(true);
     const q = collection(db, "admin_assembly_books");
     const unsubscribe = onSnapshot(
@@ -1594,165 +1594,147 @@ function AssemblyBookViewer() {
       <DailyAssemblyContent />
 
       {/* Divider */}
-      <div className="flex items-center gap-4 py-2">
-        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#D6B97A]/30 to-transparent" />
-        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[#D6B97A]/50">Reference Books</span>
-        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#D6B97A]/30 to-transparent" />
+      <div className="border-b-2 border-slate-800 pb-2 mb-6 mt-12">
+        <h3 className="text-lg font-bold text-slate-800 uppercase tracking-widest">
+          {lang === "en" ? "Reference Books & Materials Report" : "संदर्भ ग्रंथ आणि साहित्य अहवाल"}
+        </h3>
       </div>
 
       {loading ? (
-        <div className="h-60 flex flex-col items-center justify-center text-slate-400 gap-4">
-          <Loader2 className="size-10 text-[#D6B97A] animate-spin" />
-          <p className="text-xs font-black uppercase tracking-wider animate-pulse">
-            {lang === "en" ? "Loading books..." : "पुस्तके लोड होत आहेत..."}
+        <div className="py-12 flex flex-col items-center justify-center text-slate-500 border border-slate-200 bg-slate-50">
+          <Loader2 className="size-6 text-slate-400 animate-spin mb-2" />
+          <p className="text-sm font-semibold uppercase tracking-wider">
+            {lang === "en" ? "Loading Data..." : "माहिती लोड होत आहे..."}
           </p>
         </div>
       ) : books.length === 0 ? (
-        <div className="py-16 text-center border border-dashed border-slate-200/80 rounded-3xl space-y-3 bg-[#FAFAF7] my-4">
-          <div className="size-14 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 mx-auto">
-            <AlertCircle className="size-6" />
-          </div>
-          <div className="space-y-1 px-4">
-            <h4 className="text-slate-800 font-extrabold text-sm">
-              {lang === "en" ? "No daily assembly books uploaded yet." : "कोणतेही परिपाठ पुस्तक अपलोड केलेले नाही."}
-            </h4>
-            <p className="text-slate-400 text-[10px] font-bold">
-              {lang === "en" ? "Please contact the admin to upload guidebooks." : "नवीन पुस्तकांसाठी कृपया प्रशासकांशी संपर्क साधा."}
-            </p>
-          </div>
+        <div className="py-12 text-center border border-slate-300 bg-slate-50 text-slate-500">
+          <AlertCircle className="size-6 mx-auto mb-2 text-slate-400" />
+          <h4 className="font-bold text-sm mb-1">
+            {lang === "en" ? "No Reference Materials Found" : "कोणतेही संदर्भ साहित्य आढळले नाही"}
+          </h4>
+          <p className="text-xs">
+            {lang === "en" ? "Please contact administration for updates." : "अपडेटसाठी कृपया प्रशासनाशी संपर्क साधा."}
+          </p>
         </div>
       ) : (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {books.map((book) => {
-              const isSelected = selectedBook?.id === book.id;
-              return (
-                <div
-                  key={book.id}
-                  className={`p-5 border rounded-2xl flex flex-col justify-between gap-4 transition-all duration-300 ${
-                    isSelected
-                      ? "bg-[#D6B97A]/5 border-[#D6B97A]/50 shadow-sm"
-                      : "bg-[#FAFAF7]/50 border-slate-200/60 hover:shadow-md"
-                  }`}
-                >
-                  <div className="flex gap-3">
-                    <div className={`size-12 rounded-xl bg-white border flex items-center justify-center flex-shrink-0 ${
-                      isSelected ? "text-[#D6B97A] border-[#D6B97A]/30" : "text-slate-400 border-slate-100"
-                    }`}>
-                      <FileText className="size-6" />
-                    </div>
-                    <div className="space-y-1 overflow-hidden">
-                      <h4 className="font-extrabold text-slate-800 text-xs truncate pr-2" title={book.name}>
+        <div className="space-y-8">
+          <div className="overflow-x-auto border border-slate-300 bg-white">
+            <table className="w-full text-left text-sm text-slate-600">
+              <thead className="bg-slate-100 text-slate-800 text-xs uppercase font-bold border-b border-slate-300">
+                <tr>
+                  <th className="px-4 py-3 border-r border-slate-200">#</th>
+                  <th className="px-4 py-3 border-r border-slate-200">{lang === "en" ? "Document Name" : "दस्तऐवजाचे नाव"}</th>
+                  <th className="px-4 py-3 border-r border-slate-200">{lang === "en" ? "Size" : "आकार"}</th>
+                  <th className="px-4 py-3 border-r border-slate-200">{lang === "en" ? "Date Added" : "तारीख"}</th>
+                  <th className="px-4 py-3 text-center">{lang === "en" ? "Actions" : "कृती"}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {books.map((book, index) => {
+                  const isSelected = selectedBook?.id === book.id;
+                  return (
+                    <tr
+                      key={book.id}
+                      className={`border-b last:border-0 transition-colors ${isSelected ? "bg-blue-50" : "hover:bg-slate-50"}`}
+                    >
+                      <td className="px-4 py-3 border-r border-slate-200 font-semibold">{index + 1}</td>
+                      <td className="px-4 py-3 border-r border-slate-200 font-semibold text-slate-800 flex items-center gap-2">
+                        <FileText className="size-4 text-slate-500" />
                         {book.name}
-                      </h4>
-                      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                        <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded">
-                          {book.size}
-                        </span>
-                        <span>{book.date}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
-                    <button
-                      onClick={() => handleSelectBook(book)}
-                      disabled={loadingData && !isSelected}
-                      className={`flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer disabled:opacity-50 ${
-                        isSelected
-                          ? "bg-red-50 hover:bg-red-100 text-red-600 border border-red-100"
-                          : "bg-white border border-slate-200 hover:border-[#D6B97A] hover:text-[#D6B97A]"
-                      }`}
-                    >
-                      {loadingData && isSelected ? (
-                        <Loader2 className="size-3 animate-spin text-red-600" />
-                      ) : (
-                        <Eye className="size-3" />
-                      )}
-                      <span>{isSelected ? (lang === "en" ? "Close" : "बंद करा") : (lang === "en" ? "View" : "पहा")}</span>
-                    </button>
-                    <button
-                      onClick={() => handleDownload(book)}
-                      disabled={loadingData}
-                      className="flex items-center justify-center gap-1.5 py-2.5 bg-[#1A1A1A] hover:bg-[#D6B97A] text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer disabled:opacity-50"
-                    >
-                      {downloadingId === book.id ? (
-                        <Loader2 className="size-3 animate-spin text-white" />
-                      ) : (
-                        <Download className="size-3" />
-                      )}
-                      <span>{lang === "en" ? "Download" : "डाउनलोड"}</span>
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+                      </td>
+                      <td className="px-4 py-3 border-r border-slate-200">{book.size}</td>
+                      <td className="px-4 py-3 border-r border-slate-200">{book.date}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => handleSelectBook(book)}
+                            disabled={loadingData && !isSelected}
+                            className={`px-3 py-1.5 text-xs font-bold uppercase border rounded disabled:opacity-50 ${isSelected
+                                ? "bg-slate-800 text-white border-slate-800"
+                                : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
+                              }`}
+                          >
+                            {loadingData && isSelected ? (
+                              <Loader2 className="size-3 animate-spin inline mr-1" />
+                            ) : null}
+                            {isSelected ? (lang === "en" ? "Close" : "बंद करा") : (lang === "en" ? "View" : "पहा")}
+                          </button>
+                          <button
+                            onClick={() => handleDownload(book)}
+                            disabled={loadingData}
+                            className="px-3 py-1.5 text-xs font-bold uppercase bg-slate-100 text-slate-700 border border-slate-300 rounded hover:bg-slate-200 disabled:opacity-50 flex items-center gap-1"
+                          >
+                            {downloadingId === book.id ? (
+                              <Loader2 className="size-3 animate-spin" />
+                            ) : (
+                              <Download className="size-3" />
+                            )}
+                            {lang === "en" ? "Download" : "डाउनलोड"}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
 
-          <AnimatePresence mode="wait">
-            {selectedBook && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="border border-slate-200 rounded-2xl overflow-hidden bg-slate-50 p-4 space-y-3"
-              >
-                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                  <h4 className="font-extrabold text-slate-800 text-xs flex items-center gap-1.5">
-                    <Eye className="size-3.5 text-[#D6B97A] animate-pulse" />
-                    <span>{lang === "en" ? "Book Preview:" : "पुस्तक पूर्वावलोकन:"}</span>
-                    <span className="text-[#D6B97A] font-black truncate max-w-xs">{selectedBook.name}</span>
-                  </h4>
-                  <button
-                    onClick={() => {
-                      setSelectedBook(null);
-                      setBookData(null);
-                    }}
-                    className="px-2 py-0.5 bg-white border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 rounded text-[9px] font-bold transition-all cursor-pointer"
-                  >
-                    {lang === "en" ? "Close" : "बंद करा"}
-                  </button>
-                </div>
+          {selectedBook && (
+            <div className="border border-slate-300 bg-white shadow-sm p-4">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-4">
+                <h4 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                  <FileText className="size-4 text-slate-500" />
+                  {lang === "en" ? "Document Preview:" : "दस्तऐवज पूर्वावलोकन:"} {selectedBook.name}
+                </h4>
+                <button
+                  onClick={() => {
+                    setSelectedBook(null);
+                    setBookData(null);
+                  }}
+                  className="px-3 py-1 text-xs font-bold text-slate-600 border border-slate-300 hover:bg-slate-100"
+                >
+                  {lang === "en" ? "Close Preview" : "पूर्वावलोकन बंद करा"}
+                </button>
+              </div>
 
-                <div className="w-full relative min-h-[300px]">
-                  {loadingData ? (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50/80 backdrop-blur-[1px] gap-2 rounded-xl z-10">
-                      <Loader2 className="size-8 text-[#D6B97A] animate-spin" />
-                      <p className="text-[9px] font-black uppercase tracking-wider text-slate-500 animate-pulse">
-                        {lang === "en" ? "Loading preview..." : "पूर्वावलोकन लोड होत आहे..."}
-                      </p>
-                    </div>
-                  ) : null}
-
-                  {bookData ? (
-                    <div className="w-full flex justify-center">
-                      {bookData.type.includes("pdf") ? (
-                        <iframe
-                          src={bookData.base64}
-                          className="w-full h-[600px] border border-slate-200 rounded-2xl bg-white shadow-inner"
-                          title={bookData.name}
-                          allowFullScreen
-                        />
-                      ) : (
-                        <img
-                          src={bookData.base64}
-                          alt={bookData.name}
-                          className="w-full max-w-full h-auto border border-slate-200 rounded-2xl bg-white p-1.5 shadow-sm"
-                        />
-                      )}
-                    </div>
-                  ) : (
-                    !loadingData && (
-                      <div className="flex flex-col items-center justify-center h-60 text-slate-400 bg-white border border-slate-100 rounded-2xl">
-                        <AlertCircle className="size-6 mb-1" />
-                        <span className="text-[10px] font-bold">{lang === "en" ? "No Preview Available" : "पूर्वावलोकन उपलब्ध नाही"}</span>
-                      </div>
-                    )
-                  )}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+              <div className="w-full relative min-h-[400px] bg-slate-50 border border-slate-200 flex flex-col justify-center items-center">
+                {loadingData ? (
+                  <div className="flex flex-col items-center gap-2 text-slate-500">
+                    <Loader2 className="size-6 animate-spin" />
+                    <p className="text-xs font-bold uppercase">
+                      {lang === "en" ? "Loading document..." : "दस्तऐवज लोड होत आहे..."}
+                    </p>
+                  </div>
+                ) : bookData ? (
+                  <div className="w-full h-full p-2">
+                    {bookData.type.includes("pdf") ? (
+                      <iframe
+                        src={bookData.base64}
+                        className="w-full h-[600px] border-0"
+                        title={bookData.name}
+                        allowFullScreen
+                      />
+                    ) : (
+                      <img
+                        src={bookData.base64}
+                        alt={bookData.name}
+                        className="max-w-full h-auto mx-auto border border-slate-300 shadow-sm"
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-slate-400 flex flex-col items-center">
+                    <AlertCircle className="size-6 mb-2" />
+                    <span className="text-xs font-bold">
+                      {lang === "en" ? "Preview Not Available" : "पूर्वावलोकन उपलब्ध नाही"}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -1789,6 +1771,117 @@ function DailyAssemblyContent() {
     setExpandedSections((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const handleDownloadPdf = async () => {
+    const element = document.getElementById("daily-assembly-content");
+    if (!element) {
+      toast.error("Could not find the assembly content to download.");
+      return;
+    }
+
+    try {
+      const html2pdfModule = await import("html2pdf.js");
+      let html2pdfFn: any = html2pdfModule.default || html2pdfModule;
+      if (html2pdfFn && html2pdfFn.default) {
+        html2pdfFn = html2pdfFn.default;
+      }
+      if (typeof html2pdfFn !== "function") {
+        if (typeof window !== "undefined" && typeof (window as any).html2pdf === "function") {
+          html2pdfFn = (window as any).html2pdf;
+        }
+      }
+      if (typeof html2pdfFn !== "function") {
+        throw new Error("html2pdf library is not loaded properly.");
+      }
+
+      const opt = {
+        margin: [10, 10, 10, 10],
+        filename: `Paripath_${new Date().toISOString().split("T")[0]}.pdf`,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          allowTaint: false,
+          letterRendering: true,
+          windowWidth: 794,
+          ignoreElements: (node: any) => {
+            return node.classList && node.classList.contains("pdf-hide");
+          },
+          onclone: (clonedDoc: any) => {
+            const container = clonedDoc.getElementById("daily-assembly-content");
+            if (container) {
+              container.style.width = "794px";
+              container.style.margin = "0 auto";
+              container.style.padding = "16px";
+              container.style.background = "#FFFFFF";
+              container.style.borderRadius = "0";
+              container.style.overflow = "visible";
+            }
+
+            // Remove ALL problematic CSS effects
+            const elements = clonedDoc.querySelectorAll("*");
+            elements.forEach((el: any) => {
+              if (el.classList) {
+                const classesToRemove = Array.from(el.classList).filter((c: any) =>
+                  c.includes("blur") || c.includes("drop-shadow") || c.includes("mix-blend") ||
+                  c.includes("backdrop") || c.includes("hover:") || c.includes("group-hover") ||
+                  c.includes("transition") || c.includes("animate") || c.includes("scale") ||
+                  c.includes("pdf-page-break")
+                );
+                classesToRemove.forEach((c: any) => el.classList.remove(c));
+              }
+              if (el.style) {
+                el.style.backdropFilter = "none";
+                el.style.webkitBackdropFilter = "none";
+                el.style.filter = "none";
+                el.style.transform = "none";
+                el.style.transition = "none";
+                el.style.animation = "none";
+              }
+            });
+
+            // Remove decorative blobs
+            const decorativeBlobs = clonedDoc.querySelectorAll('[class*="absolute"][class*="rounded-full"]');
+            decorativeBlobs.forEach((blob: any) => {
+              if (!blob.textContent?.trim()) {
+                blob.style.display = "none";
+              }
+            });
+
+            // Inject clean print styles
+            const style = clonedDoc.createElement('style');
+            style.innerHTML = `
+              * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                font-family: 'Noto Sans Devanagari', 'Mukta', 'Hind', sans-serif !important;
+              }
+              [class*="bg-white/"] {
+                background-color: #FFFFFF !important;
+              }
+            `;
+            clonedDoc.head.appendChild(style);
+          }
+        },
+        pagebreak: { mode: 'avoid-all' },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      };
+
+      toast.success("Generating PDF, please wait...");
+
+      const originalOverflow = element.style.overflow;
+      element.style.overflow = "visible";
+      element.classList.remove("overflow-hidden");
+
+      await html2pdfFn().set(opt).from(element).save();
+
+      element.style.overflow = originalOverflow;
+      element.classList.add("overflow-hidden");
+    } catch (err: any) {
+      console.error("PDF generation error", err);
+      toast.error(`Error: ${err.message || "Failed to generate PDF"}`);
+    }
+  };
+
   const containerVariants = {
     hidden: { opacity: 0 },
     show: {
@@ -1801,131 +1894,47 @@ function DailyAssemblyContent() {
 
   const itemVariants = {
     hidden: { opacity: 0, y: 40, scale: 0.95 },
-    show: { 
-      opacity: 1, 
-      y: 0, 
+    show: {
+      opacity: 1,
+      y: 0,
       scale: 1,
       transition: { type: "spring" as const, stiffness: 100, damping: 15 }
     }
   };
 
-  const SectionCard = ({ id, emoji, title, icon: Icon, gradient, children }: {
+  const SectionCard = ({ id, emoji, title, gradient, children }: {
     id: string;
-    emoji: string;
+    emoji?: string;
     title: string;
-    icon: any;
-    gradient: string;
+    icon?: any;
+    gradient?: string;
     children: React.ReactNode;
   }) => {
-    const isExpanded = expandedSections[id] !== false; // default expanded
     return (
-      <motion.div
-        variants={itemVariants}
-        whileHover={{ y: -10, scale: 1.02 }}
-        transition={{ type: "spring", stiffness: 400, damping: 25 }}
-        className="group relative rounded-[3rem] overflow-hidden bg-white/20 backdrop-blur-3xl border border-white/50 shadow-[0_8px_32px_0_rgba(31,38,135,0.05)] hover:shadow-[0_16px_64px_0_rgba(31,38,135,0.15)] transition-all duration-500"
+      <div
+        id={id}
+        className={`space-y-8 p-8 md:p-12 bg-gradient-to-br ${gradient || 'from-slate-50/80 to-slate-100/50 border-slate-200/60'} border rounded-[3rem] shadow-sm pdf-page-break mb-8 relative overflow-hidden`}
       >
-        <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-40 group-hover:opacity-70 transition-opacity duration-700 pointer-events-none mix-blend-overlay`} />
-        
-        {/* Animated glowing border */}
-        <div className="absolute inset-0 rounded-[3rem] border-2 border-transparent bg-clip-border group-hover:border-white/50 transition-colors duration-500 pointer-events-none" />
-
-        <button
-          onClick={() => toggleSection(id)}
-          className="w-full flex items-center justify-between p-6 md:p-8 cursor-pointer relative z-10 border-b border-white/20"
-        >
-          <div className="flex items-center gap-5 md:gap-8">
-            <motion.div 
-              whileHover={{ scale: 1.2, rotate: [0, -10, 10, 0] }}
-              transition={{ duration: 0.5 }}
-              className="size-16 md:size-20 rounded-[2rem] bg-gradient-to-br from-white/90 to-white/40 backdrop-blur-xl flex items-center justify-center text-4xl md:text-5xl shadow-[0_8px_16px_rgba(0,0,0,0.1)] border border-white/60 group-hover:shadow-[0_0_30px_rgba(255,255,255,0.8)] transition-all duration-500"
-            >
-              <motion.span
-                animate={{ y: [0, -8, 0], scale: [1, 1.05, 1] }}
-                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-              >
-                {emoji}
-              </motion.span>
-            </motion.div>
-            <div className="text-left flex flex-col justify-center">
-              <h3 className="text-2xl md:text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-indigo-900 drop-shadow-[0_2px_2px_rgba(255,255,255,0.8)] group-hover:from-indigo-600 group-hover:to-purple-600 transition-all duration-500 tracking-tight">
-                {title}
-              </h3>
-            </div>
-          </div>
-          <motion.div 
-            whileHover={{ scale: 1.2, rotate: 180 }}
-            transition={{ duration: 0.3 }}
-            className="size-14 rounded-full bg-white/40 backdrop-blur-md flex items-center justify-center text-slate-700 shadow-lg border border-white/60 group-hover:bg-white group-hover:text-indigo-600 transition-all duration-300 relative z-10"
-          >
-            {isExpanded ? <ChevronUp className="size-8" /> : <ChevronDown className="size-8" />}
-          </motion.div>
-        </button>
-        <AnimatePresence>
-          {isExpanded && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.6, type: "spring", bounce: 0.3 }}
-              className="overflow-hidden relative z-10"
-            >
-              <div className="p-8 md:p-12 relative">
-                <div className="absolute inset-4 bg-white/30 backdrop-blur-xl border border-white/40 rounded-[2rem] pointer-events-none" />
-                <div className="relative z-10">
-                  {children}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
+        <div className="flex justify-center relative z-10">
+          <h3 className="text-xl md:text-2xl font-black text-slate-800 inline-flex items-center justify-center gap-3 px-8 py-4 bg-white/90 backdrop-blur-md rounded-full shadow-sm border border-slate-200/60 uppercase tracking-widest">
+            {emoji && <span>{emoji}</span>} {title}
+          </h3>
+        </div>
+        <div className="relative z-10">
+          {children}
+        </div>
+      </div>
     );
   };
 
   return (
-    <motion.div 
-      variants={containerVariants}
-      initial="hidden"
-      animate="show"
-      className="p-6 md:p-10 space-y-12 relative rounded-[3rem] overflow-hidden"
+    <div
+      id="daily-assembly-content"
+      className="p-6 md:p-10 space-y-12 relative rounded-[3rem] overflow-hidden bg-[#F8FAFF]"
     >
-      {/* Immersive Mesh Gradient Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 via-purple-50/50 to-emerald-50/50 -z-20" />
-      <motion.div 
-        animate={{ 
-          scale: [1, 1.2, 1], 
-          x: [0, 100, -100, 0], 
-          y: [0, -100, 100, 0] 
-        }}
-        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-        className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] bg-gradient-to-br from-indigo-400/20 to-purple-400/20 rounded-full blur-[120px] pointer-events-none -z-10 mix-blend-multiply" 
-      />
-      <motion.div 
-        animate={{ 
-          scale: [1, 1.3, 1], 
-          x: [0, -100, 100, 0], 
-          y: [0, 100, -100, 0] 
-        }}
-        transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-        className="absolute -bottom-[20%] -right-[10%] w-[60%] h-[60%] bg-gradient-to-br from-emerald-400/20 to-teal-400/20 rounded-full blur-[120px] pointer-events-none -z-10 mix-blend-multiply" 
-      />
       {/* Header with Language Toggle */}
-      <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-8 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-[3rem] shadow-2xl shadow-indigo-900/20 border border-white/10 relative overflow-hidden group">
-        <motion.div 
-          animate={{ scale: [1, 1.2, 1], rotate: [0, 90, 0] }}
-          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute -top-24 -right-24 size-64 bg-indigo-500/30 blur-[80px] rounded-full" 
-        />
-        <motion.div 
-          animate={{ scale: [1, 1.3, 1], rotate: [0, -90, 0] }}
-          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-          className="absolute -bottom-24 -left-24 size-64 bg-violet-500/20 blur-[80px] rounded-full" 
-        />
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-8 bg-slate-900 rounded-[3rem] shadow-xl border border-slate-800 relative overflow-hidden">
         <div className="flex items-center gap-5 relative z-10">
-          <div className="size-16 rounded-3xl bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white shadow-xl shadow-indigo-500/30 border border-white/20">
-            <BookMarked className="size-8" />
-          </div>
           <div>
             <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight drop-shadow-md">
               {lang === "mr" ? "दैनिक परीपाठ" : lang === "hi" ? "दैनिक प्रार्थना सभा" : "Daily Assembly"}
@@ -1935,59 +1944,66 @@ function DailyAssemblyContent() {
             </p>
           </div>
         </div>
-        <div className="flex bg-white/5 p-2 rounded-2xl border border-white/10 backdrop-blur-xl relative z-10">
-          {(["mr", "en", "hi"] as const).map((l) => (
-            <button
-              key={l}
-              onClick={() => setLang(l)}
-              className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-[0.15em] transition-all duration-300 ${
-                lang === l
-                  ? "bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-lg shadow-indigo-500/25 border border-white/20 scale-105"
-                  : "text-white/50 hover:text-white hover:bg-white/5"
-              }`}
-            >
-              {l === "mr" ? "मराठी" : l === "hi" ? "हिंदी" : "English"}
-            </button>
-          ))}
+        <div className="flex items-center gap-3 relative z-10 pdf-hide">
+          <div className="flex bg-white/5 p-2 rounded-2xl border border-white/10 backdrop-blur-xl">
+            {(["mr", "en", "hi"] as const).map((l) => (
+              <button
+                key={l}
+                onClick={() => setLang(l)}
+                className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-[0.15em] transition-all duration-300 ${lang === l
+                    ? "bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-lg shadow-indigo-500/25 border border-white/20 scale-105"
+                    : "text-white/50 hover:text-white hover:bg-white/5"
+                  }`}
+              >
+                {l === "mr" ? "मराठी" : l === "hi" ? "हिंदी" : "English"}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={handleDownloadPdf}
+            title="Download PDF"
+            className="flex items-center justify-center p-3 rounded-2xl bg-indigo-500/20 text-indigo-200 hover:bg-indigo-500/40 hover:text-white transition-all border border-indigo-500/30 backdrop-blur-xl shadow-lg"
+          >
+            <Download className="size-6" />
+          </button>
         </div>
-      </motion.div>
+      </div>
 
       {/* Assembly Start Items (Anthem, State Song, Pledge, Preamble, Prayer) */}
-      <SectionCard
-        id="assembly-start"
-        emoji="🇮🇳"
-        title={t.assemblyStart}
-        icon={Flag}
-        gradient="from-green-100/80 via-emerald-50/60 to-teal-100/80"
-      >
-        <div className="space-y-8">
-          {[
-            { key: 'nationalAnthem', fallbackIdx: 0 },
-            { key: 'stateAnthem', fallbackIdx: 1 },
-            { key: 'pledge', fallbackIdx: 2 },
-            { key: 'preamble', fallbackIdx: 3 },
-            { key: 'prayer', fallbackIdx: 4 },
-          ].map((itemDef, idx) => {
-            const fallbackItem = assemblyItems[itemDef.fallbackIdx];
-            const content = formData[itemDef.key] || fallbackItem.content;
-            
-            return (
-              <div key={idx} className="bg-white/60 backdrop-blur-xl border border-white rounded-[2.5rem] p-8 md:p-10 shadow-xl shadow-green-900/5 hover:shadow-2xl hover:shadow-green-900/10 transition-all duration-500 group">
-                <div className="flex flex-col items-center justify-center gap-3 mb-8 border-b border-green-900/5 pb-6">
-                  <span className="text-4xl mb-2 group-hover:scale-110 transition-transform duration-300 drop-shadow-md">{fallbackItem.emoji}</span>
-                  <h4 className="font-black text-2xl text-slate-800 text-center uppercase tracking-widest">{fallbackItem.label}</h4>
-                  <div className="px-4 py-1.5 rounded-full bg-green-100/50 border border-green-200 text-[10px] font-black text-green-700 uppercase tracking-widest text-center mt-1">
-                    {fallbackItem.sub}
-                  </div>
-                </div>
-                <pre className="whitespace-pre-wrap text-lg md:text-xl text-slate-700 font-bold leading-loose font-sans text-center">
-                  {content}
-                </pre>
-              </div>
-            );
-          })}
-        </div>
-      </SectionCard>
+      <div className="flex justify-center mb-4">
+        <h4 className="text-xl md:text-2xl font-black text-green-800 inline-flex items-center justify-center gap-3 px-8 py-4 bg-green-50 rounded-full shadow-sm border border-green-100 uppercase tracking-widest">
+          {t.assemblyStart}
+        </h4>
+      </div>
+
+      {[
+        { key: 'nationalAnthem', fallbackIdx: 0 },
+        { key: 'stateAnthem', fallbackIdx: 1 },
+        { key: 'pledge', fallbackIdx: 2 },
+        { key: 'preamble', fallbackIdx: 3 },
+        { key: 'prayer', fallbackIdx: 4 },
+      ].map((itemDef, idx) => {
+        const fallbackItem = assemblyItems[itemDef.fallbackIdx];
+        const content = formData[itemDef.key] || fallbackItem.content;
+
+        return (
+          <div key={idx} className={`bg-white p-6 md:p-10 rounded-[2.5rem] border border-green-100 shadow-md text-center mb-6 ${idx > 0 ? 'pdf-page-break' : ''}`}>
+            <div className="flex justify-center mb-6">
+              <label className="inline-flex items-center justify-center gap-2 px-6 py-2 bg-green-50 text-green-700 rounded-full text-sm font-black uppercase tracking-widest border border-green-100">
+                {fallbackItem.label}
+              </label>
+            </div>
+            <div className="text-lg md:text-2xl text-slate-900 font-extrabold leading-loose font-sans text-center">
+              {content.split('\n').map((line: string, i: number) => (
+                <React.Fragment key={i}>
+                  {line}
+                  <br />
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+        );
+      })}
 
       {/* Panchang */}
       <SectionCard
@@ -2036,7 +2052,7 @@ function DailyAssemblyContent() {
         <div className="p-10 md:p-14 bg-white/60 backdrop-blur-xl border border-white rounded-[3rem] flex flex-col items-center justify-center text-center shadow-xl shadow-violet-900/5 hover:shadow-2xl hover:shadow-violet-900/10 transition-all duration-500 relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-64 h-64 bg-violet-200/40 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 group-hover:bg-violet-300/40 transition-colors" />
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-fuchsia-200/40 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/2 group-hover:bg-fuchsia-300/40 transition-colors" />
-          
+
           <div className="size-20 rounded-full bg-violet-100 border border-violet-200 flex items-center justify-center mb-8 relative z-10 shadow-inner">
             <Quote className="size-10 text-violet-500" />
           </div>
@@ -2079,64 +2095,49 @@ function DailyAssemblyContent() {
         icon={Calendar}
         gradient="from-blue-100/80 via-indigo-50/60 to-sky-100/80"
       >
-        <div className="space-y-8">
-          <div className="flex justify-center">
-            <div className="inline-flex items-center justify-center gap-3 px-8 py-3 bg-white/80 backdrop-blur-xl border border-white shadow-xl shadow-blue-900/5 rounded-full">
-              <div className="size-8 rounded-full bg-blue-100 flex items-center justify-center">
-                <Calendar className="size-4 text-blue-600" />
-              </div>
-              <span className="text-sm font-black text-blue-700 uppercase tracking-widest">
+        <div className="space-y-6">
+          {formData.yearDay && (
+            <div className="flex justify-center mb-4">
+              <span className="text-sm font-black text-blue-800 bg-blue-50 border border-blue-100 px-6 py-2 rounded-full uppercase tracking-widest">
                 {t.yearDayStr.replace("${yearDay}", formData.yearDay)}
               </span>
             </div>
-          </div>
+          )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Important Events */}
-            <div className="bg-white/60 backdrop-blur-xl border border-white rounded-[2.5rem] p-6 shadow-xl shadow-blue-900/5">
-              <div className="flex items-center justify-center gap-3 mb-6 bg-blue-50/50 py-3 rounded-2xl border border-blue-100/50">
-                <Star className="size-5 text-blue-500" /> 
-                <h4 className="text-sm font-black text-blue-800 uppercase tracking-widest">{t.importantEvents}</h4>
-              </div>
-              <div className="space-y-3">
-                {formData.events.split("\n").map((event: string, i: number) => (
-                  <div key={i} className="flex flex-col justify-center p-5 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
-                    <span className="text-base font-bold text-slate-700 leading-relaxed text-center">{event}</span>
+          {(() => {
+            const eventsList = (formData.events || "").split("\n").filter((s: string) => s.trim() !== "");
+            const birthdaysList = (formData.birthdays || "").split("\n").filter((s: string) => s.trim() !== "");
+            const deathsList = (formData.deaths || "").split("\n").filter((s: string) => s.trim() !== "");
+
+            const allPoints: string[] = [
+              ...eventsList,
+              ...birthdaysList,
+              ...deathsList,
+            ];
+
+            const limitedPoints = allPoints.slice(0, 10);
+
+            if (limitedPoints.length === 0) {
+              return (
+                <div className="text-center text-slate-500 py-4 font-bold">
+                  कोणतीही माहिती उपलब्ध नाही.
+                </div>
+              );
+            }
+
+            return (
+              <div className="divide-y divide-slate-100 max-w-4xl mx-auto">
+                {limitedPoints.map((text, idx) => (
+                  <div key={idx} className="py-3.5 flex items-start gap-4 text-slate-900 font-bold text-base md:text-lg leading-relaxed">
+                    <span className="font-black text-blue-800 bg-blue-50 border border-blue-200 rounded-full size-8 flex items-center justify-center text-sm shrink-0 mt-0.5 shadow-sm">
+                      {idx + 1}
+                    </span>
+                    <span className="flex-1 text-slate-800 font-bold">{text}</span>
                   </div>
                 ))}
               </div>
-            </div>
-
-            {/* Birthdays */}
-            <div className="bg-white/60 backdrop-blur-xl border border-white rounded-[2.5rem] p-6 shadow-xl shadow-emerald-900/5">
-              <div className="flex items-center justify-center gap-3 mb-6 bg-emerald-50/50 py-3 rounded-2xl border border-emerald-100/50">
-                <Gift className="size-5 text-emerald-500" /> 
-                <h4 className="text-sm font-black text-emerald-800 uppercase tracking-widest">{t.birthdays}</h4>
-              </div>
-              <div className="space-y-3">
-                {formData.birthdays.split("\n").map((b: string, i: number) => (
-                  <div key={i} className="flex flex-col justify-center p-5 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
-                    <span className="text-base font-bold text-slate-700 leading-relaxed text-center">{b}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Deaths */}
-            <div className="bg-white/60 backdrop-blur-xl border border-white rounded-[2.5rem] p-6 shadow-xl shadow-rose-900/5">
-              <div className="flex items-center justify-center gap-3 mb-6 bg-rose-50/50 py-3 rounded-2xl border border-rose-100/50">
-                <Star className="size-5 text-rose-500" /> 
-                <h4 className="text-sm font-black text-rose-800 uppercase tracking-widest">{t.deaths}</h4>
-              </div>
-              <div className="space-y-3">
-                {formData.deaths.split("\n").map((d: string, i: number) => (
-                  <div key={i} className="flex flex-col justify-center p-5 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
-                    <span className="text-base font-bold text-slate-700 leading-relaxed text-center">{d}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+            );
+          })()}
         </div>
       </SectionCard>
 
@@ -2159,9 +2160,14 @@ function DailyAssemblyContent() {
           </div>
           <div className="p-8 md:p-12 bg-white/60 backdrop-blur-xl border border-white rounded-[3rem] text-center shadow-xl shadow-orange-900/5 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-b from-orange-50/30 to-transparent pointer-events-none" />
-            <pre className="whitespace-pre-wrap text-lg md:text-2xl font-bold text-slate-800 leading-relaxed font-sans relative z-10">
-              {formData.patrioticSong}
-            </pre>
+            <div className="text-lg md:text-2xl font-bold text-slate-800 leading-relaxed font-sans relative z-10">
+              {formData.patrioticSong.split('\n').map((line: string, i: number) => (
+                <React.Fragment key={i}>
+                  {line}
+                  <br />
+                </React.Fragment>
+              ))}
+            </div>
           </div>
         </div>
       </SectionCard>
@@ -2184,9 +2190,14 @@ function DailyAssemblyContent() {
             </div>
           </div>
           <div className="p-8 md:p-12 bg-white/60 backdrop-blur-xl border border-white rounded-[3rem] text-center shadow-xl shadow-pink-900/5">
-            <p className="text-lg md:text-2xl font-bold text-slate-800 leading-loose whitespace-pre-wrap">
-              {formData.story}
-            </p>
+            <div className="text-lg md:text-2xl font-bold text-slate-800 leading-loose">
+              {formData.story.split('\n').map((line: string, i: number) => (
+                <React.Fragment key={i}>
+                  {line}
+                  <br />
+                </React.Fragment>
+              ))}
+            </div>
           </div>
           <div className="p-8 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/60 rounded-[3rem] flex flex-col items-center text-center gap-4 shadow-lg shadow-amber-900/5 relative overflow-hidden group">
             <div className="absolute inset-0 bg-white/40 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -2252,13 +2263,18 @@ function DailyAssemblyContent() {
             </div>
           </div>
           <div className="p-8 md:p-12 bg-white/60 backdrop-blur-xl border border-white rounded-[3rem] text-center shadow-xl shadow-fuchsia-900/5">
-            <p className="text-lg md:text-2xl font-bold text-slate-800 leading-loose whitespace-pre-wrap">
-              {formData.personality}
-            </p>
+            <div className="text-lg md:text-2xl font-bold text-slate-800 leading-loose">
+              {formData.personality.split('\n').map((line: string, i: number) => (
+                <React.Fragment key={i}>
+                  {line}
+                  <br />
+                </React.Fragment>
+              ))}
+            </div>
           </div>
         </div>
       </SectionCard>
-    </motion.div>
+    </div>
   );
 }
 
@@ -2451,8 +2467,8 @@ function SpecialDayEditor({
             key={s.id}
             onClick={() => setActiveSection(s.id)}
             className={`p-8 rounded-[3rem] text-left transition-all duration-700 flex items-center gap-6 border-2 relative overflow-hidden group ${activeSection === s.id
-                ? "bg-white border-[#D6B97A] shadow-[0_32px_64px_-16px_rgba(214,185,122,0.2)] scale-[1.05]"
-                : "bg-white/40 border-transparent hover:bg-white hover:border-[#E8DFD1]"
+              ? "bg-white border-[#D6B97A] shadow-[0_32px_64px_-16px_rgba(214,185,122,0.2)] scale-[1.05]"
+              : "bg-white/40 border-transparent hover:bg-white hover:border-[#E8DFD1]"
               }`}
           >
             <div
@@ -2580,46 +2596,46 @@ function SpecialDayEditor({
                   </button>
                 </div>
 
-            <div className="relative group flex-1 flex flex-col">
-              <div className="absolute -top-4 left-10 px-5 py-2 bg-[#1A1A1A] text-white rounded-full text-[9px] font-black uppercase tracking-[0.4em] z-10 shadow-xl">
-                {lang === "en" ? "Anglicized Manuscript" : "Vedic Manuscript"}
-              </div>
-              <textarea
-                className={`w-full flex-1 p-8 md:p-12 bg-white/40 border-2 border-transparent focus:border-[#D6B97A]/30 rounded-[2.5rem] md:rounded-[3.5rem] outline-none focus:bg-white transition-all text-xl md:text-2xl text-[#1A1A1A] font-medium leading-relaxed resize-none shadow-inner ${isGenerating ? "animate-pulse opacity-50" : ""}`}
-                placeholder={
-                  isGenerating
-                    ? "Transcribing universal knowledge..."
-                    : `Document your daily ${current.label.toLowerCase()} in ${lang === "en" ? "English" : "Marathi"}...`
-                }
-                value={safeData[activeSection]?.[lang] || ""}
-                onChange={(e) => updateField(activeSection, e.target.value)}
-                disabled={isGenerating}
-              ></textarea>
-              {isGenerating && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="flex flex-col items-center gap-6">
-                    <div className="size-20 rounded-full border-4 border-[#D6B97A]/20 border-t-[#D6B97A] animate-spin" />
-                    <span className="text-[11px] font-black uppercase tracking-[0.4em] text-[#D6B97A] animate-pulse">
-                      Synchronizing Intelligence
-                    </span>
+                <div className="relative group flex-1 flex flex-col">
+                  <div className="absolute -top-4 left-10 px-5 py-2 bg-[#1A1A1A] text-white rounded-full text-[9px] font-black uppercase tracking-[0.4em] z-10 shadow-xl">
+                    {lang === "en" ? "Anglicized Manuscript" : "Vedic Manuscript"}
                   </div>
+                  <textarea
+                    className={`w-full flex-1 p-8 md:p-12 bg-white/40 border-2 border-transparent focus:border-[#D6B97A]/30 rounded-[2.5rem] md:rounded-[3.5rem] outline-none focus:bg-white transition-all text-xl md:text-2xl text-[#1A1A1A] font-medium leading-relaxed resize-none shadow-inner ${isGenerating ? "animate-pulse opacity-50" : ""}`}
+                    placeholder={
+                      isGenerating
+                        ? "Transcribing universal knowledge..."
+                        : `Document your daily ${current.label.toLowerCase()} in ${lang === "en" ? "English" : "Marathi"}...`
+                    }
+                    value={safeData[activeSection]?.[lang] || ""}
+                    onChange={(e) => updateField(activeSection, e.target.value)}
+                    disabled={isGenerating}
+                  ></textarea>
+                  {isGenerating && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="flex flex-col items-center gap-6">
+                        <div className="size-20 rounded-full border-4 border-[#D6B97A]/20 border-t-[#D6B97A] animate-spin" />
+                        <span className="text-[11px] font-black uppercase tracking-[0.4em] text-[#D6B97A] animate-pulse">
+                          Synchronizing Intelligence
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            <div className="flex justify-end">
-              <button
-                onClick={autoFillIntelligence}
-                className="group flex items-center gap-4 px-10 py-5 bg-[#F8F5EF] text-[#D6B97A] text-[10px] font-black uppercase tracking-[0.3em] rounded-[2rem] border border-[#D6B97A]/30 hover:bg-[#D6B97A] hover:text-white transition-all duration-700 shadow-lg"
-              >
-                <div className="size-8 rounded-xl bg-white group-hover:bg-[#1A1A1A] flex items-center justify-center shadow-sm transition-colors">
-                  <Sparkles className="size-4" />
+                <div className="flex justify-end">
+                  <button
+                    onClick={autoFillIntelligence}
+                    className="group flex items-center gap-4 px-10 py-5 bg-[#F8F5EF] text-[#D6B97A] text-[10px] font-black uppercase tracking-[0.3em] rounded-[2rem] border border-[#D6B97A]/30 hover:bg-[#D6B97A] hover:text-white transition-all duration-700 shadow-lg"
+                  >
+                    <div className="size-8 rounded-xl bg-white group-hover:bg-[#1A1A1A] flex items-center justify-center shadow-sm transition-colors">
+                      <Sparkles className="size-4" />
+                    </div>
+                    Global Intelligence Sync
+                  </button>
                 </div>
-                Global Intelligence Sync
-              </button>
-            </div>
-          </>
-        )}
+              </>
+            )}
           </div>
         </motion.main>
       </AnimatePresence>
@@ -3108,14 +3124,14 @@ const getDatesForMonth = (monthEn: string, year: number = 2026) => {
   const monthIndex = monthMap[monthEn];
   if (monthIndex === undefined) return [];
   const actualYear = (monthEn === "January" || monthEn === "February" || monthEn === "March" || monthEn === "April" || monthEn === "May") ? year + 1 : year;
-  
+
   const startDay = (monthEn === "June") ? 15 : 1;
   const tempDate = new Date(actualYear, monthIndex + 1, 0);
   const endDay = tempDate.getDate();
-  
+
   const dates: { dateNum: number; dayMr: string; isSunday: boolean }[] = [];
   const daysMr = ["रवि", "सोम", "मंगळ", "बुध", "गुरु", "शुक्र", "शनि"];
-  
+
   for (let d = startDay; d <= endDay; d++) {
     const dateObj = new Date(actualYear, monthIndex, d);
     const dayName = daysMr[dateObj.getDay()];
@@ -3129,16 +3145,16 @@ const getDatesForMonth = (monthEn: string, year: number = 2026) => {
 };
 
 const getDefaultDailyPlan = (
-  classVal: string, 
-  mediumVal: string, 
-  subject: string, 
-  monthEn: string, 
+  classVal: string,
+  mediumVal: string,
+  subject: string,
+  monthEn: string,
   dateNum: number,
   dayMr: string
 ) => {
   const isClass4 = classVal === "4th";
   const isMarathiOrSemi = mediumVal === "Marathi" || mediumVal === "Semi English";
-  
+
   if (isClass4 && isMarathiOrSemi && monthEn === "June") {
     let lookupSubject = subject;
     if (subject.includes("Math") || subject.includes("गणित") || subject.includes("Mathematics")) {
@@ -3149,18 +3165,18 @@ const getDefaultDailyPlan = (
       return subjectPlan[dateNum];
     }
   }
-  
+
   if (dayMr === "रवि" || dayMr === "रवी") {
     return { topic: "-", experience: "-", tools: "-", materials: "-", outcome: "-" };
   }
-  
+
   return { topic: "", experience: "", tools: "", materials: "", outcome: "" };
 };
 
 const renderMonthlyCoverPage = (
-  m: { en: string; mr: string }, 
-  actualYear: number, 
-  selectedClass: string | null, 
+  m: { en: string; mr: string },
+  actualYear: number,
+  selectedClass: string | null,
   classNames: Record<string, { mr: string; en: string }>,
   safeData: { schoolName: string; academicYear: string; classTeacher: string }
 ) => {
@@ -3180,7 +3196,7 @@ const renderMonthlyCoverPage = (
         <h3 className="text-3xl font-bold text-slate-800 font-devanagari">
           {m.mr} – {actualYear}
         </h3>
-        
+
         <div className="w-full max-w-lg mx-auto pt-16 space-y-6 text-left">
           <div className="flex items-center gap-3 text-lg font-bold">
             <span className="shrink-0 font-devanagari">• वर्गशिक्षक नाव :</span>
@@ -3196,7 +3212,7 @@ const renderMonthlyCoverPage = (
           </div>
         </div>
       </div>
-      
+
       <div className="mt-12 pt-3 border-t-2 border-amber-900 flex justify-between items-center text-[10px] text-slate-650 font-bold font-devanagari">
         <span>ukguruji app हे play store वरून डाऊनलोड करा.</span>
         <span>Page 1</span>
@@ -3261,7 +3277,7 @@ function AnnualMonthlyPlanningEditor({
     const isHindi = subj.includes("हिंदी") || subj.includes("Hindi");
     const isSci = subj.includes("विज्ञान") || subj.includes("Science") || subj.includes("परिसर अभ्यास १") || subj.includes("Environmental Studies 1");
     const isSoc = subj.includes("समाजशास्त्र") || subj.includes("Social Sciences") || subj.includes("परिसर अभ्यास २") || subj.includes("Environmental Studies 2") || subj.includes("इतिहास") || subj.includes("भूगोल");
-    
+
     if (isMr) {
       if (cls === "1st" || cls === "2nd") return 16;
       if (cls === "3rd" || cls === "4th") return 12;
@@ -3972,7 +3988,7 @@ function AnnualMonthlyPlanningEditor({
                 return (
                   <div key={subject} className="space-y-3">
                     <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider border-b-2 border-slate-300 pb-1">
-                      {isClass1Mr 
+                      {isClass1Mr
                         ? `वार्षिक नियोजन सन - २०२६/२०२७ (इयत्ता – ${classNames[selectedClass]?.mr} | विषय – ${subject})`
                         : `विषय (Subject) — ${subject}`
                       }
@@ -4009,7 +4025,7 @@ function AnnualMonthlyPlanningEditor({
                           const workingDays = isClass1Mr ? class1WorkingDays[m.en] : (monthData.workingDays || (m.en === "June" ? 13 : m.en === "September" ? 14 : m.en === "November" ? 17 : m.en === "April" ? 21 : m.en === "February" ? 22 : (m.en === "December" || m.en === "March") ? 24 : 25));
                           const defaultPeriods = subject.includes("मराठी") ? 60 : (subject.includes("Math") || subject.includes("गणित") || subject.includes("Mathematics")) ? 50 : 30;
                           const periods = isClass1Mr ? (getPeriodsForMonth(subject, selectedClass, m.en) || 30) : (monthData.periods || defaultPeriods);
-                          
+
                           const extraRow = (m.en === "November" && isClass1Mr) ? (
                             <tr key="diwali-holiday">
                               <td colSpan={7} className="bg-slate-50 text-center font-bold text-slate-800 text-xs py-3">
@@ -4155,17 +4171,17 @@ function AnnualMonthlyPlanningEditor({
                                       const valMaterials = planningData[mKey] !== undefined ? planningData[mKey] : plan.materials;
                                       const valOutcome = planningData[oKey] !== undefined ? planningData[oKey] : plan.outcome;
 
-                                      const dateStr = `${date.dateNum < 10 ? "०" : ""}${date.dateNum}/${m.en === "June" ? "०६" : 
-                                                       m.en === "July" ? "०७" : 
-                                                       m.en === "August" ? "०८" : 
-                                                       m.en === "September" ? "०९" : 
-                                                       m.en === "October" ? "१०" : 
-                                                       m.en === "November" ? "११" : 
-                                                       m.en === "December" ? "१२" : 
-                                                       m.en === "January" ? "०१" : 
-                                                       m.en === "February" ? "०२" : 
-                                                       m.en === "March" ? "०३" : 
-                                                       m.en === "April" ? "०४" : "०५"}`;
+                                      const dateStr = `${date.dateNum < 10 ? "०" : ""}${date.dateNum}/${m.en === "June" ? "०६" :
+                                        m.en === "July" ? "०७" :
+                                          m.en === "August" ? "०८" :
+                                            m.en === "September" ? "०९" :
+                                              m.en === "October" ? "१०" :
+                                                m.en === "November" ? "११" :
+                                                  m.en === "December" ? "१२" :
+                                                    m.en === "January" ? "०१" :
+                                                      m.en === "February" ? "०२" :
+                                                        m.en === "March" ? "०३" :
+                                                          m.en === "April" ? "०४" : "०५"}`;
 
                                       return (
                                         <tr key={date.dateNum} className={date.isSunday ? "bg-red-50/20" : ""}>
@@ -4430,13 +4446,12 @@ function AnnualMonthlyPlanningEditor({
                       setStep("planType");
                     }
                   }}
-                  className={`size-10 rounded-full flex items-center justify-center text-xs font-black transition-all ${
-                    isActive 
-                      ? "bg-[#8b5cf6] text-white ring-4 ring-[#8b5cf6]/20 scale-110 shadow-lg" 
-                      : isCompleted 
-                        ? "bg-indigo-900 text-white hover:bg-indigo-800" 
+                  className={`size-10 rounded-full flex items-center justify-center text-xs font-black transition-all ${isActive
+                      ? "bg-[#8b5cf6] text-white ring-4 ring-[#8b5cf6]/20 scale-110 shadow-lg"
+                      : isCompleted
+                        ? "bg-indigo-900 text-white hover:bg-indigo-800"
                         : "bg-slate-100 text-slate-400 cursor-not-allowed"
-                  }`}
+                    }`}
                   title={s.en}
                 >
                   {isCompleted ? <Check className="size-4" /> : idx + 1}
@@ -4476,11 +4491,10 @@ function AnnualMonthlyPlanningEditor({
                       setSelectedClass(cls);
                       setStep("medium");
                     }}
-                    className={`group p-8 rounded-[2.5rem] border text-center transition-all duration-500 shadow-md hover:shadow-[0_20px_45px_rgba(139,92,246,0.3)] cursor-pointer relative overflow-hidden flex flex-col items-center gap-4 ${
-                      isSelected 
-                        ? "bg-gradient-to-br from-[#7c3aed] to-[#5b21b6] text-white border-2 border-white ring-4 ring-indigo-400 scale-[1.03] shadow-[0_25px_50px_rgba(139,92,246,0.45)]" 
+                    className={`group p-8 rounded-[2.5rem] border text-center transition-all duration-500 shadow-md hover:shadow-[0_20px_45px_rgba(139,92,246,0.3)] cursor-pointer relative overflow-hidden flex flex-col items-center gap-4 ${isSelected
+                        ? "bg-gradient-to-br from-[#7c3aed] to-[#5b21b6] text-white border-2 border-white ring-4 ring-indigo-400 scale-[1.03] shadow-[0_25px_50px_rgba(139,92,246,0.45)]"
                         : "bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white border-[#7c3aed]/30 hover:scale-[1.02]"
-                    }`}
+                      }`}
                   >
                     <div className="absolute -bottom-6 -right-6 size-24 text-white/5 pointer-events-none group-hover:scale-110 transition-transform duration-700">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-full h-full">
@@ -4532,11 +4546,10 @@ function AnnualMonthlyPlanningEditor({
                       setSelectedMedium(m.id);
                       setStep("planType");
                     }}
-                    className={`group p-10 rounded-[3rem] border text-left transition-all duration-500 shadow-md hover:shadow-[0_20px_45px_rgba(139,92,246,0.3)] cursor-pointer relative overflow-hidden flex items-start gap-6 ${
-                      isSelected 
-                        ? "bg-gradient-to-br from-[#7c3aed] to-[#5b21b6] text-white border-2 border-white ring-4 ring-indigo-400 scale-[1.02] shadow-[0_25px_50px_rgba(139,92,246,0.45)]" 
+                    className={`group p-10 rounded-[3rem] border text-left transition-all duration-500 shadow-md hover:shadow-[0_20px_45px_rgba(139,92,246,0.3)] cursor-pointer relative overflow-hidden flex items-start gap-6 ${isSelected
+                        ? "bg-gradient-to-br from-[#7c3aed] to-[#5b21b6] text-white border-2 border-white ring-4 ring-indigo-400 scale-[1.02] shadow-[0_25px_50px_rgba(139,92,246,0.45)]"
                         : "bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white border-[#7c3aed]/30 hover:scale-[1.01]"
-                    }`}
+                      }`}
                   >
                     <div className="size-14 rounded-2xl flex items-center justify-center border border-white/20 bg-white/10 backdrop-blur-sm group-hover:scale-110 transition-transform text-white font-black text-base uppercase shrink-0">
                       {m.title[0]}
@@ -4697,17 +4710,17 @@ function AnnualMonthlyPlanningEditor({
 
             {/* Hidden elements for direct PDF download without viewing */}
             <div className="hidden absolute opacity-0 pointer-events-none w-0 h-0 overflow-hidden" style={{ zIndex: -9999 }}>
-               {selectedClass && selectedMedium && (
-                 <>
-                   {renderPlanningPDFContent("annual")}
-                   {renderPlanningPDFContent("monthly")}
-                   {syllabus?.months.map((m) => (
-                     <React.Fragment key={m.en}>
-                       {renderPlanningPDFContent(m.en)}
-                     </React.Fragment>
-                   ))}
-                 </>
-               )}
+              {selectedClass && selectedMedium && (
+                <>
+                  {renderPlanningPDFContent("annual")}
+                  {renderPlanningPDFContent("monthly")}
+                  {syllabus?.months.map((m) => (
+                    <React.Fragment key={m.en}>
+                      {renderPlanningPDFContent(m.en)}
+                    </React.Fragment>
+                  ))}
+                </>
+              )}
             </div>
 
             <div className="flex justify-center gap-6 pt-4">
@@ -4863,13 +4876,13 @@ function AnnualMonthlyPlanningEditor({
       )}
 
       {/* Off-screen/hidden container for direct PDF downloads */}
-      <div 
-        style={{ 
-          position: "absolute", 
-          left: "-9999px", 
-          top: "-9999px", 
-          width: "0px", 
-          height: "0px", 
+      <div
+        style={{
+          position: "absolute",
+          left: "-9999px",
+          top: "-9999px",
+          width: "0px",
+          height: "0px",
           overflow: "hidden",
           pointerEvents: "none"
         }}
@@ -5192,7 +5205,7 @@ function TeachingDiaryManager({
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
                       <a
                         href={file.url}
