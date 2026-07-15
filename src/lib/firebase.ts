@@ -5,15 +5,15 @@ import { Firestore, getFirestore } from "firebase/firestore";
 import { getFunctions, httpsCallable, connectFunctionsEmulator } from "firebase/functions";
 import { getStorage } from "firebase/storage";
 
-// Your web app's Firebase configuration
+// Your web app's Firebase configuration with fallback values for production resilience
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyCfVSQggxj-kZ2yJAW2xB0BcupzfCJsowU",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "education-89c54.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "education-89c54",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "education-89c54.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "292663641725",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:292663641725:web:076b161074bb891513d314",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-S4WJTJZ4XC",
 };
 
 // Initialize Firebase safely to avoid duplicate app errors in HMR/SSR
