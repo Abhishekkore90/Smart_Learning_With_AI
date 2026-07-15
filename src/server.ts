@@ -24,7 +24,13 @@ async function getServerEntry(): Promise<ServerEntry> {
   return serverEntryPromise;
 }
 
-function brandedErrorResponse(): Response {
+function brandedErrorResponse(extraInfo?: string): Response {
+  if (extraInfo) {
+    return new Response(`<!doctype html><html><body><h1>500 Internal Server Error</h1><pre>${extraInfo}</pre></body></html>`, {
+      status: 500,
+      headers: { "content-type": "text/html; charset=utf-8" },
+    });
+  }
   return new Response(renderErrorPage(), {
     status: 500,
     headers: { "content-type": "text/html; charset=utf-8" },
@@ -65,6 +71,12 @@ async function normalizeCatastrophicSsrResponse(
   response: Response,
 ): Promise<Response> {
   if (response.status < 500) return response;
+
+  const capturedErr = consumeLastCapturedError();
+  if (capturedErr) {
+    console.error("[SSR Error Captured]:", capturedErr);
+  }
+
   const contentType = response.headers.get("content-type") ?? "";
   if (!contentType.includes("application/json")) return response;
 
@@ -73,10 +85,9 @@ async function normalizeCatastrophicSsrResponse(
     return response;
   }
 
-  console.error(
-    consumeLastCapturedError() ?? new Error(`h3 swallowed SSR error: ${body}`),
-  );
-  return brandedErrorResponse();
+  const errMessage = capturedErr ? (capturedErr instanceof Error ? capturedErr.stack : String(capturedErr)) : body;
+  console.error(capturedErr ?? new Error(`h3 swallowed SSR error: ${body}`));
+  return brandedErrorResponse(errMessage);
 }
 
 export default {
@@ -85,9 +96,9 @@ export default {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);
-    } catch (error) {
-      console.error(error);
-      return brandedErrorResponse();
+    } catch (error: any) {
+      console.error("[SSR Fetch Exception]:", error);
+      return brandedErrorResponse(error?.stack || String(error));
     }
   },
 };

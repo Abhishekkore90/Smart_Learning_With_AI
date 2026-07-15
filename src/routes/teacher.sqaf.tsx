@@ -95,28 +95,58 @@ const PhotoUploader = ({ standardId, lang, evidenceUrl }: { standardId: number; 
     localStorage.setItem(`sqaf_evidence_checked_${standardId}_${idx}`, checked ? "true" : "false");
   };
 
-  const handleOptionFileChange = (e: React.ChangeEvent<HTMLInputElement>, idx: number) => {
+  const handleOptionFileChange = async (e: React.ChangeEvent<HTMLInputElement>, idx: number) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = reader.result as string;
-        
-        setFileNames(prev => ({ ...prev, [idx]: file.name }));
-        setFilePreviews(prev => ({ ...prev, [idx]: base64 }));
-        setFileTypes(prev => ({ ...prev, [idx]: file.type }));
+    if (!file) return;
 
-        try {
+    setFileNames(prev => ({ ...prev, [idx]: file.name }));
+    setFileTypes(prev => ({ ...prev, [idx]: file.type }));
+
+    try {
+      const storageApiKey = import.meta.env.VITE_BUNNY_STORAGE_API_KEY;
+      const storageZone = import.meta.env.VITE_BUNNY_STORAGE_ZONE || "sgkbrainova";
+      const cdnHostname = import.meta.env.VITE_BUNNY_STORAGE_CDN_HOSTNAME || "vz-7a00d099-4a8.b-cdn.net";
+
+      if (storageApiKey) {
+        const ext = file.name.substring(file.name.lastIndexOf("."));
+        const cleanName = `sqaf_${Date.now()}_${Math.random().toString(36).substring(2, 7)}${ext}`;
+        const res = await fetch(`/api/bunny-storage/${storageZone}/documents/${cleanName}`, {
+          method: "PUT",
+          headers: {
+            "AccessKey": storageApiKey,
+            "Content-Type": file.type || "application/octet-stream"
+          },
+          body: file
+        });
+
+        if (res.ok) {
+          const cdnUrl = `https://${cdnHostname}/documents/${cleanName}`;
+          setFilePreviews(prev => ({ ...prev, [idx]: cdnUrl }));
           localStorage.setItem(`sqaf_evidence_file_name_${standardId}_${idx}`, file.name);
-          localStorage.setItem(`sqaf_evidence_file_preview_${standardId}_${idx}`, base64);
+          localStorage.setItem(`sqaf_evidence_file_preview_${standardId}_${idx}`, cdnUrl);
           localStorage.setItem(`sqaf_evidence_file_type_${standardId}_${idx}`, file.type);
-        } catch (err) {
-          console.warn("Could not save file to localStorage due to quota.");
-          toast.error(lang === "mr" ? "स्टोरेज फुल आहे, फाईल सेव्ह झाली नाही." : "Storage full, file could not be saved locally.");
+          toast.success(lang === "mr" ? "फाईल सशास्वीरित्या Bunny Storage वर सेव्ह झाली!" : "File uploaded successfully to Bunny Storage!");
+          return;
         }
-      };
-      reader.readAsDataURL(file);
+      }
+    } catch (err) {
+      console.warn("Bunny Storage upload fallback to local preview:", err);
     }
+
+    // Fallback if Bunny Storage is unavailable
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result as string;
+      setFilePreviews(prev => ({ ...prev, [idx]: base64 }));
+      try {
+        localStorage.setItem(`sqaf_evidence_file_name_${standardId}_${idx}`, file.name);
+        localStorage.setItem(`sqaf_evidence_file_preview_${standardId}_${idx}`, base64);
+        localStorage.setItem(`sqaf_evidence_file_type_${standardId}_${idx}`, file.type);
+      } catch (err) {
+        console.warn("Storage full locally.");
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleOptionFileClear = (idx: number) => {
@@ -141,25 +171,54 @@ const PhotoUploader = ({ standardId, lang, evidenceUrl }: { standardId: number; 
     localStorage.removeItem(`sqaf_evidence_file_type_${standardId}_${idx}`);
   };
 
-  const handleFallbackFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFallbackFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = reader.result as string;
-        setFallbackFilePreview(base64);
-        setFallbackFileName(file.name);
-        setFallbackFileType(file.type);
-        try {
+    if (!file) return;
+
+    setFallbackFileName(file.name);
+    setFallbackFileType(file.type);
+
+    try {
+      const storageApiKey = import.meta.env.VITE_BUNNY_STORAGE_API_KEY;
+      const storageZone = import.meta.env.VITE_BUNNY_STORAGE_ZONE || "sgkbrainova";
+      const cdnHostname = import.meta.env.VITE_BUNNY_STORAGE_CDN_HOSTNAME || "vz-7a00d099-4a8.b-cdn.net";
+
+      if (storageApiKey) {
+        const ext = file.name.substring(file.name.lastIndexOf("."));
+        const cleanName = `sqaf_${Date.now()}_${Math.random().toString(36).substring(2, 7)}${ext}`;
+        const res = await fetch(`/api/bunny-storage/${storageZone}/documents/${cleanName}`, {
+          method: "PUT",
+          headers: {
+            "AccessKey": storageApiKey,
+            "Content-Type": file.type || "application/octet-stream"
+          },
+          body: file
+        });
+
+        if (res.ok) {
+          const cdnUrl = `https://${cdnHostname}/documents/${cleanName}`;
+          setFallbackFilePreview(cdnUrl);
           localStorage.setItem(`sqaf_evidence_${standardId}`, file.name);
-          localStorage.setItem(`sqaf_evidence_preview_${standardId}`, base64);
+          localStorage.setItem(`sqaf_evidence_preview_${standardId}`, cdnUrl);
           localStorage.setItem(`sqaf_evidence_type_${standardId}`, file.type);
-        } catch (err) {
-          console.warn("Could not save image preview to localStorage due to quota.");
+          return;
         }
-      };
-      reader.readAsDataURL(file);
+      }
+    } catch (err) {
+      console.warn("Bunny upload error:", err);
     }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result as string;
+      setFallbackFilePreview(base64);
+      try {
+        localStorage.setItem(`sqaf_evidence_${standardId}`, file.name);
+        localStorage.setItem(`sqaf_evidence_preview_${standardId}`, base64);
+        localStorage.setItem(`sqaf_evidence_type_${standardId}`, file.type);
+      } catch (err) {}
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleFallbackClear = () => {

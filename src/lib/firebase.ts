@@ -17,14 +17,27 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase safely to avoid duplicate app errors in HMR/SSR
-export const app: FirebaseApp = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+const isConfigured = !!firebaseConfig.apiKey;
+export const app = isConfigured ? (!getApps().length ? initializeApp(firebaseConfig) : getApp()) : null as any;
 
-export const auth: Auth = getAuth(app);
-export const db: Firestore = getFirestore(app);
-export const storage = getStorage(app);
+export let auth = null as unknown as Auth;
+export let db = null as unknown as Firestore;
+export let storage: any = null;
+export let functions: any = null;
 
-// Use explicit region us-central1
-export const functions = getFunctions(app, "us-central1");
+if (app) {
+  try {
+    auth = getAuth(app);
+    db = getFirestore(app);
+    storage = getStorage(app);
+    // Use explicit region us-central1
+    functions = getFunctions(app, "us-central1");
+  } catch (error) {
+    console.warn("Firebase services failed to initialize:", error);
+  }
+} else {
+  console.warn("Firebase is not configured. Missing API key.");
+}
 
 // Connect to emulator in development if specified
 if (import.meta.env.DEV && import.meta.env.VITE_USE_FIREBASE_EMULATOR === "true") {
