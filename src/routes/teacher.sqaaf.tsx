@@ -252,30 +252,61 @@ const PhotoUploader = ({
     const newPreviews = { ...filePreviews };
     const newTypes = { ...fileTypes };
 
-    const filePromises = Array.from(files).map((file) => {
-      return new Promise<void>((resolve) => {
-        const idx = nextIdx++;
+    const filePromises = Array.from(files).map(async (file) => {
+      const idx = nextIdx++;
+      newNames[idx] = file.name;
+      newTypes[idx] = file.type;
+
+      try {
+        const storageApiKey = import.meta.env.VITE_BUNNY_STORAGE_API_KEY;
+        const storageZone = import.meta.env.VITE_BUNNY_STORAGE_ZONE || "sgkbrainova";
+        const cdnHostname = import.meta.env.VITE_BUNNY_STORAGE_CDN_HOSTNAME || "vz-7a00d099-4a8.b-cdn.net";
+
+        if (storageApiKey) {
+          const ext = file.name.substring(file.name.lastIndexOf("."));
+          const cleanName = `sqaaf_${Date.now()}_${Math.random().toString(36).substring(2, 7)}${ext}`;
+          const res = await fetch(`/api/bunny-storage/${storageZone}/documents/${cleanName}`, {
+            method: "PUT",
+            headers: {
+              "AccessKey": storageApiKey,
+              "Content-Type": file.type || "application/octet-stream"
+            },
+            body: file
+          });
+
+          if (res.ok) {
+            const cdnUrl = `https://${cdnHostname}/documents/${cleanName}`;
+            newPreviews[idx] = cdnUrl;
+            try {
+              localStorage.setItem(`sqaaf_file_name_${standardId}_${selectedOptionIdx}_${idx}`, file.name);
+              localStorage.setItem(`sqaaf_file_preview_${standardId}_${selectedOptionIdx}_${idx}`, cdnUrl);
+              localStorage.setItem(`sqaaf_file_type_${standardId}_${selectedOptionIdx}_${idx}`, file.type);
+            } catch (e) {}
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn("Bunny Storage upload error fallback:", err);
+      }
+
+      // Fallback to local base64
+      await new Promise<void>((resolve) => {
         const reader = new FileReader();
         reader.onloadend = () => {
           const base64 = reader.result as string;
-          newNames[idx] = file.name;
           newPreviews[idx] = base64;
-          newTypes[idx] = file.type;
-
           try {
             localStorage.setItem(`sqaaf_file_name_${standardId}_${selectedOptionIdx}_${idx}`, file.name);
             localStorage.setItem(`sqaaf_file_preview_${standardId}_${selectedOptionIdx}_${idx}`, base64);
             localStorage.setItem(`sqaaf_file_type_${standardId}_${selectedOptionIdx}_${idx}`, file.type);
-          } catch (err) {
-            console.warn("Could not save file to localStorage due to quota.");
-          }
+          } catch (err) {}
           resolve();
         };
         reader.readAsDataURL(file);
       });
     });
 
-    toast.info(lang === "mr" ? "फाईल्स अपलोड होत आहेत..." : "Uploading files...");
+    toast.info(lang === "mr" ? "फाईल्स Bunny Storage वर अपलोड होत आहेत..." : "Uploading files to Bunny Storage...");
     await Promise.all(filePromises);
 
     setFileNames(newNames);
