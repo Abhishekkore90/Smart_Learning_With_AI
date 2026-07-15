@@ -16,15 +16,15 @@ export const Route = createFileRoute("/teacher/sqaaf")({
 
 // Photo Uploader Component for Evidences with option list support and PDF support
 // Photo Uploader Component for Evidences with option list support and PDF support
-const PhotoUploader = ({ 
-  standardId, 
-  lang, 
-  evidenceUrl, 
-  selectedOptionIdx 
-}: { 
-  standardId: number; 
-  lang: "mr" | "en"; 
-  evidenceUrl?: string; 
+const PhotoUploader = ({
+  standardId,
+  lang,
+  evidenceUrl,
+  selectedOptionIdx
+}: {
+  standardId: number;
+  lang: "mr" | "en";
+  evidenceUrl?: string;
   selectedOptionIdx?: number;
 }) => {
   const { profile } = useAuth();
@@ -47,13 +47,13 @@ const PhotoUploader = ({
     if (saved) {
       try {
         initialOpts = JSON.parse(saved);
-      } catch (e) {}
+      } catch (e) { }
     } else if (selectedOptionIdx === 0) {
       const savedOld = localStorage.getItem(`sqaaf_evidence_options_config_${standardId}`);
       if (savedOld) {
         try {
           initialOpts = JSON.parse(savedOld);
-        } catch (e) {}
+        } catch (e) { }
       }
     }
     if (initialOpts.length > 0) {
@@ -71,7 +71,7 @@ const PhotoUploader = ({
           opts = data.options;
         }
       }
-      
+
       if (opts.length === 0 && initialOpts.length === 0) {
         opts = [lang === "mr" ? "सर्वसाधारण पुरावे / General Evidences" : "General Evidences"];
       } else if (opts.length === 0) {
@@ -80,7 +80,7 @@ const PhotoUploader = ({
 
       setConfiguredOptions(opts);
       localStorage.setItem(`sqaaf_evidence_options_config_${standardId}_${selectedOptionIdx}`, JSON.stringify(opts));
-      
+
       loadUserResponses(opts);
     }).catch((err) => {
       console.error("Error loading config from Firestore:", err);
@@ -211,8 +211,8 @@ const PhotoUploader = ({
           if (cleanPreviews[idx].length > 150 * 1024) {
             cleanPreviews[idx] = ""; // strip large preview to save space
             toast.warning(
-              lang === "mr" 
-                ? `मोठ्या आकाराची फाईल (${names[idx]}) डेटाबेसमध्ये जतन केली नाही, परंतु स्थानिक पातळीवर उपलब्ध आहे.` 
+              lang === "mr"
+                ? `मोठ्या आकाराची फाईल (${names[idx]}) डेटाबेसमध्ये जतन केली नाही, परंतु स्थानिक पातळीवर उपलब्ध आहे.`
                 : `Large file (${names[idx]}) preview stripped from database sync, but remains saved locally.`
             );
           }
@@ -261,7 +261,7 @@ const PhotoUploader = ({
           newNames[idx] = file.name;
           newPreviews[idx] = base64;
           newTypes[idx] = file.type;
-          
+
           try {
             localStorage.setItem(`sqaaf_file_name_${standardId}_${selectedOptionIdx}_${idx}`, file.name);
             localStorage.setItem(`sqaaf_file_preview_${standardId}_${selectedOptionIdx}_${idx}`, base64);
@@ -338,8 +338,8 @@ const PhotoUploader = ({
       <div className="border-2 border-dashed border-slate-200 rounded-[1.5rem] p-8 text-center bg-slate-50/50">
         <Upload className="size-10 text-slate-400 mx-auto mb-3" />
         <p className="text-slate-500 font-extrabold text-sm leading-relaxed">
-          {lang === "mr" 
-            ? "कृपया पुरावे अपलोड करण्यासाठी वरीलपैकी एक पर्याय निवडा." 
+          {lang === "mr"
+            ? "कृपया पुरावे अपलोड करण्यासाठी वरीलपैकी एक पर्याय निवडा."
             : "Please select an option above to upload evidences."}
         </p>
       </div>
@@ -351,7 +351,7 @@ const PhotoUploader = ({
       <h3 className="text-lg font-black text-slate-800 tracking-tight">
         {lang === "mr" ? "पुरावे पर्याय यादी" : "Evidence Options Checklist"}
       </h3>
-      
+
       <div className="space-y-4">
         {configuredOptions.map((optionText, idx) => {
           const isChecked = checkedStates[idx] || false;
@@ -363,14 +363,13 @@ const PhotoUploader = ({
           return (
             <div
               key={idx}
-              className={`border rounded-2xl p-5 transition-all duration-300 ${
-                isChecked
-                  ? "bg-pink-50/20 border-pink-400 shadow-md ring-4 ring-pink-500/5"
-                  : "bg-white border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:border-slate-200"
-              }`}
+              className={`border rounded-2xl p-5 transition-all duration-300 ${isChecked
+                ? "bg-pink-50/20 border-pink-400 shadow-md ring-4 ring-pink-500/5"
+                : "bg-white border-slate-100 shadow-[0_4px_12px_rgba(0,0,0,0.02)] hover:border-slate-200"
+                }`}
             >
               {/* Header Row with Checkbox and Label */}
-              <label 
+              <label
                 className="flex items-start gap-4 cursor-pointer select-none text-left w-full group"
                 style={{ display: "flex", alignItems: "flex-start", gap: "16px", textAlign: "left" }}
               >
@@ -381,11 +380,10 @@ const PhotoUploader = ({
                     onChange={(e) => handleCheckboxChange(idx, e.target.checked)}
                     className="sr-only"
                   />
-                  <div className={`size-5 rounded-md border-2 flex items-center justify-center transition-all duration-200 ${
-                    isChecked 
-                      ? "bg-pink-500 border-pink-500 text-white shadow-sm scale-105" 
-                      : "border-slate-300 bg-white hover:border-slate-400"
-                  }`}>
+                  <div className={`size-5 rounded-md border-2 flex items-center justify-center transition-all duration-200 ${isChecked
+                    ? "bg-pink-500 border-pink-500 text-white shadow-sm scale-105"
+                    : "border-slate-300 bg-white hover:border-slate-400"
+                    }`}>
                     {isChecked && (
                       <svg className="size-3.5 fill-none stroke-current stroke-[3.5]" viewBox="0 0 24 24">
                         <polyline points="20 6 9 17 4 12" />
@@ -394,9 +392,8 @@ const PhotoUploader = ({
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm leading-relaxed transition-colors ${
-                    isChecked ? "text-slate-900 font-bold" : "text-slate-600 group-hover:text-slate-900"
-                  }`}>
+                  <p className={`text-sm leading-relaxed transition-colors ${isChecked ? "text-slate-900 font-bold" : "text-slate-600 group-hover:text-slate-900"
+                    }`}>
                     {optionText}
                   </p>
                 </div>
@@ -412,7 +409,7 @@ const PhotoUploader = ({
         <h4 className="text-md font-bold text-slate-800 mb-4 text-left">
           {lang === "mr" ? "पुरावे अपलोड करा (एकापेक्षा जास्त फाईल्स निवडू शकता)" : "Upload Evidences (Multiple files allowed)"}
         </h4>
-        
+
         <input
           type="file"
           id={`multi-file-input-${standardId}`}
@@ -494,7 +491,7 @@ const PhotoUploader = ({
           <p className="text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">
             {lang === "mr" ? "अतिरिक्त संदर्भ लिंक:" : "Additional Reference Link:"}
           </p>
-          <a 
+          <a
             href={evidenceUrl}
             target="_blank"
             rel="noopener noreferrer"
@@ -523,7 +520,7 @@ const DrivePhotoTab = ({ standardId, lang }: { standardId: number; lang: "mr" | 
   useEffect(() => {
     const saved = localStorage.getItem(lsKey);
     if (saved) {
-      try { setLinks(JSON.parse(saved)); } catch {}
+      try { setLinks(JSON.parse(saved)); } catch { }
     }
     // Also try Firestore
     const udise = localStorage.getItem("teacher_udise") || profile?.udise;
@@ -537,7 +534,7 @@ const DrivePhotoTab = ({ standardId, lang }: { standardId: number; lang: "mr" | 
             localStorage.setItem(lsKey, JSON.stringify(data.links));
           }
         }
-      }).catch(() => {});
+      }).catch(() => { });
     }
   }, [standardId]);
 
@@ -554,7 +551,7 @@ const DrivePhotoTab = ({ standardId, lang }: { standardId: number; lang: "mr" | 
           links: updated,
           updatedAt: new Date().toISOString()
         }, { merge: true });
-      } catch {}
+      } catch { }
       setIsSaving(false);
     }
   };
@@ -675,7 +672,7 @@ const DrivePhotoTab = ({ standardId, lang }: { standardId: number; lang: "mr" | 
                 style={{ background: isDriveLink(item.url) ? "#e8f5e9" : "#e3f2fd" }}
               >
                 {isDriveLink(item.url)
-                  ? <svg className="size-5" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 19h20L12 2z" fill="#34a853" opacity=".3"/><path d="M2 19h8l-4-7-4 7z" fill="#4285f4"/><path d="M22 19h-8l4-7 4 7z" fill="#ea4335"/><path d="M8 19h8L12 12 8 19z" fill="#fbbc05"/></svg>
+                  ? <svg className="size-5" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 19h20L12 2z" fill="#34a853" opacity=".3" /><path d="M2 19h8l-4-7-4 7z" fill="#4285f4" /><path d="M22 19h-8l4-7 4 7z" fill="#ea4335" /><path d="M8 19h8L12 12 8 19z" fill="#fbbc05" /></svg>
                   : <ImageIcon className="size-5 text-blue-500" />
                 }
               </div>
@@ -724,7 +721,7 @@ export const getStandardDetail = (num: number) => {
   if (standardsDetailData[num]) {
     return standardsDetailData[num];
   }
-  
+
   // Fallback for standards 88 to 128
   return {
     mr: {
@@ -753,7 +750,7 @@ export const getStandardDetail = (num: number) => {
 export const getGroupedOptions = (standardId: number, lang: "mr" | "en") => {
   const detail = getStandardDetail(standardId);
   if (!detail || !detail[lang]) return [];
-  
+
   const normalizeLevel = (char: string): string => {
     const mapping: Record<string, string> = {
       "१": "1", "२": "2", "३": "3", "४": "4", "५": "5", "६": "6", "७": "7", "८": "8", "९": "9",
@@ -764,12 +761,12 @@ export const getGroupedOptions = (standardId: number, lang: "mr" | "en") => {
 
   const options = detail[lang].options;
   const groups: { text: string; isGreen?: boolean }[] = [];
-  
+
   options.forEach((opt) => {
     const trimmed = opt.text.trim();
     const match = trimmed.match(/^([1-9]|[१२३४५६७८९])/);
     const level = match ? normalizeLevel(match[1]) : null;
-    
+
     let found = false;
     if (level) {
       const existingIndex = groups.findIndex((g) => {
@@ -785,7 +782,7 @@ export const getGroupedOptions = (standardId: number, lang: "mr" | "en") => {
         found = true;
       }
     }
-    
+
     if (!found) {
       groups.push({
         text: opt.text,
@@ -794,7 +791,7 @@ export const getGroupedOptions = (standardId: number, lang: "mr" | "en") => {
     }
   });
   // Append "लागू नाही" / "Not applicable" as the last option if not already present
-  const hasNotApplicable = groups.some(g => 
+  const hasNotApplicable = groups.some(g =>
     g.text.trim() === "लागू नाही" || g.text.trim() === "Not applicable"
   );
   if (!hasNotApplicable) {
@@ -4777,7 +4774,7 @@ export const standardsDetailData: Record<number, {
 
 function TeacherSqaafPage() {
   const { profile } = useAuth();
-  const [view, setView] = useState<"info" | "dashboard" | "summary" | "certificate" | "responses" | "table_report">(() => {
+  const [view, setView] = useState<"info" | "dashboard" | "summary" | "certificate" | "responses" | "table_report" | "manual_summary">(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("sqaaf_school_info");
       if (saved) return "dashboard";
@@ -4787,9 +4784,11 @@ function TeacherSqaafPage() {
   const [selectedLang, setSelectedLang] = useState<"mr" | "en">("mr");
   const [pdfLang, setPdfLang] = useState<"mr" | "en">("mr");
   const [activeStandardDetails, setActiveStandardDetails] = useState<number | null>(null);
-  const [pdfFormat, setPdfFormat] = useState<"table" | "responses">("table");
+  const [pdfFormat, setPdfFormat] = useState<"table" | "responses" | "summary">("table");
   const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
   const [isEditingTable, setIsEditingTable] = useState(false);
+  // manualData is now dynamically computed
+
   const [externalOptions, setExternalOptions] = useState<Record<number, number>>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("sqaaf_external_options");
@@ -4846,8 +4845,8 @@ function TeacherSqaafPage() {
   };
 
   const handleResetData = () => {
-    const confirmMessage = selectedLang === "mr" 
-      ? "तुम्हाला सर्व मूल्यमापन डेटा साफ करायचा आहे का? हे परत मिळवता येणार नाही." 
+    const confirmMessage = selectedLang === "mr"
+      ? "तुम्हाला सर्व मूल्यमापन डेटा साफ करायचा आहे का? हे परत मिळवता येणार नाही."
       : "Are you sure you want to clear all evaluation data? This cannot be undone.";
     if (window.confirm(confirmMessage)) {
       setCompletedStandards(new Set());
@@ -4861,7 +4860,7 @@ function TeacherSqaafPage() {
         localStorage.removeItem(`sqaaf_evidence_${i}`);
         localStorage.removeItem(`sqaaf_evidence_preview_${i}`);
         localStorage.removeItem(`sqaaf_evidence_type_${i}`);
-        
+
         // Remove options config checked & uploaded files
         const savedOptionsKey = `sqaaf_evidence_options_config_${i}`;
         const savedOptions = localStorage.getItem(savedOptionsKey);
@@ -4874,7 +4873,7 @@ function TeacherSqaafPage() {
               localStorage.removeItem(`sqaaf_evidence_file_preview_${i}_${idx}`);
               localStorage.removeItem(`sqaaf_evidence_file_type_${i}_${idx}`);
             });
-          } catch (e) {}
+          } catch (e) { }
         }
       }
       toast.success(selectedLang === "mr" ? "डेटा साफ केला!" : "Data cleared!");
@@ -4990,7 +4989,7 @@ function TeacherSqaafPage() {
 
   // Ref to the scrolling container in the summary view
   const gridRef = useRef<HTMLDivElement>(null);
-  
+
   // Track last selected standard ID for scroll restore and highlighting
   const [lastSelectedStandard, setLastSelectedStandard] = useState<number | null>(() => {
     if (typeof window !== "undefined") {
@@ -5033,12 +5032,12 @@ function TeacherSqaafPage() {
         }
         window.scrollTo({ top: savedWindowScrollPosition, behavior: "instant" });
       };
-      
+
       // Try multiple times as framer-motion layout expands the container
       restore();
       const delays = [50, 100, 200, 300, 500];
       const timeouts = delays.map(delay => setTimeout(restore, delay));
-      
+
       return () => {
         timeouts.forEach(clearTimeout);
       };
@@ -5079,6 +5078,164 @@ function TeacherSqaafPage() {
     return {};
   });
 
+  const manualData = useMemo(() => {
+    const domainsData = [
+      { id: 1, nameMr: "क्षेत्र १ : अभ्यासक्रम,अध्यापनशास्त्र आणि मूल्यांकन", stds: "१ ते ४४", start: 1, end: 44 },
+      { id: 2, nameMr: "क्षेत्र २ : पायाभूत सुविधा", stds: "४५ ते ७४", start: 45, end: 74 },
+      { id: 3, nameMr: "क्षेत्र ३ : मानवी संसाधने आणि शालेय नेतृत्व", stds: "७५ ते ८६", start: 75, end: 86 },
+      { id: 4, nameMr: "क्षेत्र ४ : समावेशित पद्धती आणि लिंगसमभाव", stds: "८७ ते १००", start: 87, end: 100 },
+      { id: 5, nameMr: "क्षेत्र ५ : व्यवस्थापन ,संनियंत्रण आणि प्रशासन", stds: "१०१ ते ११७", start: 101, end: 117 },
+      { id: 6, nameMr: "क्षेत्र ६ :लाभार्थ्यांचे समाधान", stds: "११८ ते १२८", start: 118, end: 128 },
+    ];
+    return domainsData.map(dom => {
+      let l1 = 0, l2 = 0, l3 = 0, l4 = 0;
+      let appCount = 0;
+      let naStds: string[] = [];
+
+      for (let i = dom.start; i <= dom.end; i++) {
+        const selIdx = selectedOptions[i];
+        if (selIdx !== undefined && selIdx !== null) {
+          if (selIdx >= 0 && selIdx <= 3) {
+            appCount++;
+            if (selIdx === 0) l1++;
+            if (selIdx === 1) l2++;
+            if (selIdx === 2) l3++;
+            if (selIdx === 3) l4++;
+          } else {
+            naStds.push(i.toString());
+          }
+        }
+      }
+      return { id: dom.id, name: dom.nameMr, stds: dom.stds, notApp: naStds.join(", "), app: appCount, l1, l2, l3, l4 };
+    });
+  }, [selectedOptions]);
+
+  const manualObtainedMarks = useMemo(() => {
+    return manualData.reduce((sum, row) => sum + (row.l1 * 1 + row.l2 * 2 + row.l3 * 3 + row.l4 * 4), 0);
+  }, [manualData]);
+
+  const downloadManualPdf = async () => {
+    const container = document.createElement("div");
+
+    const totalApplicable = manualData.reduce((sum, row) => sum + Number(row.app || 0), 0);
+    const obtainedMarks_ = Number(manualObtainedMarks || 0);
+    const overallSelfPct = totalApplicable > 0 ? Math.round((obtainedMarks_ / (totalApplicable * 4)) * 100) : 0;
+
+    const getGrade = (pct: number) => {
+      if (pct >= 91) return "A+";
+      if (pct >= 81) return "A";
+      if (pct >= 71) return "B+";
+      if (pct >= 61) return "B";
+      if (pct >= 51) return "C+";
+      return "C";
+    };
+
+    const summaryRowsHtml = manualData.map((row, idx) => {
+      const rowTotal = (Number(row.l1 || 0) * 1) + (Number(row.l2 || 0) * 2) + (Number(row.l3 || 0) * 3) + (Number(row.l4 || 0) * 4);
+      return `
+        <tr>
+          <td style="border: 1px solid black; padding: 4px; text-align: center; width: 5%;">${idx + 1}</td>
+          <td style="border: 1px solid black; padding: 4px; width: 24%;">${row.name}</td>
+          <td style="border: 1px solid black; padding: 4px; text-align: center; width: 12%;">${row.stds}</td>
+          <td style="border: 1px solid black; padding: 4px; text-align: center; width: 15%;">${row.notApp || "-"}</td>
+          <td style="border: 1px solid black; padding: 4px; text-align: center; width: 10%;">${row.app}</td>
+          <td style="border: 1px solid black; padding: 4px; text-align: center; width: 7%;">${row.l1 || "-"}</td>
+          <td style="border: 1px solid black; padding: 4px; text-align: center; width: 7%;">${row.l2 || "-"}</td>
+          <td style="border: 1px solid black; padding: 4px; text-align: center; width: 7%;">${row.l3 || "-"}</td>
+          <td style="border: 1px solid black; padding: 4px; text-align: center; width: 7%;">${row.l4 || "-"}</td>
+          <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold; width: 6%;">${rowTotal}</td>
+        </tr>
+      `;
+    }).join("");
+
+    const finalHtml = `
+      <div style="font-family: 'Segoe UI', 'Noto Sans Devanagari', Arial, sans-serif; color: #0f172a; padding: 10px;">
+        <h2 style="text-align: center; font-size: 16px; font-weight: bold; margin-bottom: 4px;">SQAAF एकत्रित गुणनोंद तक्ता</h2>
+        <div style="text-align: center; font-size: 11px; font-weight: bold; margin-bottom: 12px;">
+          गट: पायाभूत (अंगणवाडी ते १ली २री / पूर्वतयारी ३री ते ५ वी / पूर्व माध्यमिक ६वी ते ८वी )
+        </div>
+        
+        <div style="font-size: 10px; font-weight: bold; margin-bottom: 10px;">
+          शाळेचे नाव: ${infoSchoolName} &nbsp;&nbsp;&nbsp; U Dise No: ${infoUdise} &nbsp;&nbsp;&nbsp; तालुका: ${infoTaluka || "-"} &nbsp;&nbsp;&nbsp; जिल्हा: ${infoDistrict || "सांगली"}
+        </div>
+        
+        <table style="width: 100%; border-collapse: collapse; border: 1px solid black; font-size: 9px; table-layout: fixed; word-wrap: break-word; word-break: break-word;">
+          <thead>
+            <tr>
+              <th style="border: 1px solid black; padding: 4px; background-color: #f1f5f9; text-align: center; width: 5%;">अ. क्र.</th>
+              <th style="border: 1px solid black; padding: 4px; background-color: #f1f5f9; text-align: center; width: 24%;">क्षेत्राचे नाव</th>
+              <th style="border: 1px solid black; padding: 4px; background-color: #f1f5f9; text-align: center; width: 12%;">मानक क्र.</th>
+              <th style="border: 1px solid black; padding: 4px; background-color: #f1f5f9; text-align: center; width: 15%;">लागू नसलेली मानके</th>
+              <th style="border: 1px solid black; padding: 4px; background-color: #f1f5f9; text-align: center; width: 10%;">लागू मानक<br/>संख्या</th>
+              <th style="border: 1px solid black; padding: 4px; background-color: #f1f5f9; text-align: center; width: 7%;">स्तर १<br/><span style="font-size: 8px; font-weight: normal;">प्रारंभिक</span></th>
+              <th style="border: 1px solid black; padding: 4px; background-color: #f1f5f9; text-align: center; width: 7%;">स्तर २<br/><span style="font-size: 8px; font-weight: normal;">प्रगतशील</span></th>
+              <th style="border: 1px solid black; padding: 4px; background-color: #f1f5f9; text-align: center; width: 7%;">स्तर ३<br/><span style="font-size: 8px; font-weight: normal;">प्रगत</span></th>
+              <th style="border: 1px solid black; padding: 4px; background-color: #f1f5f9; text-align: center; width: 7%;">स्तर ४<br/><span style="font-size: 8px; font-weight: normal;">प्रवीण</span></th>
+              <th style="border: 1px solid black; padding: 4px; background-color: #f1f5f9; text-align: center; width: 6%;">एकूण<br/><span style="font-size: 8px; font-weight: normal;">गुण</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${summaryRowsHtml}
+            <tr>
+              <td style="border: 1px solid black; padding: 4px;"></td>
+              <td style="border: 1px solid black; padding: 4px;"></td>
+              <td style="border: 1px solid black; padding: 4px;"></td>
+              <td style="border: 1px solid black; padding: 4px; text-align: right; font-weight: bold;">एकूण</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${totalApplicable}</td>
+              <td style="border: 1px solid black; padding: 4px;"></td>
+              <td style="border: 1px solid black; padding: 4px;"></td>
+              <td style="border: 1px solid black; padding: 4px;"></td>
+              <td style="border: 1px solid black; padding: 4px;"></td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${obtainedMarks_}</td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <div style="margin-top: 15px; font-size: 9px; font-weight: bold; padding-top: 10px;">
+          <div style="margin-bottom: 8px;">(एकूण मानके - १२८, एकूण गुण - ${totalApplicable * 4} ) &nbsp;&nbsp;&nbsp;&nbsp; (गुणांकन - स्तर १ - १ गुण, स्तर २ - २ गुण, स्तर ३ - ३ गुण, स्तर ४ - ४ गुण)</div>
+          
+          <div style="margin-bottom: 5px; font-size: 10px; text-decoration: underline;">श्रेणी तक्ता</div>
+          <table style="width: 50%; border-collapse: collapse; border: 1px solid black; font-size: 9px; text-align: center;">
+            <thead>
+              <tr>
+                <th style="border: 1px solid black; padding: 4px; background-color: #f1f5f9;">श्रेणी</th>
+                <th style="border: 1px solid black; padding: 4px; background-color: #f1f5f9;">टक्केवारी</th>
+                <th style="border: 1px solid black; padding: 4px; background-color: #f1f5f9;">एकूण गुण</th>
+                <th style="border: 1px solid black; padding: 4px; background-color: #f1f5f9;">शाळा प्राप्त गुण</th>
+                <th style="border: 1px solid black; padding: 4px; background-color: #f1f5f9;">प्राप्त श्रेणी</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td style="border: 1px solid black; padding: 4px;">A+</td><td style="border: 1px solid black; padding: 4px;">९१ ते १००</td><td rowspan="6" style="border: 1px solid black; padding: 4px; vertical-align: middle; font-weight: bold;">${totalApplicable * 4}</td><td rowspan="6" style="border: 1px solid black; padding: 4px; vertical-align: middle; font-weight: bold; font-size: 14px;">${obtainedMarks_}</td><td rowspan="6" style="border: 1px solid black; padding: 4px; vertical-align: middle; font-weight: bold; font-size: 16px; color: #16a34a;">${getGrade(overallSelfPct)}</td></tr>
+              <tr><td style="border: 1px solid black; padding: 4px;">A</td><td style="border: 1px solid black; padding: 4px;">८१ ते ९०</td></tr>
+              <tr><td style="border: 1px solid black; padding: 4px;">B+</td><td style="border: 1px solid black; padding: 4px;">७१ ते ८०</td></tr>
+              <tr><td style="border: 1px solid black; padding: 4px;">B</td><td style="border: 1px solid black; padding: 4px;">६१ ते ७०</td></tr>
+              <tr><td style="border: 1px solid black; padding: 4px;">C+</td><td style="border: 1px solid black; padding: 4px;">५१ ते ६०</td></tr>
+              <tr><td style="border: 1px solid black; padding: 4px;">C</td><td style="border: 1px solid black; padding: 4px;">५० पेक्षा कमी</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+
+    container.innerHTML = finalHtml;
+    container.style.width = "793px";
+    container.style.padding = "20px";
+    container.style.boxSizing = "border-box";
+    container.style.backgroundColor = "white";
+    document.body.appendChild(container);
+
+    const html2pdf = (await import("html2pdf.js")).default;
+    await html2pdf().set({
+      margin: [12.7, 12.7, 12.7, 12.7],
+      filename: `SQAAF_Summary_Manual_${new Date().toISOString().slice(0, 10)}.pdf`,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, logging: false },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+    }).from(container).save();
+    document.body.removeChild(container);
+  };
+
   const groupedOptions = useMemo(() => {
     if (activeStandardDetails === null) return [];
     return getGroupedOptions(activeStandardDetails, selectedLang);
@@ -5096,7 +5253,7 @@ function TeacherSqaafPage() {
       setCompletedStandards(updatedCompleted);
       localStorage.setItem("sqaaf_completed_standards", JSON.stringify(Array.from(updatedCompleted)));
     }
-    
+
     toast.success(selectedLang === "mr" ? `पर्याय निवडला.` : `Option selected.`);
   };
 
@@ -5121,12 +5278,12 @@ function TeacherSqaafPage() {
 
 
 
-  const handleDownloadPdf = async (formatOverride?: "table" | "responses", action: "view" | "download" = "download") => {
+  const handleDownloadPdf = async (formatOverride?: "table" | "responses" | "summary", action: "view" | "download" = "download") => {
     let toastId: string | undefined;
     try {
       const currentFormat = formatOverride || pdfFormat;
       toastId = toast.loading(
-        pdfLang === "mr" 
+        pdfLang === "mr"
           ? (action === "download" ? "PDF तयार करत आहे..." : "PDF उघडत आहे, कृपया प्रतीक्षा करा...")
           : (action === "download" ? "Generating PDF..." : "Opening PDF, please wait...")
       );
@@ -5151,7 +5308,7 @@ function TeacherSqaafPage() {
       const savedSelectedOptions = localStorage.getItem("sqaaf_selected_options");
       let selectedOptionsMap: Record<string, number> = {};
       if (savedSelectedOptions) {
-        try { selectedOptionsMap = JSON.parse(savedSelectedOptions); } catch {}
+        try { selectedOptionsMap = JSON.parse(savedSelectedOptions); } catch { }
       }
 
       const isMr = pdfLang === "mr";
@@ -5168,71 +5325,71 @@ function TeacherSqaafPage() {
           const langData = detail?.[pdfLang];
           const orangeDesc = langData?.orangeDesc || (isMr ? `मानक क्र. ${toMarathiNumerals(num)}` : `Standard No. ${num}`);
           const options = getGroupedOptions(num, pdfLang);
-          
+
           const isSelected = idx !== undefined && idx !== null;
           const isNotApplicable = idx === options.length - 1;
-          
+
           const responseText = isSelected
             ? (isNotApplicable
-                ? (isMr ? "लागू नाही" : "Not applicable")
-                : (options[idx]?.text || "-"))
+              ? (isMr ? "लागू नाही" : "Not applicable")
+              : (options[idx]?.text || "-"))
             : "";
           const levelLabel = isSelected
             ? (isNotApplicable ? "" : (isMr ? `स्तर ${toMarathiNumerals(idx + 1)}` : `Level ${idx + 1}`))
             : "";
-            
+
           const marks = isSelected && !isNotApplicable ? (idx !== undefined ? idx + 1 : 0) : 0;
-            
+
           let photoHtml = "";
           if (isSelected && !isNotApplicable) {
             const savedOpts = localStorage.getItem(`sqaaf_evidence_options_config_${num}_${idx}`);
             let parsedOpts: string[] = [];
             if (savedOpts) {
-              try { parsedOpts = JSON.parse(savedOpts); } catch {}
+              try { parsedOpts = JSON.parse(savedOpts); } catch { }
             } else if (idx === 0) {
-               const oldOpts = localStorage.getItem(`sqaaf_evidence_options_config_${num}`);
-               if (oldOpts) {
-                 try { parsedOpts = JSON.parse(oldOpts); } catch {}
-               }
+              const oldOpts = localStorage.getItem(`sqaaf_evidence_options_config_${num}`);
+              if (oldOpts) {
+                try { parsedOpts = JSON.parse(oldOpts); } catch { }
+              }
             }
             if (parsedOpts.length === 0) {
               parsedOpts = [isMr ? "सर्वसाधारण पुरावे / General Evidences" : "General Evidences"];
             }
             let optsLength = parsedOpts.length;
 
-            let checkedOptions: {src: string | null, title: string, isChecked: boolean}[] = [];
+            let checkedOptions: { src: string | null, title: string, isChecked: boolean }[] = [];
             for (let pIdx = 0; pIdx < optsLength; pIdx++) {
-               let isChecked = localStorage.getItem(`sqaaf_checked_${num}_${idx}_${pIdx}`) === "true";
-               if (!isChecked && idx === 0) {
-                 isChecked = localStorage.getItem(`sqaaf_evidence_checked_${num}_${pIdx}`) === "true";
-               }
-               let preview = localStorage.getItem(`sqaaf_file_preview_${num}_${idx}_${pIdx}`);
-               if (!preview && idx === 0) {
-                 preview = localStorage.getItem(`sqaaf_evidence_file_preview_${num}_${pIdx}`);
-               }
-               
-               if (isChecked || (preview && preview.startsWith("data:image"))) {
-                 checkedOptions.push({ 
-                   src: (preview && preview.startsWith("data:image")) ? preview : null, 
-                   title: parsedOpts[pIdx] || "",
-                   isChecked
-                 });
-               }
+              let isChecked = localStorage.getItem(`sqaaf_checked_${num}_${idx}_${pIdx}`) === "true";
+              if (!isChecked && idx === 0) {
+                isChecked = localStorage.getItem(`sqaaf_evidence_checked_${num}_${pIdx}`) === "true";
+              }
+              let preview = localStorage.getItem(`sqaaf_file_preview_${num}_${idx}_${pIdx}`);
+              if (!preview && idx === 0) {
+                preview = localStorage.getItem(`sqaaf_evidence_file_preview_${num}_${pIdx}`);
+              }
+
+              if (isChecked || (preview && preview.startsWith("data:image"))) {
+                checkedOptions.push({
+                  src: (preview && preview.startsWith("data:image")) ? preview : null,
+                  title: parsedOpts[pIdx] || "",
+                  isChecked
+                });
+              }
             }
-            
+
             if (checkedOptions.length > 0) {
-               const imagesHtml = checkedOptions.map(p => `
+              const imagesHtml = checkedOptions.map(p => `
                  <div style="display: inline-block; margin-right: 12px; margin-top: 10px; width: 140px; vertical-align: top;">
-                   ${p.src 
-                      ? `<img src="${p.src}" style="max-height: 110px; max-width: 140px; border-radius: 6px; border: 1px solid #cbd5e1; box-sizing: border-box;" />`
-                      : `<div style="height: 60px; width: 140px; border-radius: 6px; border: 1px dashed #cbd5e1; background: #f8fafc; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #94a3b8; box-sizing: border-box;">${isMr ? "फोटो नाही" : "No Photo"}</div>`
-                   }
+                   ${p.src
+                  ? `<img src="${p.src}" style="max-height: 110px; max-width: 140px; border-radius: 6px; border: 1px solid #cbd5e1; box-sizing: border-box;" />`
+                  : `<div style="height: 60px; width: 140px; border-radius: 6px; border: 1px dashed #cbd5e1; background: #f8fafc; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #94a3b8; box-sizing: border-box;">${isMr ? "फोटो नाही" : "No Photo"}</div>`
+                }
                    <div style="font-size: 9px; font-weight: 800; color: #1e293b; margin-top: 6px; line-height: 1.3; word-break: break-word;">
                      <span style="color: ${p.isChecked ? '#ec4899' : '#94a3b8'}; font-weight: 900; margin-right: 2px;">${p.isChecked ? '✓' : '○'}</span> ${p.title}
                    </div>
                  </div>
                `).join("");
-               photoHtml = `
+              photoHtml = `
                  <div style="margin-top: 14px; border-top: 1px dashed #cbd5e1; padding-top: 12px; break-inside: avoid; page-break-inside: avoid;">
                    <div style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b; margin-bottom: 2px;">${isMr ? "पुरावे पर्याय (Evidence Options)" : "Evidence Options"}</div>
                    <div style="display: block;">
@@ -5251,15 +5408,15 @@ function TeacherSqaafPage() {
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
               <div style="font-size: 12px; font-weight: 900; color: #1e293b; max-width: 70%;">${isMr ? `मानक क्र. ${toMarathiNumerals(s.num)}` : `Standard No. ${s.num}`}</div>
               ${s.isSelected
-                ? (s.isNotApplicable
-                    ? `<div style="text-align: right;"><span style="background: #e5e7eb; color: #6b7280; font-size: 9px; font-weight: 800; padding: 3px 10px; border-radius: 8px; text-transform: uppercase;">${isMr ? "लागू नाही" : "N/A"}</span></div>`
-                    : `<div style="text-align: right;">
+            ? (s.isNotApplicable
+              ? `<div style="text-align: right;"><span style="background: #e5e7eb; color: #6b7280; font-size: 9px; font-weight: 800; padding: 3px 10px; border-radius: 8px; text-transform: uppercase;">${isMr ? "लागू नाही" : "N/A"}</span></div>`
+              : `<div style="text-align: right;">
                          <span style="background: linear-gradient(135deg, #22c55e, #16a34a); color: white; font-size: 9px; font-weight: 800; padding: 3px 10px; border-radius: 8px;">${s.levelLabel}</span>
                          <div style="font-size: 11px; font-weight: 900; color: #15803d; margin-top: 5px;">${isMr ? `गुण: ${toMarathiNumerals(s.marks)}` : `Marks: ${s.marks}`}</div>
                        </div>`
-                  )
-                : `<div style="text-align: right;"><span style="background: #f1f5f9; color: #94a3b8; font-size: 9px; font-weight: 800; padding: 3px 10px; border-radius: 8px; text-transform: uppercase;">${isMr ? "अपूर्ण" : "Incomplete"}</span></div>`
-              }
+            )
+            : `<div style="text-align: right;"><span style="background: #f1f5f9; color: #94a3b8; font-size: 9px; font-weight: 800; padding: 3px 10px; border-radius: 8px; text-transform: uppercase;">${isMr ? "अपूर्ण" : "Incomplete"}</span></div>`
+          }
             </div>
             <div style="font-size: 11px; font-weight: 600; color: #475569; line-height: 1.5; margin-bottom: 12px; background: #fffbeb; border-left: 3px solid #f59e0b; padding: 8px 12px; border-radius: 0 8px 8px 0;">
               ${s.orangeDesc}
@@ -5282,7 +5439,7 @@ function TeacherSqaafPage() {
           try {
             const parsed = JSON.parse(savedCompletedStds);
             completedStdsSet = new Set(parsed.map((x: any) => Number(x)));
-          } catch {}
+          } catch { }
         } else {
           completedStdsSet = completedStandards;
         }
@@ -5292,7 +5449,7 @@ function TeacherSqaafPage() {
         let totalPossibleMarks = 0;
         for (let i = 1; i <= 128; i++) {
           const selectedIdx = selectedOptionsMap[i.toString()];
-          
+
           if (!completedStdsSet.has(i)) {
             totalPossibleMarks += 4;
           } else {
@@ -5321,7 +5478,7 @@ function TeacherSqaafPage() {
         const savedExternalOptions = localStorage.getItem("sqaaf_external_options");
         let externalOptionsMap: Record<string, number> = {};
         if (savedExternalOptions) {
-          try { externalOptionsMap = JSON.parse(savedExternalOptions); } catch {}
+          try { externalOptionsMap = JSON.parse(savedExternalOptions); } catch { }
         }
 
         const domainRowsLegacyHtml = domainsDataLegacy.map(dom => {
@@ -5336,7 +5493,7 @@ function TeacherSqaafPage() {
             // Self
             const selIdx = selectedOptionsMap[sid];
             let isApplicable = false;
-            
+
             if (selIdx !== undefined && selIdx !== null) {
               if (selIdx >= 0 && selIdx <= 3) {
                 isApplicable = true;
@@ -5349,9 +5506,9 @@ function TeacherSqaafPage() {
                 naStds.push(i);
               }
             } else if (!completedStdsSet.has(i)) {
-               isApplicable = true;
+              isApplicable = true;
             }
-            if(isApplicable) appCount++;
+            if (isApplicable) appCount++;
 
             // Ext
             const extIdx = externalOptionsMap[sid];
@@ -5421,7 +5578,7 @@ function TeacherSqaafPage() {
             // Self
             const selIdx = selectedOptionsMap[sid];
             let isApplicable = false;
-            
+
             if (selIdx !== undefined && selIdx !== null) {
               if (selIdx >= 0 && selIdx <= 3) {
                 isApplicable = true;
@@ -5434,9 +5591,9 @@ function TeacherSqaafPage() {
                 naStds.push(i);
               }
             } else if (!completedStdsSet.has(i)) {
-               isApplicable = true;
+              isApplicable = true;
             }
-            if(isApplicable) appCount++;
+            if (isApplicable) appCount++;
 
             // Ext
             const extIdx = externalOptionsMap[sid];
@@ -5668,7 +5825,7 @@ function TeacherSqaafPage() {
         const savedExternalOptions = localStorage.getItem("sqaaf_external_options");
         let externalOptionsMap: Record<string, number> = {};
         if (savedExternalOptions) {
-          try { externalOptionsMap = JSON.parse(savedExternalOptions); } catch {}
+          try { externalOptionsMap = JSON.parse(savedExternalOptions); } catch { }
         }
 
         const tableRows = Array.from({ length: 128 }, (_, i) => {
@@ -5677,7 +5834,7 @@ function TeacherSqaafPage() {
           const langData = detail?.[pdfLang];
           const orangeDesc = langData?.orangeDesc || (isMr ? `मानक क्र. ${toMarathiNumerals(num)}` : `Standard No. ${num}`);
           const options = getGroupedOptions(num, pdfLang);
-          
+
           const selectedIdx = selectedOptionsMap[num.toString()] !== undefined ? selectedOptionsMap[num.toString()] : undefined;
           const isSelected = selectedIdx !== undefined && selectedIdx !== null;
           const isNotApplicable = selectedIdx === options.length - 1;
@@ -5700,7 +5857,7 @@ function TeacherSqaafPage() {
             return '';
           };
 
-          const evalValue = isSelected 
+          const evalValue = isSelected
             ? (isNotApplicable ? (isMr ? "लागू नाही" : "N/A") : (selectedIdx + 1).toString())
             : "";
 
@@ -5738,7 +5895,7 @@ function TeacherSqaafPage() {
           try {
             const parsed = JSON.parse(savedCompletedStds);
             completedStdsSet = new Set(parsed.map((x: any) => Number(x)));
-          } catch {}
+          } catch { }
         } else {
           completedStdsSet = completedStandards;
         }
@@ -5748,7 +5905,7 @@ function TeacherSqaafPage() {
         let totalPossibleMarks = 0;
         for (let i = 1; i <= 128; i++) {
           const selectedIdx = selectedOptionsMap[i.toString()];
-          
+
           if (!completedStdsSet.has(i)) {
             totalPossibleMarks += 4;
           } else {
@@ -5787,7 +5944,7 @@ function TeacherSqaafPage() {
             // Self
             const selIdx = selectedOptionsMap[sid];
             let isApplicable = false;
-            
+
             if (selIdx !== undefined && selIdx !== null) {
               if (selIdx >= 0 && selIdx <= 3) {
                 isApplicable = true;
@@ -5800,9 +5957,9 @@ function TeacherSqaafPage() {
                 naStds.push(i);
               }
             } else if (!completedStdsSet.has(i)) {
-               isApplicable = true;
+              isApplicable = true;
             }
-            if(isApplicable) appCount++;
+            if (isApplicable) appCount++;
 
             // Ext
             const eIdx = externalOptionsMap[sid];
@@ -5820,7 +5977,7 @@ function TeacherSqaafPage() {
               overallExtTot += 4;
             }
           }
-          
+
           totalApplicable += appCount;
 
           const formatRanges = (nums: number[]) => {
@@ -6101,16 +6258,16 @@ function TeacherSqaafPage() {
       if (currentFormat === "table") {
         const { default: html2canvas } = await import("html2canvas");
         const { default: jsPDF } = await import("jspdf");
-        
+
         const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
-        
+
         const savedCompletedStds = localStorage.getItem("sqaaf_completed_standards");
         let completedStdsSet = new Set<number>();
         if (savedCompletedStds) {
           try {
             const parsed = JSON.parse(savedCompletedStds);
             completedStdsSet = new Set(parsed.map((x: any) => Number(x)));
-          } catch {}
+          } catch { }
         } else {
           completedStdsSet = completedStandards;
         }
@@ -6120,7 +6277,7 @@ function TeacherSqaafPage() {
         let totalPossible = 0;
         for (let i = 1; i <= 128; i++) {
           const selectedIdx = selectedOptionsMap[i.toString()];
-          
+
           if (!completedStdsSet.has(i)) {
             totalPossible += 4;
           } else {
@@ -6134,10 +6291,10 @@ function TeacherSqaafPage() {
             }
           }
         }
-        
-        const A4_WIDTH_PX = 1122; 
-        const A4_HEIGHT_PX = 793; 
-        
+
+        const A4_WIDTH_PX = 1122;
+        const A4_HEIGHT_PX = 793;
+
         const renderContainer = document.createElement("div");
         renderContainer.style.position = "fixed";
         renderContainer.style.top = "0";
@@ -6147,18 +6304,18 @@ function TeacherSqaafPage() {
         document.body.appendChild(renderContainer);
 
         const createNewPageContainer = () => {
-           renderContainer.innerHTML = "";
-           const page = document.createElement("div");
-           page.style.width = "100%";
-           page.style.padding = "40px"; // 40px margin
-           page.style.boxSizing = "border-box";
-           page.style.backgroundColor = "white";
-           renderContainer.appendChild(page);
-           return page;
+          renderContainer.innerHTML = "";
+          const page = document.createElement("div");
+          page.style.width = "100%";
+          page.style.padding = "40px"; // 40px margin
+          page.style.boxSizing = "border-box";
+          page.style.backgroundColor = "white";
+          renderContainer.appendChild(page);
+          return page;
         };
 
         let currentPage = createNewPageContainer();
-        
+
         const headerHtml = `
           <div style="font-family: sans-serif; margin-bottom: 30px;">
             <div style="color: #ea580c; font-size: 18px; font-weight: bold;">
@@ -6176,8 +6333,11 @@ function TeacherSqaafPage() {
                  <div style="color: #94a3b8; font-size: 14px; font-weight: bold;">${isMr ? "शाळेचे नाव" : "SCHOOL NAME"}</div>
                  <div style="color: #0f172a; font-size: 24px; font-weight: bold; margin-top: 4px;">${schoolName.toUpperCase()}</div>
                </div>
-               <div style="background-color: #6d28d9; color: white; padding: 10px 20px; border-radius: 8px; font-weight: bold; font-size: 18px;">
-                 ${udise}
+               <div style="text-align: right;">
+                 <div style="color: #94a3b8; font-size: 14px; font-weight: bold; margin-bottom: 6px;">${isMr ? "युडायस कोड" : "UDISE CODE"}</div>
+                 <div style="background-color: #6d28d9; color: white; padding: 10px 20px; border-radius: 8px; font-weight: bold; font-size: 18px; display: inline-block;">
+                   ${udise}
+                 </div>
                </div>
             </div>
             
@@ -6216,13 +6376,13 @@ function TeacherSqaafPage() {
 
         let pageCount = 0;
         const saveCurrentPageToPdf = async () => {
-           const canvas = await html2canvas(renderContainer, { scale: 2, useCORS: true, logging: false });
-           const imgData = canvas.toDataURL("image/jpeg", 1.0);
-           if (pageCount > 0) doc.addPage();
-           const pdfWidth = 297;
-           const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-           doc.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
-           pageCount++;
+          const canvas = await html2canvas(renderContainer, { scale: 2, useCORS: true, logging: false });
+          const imgData = canvas.toDataURL("image/jpeg", 1.0);
+          if (pageCount > 0) doc.addPage();
+          const pdfWidth = 297;
+          const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+          doc.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
+          pageCount++;
         };
 
         const tempDiv = document.createElement("div");
@@ -6232,118 +6392,118 @@ function TeacherSqaafPage() {
         const summaryTable = tables[1];
 
         if (mainTable) {
-           const tbody = mainTable.querySelector("tbody");
-           const thead = mainTable.querySelector("thead");
-           const allRows = Array.from(tbody ? tbody.querySelectorAll("tr") : []);
-           
-           let currentTable = document.createElement("table");
-           currentTable.style.width = "100%";
-           currentTable.style.borderCollapse = "collapse";
-           currentTable.style.fontFamily = "sans-serif";
-           currentTable.style.fontSize = "14px";
-           
-           if (thead) {
-              const cloneThead = thead.cloneNode(true) as HTMLTableSectionElement;
-              const headers = cloneThead.querySelectorAll("th");
-              headers.forEach((th, idx) => {
-                 th.style.color = "white";
-                 th.style.padding = "12px";
-                 th.style.border = "1px solid #94a3b8";
-                 if (idx === 0 || idx === 1) th.style.backgroundColor = "#1e293b";
-                 if (idx === 2) th.style.backgroundColor = "#dc2626";
-                 if (idx === 3) th.style.backgroundColor = "#ea580c";
-                 if (idx === 4) th.style.backgroundColor = "#ca8a04";
-                 if (idx === 5) th.style.backgroundColor = "#16a34a";
-                 if (idx === 6) th.style.backgroundColor = "#7c3aed";
-                 if (idx === 7) th.style.backgroundColor = "#4f46e5";
-              });
-              currentTable.appendChild(cloneThead);
-           }
-           let currentTbody = document.createElement("tbody");
-           currentTable.appendChild(currentTbody);
-           currentPage.appendChild(currentTable);
+          const tbody = mainTable.querySelector("tbody");
+          const thead = mainTable.querySelector("thead");
+          const allRows = Array.from(tbody ? tbody.querySelectorAll("tr") : []);
 
-           for (let i = 0; i < allRows.length; i++) {
-              const row = allRows[i].cloneNode(true) as HTMLTableRowElement;
-              const cells = row.querySelectorAll("td");
-              cells.forEach(td => {
-                 td.style.padding = "10px";
-                 td.style.border = "1px solid #cbd5e1";
-                 td.style.color = "#334155";
-              });
-              currentTbody.appendChild(row);
-              
-              if (renderContainer.offsetHeight > A4_HEIGHT_PX) {
-                 currentTbody.removeChild(row);
-                 await saveCurrentPageToPdf();
-                 
-                 currentPage = createNewPageContainer();
-                 currentTable = document.createElement("table");
-                 currentTable.style.width = "100%";
-                 currentTable.style.borderCollapse = "collapse";
-                 currentTable.style.fontFamily = "sans-serif";
-                 currentTable.style.fontSize = "14px";
-                 
-                 if (thead) {
-                    const cloneThead = thead.cloneNode(true) as HTMLTableSectionElement;
-                    const headers = cloneThead.querySelectorAll("th");
-                    headers.forEach((th, idx) => {
-                       th.style.color = "white";
-                       th.style.padding = "12px";
-                       th.style.border = "1px solid #94a3b8";
-                       if (idx === 0 || idx === 1) th.style.backgroundColor = "#1e293b";
-                       if (idx === 2) th.style.backgroundColor = "#dc2626";
-                       if (idx === 3) th.style.backgroundColor = "#ea580c";
-                       if (idx === 4) th.style.backgroundColor = "#ca8a04";
-                       if (idx === 5) th.style.backgroundColor = "#16a34a";
-                       if (idx === 6) th.style.backgroundColor = "#7c3aed";
-                       if (idx === 7) th.style.backgroundColor = "#4f46e5";
-                    });
-                    currentTable.appendChild(cloneThead);
-                 }
-                 currentTbody = document.createElement("tbody");
-                 currentTable.appendChild(currentTbody);
-                 currentPage.appendChild(currentTable);
-                 
-                 currentTbody.appendChild(row);
+          let currentTable = document.createElement("table");
+          currentTable.style.width = "100%";
+          currentTable.style.borderCollapse = "collapse";
+          currentTable.style.fontFamily = "sans-serif";
+          currentTable.style.fontSize = "14px";
+
+          if (thead) {
+            const cloneThead = thead.cloneNode(true) as HTMLTableSectionElement;
+            const headers = cloneThead.querySelectorAll("th");
+            headers.forEach((th, idx) => {
+              th.style.color = "white";
+              th.style.padding = "12px";
+              th.style.border = "1px solid #94a3b8";
+              if (idx === 0 || idx === 1) th.style.backgroundColor = "#1e293b";
+              if (idx === 2) th.style.backgroundColor = "#dc2626";
+              if (idx === 3) th.style.backgroundColor = "#ea580c";
+              if (idx === 4) th.style.backgroundColor = "#ca8a04";
+              if (idx === 5) th.style.backgroundColor = "#16a34a";
+              if (idx === 6) th.style.backgroundColor = "#7c3aed";
+              if (idx === 7) th.style.backgroundColor = "#4f46e5";
+            });
+            currentTable.appendChild(cloneThead);
+          }
+          let currentTbody = document.createElement("tbody");
+          currentTable.appendChild(currentTbody);
+          currentPage.appendChild(currentTable);
+
+          for (let i = 0; i < allRows.length; i++) {
+            const row = allRows[i].cloneNode(true) as HTMLTableRowElement;
+            const cells = row.querySelectorAll("td");
+            cells.forEach(td => {
+              td.style.padding = "10px";
+              td.style.border = "1px solid #cbd5e1";
+              td.style.color = "#334155";
+            });
+            currentTbody.appendChild(row);
+
+            if (renderContainer.offsetHeight > A4_HEIGHT_PX) {
+              currentTbody.removeChild(row);
+              await saveCurrentPageToPdf();
+
+              currentPage = createNewPageContainer();
+              currentTable = document.createElement("table");
+              currentTable.style.width = "100%";
+              currentTable.style.borderCollapse = "collapse";
+              currentTable.style.fontFamily = "sans-serif";
+              currentTable.style.fontSize = "14px";
+
+              if (thead) {
+                const cloneThead = thead.cloneNode(true) as HTMLTableSectionElement;
+                const headers = cloneThead.querySelectorAll("th");
+                headers.forEach((th, idx) => {
+                  th.style.color = "white";
+                  th.style.padding = "12px";
+                  th.style.border = "1px solid #94a3b8";
+                  if (idx === 0 || idx === 1) th.style.backgroundColor = "#1e293b";
+                  if (idx === 2) th.style.backgroundColor = "#dc2626";
+                  if (idx === 3) th.style.backgroundColor = "#ea580c";
+                  if (idx === 4) th.style.backgroundColor = "#ca8a04";
+                  if (idx === 5) th.style.backgroundColor = "#16a34a";
+                  if (idx === 6) th.style.backgroundColor = "#7c3aed";
+                  if (idx === 7) th.style.backgroundColor = "#4f46e5";
+                });
+                currentTable.appendChild(cloneThead);
               }
-           }
-        }
-        
-        if (summaryTable) {
-           let spacing = document.createElement("div");
-           spacing.style.height = "40px";
-           currentPage.appendChild(spacing);
-           
-           summaryTable.style.width = "100%";
-           summaryTable.style.borderCollapse = "collapse";
-           summaryTable.style.fontFamily = "sans-serif";
-           summaryTable.style.fontSize = "14px";
-           
-           const sCells = summaryTable.querySelectorAll("td, th");
-           sCells.forEach(td => {
-               (td as HTMLElement).style.padding = "12px";
-               (td as HTMLElement).style.border = "1px solid #94a3b8";
-               (td as HTMLElement).style.color = "#0f172a";
-           });
+              currentTbody = document.createElement("tbody");
+              currentTable.appendChild(currentTbody);
+              currentPage.appendChild(currentTable);
 
-           const clonedSummary = summaryTable.cloneNode(true) as HTMLElement;
-           currentPage.appendChild(clonedSummary);
-           
-           if (renderContainer.offsetHeight > A4_HEIGHT_PX) {
-               currentPage.removeChild(clonedSummary);
-               currentPage.removeChild(spacing);
-               await saveCurrentPageToPdf();
-               currentPage = createNewPageContainer();
-               currentPage.appendChild(clonedSummary);
-           }
+              currentTbody.appendChild(row);
+            }
+          }
         }
-        
+
+        if (summaryTable) {
+          let spacing = document.createElement("div");
+          spacing.style.height = "40px";
+          currentPage.appendChild(spacing);
+
+          summaryTable.style.width = "100%";
+          summaryTable.style.borderCollapse = "collapse";
+          summaryTable.style.fontFamily = "sans-serif";
+          summaryTable.style.fontSize = "14px";
+
+          const sCells = summaryTable.querySelectorAll("td, th");
+          sCells.forEach(td => {
+            (td as HTMLElement).style.padding = "12px";
+            (td as HTMLElement).style.border = "1px solid #94a3b8";
+            (td as HTMLElement).style.color = "#0f172a";
+          });
+
+          const clonedSummary = summaryTable.cloneNode(true) as HTMLElement;
+          currentPage.appendChild(clonedSummary);
+
+          if (renderContainer.offsetHeight > A4_HEIGHT_PX) {
+            currentPage.removeChild(clonedSummary);
+            currentPage.removeChild(spacing);
+            await saveCurrentPageToPdf();
+            currentPage = createNewPageContainer();
+            currentPage.appendChild(clonedSummary);
+          }
+        }
+
         await saveCurrentPageToPdf();
         document.body.removeChild(renderContainer);
 
         const filename = `SQAAF_Report_${schoolName.replace(/\s+/g, "_") || "School"}_${new Date().toISOString().slice(0, 10)}.pdf`;
-        
+
         if (action === "download") {
           doc.save(filename);
           if (toastId) toast.dismiss(toastId);
@@ -6355,45 +6515,331 @@ function TeacherSqaafPage() {
         }
 
       } else {
-         const { default: html2pdf } = await import("html2pdf.js");
-         const container = document.createElement("div");
-         container.innerHTML = html;
-         container.style.width = "793px";
-         container.style.padding = "20px";
-         container.style.backgroundColor = "white";
-         document.body.appendChild(container);
-         
-         const pdfOptions = {
-            margin: [10, 10, 10, 10],
-            filename: `SQAAF_Responses_${schoolName.replace(/\s+/g, "_") || "School"}_${new Date().toISOString().slice(0, 10)}.pdf`,
-            image: { type: "jpeg", quality: 0.98 },
-            html2canvas: { scale: 1.5, useCORS: true, logging: false },
+        const { default: html2pdf } = await import("html2pdf.js");
+        const container = document.createElement("div");
+
+        let finalHtml = html;
+
+        if (currentFormat === "summary") {
+          const savedCompletedStds = localStorage.getItem("sqaaf_completed_standards");
+          let completedStdsSet = new Set<number>();
+          if (savedCompletedStds) {
+            try {
+              const parsed = JSON.parse(savedCompletedStds);
+              completedStdsSet = new Set(parsed.map((x: any) => Number(x)));
+            } catch { }
+          } else {
+            completedStdsSet = completedStandards;
+          }
+
+          const domainsDataLegacy = [
+            { id: 1, nameMr: "क्षेत्र १ : अभ्यासक्रम,अध्यापनशास्त्र आणि मूल्यांकन", start: 1, end: 44 },
+            { id: 2, nameMr: "क्षेत्र २ : पायाभूत सुविधा", start: 45, end: 74 },
+            { id: 3, nameMr: "क्षेत्र ३ : मानवी संसाधने आणि शालेय नेतृत्व", start: 75, end: 86 },
+            { id: 4, nameMr: "क्षेत्र ४ : समावेशित पद्धती आणि लिंगसमभाव", start: 87, end: 100 },
+            { id: 5, nameMr: "क्षेत्र ५ : व्यवस्थापन ,संनियंत्रण आणि प्रशासन", start: 101, end: 117 },
+            { id: 6, nameMr: "क्षेत्र ६ :लाभार्थ्यांचे समाधान", start: 118, end: 128 },
+          ];
+
+          let totalApplicable = 0;
+          let obtainedMarks_ = 0;
+          let totalPossibleMarks = 0;
+
+          let summaryRowsPart1 = "";
+          let summaryRowsPart2 = "";
+
+          domainsDataLegacy.forEach((dom, idx) => {
+            let selfL1 = 0, selfL2 = 0, selfL3 = 0, selfL4 = 0;
+            let selfObt = 0;
+            let appCount = 0;
+            let naStds: number[] = [];
+
+            for (let i = dom.start; i <= dom.end; i++) {
+              const sid = i.toString();
+              const selIdx = selectedOptionsMap[sid];
+              let isApplicable = false;
+
+              if (selIdx !== undefined && selIdx !== null) {
+                if (selIdx >= 0 && selIdx <= 3) {
+                  isApplicable = true;
+                  if (selIdx === 0) selfL1++;
+                  if (selIdx === 1) selfL2++;
+                  if (selIdx === 2) selfL3++;
+                  if (selIdx === 3) selfL4++;
+                  selfObt += (selIdx + 1);
+                  obtainedMarks_ += (selIdx + 1);
+                  totalPossibleMarks += 4;
+                } else if (selIdx > 3) {
+                  naStds.push(i);
+                }
+              } else if (!completedStdsSet.has(i)) {
+                isApplicable = true;
+                totalPossibleMarks += 4;
+              } else {
+                totalPossibleMarks += 4;
+              }
+              if (isApplicable) appCount++;
+            }
+
+            totalApplicable += appCount;
+
+            const formatRanges = (nums: number[]) => {
+              if (nums.length === 0) return "-";
+              let ranges = [];
+              let start = nums[0];
+              let end = nums[0];
+              for (let k = 1; k < nums.length; k++) {
+                if (nums[k] === end + 1) {
+                  end = nums[k];
+                } else {
+                  ranges.push(start === end ? `${start}` : `${start} ते ${end}`);
+                  start = nums[k];
+                  end = nums[k];
+                }
+              }
+              ranges.push(start === end ? `${start}` : `${start} ते ${end}`);
+              return ranges.join(", ");
+            };
+
+            const naText = formatRanges(naStds);
+
+            summaryRowsPart1 += `
+                <tr style="text-align: center;">
+                  <td style="border: 1px solid #ccc; padding: 4px;">${idx + 1}</td>
+                  <td style="border: 1px solid #ccc; padding: 4px; text-align: left; font-size: 11px;">${dom.nameMr}</td>
+                  <td style="border: 1px solid #ccc; padding: 4px;">${dom.start} ते ${dom.end}</td>
+                  <td style="border: 1px solid #ccc; padding: 4px;">${naText}</td>
+                  <td style="border: 1px solid #ccc; padding: 4px; font-weight: bold;">${appCount}</td>
+                </tr>
+            `;
+
+            summaryRowsPart2 += `
+                <tr style="text-align: center;">
+                  <td style="border: 1px solid #ccc; padding: 4px;">${idx + 1}</td>
+                  <td style="border: 1px solid #ccc; padding: 4px; text-align: left; font-size: 11px;">${dom.nameMr}</td>
+                  <td style="border: 1px solid #ccc; padding: 4px;">${selfL1 || "-"}</td>
+                  <td style="border: 1px solid #ccc; padding: 4px;">${selfL2 || "-"}</td>
+                  <td style="border: 1px solid #ccc; padding: 4px;">${selfL3 || "-"}</td>
+                  <td style="border: 1px solid #ccc; padding: 4px;">${selfL4 || "-"}</td>
+                  <td style="border: 1px solid #ccc; padding: 4px; font-weight: bold;">${selfObt}</td>
+                </tr>
+            `;
+          });
+
+          const getGrade = (pct: number) => {
+            if (pct >= 91) return "A+";
+            if (pct >= 81) return "A";
+            if (pct >= 71) return "B+";
+            if (pct >= 61) return "B";
+            if (pct >= 51) return "C+";
+            return "C";
+          };
+
+          const overallSelfPct = totalPossibleMarks > 0 ? Math.round((obtainedMarks_ / totalPossibleMarks) * 100) : 0;
+
+          finalHtml = `
+            <div style="font-family: sans-serif; font-size: 12px; padding: 20px; background: white;">
+              <div style="text-align: center; margin-bottom: 20px;">
+                <h2 style="font-size: 18px; font-weight: bold; margin: 0 0 5px 0;">SQAAF एकत्रित गुणनोंद तक्ता</h2>
+                <div style="font-size: 11px; color: #555;">गट: पायाभूत (अंगणवाडी ते १ली २री / पूर्वतयारी ३री ते ५ वी / पूर्व माध्यमिक ६वी ते ८वी )</div>
+              </div>
+
+              <div style="margin-bottom: 20px;">
+                <h3 style="font-size: 14px; font-weight: bold; margin-bottom: 5px;">शाळेची माहिती</h3>
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;">
+                  <tr>
+                    <td style="border: 1px solid #ccc; padding: 4px; font-weight: bold; width: 15%; background-color: #f8f9fa;">शाळेचे नाव</td>
+                    <td style="border: 1px solid #ccc; padding: 4px; width: 35%;">${schoolName || "-"}</td>
+                    <td style="border: 1px solid #ccc; padding: 4px; font-weight: bold; width: 15%; background-color: #f8f9fa;">U Dise No</td>
+                    <td style="border: 1px solid #ccc; padding: 4px; width: 35%;">${udise || "-"}</td>
+                  </tr>
+                  <tr>
+                    <td style="border: 1px solid #ccc; padding: 4px; font-weight: bold; background-color: #f8f9fa;">तालुका</td>
+                    <td style="border: 1px solid #ccc; padding: 4px;">${taluka || "-"}</td>
+                    <td style="border: 1px solid #ccc; padding: 4px; font-weight: bold; background-color: #f8f9fa;">जिल्हा</td>
+                    <td style="border: 1px solid #ccc; padding: 4px;">${district || "सांगली"}</td>
+                  </tr>
+                </table>
+              </div>
+
+              <div style="margin-bottom: 20px;">
+                <h3 style="font-size: 14px; font-weight: bold; margin-bottom: 5px;">मूल्यांकन तपशील - भाग १ (मानके)</h3>
+                <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                  <thead>
+                    <tr style="background-color: #f8f9fa;">
+                      <th style="border: 1px solid #ccc; padding: 4px; width: 8%;">अ. क्र.</th>
+                      <th style="border: 1px solid #ccc; padding: 4px; width: 32%;">क्षेत्राचे नाव</th>
+                      <th style="border: 1px solid #ccc; padding: 4px; width: 20%;">मानक क्र.</th>
+                      <th style="border: 1px solid #ccc; padding: 4px; width: 25%;">लागू नसलेली मानके</th>
+                      <th style="border: 1px solid #ccc; padding: 4px; width: 15%;">लागू मानक संख्या</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${summaryRowsPart1}
+                    <tr style="background-color: #f8f9fa; font-weight: bold; text-align: center;">
+                      <td style="border: 1px solid #ccc; padding: 4px;" colspan="3"></td>
+                      <td style="border: 1px solid #ccc; padding: 4px; text-align: right;">एकूण लागू मानके</td>
+                      <td style="border: 1px solid #ccc; padding: 4px; font-size: 13px;">${totalApplicable}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div style="margin-bottom: 20px;">
+                <h3 style="font-size: 14px; font-weight: bold; margin-bottom: 5px;">मूल्यांकन तपशील - भाग २ (प्राप्त स्तर आणि गुण)</h3>
+                <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                  <thead>
+                    <tr style="background-color: #f8f9fa;">
+                      <th style="border: 1px solid #ccc; padding: 4px; width: 8%;">अ. क्र.</th>
+                      <th style="border: 1px solid #ccc; padding: 4px; width: 32%;">क्षेत्राचे नाव</th>
+                      <th style="border: 1px solid #ccc; padding: 4px; width: 10%;">स्तर १</th>
+                      <th style="border: 1px solid #ccc; padding: 4px; width: 10%;">स्तर २</th>
+                      <th style="border: 1px solid #ccc; padding: 4px; width: 10%;">स्तर ३</th>
+                      <th style="border: 1px solid #ccc; padding: 4px; width: 10%;">स्तर ४</th>
+                      <th style="border: 1px solid #ccc; padding: 4px; width: 20%;">एकूण गुण</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${summaryRowsPart2}
+                    <tr style="background-color: #f8f9fa; font-weight: bold; text-align: center;">
+                      <td style="border: 1px solid #ccc; padding: 4px;" colspan="5"></td>
+                      <td style="border: 1px solid #ccc; padding: 4px; text-align: right;">एकूण गुण</td>
+                      <td style="border: 1px solid #ccc; padding: 4px; font-size: 13px;">${obtainedMarks_}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="width: 50%; vertical-align: top; padding-right: 10px;">
+                    <h3 style="font-size: 13px; font-weight: bold; margin-bottom: 5px;">श्रेणी तक्ता</h3>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 11px; text-align: center;">
+                      <thead>
+                        <tr style="background-color: #f8f9fa;">
+                          <th style="border: 1px solid #ccc; padding: 4px;">श्रेणी</th>
+                          <th style="border: 1px solid #ccc; padding: 4px;">टक्केवारी</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr><td style="border: 1px solid #ccc; padding: 4px; font-weight: bold;">A+</td><td style="border: 1px solid #ccc; padding: 4px;">९१ ते १००</td></tr>
+                        <tr><td style="border: 1px solid #ccc; padding: 4px; font-weight: bold;">A</td><td style="border: 1px solid #ccc; padding: 4px;">८१ ते ९०</td></tr>
+                        <tr><td style="border: 1px solid #ccc; padding: 4px; font-weight: bold;">B+</td><td style="border: 1px solid #ccc; padding: 4px;">७१ ते ८०</td></tr>
+                        <tr><td style="border: 1px solid #ccc; padding: 4px; font-weight: bold;">B</td><td style="border: 1px solid #ccc; padding: 4px;">६१ ते ७०</td></tr>
+                        <tr><td style="border: 1px solid #ccc; padding: 4px; font-weight: bold;">C+</td><td style="border: 1px solid #ccc; padding: 4px;">५१ ते ६०</td></tr>
+                        <tr><td style="border: 1px solid #ccc; padding: 4px; font-weight: bold;">C</td><td style="border: 1px solid #ccc; padding: 4px;">५० पेक्षा कमी</td></tr>
+                      </tbody>
+                    </table>
+                  </td>
+                  <td style="width: 50%; vertical-align: top; padding-left: 10px;">
+                    <div style="border: 1px solid #ccc; padding: 15px; background: #f8f9fa; border-radius: 4px;">
+                      <div style="margin-bottom: 8px;">
+                        <span style="font-weight: bold;">एकूण शक्य गुण:</span>
+                        <span style="float: right;">${totalApplicable * 4}</span>
+                      </div>
+                      <div style="margin-bottom: 8px;">
+                        <span style="font-weight: bold;">शाळा प्राप्त गुण:</span>
+                        <span style="float: right; font-weight: bold;">${obtainedMarks_}</span>
+                      </div>
+                      <div style="border-top: 1px solid #ccc; padding-top: 8px; margin-top: 8px;">
+                        <span style="font-weight: bold;">प्राप्त श्रेणी:</span>
+                        <span style="float: right; font-weight: bold; font-size: 16px;">${getGrade(overallSelfPct)}</span>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </div>
+          `;
+        }
+
+        // For summary, we use a string-based approach. 
+        // This creates an isolated iframe internally, 100% immune to viewport cropping, overflow hidden, or blank page scroll bugs.
+        if (currentFormat === "summary") {
+          const htmlString = `
+            <div style="width: 793px; background-color: white; padding: 20px; box-sizing: border-box; margin: 0; position: relative;">
+              ${finalHtml}
+            </div>
+          `;
+          
+          const pdfOptions = {
+            margin: [12.7, 12.7, 12.7, 12.7],
+            filename: `SQAAF_Summary_${schoolName.replace(/\s+/g, "_") || "School"}_${new Date().toISOString().slice(0, 10)}.pdf`,
+            image: { type: "jpeg", quality: 1.0 },
+            html2canvas: { scale: 2, useCORS: true, logging: false },
             jsPDF: { unit: "mm", format: "a4", orientation: "portrait", compress: true },
             pagebreak: { mode: ["css", "legacy"] },
-         };
-         
-         if (action === "download") {
-            await html2pdf().set(pdfOptions).from(container).save();
-            document.body.removeChild(container);
+          };
+
+          if (action === "download") {
+            await html2pdf().set(pdfOptions).from(htmlString).save();
             if (toastId) toast.dismiss(toastId);
             toast.success(pdfLang === "mr" ? "PDF डाउनलोड झाली!" : "PDF downloaded!");
-         } else {
-            html2pdf().set(pdfOptions).from(container).output('bloburl').then((url: any) => {
+          } else if (action === "view") {
+            html2pdf().set(pdfOptions).from(htmlString).output('bloburl').then((url: any) => {
               setPreviewPdfUrl(url);
-              document.body.removeChild(container);
               if (toastId) toast.dismiss(toastId);
             }).catch((err: any) => {
               console.error("PDF View Error:", err);
-              document.body.removeChild(container);
               if (toastId) toast.dismiss(toastId);
               toast.error(pdfLang === "mr" ? "PDF उघडताना त्रुटी आली." : "Error opening PDF.");
             });
-         }
+          }
+          return;
+        }
+
+        // For responses, we must append to DOM to inherit Tailwind CSS
+        // container is already declared at line 6519
+        container.innerHTML = finalHtml;
+        container.style.width = "1122px"; // Landscape
+        container.style.padding = "20px";
+        container.style.boxSizing = "border-box";
+        container.style.backgroundColor = "white";
+        
+        const originalOverflowX = document.body.style.overflowX;
+        document.body.style.overflowX = "visible";
+        
+        document.body.appendChild(container);
+
+        const pdfOptions = {
+          margin: [10, 10, 10, 10],
+          filename: `SQAAF_Responses_${schoolName.replace(/\s+/g, "_") || "School"}_${new Date().toISOString().slice(0, 10)}.pdf`,
+          image: { type: "jpeg", quality: 1.0 },
+          html2canvas: { 
+            scale: 2, 
+            useCORS: true, 
+            logging: false,
+            windowWidth: 1200
+          },
+          jsPDF: { unit: "mm", format: "a4", orientation: "landscape", compress: true },
+          pagebreak: { mode: ["css", "legacy"] },
+        };
+
+        if (action === "download") {
+          await html2pdf().set(pdfOptions).from(container).save();
+          document.body.removeChild(container);
+          document.body.style.overflowX = originalOverflowX;
+          if (toastId) toast.dismiss(toastId);
+          toast.success(pdfLang === "mr" ? "PDF डाउनलोड झाली!" : "PDF downloaded!");
+        } else {
+          html2pdf().set(pdfOptions).from(container).output('bloburl').then((url: any) => {
+            setPreviewPdfUrl(url);
+            document.body.removeChild(container);
+            document.body.style.overflowX = originalOverflowX;
+            if (toastId) toast.dismiss(toastId);
+          }).catch((err: any) => {
+            console.error("PDF View Error:", err);
+            if (document.body.contains(container)) document.body.removeChild(container);
+            document.body.style.overflowX = originalOverflowX;
+            if (toastId) toast.dismiss(toastId);
+            toast.error(pdfLang === "mr" ? "PDF उघडताना त्रुटी आली." : "Error opening PDF.");
+          });
+        }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("PDF generation error:", err);
       if (toastId) toast.dismiss(toastId);
-      toast.error(pdfLang === "mr" ? "PDF बनवताना त्रुटी आली." : "Error generating PDF.");
+      toast.error(pdfLang === "mr" ? `PDF बनवताना त्रुटी आली: ${err.message || String(err)}` : `Error generating PDF: ${err.message || String(err)}`);
     }
   };
 
@@ -6403,16 +6849,16 @@ function TeacherSqaafPage() {
     const title = certLang === "mr" ? certTitleMr : certTitleEn;
     const description = certLang === "mr" ? certDescMr : certDescEn;
 
-    const headerText = certLang === "mr" 
-      ? "राज्य शैक्षणिक संशोधन व प्रशिक्षण परिषद महाराष्ट्र" 
+    const headerText = certLang === "mr"
+      ? "राज्य शैक्षणिक संशोधन व प्रशिक्षण परिषद महाराष्ट्र"
       : "State Council For Educational Research and Training Maharashtra";
-      
-    const certifyText = certLang === "mr" 
-      ? "याद्वारे प्रमाणित करण्यात येते की," 
+
+    const certifyText = certLang === "mr"
+      ? "याद्वारे प्रमाणित करण्यात येते की,"
       : "This is to certify that";
 
-    const sigHeader = certLang === "mr" 
-      ? "एस.सी.ई.आर.टी. महाराष्ट्र" 
+    const sigHeader = certLang === "mr"
+      ? "एस.सी.ई.आर.टी. महाराष्ट्र"
       : "SCERT Maharashtra";
 
     const sigAddress = certLang === "mr"
@@ -6420,7 +6866,7 @@ function TeacherSqaafPage() {
       : `State Council For Educational Research and Training, Maharashtra, Pune.<br/>(SCERT)<br/>708, Sadashiv Peth, Kumthekar Marg, Pune – 411030<br/>Maharashtra, India`;
 
     const printContainer = document.createElement("div");
-    
+
     const html = `
       <div style="
         font-family: 'Georgia', serif;
@@ -6574,7 +7020,7 @@ function TeacherSqaafPage() {
     let notApplicable = 0;
     for (let i = 1; i <= 128; i++) {
       const idx = selectedOptions[i];
-      
+
       if (!completedStandards.has(i)) {
         total += 4;
       } else {
@@ -6687,8 +7133,8 @@ function TeacherSqaafPage() {
     <div className="min-h-screen bg-slate-50/50">
       {/* Hide header and sidebar if viewing detailed full-screen standard or certificate */}
       <div className={(activeStandardDetails !== null || view === "certificate" || view === "responses") ? "hidden" : "block"}>
-         <TeacherHeader />
-         <TeacherSidebar />
+        <TeacherHeader />
+        <TeacherSidebar />
       </div>
 
       <main className={`${(activeStandardDetails !== null || view === "certificate" || view === "responses") ? "" : "lg:pl-64 pt-16"} min-h-screen transition-all duration-300`}>
@@ -6742,11 +7188,10 @@ function TeacherSqaafPage() {
                           <div
                             key={idx}
                             onClick={() => selectOption(activeStandardDetails, idx)}
-                            className={`rounded-2xl p-5 border transition-all text-[13px] font-extrabold leading-relaxed cursor-pointer hover:scale-[1.01] hover:border-slate-300 whitespace-pre-line ${
-                              isSelected
-                                ? "bg-[#22c55e] text-slate-950 border-[#22c55e] shadow-md"
-                                : "bg-[#f1eff7] text-slate-700 border-slate-200/60 shadow-sm"
-                            }`}
+                            className={`rounded-2xl p-5 border transition-all text-[13px] font-extrabold leading-relaxed cursor-pointer hover:scale-[1.01] hover:border-slate-300 whitespace-pre-line ${isSelected
+                              ? "bg-[#22c55e] text-slate-950 border-[#22c55e] shadow-md"
+                              : "bg-[#f1eff7] text-slate-700 border-slate-200/60 shadow-sm"
+                              }`}
                           >
                             {opt.text}
                           </div>
@@ -6756,10 +7201,10 @@ function TeacherSqaafPage() {
                   </div>
 
                   {/* Evidences / Photo Upload Section */}
-                  <PhotoUploader 
-                    standardId={activeStandardDetails} 
-                    lang={selectedLang} 
-                    evidenceUrl={currentDetail[selectedLang].evidenceUrl} 
+                  <PhotoUploader
+                    standardId={activeStandardDetails}
+                    lang={selectedLang}
+                    evidenceUrl={currentDetail[selectedLang].evidenceUrl}
                     selectedOptionIdx={selectedOptions[activeStandardDetails]}
                   />
 
@@ -6976,7 +7421,7 @@ function TeacherSqaafPage() {
                       <p className="text-[10px] font-black uppercase tracking-widest text-orange-50">{t.subtitle}</p>
                     </div>
                   </div>
-                  
+
                   {/* Language Selector Button with Automatic Toggle */}
                   <div>
                     <button
@@ -7007,7 +7452,7 @@ function TeacherSqaafPage() {
                           {infoSchoolName || profile?.schoolName || ""}
                         </h2>
                       </div>
-                      
+
                       <div className="flex items-center gap-3 self-start md:self-auto mt-2 md:mt-0">
                         <div className="inline-block bg-[#c4b5fd] text-slate-900 text-sm md:text-base font-bold px-5 py-2 rounded-xl border border-slate-900/10">
                           {infoUdise || profile?.udise || ""}
@@ -7041,18 +7486,17 @@ function TeacherSqaafPage() {
                       <div>
                         <div className="flex justify-between items-center mb-4">
                           <h4 className="text-[16px] font-bold text-slate-900">{t.viewSub}</h4>
-                          <div 
+                          <div
                             onClick={(e) => {
                               e.stopPropagation();
                               toggleCard1();
                             }}
-                            className={`size-6 border-2 rounded flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 transition-transform ${
-                              card1Checked 
-                                ? "border-slate-900 bg-slate-900 text-white" 
-                                : "border-slate-400 bg-white text-transparent"
-                            }`}
+                            className={`size-6 border-2 rounded flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 transition-transform ${card1Checked
+                              ? "border-slate-900 bg-slate-900 text-white"
+                              : "border-slate-400 bg-white text-transparent"
+                              }`}
                           >
-                             {card1Checked && <CheckCircle2 className="size-4" />}
+                            {card1Checked && <CheckCircle2 className="size-4" />}
                           </div>
                         </div>
                         <hr className="border-slate-900/40 mb-4" />
@@ -7081,8 +7525,8 @@ function TeacherSqaafPage() {
                         </div>
                         <hr className="border-slate-900/40 mb-4" />
                         <p className="text-[14px] text-slate-700 mb-6">
-                          {selectedLang === "mr" 
-                            ? "तुमचा मूल्यमापन अहवाल तक्ता स्वरूपात (Table Format) पीडीएफ म्हणून डाऊनलोड करा." 
+                          {selectedLang === "mr"
+                            ? "तुमचा मूल्यमापन अहवाल तक्ता स्वरूपात (Table Format) पीडीएफ म्हणून डाऊनलोड करा."
                             : "Download your evaluation report in table format as a PDF."}
                         </p>
                       </div>
@@ -7117,8 +7561,8 @@ function TeacherSqaafPage() {
                         </div>
                         <hr className="border-slate-900/40 mb-4" />
                         <p className="text-[14px] text-slate-700 mb-6">
-                          {selectedLang === "mr" 
-                            ? "तुमचा शाळा प्रतिसाद अहवाल पहा आणि पीडीएफ स्वरूपात डाऊनलोड करा." 
+                          {selectedLang === "mr"
+                            ? "तुमचा शाळा प्रतिसाद अहवाल पहा आणि पीडीएफ स्वरूपात डाऊनलोड करा."
                             : "View your school responses report and download it in PDF format."}
                         </p>
                       </div>
@@ -7139,6 +7583,44 @@ function TeacherSqaafPage() {
                         </button>
                       </div>
                     </div>
+
+                    {/* Card 4: Summary Report */}
+                    <div className="bg-white border border-slate-900 rounded-[1.5rem] p-6 w-full relative shadow-sm flex flex-col justify-between h-full">
+                      <div>
+                        <div className="flex items-center gap-3 mb-5">
+                          <div className="size-10 rounded-xl bg-[#e5e7eb] flex items-center justify-center">
+                            <FileText className="size-5 text-[#1e1b4b]" />
+                          </div>
+                          <h3 className="text-[17px] font-black text-[#1e1b4b] leading-tight">
+                            {selectedLang === "mr" ? "एकत्रित गुण अहवाल" : "Consolidated Marks Report"}
+                          </h3>
+                        </div>
+                        <hr className="border-slate-900/40 mb-4" />
+                        <p className="text-[14px] text-slate-700 mb-6">
+                          {selectedLang === "mr"
+                            ? "नवीन अहवालाची रचना लवकरच अपडेट केली जाईल."
+                            : "New report structure will be updated soon."}
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 mt-auto">
+                        <button
+                          onClick={() => setView("manual_summary")}
+                          className="py-3 px-4 bg-[#1e1b4b] text-white rounded-3xl text-[13px] font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                        >
+                          <Eye className="size-4" />
+                          <span>{selectedLang === "mr" ? "पहा" : "View"}</span>
+                        </button>
+                        <button
+                          onClick={() => handleDownloadPdf("summary", "download")}
+                          className="py-3 px-4 bg-[#1e1b4b] text-white rounded-3xl text-[13px] font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                        >
+                          <Download className="size-4" />
+                          <span>{selectedLang === "mr" ? "डाऊनलोड करा" : "Download PDF"}</span>
+                        </button>
+                      </div>
+                    </div>
+
+
                   </div>
                 </div>
               </motion.div>
@@ -7163,28 +7645,26 @@ function TeacherSqaafPage() {
                       {selectedLang === "mr" ? "तक्ता अहवाल अहवाल" : "Table Report Review"}
                     </span>
                   </div>
-                  
+
                   {/* Actions on the right side of header */}
                   <div className="flex items-center gap-3">
                     {/* Language Selector */}
                     <div className="flex bg-white/20 backdrop-blur-md rounded-xl p-1 gap-1 border border-black/15">
                       <button
                         onClick={() => setSelectedLang("mr")}
-                        className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                          selectedLang === "mr"
-                            ? "bg-[#1e1b4b] text-white shadow-sm"
-                            : "text-slate-900 hover:bg-white/10"
-                        }`}
+                        className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${selectedLang === "mr"
+                          ? "bg-[#1e1b4b] text-white shadow-sm"
+                          : "text-slate-900 hover:bg-white/10"
+                          }`}
                       >
                         मराठी
                       </button>
                       <button
                         onClick={() => setSelectedLang("en")}
-                        className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                          selectedLang === "en"
-                            ? "bg-[#1e1b4b] text-white shadow-sm"
-                            : "text-slate-900 hover:bg-white/10"
-                        }`}
+                        className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${selectedLang === "en"
+                          ? "bg-[#1e1b4b] text-white shadow-sm"
+                          : "text-slate-900 hover:bg-white/10"
+                          }`}
                       >
                         English
                       </button>
@@ -7338,7 +7818,7 @@ function TeacherSqaafPage() {
                         <h2 className="text-xl md:text-2xl font-bold text-slate-900 uppercase tracking-wide">
                           {infoSchoolName || profile?.schoolName || ""}
                         </h2>
-                        
+
                         <div className="inline-block bg-[#c4b5fd] text-slate-900 text-sm md:text-base font-bold px-5 py-2 rounded-xl border border-slate-900/10">
                           {infoUdise || profile?.udise || ""}
                         </div>
@@ -7421,8 +7901,8 @@ function TeacherSqaafPage() {
                               {[0, 1, 2, 3].map((levelIdx) => {
                                 const opt = options[levelIdx];
                                 const isCellSelected = isSelected && Number(selectedIdx) === levelIdx;
-                                const cellBg = isCellSelected 
-                                  ? "bg-green-50 border-2 border-green-500 font-bold text-green-950 font-sans" 
+                                const cellBg = isCellSelected
+                                  ? "bg-green-50 border-2 border-green-500 font-bold text-green-950 font-sans"
                                   : "text-slate-600 font-sans";
 
                                 return (
@@ -7472,8 +7952,8 @@ function TeacherSqaafPage() {
                                   </select>
                                 ) : (
                                   <span>
-                                    {isSelected 
-                                      ? (isNotApplicable ? (selectedLang === "mr" ? "लागू नाही" : "N/A") : (selectedIdx + 1)) 
+                                    {isSelected
+                                      ? (isNotApplicable ? (selectedLang === "mr" ? "लागू नाही" : "N/A") : (selectedIdx + 1))
                                       : "—"}
                                   </span>
                                 )}
@@ -7506,8 +7986,8 @@ function TeacherSqaafPage() {
                                   </select>
                                 ) : (
                                   <span>
-                                    {hasExt 
-                                      ? (isExtNotApplicable ? (selectedLang === "mr" ? "लागू नाही" : "N/A") : (extIdx + 1)) 
+                                    {hasExt
+                                      ? (isExtNotApplicable ? (selectedLang === "mr" ? "लागू नाही" : "N/A") : (extIdx + 1))
                                       : "—"}
                                   </span>
                                 )}
@@ -7636,28 +8116,26 @@ function TeacherSqaafPage() {
                       {certLang === "mr" ? "प्रमाणपत्र" : "Certificate"}
                     </span>
                   </div>
-                  
+
                   {/* Actions on the right side of orange header */}
                   <div className="flex items-center gap-3">
                     {/* Language Selector */}
                     <div className="flex bg-white/20 backdrop-blur-md rounded-xl p-1 gap-1 border border-black/15">
                       <button
                         onClick={() => setCertLang("mr")}
-                        className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                          certLang === "mr"
-                            ? "bg-[#1e1b4b] text-white shadow-sm"
-                            : "text-slate-900 hover:bg-white/10"
-                        }`}
+                        className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${certLang === "mr"
+                          ? "bg-[#1e1b4b] text-white shadow-sm"
+                          : "text-slate-900 hover:bg-white/10"
+                          }`}
                       >
                         मराठी
                       </button>
                       <button
                         onClick={() => setCertLang("en")}
-                        className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                          certLang === "en"
-                            ? "bg-[#1e1b4b] text-white shadow-sm"
-                            : "text-slate-900 hover:bg-white/10"
-                        }`}
+                        className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${certLang === "en"
+                          ? "bg-[#1e1b4b] text-white shadow-sm"
+                          : "text-slate-900 hover:bg-white/10"
+                          }`}
                       >
                         English
                       </button>
@@ -7685,8 +8163,8 @@ function TeacherSqaafPage() {
 
                 {/* Certificate Canvas Area */}
                 <div className="flex-1 w-full flex items-center justify-center p-4 md:p-8 overflow-y-auto">
-                  <div 
-                    id="certificate-container" 
+                  <div
+                    id="certificate-container"
                     className="relative bg-white shadow-2xl rounded-sm w-full max-w-[650px] aspect-[1/1.4] p-8 md:p-12 flex flex-col justify-between items-center overflow-hidden border border-slate-200"
                     style={{
                       backgroundImage: 'radial-gradient(circle, #fdfbf7 0%, #fff 100%)'
@@ -7747,11 +8225,11 @@ function TeacherSqaafPage() {
                     <div className="relative z-10 w-full flex flex-col items-center my-auto px-4 text-center space-y-4">
                       {/* Header */}
                       <h1 className="text-[#1e3b8b] font-serif font-black text-base sm:text-lg md:text-xl leading-snug tracking-wide max-w-[90%] uppercase">
-                        {certLang === "mr" 
-                          ? "राज्य शैक्षणिक संशोधन व प्रशिक्षण परिषद महाराष्ट्र" 
+                        {certLang === "mr"
+                          ? "राज्य शैक्षणिक संशोधन व प्रशिक्षण परिषद महाराष्ट्र"
                           : "State Council For Educational Research and Training Maharashtra"}
                       </h1>
-                      
+
                       <div className="h-[2px] w-24 bg-[#bf953f] my-2" />
 
                       {/* Certificate Title (Editable) */}
@@ -7849,16 +8327,16 @@ function TeacherSqaafPage() {
                         <p className="text-slate-500 text-[8px] sm:text-[9px] font-bold leading-normal">
                           {certLang === "mr" ? (
                             <>
-                              राज्य शैक्षणिक संशोधन व प्रशिक्षण परिषद, महाराष्ट्र, पुणे.<br/>
-                              (एस.सी.ई.आर.टी.)<br/>
-                              ७०८, सदाशिव पेठ, कुमठेकर मार्ग, पुणे – ४११0३0<br/>
+                              राज्य शैक्षणिक संशोधन व प्रशिक्षण परिषद, महाराष्ट्र, पुणे.<br />
+                              (एस.सी.ई.आर.टी.)<br />
+                              ७०८, सदाशिव पेठ, कुमठेकर मार्ग, पुणे – ४११0३0<br />
                               महाराष्ट्र, भारत
                             </>
                           ) : (
                             <>
-                              State Council For Educational Research and Training, Maharashtra, Pune.<br/>
-                              (SCERT)<br/>
-                              708, Sadashiv Peth, Kumthekar Marg, Pune – 411030<br/>
+                              State Council For Educational Research and Training, Maharashtra, Pune.<br />
+                              (SCERT)<br />
+                              708, Sadashiv Peth, Kumthekar Marg, Pune – 411030<br />
                               Maharashtra, India
                             </>
                           )}
@@ -7879,7 +8357,7 @@ function TeacherSqaafPage() {
                   </button>
                 </div>
               </motion.div>
-            ) : (
+            ) : view === "summary" ? (
               <motion.div
                 key="summary"
                 initial={{ opacity: 0, y: 20 }}
@@ -7897,7 +8375,7 @@ function TeacherSqaafPage() {
                     <ArrowLeft className="size-4 group-hover:-translate-x-1 transition-transform" />
                     <span>{t.backBtn}</span>
                   </button>
-                  
+
                   {/* Language Selector & Reset Buttons in Summary view */}
                   <div className="flex items-center gap-3">
                     <button
@@ -7972,7 +8450,7 @@ function TeacherSqaafPage() {
                     </div>
 
                     {/* Desktop Premium Grid Layout */}
-                    <div 
+                    <div
                       ref={gridRef}
                       className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5"
                     >
@@ -8003,37 +8481,32 @@ function TeacherSqaafPage() {
                                 setActiveStandardDetails(num);
                               }
                             }}
-                            className={`relative border-2 rounded-2xl p-4 flex flex-col justify-between transition-all duration-300 cursor-pointer group overflow-hidden ${
-                              isCompleted
-                                ? "bg-gradient-to-br from-green-50 to-green-100/50 border-green-500 hover:shadow-green-100"
-                                : "bg-gradient-to-br from-white to-slate-50 border-slate-200/80 hover:border-slate-400 hover:shadow-slate-100"
-                            } ${
-                              isLastSelected
+                            className={`relative border-2 rounded-2xl p-4 flex flex-col justify-between transition-all duration-300 cursor-pointer group overflow-hidden ${isCompleted
+                              ? "bg-gradient-to-br from-green-50 to-green-100/50 border-green-500 hover:shadow-green-100"
+                              : "bg-gradient-to-br from-white to-slate-50 border-slate-200/80 hover:border-slate-400 hover:shadow-slate-100"
+                              } ${isLastSelected
                                 ? "ring-4 ring-indigo-600/50 border-indigo-500 shadow-xl scale-[1.02] z-10"
                                 : ""
-                            }`}
+                              }`}
                           >
                             <div
-                              className={`absolute -right-6 -bottom-6 size-20 rounded-full blur-lg transition-all duration-300 pointer-events-none ${
-                                isCompleted
-                                  ? "bg-green-500/10 group-hover:bg-green-500/20"
-                                  : "bg-slate-500/5 group-hover:bg-slate-500/10"
-                              }`}
+                              className={`absolute -right-6 -bottom-6 size-20 rounded-full blur-lg transition-all duration-300 pointer-events-none ${isCompleted
+                                ? "bg-green-500/10 group-hover:bg-green-500/20"
+                                : "bg-slate-500/5 group-hover:bg-slate-500/10"
+                                }`}
                             />
-                            
+
                             <div className="flex justify-between items-start gap-4">
                               <div className="space-y-1">
                                 <span
-                                  className={`text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider ${
-                                    isCompleted ? "text-green-700 bg-green-100" : "text-slate-500 bg-slate-100"
-                                  }`}
+                                  className={`text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider ${isCompleted ? "text-green-700 bg-green-100" : "text-slate-500 bg-slate-100"
+                                    }`}
                                 >
                                   {selectedLang === "mr" ? "मानक" : "Standard"}
                                 </span>
                                 <h4
-                                  className={`font-extrabold text-sm transition-colors ${
-                                    isCompleted ? "text-green-950" : "text-slate-800"
-                                  }`}
+                                  className={`font-extrabold text-sm transition-colors ${isCompleted ? "text-green-950" : "text-slate-800"
+                                    }`}
                                 >
                                   {selectedLang === "mr"
                                     ? `मानक क्र. ${toMarathiNumerals(num)}`
@@ -8041,11 +8514,10 @@ function TeacherSqaafPage() {
                                 </h4>
                               </div>
                               <div
-                                className={`size-8 rounded-full flex items-center justify-center shadow-md transition-all ${
-                                  isCompleted
-                                    ? "bg-green-500 text-white shadow-green-500/20 group-hover:scale-110"
-                                    : "bg-slate-100 text-slate-300 group-hover:bg-slate-200"
-                                }`}
+                                className={`size-8 rounded-full flex items-center justify-center shadow-md transition-all ${isCompleted
+                                  ? "bg-green-500 text-white shadow-green-500/20 group-hover:scale-110"
+                                  : "bg-slate-100 text-slate-300 group-hover:bg-slate-200"
+                                  }`}
                               >
                                 <CheckCircle2 className="size-4" strokeWidth={2.5} />
                               </div>
@@ -8057,7 +8529,168 @@ function TeacherSqaafPage() {
                   </div>
                 </div>
               </motion.div>
-            )}
+            ) : view === "manual_summary" ? (
+              <motion.div
+                key="manual_summary"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-[#f8fafc] min-h-screen w-full flex flex-col"
+              >
+                {/* Header bar */}
+                <div className="bg-[#ffaf66] px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between text-slate-900 border-b border-black/5 relative z-20 w-full gap-4">
+                  <div className="flex items-center gap-4">
+                    <button onClick={() => setView("dashboard")} className="p-2 hover:bg-black/10 rounded-full transition-colors">
+                      <ArrowLeft className="size-5" />
+                    </button>
+                    <div className="flex flex-col">
+                      <h2 className="text-xl font-black">{selectedLang === "mr" ? "मॅन्युअल गुणनोंद तक्ता" : "Manual Marks Table"}</h2>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleDownloadPdf("summary", "download")}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1e1b4b] text-white hover:bg-slate-800 transition-colors shadow-sm"
+                  >
+                    <Download className="size-4" />
+                    <span>{selectedLang === "mr" ? "PDF डाऊनलोड करा" : "Download PDF"}</span>
+                  </button>
+                </div>
+
+                {/* Form Content */}
+                <div className="p-4 sm:p-8 overflow-y-auto max-h-[85vh]">
+                  <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8 max-w-6xl mx-auto">
+                    <h3 className="text-lg font-bold mb-4">{selectedLang === "mr" ? "शाळेची माहिती" : "School Information"}</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-500 mb-1">शाळेचे नाव</label>
+                        <div className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 min-h-[38px]">{infoSchoolName || "-"}</div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-500 mb-1">U Dise No</label>
+                        <div className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 min-h-[38px]">{infoUdise || "-"}</div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-500 mb-1">तालुका</label>
+                        <div className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 min-h-[38px]">{infoTaluka || "-"}</div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-500 mb-1">जिल्हा</label>
+                        <div className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 min-h-[38px]">{infoDistrict || "-"}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-2 sm:p-6 max-w-6xl mx-auto overflow-x-auto">
+                    <h3 className="text-lg font-bold mb-4 px-2">{selectedLang === "mr" ? "मूल्यांकन तपशील" : "Evaluation Details"}</h3>
+                    <table className="w-full min-w-[800px] border-collapse table-fixed text-sm">
+                      <thead>
+                        <tr className="bg-slate-50">
+                          <th className="border border-slate-200 p-2 w-[5%]">अ. क्र.</th>
+                          <th className="border border-slate-200 p-2 w-[25%]">क्षेत्राचे नाव</th>
+                          <th className="border border-slate-200 p-2 w-[10%]">मानक क्र.</th>
+                          <th className="border border-slate-200 p-2 w-[12%]">लागू नसलेली मानके</th>
+                          <th className="border border-slate-200 p-2 w-[8%]">लागू मानक<br />संख्या</th>
+                          <th className="border border-slate-200 p-2 w-[8%]">स्तर १</th>
+                          <th className="border border-slate-200 p-2 w-[8%]">स्तर २</th>
+                          <th className="border border-slate-200 p-2 w-[8%]">स्तर ३</th>
+                          <th className="border border-slate-200 p-2 w-[8%]">स्तर ४</th>
+                          <th className="border border-slate-200 p-2 w-[8%]">एकूण गुण</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {manualData.map((row, i) => {
+                          const rowTotal = (Number(row.l1 || 0) * 1) + (Number(row.l2 || 0) * 2) + (Number(row.l3 || 0) * 3) + (Number(row.l4 || 0) * 4);
+                          return (
+                            <tr key={row.id}>
+                              <td className="border border-slate-200 p-2 text-center">{i + 1}</td>
+                              <td className="border border-slate-200 p-2 font-medium text-[11px] leading-tight">{row.name}</td>
+                              <td className="border border-slate-200 p-2 text-center text-[12px]">{row.stds}</td>
+                              <td className="border border-slate-200 p-1 text-center text-[12px] text-slate-700">
+                                {row.notApp || "-"}
+                              </td>
+                              <td className="border border-slate-200 p-1 text-center font-bold text-[#1e1b4b]">
+                                {row.app}
+                              </td>
+                              <td className="border border-slate-200 p-1 text-center font-bold bg-red-50 text-slate-700">
+                                {row.l1}
+                              </td>
+                              <td className="border border-slate-200 p-1 text-center font-bold bg-orange-50 text-slate-700">
+                                {row.l2}
+                              </td>
+                              <td className="border border-slate-200 p-1 text-center font-bold bg-amber-50 text-slate-700">
+                                {row.l3}
+                              </td>
+                              <td className="border border-slate-200 p-1 text-center font-bold bg-green-50 text-slate-700">
+                                {row.l4}
+                              </td>
+                              <td className="border border-slate-200 p-2 text-center font-bold text-lg text-[#1e1b4b]">{rowTotal}</td>
+                            </tr>
+                          );
+                        })}
+                        <tr className="bg-slate-50 font-bold">
+                          <td className="border border-slate-200 p-2" colSpan={3}></td>
+                          <td className="border border-slate-200 p-2 text-right">एकूण</td>
+                          <td className="border border-slate-200 p-2 text-center text-lg text-[#1e1b4b]">
+                            {manualData.reduce((sum, row) => sum + Number(row.app || 0), 0)}
+                          </td>
+                          <td className="border border-slate-200 p-2" colSpan={4}></td>
+                          <td className="border border-slate-200 p-2 text-center text-xl text-[#1e1b4b]">{manualObtainedMarks}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    <div className="mt-8 flex flex-col md:flex-row gap-8 items-start">
+                      <div className="w-full md:w-1/2">
+                        <div className="mb-2 text-xs font-semibold text-slate-500">श्रेणी तक्ता</div>
+                        <table className="w-full border-collapse text-sm text-center">
+                          <thead>
+                            <tr className="bg-slate-50">
+                              <th className="border border-slate-200 p-2">श्रेणी</th>
+                              <th className="border border-slate-200 p-2">टक्केवारी</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr><td className="border border-slate-200 p-2 font-bold text-green-700">A+</td><td className="border border-slate-200 p-2">९१ ते १००</td></tr>
+                            <tr><td className="border border-slate-200 p-2 font-bold text-green-600">A</td><td className="border border-slate-200 p-2">८१ ते ९०</td></tr>
+                            <tr><td className="border border-slate-200 p-2 font-bold text-yellow-600">B+</td><td className="border border-slate-200 p-2">७१ ते ८०</td></tr>
+                            <tr><td className="border border-slate-200 p-2 font-bold text-orange-500">B</td><td className="border border-slate-200 p-2">६१ ते ७०</td></tr>
+                            <tr><td className="border border-slate-200 p-2 font-bold text-orange-600">C+</td><td className="border border-slate-200 p-2">५१ ते ६०</td></tr>
+                            <tr><td className="border border-slate-200 p-2 font-bold text-red-600">C</td><td className="border border-slate-200 p-2">५० पेक्षा कमी</td></tr>
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <div className="w-full md:w-1/2 bg-white rounded-xl p-6 border-2 border-dashed border-slate-300 shadow-sm">
+                        <div className="flex justify-between items-center mb-4">
+                          <span className="font-semibold text-slate-700">एकूण शक्य गुण:</span>
+                          <span className="text-xl font-bold bg-slate-100 px-3 py-1 rounded-md">{manualData.reduce((sum, row) => sum + Number(row.app || 0), 0) * 4}</span>
+                        </div>
+                        <div className="flex justify-between items-center mb-6">
+                          <span className="font-semibold text-slate-700">शाळा प्राप्त गुण:</span>
+                          <span className="w-24 px-3 py-1 bg-amber-50 border-2 border-amber-300 rounded-lg text-xl font-bold text-center shadow-inner">{manualObtainedMarks}</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-4 border-t-2 border-slate-100">
+                          <span className="font-bold text-slate-700">प्राप्त श्रेणी:</span>
+                          <span className="text-4xl font-black text-green-600 drop-shadow-sm">
+                            {(() => {
+                              const totalApp = manualData.reduce((sum, row) => sum + Number(row.app || 0), 0);
+                              const obt = Number(manualObtainedMarks || 0);
+                              const pct = totalApp > 0 ? Math.round((obt / (totalApp * 4)) * 100) : 0;
+                              if (pct >= 91) return "A+";
+                              if (pct >= 81) return "A";
+                              if (pct >= 71) return "B+";
+                              if (pct >= 61) return "B";
+                              if (pct >= 51) return "C+";
+                              return "C";
+                            })()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ) : null}
           </AnimatePresence>
         </div>
       </main>
@@ -8094,9 +8727,11 @@ function TeacherSqaafPage() {
                       {selectedLang === "mr" ? "PDF प्रिव्ह्यू" : "PDF Preview"}
                     </h3>
                     <p className="text-[11px] text-slate-500 font-semibold">
-                      {pdfFormat === "responses"
-                        ? (selectedLang === "mr" ? "शाळा प्रतिसाद अहवाल" : "School Responses Report")
-                        : (selectedLang === "mr" ? "तक्ता अहवाल" : "Table Report")
+                      {pdfFormat === "summary"
+                        ? (selectedLang === "mr" ? "एकत्रित गुण अहवाल" : "Consolidated Marks Report")
+                        : pdfFormat === "responses"
+                          ? (selectedLang === "mr" ? "शाळा प्रतिसाद अहवाल" : "School Responses Report")
+                          : (selectedLang === "mr" ? "तक्ता अहवाल" : "Table Report")
                       }
                     </p>
                   </div>
@@ -8122,9 +8757,11 @@ function TeacherSqaafPage() {
                   {/* Download Button */}
                   <a
                     href={previewPdfUrl}
-                    download={pdfFormat === "responses"
-                      ? `SQAAF_Responses_${new Date().toISOString().slice(0, 10)}.pdf`
-                      : `SQAAF_Report_${new Date().toISOString().slice(0, 10)}.pdf`
+                    download={pdfFormat === "summary"
+                      ? `SQAAF_Summary_${new Date().toISOString().slice(0, 10)}.pdf`
+                      : pdfFormat === "responses"
+                        ? `SQAAF_Responses_${new Date().toISOString().slice(0, 10)}.pdf`
+                        : `SQAAF_Report_${new Date().toISOString().slice(0, 10)}.pdf`
                     }
                     className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs font-bold hover:from-green-600 hover:to-emerald-700 transition-all shadow-md shadow-green-500/20 active:scale-95"
                   >

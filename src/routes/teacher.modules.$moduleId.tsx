@@ -266,31 +266,31 @@ function ModulePage() {
             </div>
           </div>
 
-           <div className="flex items-center gap-2 md:gap-4">
-             {moduleId === "teacher-statistics" && (
-               <button
-                 onClick={() => window.dispatchEvent(new Event("download-teacher-portfolio-pdf"))}
-                 className="group flex items-center gap-2 md:gap-4 px-6 md:px-12 py-3 md:py-5 bg-white text-slate-800 text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] rounded-full hover:bg-[#D6B97A] hover:text-white hover:border-[#D6B97A] border border-slate-200 transition-all duration-700 shadow-xl cursor-pointer"
-               >
-                 <Download className="size-3 md:size-4 text-[#D6B97A] group-hover:text-white" />
-                 <span className="hidden sm:inline">Download PDF</span>
-                 <span className="sm:hidden">PDF</span>
-               </button>
-             )}
-             <button
-               onClick={handleSave}
-               disabled={saving}
-               className="group flex items-center gap-2 md:gap-4 px-6 md:px-12 py-3 md:py-5 bg-[#1A1A1A] text-white text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] rounded-full hover:bg-[#D6B97A] transition-all duration-700 shadow-2xl disabled:opacity-50"
-             >
-               {saving ? (
-                 <Loader2 className="size-3 md:size-4 animate-spin" />
-               ) : (
-                 <Save className="size-3 md:size-4 group-hover:rotate-12 transition-transform text-[#D6B97A] group-hover:text-white" />
-               )}
-               <span className="hidden sm:inline">Commit Sync</span>
-               <span className="sm:hidden">Save</span>
-             </button>
-           </div>
+          <div className="flex items-center gap-2 md:gap-4">
+            {moduleId === "teacher-statistics" && (
+              <button
+                onClick={() => window.dispatchEvent(new Event("download-teacher-portfolio-pdf"))}
+                className="group flex items-center gap-2 md:gap-4 px-6 md:px-12 py-3 md:py-5 bg-white text-slate-800 text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] rounded-full hover:bg-[#D6B97A] hover:text-white hover:border-[#D6B97A] border border-slate-200 transition-all duration-700 shadow-xl cursor-pointer"
+              >
+                <Download className="size-3 md:size-4 text-[#D6B97A] group-hover:text-white" />
+                <span className="hidden sm:inline">Download PDF</span>
+                <span className="sm:hidden">PDF</span>
+              </button>
+            )}
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="group flex items-center gap-2 md:gap-4 px-6 md:px-12 py-3 md:py-5 bg-[#1A1A1A] text-white text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] rounded-full hover:bg-[#D6B97A] transition-all duration-700 shadow-2xl disabled:opacity-50"
+            >
+              {saving ? (
+                <Loader2 className="size-3 md:size-4 animate-spin" />
+              ) : (
+                <Save className="size-3 md:size-4 group-hover:rotate-12 transition-transform text-[#D6B97A] group-hover:text-white" />
+              )}
+              <span className="hidden sm:inline">Commit Sync</span>
+              <span className="sm:hidden">Save</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -299,117 +299,117 @@ function ModulePage() {
       <main className="flex-1 lg:pl-64 pt-24 max-w-[1800px] mx-auto w-full px-4 md:px-8 py-12 md:py-20 relative z-10">
         <PinGate sectionKey="planning" enabled={moduleId === "annual-monthly-planning"}>
           <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white/80 backdrop-blur-3xl rounded-[4rem] border border-white/50 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.1)] relative overflow-hidden"
-        >
-          {/* Canvas Decoration */}
-          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-[#D6B97A]/30 to-transparent" />
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white/80 backdrop-blur-3xl rounded-[4rem] border border-white/50 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.1)] relative overflow-hidden"
+          >
+            {/* Canvas Decoration */}
+            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-[#D6B97A]/30 to-transparent" />
 
-          <div className={`p-4 ${moduleId === 'special-day' ? 'md:p-8 lg:p-10' : 'md:p-16'}`}>
-            <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none group-hover:scale-110 transition-transform duration-1000">
-              <config.icon className="size-32 md:size-64 text-[#D6B97A]" />
-            </div>
+            <div className={`p-4 ${moduleId === 'special-day' ? 'md:p-8 lg:p-10' : 'md:p-16'}`}>
+              <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none group-hover:scale-110 transition-transform duration-1000">
+                <config.icon className="size-32 md:size-64 text-[#D6B97A]" />
+              </div>
 
 
-            {moduleId === "timetable" && (
-              <>
-                <div className="md:hidden flex items-center justify-center gap-2 mb-6 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] animate-pulse">
-                  <ArrowRight className="size-3" /> Swipe left to see more{" "}
-                  <ArrowRight className="size-3" />
-                </div>
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-100 rounded-[2rem] mb-12 overflow-x-auto no-scrollbar shadow-sm"
-                >
-                  {["5th", "6th", "7th", "8th", "9th", "10th"].map((cls) => (
-                    <button
-                      key={cls}
-                      onClick={() => setSelectedClass(cls)}
-                      className={`px-10 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all duration-500 ${selectedClass === cls
+              {moduleId === "timetable" && (
+                <>
+                  <div className="md:hidden flex items-center justify-center gap-2 mb-6 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] animate-pulse">
+                    <ArrowRight className="size-3" /> Swipe left to see more{" "}
+                    <ArrowRight className="size-3" />
+                  </div>
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-100 rounded-[2rem] mb-12 overflow-x-auto no-scrollbar shadow-sm"
+                  >
+                    {["5th", "6th", "7th", "8th", "9th", "10th"].map((cls) => (
+                      <button
+                        key={cls}
+                        onClick={() => setSelectedClass(cls)}
+                        className={`px-10 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all duration-500 ${selectedClass === cls
                           ? "bg-slate-900 text-white shadow-2xl translate-y-[-2px]"
                           : "text-slate-400 hover:text-slate-900 hover:bg-white"
-                        }`}
-                    >
-                      Class {cls}
-                    </button>
-                  ))}
-                </motion.div>
-              </>
-            )}
-            {loading ? (
-              <div className="h-96 flex flex-col items-center justify-center text-slate-400 gap-6">
-                <Loader2 className="size-10 animate-spin text-indigo-600" />
-                <p className="text-[12px] font-black uppercase tracking-[0.3em] animate-pulse">
-                  Synchronizing Data...
-                </p>
-              </div>
-            ) : moduleId === "timetable" ? (
-              <TimetableEditor
-                data={data}
-                selectedClass={selectedClass}
-                onChange={(val: any) => setData(val)}
-              />
-            ) : moduleId === "special-day" ? (
-              <AssemblyBookViewer />
-            ) : moduleId === "template" ? (
-              <TemplateVisualHub data={data} onChange={setData} />
+                          }`}
+                      >
+                        Class {cls}
+                      </button>
+                    ))}
+                  </motion.div>
+                </>
+              )}
+              {loading ? (
+                <div className="h-96 flex flex-col items-center justify-center text-slate-400 gap-6">
+                  <Loader2 className="size-10 animate-spin text-indigo-600" />
+                  <p className="text-[12px] font-black uppercase tracking-[0.3em] animate-pulse">
+                    Synchronizing Data...
+                  </p>
+                </div>
+              ) : moduleId === "timetable" ? (
+                <TimetableEditor
+                  data={data}
+                  selectedClass={selectedClass}
+                  onChange={(val: any) => setData(val)}
+                />
+              ) : moduleId === "special-day" ? (
+                <AssemblyBookViewer />
+              ) : moduleId === "template" ? (
+                <TemplateVisualHub data={data} onChange={setData} />
 
-            ) : moduleId === "mid-day-meal-(mdm)" ? (
-              <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-6">
-                <div className="size-20 rounded-full bg-[#D6B97A]/10 text-[#D6B97A] flex items-center justify-center shadow-inner">
-                  <Utensils className="size-10" />
+              ) : moduleId === "mid-day-meal-(mdm)" ? (
+                <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-6">
+                  <div className="size-20 rounded-full bg-[#D6B97A]/10 text-[#D6B97A] flex items-center justify-center shadow-inner">
+                    <Utensils className="size-10" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-2xl font-black text-[#1A1A1A] italic">
+                      Mid-Day Meal (MDM) Portal
+                    </h3>
+                    <p className="text-slate-500 font-medium max-w-md mx-auto">
+                      Access the interactive meal distribution registers, food
+                      stock inventory ledgers, helper records, and autogenerated
+                      reports.
+                    </p>
+                  </div>
+                  <Link
+                    to="/teacher/mdm"
+                    className="px-10 py-5 bg-[#1A1A1A] hover:bg-[#D6B97A] text-white rounded-full text-[10px] font-black uppercase tracking-[0.3em] transition-all shadow-xl"
+                  >
+                    Access MDM Workspace
+                  </Link>
                 </div>
-                <div className="space-y-2">
-                  <h3 className="text-2xl font-black text-[#1A1A1A] italic">
-                    Mid-Day Meal (MDM) Portal
-                  </h3>
-                  <p className="text-slate-500 font-medium max-w-md mx-auto">
-                    Access the interactive meal distribution registers, food
-                    stock inventory ledgers, helper records, and autogenerated
-                    reports.
-                  </p>
+              ) : moduleId === "annual-monthly-planning" ? (
+                <AnnualMonthlyPlanningEditor
+                  data={data}
+                  onChange={(val: any) => setData(val)}
+                />
+              ) : moduleId === "teaching-record-notebook" ? (
+                <TeachingDiaryManager
+                  data={data}
+                  onChange={(val: any) => setData(val)}
+                />
+              ) : moduleId === "teacher-statistics" ? (
+                <TeacherStatisticsEditor
+                  data={data}
+                  onChange={(val: any) => setData(val)}
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-6">
+                  <div className="size-20 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+                    <Grid className="size-10" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-black text-slate-900">
+                      Module Under Construction
+                    </h3>
+                    <p className="text-slate-500 font-medium">
+                      We're building something amazing here. Please check back
+                      soon.
+                    </p>
+                  </div>
                 </div>
-                <Link
-                  to="/teacher/mdm"
-                  className="px-10 py-5 bg-[#1A1A1A] hover:bg-[#D6B97A] text-white rounded-full text-[10px] font-black uppercase tracking-[0.3em] transition-all shadow-xl"
-                >
-                  Access MDM Workspace
-                </Link>
-              </div>
-            ) : moduleId === "annual-monthly-planning" ? (
-              <AnnualMonthlyPlanningEditor
-                data={data}
-                onChange={(val: any) => setData(val)}
-              />
-            ) : moduleId === "teaching-record-notebook" ? (
-              <TeachingDiaryManager
-                data={data}
-                onChange={(val: any) => setData(val)}
-              />
-            ) : moduleId === "teacher-statistics" ? (
-              <TeacherStatisticsEditor
-                data={data}
-                onChange={(val: any) => setData(val)}
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-6">
-                <div className="size-20 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
-                  <Grid className="size-10" />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-xl font-black text-slate-900">
-                    Module Under Construction
-                  </h3>
-                  <p className="text-slate-500 font-medium">
-                    We're building something amazing here. Please check back
-                    soon.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
           </motion.div>
         </PinGate>
       </main>
@@ -805,8 +805,8 @@ function TemplateVisualHub({
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 whitespace-nowrap border-2 ${activeTab === tab
-                  ? "bg-[#111827] text-white border-[#111827] shadow-2xl scale-105"
-                  : "bg-white text-[#111827]/40 border-transparent hover:border-[#E8DFD1]/50 hover:text-[#111827]"
+                ? "bg-[#111827] text-white border-[#111827] shadow-2xl scale-105"
+                : "bg-white text-[#111827]/40 border-transparent hover:border-[#E8DFD1]/50 hover:text-[#111827]"
                 }`}
             >
               {tab}
@@ -1500,7 +1500,7 @@ function AssemblyBookViewer() {
   useEffect(() => {
     const htmlLang = document.documentElement.lang || "en";
     setLang(htmlLang.startsWith("mr") ? "mr" : "en");
-    
+
     setLoading(true);
     const q = collection(db, "admin_assembly_books");
     const unsubscribe = onSnapshot(
@@ -1634,8 +1634,8 @@ function AssemblyBookViewer() {
                 {books.map((book, index) => {
                   const isSelected = selectedBook?.id === book.id;
                   return (
-                    <tr 
-                      key={book.id} 
+                    <tr
+                      key={book.id}
                       className={`border-b last:border-0 transition-colors ${isSelected ? "bg-blue-50" : "hover:bg-slate-50"}`}
                     >
                       <td className="px-4 py-3 border-r border-slate-200 font-semibold">{index + 1}</td>
@@ -1650,11 +1650,10 @@ function AssemblyBookViewer() {
                           <button
                             onClick={() => handleSelectBook(book)}
                             disabled={loadingData && !isSelected}
-                            className={`px-3 py-1.5 text-xs font-bold uppercase border rounded disabled:opacity-50 ${
-                              isSelected 
-                                ? "bg-slate-800 text-white border-slate-800" 
+                            className={`px-3 py-1.5 text-xs font-bold uppercase border rounded disabled:opacity-50 ${isSelected
+                                ? "bg-slate-800 text-white border-slate-800"
                                 : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
-                            }`}
+                              }`}
                           >
                             {loadingData && isSelected ? (
                               <Loader2 className="size-3 animate-spin inline mr-1" />
@@ -1798,8 +1797,8 @@ function DailyAssemblyContent() {
         margin: [10, 10, 10, 10],
         filename: `Paripath_${new Date().toISOString().split("T")[0]}.pdf`,
         image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { 
-          scale: 2, 
+        html2canvas: {
+          scale: 2,
           useCORS: true,
           allowTaint: false,
           letterRendering: true,
@@ -1822,7 +1821,7 @@ function DailyAssemblyContent() {
             const elements = clonedDoc.querySelectorAll("*");
             elements.forEach((el: any) => {
               if (el.classList) {
-                const classesToRemove = Array.from(el.classList).filter((c: any) => 
+                const classesToRemove = Array.from(el.classList).filter((c: any) =>
                   c.includes("blur") || c.includes("drop-shadow") || c.includes("mix-blend") ||
                   c.includes("backdrop") || c.includes("hover:") || c.includes("group-hover") ||
                   c.includes("transition") || c.includes("animate") || c.includes("scale") ||
@@ -1868,13 +1867,13 @@ function DailyAssemblyContent() {
       };
 
       toast.success("Generating PDF, please wait...");
-      
+
       const originalOverflow = element.style.overflow;
       element.style.overflow = "visible";
       element.classList.remove("overflow-hidden");
 
       await html2pdfFn().set(opt).from(element).save();
-      
+
       element.style.overflow = originalOverflow;
       element.classList.add("overflow-hidden");
     } catch (err: any) {
@@ -1895,9 +1894,9 @@ function DailyAssemblyContent() {
 
   const itemVariants = {
     hidden: { opacity: 0, y: 40, scale: 0.95 },
-    show: { 
-      opacity: 1, 
-      y: 0, 
+    show: {
+      opacity: 1,
+      y: 0,
       scale: 1,
       transition: { type: "spring" as const, stiffness: 100, damping: 15 }
     }
@@ -1929,7 +1928,7 @@ function DailyAssemblyContent() {
   };
 
   return (
-    <div 
+    <div
       id="daily-assembly-content"
       className="p-6 md:p-10 space-y-12 relative rounded-[3rem] overflow-hidden bg-[#F8FAFF]"
     >
@@ -1951,11 +1950,10 @@ function DailyAssemblyContent() {
               <button
                 key={l}
                 onClick={() => setLang(l)}
-                className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-[0.15em] transition-all duration-300 ${
-                  lang === l
+                className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-[0.15em] transition-all duration-300 ${lang === l
                     ? "bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-lg shadow-indigo-500/25 border border-white/20 scale-105"
                     : "text-white/50 hover:text-white hover:bg-white/5"
-                }`}
+                  }`}
               >
                 {l === "mr" ? "मराठी" : l === "hi" ? "हिंदी" : "English"}
               </button>
@@ -1977,7 +1975,7 @@ function DailyAssemblyContent() {
           {t.assemblyStart}
         </h4>
       </div>
-      
+
       {[
         { key: 'nationalAnthem', fallbackIdx: 0 },
         { key: 'stateAnthem', fallbackIdx: 1 },
@@ -1987,7 +1985,7 @@ function DailyAssemblyContent() {
       ].map((itemDef, idx) => {
         const fallbackItem = assemblyItems[itemDef.fallbackIdx];
         const content = formData[itemDef.key] || fallbackItem.content;
-        
+
         return (
           <div key={idx} className={`bg-white p-6 md:p-10 rounded-[2.5rem] border border-green-100 shadow-md text-center mb-6 ${idx > 0 ? 'pdf-page-break' : ''}`}>
             <div className="flex justify-center mb-6">
@@ -2054,7 +2052,7 @@ function DailyAssemblyContent() {
         <div className="p-10 md:p-14 bg-white/60 backdrop-blur-xl border border-white rounded-[3rem] flex flex-col items-center justify-center text-center shadow-xl shadow-violet-900/5 hover:shadow-2xl hover:shadow-violet-900/10 transition-all duration-500 relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-64 h-64 bg-violet-200/40 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 group-hover:bg-violet-300/40 transition-colors" />
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-fuchsia-200/40 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/2 group-hover:bg-fuchsia-300/40 transition-colors" />
-          
+
           <div className="size-20 rounded-full bg-violet-100 border border-violet-200 flex items-center justify-center mb-8 relative z-10 shadow-inner">
             <Quote className="size-10 text-violet-500" />
           </div>
@@ -2469,8 +2467,8 @@ function SpecialDayEditor({
             key={s.id}
             onClick={() => setActiveSection(s.id)}
             className={`p-8 rounded-[3rem] text-left transition-all duration-700 flex items-center gap-6 border-2 relative overflow-hidden group ${activeSection === s.id
-                ? "bg-white border-[#D6B97A] shadow-[0_32px_64px_-16px_rgba(214,185,122,0.2)] scale-[1.05]"
-                : "bg-white/40 border-transparent hover:bg-white hover:border-[#E8DFD1]"
+              ? "bg-white border-[#D6B97A] shadow-[0_32px_64px_-16px_rgba(214,185,122,0.2)] scale-[1.05]"
+              : "bg-white/40 border-transparent hover:bg-white hover:border-[#E8DFD1]"
               }`}
           >
             <div
@@ -2598,46 +2596,46 @@ function SpecialDayEditor({
                   </button>
                 </div>
 
-            <div className="relative group flex-1 flex flex-col">
-              <div className="absolute -top-4 left-10 px-5 py-2 bg-[#1A1A1A] text-white rounded-full text-[9px] font-black uppercase tracking-[0.4em] z-10 shadow-xl">
-                {lang === "en" ? "Anglicized Manuscript" : "Vedic Manuscript"}
-              </div>
-              <textarea
-                className={`w-full flex-1 p-8 md:p-12 bg-white/40 border-2 border-transparent focus:border-[#D6B97A]/30 rounded-[2.5rem] md:rounded-[3.5rem] outline-none focus:bg-white transition-all text-xl md:text-2xl text-[#1A1A1A] font-medium leading-relaxed resize-none shadow-inner ${isGenerating ? "animate-pulse opacity-50" : ""}`}
-                placeholder={
-                  isGenerating
-                    ? "Transcribing universal knowledge..."
-                    : `Document your daily ${current.label.toLowerCase()} in ${lang === "en" ? "English" : "Marathi"}...`
-                }
-                value={safeData[activeSection]?.[lang] || ""}
-                onChange={(e) => updateField(activeSection, e.target.value)}
-                disabled={isGenerating}
-              ></textarea>
-              {isGenerating && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="flex flex-col items-center gap-6">
-                    <div className="size-20 rounded-full border-4 border-[#D6B97A]/20 border-t-[#D6B97A] animate-spin" />
-                    <span className="text-[11px] font-black uppercase tracking-[0.4em] text-[#D6B97A] animate-pulse">
-                      Synchronizing Intelligence
-                    </span>
+                <div className="relative group flex-1 flex flex-col">
+                  <div className="absolute -top-4 left-10 px-5 py-2 bg-[#1A1A1A] text-white rounded-full text-[9px] font-black uppercase tracking-[0.4em] z-10 shadow-xl">
+                    {lang === "en" ? "Anglicized Manuscript" : "Vedic Manuscript"}
                   </div>
+                  <textarea
+                    className={`w-full flex-1 p-8 md:p-12 bg-white/40 border-2 border-transparent focus:border-[#D6B97A]/30 rounded-[2.5rem] md:rounded-[3.5rem] outline-none focus:bg-white transition-all text-xl md:text-2xl text-[#1A1A1A] font-medium leading-relaxed resize-none shadow-inner ${isGenerating ? "animate-pulse opacity-50" : ""}`}
+                    placeholder={
+                      isGenerating
+                        ? "Transcribing universal knowledge..."
+                        : `Document your daily ${current.label.toLowerCase()} in ${lang === "en" ? "English" : "Marathi"}...`
+                    }
+                    value={safeData[activeSection]?.[lang] || ""}
+                    onChange={(e) => updateField(activeSection, e.target.value)}
+                    disabled={isGenerating}
+                  ></textarea>
+                  {isGenerating && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="flex flex-col items-center gap-6">
+                        <div className="size-20 rounded-full border-4 border-[#D6B97A]/20 border-t-[#D6B97A] animate-spin" />
+                        <span className="text-[11px] font-black uppercase tracking-[0.4em] text-[#D6B97A] animate-pulse">
+                          Synchronizing Intelligence
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            <div className="flex justify-end">
-              <button
-                onClick={autoFillIntelligence}
-                className="group flex items-center gap-4 px-10 py-5 bg-[#F8F5EF] text-[#D6B97A] text-[10px] font-black uppercase tracking-[0.3em] rounded-[2rem] border border-[#D6B97A]/30 hover:bg-[#D6B97A] hover:text-white transition-all duration-700 shadow-lg"
-              >
-                <div className="size-8 rounded-xl bg-white group-hover:bg-[#1A1A1A] flex items-center justify-center shadow-sm transition-colors">
-                  <Sparkles className="size-4" />
+                <div className="flex justify-end">
+                  <button
+                    onClick={autoFillIntelligence}
+                    className="group flex items-center gap-4 px-10 py-5 bg-[#F8F5EF] text-[#D6B97A] text-[10px] font-black uppercase tracking-[0.3em] rounded-[2rem] border border-[#D6B97A]/30 hover:bg-[#D6B97A] hover:text-white transition-all duration-700 shadow-lg"
+                  >
+                    <div className="size-8 rounded-xl bg-white group-hover:bg-[#1A1A1A] flex items-center justify-center shadow-sm transition-colors">
+                      <Sparkles className="size-4" />
+                    </div>
+                    Global Intelligence Sync
+                  </button>
                 </div>
-                Global Intelligence Sync
-              </button>
-            </div>
-          </>
-        )}
+              </>
+            )}
           </div>
         </motion.main>
       </AnimatePresence>
@@ -3126,14 +3124,14 @@ const getDatesForMonth = (monthEn: string, year: number = 2026) => {
   const monthIndex = monthMap[monthEn];
   if (monthIndex === undefined) return [];
   const actualYear = (monthEn === "January" || monthEn === "February" || monthEn === "March" || monthEn === "April" || monthEn === "May") ? year + 1 : year;
-  
+
   const startDay = (monthEn === "June") ? 15 : 1;
   const tempDate = new Date(actualYear, monthIndex + 1, 0);
   const endDay = tempDate.getDate();
-  
+
   const dates: { dateNum: number; dayMr: string; isSunday: boolean }[] = [];
   const daysMr = ["रवि", "सोम", "मंगळ", "बुध", "गुरु", "शुक्र", "शनि"];
-  
+
   for (let d = startDay; d <= endDay; d++) {
     const dateObj = new Date(actualYear, monthIndex, d);
     const dayName = daysMr[dateObj.getDay()];
@@ -3147,16 +3145,16 @@ const getDatesForMonth = (monthEn: string, year: number = 2026) => {
 };
 
 const getDefaultDailyPlan = (
-  classVal: string, 
-  mediumVal: string, 
-  subject: string, 
-  monthEn: string, 
+  classVal: string,
+  mediumVal: string,
+  subject: string,
+  monthEn: string,
   dateNum: number,
   dayMr: string
 ) => {
   const isClass4 = classVal === "4th";
   const isMarathiOrSemi = mediumVal === "Marathi" || mediumVal === "Semi English";
-  
+
   if (isClass4 && isMarathiOrSemi && monthEn === "June") {
     let lookupSubject = subject;
     if (subject.includes("Math") || subject.includes("गणित") || subject.includes("Mathematics")) {
@@ -3167,18 +3165,18 @@ const getDefaultDailyPlan = (
       return subjectPlan[dateNum];
     }
   }
-  
+
   if (dayMr === "रवि" || dayMr === "रवी") {
     return { topic: "-", experience: "-", tools: "-", materials: "-", outcome: "-" };
   }
-  
+
   return { topic: "", experience: "", tools: "", materials: "", outcome: "" };
 };
 
 const renderMonthlyCoverPage = (
-  m: { en: string; mr: string }, 
-  actualYear: number, 
-  selectedClass: string | null, 
+  m: { en: string; mr: string },
+  actualYear: number,
+  selectedClass: string | null,
   classNames: Record<string, { mr: string; en: string }>,
   safeData: { schoolName: string; academicYear: string; classTeacher: string }
 ) => {
@@ -3198,7 +3196,7 @@ const renderMonthlyCoverPage = (
         <h3 className="text-3xl font-bold text-slate-800 font-devanagari">
           {m.mr} – {actualYear}
         </h3>
-        
+
         <div className="w-full max-w-lg mx-auto pt-16 space-y-6 text-left">
           <div className="flex items-center gap-3 text-lg font-bold">
             <span className="shrink-0 font-devanagari">• वर्गशिक्षक नाव :</span>
@@ -3214,7 +3212,7 @@ const renderMonthlyCoverPage = (
           </div>
         </div>
       </div>
-      
+
       <div className="mt-12 pt-3 border-t-2 border-amber-900 flex justify-between items-center text-[10px] text-slate-650 font-bold font-devanagari">
         <span>ukguruji app हे play store वरून डाऊनलोड करा.</span>
         <span>Page 1</span>
@@ -3279,7 +3277,7 @@ function AnnualMonthlyPlanningEditor({
     const isHindi = subj.includes("हिंदी") || subj.includes("Hindi");
     const isSci = subj.includes("विज्ञान") || subj.includes("Science") || subj.includes("परिसर अभ्यास १") || subj.includes("Environmental Studies 1");
     const isSoc = subj.includes("समाजशास्त्र") || subj.includes("Social Sciences") || subj.includes("परिसर अभ्यास २") || subj.includes("Environmental Studies 2") || subj.includes("इतिहास") || subj.includes("भूगोल");
-    
+
     if (isMr) {
       if (cls === "1st" || cls === "2nd") return 16;
       if (cls === "3rd" || cls === "4th") return 12;
@@ -3990,7 +3988,7 @@ function AnnualMonthlyPlanningEditor({
                 return (
                   <div key={subject} className="space-y-3">
                     <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider border-b-2 border-slate-300 pb-1">
-                      {isClass1Mr 
+                      {isClass1Mr
                         ? `वार्षिक नियोजन सन - २०२६/२०२७ (इयत्ता – ${classNames[selectedClass]?.mr} | विषय – ${subject})`
                         : `विषय (Subject) — ${subject}`
                       }
@@ -4027,7 +4025,7 @@ function AnnualMonthlyPlanningEditor({
                           const workingDays = isClass1Mr ? class1WorkingDays[m.en] : (monthData.workingDays || (m.en === "June" ? 13 : m.en === "September" ? 14 : m.en === "November" ? 17 : m.en === "April" ? 21 : m.en === "February" ? 22 : (m.en === "December" || m.en === "March") ? 24 : 25));
                           const defaultPeriods = subject.includes("मराठी") ? 60 : (subject.includes("Math") || subject.includes("गणित") || subject.includes("Mathematics")) ? 50 : 30;
                           const periods = isClass1Mr ? (getPeriodsForMonth(subject, selectedClass, m.en) || 30) : (monthData.periods || defaultPeriods);
-                          
+
                           const extraRow = (m.en === "November" && isClass1Mr) ? (
                             <tr key="diwali-holiday">
                               <td colSpan={7} className="bg-slate-50 text-center font-bold text-slate-800 text-xs py-3">
@@ -4173,17 +4171,17 @@ function AnnualMonthlyPlanningEditor({
                                       const valMaterials = planningData[mKey] !== undefined ? planningData[mKey] : plan.materials;
                                       const valOutcome = planningData[oKey] !== undefined ? planningData[oKey] : plan.outcome;
 
-                                      const dateStr = `${date.dateNum < 10 ? "०" : ""}${date.dateNum}/${m.en === "June" ? "०६" : 
-                                                       m.en === "July" ? "०७" : 
-                                                       m.en === "August" ? "०८" : 
-                                                       m.en === "September" ? "०९" : 
-                                                       m.en === "October" ? "१०" : 
-                                                       m.en === "November" ? "११" : 
-                                                       m.en === "December" ? "१२" : 
-                                                       m.en === "January" ? "०१" : 
-                                                       m.en === "February" ? "०२" : 
-                                                       m.en === "March" ? "०३" : 
-                                                       m.en === "April" ? "०४" : "०५"}`;
+                                      const dateStr = `${date.dateNum < 10 ? "०" : ""}${date.dateNum}/${m.en === "June" ? "०६" :
+                                        m.en === "July" ? "०७" :
+                                          m.en === "August" ? "०८" :
+                                            m.en === "September" ? "०९" :
+                                              m.en === "October" ? "१०" :
+                                                m.en === "November" ? "११" :
+                                                  m.en === "December" ? "१२" :
+                                                    m.en === "January" ? "०१" :
+                                                      m.en === "February" ? "०२" :
+                                                        m.en === "March" ? "०३" :
+                                                          m.en === "April" ? "०४" : "०५"}`;
 
                                       return (
                                         <tr key={date.dateNum} className={date.isSunday ? "bg-red-50/20" : ""}>
@@ -4448,13 +4446,12 @@ function AnnualMonthlyPlanningEditor({
                       setStep("planType");
                     }
                   }}
-                  className={`size-10 rounded-full flex items-center justify-center text-xs font-black transition-all ${
-                    isActive 
-                      ? "bg-[#8b5cf6] text-white ring-4 ring-[#8b5cf6]/20 scale-110 shadow-lg" 
-                      : isCompleted 
-                        ? "bg-indigo-900 text-white hover:bg-indigo-800" 
+                  className={`size-10 rounded-full flex items-center justify-center text-xs font-black transition-all ${isActive
+                      ? "bg-[#8b5cf6] text-white ring-4 ring-[#8b5cf6]/20 scale-110 shadow-lg"
+                      : isCompleted
+                        ? "bg-indigo-900 text-white hover:bg-indigo-800"
                         : "bg-slate-100 text-slate-400 cursor-not-allowed"
-                  }`}
+                    }`}
                   title={s.en}
                 >
                   {isCompleted ? <Check className="size-4" /> : idx + 1}
@@ -4494,11 +4491,10 @@ function AnnualMonthlyPlanningEditor({
                       setSelectedClass(cls);
                       setStep("medium");
                     }}
-                    className={`group p-8 rounded-[2.5rem] border text-center transition-all duration-500 shadow-md hover:shadow-[0_20px_45px_rgba(139,92,246,0.3)] cursor-pointer relative overflow-hidden flex flex-col items-center gap-4 ${
-                      isSelected 
-                        ? "bg-gradient-to-br from-[#7c3aed] to-[#5b21b6] text-white border-2 border-white ring-4 ring-indigo-400 scale-[1.03] shadow-[0_25px_50px_rgba(139,92,246,0.45)]" 
+                    className={`group p-8 rounded-[2.5rem] border text-center transition-all duration-500 shadow-md hover:shadow-[0_20px_45px_rgba(139,92,246,0.3)] cursor-pointer relative overflow-hidden flex flex-col items-center gap-4 ${isSelected
+                        ? "bg-gradient-to-br from-[#7c3aed] to-[#5b21b6] text-white border-2 border-white ring-4 ring-indigo-400 scale-[1.03] shadow-[0_25px_50px_rgba(139,92,246,0.45)]"
                         : "bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white border-[#7c3aed]/30 hover:scale-[1.02]"
-                    }`}
+                      }`}
                   >
                     <div className="absolute -bottom-6 -right-6 size-24 text-white/5 pointer-events-none group-hover:scale-110 transition-transform duration-700">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-full h-full">
@@ -4550,11 +4546,10 @@ function AnnualMonthlyPlanningEditor({
                       setSelectedMedium(m.id);
                       setStep("planType");
                     }}
-                    className={`group p-10 rounded-[3rem] border text-left transition-all duration-500 shadow-md hover:shadow-[0_20px_45px_rgba(139,92,246,0.3)] cursor-pointer relative overflow-hidden flex items-start gap-6 ${
-                      isSelected 
-                        ? "bg-gradient-to-br from-[#7c3aed] to-[#5b21b6] text-white border-2 border-white ring-4 ring-indigo-400 scale-[1.02] shadow-[0_25px_50px_rgba(139,92,246,0.45)]" 
+                    className={`group p-10 rounded-[3rem] border text-left transition-all duration-500 shadow-md hover:shadow-[0_20px_45px_rgba(139,92,246,0.3)] cursor-pointer relative overflow-hidden flex items-start gap-6 ${isSelected
+                        ? "bg-gradient-to-br from-[#7c3aed] to-[#5b21b6] text-white border-2 border-white ring-4 ring-indigo-400 scale-[1.02] shadow-[0_25px_50px_rgba(139,92,246,0.45)]"
                         : "bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white border-[#7c3aed]/30 hover:scale-[1.01]"
-                    }`}
+                      }`}
                   >
                     <div className="size-14 rounded-2xl flex items-center justify-center border border-white/20 bg-white/10 backdrop-blur-sm group-hover:scale-110 transition-transform text-white font-black text-base uppercase shrink-0">
                       {m.title[0]}
@@ -4715,17 +4710,17 @@ function AnnualMonthlyPlanningEditor({
 
             {/* Hidden elements for direct PDF download without viewing */}
             <div className="hidden absolute opacity-0 pointer-events-none w-0 h-0 overflow-hidden" style={{ zIndex: -9999 }}>
-               {selectedClass && selectedMedium && (
-                 <>
-                   {renderPlanningPDFContent("annual")}
-                   {renderPlanningPDFContent("monthly")}
-                   {syllabus?.months.map((m) => (
-                     <React.Fragment key={m.en}>
-                       {renderPlanningPDFContent(m.en)}
-                     </React.Fragment>
-                   ))}
-                 </>
-               )}
+              {selectedClass && selectedMedium && (
+                <>
+                  {renderPlanningPDFContent("annual")}
+                  {renderPlanningPDFContent("monthly")}
+                  {syllabus?.months.map((m) => (
+                    <React.Fragment key={m.en}>
+                      {renderPlanningPDFContent(m.en)}
+                    </React.Fragment>
+                  ))}
+                </>
+              )}
             </div>
 
             <div className="flex justify-center gap-6 pt-4">
@@ -4881,13 +4876,13 @@ function AnnualMonthlyPlanningEditor({
       )}
 
       {/* Off-screen/hidden container for direct PDF downloads */}
-      <div 
-        style={{ 
-          position: "absolute", 
-          left: "-9999px", 
-          top: "-9999px", 
-          width: "0px", 
-          height: "0px", 
+      <div
+        style={{
+          position: "absolute",
+          left: "-9999px",
+          top: "-9999px",
+          width: "0px",
+          height: "0px",
           overflow: "hidden",
           pointerEvents: "none"
         }}
@@ -5210,7 +5205,7 @@ function TeachingDiaryManager({
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
                       <a
                         href={file.url}

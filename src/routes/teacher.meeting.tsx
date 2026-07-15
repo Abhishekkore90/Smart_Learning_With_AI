@@ -2095,17 +2095,17 @@ function TeacherMeetingPage() {
                               {selectedPastMeeting.members &&
                                 selectedPastMeeting.members.length > 0 && (
                                   <div className="space-y-4">
-                                    <div className="w-full overflow-x-auto no-scrollbar">
-                                      <table className="register-table min-w-[600px] w-full">
+                                    <div className="w-full">
+                                      <table className="register-table w-full table-fixed">
                                         <thead>
-                                          <tr className="bg-slate-100 whitespace-nowrap">
-                                            <th className="w-10 text-center px-2 py-2">
+                                          <tr className="bg-slate-100">
+                                            <th className="w-12 text-center px-1 py-2">
                                               अ.क्र.
                                             </th>
-                                            <th className="text-left px-2 py-2">सदस्याचे नाव</th>
-                                            <th className="text-left px-2 py-2">पदनाम</th>
-                                            <th className="text-left px-2 py-2">पद</th>
-                                            <th className="w-24 text-center px-2 py-2">
+                                            <th className="w-[45%] text-left px-2 py-2">सदस्याचे नाव</th>
+                                            <th className="w-[25%] text-left px-2 py-2">पदनाम</th>
+                                            <th className="w-[15%] text-left px-2 py-2">पद</th>
+                                            <th className="w-32 text-center px-2 py-2">
                                               स्वाक्षरी
                                             </th>
                                           </tr>
@@ -2116,17 +2116,17 @@ function TeacherMeetingPage() {
                                             .map((member: any, index: number) => (
                                               <tr
                                                 key={index}
-                                                className="hover:bg-slate-50/30 whitespace-nowrap"
+                                                className="hover:bg-slate-50/30"
                                               >
-                                                <td className="text-center w-10 px-2 py-2">
+                                                <td className="text-center px-1 py-2">
                                                   {index + 1}
                                                 </td>
-                                                <td className="font-bold text-slate-900 px-2 py-2">
+                                                <td className="font-bold text-slate-900 px-2 py-2 whitespace-normal break-words">
                                                   {member.name}
                                                 </td>
-                                                <td className="px-2 py-2">{member.post}</td>
-                                                <td className="px-2 py-2">{member.role || "सदस्य"}</td>
-                                                <td className="text-center w-24 px-2 py-2">
+                                                <td className="px-2 py-2 whitespace-normal break-words">{member.post}</td>
+                                                <td className="px-2 py-2 whitespace-normal break-words">{member.role || "सदस्य"}</td>
+                                                <td className="text-center px-2 py-2">
                                                   {/* Left blank for physical signing as requested */}
                                                   <div className="h-6 w-full" />
                                                 </td>

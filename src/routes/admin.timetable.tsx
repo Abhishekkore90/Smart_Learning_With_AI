@@ -97,58 +97,70 @@ function TimetableAdmin() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 1024 * 1024 * 5) {
-      toast.error(`File is too large (${formatSize(file.size)}). Maximum allowed size is 5MB.`);
+    if (file.size > 1024 * 1024 * 10) {
+      toast.error(`File is too large (${formatSize(file.size)}). Maximum allowed size is 10MB.`);
+      return;
+    }
+
+    const storageApiKey = import.meta.env.VITE_BUNNY_STORAGE_API_KEY;
+    const storageZone = import.meta.env.VITE_BUNNY_STORAGE_ZONE;
+    const cdnHostname = import.meta.env.VITE_BUNNY_STORAGE_CDN_HOSTNAME;
+
+    if (!storageApiKey || !storageZone || !cdnHostname) {
+      toast.error("Bunny Storage configuration is missing in .env.");
       return;
     }
 
     setUploading(true);
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      try {
-        const base64 = reader.result as string;
-        const formattedDate = new Date().toLocaleDateString("en-IN");
-        
-        // Chunk the base64 string to bypass 1MB Firestore limit
-        const base64Chunks = chunkString(base64, 800000); // 800KB chunks
-        
-        // Upload all chunks in parallel for dramatically faster speed
-        const chunkUploadPromises = base64Chunks.map((chunk) =>
-          addDoc(collection(db, "admin_timetables_chunks"), { data: chunk })
-        );
-        
-        const chunkRefs = await Promise.all(chunkUploadPromises);
-        const chunkIds = chunkRefs.map((ref) => ref.id);
+    try {
+      const formattedDate = new Date().toLocaleDateString("en-IN");
+      const uniqueId = Math.random().toString(36).substring(2, 9) + "_" + Date.now();
+      const cleanFileName = uniqueId + "_" + file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
 
-        const newTimetable: any = {
-          className: selectedClass,
-          name: file.name,
-          size: formatSize(file.size),
-          type: file.type || "application/pdf",
-          date: formattedDate,
-          chunks: chunkIds,
-        };
+      // Upload file directly to Bunny Storage via proxy
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.addEventListener("load", () => {
+          if (xhr.status >= 200 && xhr.status < 300) resolve();
+          else reject(new Error(`Upload failed (Status: ${xhr.status})`));
+        });
+        xhr.addEventListener("error", () => reject(new Error("Network error during upload.")));
 
-        const docRef = await addDoc(
-          collection(db, "admin_timetables"),
-          newTimetable,
-        );
+        xhr.open("PUT", `/api/bunny-storage/${storageZone}/documents/${cleanFileName}`);
+        xhr.setRequestHeader("AccessKey", storageApiKey);
+        xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+        xhr.send(file);
+      });
 
-        setTimetables((prev) => [
-          ...prev,
-          { id: docRef.id, ...newTimetable } as TimetableFile,
-        ]);
-        
-        toast.success(`"${file.name}" uploaded successfully! 🎉`);
-      } catch (err: any) {
-        console.error("Upload error:", err);
-        toast.error(err?.message || "Failed to save file details.");
-      } finally {
-        setUploading(false);
-        if (e.target) e.target.value = ''; // Reset input
-      }
-    };
-    reader.readAsDataURL(file);
+      const fileUrl = `https://${cdnHostname}/documents/${cleanFileName}`;
+
+      const newTimetable: any = {
+        className: selectedClass,
+        name: file.name,
+        size: formatSize(file.size),
+        type: file.type || "application/pdf",
+        date: formattedDate,
+        url: fileUrl,
+      };
+
+      const docRef = await addDoc(
+        collection(db, "admin_timetables"),
+        newTimetable,
+      );
+
+      setTimetables((prev) => [
+        ...prev,
+        { id: docRef.id, ...newTimetable } as TimetableFile,
+      ]);
+      
+      toast.success(`"${file.name}" uploaded successfully! 🎉`);
+    } catch (err: any) {
+      console.error("Upload error:", err);
+      toast.error(err?.message || "Failed to upload file to Bunny Storage.");
+    } finally {
+      setUploading(false);
+      if (e.target) e.target.value = ''; // Reset input
+    }
   };
 
   const handleDelete = async (timetable: TimetableFile) => {
@@ -158,6 +170,22 @@ function TimetableAdmin() {
       if (timetable.chunks) {
         for (const chunkId of timetable.chunks) {
           await deleteDoc(doc(db, "admin_timetables_chunks", chunkId)).catch(() => {});
+        }
+      }
+
+      // Delete from Bunny Storage if it exists
+      if (timetable.url && timetable.url.includes("b-cdn.net")) {
+        const storageApiKey = import.meta.env.VITE_BUNNY_STORAGE_API_KEY;
+        const storageZone = import.meta.env.VITE_BUNNY_STORAGE_ZONE;
+        if (storageApiKey && storageZone) {
+          const urlParts = timetable.url.split("/");
+          const fileName = urlParts[urlParts.length - 1];
+          await fetch(`/api/bunny-storage/${storageZone}/documents/${fileName}`, {
+            method: "DELETE",
+            headers: {
+              "AccessKey": storageApiKey
+            }
+          }).catch((e) => console.error("Failed to delete from Bunny Storage:", e));
         }
       }
 

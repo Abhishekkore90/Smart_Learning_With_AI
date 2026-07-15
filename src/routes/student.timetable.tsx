@@ -325,21 +325,21 @@ function StudentTimetablePage() {
 
                     {/* ZP Info bar */}
                     <div className="border border-black text-[10px] font-bold grid grid-cols-12 bg-white">
-                      <div className="col-span-5 flex items-center gap-1 p-1.5 bg-white" style={{ borderRight: '1px solid black' }}>
-                        <span>जिल्हा परिषद प्राथमिक शाळा :</span>
-                        <span className="font-bold text-slate-800 px-1">{gridData.schoolName}</span>
+                      <div className="col-span-5 flex items-center gap-1 p-1.5 bg-white whitespace-nowrap" style={{ borderRight: '1px solid black' }}>
+                        <span className="whitespace-nowrap flex-shrink-0">जिल्हा परिषद प्राथमिक शाळा :</span>
+                        <span className="font-bold text-slate-800 px-1 whitespace-nowrap overflow-hidden text-ellipsis">{gridData.schoolName}</span>
                       </div>
-                      <div className="col-span-2 flex items-center gap-1 p-1.5" style={{ backgroundColor: '#C6E0B4', borderRight: '1px solid black' }}>
-                        <span>केंद्र :-</span>
-                        <span className="font-bold text-slate-800 px-1">{gridData.center}</span>
+                      <div className="col-span-2 flex items-center gap-1 p-1.5 whitespace-nowrap" style={{ backgroundColor: '#C6E0B4', borderRight: '1px solid black' }}>
+                        <span className="whitespace-nowrap flex-shrink-0">केंद्र :-</span>
+                        <span className="font-bold text-slate-800 px-1 whitespace-nowrap overflow-hidden text-ellipsis">{gridData.center}</span>
                       </div>
-                      <div className="col-span-2 flex items-center gap-1 p-1.5" style={{ backgroundColor: '#C6E0B4', borderRight: '1px solid black' }}>
-                        <span>तालुका :-</span>
-                        <span className="font-bold text-slate-800 px-1">{gridData.taluka}</span>
+                      <div className="col-span-2 flex items-center gap-1 p-1.5 whitespace-nowrap" style={{ backgroundColor: '#C6E0B4', borderRight: '1px solid black' }}>
+                        <span className="whitespace-nowrap flex-shrink-0">तालुका :-</span>
+                        <span className="font-bold text-slate-800 px-1 whitespace-nowrap overflow-hidden text-ellipsis">{gridData.taluka}</span>
                       </div>
-                      <div className="col-span-3 flex items-center gap-1 p-1.5" style={{ backgroundColor: '#F2DCDB' }}>
-                        <span>जिल्हा :-</span>
-                        <span className="font-bold text-slate-800 px-1">{gridData.district}</span>
+                      <div className="col-span-3 flex items-center gap-1 p-1.5 whitespace-nowrap" style={{ backgroundColor: '#F2DCDB' }}>
+                        <span className="whitespace-nowrap flex-shrink-0">जिल्हा :-</span>
+                        <span className="font-bold text-slate-800 px-1 whitespace-nowrap overflow-hidden text-ellipsis">{gridData.district}</span>
                       </div>
                     </div>
 
@@ -348,20 +348,20 @@ function StudentTimetablePage() {
                       <table className="w-full text-center" style={{ borderCollapse: 'collapse', border: '1px solid black' }}>
                         <thead>
                           <tr className="text-slate-800 font-bold text-[9px] h-8">
-                            <th style={{ backgroundColor: '#C6E0B4', border: '1px solid black', width: '4%' }}>तासिका</th>
-                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '8%' }}>वेळ</th>
-                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '9%' }}>सोमवार</th>
-                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '9%' }}>मंगळवार</th>
-                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '9%' }}>बुधवार</th>
-                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '9%' }}>गुरुवार</th>
+                            <th style={{ backgroundColor: '#C6E0B4', border: '1px solid black', width: '4%', textAlign: 'center' }}>तासिका</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '8%', textAlign: 'center' }}>वेळ</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '9%', textAlign: 'center' }}>सोमवार</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '9%', textAlign: 'center' }}>मंगळवार</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '9%', textAlign: 'center' }}>बुधवार</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '9%', textAlign: 'center' }}>गुरुवार</th>
                             
-                            <th style={{ backgroundColor: '#C6E0B4', border: '1px solid black', width: '4%' }}>तासिका</th>
-                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '8%' }}>वेळ</th>
-                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '10%' }}>शुक्रवार</th>
+                            <th style={{ backgroundColor: '#C6E0B4', border: '1px solid black', width: '4%', textAlign: 'center' }}>तासिका</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '8%', textAlign: 'center' }}>वेळ</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '10%', textAlign: 'center' }}>शुक्रवार</th>
                             
-                            <th style={{ backgroundColor: '#C6E0B4', border: '1px solid black', width: '4%' }}>तासिका</th>
-                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '8%' }}>वेळ</th>
-                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '10%' }}>शनिवार</th>
+                            <th style={{ backgroundColor: '#C6E0B4', border: '1px solid black', width: '4%', textAlign: 'center' }}>तासिका</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '8%', textAlign: 'center' }}>वेळ</th>
+                            <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '10%', textAlign: 'center' }}>शनिवार</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -445,9 +445,9 @@ function StudentTimetablePage() {
                           <thead>
                             <tr className="font-bold">
                               {(CLASS_SUBJECTS_MAP[selectedClass] || CLASS_SUBJECTS_MAP["8th"]).map((subj) => (
-                                <th key={subj.key} style={{ backgroundColor: 'white', border: '1px solid black', padding: '2px 6px' }}>{subj.label}</th>
+                                <th key={subj.key} style={{ backgroundColor: 'white', border: '1px solid black', padding: '2px 6px', textAlign: 'center' }}>{subj.label}</th>
                               ))}
-                              <th style={{ backgroundColor: 'white', border: '1px solid black', padding: '2px 6px' }} className="font-black">एकूण</th>
+                              <th style={{ backgroundColor: 'white', border: '1px solid black', padding: '2px 6px', textAlign: 'center' }} className="font-black">एकूण</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -466,12 +466,12 @@ function StudentTimetablePage() {
                       </div>
                       <div className="col-span-5 p-3 flex justify-between items-center h-16 rounded-lg" style={{ backgroundColor: '#FCE4D6', border: '1px solid black' }}>
                         <div className="text-center flex-1 flex flex-col justify-between h-full">
-                          <span className="font-black text-slate-800 text-[10px]">{gridData.teacherName}</span>
+                          <span className="font-black text-slate-800 text-[9px]">{gridData.teacherName}</span>
                           <div className="border-t border-dashed border-black mt-1 pt-1 text-[8px] font-black text-slate-700 text-center uppercase tracking-wider">वर्गशिक्षक</div>
                         </div>
                         <div className="h-full w-px bg-black/20 mx-4" />
                         <div className="text-center flex-1 flex flex-col justify-between h-full">
-                          <span className="font-black text-slate-800 text-[10px]">{gridData.headmasterName}</span>
+                          <span className="font-black text-slate-800 text-[9px]">{gridData.headmasterName}</span>
                           <div className="border-t border-dashed border-black mt-1 pt-1 text-[8px] font-black text-slate-700 text-center uppercase tracking-wider">मुख्याध्यापक</div>
                         </div>
                       </div>
