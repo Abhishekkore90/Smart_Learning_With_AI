@@ -2537,11 +2537,94 @@ function TeacherMeetingPage() {
 
                     {formStep === 2 && (
                       <div className="space-y-12">
-                        <div className="flex items-center">
-                          <button type="button" onClick={() => setFormStep(1)} className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors w-fit">
-                            <ArrowLeft className="size-4" /> मागे जा (प्राथमिक माहिती)
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border-2 border-slate-300 p-6 sm:p-8 rounded-2xl shadow-sm">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-lg text-xs font-black uppercase tracking-wider">
+                                प्राथमिक माहिती सेव्ह झाली
+                              </span>
+                            </div>
+                            <h2 className="text-2xl font-black text-slate-900 mt-2">
+                              {schoolName || "शाळेचे नाव प्रविष्ट केलेले नाही"}
+                            </h2>
+                            <p className="text-base font-extrabold text-blue-600 mt-1">
+                              {committeeName || selectedCommittee?.name}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setFormStep(1)}
+                            className="flex items-center gap-2 px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-black uppercase tracking-wider transition-all border border-slate-300 shadow-sm self-start sm:self-auto cursor-pointer"
+                          >
+                            <ArrowLeft className="size-4 text-blue-600" /> प्राथमिक माहिती संपादित करा
                           </button>
                         </div>
+
+                        {/* Complete Primary Info & Committee Members Table Structure */}
+                        <div className="bg-white border-2 border-slate-300 p-6 sm:p-8 rounded-2xl space-y-6 shadow-sm">
+                          <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest border-b-2 border-slate-100 pb-3 flex items-center justify-between">
+                            <span>१. शाळा व समिती सदस्यांचा माहिती तक्ता</span>
+                          </h3>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 p-5 rounded-xl border border-slate-200">
+                            <div>
+                              <span className="text-slate-500 font-extrabold block text-xs">शाळेचे नाव:</span>
+                              <span className="text-base font-black text-slate-900">{schoolName || "—"}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-500 font-extrabold block text-xs">समितीचे नाव:</span>
+                              <span className="text-base font-black text-blue-700">{committeeName || selectedCommittee?.name || "—"}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-500 font-extrabold block text-xs">मुख्याध्यापक:</span>
+                              <span className="text-base font-black text-slate-900">{headmasterName || "—"}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-500 font-extrabold block text-xs">समिती अध्यक्ष:</span>
+                              <span className="text-base font-black text-slate-900">{presidentName || "—"}</span>
+                            </div>
+                          </div>
+
+                          {/* Committee Members Table */}
+                          <div className="space-y-3 pt-2">
+                            <h4 className="text-sm font-black text-slate-700 uppercase tracking-widest flex items-center justify-between">
+                              <span>समिती सदस्यांची नावे ({formMembers.filter((m: any) => m.name?.trim()).length} सदस्य भरलेले)</span>
+                            </h4>
+                            <div className="overflow-x-auto border-2 border-slate-200 rounded-xl bg-white">
+                              <table className="w-full text-left border-collapse text-sm">
+                                <thead>
+                                  <tr className="bg-slate-100 text-slate-800 font-black border-b-2 border-slate-200">
+                                    <th className="px-3 py-3.5 text-center w-12 border-r border-slate-200">अ.क्र.</th>
+                                    <th className="px-4 py-3.5 border-r border-slate-200">सदस्याचे नाव</th>
+                                    <th className="px-4 py-3.5 border-r border-slate-200">पदनाम (Designation)</th>
+                                    <th className="px-4 py-3.5 border-r border-slate-200">पद (Post)</th>
+                                    <th className="px-4 py-3.5 text-center w-24">स्वाक्षरी</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-200 font-extrabold text-slate-950">
+                                  {formMembers.filter((m: any) => m.name?.trim() !== "" || m.post?.trim() !== "" || m.role?.trim() !== "").length > 0 ? (
+                                    formMembers.filter((m: any) => m.name?.trim() !== "" || m.post?.trim() !== "" || m.role?.trim() !== "").map((m: any, idx: number) => (
+                                      <tr key={idx} className="hover:bg-slate-50">
+                                        <td className="px-3 py-3.5 text-center text-slate-500 font-extrabold border-r border-slate-200">{idx + 1}</td>
+                                        <td className="px-4 py-3.5 border-r border-slate-200 font-black text-slate-900">{m.name || "—"}</td>
+                                        <td className="px-4 py-3.5 border-r border-slate-200 text-slate-700">{m.post || "—"}</td>
+                                        <td className="px-4 py-3.5 border-r border-slate-200 text-blue-700 font-black">{m.role || "—"}</td>
+                                        <td className="px-4 py-3.5 text-center text-slate-400 font-bold italic">स्वाक्षरी</td>
+                                      </tr>
+                                    ))
+                                  ) : (
+                                    <tr>
+                                      <td colSpan={5} className="px-4 py-6 text-center text-slate-400 font-bold italic">
+                                        कोणतेही सदस्य प्रविष्ट केलेले नाहीत.
+                                      </td>
+                                    </tr>
+                                  )}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </div>
+
                         {/* Month Selection Navbar & Metadata */}
                         <div className="bg-slate-50 border border-slate-200/80 p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-[2rem] space-y-6">
                           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
