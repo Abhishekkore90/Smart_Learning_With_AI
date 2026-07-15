@@ -36,7 +36,7 @@ export const generateAIResponseCallable = httpsCallable(functions, "generateAIRe
 
 export let analytics: Analytics | null = null;
 
-if (typeof window !== "undefined" && hasFirebaseConfig) {
+if (typeof window !== "undefined") {
   // Analytics can fail in certain network environments (e.g. firewalls/VPNs)
   try {
     analytics = getAnalytics(app);
