@@ -2624,18 +2624,18 @@ function TeacherMeetingPage() {
                             </div>
                           </div>
 
-                          {/* Committee Members Table */}
+                          {/* Committee Members Table (Shows ONLY filled members) */}
                           <div className="space-y-3 pt-2">
                             <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
                               <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">
-                                ३. समिती सदस्यांची नावे ({formMembers.filter((m: any) => m.name?.trim()).length} सदस्य भरलेले)
+                                ३. समिती सदस्यांची नावे ({formMembers.filter((m: any) => m.name?.trim() || m.post?.trim() || m.role?.trim()).length} सदस्य)
                               </h4>
                               <button
                                 type="button"
                                 onClick={handleAddFormMemberRow}
                                 className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-sm cursor-pointer"
                               >
-                                <UserPlus className="size-4" /> सदस्य जोडा
+                                <UserPlus className="size-4" /> + सदस्य जोडा
                               </button>
                             </div>
 
@@ -2652,118 +2652,135 @@ function TeacherMeetingPage() {
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-200 font-extrabold text-slate-950">
-                                  {formMembers.map((m: any, idx: number) => (
-                                    <tr key={idx} className="hover:bg-slate-50/50">
-                                      <td className="px-3 py-3 text-center text-slate-500 font-extrabold text-lg border-r border-slate-200">
-                                        {idx + 1}
-                                      </td>
-                                      <td className="px-4 py-3 border-r border-slate-200">
-                                        <input
-                                          type="text"
-                                          value={m.name}
-                                          onChange={(e) => handleUpdateFormMemberField(idx, "name", e.target.value)}
-                                          placeholder="सदस्याचे नाव प्रविष्ट करा..."
-                                          className="w-full px-4 py-2.5 border-2 border-slate-300 rounded-lg outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-base shadow-sm"
-                                        />
-                                      </td>
-                                      <td className="px-4 py-3 border-r border-slate-200">
-                                        {m.isCustomPost ? (
-                                          <div className="flex gap-2">
-                                            <input
-                                              type="text"
-                                              value={m.post}
-                                              onChange={(e) => handleUpdateFormMemberField(idx, "post", e.target.value)}
-                                              placeholder="स्वतः लिहा..."
-                                              className="w-full px-4 py-2.5 border-2 border-slate-300 rounded-lg outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-base shadow-sm"
-                                            />
-                                            <button
-                                              type="button"
-                                              onClick={() => handleUpdateFormMemberField(idx, "isCustomPost", false)}
-                                              className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg"
-                                            >
-                                              <X className="size-4" />
-                                            </button>
-                                          </div>
-                                        ) : (
-                                          <select
-                                            value={m.post}
-                                            onChange={(e) => {
-                                              if (e.target.value === "__CUSTOM__") {
-                                                handleUpdateFormMemberField(idx, "isCustomPost", true);
-                                                handleUpdateFormMemberField(idx, "post", "");
-                                              } else {
-                                                handleUpdateFormMemberField(idx, "post", e.target.value);
-                                              }
-                                            }}
-                                            className="w-full px-4 py-2.5 border-2 border-slate-300 rounded-lg outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-base cursor-pointer shadow-sm"
-                                          >
-                                            <option value="">-- पदनाम निवडा --</option>
-                                            {selectedCommittee && getCommitteeDesignations(selectedCommittee.id).map((designation, dIdx) => (
-                                              <option key={dIdx} value={designation}>{designation}</option>
-                                            ))}
-                                            {m.post && selectedCommittee && !getCommitteeDesignations(selectedCommittee.id).includes(m.post) && (
-                                              <option value={m.post}>{m.post}</option>
-                                            )}
-                                            <option value="__CUSTOM__" className="font-bold text-blue-600">-- स्वतः लिहा --</option>
-                                          </select>
-                                        )}
-                                      </td>
-                                      <td className="px-4 py-3 border-r border-slate-200">
-                                        {m.isCustomRole ? (
-                                          <div className="flex gap-2">
-                                            <input
-                                              type="text"
-                                              value={m.role}
-                                              onChange={(e) => handleUpdateFormMemberField(idx, "role", e.target.value)}
-                                              placeholder="स्वतः लिहा..."
-                                              className="w-full px-4 py-2.5 border-2 border-slate-300 rounded-lg outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-base shadow-sm"
-                                            />
-                                            <button
-                                              type="button"
-                                              onClick={() => handleUpdateFormMemberField(idx, "isCustomRole", false)}
-                                              className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg"
-                                            >
-                                              <X className="size-4" />
-                                            </button>
-                                          </div>
-                                        ) : (
-                                          <select
-                                            value={m.role}
-                                            onChange={(e) => {
-                                              if (e.target.value === "__CUSTOM__") {
-                                                handleUpdateFormMemberField(idx, "isCustomRole", true);
-                                                handleUpdateFormMemberField(idx, "role", "");
-                                              } else {
-                                                handleUpdateFormMemberField(idx, "role", e.target.value);
-                                              }
-                                            }}
-                                            className="w-full px-4 py-2.5 border-2 border-slate-300 rounded-lg outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-base cursor-pointer shadow-sm"
-                                          >
-                                            <option value="">-- पद निवडा --</option>
-                                            {COMMITTEE_ROLES.map((roleOpt, rIdx) => (
-                                              <option key={rIdx} value={roleOpt}>{roleOpt}</option>
-                                            ))}
-                                            {m.role && !COMMITTEE_ROLES.includes(m.role) && (
-                                              <option value={m.role}>{m.role}</option>
-                                            )}
-                                            <option value="__CUSTOM__" className="font-bold text-blue-600">-- स्वतः लिहा --</option>
-                                          </select>
-                                        )}
-                                      </td>
-                                      <td className="px-4 py-3 text-center text-slate-400 font-bold italic border-r border-slate-200">
-                                        स्वाक्षरी
-                                      </td>
-                                      <td className="px-4 py-3 text-center">
-                                        <button
-                                          type="button"
-                                          onClick={() => handleRemoveFormMemberRow(idx)}
-                                          className="p-2 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-xl transition-colors"
-                                        >
-                                          <Trash2 className="size-5" />
-                                        </button>
+                                  {formMembers
+                                    .map((m: any, originalIdx: number) => ({ ...m, originalIdx }))
+                                    .filter((m: any) => m.name?.trim() !== "" || m.post?.trim() !== "" || m.role?.trim() !== "").length > 0 ? (
+                                    formMembers
+                                      .map((m: any, originalIdx: number) => ({ ...m, originalIdx }))
+                                      .filter((m: any) => m.name?.trim() !== "" || m.post?.trim() !== "" || m.role?.trim() !== "")
+                                      .map((m: any, displayIdx: number) => {
+                                        const idx = m.originalIdx;
+                                        return (
+                                          <tr key={idx} className="hover:bg-slate-50/50">
+                                            <td className="px-3 py-3 text-center text-slate-500 font-extrabold text-lg border-r border-slate-200">
+                                              {displayIdx + 1}
+                                            </td>
+                                            <td className="px-4 py-3 border-r border-slate-200">
+                                              <input
+                                                type="text"
+                                                value={m.name}
+                                                onChange={(e) => handleUpdateFormMemberField(idx, "name", e.target.value)}
+                                                placeholder="सदस्याचे नाव प्रविष्ट करा..."
+                                                className="w-full px-4 py-2.5 border-2 border-slate-300 rounded-lg outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-base shadow-sm"
+                                              />
+                                            </td>
+                                            <td className="px-4 py-3 border-r border-slate-200">
+                                              {m.isCustomPost ? (
+                                                <div className="flex gap-2">
+                                                  <input
+                                                    type="text"
+                                                    value={m.post}
+                                                    onChange={(e) => handleUpdateFormMemberField(idx, "post", e.target.value)}
+                                                    placeholder="स्वतः लिहा..."
+                                                    className="w-full px-4 py-2.5 border-2 border-slate-300 rounded-lg outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-base shadow-sm"
+                                                  />
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => handleUpdateFormMemberField(idx, "isCustomPost", false)}
+                                                    className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg"
+                                                  >
+                                                    <X className="size-4" />
+                                                  </button>
+                                                </div>
+                                              ) : (
+                                                <select
+                                                  value={m.post}
+                                                  onChange={(e) => {
+                                                    if (e.target.value === "__CUSTOM__") {
+                                                      handleUpdateFormMemberField(idx, "isCustomPost", true);
+                                                      handleUpdateFormMemberField(idx, "post", "");
+                                                    } else {
+                                                      handleUpdateFormMemberField(idx, "post", e.target.value);
+                                                    }
+                                                  }}
+                                                  className="w-full px-4 py-2.5 border-2 border-slate-300 rounded-lg outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-base cursor-pointer shadow-sm"
+                                                >
+                                                  <option value="">-- पदनाम निवडा --</option>
+                                                  {selectedCommittee && getCommitteeDesignations(selectedCommittee.id).map((designation, dIdx) => (
+                                                    <option key={dIdx} value={designation}>{designation}</option>
+                                                  ))}
+                                                  {m.post && selectedCommittee && !getCommitteeDesignations(selectedCommittee.id).includes(m.post) && (
+                                                    <option value={m.post}>{m.post}</option>
+                                                  )}
+                                                  <option value="__CUSTOM__" className="font-bold text-blue-600">-- स्वतः लिहा --</option>
+                                                </select>
+                                              )}
+                                            </td>
+                                            <td className="px-4 py-3 border-r border-slate-200">
+                                              {m.isCustomRole ? (
+                                                <div className="flex gap-2">
+                                                  <input
+                                                    type="text"
+                                                    value={m.role}
+                                                    onChange={(e) => handleUpdateFormMemberField(idx, "role", e.target.value)}
+                                                    placeholder="स्वतः लिहा..."
+                                                    className="w-full px-4 py-2.5 border-2 border-slate-300 rounded-lg outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-base shadow-sm"
+                                                  />
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => handleUpdateFormMemberField(idx, "isCustomRole", false)}
+                                                    className="p-2 text-slate-500 hover:bg-slate-100 rounded-lg"
+                                                  >
+                                                    <X className="size-4" />
+                                                  </button>
+                                                </div>
+                                              ) : (
+                                                <select
+                                                  value={m.role}
+                                                  onChange={(e) => {
+                                                    if (e.target.value === "__CUSTOM__") {
+                                                      handleUpdateFormMemberField(idx, "isCustomRole", true);
+                                                      handleUpdateFormMemberField(idx, "role", "");
+                                                    } else {
+                                                      handleUpdateFormMemberField(idx, "role", e.target.value);
+                                                    }
+                                                  }}
+                                                  className="w-full px-4 py-2.5 border-2 border-slate-300 rounded-lg outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-base cursor-pointer shadow-sm"
+                                                >
+                                                  <option value="">-- पद निवडा --</option>
+                                                  {COMMITTEE_ROLES.map((roleOpt, rIdx) => (
+                                                    <option key={rIdx} value={roleOpt}>{roleOpt}</option>
+                                                  ))}
+                                                  {m.role && !COMMITTEE_ROLES.includes(m.role) && (
+                                                    <option value={m.role}>{m.role}</option>
+                                                  )}
+                                                  <option value="__CUSTOM__" className="font-bold text-blue-600">-- स्वतः लिहा --</option>
+                                                </select>
+                                              )}
+                                            </td>
+                                            <td className="px-4 py-3 text-center text-slate-400 font-bold italic border-r border-slate-200">
+                                              स्वाक्षरी
+                                            </td>
+                                            <td className="px-4 py-3 text-center">
+                                              <button
+                                                type="button"
+                                                onClick={() => handleRemoveFormMemberRow(idx)}
+                                                className="p-2 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-xl transition-colors"
+                                                title="सदस्य काढून टाका"
+                                              >
+                                                <Trash2 className="size-5" />
+                                              </button>
+                                            </td>
+                                          </tr>
+                                        );
+                                      })
+                                  ) : (
+                                    <tr>
+                                      <td colSpan={6} className="px-4 py-8 text-center text-slate-500 font-bold">
+                                        कोणताही सदस्य प्रविष्ट केलेला नाही. नवीन सदस्य जोडण्यासाठी वर '+ सदस्य जोडा' वर क्लिक करा.
                                       </td>
                                     </tr>
-                                  ))}
+                                  )}
                                 </tbody>
                               </table>
                             </div>
