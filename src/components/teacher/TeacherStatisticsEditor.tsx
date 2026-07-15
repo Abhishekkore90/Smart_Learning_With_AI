@@ -1301,7 +1301,7 @@ export function TeacherStatisticsEditor({
       `}</style>
 
       {/* Stack of all 18 A4 sheets scrollable vertically */}
-      <div 
+      <div
         className="bg-[#0d1b4b]/30 p-4 md:p-6 pb-4 rounded-3xl border border-[#c9a227]/20 shadow-inner flex flex-col items-center relative mx-auto overflow-x-auto"
         style={{ width: "100%", maxWidth: "930px", height: "fit-content" }}
       >
