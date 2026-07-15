@@ -16,26 +16,34 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
+// Guard: only initialize Firebase if we have the required config (prevents SSR prerender failure)
+const hasFirebaseConfig = !!firebaseConfig.apiKey && !!firebaseConfig.projectId;
+
 // Initialize Firebase safely to avoid duplicate app errors in HMR/SSR
-export const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const storage = getStorage(app);
+export const app: FirebaseApp = hasFirebaseConfig
+  ? (!getApps().length ? initializeApp(firebaseConfig) : getApp())
+  : ({} as FirebaseApp); // SSR-safe stub during prerender
+
+export const auth: Auth = hasFirebaseConfig ? getAuth(app) : ({} as Auth);
+export const db: Firestore = hasFirebaseConfig ? getFirestore(app) : ({} as Firestore);
+export const storage = hasFirebaseConfig ? getStorage(app) : null;
 
 // Use explicit region us-central1
-export const functions = getFunctions(app, "us-central1");
+export const functions = hasFirebaseConfig ? getFunctions(app, "us-central1") : null;
 
 // Connect to emulator in development if specified
-if (import.meta.env.DEV && import.meta.env.VITE_USE_FIREBASE_EMULATOR === "true") {
-  connectFunctionsEmulator(functions, "127.0.0.1", 5001);
+if (hasFirebaseConfig && import.meta.env.DEV && import.meta.env.VITE_USE_FIREBASE_EMULATOR === "true") {
+  connectFunctionsEmulator(functions!, "127.0.0.1", 5001);
 }
 
 // Pre-bind the Firebase Callable Function wrapper
-export const generateAIResponseCallable = httpsCallable(functions, "generateAIResponse");
+export const generateAIResponseCallable = hasFirebaseConfig && functions
+  ? httpsCallable(functions, "generateAIResponse")
+  : null;
 
 export let analytics: Analytics | null = null;
 
-if (typeof window !== "undefined") {
+if (typeof window !== "undefined" && hasFirebaseConfig) {
   // Analytics can fail in certain network environments (e.g. firewalls/VPNs)
   try {
     analytics = getAnalytics(app);

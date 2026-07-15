@@ -10,6 +10,9 @@ export default defineConfig({
     spa: {
       enabled: true,
     },
+    prerender: {
+      enabled: false,
+    },
     tsr: {
       autoCodeSplitting: false,
     },
