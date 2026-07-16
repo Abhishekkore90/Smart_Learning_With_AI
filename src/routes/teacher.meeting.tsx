@@ -417,6 +417,11 @@ function TeacherMeetingPage() {
   const [showCustomForm, setShowCustomForm] = useState<boolean>(false);
   const [savingCustomTemplate, setSavingCustomTemplate] = useState<boolean>(false);
 
+  // Template cache states for instant loading
+  const [cachedAdminTemplates, setCachedAdminTemplates] = useState<Record<string, any>>({});
+  const [cachedCustomTemplates, setCachedCustomTemplates] = useState<Record<string, any>>({});
+  const [isTemplatesLoading, setIsTemplatesLoading] = useState<boolean>(false);
+
   // Edit Mode States
   const isEditing = search.edit === true;
   const [editSchoolName, setEditSchoolName] = useState("");
@@ -588,6 +593,53 @@ function TeacherMeetingPage() {
     });
 
     return () => unsubscribe();
+  }, [selectedCommittee?.id, udise]);
+
+  // Cache all templates (admin and teacher custom) for the selected committee to enable instant month switching
+  useEffect(() => {
+    if (!selectedCommittee) {
+      setCachedAdminTemplates({});
+      setCachedCustomTemplates({});
+      return;
+    }
+
+    const cacheAllTemplates = async () => {
+      setIsTemplatesLoading(true);
+      try {
+        // 1. Fetch and cache admin meeting templates
+        const adminQ = query(
+          collection(db, "meeting_templates"),
+          where("committeeId", "==", selectedCommittee.id)
+        );
+        const adminSnapshot = await getDocs(adminQ);
+        const adminMap: Record<string, any> = {};
+        adminSnapshot.docs.forEach((doc) => {
+          const data = doc.data();
+          adminMap[data.month] = { id: doc.id, ...data };
+        });
+        setCachedAdminTemplates(adminMap);
+
+        // 2. Fetch and cache teacher custom templates
+        const customQ = query(
+          collection(db, "teacher_custom_templates"),
+          where("udise", "==", udise),
+          where("committeeId", "==", selectedCommittee.id)
+        );
+        const customSnapshot = await getDocs(customQ);
+        const customMap: Record<string, any> = {};
+        customSnapshot.docs.forEach((doc) => {
+          const data = doc.data();
+          customMap[data.month] = { id: doc.id, ...data };
+        });
+        setCachedCustomTemplates(customMap);
+      } catch (err) {
+        console.error("Error caching meeting templates:", err);
+      } finally {
+        setIsTemplatesLoading(false);
+      }
+    };
+
+    cacheAllTemplates();
   }, [selectedCommittee?.id, udise]);
 
   // Switch committee
@@ -794,41 +846,31 @@ function TeacherMeetingPage() {
     setFormResolutions(updated);
   };
 
-  const loadMeetingTemplate = async (commId: string, monthStr: string, force = false) => {
+  const loadMeetingTemplate = (commId: string, monthStr: string, force = false) => {
     if (!commId || !monthStr) return;
     setLoadingTemplate(true);
     try {
-      // Fetch all templates for the current committee to compute cumulative start resolution
-      const q = query(
-        collection(db, "meeting_templates"),
-        where("committeeId", "==", commId)
-      );
-      const snapshot = await getDocs(q);
-      const templatesMap: Record<string, any[]> = {};
-      snapshot.docs.forEach((doc) => {
-        const d = doc.data();
-        templatesMap[d.month] = d.subjects || [];
-      });
-
+      // Calculate cumulative start resolution from admin templates cache
       const monthsList = commId === "alumni" ? ["sem1", "sem2"] : ["06", "07", "08", "09", "10", "11", "12", "01", "02", "03", "04", "05"];
       const targetIdx = monthsList.indexOf(monthStr);
       let calculatedStartNo = 1;
       if (targetIdx > 0) {
         const preceding = monthsList.slice(0, targetIdx);
-        const totalPreceding = preceding.reduce((sum, m) => sum + (templatesMap[m]?.length || 0), 0);
+        const totalPreceding = preceding.reduce((sum, m) => {
+          const subjects = cachedAdminTemplates[m]?.subjects || [];
+          return sum + subjects.length;
+        }, 0);
         calculatedStartNo = 1 + totalPreceding;
       }
       setStartResolutionNo(calculatedStartNo);
 
-      // Find the specific template document for the selected committee and month
-      const matchedDoc = snapshot.docs.find(d => d.id === `${commId}_${monthStr}`);
-      const dynamicOutro = matchedDoc && matchedDoc.data().outroText
-        ? matchedDoc.data().outroText
-        : "ऐन वेळेस उपस्थित होणाऱ्या विषयांवर चर्चा करून समितीचे सचिव यांनी सभेत उपस्थित सर्व सदस्यांचे आभार व्यक्त केले व अध्यक्ष यांच्या संमतीने सभा संपन्न झाली असे घोषीत केले.";
+      // Find the specific template document in the cache
+      const matchedDoc = cachedAdminTemplates[monthStr];
+      const dynamicOutro = matchedDoc?.outroText || "ऐन वेळेस उपस्थित होणाऱ्या विषयांवर चर्चा करून समितीचे सचिव यांनी सभेत उपस्थित सर्व सदस्यांचे आभार व्यक्त केले व अध्यक्ष यांच्या संमतीने सभा संपन्न झाली असे घोषीत केले.";
       setFormOutroText(dynamicOutro);
 
       // Now set form resolutions from template subjects mapped with correct subjectNo and resolutionNo
-      const currentTemplateSubjects = templatesMap[monthStr] || [];
+      const currentTemplateSubjects = matchedDoc?.subjects || [];
       const formattedSubjects = currentTemplateSubjects.map((item: any, idx: number) => ({
         subjectNo: idx + 1,
         resolutionNo: calculatedStartNo + idx,
@@ -886,7 +928,7 @@ function TeacherMeetingPage() {
       );
       const snapshot = await getDocs(q);
 
-      const templateData = {
+      const templateData: any = {
         udise,
         committeeId: selectedCommittee.id,
         month: selectedMonth,
@@ -907,11 +949,19 @@ function TeacherMeetingPage() {
 
       if (snapshot.docs.length > 0) {
         await updateDoc(doc(db, "teacher_custom_templates", snapshot.docs[0].id), templateData);
+        setCachedCustomTemplates(prev => ({
+          ...prev,
+          [selectedMonth]: { id: snapshot.docs[0].id, ...templateData }
+        }));
       } else {
-        await addDoc(collection(db, "teacher_custom_templates"), {
+        const newDocRef = await addDoc(collection(db, "teacher_custom_templates"), {
           ...templateData,
           createdAt: new Date().toISOString(),
         });
+        setCachedCustomTemplates(prev => ({
+          ...prev,
+          [selectedMonth]: { id: newDocRef.id, ...templateData, createdAt: new Date().toISOString() }
+        }));
       }
 
       toast.success("तुमचे विषय आणि ठराव यशस्वीरीत्या जतन केले गेले!");
@@ -924,51 +974,34 @@ function TeacherMeetingPage() {
   };
 
   // Load teacher's custom template for non-current months
-  const loadTeacherCustomTemplate = async (commId: string, monthStr: string) => {
+  const loadTeacherCustomTemplate = (commId: string, monthStr: string): boolean => {
     setFormStep(2);
     try {
-      // First, calculate cumulative start resolution number from admin templates
-      const adminQ = query(
-        collection(db, "meeting_templates"),
-        where("committeeId", "==", commId)
-      );
-      const adminSnapshot = await getDocs(adminQ);
-      const templatesMap: Record<string, any[]> = {};
-      adminSnapshot.docs.forEach((d) => {
-        const data = d.data();
-        templatesMap[data.month] = data.subjects || [];
-      });
-
+      // First, calculate cumulative start resolution number from cached admin templates
       const monthsList = commId === "alumni" ? ["sem1", "sem2"] : ["06", "07", "08", "09", "10", "11", "12", "01", "02", "03", "04", "05"];
       const targetIdx = monthsList.indexOf(monthStr);
       let calculatedStartNo = 1;
       if (targetIdx > 0) {
         const preceding = monthsList.slice(0, targetIdx);
-        const totalPreceding = preceding.reduce((sum, m) => sum + (templatesMap[m]?.length || 0), 0);
+        const totalPreceding = preceding.reduce((sum, m) => {
+          const subjects = cachedAdminTemplates[m]?.subjects || [];
+          return sum + subjects.length;
+        }, 0);
         calculatedStartNo = 1 + totalPreceding;
       }
       setStartResolutionNo(calculatedStartNo);
 
-      // Fetch the outroText from the admin templates for this month to use as a fallback
-      const matchedAdminDoc = adminSnapshot.docs.find(d => d.id === `${commId}_${monthStr}`);
-      const fallbackOutroText = matchedAdminDoc && matchedAdminDoc.data().outroText
-        ? matchedAdminDoc.data().outroText
-        : "ऐन वेळेस उपस्थित होणाऱ्या विषयांवर चर्चा करून समितीचे सचिव यांनी सभेत उपस्थित सर्व सदस्यांचे आभार व्यक्त केले व अध्यक्ष यांच्या संमतीने सभा संपन्न झाली असे घोषीत केले.";
+      // Fetch the outroText from cached admin templates
+      const matchedAdminDoc = cachedAdminTemplates[monthStr];
+      const fallbackOutroText = matchedAdminDoc?.outroText || "ऐन वेळेस उपस्थित होणाऱ्या विषयांवर चर्चा करून समितीचे सचिव यांनी सभेत उपस्थित सर्व सदस्यांचे आभार व्यक्त केले व अध्यक्ष यांच्या संमतीने सभा संपन्न झाली असे घोषीत केले.";
 
-      // Now try to load teacher's custom template
-      const q = query(
-        collection(db, "teacher_custom_templates"),
-        where("udise", "==", udise),
-        where("committeeId", "==", commId),
-        where("month", "==", monthStr)
-      );
-      const snapshot = await getDocs(q);
+      // Load custom template from in-memory cache
+      const customDoc = cachedCustomTemplates[monthStr];
 
-      if (snapshot.docs.length > 0) {
-        const data = snapshot.docs[0].data();
-        const subjects = data.subjects || [];
-        if (data.outroText) {
-          setFormOutroText(data.outroText);
+      if (customDoc) {
+        const subjects = customDoc.subjects || [];
+        if (customDoc.outroText) {
+          setFormOutroText(customDoc.outroText);
         } else {
           setFormOutroText(fallbackOutroText);
         }
@@ -998,7 +1031,7 @@ function TeacherMeetingPage() {
     }
   };
 
-  const handleMonthChange = async (monthVal: string) => {
+  const handleMonthChange = (monthVal: string) => {
     setSelectedMonth(monthVal);
 
     // Automatically select the current academic year
@@ -1017,7 +1050,7 @@ function TeacherMeetingPage() {
 
     setShowCustomForm(false);
     if (selectedCommittee && monthVal) {
-      const hasCustom = await loadTeacherCustomTemplate(selectedCommittee.id, monthVal);
+      const hasCustom = loadTeacherCustomTemplate(selectedCommittee.id, monthVal);
       if (!hasCustom) {
         loadMeetingTemplate(selectedCommittee.id, monthVal, true);
       }
@@ -1033,13 +1066,11 @@ function TeacherMeetingPage() {
         if (monthStr !== selectedMonth) {
           setSelectedMonth(monthStr);
           if (selectedCommittee) {
-            (async () => {
-              setShowCustomForm(false);
-              const hasCustom = await loadTeacherCustomTemplate(selectedCommittee.id, monthStr);
-              if (!hasCustom) {
-                loadMeetingTemplate(selectedCommittee.id, monthStr, true);
-              }
-            })();
+            setShowCustomForm(false);
+            const hasCustom = loadTeacherCustomTemplate(selectedCommittee.id, monthStr);
+            if (!hasCustom) {
+              loadMeetingTemplate(selectedCommittee.id, monthStr, true);
+            }
           }
         }
       }
@@ -1201,7 +1232,8 @@ function TeacherMeetingPage() {
           useCORS: true,
           windowWidth: 800 // Force consistent width for A4 aspect ratio
         },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['css', 'legacy'] }
       };
 
       await html2pdf().from(element).set(opt).save();
@@ -1554,7 +1586,12 @@ function TeacherMeetingPage() {
                             width: 100%;
                             border-collapse: collapse;
                             margin-bottom: 2rem;
-                            font-size: 1.2rem;
+                            font-size: 0.95rem;
+                          }
+
+                          .register-table tr {
+                            page-break-inside: avoid;
+                            break-inside: avoid;
                           }
 
                           .register-table th, .register-table td {
@@ -1585,6 +1622,8 @@ function TeacherMeetingPage() {
                             line-height: 2.6rem;
                             border-bottom: 1px dotted #cbd5e1;
                             padding-bottom: 1.5rem;
+                            page-break-inside: avoid;
+                            break-inside: avoid;
                           }
 
                           .register-res-title {
@@ -1602,6 +1641,8 @@ function TeacherMeetingPage() {
                             text-align: center;
                             font-size: 1.15rem;
                             font-weight: 700;
+                            page-break-inside: avoid;
+                            break-inside: avoid;
                           }
                           
                           .ledger-input {
@@ -2099,13 +2140,13 @@ function TeacherMeetingPage() {
                                       <table className="register-table w-full table-fixed">
                                         <thead>
                                           <tr className="bg-slate-100">
-                                            <th className="w-12 text-center px-1 py-2">
+                                            <th style={{ width: '4%' }} className="text-center px-1 py-2">
                                               अ.क्र.
                                             </th>
-                                            <th className="w-[45%] text-left px-2 py-2">सदस्याचे नाव</th>
-                                            <th className="w-[25%] text-left px-2 py-2">पदनाम</th>
-                                            <th className="w-[15%] text-left px-2 py-2">पद</th>
-                                            <th className="w-32 text-center px-2 py-2">
+                                            <th style={{ width: '42%' }} className="text-left px-2 py-2">सदस्याचे नाव</th>
+                                            <th style={{ width: '31%' }} className="text-left px-2 py-2">पदनाम</th>
+                                            <th style={{ width: '11%' }} className="text-left px-2 py-2">पद</th>
+                                            <th style={{ width: '12%' }} className="text-center px-2 py-2">
                                               स्वाक्षरी
                                             </th>
                                           </tr>
@@ -2911,48 +2952,34 @@ function TeacherMeetingPage() {
                           {!showCustomForm && (
                             <button
                               type="button"
-                              onClick={async () => {
-                                // Calculate cumulative start resolution number from admin templates
+                              onClick={() => {
+                                // Calculate cumulative start resolution number from admin templates cache
                                 if (selectedCommittee && selectedMonth) {
-                                  try {
-                                    const adminQ = query(
-                                      collection(db, "meeting_templates"),
-                                      where("committeeId", "==", selectedCommittee.id)
-                                    );
-                                    const adminSnap = await getDocs(adminQ);
-                                    const tMap: Record<string, any[]> = {};
-                                    adminSnap.docs.forEach((d) => {
-                                      const data = d.data();
-                                      tMap[data.month] = data.subjects || [];
-                                    });
-                                    const monthsList = ["06", "07", "08", "09", "10", "11", "12", "01", "02", "03", "04", "05"];
-                                    const targetIdx = monthsList.indexOf(selectedMonth);
-                                    let calcStartNo = 1;
-                                    if (targetIdx > 0) {
-                                      const preceding = monthsList.slice(0, targetIdx);
-                                      const totalPreceding = preceding.reduce((sum, m) => sum + (tMap[m]?.length || 0), 0);
-                                      calcStartNo = 1 + totalPreceding;
-                                    }
-                                    setStartResolutionNo(calcStartNo);
-                                    // Directly create first resolution with correct number (avoid stale state)
-                                    if (formResolutions.length === 0) {
-                                      setFormResolutions([{
-                                        subjectNo: 1,
-                                        resolutionNo: calcStartNo,
-                                        subject: "",
-                                        discussion: "",
-                                        resolution: "",
-                                        remark: "",
-                                        proposer: "",
-                                        seconder: "",
-                                        statusText: "ठराव सर्वानुमते मंजूर करण्यात आला.",
-                                      }]);
-                                    }
-                                  } catch (e) {
-                                    console.error("Error calculating start resolution no:", e);
-                                    if (formResolutions.length === 0) {
-                                      handleAddFormResolutionRow();
-                                    }
+                                  const monthsList = ["06", "07", "08", "09", "10", "11", "12", "01", "02", "03", "04", "05"];
+                                  const targetIdx = monthsList.indexOf(selectedMonth);
+                                  let calcStartNo = 1;
+                                  if (targetIdx > 0) {
+                                    const preceding = monthsList.slice(0, targetIdx);
+                                    const totalPreceding = preceding.reduce((sum, m) => {
+                                      const subjects = cachedAdminTemplates[m]?.subjects || [];
+                                      return sum + subjects.length;
+                                    }, 0);
+                                    calcStartNo = 1 + totalPreceding;
+                                  }
+                                  setStartResolutionNo(calcStartNo);
+                                  // Directly create first resolution with correct number
+                                  if (formResolutions.length === 0) {
+                                    setFormResolutions([{
+                                      subjectNo: 1,
+                                      resolutionNo: calcStartNo,
+                                      subject: "",
+                                      discussion: "",
+                                      resolution: "",
+                                      remark: "",
+                                      proposer: "",
+                                      seconder: "",
+                                      statusText: "ठराव सर्वानुमते मंजूर करण्यात आला.",
+                                    }]);
                                   }
                                 } else {
                                   if (formResolutions.length === 0) {
