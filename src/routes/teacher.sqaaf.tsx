@@ -5260,9 +5260,9 @@ function TeacherSqaafPage() {
     await html2pdf().set({
       margin: [10, 10, 10, 10],
       filename: `SQAAF_Summary_Manual_${new Date().toISOString().slice(0, 10)}.pdf`,
-      image: { type: "jpeg", quality: 0.98 },
+      image: { type: "jpeg", quality: 0.82 },
       html2canvas: { 
-        scale: 2, 
+        scale: 1.5, 
         useCORS: true, 
         logging: false,
         windowWidth: 850
@@ -5440,27 +5440,27 @@ function TeacherSqaafPage() {
         });
 
         const responseCards = answeredStandards.map(s => `
-          <div style="background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 16px 20px; page-break-inside: avoid; break-inside: avoid; margin-bottom: 14px; display: block; overflow: hidden;">
+          <div style="background: #fff; border: 1px solid #cbd5e1; padding: 12px 16px; page-break-inside: avoid; break-inside: avoid; margin-bottom: 12px; display: block;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
               <div style="font-size: 12px; font-weight: 900; color: #1e293b; max-width: 70%;">${isMr ? `मानक क्र. ${toMarathiNumerals(s.num)}` : `Standard No. ${s.num}`}</div>
               ${s.isSelected
             ? (s.isNotApplicable
-              ? `<div style="text-align: right;"><span style="background: #e5e7eb; color: #6b7280; font-size: 9px; font-weight: 800; padding: 3px 10px; border-radius: 8px; text-transform: uppercase;">${isMr ? "लागू नाही" : "N/A"}</span></div>`
+              ? `<div style="text-align: right;"><span style="background: #e2e8f0; color: #475569; font-size: 9px; font-weight: 800; padding: 3px 6px; text-transform: uppercase;">${isMr ? "लागू नाही" : "N/A"}</span></div>`
               : `<div style="text-align: right;">
-                         <span style="background: linear-gradient(135deg, #22c55e, #16a34a); color: white; font-size: 9px; font-weight: 800; padding: 3px 10px; border-radius: 8px;">${s.levelLabel}</span>
+                         <span style="background: #16a34a; color: white; font-size: 9px; font-weight: 800; padding: 3px 6px;">${s.levelLabel}</span>
                          <div style="font-size: 11px; font-weight: 900; color: #15803d; margin-top: 5px;">${isMr ? `गुण: ${toMarathiNumerals(s.marks)}` : `Marks: ${s.marks}`}</div>
                        </div>`
             )
-            : `<div style="text-align: right;"><span style="background: #f1f5f9; color: #94a3b8; font-size: 9px; font-weight: 800; padding: 3px 10px; border-radius: 8px; text-transform: uppercase;">${isMr ? "अपूर्ण" : "Incomplete"}</span></div>`
+            : `<div style="text-align: right;"><span style="background: #e2e8f0; color: #475569; font-size: 9px; font-weight: 800; padding: 3px 6px; text-transform: uppercase;">${isMr ? "अपूर्ण" : "Incomplete"}</span></div>`
           }
             </div>
-            <div style="font-size: 11px; font-weight: 600; color: #475569; line-height: 1.5; margin-bottom: 12px; background: #fffbeb; border-left: 3px solid #f59e0b; padding: 8px 12px; border-radius: 0 8px 8px 0;">
+            <div style="font-size: 11px; font-weight: 600; color: #475569; line-height: 1.5; margin-bottom: 12px; background: #fffbeb; border-left: 3px solid #f59e0b; padding: 8px 12px;">
               ${s.orangeDesc}
             </div>
             <div style="margin-bottom: 4px;">
               <span style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8;">${isMr ? "प्रतिसाद" : "RESPONSE"}</span>
             </div>
-            <div style="font-size: 11px; font-weight: 700; color: #0f172a; line-height: 1.5; white-space: pre-line; background: ${s.isSelected ? (s.isNotApplicable ? "#f1f5f9" : "#f0fdf4") : "#fafafa"}; padding: 10px 14px; border-radius: 10px; border: 1px solid ${s.isSelected ? (s.isNotApplicable ? "#e2e8f0" : "#bbf7d0") : "#e2e8f0"};">
+            <div style="font-size: 11px; font-weight: 700; color: #0f172a; line-height: 1.5; white-space: pre-line; background: ${s.isSelected ? (s.isNotApplicable ? "#f8fafc" : "#f0fdf4") : "#fafafa"}; padding: 8px 12px; border: 1px solid ${s.isSelected ? (s.isNotApplicable ? "#cbd5e1" : "#86efac") : "#cbd5e1"};">
               ${s.responseText}
             </div>
             ${s.photoHtml || ""}
@@ -5713,13 +5713,13 @@ function TeacherSqaafPage() {
             </div>
 
             <!-- School Info -->
-            <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1.5px solid #e2e8f0;">
+            <div style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 12px 16px; margin-bottom: 16px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #cbd5e1;">
                 <div>
                   <div style="font-size: 7px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8; margin-bottom: 2px;">${isMr ? "शाळेचे नाव" : "School Name"}</div>
                   <div style="font-size: 15px; font-weight: 900; color: #0f172a; text-transform: uppercase;">${schoolName}</div>
                 </div>
-                <div style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: white; padding: 6px 14px; border-radius: 8px; font-weight: 800; font-size: 11px;">
+                <div style="background: #6d28d9; color: white; padding: 4px 10px; font-weight: 800; font-size: 11px;">
                   ${udise}
                 </div>
               </div>
@@ -5737,7 +5737,7 @@ function TeacherSqaafPage() {
 
             <!-- Summary badge -->
             <div style="display: flex; gap: 10px; margin-bottom: 18px;">
-              <div style="flex: 1; background: linear-gradient(135deg, #22c55e, #16a34a); border-radius: 10px; padding: 10px 14px; color: white;">
+              <div style="flex: 1; background: #16a34a; padding: 8px 12px; color: white;">
                 <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;">${isMr ? "प्रतिसाद नोंदवलेले" : "Responded"}</div>
                 <div style="font-size: 20px; font-weight: 900;">${totalAnswered} <span style="font-size: 11px; opacity: 0.7;">/ 128</span></div>
               </div>
@@ -5940,6 +5940,7 @@ function TeacherSqaafPage() {
         const completedCount_ = completedStdsSet.size;
         let obtainedMarks_ = 0;
         let totalPossibleMarks = 0;
+        let notApplicableCount_ = 0;
         for (let i = 1; i <= 128; i++) {
           const selectedIdx = selectedOptionsMap[i.toString()];
 
@@ -5947,8 +5948,16 @@ function TeacherSqaafPage() {
             totalPossibleMarks += 4;
           } else {
             if (selectedIdx !== undefined && selectedIdx !== null) {
-              if (selectedIdx >= 0 && selectedIdx <= 3) {
+              const opts = getGroupedOptions(i, pdfLang);
+              const optText = opts[selectedIdx]?.text?.trim() || "";
+              const isNotApplicable = optText === "लागू नाही" || optText === "Not applicable" || selectedIdx === opts.length - 1;
+              if (isNotApplicable) {
+                notApplicableCount_++;
+              }
+              if (selectedIdx >= 0 && selectedIdx <= 3 && !isNotApplicable) {
                 obtainedMarks_ += (selectedIdx + 1);
+                totalPossibleMarks += 4;
+              } else {
                 totalPossibleMarks += 4;
               }
             } else {
@@ -5956,6 +5965,7 @@ function TeacherSqaafPage() {
             }
           }
         }
+        const applicableCount_ = 128 - notApplicableCount_;
 
         const domainsDataLegacy = [
           { id: 1, nameMr: "क्षेत्र १ : अभ्यासक्रम,अध्यापनशास्त्र आणि मूल्यांकन", start: 1, end: 44 },
@@ -6128,22 +6138,30 @@ function TeacherSqaafPage() {
             </div>
 
             <!-- Summary Stats -->
-            <div style="display: flex; gap: 12px; margin-bottom: 20px;">
-              <div style="flex: 1; background: linear-gradient(135deg, #3b82f6, #2563eb); border-radius: 12px; padding: 14px 16px; color: white;">
-                <div style="font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.8;">${isMr ? "एकूण मानके" : "Total Standards"}</div>
-                <div style="font-size: 24px; font-weight: 900;">${totalStds}</div>
+            <div style="display: flex; gap: 8px; margin-bottom: 20px;">
+              <div style="flex: 1; background: linear-gradient(135deg, #3b82f6, #2563eb); border-radius: 10px; padding: 10px 12px; color: white;">
+                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;">${isMr ? "एकूण मानके" : "Total Standards"}</div>
+                <div style="font-size: 20px; font-weight: 900; margin-top: 4px;">${totalStds}</div>
               </div>
-              <div style="flex: 1; background: linear-gradient(135deg, #22c55e, #16a34a); border-radius: 12px; padding: 14px 16px; color: white;">
-                <div style="font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.8;">${isMr ? "प्रतिसाद नोंदवलेले" : "Responded"}</div>
-                <div style="font-size: 24px; font-weight: 900;">${completedCount_}</div>
+              <div style="flex: 1; background: linear-gradient(135deg, #22c55e, #16a34a); border-radius: 10px; padding: 10px 12px; color: white;">
+                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;">${isMr ? "प्रतिसाद नोंदवलेले" : "Responded"}</div>
+                <div style="font-size: 20px; font-weight: 900; margin-top: 4px;">${completedCount_}</div>
               </div>
-              <div style="flex: 1; background: linear-gradient(135deg, #f97316, #ea580c); border-radius: 12px; padding: 14px 16px; color: white;">
-                <div style="font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.8;">${isMr ? "प्रतिसाद बाकी" : "Pending"}</div>
-                <div style="font-size: 24px; font-weight: 900;">${totalStds - completedCount_}</div>
+              <div style="flex: 1; background: linear-gradient(135deg, #f97316, #ea580c); border-radius: 10px; padding: 10px 12px; color: white;">
+                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;">${isMr ? "प्रतिसाद बाकी" : "Pending"}</div>
+                <div style="font-size: 20px; font-weight: 900; margin-top: 4px;">${totalStds - completedCount_}</div>
               </div>
-              <div style="flex: 1; background: linear-gradient(135deg, #8b5cf6, #7c3aed); border-radius: 12px; padding: 14px 16px; color: white;">
-                <div style="font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.8;">${isMr ? "गुण" : "Marks"}</div>
-                <div style="font-size: 24px; font-weight: 900;">${obtainedMarks_}<span style="font-size: 13px; opacity: 0.7;"> / ${totalPossibleMarks}</span></div>
+              <div style="flex: 1; background: linear-gradient(135deg, #0ea5e9, #0284c7); border-radius: 10px; padding: 10px 12px; color: white;">
+                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;">${isMr ? "लागू असलेले मानक" : "Applicable"}</div>
+                <div style="font-size: 20px; font-weight: 900; margin-top: 4px;">${applicableCount_}</div>
+              </div>
+              <div style="flex: 1; background: linear-gradient(135deg, #94a3b8, #64748b); border-radius: 10px; padding: 10px 12px; color: white;">
+                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;">${isMr ? "लागू नसलेले मानक" : "Not Applicable"}</div>
+                <div style="font-size: 20px; font-weight: 900; margin-top: 4px;">${notApplicableCount_}</div>
+              </div>
+              <div style="flex: 1; background: linear-gradient(135deg, #8b5cf6, #7c3aed); border-radius: 10px; padding: 10px 12px; color: white;">
+                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;">${isMr ? "गुण" : "Marks"}</div>
+                <div style="font-size: 20px; font-weight: 900; margin-top: 4px;">${obtainedMarks_}<span style="font-size: 11px; opacity: 0.7;"> / ${totalPossibleMarks}</span></div>
               </div>
             </div>
 
@@ -6312,6 +6330,7 @@ function TeacherSqaafPage() {
         const completedCount = completedStdsSet.size;
         let obtainedMarks = 0;
         let totalPossible = 0;
+        let notApplicableCount = 0;
         for (let i = 1; i <= 128; i++) {
           const selectedIdx = selectedOptionsMap[i.toString()];
 
@@ -6319,8 +6338,16 @@ function TeacherSqaafPage() {
             totalPossible += 4;
           } else {
             if (selectedIdx !== undefined && selectedIdx !== null) {
-              if (selectedIdx >= 0 && selectedIdx <= 3) {
+              const opts = getGroupedOptions(i, pdfLang);
+              const optText = opts[selectedIdx]?.text?.trim() || "";
+              const isNotApplicable = optText === "लागू नाही" || optText === "Not applicable" || selectedIdx === opts.length - 1;
+              if (isNotApplicable) {
+                notApplicableCount++;
+              }
+              if (selectedIdx >= 0 && selectedIdx <= 3 && !isNotApplicable) {
                 obtainedMarks += (selectedIdx + 1);
+                totalPossible += 4;
+              } else {
                 totalPossible += 4;
               }
             } else {
@@ -6328,6 +6355,7 @@ function TeacherSqaafPage() {
             }
           }
         }
+        const applicableCount = 128 - notApplicableCount;
 
         const A4_WIDTH_PX = 1122;
         const A4_HEIGHT_PX = 793;
@@ -6389,22 +6417,30 @@ function TeacherSqaafPage() {
                </div>
             </div>
             
-            <div style="display: flex; gap: 24px; margin-top: 24px;">
-               <div style="background-color: #2563eb; color: white; border-radius: 12px; padding: 20px; flex: 1;">
-                  <div style="font-size: 14px; opacity: 0.9; font-weight: 500;">${isMr ? "एकूण मानके" : "TOTAL STANDARDS"}</div>
-                  <div style="font-size: 36px; font-weight: bold; margin-top: 8px;">128</div>
+            <div style="display: flex; gap: 16px; margin-top: 24px;">
+               <div style="background-color: #2563eb; color: white; border-radius: 12px; padding: 16px; flex: 1;">
+                  <div style="font-size: 12px; opacity: 0.9; font-weight: 500;">${isMr ? "एकूण मानके" : "TOTAL STANDARDS"}</div>
+                  <div style="font-size: 28px; font-weight: bold; margin-top: 8px;">128</div>
                </div>
-               <div style="background-color: #16a34a; color: white; border-radius: 12px; padding: 20px; flex: 1;">
-                  <div style="font-size: 14px; opacity: 0.9; font-weight: 500;">${isMr ? "प्रतिसाद नोंदवलेले" : "RESPONDED"}</div>
-                  <div style="font-size: 36px; font-weight: bold; margin-top: 8px;">${completedCount}</div>
+               <div style="background-color: #16a34a; color: white; border-radius: 12px; padding: 16px; flex: 1;">
+                  <div style="font-size: 12px; opacity: 0.9; font-weight: 500;">${isMr ? "प्रतिसाद नोंदवलेले" : "RESPONDED"}</div>
+                  <div style="font-size: 28px; font-weight: bold; margin-top: 8px;">${completedCount}</div>
                </div>
-               <div style="background-color: #ea580c; color: white; border-radius: 12px; padding: 20px; flex: 1;">
-                  <div style="font-size: 14px; opacity: 0.9; font-weight: 500;">${isMr ? "प्रतिसाद बाकी" : "PENDING"}</div>
-                  <div style="font-size: 36px; font-weight: bold; margin-top: 8px;">${128 - completedCount}</div>
+               <div style="background-color: #ea580c; color: white; border-radius: 12px; padding: 16px; flex: 1;">
+                  <div style="font-size: 12px; opacity: 0.9; font-weight: 500;">${isMr ? "प्रतिसाद बाकी" : "PENDING"}</div>
+                  <div style="font-size: 28px; font-weight: bold; margin-top: 8px;">${128 - completedCount}</div>
                </div>
-               <div style="background-color: #7c3aed; color: white; border-radius: 12px; padding: 20px; flex: 1;">
-                  <div style="font-size: 14px; opacity: 0.9; font-weight: 500;">${isMr ? "गुण" : "MARKS"}</div>
-                  <div style="font-size: 36px; font-weight: bold; margin-top: 8px;">${obtainedMarks} / ${totalPossible}</div>
+               <div style="background-color: #0284c7; color: white; border-radius: 12px; padding: 16px; flex: 1;">
+                  <div style="font-size: 12px; opacity: 0.9; font-weight: 500;">${isMr ? "लागू असलेले मानक" : "APPLICABLE"}</div>
+                  <div style="font-size: 28px; font-weight: bold; margin-top: 8px;">${applicableCount}</div>
+               </div>
+               <div style="background-color: #64748b; color: white; border-radius: 12px; padding: 16px; flex: 1;">
+                  <div style="font-size: 12px; opacity: 0.9; font-weight: 500;">${isMr ? "लागू नसलेले मानक" : "NOT APPLICABLE"}</div>
+                  <div style="font-size: 28px; font-weight: bold; margin-top: 8px;">${notApplicableCount}</div>
+               </div>
+               <div style="background-color: #7c3aed; color: white; border-radius: 12px; padding: 16px; flex: 1;">
+                  <div style="font-size: 12px; opacity: 0.9; font-weight: 500;">${isMr ? "गुण" : "MARKS"}</div>
+                  <div style="font-size: 28px; font-weight: bold; margin-top: 8px;">${obtainedMarks} / ${totalPossible}</div>
                </div>
             </div>
           </div>
@@ -6413,12 +6449,12 @@ function TeacherSqaafPage() {
 
         let pageCount = 0;
         const saveCurrentPageToPdf = async () => {
-          const canvas = await html2canvas(renderContainer, { scale: 2, useCORS: true, logging: false });
-          const imgData = canvas.toDataURL("image/jpeg", 1.0);
+          const canvas = await html2canvas(renderContainer, { scale: 1.5, useCORS: true, logging: false });
+          const imgData = canvas.toDataURL("image/jpeg", 0.95);
           if (pageCount > 0) doc.addPage();
           const pdfWidth = 297;
           const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-          doc.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
+          doc.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight, undefined, "FAST");
           pageCount++;
         };
 
@@ -6669,7 +6705,7 @@ function TeacherSqaafPage() {
           finalHtml = `
             <div style="font-family: Arial, sans-serif; font-size: 10px; padding: 10px 15px; background: white; width: 100%; box-sizing: border-box;">
               <!-- Premium Header Bar matching View -->
-              <div style="background-color: #ffaf66; padding: 8px 15px; border-radius: 8px; margin-bottom: 12px; text-align: center; border: 1px solid rgba(0, 0, 0, 0.05);">
+              <div style="background-color: #ffaf66; padding: 8px 15px; margin-bottom: 12px; text-align: center; border: 1px solid #e2e8f0;">
                 <h2 style="font-size: 15px; font-weight: 900; margin: 0; color: #0f172a; letter-spacing: -0.3px;">SQAAF एकत्रित गुणनोंद तक्ता</h2>
                 <div style="font-size: 9px; color: #1e293b; font-weight: 800; margin-top: 1px; opacity: 0.85;">गट: पायाभूत (अंगणवाडी ते १ली २री / पूर्वतयारी ३री ते ५ वी / पूर्व माध्यमिक ६वी ते ८वी )</div>
               </div>
@@ -6746,7 +6782,7 @@ function TeacherSqaafPage() {
                   <td style="width: 4%;"></td>
                   <td style="width: 48%; vertical-align: top; padding: 0;">
                     <h3 style="font-size: 11px; font-weight: bold; margin: 0 0 4px 0; color: #0f172a;">निकाल तपशील</h3>
-                    <div style="border: 2px dashed #cbd5e1; padding: 10px 15px; background: #f8fafc; border-radius: 8px; min-height: 100px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; gap: 6px;">
+                    <div style="border: 1px solid #cbd5e1; padding: 10px 15px; background: #f8fafc; min-height: 100px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; gap: 6px;">
                       <div style="font-size: 10px;">
                         <span style="font-weight: bold; color: #475569;">एकूण शक्य गुण:</span>
                         <span style="float: right; font-weight: bold; color: #0f172a;">${totalApplicable * 4}</span>
@@ -6791,14 +6827,14 @@ function TeacherSqaafPage() {
           const pdfOptions = {
             margin: [8, 8, 8, 8],
             filename: `SQAAF_Summary_${schoolName.replace(/\s+/g, "_") || "School"}_${new Date().toISOString().slice(0, 10)}.pdf`,
-            image: { type: "jpeg", quality: 1.0 },
+            image: { type: "jpeg", quality: 0.95 },
             html2canvas: { 
-              scale: 2, 
+              scale: 1.5, 
               useCORS: true, 
               logging: false,
               windowWidth: 1120
             },
-            jsPDF: { unit: "mm", format: "a4", orientation: "landscape", compress: true },
+            jsPDF: { unit: "mm", format: "a4", orientation: "landscape", compress: false },
             pagebreak: { mode: ["css", "legacy"] },
           };
 
@@ -6844,14 +6880,14 @@ function TeacherSqaafPage() {
         const pdfOptions = {
           margin: [8, 8, 8, 8],
           filename: `SQAAF_Responses_${schoolName.replace(/\s+/g, "_") || "School"}_${new Date().toISOString().slice(0, 10)}.pdf`,
-          image: { type: "jpeg", quality: 1.0 },
+          image: { type: "jpeg", quality: 0.95 },
           html2canvas: { 
-            scale: 2, 
+            scale: 1.5, 
             useCORS: true, 
             logging: false,
             windowWidth: 1120
           },
-          jsPDF: { unit: "mm", format: "a4", orientation: "landscape", compress: true },
+          jsPDF: { unit: "mm", format: "a4", orientation: "landscape", compress: false },
           pagebreak: { mode: ["css", "legacy"] },
         };
 

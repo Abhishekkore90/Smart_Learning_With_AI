@@ -216,7 +216,7 @@ const PhotoUploader = ({ standardId, lang, evidenceUrl }: { standardId: number; 
         localStorage.setItem(`sqaf_evidence_${standardId}`, file.name);
         localStorage.setItem(`sqaf_evidence_preview_${standardId}`, base64);
         localStorage.setItem(`sqaf_evidence_type_${standardId}`, file.type);
-      } catch (err) {}
+      } catch (err) { }
     };
     reader.readAsDataURL(file);
   };
@@ -268,7 +268,7 @@ const PhotoUploader = ({ standardId, lang, evidenceUrl }: { standardId: number; 
         <h3 className="text-lg font-black text-slate-900">
           {lang === "mr" ? "पुरावे पर्याय यादी" : "Evidence Options Checklist"}
         </h3>
-        
+
         <div className="space-y-4">
           {configuredOptions.map((optionText, idx) => {
             const isChecked = checkedStates[idx] || false;
@@ -280,11 +280,10 @@ const PhotoUploader = ({ standardId, lang, evidenceUrl }: { standardId: number; 
             return (
               <div
                 key={idx}
-                className={`border rounded-3xl p-5 transition-all duration-300 ${
-                  isChecked
+                className={`border rounded-3xl p-5 transition-all duration-300 ${isChecked
                     ? "bg-white border-pink-300 shadow-md ring-1 ring-pink-100"
                     : "bg-slate-50/70 border-slate-200/60 shadow-sm"
-                }`}
+                  }`}
               >
                 {/* Header Row with Checkbox and Label */}
                 <label className="flex items-start gap-4 cursor-pointer select-none">
@@ -295,9 +294,8 @@ const PhotoUploader = ({ standardId, lang, evidenceUrl }: { standardId: number; 
                     className="mt-1 size-5 rounded-md border-slate-300 text-pink-600 focus:ring-pink-500 accent-pink-500 cursor-pointer"
                   />
                   <div className="flex-1 min-w-0">
-                    <p className={`font-extrabold text-sm md:text-[15px] leading-relaxed transition-colors ${
-                      isChecked ? "text-slate-900 font-black" : "text-slate-600"
-                    }`}>
+                    <p className={`font-extrabold text-sm md:text-[15px] leading-relaxed transition-colors ${isChecked ? "text-slate-900 font-black" : "text-slate-600"
+                      }`}>
                       {optionText}
                     </p>
                   </div>
@@ -385,7 +383,7 @@ const PhotoUploader = ({ standardId, lang, evidenceUrl }: { standardId: number; 
             <p className="text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">
               {lang === "mr" ? "अतिरिक्त संदर्भ लिंक:" : "Additional Reference Link:"}
             </p>
-            <a 
+            <a
               href={evidenceUrl}
               target="_blank"
               rel="noopener noreferrer"
@@ -406,7 +404,7 @@ const PhotoUploader = ({ standardId, lang, evidenceUrl }: { standardId: number; 
         <h3 className="text-lg font-black text-slate-900">
           {lang === "mr" ? "पुरावे" : "Evidences"}
         </h3>
-        <a 
+        <a
           href={evidenceUrl}
           target="_blank"
           rel="noopener noreferrer"
@@ -425,61 +423,61 @@ const PhotoUploader = ({ standardId, lang, evidenceUrl }: { standardId: number; 
         {lang === "mr" ? "पुरावे" : "Evidences"}
       </h3>
       <div className="bg-[#fbcfe8] rounded-[2rem] p-5 md:p-6 shadow-sm relative overflow-hidden">
-        <input 
-           type="file" 
-           ref={fallbackFileInputRef} 
-           onChange={handleFallbackFileChange} 
-           accept="image/*,application/pdf" 
-           className="hidden" 
+        <input
+          type="file"
+          ref={fallbackFileInputRef}
+          onChange={handleFallbackFileChange}
+          accept="image/*,application/pdf"
+          className="hidden"
         />
-        
+
         {fallbackFileName ? (
           <div className="flex items-center gap-4 bg-white/70 p-3 rounded-2xl border border-pink-300/50 backdrop-blur-md shadow-sm relative group">
-            <div 
-               onClick={() => handlePreviewFile(fallbackFilePreview || "", fallbackFileName, fallbackFileType || "")}
-               className="size-16 rounded-xl overflow-hidden bg-pink-100 flex-shrink-0 border border-pink-200 flex items-center justify-center cursor-pointer hover:scale-105 transition-transform"
+            <div
+              onClick={() => handlePreviewFile(fallbackFilePreview || "", fallbackFileName, fallbackFileType || "")}
+              className="size-16 rounded-xl overflow-hidden bg-pink-100 flex-shrink-0 border border-pink-200 flex items-center justify-center cursor-pointer hover:scale-105 transition-transform"
             >
-               {isPdf(fallbackFileType) ? (
-                 <FileText className="size-8 text-red-500" />
-               ) : (
-                 <img src={fallbackFilePreview || ""} alt="Evidence" className="w-full h-full object-cover" />
-               )}
+              {isPdf(fallbackFileType) ? (
+                <FileText className="size-8 text-red-500" />
+              ) : (
+                <img src={fallbackFilePreview || ""} alt="Evidence" className="w-full h-full object-cover" />
+              )}
             </div>
             <div className="flex-1 min-w-0">
-               <p 
-                  onClick={() => handlePreviewFile(fallbackFilePreview || "", fallbackFileName, fallbackFileType || "")}
-                  className="text-pink-950 font-black text-sm truncate cursor-pointer hover:underline"
-               >
-                  {fallbackFileName}
-               </p>
-               <p className="text-pink-700/80 text-[10px] uppercase tracking-widest font-bold mt-1">
-                  {lang === "mr" ? "यशस्वीरित्या अपलोड केले" : "Successfully uploaded"}
-               </p>
+              <p
+                onClick={() => handlePreviewFile(fallbackFilePreview || "", fallbackFileName, fallbackFileType || "")}
+                className="text-pink-950 font-black text-sm truncate cursor-pointer hover:underline"
+              >
+                {fallbackFileName}
+              </p>
+              <p className="text-pink-700/80 text-[10px] uppercase tracking-widest font-bold mt-1">
+                {lang === "mr" ? "यशस्वीरित्या अपलोड केले" : "Successfully uploaded"}
+              </p>
             </div>
-            <button 
-               onClick={handleFallbackClear}
-               className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white border border-red-100 hover:border-red-500 transition-all shadow-sm active:scale-95"
-               title={lang === "mr" ? "काढून टाका" : "Remove"}
+            <button
+              onClick={handleFallbackClear}
+              className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white border border-red-100 hover:border-red-500 transition-all shadow-sm active:scale-95"
+              title={lang === "mr" ? "काढून टाका" : "Remove"}
             >
-               <Trash2 className="size-5" />
+              <Trash2 className="size-5" />
             </button>
           </div>
         ) : (
-          <div 
-             onClick={() => fallbackFileInputRef.current?.click()}
-             className="border-2 border-dashed border-pink-400/60 rounded-[1.5rem] p-8 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-pink-300/20 hover:border-pink-400 transition-all group bg-white/30 backdrop-blur-sm"
+          <div
+            onClick={() => fallbackFileInputRef.current?.click()}
+            className="border-2 border-dashed border-pink-400/60 rounded-[1.5rem] p-8 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-pink-300/20 hover:border-pink-400 transition-all group bg-white/30 backdrop-blur-sm"
           >
-             <div className="size-14 bg-pink-100 text-pink-600 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm border border-pink-200">
-                <Upload className="size-6" />
-             </div>
-             <div className="text-center">
-                <p className="text-pink-900 font-black text-sm tracking-wide">
-                   {lang === "mr" ? "फाईल निवडा किंवा येथे ड्रॅग करा" : "Select file or drag here"}
-                </p>
-                <p className="text-pink-700/70 text-xs font-bold mt-1">
-                   {lang === "mr" ? "प्रतिма फाईल (PNG, JPG) किंवा PDF फाईल" : "Image files (PNG, JPG) or PDF file"}
-                </p>
-             </div>
+            <div className="size-14 bg-pink-100 text-pink-600 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm border border-pink-200">
+              <Upload className="size-6" />
+            </div>
+            <div className="text-center">
+              <p className="text-pink-900 font-black text-sm tracking-wide">
+                {lang === "mr" ? "फाईल निवडा किंवा येथे ड्रॅग करा" : "Select file or drag here"}
+              </p>
+              <p className="text-pink-700/70 text-xs font-bold mt-1">
+                {lang === "mr" ? "प्रतिма फाईल (PNG, JPG) किंवा PDF फाईल" : "Image files (PNG, JPG) or PDF file"}
+              </p>
+            </div>
           </div>
         )}
       </div>
@@ -496,7 +494,7 @@ const getStandardDetail = (num: number) => {
   if (standardsDetailData[num]) {
     return standardsDetailData[num];
   }
-  
+
   // Fallback for standards 88 to 128
   return {
     mr: {
@@ -4605,7 +4603,7 @@ function TeacherSqafPage() {
 
   // Ref to the scrolling container in the summary view
   const gridRef = useRef<HTMLDivElement>(null);
-  
+
   // Track last selected standard ID for scroll restore and highlighting
   const [lastSelectedStandard, setLastSelectedStandard] = useState<number | null>(() => {
     if (typeof window !== "undefined") {
@@ -4690,7 +4688,7 @@ function TeacherSqafPage() {
 
   const groupedOptions = useMemo(() => {
     if (!currentDetail || !currentDetail[selectedLang]) return [];
-    
+
     const normalizeLevel = (char: string): string => {
       const mapping: Record<string, string> = {
         "१": "1", "२": "2", "३": "3", "४": "4", "५": "5", "६": "6", "७": "7", "८": "8", "९": "9",
@@ -4701,12 +4699,12 @@ function TeacherSqafPage() {
 
     const opts = currentDetail[selectedLang].options;
     const groups: { text: string; isGreen?: boolean }[] = [];
-    
+
     opts.forEach((opt) => {
       const trimmed = opt.text.trim();
       const match = trimmed.match(/^([1-9]|[१२३४५६७८९])/);
       const level = match ? normalizeLevel(match[1]) : null;
-      
+
       let found = false;
       if (level) {
         const existingIndex = groups.findIndex((g) => {
@@ -4722,7 +4720,7 @@ function TeacherSqafPage() {
           found = true;
         }
       }
-      
+
       if (!found) {
         groups.push({
           text: opt.text,
@@ -4750,7 +4748,7 @@ function TeacherSqafPage() {
       setCompletedStandards(updatedCompleted);
       localStorage.setItem("sqaf_completed_standards", JSON.stringify(Array.from(updatedCompleted)));
     }
-    
+
     toast.success(selectedLang === "mr" ? `पर्याय निवडला.` : `Option selected.`);
   };
 
@@ -4776,7 +4774,7 @@ function TeacherSqafPage() {
   const getGroupedOptions = (standardId: number, lang: "mr" | "en") => {
     const detail = getStandardDetail(standardId);
     if (!detail || !detail[lang]) return [];
-    
+
     const normalizeLevel = (char: string): string => {
       const mapping: Record<string, string> = {
         "१": "1", "२": "2", "३": "3", "४": "4", "५": "5", "६": "6", "७": "7", "८": "8", "९": "9",
@@ -4787,12 +4785,12 @@ function TeacherSqafPage() {
 
     const options = detail[lang].options;
     const groups: { text: string; isGreen?: boolean }[] = [];
-    
+
     options.forEach((opt) => {
       const trimmed = opt.text.trim();
       const match = trimmed.match(/^([1-9]|[१२३४५६७८९])/);
       const level = match ? normalizeLevel(match[1]) : null;
-      
+
       let found = false;
       if (level) {
         const existingIndex = groups.findIndex((g) => {
@@ -4808,7 +4806,7 @@ function TeacherSqafPage() {
           found = true;
         }
       }
-      
+
       if (!found) {
         groups.push({
           text: opt.text,
@@ -4827,18 +4825,18 @@ function TeacherSqafPage() {
   const handleDownloadPdf = async () => {
     try {
       const toastId = toast.loading(selectedLang === "mr" ? "PDF तयार करत आहे..." : "Generating PDF...");
-      
+
       // Dynamically import pdf-lib
       const { PDFDocument, rgb, StandardFonts } = await import('pdf-lib');
-      
+
       const pdfBytes = await fetch("/SQAAF_Self_Evaluation.pdf").then(res => res.arrayBuffer());
       const coordsRes = await fetch("/sqaaf_coords.json");
       const coordsMap = await coordsRes.json();
-      
+
       const pdfDoc = await PDFDocument.load(pdfBytes);
       const helveticaFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
       const pages = pdfDoc.getPages();
-      
+
       // Coordinates logic derived from python script
       const SCALE = 1.18083684;
       const NEW_L1_START = 253.82;
@@ -4851,7 +4849,7 @@ function TeacherSqafPage() {
       const NEW_L4_END = NEW_L4_START + 125.28 * SCALE;
       const EVAL_COL_START = NEW_L4_END;
       const EVAL_COL_WIDTH = 22.38;
-      
+
       const levelXCoords = [
         { x: NEW_L1_START, w: NEW_L1_END - NEW_L1_START },
         { x: NEW_L2_START, w: NEW_L2_END - NEW_L2_START },
@@ -4865,30 +4863,30 @@ function TeacherSqafPage() {
       if (savedSelectedOptions) {
         try {
           selectedOptionsMap = JSON.parse(savedSelectedOptions);
-        } catch(e) {}
+        } catch (e) { }
       }
 
       // Draw highlights and marks for each standard
       Object.keys(selectedOptionsMap).forEach((standardId) => {
         const selectedIndex = selectedOptionsMap[standardId];
         if (selectedIndex === undefined || selectedIndex === null) return;
-        
+
         const coords = coordsMap[standardId.toString()];
         if (!coords) return;
-        
+
         const pageIdx = coords.page;
         if (pageIdx >= pages.length) return;
         const page = pages[pageIdx];
-        
+
         // y_top and y_bottom in PyMuPDF are from top-left.
         // pdf-lib origin is bottom-left.
         const { height } = page.getSize();
         const yTop = height - coords.y_top;
         const yBot = height - coords.y_bottom;
         // Add a tiny padding
-        const rectY = yBot - 2; 
+        const rectY = yBot - 2;
         const rectH = (yTop - yBot) + 4;
-        
+
         if (selectedIndex < 4) {
           // Highlight the specific level
           const lx = levelXCoords[selectedIndex];
@@ -4900,7 +4898,7 @@ function TeacherSqafPage() {
             color: rgb(1, 0.95, 0.6), // Light Yellow
             opacity: 0.5,
           });
-          
+
           // Add mark in Eval column
           const markValue = (selectedIndex + 1).toString();
           page.drawText(markValue, {
@@ -4910,7 +4908,7 @@ function TeacherSqafPage() {
             font: helveticaFont,
             color: rgb(0, 0, 0),
           });
-          
+
         } else if (selectedIndex === 4) {
           // Not applicable: fully highlight the row
           page.drawRectangle({
@@ -4923,17 +4921,17 @@ function TeacherSqafPage() {
           });
         }
       });
-      
+
       const pdfBytesModified = await pdfDoc.save();
       const blob = new Blob([pdfBytesModified as unknown as BlobPart], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
-      
+
       toast.dismiss(toastId);
       toast.success(selectedLang === "mr" ? "PDF यशस्वीरित्या तयार झाली!" : "PDF Generated Successfully!");
-      
+
       window.open(url, "_blank");
-      
-    } catch(err) {
+
+    } catch (err) {
       console.error("PDF generation error:", err);
       toast.error(selectedLang === "mr" ? "PDF बनवताना त्रुटी आली." : "Error generating PDF.");
     }
@@ -4945,16 +4943,16 @@ function TeacherSqafPage() {
     const title = certLang === "mr" ? certTitleMr : certTitleEn;
     const description = certLang === "mr" ? certDescMr : certDescEn;
 
-    const headerText = certLang === "mr" 
-      ? "राज्य शैक्षणिक संशोधन व प्रशिक्षण परिषद महाराष्ट्र" 
+    const headerText = certLang === "mr"
+      ? "राज्य शैक्षणिक संशोधन व प्रशिक्षण परिषद महाराष्ट्र"
       : "State Council For Educational Research and Training Maharashtra";
-      
-    const certifyText = certLang === "mr" 
-      ? "याद्वारे प्रमाणित करण्यात येते की," 
+
+    const certifyText = certLang === "mr"
+      ? "याद्वारे प्रमाणित करण्यात येते की,"
       : "This is to certify that";
 
-    const sigHeader = certLang === "mr" 
-      ? "एस.सी.ई.आर.टी. महाराष्ट्र" 
+    const sigHeader = certLang === "mr"
+      ? "एस.सी.ई.आर.टी. महाराष्ट्र"
       : "SCERT Maharashtra";
 
     const sigAddress = certLang === "mr"
@@ -4962,7 +4960,7 @@ function TeacherSqafPage() {
       : `State Council For Educational Research and Training, Maharashtra, Pune.<br/>(SCERT)<br/>708, Sadashiv Peth, Kumthekar Marg, Pune – 411030<br/>Maharashtra, India`;
 
     const printContainer = document.createElement("div");
-    
+
     const html = `
       <div style="
         font-family: 'Georgia', serif;
@@ -5190,8 +5188,8 @@ function TeacherSqafPage() {
     <div className="min-h-screen bg-slate-50/50">
       {/* Hide header and sidebar if viewing detailed full-screen standard or certificate */}
       <div className={(activeStandardDetails !== null || view === "certificate") ? "hidden" : "block"}>
-         <TeacherHeader />
-         <TeacherSidebar />
+        <TeacherHeader />
+        <TeacherSidebar />
       </div>
 
       <main className={`${(activeStandardDetails !== null || view === "certificate") ? "" : "lg:pl-64 pt-16"} min-h-screen transition-all duration-300`}>
@@ -5245,11 +5243,10 @@ function TeacherSqafPage() {
                           <div
                             key={idx}
                             onClick={() => selectOption(activeStandardDetails, idx)}
-                            className={`rounded-2xl p-5 border transition-all text-[13px] font-extrabold leading-relaxed cursor-pointer hover:scale-[1.01] hover:border-slate-300 whitespace-pre-line ${
-                              isSelected
+                            className={`rounded-2xl p-5 border transition-all text-[13px] font-extrabold leading-relaxed cursor-pointer hover:scale-[1.01] hover:border-slate-300 whitespace-pre-line ${isSelected
                                 ? "bg-[#22c55e] text-slate-950 border-[#22c55e] shadow-md"
                                 : "bg-[#f1eff7] text-slate-700 border-slate-200/60 shadow-sm"
-                            }`}
+                              }`}
                           >
                             {opt.text}
                           </div>
@@ -5259,10 +5256,10 @@ function TeacherSqafPage() {
                   </div>
 
                   {/* Evidences / Photo Upload Section */}
-                  <PhotoUploader 
-                    standardId={activeStandardDetails} 
-                    lang={selectedLang} 
-                    evidenceUrl={currentDetail[selectedLang].evidenceUrl} 
+                  <PhotoUploader
+                    standardId={activeStandardDetails}
+                    lang={selectedLang}
+                    evidenceUrl={currentDetail[selectedLang].evidenceUrl}
                   />
 
                   {/* Dark Pill "Go Back" Button at Bottom Center */}
@@ -5472,7 +5469,7 @@ function TeacherSqafPage() {
                       <p className="text-[10px] font-black uppercase tracking-widest text-orange-50">{t.subtitle}</p>
                     </div>
                   </div>
-                  
+
                   {/* Language Selector Button with Automatic Toggle */}
                   <div>
                     <button
@@ -5500,7 +5497,7 @@ function TeacherSqafPage() {
                       <h2 className="text-xl md:text-2xl font-bold text-slate-900 uppercase tracking-wide">
                         {infoSchoolName || profile?.schoolName || "Z.P SCHOOL DHONDEWADIPED"}
                       </h2>
-                      
+
                       <div className="inline-block bg-[#c4b5fd] text-slate-900 text-sm md:text-base font-bold px-5 py-2 rounded-xl border border-slate-900/10">
                         {infoUdise || profile?.udise || "27350800701"}
                       </div>
@@ -5525,18 +5522,17 @@ function TeacherSqafPage() {
                       <div>
                         <div className="flex justify-between items-center mb-4">
                           <h4 className="text-[16px] font-bold text-slate-900">{t.viewSub}</h4>
-                          <div 
+                          <div
                             onClick={(e) => {
                               e.stopPropagation();
                               toggleCard1();
                             }}
-                            className={`size-6 border-2 rounded flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 transition-transform ${
-                              card1Checked 
-                                ? "border-slate-900 bg-slate-900 text-white" 
+                            className={`size-6 border-2 rounded flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 transition-transform ${card1Checked
+                                ? "border-slate-900 bg-slate-900 text-white"
                                 : "border-slate-400 bg-white text-transparent"
-                            }`}
+                              }`}
                           >
-                             {card1Checked && <CheckCircle2 className="size-4" />}
+                            {card1Checked && <CheckCircle2 className="size-4" />}
                           </div>
                         </div>
                         <hr className="border-slate-900/40 mb-4" />
@@ -5557,23 +5553,22 @@ function TeacherSqafPage() {
                       <div>
                         <div className="flex justify-between items-center mb-4">
                           <h4 className="text-[16px] font-bold text-slate-900">{t.downloadPdfSub}</h4>
-                          <div 
+                          <div
                             onClick={(e) => {
                               e.stopPropagation();
                               toggleCard2();
                             }}
-                            className={`size-6 border-2 rounded flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 transition-transform ${
-                              card2Checked 
-                                ? "border-slate-900 bg-slate-900 text-white" 
+                            className={`size-6 border-2 rounded flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 transition-transform ${card2Checked
+                                ? "border-slate-900 bg-slate-900 text-white"
                                 : "border-slate-400 bg-white text-transparent"
-                            }`}
+                              }`}
                           >
-                             {card2Checked && <CheckCircle2 className="size-4" />}
+                            {card2Checked && <CheckCircle2 className="size-4" />}
                           </div>
                         </div>
                         <hr className="border-slate-900/40 mb-4" />
                         <p className="text-[14px] text-slate-700 mb-4">{t.downloadPdfDesc}</p>
-                        
+
                         {/* Premium Language Selector Inside Card */}
                         <div className="mb-6 space-y-2">
                           <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block">
@@ -5582,21 +5577,19 @@ function TeacherSqafPage() {
                           <div className="flex bg-slate-100 rounded-xl p-1 gap-1 border border-slate-200">
                             <button
                               onClick={() => setPdfLang("mr")}
-                              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                                pdfLang === "mr"
+                              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${pdfLang === "mr"
                                   ? "bg-[#1e1b4b] text-white shadow-sm"
                                   : "text-slate-600 hover:bg-slate-200/50"
-                              }`}
+                                }`}
                             >
                               मराठी
                             </button>
                             <button
                               onClick={() => setPdfLang("en")}
-                              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                                pdfLang === "en"
+                              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${pdfLang === "en"
                                   ? "bg-[#1e1b4b] text-white shadow-sm"
                                   : "text-slate-600 hover:bg-slate-200/50"
-                              }`}
+                                }`}
                             >
                               English
                             </button>
@@ -5618,18 +5611,17 @@ function TeacherSqafPage() {
                       <div>
                         <div className="flex justify-between items-center mb-4">
                           <h4 className="text-[16px] font-bold text-slate-900">{t.downloadCertSub}</h4>
-                          <div 
+                          <div
                             onClick={(e) => {
                               e.stopPropagation();
                               toggleCard3();
                             }}
-                            className={`size-6 border-2 rounded flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 transition-transform ${
-                              card3Checked 
-                                ? "border-slate-900 bg-slate-900 text-white" 
+                            className={`size-6 border-2 rounded flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 transition-transform ${card3Checked
+                                ? "border-slate-900 bg-slate-900 text-white"
                                 : "border-slate-400 bg-white text-transparent"
-                            }`}
+                              }`}
                           >
-                             {card3Checked && <CheckCircle2 className="size-4" />}
+                            {card3Checked && <CheckCircle2 className="size-4" />}
                           </div>
                         </div>
                         <hr className="border-slate-900/40 mb-4" />
@@ -5679,28 +5671,26 @@ function TeacherSqafPage() {
                       {certLang === "mr" ? "प्रमाणपत्र" : "Certificate"}
                     </span>
                   </div>
-                  
+
                   {/* Actions on the right side of orange header */}
                   <div className="flex items-center gap-3">
                     {/* Language Selector */}
                     <div className="flex bg-white/20 backdrop-blur-md rounded-xl p-1 gap-1 border border-black/15">
                       <button
                         onClick={() => setCertLang("mr")}
-                        className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                          certLang === "mr"
+                        className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${certLang === "mr"
                             ? "bg-[#1e1b4b] text-white shadow-sm"
                             : "text-slate-900 hover:bg-white/10"
-                        }`}
+                          }`}
                       >
                         मराठी
                       </button>
                       <button
                         onClick={() => setCertLang("en")}
-                        className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                          certLang === "en"
+                        className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${certLang === "en"
                             ? "bg-[#1e1b4b] text-white shadow-sm"
                             : "text-slate-900 hover:bg-white/10"
-                        }`}
+                          }`}
                       >
                         English
                       </button>
@@ -5728,8 +5718,8 @@ function TeacherSqafPage() {
 
                 {/* Certificate Canvas Area */}
                 <div className="flex-1 w-full flex items-center justify-center p-4 md:p-8 overflow-y-auto">
-                  <div 
-                    id="certificate-container" 
+                  <div
+                    id="certificate-container"
                     className="relative bg-white shadow-2xl rounded-sm w-full max-w-[650px] aspect-[1/1.4] p-8 md:p-12 flex flex-col justify-between items-center overflow-hidden border border-slate-200"
                     style={{
                       backgroundImage: 'radial-gradient(circle, #fdfbf7 0%, #fff 100%)'
@@ -5790,11 +5780,11 @@ function TeacherSqafPage() {
                     <div className="relative z-10 w-full flex flex-col items-center my-auto px-4 text-center space-y-4">
                       {/* Header */}
                       <h1 className="text-[#1e3b8b] font-serif font-black text-base sm:text-lg md:text-xl leading-snug tracking-wide max-w-[90%] uppercase">
-                        {certLang === "mr" 
-                          ? "राज्य शैक्षणिक संशोधन व प्रशिक्षण परिषद महाराष्ट्र" 
+                        {certLang === "mr"
+                          ? "राज्य शैक्षणिक संशोधन व प्रशिक्षण परिषद महाराष्ट्र"
                           : "State Council For Educational Research and Training Maharashtra"}
                       </h1>
-                      
+
                       <div className="h-[2px] w-24 bg-[#bf953f] my-2" />
 
                       {/* Certificate Title (Editable) */}
@@ -5892,16 +5882,16 @@ function TeacherSqafPage() {
                         <p className="text-slate-500 text-[8px] sm:text-[9px] font-bold leading-normal">
                           {certLang === "mr" ? (
                             <>
-                              राज्य शैक्षणिक संशोधन व प्रशिक्षण परिषद, महाराष्ट्र, पुणे.<br/>
-                              (एस.सी.ई.आर.टी.)<br/>
-                              ७०८, सदाशिव पेठ, कुमठेकर मार्ग, पुणे – ४११0३0<br/>
+                              राज्य शैक्षणिक संशोधन व प्रशिक्षण परिषद, महाराष्ट्र, पुणे.<br />
+                              (एस.सी.ई.आर.टी.)<br />
+                              ७०८, सदाशिव पेठ, कुमठेकर मार्ग, पुणे – ४११0३0<br />
                               महाराष्ट्र, भारत
                             </>
                           ) : (
                             <>
-                              State Council For Educational Research and Training, Maharashtra, Pune.<br/>
-                              (SCERT)<br/>
-                              708, Sadashiv Peth, Kumthekar Marg, Pune – 411030<br/>
+                              State Council For Educational Research and Training, Maharashtra, Pune.<br />
+                              (SCERT)<br />
+                              708, Sadashiv Peth, Kumthekar Marg, Pune – 411030<br />
                               Maharashtra, India
                             </>
                           )}
@@ -5940,7 +5930,7 @@ function TeacherSqafPage() {
                     <ArrowLeft className="size-4 group-hover:-translate-x-1 transition-transform" />
                     <span>{t.backBtn}</span>
                   </button>
-                  
+
                   {/* Language Selector Button with Automatic Toggle for Summary view */}
                   <div>
                     <button
@@ -5999,7 +5989,7 @@ function TeacherSqafPage() {
                     </div>
 
                     {/* Desktop Premium Grid Layout */}
-                    <div 
+                    <div
                       ref={gridRef}
                       className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5 max-h-[62vh] overflow-y-auto pr-3 scrollbar-thin"
                     >
@@ -6030,37 +6020,32 @@ function TeacherSqafPage() {
                                 setActiveStandardDetails(num);
                               }
                             }}
-                            className={`relative border-2 rounded-2xl p-4 flex flex-col justify-between transition-all duration-300 cursor-pointer group overflow-hidden ${
-                              isCompleted
+                            className={`relative border-2 rounded-2xl p-4 flex flex-col justify-between transition-all duration-300 cursor-pointer group overflow-hidden ${isCompleted
                                 ? "bg-gradient-to-br from-green-50 to-green-100/50 border-green-500 hover:shadow-green-100"
                                 : "bg-gradient-to-br from-white to-slate-50 border-slate-200/80 hover:border-slate-400 hover:shadow-slate-100"
-                            } ${
-                              isLastSelected
+                              } ${isLastSelected
                                 ? "ring-4 ring-indigo-600/50 border-indigo-500 shadow-xl scale-[1.02] z-10"
                                 : ""
-                            }`}
+                              }`}
                           >
                             <div
-                              className={`absolute -right-6 -bottom-6 size-20 rounded-full blur-lg transition-all duration-300 pointer-events-none ${
-                                isCompleted
+                              className={`absolute -right-6 -bottom-6 size-20 rounded-full blur-lg transition-all duration-300 pointer-events-none ${isCompleted
                                   ? "bg-green-500/10 group-hover:bg-green-500/20"
                                   : "bg-slate-500/5 group-hover:bg-slate-500/10"
-                              }`}
+                                }`}
                             />
-                            
+
                             <div className="flex justify-between items-start gap-4">
                               <div className="space-y-1">
                                 <span
-                                  className={`text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider ${
-                                    isCompleted ? "text-green-700 bg-green-100" : "text-slate-500 bg-slate-100"
-                                  }`}
+                                  className={`text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider ${isCompleted ? "text-green-700 bg-green-100" : "text-slate-500 bg-slate-100"
+                                    }`}
                                 >
                                   {selectedLang === "mr" ? "मानक" : "Standard"}
                                 </span>
                                 <h4
-                                  className={`font-extrabold text-sm transition-colors ${
-                                    isCompleted ? "text-green-950" : "text-slate-800"
-                                  }`}
+                                  className={`font-extrabold text-sm transition-colors ${isCompleted ? "text-green-950" : "text-slate-800"
+                                    }`}
                                 >
                                   {selectedLang === "mr"
                                     ? `मानक क्र. ${toMarathiNumerals(num)}`
@@ -6068,11 +6053,10 @@ function TeacherSqafPage() {
                                 </h4>
                               </div>
                               <div
-                                className={`size-8 rounded-full flex items-center justify-center shadow-md transition-all ${
-                                  isCompleted
+                                className={`size-8 rounded-full flex items-center justify-center shadow-md transition-all ${isCompleted
                                     ? "bg-green-500 text-white shadow-green-500/20 group-hover:scale-110"
                                     : "bg-slate-100 text-slate-300 group-hover:bg-slate-200"
-                                }`}
+                                  }`}
                               >
                                 <CheckCircle2 className="size-4" strokeWidth={2.5} />
                               </div>

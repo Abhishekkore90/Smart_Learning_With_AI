@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { showToast as toast } from "@/lib/custom-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { useLanguage } from "@/hooks/use-language";
 import { db } from "@/lib/firebase";
 import {
   collection,
@@ -280,6 +281,7 @@ const ALUMNI_MEETINGS = [
 
 function TeacherMeetingPage() {
   const { user, profile, loading: authLoading } = useAuth();
+  const { lang } = useLanguage();
   const navigate = useNavigate({ from: Route.fullPath });
   const search = Route.useSearch();
 
@@ -1828,7 +1830,7 @@ function TeacherMeetingPage() {
                                   <table className="register-table min-w-[600px] w-full">
                                     <thead>
                                       <tr className="bg-slate-100 whitespace-nowrap">
-                                        <th className="w-10 text-center px-2 py-2">अ.क्र.</th>
+                                        <th className="w-16 text-center px-1 py-2">अ.क्र.</th>
                                         <th className="text-left px-2 py-2">सदस्याचे नाव</th>
                                         <th className="text-left px-2 py-2">पदनाम</th>
                                         <th className="text-left px-2 py-2">पद</th>
@@ -1843,7 +1845,7 @@ function TeacherMeetingPage() {
                                             key={index}
                                             className="hover:bg-slate-50/30 whitespace-nowrap"
                                           >
-                                            <td className="text-center w-10 px-2 py-2">
+                                            <td className="text-center w-16 px-1 py-2">
                                               {index + 1}
                                             </td>
                                             <td className="px-2 py-2">
@@ -2140,10 +2142,10 @@ function TeacherMeetingPage() {
                                       <table className="register-table w-full table-fixed">
                                         <thead>
                                           <tr className="bg-slate-100">
-                                            <th style={{ width: '4%' }} className="text-center px-1 py-2">
+                                            <th style={{ width: '8%' }} className="text-center px-1 py-2">
                                               अ.क्र.
                                             </th>
-                                            <th style={{ width: '42%' }} className="text-left px-2 py-2">सदस्याचे नाव</th>
+                                            <th style={{ width: '38%' }} className="text-left px-2 py-2">सदस्याचे नाव</th>
                                             <th style={{ width: '31%' }} className="text-left px-2 py-2">पदनाम</th>
                                             <th style={{ width: '11%' }} className="text-left px-2 py-2">पद</th>
                                             <th style={{ width: '12%' }} className="text-center px-2 py-2">
@@ -2415,7 +2417,7 @@ function TeacherMeetingPage() {
                         <table className="w-full text-left border-collapse text-base">
                           <thead>
                             <tr className="bg-slate-100 text-slate-800 font-extrabold border-b-2 border-slate-300">
-                              <th className="px-2 py-4 text-center w-12">
+                              <th className="px-1.5 py-4 text-center w-16">
                                 अ.क्र.
                               </th>
                               <th className="px-4 py-4 w-[35%] min-w-[250px]">सदस्याचे नाव</th>
@@ -2684,7 +2686,7 @@ function TeacherMeetingPage() {
                               <table className="w-full text-left border-collapse text-base">
                                 <thead>
                                   <tr className="bg-slate-100 text-slate-800 font-black border-b-2 border-slate-300">
-                                    <th className="px-3 py-3.5 text-center w-12 border-r border-slate-200">अ.क्र.</th>
+                                    <th className="px-1.5 py-3.5 text-center w-16 border-r border-slate-200">अ.क्र.</th>
                                     <th className="px-4 py-3.5 border-r border-slate-200 w-[35%] min-w-[220px]">सदस्याचे नाव</th>
                                     <th className="px-4 py-3.5 border-r border-slate-200 min-w-[200px]">पदनाम (Designation)</th>
                                     <th className="px-4 py-3.5 border-r border-slate-200 min-w-[180px]">पद (Post)</th>
