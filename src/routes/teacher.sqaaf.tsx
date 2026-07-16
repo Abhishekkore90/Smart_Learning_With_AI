@@ -8,7 +8,49 @@ import { showToast as toast } from "@/lib/custom-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-// print-js is imported dynamically to avoid SSR "window is not defined" error
+// Helper function to extract public Google Drive photos from single file links and folder links
+async function fetchGoogleDriveImages(url: string): Promise<{ src: string }[]> {
+  try {
+    const trimmed = url.trim();
+    if (!trimmed) return [];
+
+    // 1. Direct image link or base64
+    if (trimmed.match(/\.(jpeg|jpg|gif|png|webp|svg)(?:\?.*)?$/i) || trimmed.startsWith("data:image")) {
+      return [{ src: trimmed }];
+    }
+
+    // 2. Direct drive file link
+    const fileIdMatch = trimmed.match(/(?:file\/d\/|id=)([a-zA-Z0-9_-]{25,})/);
+    if (fileIdMatch && !trimmed.includes("/folders/") && !trimmed.includes("/drive/folders/")) {
+      const fileId = fileIdMatch[1];
+      return [{ src: `https://lh3.googleusercontent.com/d/${fileId}` }];
+    }
+
+    // 3. Drive folder link
+    const folderIdMatch = trimmed.match(/(?:folders\/|id=)([a-zA-Z0-9_-]{25,})/);
+    if (folderIdMatch) {
+      const folderId = folderIdMatch[1];
+      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(`https://drive.google.com/embeddedfolderview?id=${folderId}`)}`;
+      const response = await fetch(proxyUrl);
+      if (!response.ok) return [];
+      const json = await response.json();
+      const html = json.contents;
+      
+      const fileIds: string[] = [];
+      const regex = /file\/d\/([a-zA-Z0-9_-]{25,})/g;
+      let match;
+      while ((match = regex.exec(html)) !== null) {
+        if (!fileIds.includes(match[1])) {
+          fileIds.push(match[1]);
+        }
+      }
+      return fileIds.map(id => ({ src: `https://lh3.googleusercontent.com/d/${id}` }));
+    }
+  } catch (err) {
+    console.error("Error fetching drive images:", err);
+  }
+  return [];
+}
 
 export const Route = createFileRoute("/teacher/sqaaf")({
   component: TeacherSqaafPage,
@@ -5003,6 +5045,18 @@ function TeacherSqaafPage() {
     setCertLang(selectedLang);
   }, [selectedLang]);
 
+  useEffect(() => {
+    if (typeof window !== "undefined" && !localStorage.getItem("sqaaf_cert_school_name")) {
+      setCertSchoolName(infoSchoolName || profile?.schoolName || "");
+    }
+  }, [infoSchoolName, profile?.schoolName]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && !localStorage.getItem("sqaaf_cert_udise")) {
+      setCertUdise(infoUdise || profile?.udise || "");
+    }
+  }, [infoUdise, profile?.udise]);
+
   const handleEditToggle = () => {
     if (isEditingCert) {
       localStorage.setItem("sqaaf_cert_school_name", certSchoolName);
@@ -5354,116 +5408,182 @@ function TeacherSqaafPage() {
 
       if (currentFormat === "responses") {
         // ── "School Responses" card-based portrait report ──
-        const answeredStandards = Array.from({ length: 128 }, (_, i) => {
-          const num = i + 1;
-          const idx = selectedOptionsMap[num.toString()] !== undefined ? selectedOptionsMap[num.toString()] : undefined;
-          const detail = getStandardDetail(num);
-          const langData = detail?.[pdfLang];
-          const orangeDesc = langData?.orangeDesc || (isMr ? `मानक क्र. ${toMarathiNumerals(num)}` : `Standard No. ${num}`);
-          const options = getGroupedOptions(num, pdfLang);
+        const answeredStandards = await Promise.all(
+          Array.from({ length: 128 }, async (_, i) => {
+            const num = i + 1;
+            const idx = selectedOptionsMap[num.toString()] !== undefined ? selectedOptionsMap[num.toString()] : undefined;
+            const detail = getStandardDetail(num);
+            const langData = detail?.[pdfLang];
+            const orangeDesc = langData?.orangeDesc || (isMr ? `मानक क्र. ${toMarathiNumerals(num)}` : `Standard No. ${num}`);
+            const options = getGroupedOptions(num, pdfLang);
 
-          const isSelected = idx !== undefined && idx !== null;
-          const isNotApplicable = idx === options.length - 1;
+            const isSelected = idx !== undefined && idx !== null;
+            const isNotApplicable = idx === options.length - 1;
 
-          const responseText = isSelected
-            ? (isNotApplicable
-              ? (isMr ? "लागू नाही" : "Not applicable")
-              : (options[idx]?.text || "-"))
-            : "";
-          const levelLabel = isSelected
-            ? (isNotApplicable ? "" : (isMr ? `स्तर ${toMarathiNumerals(idx + 1)}` : `Level ${idx + 1}`))
-            : "";
+            const responseText = isSelected
+              ? (isNotApplicable
+                ? (isMr ? "लागू नाही" : "Not applicable")
+                : (options[idx]?.text || "-"))
+              : "";
+            const levelLabel = isSelected
+              ? (isNotApplicable ? "" : (isMr ? `स्तर ${toMarathiNumerals(idx + 1)}` : `Level ${idx + 1}`))
+              : "";
 
-          const marks = isSelected && !isNotApplicable ? (idx !== undefined ? idx + 1 : 0) : 0;
+            const marks = isSelected && !isNotApplicable ? (idx !== undefined ? idx + 1 : 0) : 0;
 
-          let photoHtml = "";
-          if (isSelected && !isNotApplicable) {
-            const savedOpts = localStorage.getItem(`sqaaf_evidence_options_config_${num}_${idx}`);
-            let parsedOpts: string[] = [];
-            if (savedOpts) {
-              try { parsedOpts = JSON.parse(savedOpts); } catch { }
-            } else if (idx === 0) {
-              const oldOpts = localStorage.getItem(`sqaaf_evidence_options_config_${num}`);
-              if (oldOpts) {
-                try { parsedOpts = JSON.parse(oldOpts); } catch { }
-              }
-            }
-            if (parsedOpts.length === 0) {
-              parsedOpts = [isMr ? "सर्वसाधारण पुरावे / General Evidences" : "General Evidences"];
-            }
-            let optsLength = parsedOpts.length;
+            let subOptionsHtml = "";
+            let photosHtml = "";
 
-            let checkedOptions: { src: string | null, title: string, isChecked: boolean }[] = [];
-            for (let pIdx = 0; pIdx < optsLength; pIdx++) {
-              let isChecked = localStorage.getItem(`sqaaf_checked_${num}_${idx}_${pIdx}`) === "true";
-              if (!isChecked && idx === 0) {
-                isChecked = localStorage.getItem(`sqaaf_evidence_checked_${num}_${pIdx}`) === "true";
-              }
-              let preview = localStorage.getItem(`sqaaf_file_preview_${num}_${idx}_${pIdx}`);
-              if (!preview && idx === 0) {
-                preview = localStorage.getItem(`sqaaf_evidence_file_preview_${num}_${pIdx}`);
-              }
-
-              if (isChecked || (preview && preview.startsWith("data:image"))) {
-                checkedOptions.push({
-                  src: (preview && preview.startsWith("data:image")) ? preview : null,
-                  title: parsedOpts[pIdx] || "",
-                  isChecked
-                });
-              }
-            }
-
-            if (checkedOptions.length > 0) {
-              const imagesHtml = checkedOptions.map(p => `
-                 <div style="display: inline-block; margin-right: 12px; margin-top: 10px; width: 140px; vertical-align: top;">
-                   ${p.src
-                  ? `<img src="${p.src}" style="max-height: 110px; max-width: 140px; border-radius: 6px; border: 1px solid #cbd5e1; box-sizing: border-box;" />`
-                  : `<div style="height: 60px; width: 140px; border-radius: 6px; border: 1px dashed #cbd5e1; background: #f8fafc; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #94a3b8; box-sizing: border-box;">${isMr ? "फोटो नाही" : "No Photo"}</div>`
+            if (isSelected && !isNotApplicable) {
+              const savedOpts = localStorage.getItem(`sqaaf_evidence_options_config_${num}_${idx}`);
+              let parsedOpts: string[] = [];
+              if (savedOpts) {
+                try { parsedOpts = JSON.parse(savedOpts); } catch { }
+              } else if (idx === 0) {
+                const oldOpts = localStorage.getItem(`sqaaf_evidence_options_config_${num}`);
+                if (oldOpts) {
+                  try { parsedOpts = JSON.parse(oldOpts); } catch { }
                 }
-                   <div style="font-size: 9px; font-weight: 800; color: #1e293b; margin-top: 6px; line-height: 1.3; word-break: break-word;">
-                     <span style="color: ${p.isChecked ? '#ec4899' : '#94a3b8'}; font-weight: 900; margin-right: 2px;">${p.isChecked ? '✓' : '○'}</span> ${p.title}
-                   </div>
-                 </div>
-               `).join("");
-              photoHtml = `
-                 <div style="margin-top: 14px; border-top: 1px dashed #cbd5e1; padding-top: 12px; break-inside: avoid; page-break-inside: avoid;">
-                   <div style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b; margin-bottom: 2px;">${isMr ? "पुरावे पर्याय (Evidence Options)" : "Evidence Options"}</div>
-                   <div style="display: block;">
-                     ${imagesHtml}
-                   </div>
-                 </div>
-               `;
-            }
-          }
+              }
+              if (parsedOpts.length === 0) {
+                parsedOpts = [isMr ? "सर्वसाधारण पुरावे / General Evidences" : "General Evidences"];
+              }
+              let optsLength = parsedOpts.length;
 
-          return { num, orangeDesc, responseText, levelLabel, isNotApplicable, isSelected, photoHtml, marks };
-        });
+              let checkedOptions: { title: string }[] = [];
+              let localPhotos: { src: string; label: string }[] = [];
+              for (let pIdx = 0; pIdx < optsLength; pIdx++) {
+                let isChecked = localStorage.getItem(`sqaaf_checked_${num}_${idx}_${pIdx}`) === "true";
+                if (!isChecked && idx === 0) {
+                  isChecked = localStorage.getItem(`sqaaf_evidence_checked_${num}_${pIdx}`) === "true";
+                }
+                
+                // Show ONLY selected/checked sub-options in text list
+                if (isChecked) {
+                  checkedOptions.push({
+                    title: parsedOpts[pIdx] || ""
+                  });
+                }
+
+                // Collect photos from any sub-option (checked or unchecked)
+                let preview = localStorage.getItem(`sqaaf_file_preview_${num}_${idx}_${pIdx}`);
+                if (!preview && idx === 0) {
+                  preview = localStorage.getItem(`sqaaf_evidence_file_preview_${num}_${pIdx}`);
+                }
+                if (preview && preview.startsWith("data:image")) {
+                  localPhotos.push({
+                    src: preview,
+                    label: parsedOpts[pIdx] || ""
+                  });
+                }
+              }
+
+              if (checkedOptions.length > 0) {
+                const subOptsListHtml = checkedOptions.map(o => `
+                  <div style="font-size: 10px; font-weight: 700; color: #334155; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                    <span style="color: #16a34a; font-weight: 900;">✓</span>
+                    <span>${o.title}</span>
+                  </div>
+                `).join("");
+
+                subOptionsHtml = `
+                  <div style="margin-top: 10px; margin-bottom: 10px; border-top: 1px dashed #cbd5e1; padding-top: 8px;">
+                    <div style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 6px;">
+                      ${isMr ? "निवडलेले पुरावे / पर्याय" : "Selected Evidence Details"}
+                    </div>
+                    <div>${subOptsListHtml}</div>
+                  </div>
+                `;
+              }
+
+              // Fetch Google Drive photos
+              const driveLinksKey = `sqaf_drive_links_${num}`;
+              const savedDriveLinks = localStorage.getItem(driveLinksKey);
+              let driveLinksList: { url: string; label: string }[] = [];
+              if (savedDriveLinks) {
+                try { driveLinksList = JSON.parse(savedDriveLinks); } catch { }
+              }
+
+              const drivePhotos: { src: string; label: string }[] = [];
+              for (const link of driveLinksList) {
+                if (link.url) {
+                  const items = await fetchGoogleDriveImages(link.url);
+                  for (const item of items) {
+                    drivePhotos.push({
+                      src: item.src,
+                      label: link.label || (isMr ? "ड्राइव्ह फोटो" : "Drive Photo")
+                    });
+                  }
+                }
+              }
+
+              const allPhotos = [...localPhotos, ...drivePhotos];
+              if (allPhotos.length > 0) {
+                const imagesHtml = allPhotos.map(p => `
+                  <div style="display: inline-block; margin-right: 12px; margin-top: 8px; width: 140px; vertical-align: top; text-align: center;">
+                    <img src="${p.src}" style="max-height: 100px; max-width: 140px; border: 1px solid #cbd5e1; box-sizing: border-box; object-fit: contain;" />
+                    <div style="font-size: 8px; font-weight: 700; color: #475569; margin-top: 4px; line-height: 1.2; word-break: break-word;">
+                      ${p.label}
+                    </div>
+                  </div>
+                `).join("");
+
+                photosHtml = `
+                  <div style="margin-top: 10px; border-top: 1px dashed #cbd5e1; padding-top: 8px; page-break-inside: avoid; break-inside: avoid;">
+                    <div style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 4px;">
+                      ${isMr ? "अहवाल पुरावे फोटो (Evidence Photos)" : "Evidence Photos"}
+                    </div>
+                    <div style="display: block;">
+                      ${imagesHtml}
+                    </div>
+                  </div>
+                `;
+              }
+            }
+
+            return { num, orangeDesc, responseText, levelLabel, isNotApplicable, isSelected, subOptionsHtml, photosHtml, marks };
+          })
+        );
 
         const responseCards = answeredStandards.map(s => `
-          <div style="background: #fff; border: 1px solid #cbd5e1; padding: 12px 16px; page-break-inside: avoid; break-inside: avoid; margin-bottom: 12px; display: block;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
-              <div style="font-size: 12px; font-weight: 900; color: #1e293b; max-width: 70%;">${isMr ? `मानक क्र. ${toMarathiNumerals(s.num)}` : `Standard No. ${s.num}`}</div>
-              ${s.isSelected
-            ? (s.isNotApplicable
-              ? `<div style="text-align: right;"><span style="background: #e2e8f0; color: #475569; font-size: 9px; font-weight: 800; padding: 3px 6px; text-transform: uppercase;">${isMr ? "लागू नाही" : "N/A"}</span></div>`
-              : `<div style="text-align: right;">
-                         <span style="background: #16a34a; color: white; font-size: 9px; font-weight: 800; padding: 3px 6px;">${s.levelLabel}</span>
-                         <div style="font-size: 11px; font-weight: 900; color: #15803d; margin-top: 5px;">${isMr ? `गुण: ${toMarathiNumerals(s.marks)}` : `Marks: ${s.marks}`}</div>
-                       </div>`
-            )
-            : `<div style="text-align: right;"><span style="background: #e2e8f0; color: #475569; font-size: 9px; font-weight: 800; padding: 3px 6px; text-transform: uppercase;">${isMr ? "अपूर्ण" : "Incomplete"}</span></div>`
-          }
+          <div style="background: #fff; border: 1px solid #cbd5e1; padding: 16px; page-break-inside: avoid; break-inside: avoid; margin-bottom: 12px; display: block;">
+            
+            <!-- 1. Standard (Manak) Header & Description -->
+            <div style="font-size: 13px; font-weight: 900; color: #1e293b; margin-bottom: 6px;">
+              ${isMr ? `मानक क्र. ${toMarathiNumerals(s.num)}` : `Standard No. ${s.num}`}
             </div>
-            <div style="font-size: 11px; font-weight: 600; color: #475569; line-height: 1.5; margin-bottom: 12px; background: #fffbeb; border-left: 3px solid #f59e0b; padding: 8px 12px;">
+            <div style="font-size: 11px; font-weight: 600; color: #475569; line-height: 1.5; margin-bottom: 12px; background: #f8fafc; border-left: 3px solid #64748b; padding: 8px 12px;">
               ${s.orangeDesc}
             </div>
-            <div style="margin-bottom: 4px;">
-              <span style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8;">${isMr ? "प्रतिसाद" : "RESPONSE"}</span>
-            </div>
-            <div style="font-size: 11px; font-weight: 700; color: #0f172a; line-height: 1.5; white-space: pre-line; background: ${s.isSelected ? (s.isNotApplicable ? "#f8fafc" : "#f0fdf4") : "#fafafa"}; padding: 8px 12px; border: 1px solid ${s.isSelected ? (s.isNotApplicable ? "#cbd5e1" : "#86efac") : "#cbd5e1"};">
-              ${s.responseText}
-            </div>
-            ${s.photoHtml || ""}
+
+            <!-- 2. Chosen Option (Level) -->
+            ${s.isSelected ? `
+              <div style="margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <div style="font-size: 10px; font-weight: 900; color: #16a34a; text-transform: uppercase;">
+                    ${isMr ? "निवडलेला स्तर" : "SELECTED LEVEL"}: ${s.levelLabel}
+                  </div>
+                  ${!s.isNotApplicable ? `
+                    <div style="font-size: 10px; font-weight: 900; color: #15803d; background: #e8f5e9; padding: 2px 6px; border: 1px solid #86efac; border-radius: 4px;">
+                      ${isMr ? `प्राप्त गुण: ${toMarathiNumerals(s.marks)} / ४` : `Obtained Marks: ${s.marks} / 4`}
+                    </div>
+                  ` : ""}
+                </div>
+                <div style="font-size: 11px; font-weight: 700; color: #0f172a; line-height: 1.5; background: #f0fdf4; border: 1px solid #86efac; padding: 8px 12px;">
+                  ${s.responseText}
+                </div>
+              </div>
+            ` : `
+              <div style="font-size: 11px; font-weight: 700; color: #64748b; line-height: 1.5; background: #f8fafc; border: 1px solid #cbd5e1; padding: 8px 12px; margin-bottom: 12px;">
+                ${isMr ? "अपूर्ण / प्रतिसाद दिलेला नाही" : "Incomplete / No response"}
+              </div>
+            `}
+
+            <!-- 3. Selected Sub-options (Checkboxes) -->
+            ${s.subOptionsHtml || ""}
+
+            <!-- 4 & 5. Uploaded Photos & Drive Photos -->
+            ${s.photosHtml || ""}
           </div>
         `).join("");
 
@@ -5719,8 +5839,8 @@ function TeacherSqaafPage() {
                   <div style="font-size: 7px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8; margin-bottom: 2px;">${isMr ? "शाळेचे नाव" : "School Name"}</div>
                   <div style="font-size: 15px; font-weight: 900; color: #0f172a; text-transform: uppercase;">${schoolName}</div>
                 </div>
-                <div style="background: #6d28d9; color: white; padding: 4px 10px; font-weight: 800; font-size: 11px;">
-                  ${udise}
+                <div style="background: #6d28d9; color: white; padding: 4px 10px; font-weight: 800; font-size: 11px; border-radius: 4px;">
+                  ${isMr ? "युडायस कोड" : "UDISE CODE"}: ${udise}
                 </div>
               </div>
               <div style="display: flex; gap: 20px; flex-wrap: wrap; font-size: 10px;">
@@ -6899,11 +7019,11 @@ function TeacherSqaafPage() {
         } else {
           html2pdf().set(pdfOptions).from(container).output('bloburl').then((url: any) => {
             setPreviewPdfUrl(url);
-            document.body.removeChild(container);
+            document.body.removeChild(wrapper);
             if (toastId) toast.dismiss(toastId);
           }).catch((err: any) => {
             console.error("PDF View Error:", err);
-            if (document.body.contains(container)) document.body.removeChild(container);
+            if (document.body.contains(wrapper)) document.body.removeChild(wrapper);
             if (toastId) toast.dismiss(toastId);
             toast.error(pdfLang === "mr" ? "PDF उघडताना त्रुटी आली." : "Error opening PDF.");
           });
@@ -7002,14 +7122,14 @@ function TeacherSqaafPage() {
           <path d="M 200,0 L 200,90 C 185,75 160,50 130,35 C 100,20 70,10 30,0 Z" fill="url(#gold-grad-print)" opacity="0.5" />
           <path d="M 200,0 L 200,60 C 190,50 170,30 145,20 C 120,10 90,5 50,0 Z" fill="url(#gold-grad-print)" opacity="0.8" />
         </svg>
-
+ 
         <svg style="position: absolute; bottom: 0; left: 0; width: 350px; height: 350px; pointer-events: none;" viewBox="0 0 200 200" preserveAspectRatio="none">
           <path d="M 0,200 L 0,50 C 20,80 50,120 80,140 C 110,160 150,180 200,200 Z" fill="url(#gold-grad-print)" opacity="0.15" />
           <path d="M 0,200 L 0,80 C 30,100 55,140 85,155 C 115,170 145,185 185,200 Z" fill="url(#gold-grad-print)" opacity="0.3" />
           <path d="M 0,200 L 0,110 C 15,125 40,150 70,165 C 100,180 130,190 170,200 Z" fill="url(#gold-grad-print)" opacity="0.5" />
           <path d="M 0,200 L 0,140 C 10,150 30,170 55,180 C 80,190 110,195 150,200 Z" fill="url(#gold-grad-print)" opacity="0.8" />
         </svg>
-
+ 
         <!-- Content -->
         <div style="position: relative; z-index: 10; display: flex; flex-direction: column; align-items: center; text-align: center; width: 100%; max-width: 600px;">
           <h1 style="color: #1e3b8b; font-family: 'Georgia', serif; font-weight: 900; font-size: 26px; line-height: 1.4; text-transform: uppercase; margin: 0; letter-spacing: 0.5px;">
@@ -7017,29 +7137,27 @@ function TeacherSqaafPage() {
           </h1>
           
           <div style="height: 2px; width: 120px; background-color: #bf953f; margin: 25px 0;"></div>
-
+ 
           <h2 style="color: #0e7490; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 900; font-size: 14px; tracking: 0.25em; text-transform: uppercase; margin: 0 0 50px 0; letter-spacing: 2.5px;">
             ${title}
           </h2>
-
+ 
           <p style="color: #64748b; font-family: 'Georgia', serif; font-style: italic; font-size: 18px; margin: 0 0 20px 0;">
             ${certifyText}
           </p>
-
-          <h3 style="color: #0f172a; font-family: 'Georgia', serif; font-weight: 800; font-size: 24px; text-transform: uppercase; border-bottom: 2px solid #cbd5e1; padding-bottom: 5px; margin: 0 0 10px 0; display: inline-block; width: 90%; letter-spacing: 0.5px;">
+ 
+          <h3 style="color: #0f172a; font-family: 'Georgia', serif; font-weight: 800; font-size: 24px; text-transform: uppercase; border-bottom: 2px solid #cbd5e1; padding-bottom: 5px; margin: 0 0 15px 0; display: inline-block; width: 90%; letter-spacing: 0.5px;">
             ${schoolName}
           </h3>
-
-          <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 45px; color: #334155; font-family: 'Georgia', serif; font-weight: bold; font-size: 19px;">
-            <span style="color: #bf953f;">—</span>
-            <span style="letter-spacing: 3px;">${udise}</span>
-            <span style="color: #bf953f;">—</span>
+ 
+          <div style="color: #334155; font-family: 'Georgia', serif; font-weight: bold; font-size: 19px; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; margin-bottom: 45px; display: inline-block; width: 60%; letter-spacing: 3px; text-align: center;">
+            ${udise}
           </div>
-
+ 
           <p style="color: #334155; font-family: 'Georgia', serif; font-size: 16px; line-height: 1.6; max-width: 520px; margin: 0 0 70px 0;">
             ${description}
           </p>
-
+ 
           <div style="margin-top: 20px;">
             <p style="color: #1e3b8b; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 900; font-size: 13px; text-transform: uppercase; margin: 0 0 5px 0; letter-spacing: 1px;">
               ${sigHeader}
@@ -7051,32 +7169,23 @@ function TeacherSqaafPage() {
         </div>
       </div>
     `;
-
+ 
     printContainer.innerHTML = html;
-
-    const { default: printJS } = await import("print-js");
-    printJS({
-      printable: printContainer.innerHTML,
-      type: 'raw-html',
-      style: `
-        @media print {
-          @page {
-            size: portrait;
-            margin: 0;
-          }
-          body {
-            margin: 0;
-            padding: 0;
-            background-color: #fff;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-          * {
-            box-sizing: border-box;
-          }
-        }
-      `
-    });
+ 
+    const html2pdf = (await import("html2pdf.js")).default;
+    const pdfOptions = {
+      margin: [0, 0, 0, 0],
+      filename: `SQAAF_Certificate_${schoolName.replace(/\s+/g, "_") || "School"}.pdf`,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { 
+        scale: 2, 
+        useCORS: true, 
+        logging: false,
+      },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait", compress: false },
+    };
+    
+    await html2pdf().set(pdfOptions).from(printContainer).save();
   };
 
   const standards = Array.from({ length: 128 }, (_, i) => i + 1);
@@ -7559,18 +7668,6 @@ function TeacherSqaafPage() {
                       <div>
                         <div className="flex justify-between items-center mb-4">
                           <h4 className="text-[16px] font-bold text-slate-900">{t.viewSub}</h4>
-                          <div
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleCard1();
-                            }}
-                            className={`size-6 border-2 rounded flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 transition-transform ${card1Checked
-                              ? "border-slate-900 bg-slate-900 text-white"
-                              : "border-slate-400 bg-white text-transparent"
-                              }`}
-                          >
-                            {card1Checked && <CheckCircle2 className="size-4" />}
-                          </div>
                         </div>
                         <hr className="border-slate-900/40 mb-4" />
                         <p className="text-[14px] text-slate-700 mb-6">{t.viewDesc}</p>
@@ -7592,9 +7689,6 @@ function TeacherSqaafPage() {
                           <h4 className="text-[16px] font-bold text-slate-900">
                             {selectedLang === "mr" ? "स्वयं मूल्यांकन व बाह्य मूल्यांकन अहवाल" : "Self & External Evaluation Report"}
                           </h4>
-                          <div className="size-6 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center shrink-0">
-                            <FileText className="size-4" />
-                          </div>
                         </div>
                         <hr className="border-slate-900/40 mb-4" />
                         <p className="text-[14px] text-slate-700 mb-6">
@@ -7628,9 +7722,6 @@ function TeacherSqaafPage() {
                           <h4 className="text-[16px] font-bold text-slate-900">
                             {selectedLang === "mr" ? "शाळा प्रतिसाद अहवाल" : "School Responses Report"}
                           </h4>
-                          <div className="size-6 bg-amber-50 text-amber-600 rounded-lg flex items-center justify-center shrink-0">
-                            <FileText className="size-4" />
-                          </div>
                         </div>
                         <hr className="border-slate-900/40 mb-4" />
                         <p className="text-[14px] text-slate-700 mb-6">
@@ -7689,6 +7780,39 @@ function TeacherSqaafPage() {
                         >
                           <Download className="size-4" />
                           <span>{selectedLang === "mr" ? "डाऊनलोड करा" : "Download PDF"}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Card 5: Certificate Download */}
+                    <div className="bg-white border border-slate-900 rounded-[1.5rem] p-6 w-full relative shadow-sm flex flex-col justify-between h-full">
+                      <div>
+                        <div className="flex justify-between items-center mb-4">
+                          <h4 className="text-[16px] font-bold text-slate-900">
+                            {selectedLang === "mr" ? "प्रमाणपत्र डाऊनलोड करा" : "Download Certificate"}
+                          </h4>
+                        </div>
+                        <hr className="border-slate-900/40 mb-4" />
+                        <p className="text-[14px] text-slate-700 mb-6">
+                          {selectedLang === "mr"
+                            ? "तुमचे प्रमाणपत्र डाऊनलोड करा."
+                            : "Download your certificate."}
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 mt-auto">
+                        <button
+                          onClick={() => setView("certificate")}
+                          className="py-3 px-4 bg-[#1e1b4b] text-white rounded-3xl text-[13px] font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                        >
+                          <Eye className="size-4" />
+                          <span>{selectedLang === "mr" ? "पहा" : "View"}</span>
+                        </button>
+                        <button
+                          onClick={handleSavePdf}
+                          className="py-3 px-4 bg-[#1e1b4b] text-white rounded-3xl text-[13px] font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                        >
+                          <Download className="size-4" />
+                          <span>{selectedLang === "mr" ? "डाऊनलोड करा" : "Download"}</span>
                         </button>
                       </div>
                     </div>
@@ -8366,10 +8490,8 @@ function TeacherSqaafPage() {
                           </div>
                         </div>
                       ) : (
-                        <div className="flex items-center justify-center gap-1.5 text-slate-700 font-serif font-bold text-sm sm:text-base">
-                          <span className="text-[#bf953f] text-lg">—</span>
-                          <span className="tracking-widest">{certUdise}</span>
-                          <span className="text-[#bf953f] text-lg">—</span>
+                        <div className="text-slate-700 font-serif font-bold text-xs sm:text-sm md:text-base border-b border-slate-300 pb-1 px-4 min-w-[50%] tracking-widest text-center mt-2">
+                          {certUdise}
                         </div>
                       )}
 
