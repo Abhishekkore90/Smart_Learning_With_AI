@@ -43,8 +43,16 @@ function AssemblyBookAdmin() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [activeTab, setActiveTab] = useState<"pdf" | "paripath">("paripath");
+  
+  const getLocalDateString = (d = new Date()): string => {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
+
+  const [selectedDate, setSelectedDate] = useState<string>(() => getLocalDateString());
+  const [adminLang, setAdminLang] = useState<"mr" | "en" | "hi">("mr");
   const [paripathData, setParipathData] = useState<any>(DEFAULT_FORM_DATA.mr);
   const [savingParipath, setSavingParipath] = useState(false);
+  const [isSavedForDate, setIsSavedForDate] = useState(false);
 
   useEffect(() => {
     const isAdmin = sessionStorage.getItem("is_super_admin");
@@ -57,32 +65,260 @@ function AssemblyBookAdmin() {
     }
 
     fetchBooks();
-    fetchParipath();
   }, [navigate]);
 
-  const fetchParipath = async () => {
+  useEffect(() => {
+    fetchParipath(selectedDate);
+  }, [selectedDate]);
+
+  const MARATHI_DAYS_LIST = ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
+  const MARATHI_MONTHS_LIST = ["जानेवारी", "फेब्रुवारी", "मार्च", "एप्रिल", "मे", "जून", "जुलै", "ऑगस्ट", "सप्टेंबर", "ऑक्टोबर", "नोव्हेंबर", "डिसेंबर"];
+
+  const toDevanagariDigits = (str: string | number): string => {
+    const devanagariDigits = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
+    return String(str).replace(/[0-9]/g, (w) => devanagariDigits[parseInt(w, 10)]);
+  };
+
+  const getParipathDefaultsForDate = (dateStr: string) => {
+    const [y, m, d] = dateStr.split("-").map(Number);
+    const dateObj = new Date(y, m - 1, d);
+
+    const dayName = MARATHI_DAYS_LIST[dateObj.getDay()];
+    const monthName = MARATHI_MONTHS_LIST[dateObj.getMonth()];
+    const formattedDayNum = String(d).padStart(2, "0");
+    const dateMonthStr = `${toDevanagariDigits(formattedDayNum)} ${monthName}`;
+
+    const startOfYear = new Date(y, 0, 0);
+    const diff = dateObj.getTime() - startOfYear.getTime();
+    const oneDay = 1000 * 60 * 60 * 24;
+    const dayOfYear = Math.floor(diff / oneDay);
+    const yearDayStr = toDevanagariDigits(dayOfYear);
+
+    return {
+      ...DEFAULT_FORM_DATA.mr,
+      day: dayName,
+      dateMonth: dateMonthStr,
+      yearDay: yearDayStr,
+      events: "",
+      birthdays: "",
+      deaths: "",
+      thought: "",
+      proverb: "",
+      proverbMeaning: "",
+      storyTitle: "",
+      story: "",
+      moral: "",
+      songTitle: "",
+      patrioticSong: "",
+      personalityTitle: "",
+      personality: "",
+    };
+  };
+
+  const fetchParipath = async (dateStr: string) => {
     try {
-      const docRef = doc(db, "admin_daily_paripath", "current");
+      const docRef = doc(db, "daily_paripath_archive", dateStr);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         setParipathData(docSnap.data());
+        setIsSavedForDate(true);
       } else {
-        setParipathData(DEFAULT_FORM_DATA.mr); // Fallback to template
+        const todayStr = getLocalDateString();
+        if (dateStr === todayStr) {
+          const currentRef = doc(db, "admin_daily_paripath", "current");
+          const currentSnap = await getDoc(currentRef);
+          if (currentSnap.exists()) {
+            setParipathData(currentSnap.data());
+            setIsSavedForDate(true);
+            return;
+          }
+        }
+        setParipathData(getParipathDefaultsForDate(dateStr));
+        setIsSavedForDate(false);
       }
     } catch (err) {
       console.error("Error fetching paripath:", err);
-      toast.error("Failed to load today's Paripath.");
+      toast.error("Failed to load Paripath for this date.");
+    }
+  };
+
+  const generateParipathPdfBlob = async (data: any, dateStr: string) => {
+    const html2pdfModule = await import("html2pdf.js");
+    let html2pdfFn: any = html2pdfModule.default || html2pdfModule;
+    if (html2pdfFn && html2pdfFn.default) html2pdfFn = html2pdfFn.default;
+  
+    const tempDiv = document.createElement("div");
+    tempDiv.id = "temp-pdf-render";
+    tempDiv.style.width = "750px";
+    tempDiv.style.padding = "40px";
+    tempDiv.style.background = "#FFFFFF";
+    tempDiv.style.color = "#1F2937";
+    tempDiv.style.fontFamily = "system-ui, -apple-system, sans-serif";
+  
+    // Build professional design
+    tempDiv.innerHTML = `
+      <div style="border: 2px solid #E5E7EB; border-radius: 1.5rem; padding: 30px; background: #FFFFFF;">
+        <!-- Header -->
+        <div style="text-align: center; border-bottom: 2px solid #E5E7EB; padding-bottom: 20px; margin-bottom: 30px;">
+          <h1 style="font-size: 28px; font-weight: 800; color: #1F2937; margin: 0;">दैनिक परिपाठ नोंद</h1>
+          <p style="font-size: 16px; font-weight: 600; color: #4B5563; margin: 5px 0 0 0;">दिनांक: ${dateStr}</p>
+        </div>
+  
+        <!-- Grid for core sections -->
+        <div style="display: flex; flex-direction: column; gap: 24px;">
+          <!-- Panchang -->
+          <div style="background: #FFFBEB; border: 1px solid #FEF3C7; border-radius: 1rem; padding: 20px;">
+            <h2 style="font-size: 18px; font-weight: 700; color: #92400E; margin-top: 0; margin-bottom: 12px; border-bottom: 1px solid #FEF3C7; padding-bottom: 6px;">☀️ आजचे पंचांग</h2>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; font-size: 12px; font-weight: 600;">
+              <div>वार: <span style="color: #1F2937;">${data.day || "-"}</span></div>
+              <div>महिना: <span style="color: #1F2937;">${data.month || "-"}</span></div>
+              <div>पक्ष: <span style="color: #1F2937;">${data.paksha || "-"}</span></div>
+              <div>तिथी: <span style="color: #1F2937;">${data.tithi || "-"}</span></div>
+              <div>नक्षत्र: <span style="color: #1F2937;">${data.nakshatra || "-"}</span></div>
+              <div>योग: <span style="color: #1F2937;">${data.yog || "-"}</span></div>
+              <div>सूर्योदय: <span style="color: #1F2937;">${data.sunrise || "-"}</span></div>
+              <div>सूर्यास्त: <span style="color: #1F2937;">${data.sunset || "-"}</span></div>
+            </div>
+          </div>
+  
+          <!-- Suvichar & Proverb -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div style="background: #F5F3FF; border: 1px solid #EDE9FE; border-radius: 1rem; padding: 20px;">
+              <h2 style="font-size: 18px; font-weight: 700; color: #5B21B6; margin-top: 0; margin-bottom: 8px;">💭 आजचा सुविचार</h2>
+              <p style="font-size: 14px; font-weight: 600; line-height: 1.6; color: #1F2937; margin: 0;">"${data.thought || "-"}"</p>
+            </div>
+            <div style="background: #FDF2F8; border: 1px solid #FCE7F3; border-radius: 1rem; padding: 20px;">
+              <h2 style="font-size: 18px; font-weight: 700; color: #9D174D; margin-top: 0; margin-bottom: 8px;">📖 आजची म्हण</h2>
+              <p style="font-size: 14px; font-weight: 700; color: #1F2937; margin: 0 0 6px 0;">"${data.proverb || "-"}"</p>
+              <p style="font-size: 12px; color: #4B5563; margin: 0;">अर्थ: ${data.proverbMeaning || "-"}</p>
+            </div>
+          </div>
+  
+          <!-- Dinvishesh -->
+          <div style="background: #EFF6FF; border: 1px solid #DBEAFE; border-radius: 1rem; padding: 20px;">
+            <h2 style="font-size: 18px; font-weight: 700; color: #1E40AF; margin-top: 0; margin-bottom: 12px; border-bottom: 1px solid #DBEAFE; padding-bottom: 6px;">📅 दिनविशेष (घटना व दिनविशेष)</h2>
+            <div style="font-size: 13px; line-height: 1.6; color: #1F2937; white-space: pre-line;">${data.events || "-"}</div>
+          </div>
+  
+          <!-- Story -->
+          <div style="background: #FFF7ED; border: 1px solid #FFEDD5; border-radius: 1rem; padding: 20px;">
+            <h2 style="font-size: 18px; font-weight: 700; color: #C2410C; margin-top: 0; margin-bottom: 8px;">📖 बोधकथा: ${data.storyTitle || "-"}</h2>
+            <p style="font-size: 13px; line-height: 1.6; color: #1F2937; white-space: pre-line; margin-bottom: 12px;">${data.story || "-"}</p>
+            <div style="background: #FFF; border-left: 4px solid #F97316; padding: 8px 12px; font-size: 12px; font-weight: 700; color: #EA580C;">तात्पर्य: ${data.moral || "-"}</div>
+          </div>
+  
+          <!-- General Knowledge & Patriotic Song -->
+          <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px;">
+            <div style="background: #FAF5FF; border: 1px solid #F3E8FF; border-radius: 1rem; padding: 20px;">
+              <h2 style="font-size: 18px; font-weight: 700; color: #6B21A8; margin-top: 0; margin-bottom: 12px; border-bottom: 1px solid #F3E8FF; padding-bottom: 6px;">🧠 सामान्य ज्ञान (GK)</h2>
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                ${[1, 2, 3, 4].map(num => data[`gkQ${num}`] ? `
+                  <div style="font-size: 12px; line-height: 1.5;">
+                    <div style="font-weight: 700; color: #1F2937;">Q${num}. ${data[`gkQ${num}`]}</div>
+                    <div style="font-weight: 800; color: #6B21A8; margin-top: 2px;">Ans. ${data[`gkA${num}`] || "-"}</div>
+                  </div>
+                ` : '').join('')}
+              </div>
+            </div>
+            <div style="background: #EEF2F6; border: 1px solid #E2E8F0; border-radius: 1rem; padding: 20px;">
+              <h2 style="font-size: 18px; font-weight: 700; color: #334155; margin-top: 0; margin-bottom: 8px;">🎵 समूहगीत: ${data.songTitle || "-"}</h2>
+              <p style="font-size: 11px; line-height: 1.6; color: #475569; white-space: pre-line; margin: 0; text-align: center;">${data.patrioticSong || "-"}</p>
+            </div>
+          </div>
+  
+          <!-- Personality -->
+          ${data.personalityTitle ? `
+            <div style="background: #F0FDFA; border: 1px solid #CCFBF1; border-radius: 1rem; padding: 20px;">
+              <h2 style="font-size: 18px; font-weight: 700; color: #0F766E; margin-top: 0; margin-bottom: 8px;">👤 थोरव्यक्ती परिचय: ${data.personalityTitle}</h2>
+              <p style="font-size: 13px; line-height: 1.6; color: #1F2937; white-space: pre-line; margin: 0;">${data.personality || "-"}</p>
+            </div>
+          ` : ''}
+  
+        </div>
+      </div>
+    `;
+  
+    document.body.appendChild(tempDiv);
+  
+    const opt = {
+      margin: [10, 10, 10, 10],
+      filename: `Paripath_${dateStr}.pdf`,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+    };
+  
+    try {
+      const blob = await html2pdfFn().set(opt).from(tempDiv).outputPdf("blob");
+      document.body.removeChild(tempDiv);
+      return blob;
+    } catch (err) {
+      if (tempDiv.parentNode) document.body.removeChild(tempDiv);
+      throw err;
     }
   };
 
   const handleSaveParipath = async () => {
     setSavingParipath(true);
     try {
-      await setDoc(doc(db, "admin_daily_paripath", "current"), paripathData);
-      toast.success("Paripath updated successfully! 🎉");
-    } catch (err) {
+      // 1. Generate PDF Blob from form content
+      toast.success("Generating Daily Paripath PDF... 📄");
+      const pdfBlob = await generateParipathPdfBlob(paripathData, selectedDate);
+      const pdfFile = new File([pdfBlob], `paripath_${selectedDate}.pdf`, { type: "application/pdf" });
+
+      // 2. Upload generated PDF directly to Bunny Storage
+      const storageApiKey = import.meta.env.VITE_BUNNY_STORAGE_API_KEY;
+      const storageZone = import.meta.env.VITE_BUNNY_STORAGE_ZONE;
+      const cdnHostname = import.meta.env.VITE_BUNNY_STORAGE_CDN_HOSTNAME;
+
+      let bunnyPdfUrl = "";
+      if (storageApiKey && storageZone && cdnHostname) {
+        toast.success("Uploading Paripath PDF to Bunny Storage... ☁️");
+        const cleanFileName = `paripath_${selectedDate}_${Date.now()}.pdf`;
+
+        await new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.addEventListener("load", () => {
+            if (xhr.status >= 200 && xhr.status < 300) resolve();
+            else reject(new Error(`Upload failed (Status: ${xhr.status})`));
+          });
+          xhr.addEventListener("error", () => reject(new Error("Network error during upload.")));
+          
+          xhr.open("PUT", `/api/bunny-storage/${storageZone}/documents/${cleanFileName}`);
+          xhr.setRequestHeader("AccessKey", storageApiKey);
+          xhr.setRequestHeader("Content-Type", "application/pdf");
+          xhr.send(pdfFile);
+        });
+
+        bunnyPdfUrl = `https://${cdnHostname}/documents/${cleanFileName}`;
+      } else {
+        console.warn("Bunny Storage is not configured. Saving text only.");
+      }
+
+      // 3. Save as "current" for live display if it is today
+      const todayStr = getLocalDateString();
+      const payload = {
+        ...paripathData,
+        bunnyPdfUrl,
+        lastUpdated: new Date().toISOString(),
+      };
+
+      if (selectedDate === todayStr) {
+        await setDoc(doc(db, "admin_daily_paripath", "current"), payload);
+      }
+      
+      // 4. Archive under selected date
+      await setDoc(doc(db, "daily_paripath_archive", selectedDate), {
+        ...payload,
+        archivedDate: selectedDate,
+      });
+
+      setIsSavedForDate(true);
+      
+      toast.success("Paripath data and PDF saved successfully! 🎉");
+    } catch (err: any) {
       console.error("Error saving paripath:", err);
-      toast.error("Failed to save Paripath.");
+      toast.error(err?.message || "Failed to save Paripath.");
     } finally {
       setSavingParipath(false);
     }
@@ -450,17 +686,35 @@ function AssemblyBookAdmin() {
         ) : (
           /* Paripath Form Editor */
           <div className="bg-white border border-black/5 rounded-[3rem] p-8 md:p-12 shadow-sm space-y-8">
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border-b border-stone-100 pb-6">
-              <div>
-                <h3 className="text-2xl font-black tracking-tight text-stone-900 flex items-center gap-3">
-                  <MessageSquare className="size-6 text-[#6C63FF]" /> Today's Paripath Data
-                </h3>
-                <p className="text-slate-500 mt-2">Edit the structured text below. It will automatically update in the teacher's Daily Assembly module.</p>
+            <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6 border-b border-stone-100 pb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-6">
+                <div>
+                  <h3 className="text-2xl font-black tracking-tight text-stone-900 flex items-center gap-3">
+                    <MessageSquare className="size-6 text-[#6C63FF]" /> Daily Paripath Data
+                  </h3>
+                  <p className="text-slate-500 mt-2">Edit the structured text below. It will automatically update in the teacher's Daily Assembly module.</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-3 bg-slate-100 px-5 py-3 rounded-2xl border border-slate-200/80 shadow-inner">
+                  <Calendar className="size-5 text-[#6C63FF]" />
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="bg-transparent border-none text-sm font-black text-slate-800 outline-none cursor-pointer"
+                  />
+                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                    isSavedForDate
+                      ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                      : "bg-amber-100 text-amber-800 border border-amber-300"
+                  }`}>
+                    {isSavedForDate ? "✓ डेटा सेव्ह आहे" : "✨ नवीन तारीख एंट्री"}
+                  </span>
+                </div>
               </div>
               <button
                 onClick={handleSaveParipath}
                 disabled={savingParipath}
-                className="px-8 py-4 bg-[#6C63FF] text-white text-sm font-black uppercase tracking-widest rounded-2xl hover:bg-indigo-600 transition-all shadow-xl hover:shadow-indigo-500/20 flex items-center gap-2 disabled:opacity-50"
+                className="px-8 py-4 bg-[#6C63FF] text-white text-sm font-black uppercase tracking-widest rounded-2xl hover:bg-indigo-600 transition-all shadow-xl hover:shadow-indigo-500/20 flex items-center gap-2 disabled:opacity-50 xl:self-center w-full xl:w-auto justify-center"
               >
                 {savingParipath ? <Loader2 className="size-5 animate-spin" /> : <Save className="size-5" />}
                 Save Paripath
@@ -473,19 +727,17 @@ function AssemblyBookAdmin() {
                 <div className="absolute top-0 right-0 w-64 h-64 bg-green-300/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
                 <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-300/20 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3"></div>
                 
-                <div className="flex justify-center relative">
+                <div className="flex justify-center relative z-10">
                   <h4 className="text-xl md:text-2xl font-black text-green-800 inline-flex items-center justify-center gap-3 px-8 py-4 bg-white/80 backdrop-blur-md rounded-full shadow-sm border border-green-100/50 uppercase tracking-widest">
                     🇮🇳 सुरुवातीचा परिपाठ (Assembly Start)
                   </h4>
                 </div>
                 
                 <div className="flex flex-col space-y-8 max-w-3xl mx-auto relative">
+                  {/* National Anthem - Single field */}
                   {[
                     { key: 'nationalAnthem', label: '🇮🇳 राष्ट्रगीत (National Anthem)', rows: 11, idx: 0 },
                     { key: 'stateAnthem', label: '🚩 राज्यगीत (State Anthem)', rows: 14, idx: 1 },
-                    { key: 'pledge', label: '🇮🇳 प्रतिज्ञा (Pledge)', rows: 17, idx: 2 },
-                    { key: 'preamble', label: '🇪🇺 संविधान (Preamble)', rows: 6, idx: 3 },
-                    { key: 'prayer', label: '👏🏻 प्रार्थना (Prayer)', rows: 14, idx: 4 },
                   ].map((field) => (
                     <div key={field.key} className="bg-white/90 backdrop-blur-sm p-6 md:p-8 rounded-[2.5rem] border border-green-100 shadow-xl shadow-green-900/5 hover:shadow-2xl hover:shadow-green-900/10 transition-all duration-300 text-center">
                       <label className="inline-block px-4 py-1.5 bg-green-50 text-green-700 rounded-full text-xs font-black uppercase tracking-widest mb-4 border border-green-100">{field.label}</label>
@@ -497,6 +749,91 @@ function AssemblyBookAdmin() {
                       />
                     </div>
                   ))}
+
+                  {/* ─── Pledge (प्रतिज्ञा) with 3-language tabs ─── */}
+                  <div className="bg-white/90 backdrop-blur-sm p-6 md:p-8 rounded-[2.5rem] border border-green-100 shadow-xl shadow-green-900/5 hover:shadow-2xl hover:shadow-green-900/10 transition-all duration-300 text-center">
+                    <label className="inline-block px-4 py-1.5 bg-green-50 text-green-700 rounded-full text-xs font-black uppercase tracking-widest mb-4 border border-green-100">
+                      🇮🇳 प्रतिज्ञा (Pledge)
+                    </label>
+                    {/* Language tabs for Pledge */}
+                    <div className="flex justify-center mb-4">
+                      <div className="flex bg-green-50 p-1 rounded-xl border border-green-100 shadow-sm">
+                        {(["mr", "en", "hi"] as const).map((lk) => (
+                          <button
+                            key={lk}
+                            type="button"
+                            onClick={() => setAdminLang(lk)}
+                            className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${
+                              adminLang === lk
+                                ? "bg-green-600 text-white shadow-sm"
+                                : "text-slate-500 hover:text-slate-800"
+                            }`}
+                          >
+                            {lk === "mr" ? "मराठी" : lk === "en" ? "English" : "हिंदी"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <textarea
+                      rows={17}
+                      value={
+                        paripathData[`pledge_${adminLang}`] !== undefined
+                          ? paripathData[`pledge_${adminLang}`]
+                          : (paripathData.pledge || DEFAULT_ASSEMBLY_ITEMS[adminLang]?.[2]?.content || "")
+                      }
+                      onChange={(e) => setParipathData({ ...paripathData, [`pledge_${adminLang}`]: e.target.value })}
+                      className="w-full px-6 py-5 bg-green-50/30 border border-green-100 hover:border-green-300 focus:bg-white rounded-2xl focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all resize-none text-center font-bold text-slate-800 leading-relaxed"
+                    />
+                  </div>
+
+                  {/* ─── Constitution / Preamble (संविधान) with 3-language tabs ─── */}
+                  <div className="bg-white/90 backdrop-blur-sm p-6 md:p-8 rounded-[2.5rem] border border-green-100 shadow-xl shadow-green-900/5 hover:shadow-2xl hover:shadow-green-900/10 transition-all duration-300 text-center">
+                    <label className="inline-block px-4 py-1.5 bg-green-50 text-green-700 rounded-full text-xs font-black uppercase tracking-widest mb-4 border border-green-100">
+                      🇪🇺 संविधान उद्देशिका (Preamble)
+                    </label>
+                    {/* Language tabs for Preamble */}
+                    <div className="flex justify-center mb-4">
+                      <div className="flex bg-green-50 p-1 rounded-xl border border-green-100 shadow-sm">
+                        {(["mr", "en", "hi"] as const).map((lk) => (
+                          <button
+                            key={lk}
+                            type="button"
+                            onClick={() => setAdminLang(lk)}
+                            className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${
+                              adminLang === lk
+                                ? "bg-green-600 text-white shadow-sm"
+                                : "text-slate-500 hover:text-slate-800"
+                            }`}
+                          >
+                            {lk === "mr" ? "मराठी" : lk === "en" ? "English" : "हिंदी"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <textarea
+                      rows={6}
+                      value={
+                        paripathData[`preamble_${adminLang}`] !== undefined
+                          ? paripathData[`preamble_${adminLang}`]
+                          : (paripathData.preamble || DEFAULT_ASSEMBLY_ITEMS[adminLang]?.[3]?.content || "")
+                      }
+                      onChange={(e) => setParipathData({ ...paripathData, [`preamble_${adminLang}`]: e.target.value })}
+                      className="w-full px-6 py-5 bg-green-50/30 border border-green-100 hover:border-green-300 focus:bg-white rounded-2xl focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all resize-none text-center font-bold text-slate-800 leading-relaxed"
+                    />
+                  </div>
+
+                  {/* Prayer - Single field */}
+                  <div className="bg-white/90 backdrop-blur-sm p-6 md:p-8 rounded-[2.5rem] border border-green-100 shadow-xl shadow-green-900/5 hover:shadow-2xl hover:shadow-green-900/10 transition-all duration-300 text-center">
+                    <label className="inline-block px-4 py-1.5 bg-green-50 text-green-700 rounded-full text-xs font-black uppercase tracking-widest mb-4 border border-green-100">
+                      👏🏻 प्रार्थना (Prayer)
+                    </label>
+                    <textarea
+                      rows={14}
+                      value={paripathData.prayer || DEFAULT_ASSEMBLY_ITEMS.mr[4].content}
+                      onChange={(e) => setParipathData({ ...paripathData, prayer: e.target.value })}
+                      className="w-full px-6 py-5 bg-green-50/30 border border-green-100 hover:border-green-300 focus:bg-white rounded-2xl focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all resize-none text-center font-bold text-slate-800 leading-relaxed"
+                    />
+                  </div>
                 </div>
               </div>
 
