@@ -289,7 +289,6 @@ function TeacherMeetingPage() {
   const { lang } = useLanguage();
   const navigate = useNavigate({ from: Route.fullPath });
   const search = Route.useSearch();
-  const { lang } = useLanguage();
 
   // Helper to dynamically calculate the current academic year based on current date
   const getCurrentAcademicYear = () => {
