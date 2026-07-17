@@ -95,7 +95,7 @@ export const Route = createFileRoute("/teacher/result")({
   component: TeacherResultsPage,
 });
 
-const CLASSES = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th", "11th", "12th"];
+const CLASSES = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"];
 
 // Wrapper for Marks Entry
 function MarksEntryWrapper({ initialClass, initialYear }: { initialClass: string; initialYear: string }) {
@@ -213,7 +213,7 @@ function TeacherResultsPage() {
         }
 
         // 2. Loop through other common classes and academic years to find ANY saved settings
-        const classes = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th", "11th", "12th"];
+        const classes = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"];
         const years = ["2025-2026", "2024-25", "2025-26", "2026-27"];
         for (const cls of classes) {
           for (const yr of years) {
@@ -448,8 +448,6 @@ function TeacherResultsPage() {
                   <option value="6th">सहावी 6</option>
                   <option value="7th">सातवी 7</option>
                   <option value="8th">आठवी 8</option>
-                  <option value="9th">नववी 9</option>
-                  <option value="10th">दहावी 10</option>
                 </select>
               </div>
 
