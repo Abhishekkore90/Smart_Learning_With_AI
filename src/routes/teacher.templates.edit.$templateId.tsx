@@ -38,6 +38,7 @@ import {
   FileText,
 } from "lucide-react";
 import { useState, useRef, useMemo, useEffect } from "react";
+import { flushSync } from "react-dom";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import { showToast as toast } from "@/lib/custom-toast";
@@ -666,59 +667,17 @@ function TemplateEditorPage() {
               }
             });
 
-            // Convert SVGs to base64 images to prevent inline SVGs from tainting the canvas
-            const svgs = Array.from(clonedDoc.getElementsByTagName("svg"));
-            svgs.forEach((svg) => {
-              try {
-                // Inline styles from CSS classes (like text-white) need to be explicitly set as attributes
-                // to survive serialization when rendering as a static image in <img>
-                const docView = svg.ownerDocument?.defaultView || window;
-                const computed = docView.getComputedStyle(svg);
-                const color = computed.color || "white";
-                const stroke = computed.stroke && computed.stroke !== "none" ? computed.stroke : null;
-                const fill = computed.fill && computed.fill !== "none" ? computed.fill : null;
+            // SVGs are natively supported by html2canvas, converting them to data URIs can taint the canvas.
 
-                if (color) svg.setAttribute("color", color);
-                
-                if (stroke) {
-                  if (stroke === "currentColor") {
-                    svg.setAttribute("stroke", color);
-                  } else {
-                    svg.setAttribute("stroke", stroke);
-                  }
-                }
-                
-                if (fill) {
-                  if (fill === "currentColor") {
-                    svg.setAttribute("fill", color);
-                  } else {
-                    svg.setAttribute("fill", fill);
-                  }
-                }
-
-                const xml = new XMLSerializer().serializeToString(svg);
-                const base64 = window.btoa(unescape(encodeURIComponent(xml)));
-                const img = clonedDoc.createElement("img");
-                img.src = `data:image/svg+xml;base64,${base64}`;
-                img.className = svg.className.baseVal || svg.getAttribute("class") || "";
-                img.style.cssText = svg.style.cssText;
-                
-                if (svg.hasAttribute("width")) img.setAttribute("width", svg.getAttribute("width")!);
-                if (svg.hasAttribute("height")) img.setAttribute("height", svg.getAttribute("height")!);
-                
-                svg.parentNode?.replaceChild(img, svg);
-              } catch (e) {
-                console.error("Error converting SVG in clone:", e);
-              }
-            });
-
-            // Prevent any images from tainting the canvas
+            // Prevent external images from tainting the canvas
             const imgs = Array.from(clonedDoc.getElementsByTagName("img"));
             imgs.forEach((img) => {
-              img.setAttribute("crossorigin", "anonymous");
-              const src = img.src;
-              img.src = "";
-              img.src = src;
+              if (img.src && !img.src.startsWith("data:")) {
+                img.setAttribute("crossorigin", "anonymous");
+                const src = img.src;
+                img.src = "";
+                img.src = src;
+              }
             });
           },
         });
@@ -748,7 +707,7 @@ function TemplateEditorPage() {
     }, 150);
   };
 
-  const handleWhatsAppShare = () => {
+  const handleWhatsAppShare = async () => {
     const isAdmission = templateId?.includes("admission");
     const isSports = templateId?.includes("sports");
     const isAnnual = templateId?.includes("annual");
@@ -769,7 +728,136 @@ function TemplateEditorPage() {
       message = `🏆 *Achievement Celebration* 🏅\n\nDear Parent, we are thrilled to celebrate ${studentName}'s victory in ${studentClass}!\n\n"${configToUse.quote}"\n\n— Proud School Management ❤️`;
     }
 
-    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
+    if (!templateRef.current) return;
+    
+    // Use flushSync to guarantee DOM updates immediately WITHOUT breaking the user-gesture token!
+    // This allows navigator.share and clipboard APIs to work correctly.
+    flushSync(() => {
+      setIsDownloading(true);
+    });
+
+    try {
+      const { default: html2canvas } = await import("html2canvas");
+      const canvas = await html2canvas(templateRef.current!, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: false,
+        logging: true,
+        backgroundColor: null,
+        onclone: (clonedDoc) => {
+          // Remove cross-origin stylesheets/fonts to prevent canvas tainting
+          const links = Array.from(clonedDoc.getElementsByTagName("link"));
+          links.forEach((link) => {
+            if (
+              link.href &&
+              (link.href.includes("fonts.googleapis.com") ||
+                link.href.includes("fonts.gstatic.com") ||
+                link.href.includes("use.typekit.net") ||
+                (!link.href.startsWith(window.location.origin) && !link.href.startsWith("/")))
+            ) {
+              link.parentNode?.removeChild(link);
+            }
+          });
+
+          // Clean style tags: remove all @import statements to prevent loading cross-origin fonts
+          const styles = Array.from(clonedDoc.getElementsByTagName("style"));
+          styles.forEach((style) => {
+            if (style.textContent && style.textContent.includes("@import")) {
+              style.textContent = style.textContent.replace(/@import\s+url\([^)]+\);?/g, "");
+              style.textContent = style.textContent.replace(/@import\s+['"][^'"]+['"];?/g, "");
+            }
+          });
+
+          // SVGs are natively supported by html2canvas, converting them to data URIs can taint the canvas.
+
+          // Prevent external images from tainting the canvas
+          const imgs = Array.from(clonedDoc.getElementsByTagName("img"));
+          imgs.forEach((img) => {
+            if (img.src && !img.src.startsWith("data:")) {
+              img.setAttribute("crossorigin", "anonymous");
+              const src = img.src;
+              img.src = "";
+              img.src = src;
+            }
+          });
+        },
+      });
+
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((b) => {
+          if (b) resolve(b);
+          else reject(new Error("Failed to create blob from canvas"));
+        }, "image/png");
+      });
+      const dataUrl = canvas.toDataURL("image/png");
+
+      const safeStudentName = (studentName || "student").replace(/\s+/g, '_');
+      const safeTitle = (configToUse.title || "template").replace(/\s+/g, '_');
+      const filename = `${safeStudentName}_${safeTitle}.png`;
+      const file = new File([blob], filename, { type: "image/png" });
+
+      let sharedSuccessfully = false;
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: filename,
+          });
+          toast.success(lang === "mr" ? "व्हाट्सॲपवर पाठवले!" : "Shared on WhatsApp!");
+          sharedSuccessfully = true;
+        } catch (shareErr: any) {
+          if (shareErr.name === "AbortError") {
+            // User cancelled the share dialog, no need to show an error or fallback
+            return;
+          }
+          console.error("Native share failed:", shareErr);
+          // Let it fall through to the clipboard/download fallback
+        }
+      }
+
+      if (!sharedSuccessfully) {
+        // Fallback for Desktop or if Native Share failed
+        try {
+          await navigator.clipboard.write([
+            new window.ClipboardItem({
+              "image/png": blob
+            })
+          ]);
+          toast.success(
+            lang === "mr" 
+              ? "टेम्पलेट कॉपी झाले! आता WhatsApp मध्ये Paste करा (Ctrl+V)." 
+              : "Template copied! Now paste it in WhatsApp (Ctrl+V)."
+          );
+          
+          setTimeout(() => {
+            window.open("https://wa.me/", "_blank");
+          }, 1500);
+        } catch (err) {
+          console.error("Clipboard failed, falling back to download:", err);
+          const link = document.createElement("a");
+          link.download = filename;
+          link.href = dataUrl;
+          link.click();
+          
+          toast.success(
+            lang === "mr" 
+              ? "टेम्पलेट डाउनलोड झाले! आता ते WhatsApp मध्ये जोडा (Attach करा)." 
+              : "Template downloaded! Now attach it in WhatsApp."
+          );
+          
+          setTimeout(() => {
+            window.open("https://wa.me/", "_blank");
+          }, 1500);
+        }
+      }
+    } catch (error: any) {
+      console.error("Error sharing template:", error);
+      const errMsg = error?.message || String(error);
+      toast.error(lang === "mr" ? `टेम्पलेट शेअर करण्यात त्रुटी: ${errMsg}` : `Failed to share template: ${errMsg}`);
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return (
@@ -922,24 +1010,34 @@ function TemplateEditorPage() {
                     )}{" "}
                     {lang === "mr" ? "डॅशबोर्डवर शेअर करा" : lang === "hi" ? "डैशबोर्ड पर साझा करें" : "Share to Dashboard"}
                   </button>
-                  <button
-                    onClick={handleWhatsAppShare}
-                    className="w-full bg-emerald-600 text-white py-6 rounded-[2rem] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-500/20"
-                  >
-                    <MessageCircle className="size-5" /> {lang === "mr" ? "व्हॉट्सॲपवर पाठवा" : lang === "hi" ? "व्हाट्सएप पर भेजें" : "Send to WhatsApp"}
-                  </button>
-                  <button
-                    onClick={handleDownloadTemplate}
-                    disabled={isDownloading}
-                    className="w-full bg-blue-600 text-white py-6 rounded-[2rem] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20"
-                  >
-                    {isDownloading ? (
-                      <Loader2 className="size-5 animate-spin" />
-                    ) : (
-                      <Download className="size-5" />
-                    )}{" "}
-                    {lang === "mr" ? "टेम्पलेट डाउनलोड करा" : lang === "hi" ? "टेम्पलेट डाउनलोड करें" : "Download Template"}
-                  </button>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      onClick={handleDownloadTemplate}
+                      disabled={isDownloading}
+                      className="w-full bg-indigo-500 text-white py-4 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-indigo-600 transition-all shadow-lg"
+                    >
+                      {isDownloading ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Download className="size-4" />
+                      )}{" "}
+                      {lang === "mr" ? "डाउनलोड" : lang === "hi" ? "डाउनलोड" : "Download"}
+                    </button>
+
+                    <button
+                      onClick={handleWhatsAppShare}
+                      disabled={isDownloading}
+                      className="w-full bg-[#25D366] text-white py-4 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#128C7E] transition-all shadow-lg"
+                    >
+                      {isDownloading ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Share2 className="size-4" />
+                      )}{" "}
+                      {lang === "mr" ? "शेअर" : lang === "hi" ? "शेयर" : "Share"}
+                    </button>
+                  </div>
                 </div>
               </div>
             </motion.div>

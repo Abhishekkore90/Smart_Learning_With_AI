@@ -8,7 +8,49 @@ import { showToast as toast } from "@/lib/custom-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-// print-js is imported dynamically to avoid SSR "window is not defined" error
+// Helper function to extract public Google Drive photos from single file links and folder links
+async function fetchGoogleDriveImages(url: string): Promise<{ src: string }[]> {
+  try {
+    const trimmed = url.trim();
+    if (!trimmed) return [];
+
+    // 1. Direct image link or base64
+    if (trimmed.match(/\.(jpeg|jpg|gif|png|webp|svg)(?:\?.*)?$/i) || trimmed.startsWith("data:image")) {
+      return [{ src: trimmed }];
+    }
+
+    // 2. Direct drive file link
+    const fileIdMatch = trimmed.match(/(?:file\/d\/|id=)([a-zA-Z0-9_-]{25,})/);
+    if (fileIdMatch && !trimmed.includes("/folders/") && !trimmed.includes("/drive/folders/")) {
+      const fileId = fileIdMatch[1];
+      return [{ src: `https://lh3.googleusercontent.com/d/${fileId}` }];
+    }
+
+    // 3. Drive folder link
+    const folderIdMatch = trimmed.match(/(?:folders\/|id=)([a-zA-Z0-9_-]{25,})/);
+    if (folderIdMatch) {
+      const folderId = folderIdMatch[1];
+      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(`https://drive.google.com/embeddedfolderview?id=${folderId}`)}`;
+      const response = await fetch(proxyUrl);
+      if (!response.ok) return [];
+      const json = await response.json();
+      const html = json.contents;
+      
+      const fileIds: string[] = [];
+      const regex = /file\/d\/([a-zA-Z0-9_-]{25,})/g;
+      let match;
+      while ((match = regex.exec(html)) !== null) {
+        if (!fileIds.includes(match[1])) {
+          fileIds.push(match[1]);
+        }
+      }
+      return fileIds.map(id => ({ src: `https://lh3.googleusercontent.com/d/${id}` }));
+    }
+  } catch (err) {
+    console.error("Error fetching drive images:", err);
+  }
+  return [];
+}
 
 export const Route = createFileRoute("/teacher/sqaaf")({
   component: TeacherSqaafPage,
@@ -5003,6 +5045,18 @@ function TeacherSqaafPage() {
     setCertLang(selectedLang);
   }, [selectedLang]);
 
+  useEffect(() => {
+    if (typeof window !== "undefined" && !localStorage.getItem("sqaaf_cert_school_name")) {
+      setCertSchoolName(infoSchoolName || profile?.schoolName || "");
+    }
+  }, [infoSchoolName, profile?.schoolName]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && !localStorage.getItem("sqaaf_cert_udise")) {
+      setCertUdise(infoUdise || profile?.udise || "");
+    }
+  }, [infoUdise, profile?.udise]);
+
   const handleEditToggle = () => {
     if (isEditingCert) {
       localStorage.setItem("sqaaf_cert_school_name", certSchoolName);
@@ -5258,10 +5312,15 @@ function TeacherSqaafPage() {
 
     const html2pdf = (await import("html2pdf.js")).default;
     await html2pdf().set({
-      margin: [12.7, 12.7, 12.7, 12.7],
+      margin: [10, 10, 10, 10],
       filename: `SQAAF_Summary_Manual_${new Date().toISOString().slice(0, 10)}.pdf`,
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, logging: false },
+      image: { type: "jpeg", quality: 0.82 },
+      html2canvas: { 
+        scale: 1.5, 
+        useCORS: true, 
+        logging: false,
+        windowWidth: 850
+      },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
     }).from(container).save();
     document.body.removeChild(container);
@@ -5349,116 +5408,182 @@ function TeacherSqaafPage() {
 
       if (currentFormat === "responses") {
         // ── "School Responses" card-based portrait report ──
-        const answeredStandards = Array.from({ length: 128 }, (_, i) => {
-          const num = i + 1;
-          const idx = selectedOptionsMap[num.toString()] !== undefined ? selectedOptionsMap[num.toString()] : undefined;
-          const detail = getStandardDetail(num);
-          const langData = detail?.[pdfLang];
-          const orangeDesc = langData?.orangeDesc || (isMr ? `मानक क्र. ${toMarathiNumerals(num)}` : `Standard No. ${num}`);
-          const options = getGroupedOptions(num, pdfLang);
+        const answeredStandards = await Promise.all(
+          Array.from({ length: 128 }, async (_, i) => {
+            const num = i + 1;
+            const idx = selectedOptionsMap[num.toString()] !== undefined ? selectedOptionsMap[num.toString()] : undefined;
+            const detail = getStandardDetail(num);
+            const langData = detail?.[pdfLang];
+            const orangeDesc = langData?.orangeDesc || (isMr ? `मानक क्र. ${toMarathiNumerals(num)}` : `Standard No. ${num}`);
+            const options = getGroupedOptions(num, pdfLang);
 
-          const isSelected = idx !== undefined && idx !== null;
-          const isNotApplicable = idx === options.length - 1;
+            const isSelected = idx !== undefined && idx !== null;
+            const isNotApplicable = idx === options.length - 1;
 
-          const responseText = isSelected
-            ? (isNotApplicable
-              ? (isMr ? "लागू नाही" : "Not applicable")
-              : (options[idx]?.text || "-"))
-            : "";
-          const levelLabel = isSelected
-            ? (isNotApplicable ? "" : (isMr ? `स्तर ${toMarathiNumerals(idx + 1)}` : `Level ${idx + 1}`))
-            : "";
+            const responseText = isSelected
+              ? (isNotApplicable
+                ? (isMr ? "लागू नाही" : "Not applicable")
+                : (options[idx]?.text || "-"))
+              : "";
+            const levelLabel = isSelected
+              ? (isNotApplicable ? "" : (isMr ? `स्तर ${toMarathiNumerals(idx + 1)}` : `Level ${idx + 1}`))
+              : "";
 
-          const marks = isSelected && !isNotApplicable ? (idx !== undefined ? idx + 1 : 0) : 0;
+            const marks = isSelected && !isNotApplicable ? (idx !== undefined ? idx + 1 : 0) : 0;
 
-          let photoHtml = "";
-          if (isSelected && !isNotApplicable) {
-            const savedOpts = localStorage.getItem(`sqaaf_evidence_options_config_${num}_${idx}`);
-            let parsedOpts: string[] = [];
-            if (savedOpts) {
-              try { parsedOpts = JSON.parse(savedOpts); } catch { }
-            } else if (idx === 0) {
-              const oldOpts = localStorage.getItem(`sqaaf_evidence_options_config_${num}`);
-              if (oldOpts) {
-                try { parsedOpts = JSON.parse(oldOpts); } catch { }
-              }
-            }
-            if (parsedOpts.length === 0) {
-              parsedOpts = [isMr ? "सर्वसाधारण पुरावे / General Evidences" : "General Evidences"];
-            }
-            let optsLength = parsedOpts.length;
+            let subOptionsHtml = "";
+            let photosHtml = "";
 
-            let checkedOptions: { src: string | null, title: string, isChecked: boolean }[] = [];
-            for (let pIdx = 0; pIdx < optsLength; pIdx++) {
-              let isChecked = localStorage.getItem(`sqaaf_checked_${num}_${idx}_${pIdx}`) === "true";
-              if (!isChecked && idx === 0) {
-                isChecked = localStorage.getItem(`sqaaf_evidence_checked_${num}_${pIdx}`) === "true";
-              }
-              let preview = localStorage.getItem(`sqaaf_file_preview_${num}_${idx}_${pIdx}`);
-              if (!preview && idx === 0) {
-                preview = localStorage.getItem(`sqaaf_evidence_file_preview_${num}_${pIdx}`);
-              }
-
-              if (isChecked || (preview && preview.startsWith("data:image"))) {
-                checkedOptions.push({
-                  src: (preview && preview.startsWith("data:image")) ? preview : null,
-                  title: parsedOpts[pIdx] || "",
-                  isChecked
-                });
-              }
-            }
-
-            if (checkedOptions.length > 0) {
-              const imagesHtml = checkedOptions.map(p => `
-                 <div style="display: inline-block; margin-right: 12px; margin-top: 10px; width: 140px; vertical-align: top;">
-                   ${p.src
-                  ? `<img src="${p.src}" style="max-height: 110px; max-width: 140px; border-radius: 6px; border: 1px solid #cbd5e1; box-sizing: border-box;" />`
-                  : `<div style="height: 60px; width: 140px; border-radius: 6px; border: 1px dashed #cbd5e1; background: #f8fafc; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #94a3b8; box-sizing: border-box;">${isMr ? "फोटो नाही" : "No Photo"}</div>`
+            if (isSelected && !isNotApplicable) {
+              const savedOpts = localStorage.getItem(`sqaaf_evidence_options_config_${num}_${idx}`);
+              let parsedOpts: string[] = [];
+              if (savedOpts) {
+                try { parsedOpts = JSON.parse(savedOpts); } catch { }
+              } else if (idx === 0) {
+                const oldOpts = localStorage.getItem(`sqaaf_evidence_options_config_${num}`);
+                if (oldOpts) {
+                  try { parsedOpts = JSON.parse(oldOpts); } catch { }
                 }
-                   <div style="font-size: 9px; font-weight: 800; color: #1e293b; margin-top: 6px; line-height: 1.3; word-break: break-word;">
-                     <span style="color: ${p.isChecked ? '#ec4899' : '#94a3b8'}; font-weight: 900; margin-right: 2px;">${p.isChecked ? '✓' : '○'}</span> ${p.title}
-                   </div>
-                 </div>
-               `).join("");
-              photoHtml = `
-                 <div style="margin-top: 14px; border-top: 1px dashed #cbd5e1; padding-top: 12px; break-inside: avoid; page-break-inside: avoid;">
-                   <div style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b; margin-bottom: 2px;">${isMr ? "पुरावे पर्याय (Evidence Options)" : "Evidence Options"}</div>
-                   <div style="display: block;">
-                     ${imagesHtml}
-                   </div>
-                 </div>
-               `;
-            }
-          }
+              }
+              if (parsedOpts.length === 0) {
+                parsedOpts = [isMr ? "सर्वसाधारण पुरावे / General Evidences" : "General Evidences"];
+              }
+              let optsLength = parsedOpts.length;
 
-          return { num, orangeDesc, responseText, levelLabel, isNotApplicable, isSelected, photoHtml, marks };
-        });
+              let checkedOptions: { title: string }[] = [];
+              let localPhotos: { src: string; label: string }[] = [];
+              for (let pIdx = 0; pIdx < optsLength; pIdx++) {
+                let isChecked = localStorage.getItem(`sqaaf_checked_${num}_${idx}_${pIdx}`) === "true";
+                if (!isChecked && idx === 0) {
+                  isChecked = localStorage.getItem(`sqaaf_evidence_checked_${num}_${pIdx}`) === "true";
+                }
+                
+                // Show ONLY selected/checked sub-options in text list
+                if (isChecked) {
+                  checkedOptions.push({
+                    title: parsedOpts[pIdx] || ""
+                  });
+                }
+
+                // Collect photos from any sub-option (checked or unchecked)
+                let preview = localStorage.getItem(`sqaaf_file_preview_${num}_${idx}_${pIdx}`);
+                if (!preview && idx === 0) {
+                  preview = localStorage.getItem(`sqaaf_evidence_file_preview_${num}_${pIdx}`);
+                }
+                if (preview && preview.startsWith("data:image")) {
+                  localPhotos.push({
+                    src: preview,
+                    label: parsedOpts[pIdx] || ""
+                  });
+                }
+              }
+
+              if (checkedOptions.length > 0) {
+                const subOptsListHtml = checkedOptions.map(o => `
+                  <div style="font-size: 10px; font-weight: 700; color: #334155; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                    <span style="color: #16a34a; font-weight: 900;">✓</span>
+                    <span>${o.title}</span>
+                  </div>
+                `).join("");
+
+                subOptionsHtml = `
+                  <div style="margin-top: 10px; margin-bottom: 10px; border-top: 1px dashed #cbd5e1; padding-top: 8px;">
+                    <div style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 6px;">
+                      ${isMr ? "निवडलेले पुरावे / पर्याय" : "Selected Evidence Details"}
+                    </div>
+                    <div>${subOptsListHtml}</div>
+                  </div>
+                `;
+              }
+
+              // Fetch Google Drive photos
+              const driveLinksKey = `sqaf_drive_links_${num}`;
+              const savedDriveLinks = localStorage.getItem(driveLinksKey);
+              let driveLinksList: { url: string; label: string }[] = [];
+              if (savedDriveLinks) {
+                try { driveLinksList = JSON.parse(savedDriveLinks); } catch { }
+              }
+
+              const drivePhotos: { src: string; label: string }[] = [];
+              for (const link of driveLinksList) {
+                if (link.url) {
+                  const items = await fetchGoogleDriveImages(link.url);
+                  for (const item of items) {
+                    drivePhotos.push({
+                      src: item.src,
+                      label: link.label || (isMr ? "ड्राइव्ह फोटो" : "Drive Photo")
+                    });
+                  }
+                }
+              }
+
+              const allPhotos = [...localPhotos, ...drivePhotos];
+              if (allPhotos.length > 0) {
+                const imagesHtml = allPhotos.map(p => `
+                  <div style="display: inline-block; margin-right: 12px; margin-top: 8px; width: 140px; vertical-align: top; text-align: center;">
+                    <img src="${p.src}" style="max-height: 100px; max-width: 140px; border: 1px solid #cbd5e1; box-sizing: border-box; object-fit: contain;" />
+                    <div style="font-size: 8px; font-weight: 700; color: #475569; margin-top: 4px; line-height: 1.2; word-break: break-word;">
+                      ${p.label}
+                    </div>
+                  </div>
+                `).join("");
+
+                photosHtml = `
+                  <div style="margin-top: 10px; border-top: 1px dashed #cbd5e1; padding-top: 8px; page-break-inside: avoid; break-inside: avoid;">
+                    <div style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 4px;">
+                      ${isMr ? "अहवाल पुरावे फोटो (Evidence Photos)" : "Evidence Photos"}
+                    </div>
+                    <div style="display: block;">
+                      ${imagesHtml}
+                    </div>
+                  </div>
+                `;
+              }
+            }
+
+            return { num, orangeDesc, responseText, levelLabel, isNotApplicable, isSelected, subOptionsHtml, photosHtml, marks };
+          })
+        );
 
         const responseCards = answeredStandards.map(s => `
-          <div style="background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 16px 20px; page-break-inside: avoid; break-inside: avoid; margin-bottom: 14px; display: block; overflow: hidden;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
-              <div style="font-size: 12px; font-weight: 900; color: #1e293b; max-width: 70%;">${isMr ? `मानक क्र. ${toMarathiNumerals(s.num)}` : `Standard No. ${s.num}`}</div>
-              ${s.isSelected
-            ? (s.isNotApplicable
-              ? `<div style="text-align: right;"><span style="background: #e5e7eb; color: #6b7280; font-size: 9px; font-weight: 800; padding: 3px 10px; border-radius: 8px; text-transform: uppercase;">${isMr ? "लागू नाही" : "N/A"}</span></div>`
-              : `<div style="text-align: right;">
-                         <span style="background: linear-gradient(135deg, #22c55e, #16a34a); color: white; font-size: 9px; font-weight: 800; padding: 3px 10px; border-radius: 8px;">${s.levelLabel}</span>
-                         <div style="font-size: 11px; font-weight: 900; color: #15803d; margin-top: 5px;">${isMr ? `गुण: ${toMarathiNumerals(s.marks)}` : `Marks: ${s.marks}`}</div>
-                       </div>`
-            )
-            : `<div style="text-align: right;"><span style="background: #f1f5f9; color: #94a3b8; font-size: 9px; font-weight: 800; padding: 3px 10px; border-radius: 8px; text-transform: uppercase;">${isMr ? "अपूर्ण" : "Incomplete"}</span></div>`
-          }
+          <div style="background: #fff; border: 1px solid #cbd5e1; padding: 16px; page-break-inside: avoid; break-inside: avoid; margin-bottom: 12px; display: block;">
+            
+            <!-- 1. Standard (Manak) Header & Description -->
+            <div style="font-size: 13px; font-weight: 900; color: #1e293b; margin-bottom: 6px;">
+              ${isMr ? `मानक क्र. ${toMarathiNumerals(s.num)}` : `Standard No. ${s.num}`}
             </div>
-            <div style="font-size: 11px; font-weight: 600; color: #475569; line-height: 1.5; margin-bottom: 12px; background: #fffbeb; border-left: 3px solid #f59e0b; padding: 8px 12px; border-radius: 0 8px 8px 0;">
+            <div style="font-size: 11px; font-weight: 600; color: #475569; line-height: 1.5; margin-bottom: 12px; background: #f8fafc; border-left: 3px solid #64748b; padding: 8px 12px;">
               ${s.orangeDesc}
             </div>
-            <div style="margin-bottom: 4px;">
-              <span style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8;">${isMr ? "प्रतिसाद" : "RESPONSE"}</span>
-            </div>
-            <div style="font-size: 11px; font-weight: 700; color: #0f172a; line-height: 1.5; white-space: pre-line; background: ${s.isSelected ? (s.isNotApplicable ? "#f1f5f9" : "#f0fdf4") : "#fafafa"}; padding: 10px 14px; border-radius: 10px; border: 1px solid ${s.isSelected ? (s.isNotApplicable ? "#e2e8f0" : "#bbf7d0") : "#e2e8f0"};">
-              ${s.responseText}
-            </div>
-            ${s.photoHtml || ""}
+
+            <!-- 2. Chosen Option (Level) -->
+            ${s.isSelected ? `
+              <div style="margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <div style="font-size: 10px; font-weight: 900; color: #16a34a; text-transform: uppercase;">
+                    ${isMr ? "निवडलेला स्तर" : "SELECTED LEVEL"}: ${s.levelLabel}
+                  </div>
+                  ${!s.isNotApplicable ? `
+                    <div style="font-size: 10px; font-weight: 900; color: #15803d; background: #e8f5e9; padding: 2px 6px; border: 1px solid #86efac; border-radius: 4px;">
+                      ${isMr ? `प्राप्त गुण: ${toMarathiNumerals(s.marks)} / ४` : `Obtained Marks: ${s.marks} / 4`}
+                    </div>
+                  ` : ""}
+                </div>
+                <div style="font-size: 11px; font-weight: 700; color: #0f172a; line-height: 1.5; background: #f0fdf4; border: 1px solid #86efac; padding: 8px 12px;">
+                  ${s.responseText}
+                </div>
+              </div>
+            ` : `
+              <div style="font-size: 11px; font-weight: 700; color: #64748b; line-height: 1.5; background: #f8fafc; border: 1px solid #cbd5e1; padding: 8px 12px; margin-bottom: 12px;">
+                ${isMr ? "अपूर्ण / प्रतिसाद दिलेला नाही" : "Incomplete / No response"}
+              </div>
+            `}
+
+            <!-- 3. Selected Sub-options (Checkboxes) -->
+            ${s.subOptionsHtml || ""}
+
+            <!-- 4 & 5. Uploaded Photos & Drive Photos -->
+            ${s.photosHtml || ""}
           </div>
         `).join("");
 
@@ -5708,14 +5833,14 @@ function TeacherSqaafPage() {
             </div>
 
             <!-- School Info -->
-            <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1.5px solid #e2e8f0;">
+            <div style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 12px 16px; margin-bottom: 16px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #cbd5e1;">
                 <div>
                   <div style="font-size: 7px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8; margin-bottom: 2px;">${isMr ? "शाळेचे नाव" : "School Name"}</div>
                   <div style="font-size: 15px; font-weight: 900; color: #0f172a; text-transform: uppercase;">${schoolName}</div>
                 </div>
-                <div style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: white; padding: 6px 14px; border-radius: 8px; font-weight: 800; font-size: 11px;">
-                  ${udise}
+                <div style="background: #6d28d9; color: white; padding: 4px 10px; font-weight: 800; font-size: 11px; border-radius: 4px;">
+                  ${isMr ? "युडायस कोड" : "UDISE CODE"}: ${udise}
                 </div>
               </div>
               <div style="display: flex; gap: 20px; flex-wrap: wrap; font-size: 10px;">
@@ -5732,7 +5857,7 @@ function TeacherSqaafPage() {
 
             <!-- Summary badge -->
             <div style="display: flex; gap: 10px; margin-bottom: 18px;">
-              <div style="flex: 1; background: linear-gradient(135deg, #22c55e, #16a34a); border-radius: 10px; padding: 10px 14px; color: white;">
+              <div style="flex: 1; background: #16a34a; padding: 8px 12px; color: white;">
                 <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;">${isMr ? "प्रतिसाद नोंदवलेले" : "Responded"}</div>
                 <div style="font-size: 20px; font-weight: 900;">${totalAnswered} <span style="font-size: 11px; opacity: 0.7;">/ 128</span></div>
               </div>
@@ -5742,42 +5867,43 @@ function TeacherSqaafPage() {
             ${responseCards}
 
             <!-- Summary Totals Chart -->
-            <div class="html2pdf__page-break" style="margin-top: 30px; padding-top: 10px;">
+            <div style="page-break-before: always; height: 1px;"></div>
+            <div style="margin-top: 20px; padding-top: 10px;">
               <table style="width: 100%; table-layout: fixed; border-collapse: collapse; border: 1px solid black; font-size: 10px; font-family: 'Noto Sans Devanagari', Arial, sans-serif;">
                 <colgroup>
-                  <col style="width: 60px;">
-                  <col style="width: 40px;">
-                  <col style="width: 170px;">
-                  <col style="width: 32px;">
-                  <col style="width: 32px;">
-                  <col style="width: 32px;">
-                  <col style="width: 32px;">
-                  <col style="width: 32px;">
-                  <col style="width: 32px;">
-                  <col style="width: 32px;">
-                  <col style="width: 32px;">
-                  <col style="width: 32px;">
-                  <col style="width: 32px;">
+                  <col style="width: 8%;">
+                  <col style="width: 6%;">
+                  <col style="width: 26%;">
+                  <col style="width: 6%;">
+                  <col style="width: 6%;">
+                  <col style="width: 6%;">
+                  <col style="width: 6%;">
+                  <col style="width: 6%;">
+                  <col style="width: 6%;">
+                  <col style="width: 6%;">
+                  <col style="width: 6%;">
+                  <col style="width: 6%;">
+                  <col style="width: 6%;">
                 </colgroup>
                 <thead>
                   <tr>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px; width: 60px;">मानक क्र.</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px; width: 40px;">लागू मानके</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px; width: 120px;">क्षेत्र</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px;">मानक क्र.</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px;">लागू मानके</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 4px;">क्षेत्र</th>
                     <th colspan="5" style="border: 1px solid black; padding: 4px; text-align: center; background-color: #f8fafc;">स्वयं मूल्यमापन</th>
                     <th colspan="5" style="border: 1px solid black; padding: 4px; text-align: center; background-color: #f8fafc;">बाह्य मूल्यमापन</th>
                   </tr>
                   <tr>
-                    <th style="border: 1px solid black; padding: 4px; width: 30px;">स्तर १</th>
-                    <th style="border: 1px solid black; padding: 4px; width: 30px;">स्तर २</th>
-                    <th style="border: 1px solid black; padding: 4px; width: 30px;">स्तर ३</th>
-                    <th style="border: 1px solid black; padding: 4px; width: 30px;">स्तर ४</th>
-                    <th style="border: 1px solid black; padding: 4px; width: 35px;">एकूण</th>
-                    <th style="border: 1px solid black; padding: 4px; width: 30px;">स्तर १</th>
-                    <th style="border: 1px solid black; padding: 4px; width: 30px;">स्तर २</th>
-                    <th style="border: 1px solid black; padding: 4px; width: 30px;">स्तर ३</th>
-                    <th style="border: 1px solid black; padding: 4px; width: 30px;">स्तर ४</th>
-                    <th style="border: 1px solid black; padding: 4px; width: 35px;">एकूण</th>
+                    <th style="border: 1px solid black; padding: 4px;">स्तर १</th>
+                    <th style="border: 1px solid black; padding: 4px;">स्तर २</th>
+                    <th style="border: 1px solid black; padding: 4px;">स्तर ३</th>
+                    <th style="border: 1px solid black; padding: 4px;">स्तर ४</th>
+                    <th style="border: 1px solid black; padding: 4px; background-color: #f1f5f9;">एकूण</th>
+                    <th style="border: 1px solid black; padding: 4px;">स्तर १</th>
+                    <th style="border: 1px solid black; padding: 4px;">स्तर २</th>
+                    <th style="border: 1px solid black; padding: 4px;">स्तर ३</th>
+                    <th style="border: 1px solid black; padding: 4px;">स्तर ४</th>
+                    <th style="border: 1px solid black; padding: 4px; background-color: #f1f5f9;">एकूण</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -5934,6 +6060,7 @@ function TeacherSqaafPage() {
         const completedCount_ = completedStdsSet.size;
         let obtainedMarks_ = 0;
         let totalPossibleMarks = 0;
+        let notApplicableCount_ = 0;
         for (let i = 1; i <= 128; i++) {
           const selectedIdx = selectedOptionsMap[i.toString()];
 
@@ -5941,8 +6068,16 @@ function TeacherSqaafPage() {
             totalPossibleMarks += 4;
           } else {
             if (selectedIdx !== undefined && selectedIdx !== null) {
-              if (selectedIdx >= 0 && selectedIdx <= 3) {
+              const opts = getGroupedOptions(i, pdfLang);
+              const optText = opts[selectedIdx]?.text?.trim() || "";
+              const isNotApplicable = optText === "लागू नाही" || optText === "Not applicable" || selectedIdx === opts.length - 1;
+              if (isNotApplicable) {
+                notApplicableCount_++;
+              }
+              if (selectedIdx >= 0 && selectedIdx <= 3 && !isNotApplicable) {
                 obtainedMarks_ += (selectedIdx + 1);
+                totalPossibleMarks += 4;
+              } else {
                 totalPossibleMarks += 4;
               }
             } else {
@@ -5950,6 +6085,7 @@ function TeacherSqaafPage() {
             }
           }
         }
+        const applicableCount_ = 128 - notApplicableCount_;
 
         const domainsDataLegacy = [
           { id: 1, nameMr: "क्षेत्र १ : अभ्यासक्रम,अध्यापनशास्त्र आणि मूल्यांकन", start: 1, end: 44 },
@@ -6122,22 +6258,30 @@ function TeacherSqaafPage() {
             </div>
 
             <!-- Summary Stats -->
-            <div style="display: flex; gap: 12px; margin-bottom: 20px;">
-              <div style="flex: 1; background: linear-gradient(135deg, #3b82f6, #2563eb); border-radius: 12px; padding: 14px 16px; color: white;">
-                <div style="font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.8;">${isMr ? "एकूण मानके" : "Total Standards"}</div>
-                <div style="font-size: 24px; font-weight: 900;">${totalStds}</div>
+            <div style="display: flex; gap: 8px; margin-bottom: 20px;">
+              <div style="flex: 1; background: linear-gradient(135deg, #3b82f6, #2563eb); border-radius: 10px; padding: 10px 12px; color: white;">
+                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;">${isMr ? "एकूण मानके" : "Total Standards"}</div>
+                <div style="font-size: 20px; font-weight: 900; margin-top: 4px;">${totalStds}</div>
               </div>
-              <div style="flex: 1; background: linear-gradient(135deg, #22c55e, #16a34a); border-radius: 12px; padding: 14px 16px; color: white;">
-                <div style="font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.8;">${isMr ? "प्रतिसाद नोंदवलेले" : "Responded"}</div>
-                <div style="font-size: 24px; font-weight: 900;">${completedCount_}</div>
+              <div style="flex: 1; background: linear-gradient(135deg, #22c55e, #16a34a); border-radius: 10px; padding: 10px 12px; color: white;">
+                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;">${isMr ? "प्रतिसाद नोंदवलेले" : "Responded"}</div>
+                <div style="font-size: 20px; font-weight: 900; margin-top: 4px;">${completedCount_}</div>
               </div>
-              <div style="flex: 1; background: linear-gradient(135deg, #f97316, #ea580c); border-radius: 12px; padding: 14px 16px; color: white;">
-                <div style="font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.8;">${isMr ? "प्रतिसाद बाकी" : "Pending"}</div>
-                <div style="font-size: 24px; font-weight: 900;">${totalStds - completedCount_}</div>
+              <div style="flex: 1; background: linear-gradient(135deg, #f97316, #ea580c); border-radius: 10px; padding: 10px 12px; color: white;">
+                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;">${isMr ? "प्रतिसाद बाकी" : "Pending"}</div>
+                <div style="font-size: 20px; font-weight: 900; margin-top: 4px;">${totalStds - completedCount_}</div>
               </div>
-              <div style="flex: 1; background: linear-gradient(135deg, #8b5cf6, #7c3aed); border-radius: 12px; padding: 14px 16px; color: white;">
-                <div style="font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.8;">${isMr ? "गुण" : "Marks"}</div>
-                <div style="font-size: 24px; font-weight: 900;">${obtainedMarks_}<span style="font-size: 13px; opacity: 0.7;"> / ${totalPossibleMarks}</span></div>
+              <div style="flex: 1; background: linear-gradient(135deg, #0ea5e9, #0284c7); border-radius: 10px; padding: 10px 12px; color: white;">
+                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;">${isMr ? "लागू असलेले मानक" : "Applicable"}</div>
+                <div style="font-size: 20px; font-weight: 900; margin-top: 4px;">${applicableCount_}</div>
+              </div>
+              <div style="flex: 1; background: linear-gradient(135deg, #94a3b8, #64748b); border-radius: 10px; padding: 10px 12px; color: white;">
+                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;">${isMr ? "लागू नसलेले मानक" : "Not Applicable"}</div>
+                <div style="font-size: 20px; font-weight: 900; margin-top: 4px;">${notApplicableCount_}</div>
+              </div>
+              <div style="flex: 1; background: linear-gradient(135deg, #8b5cf6, #7c3aed); border-radius: 10px; padding: 10px 12px; color: white;">
+                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;">${isMr ? "गुण" : "Marks"}</div>
+                <div style="font-size: 20px; font-weight: 900; margin-top: 4px;">${obtainedMarks_}<span style="font-size: 11px; opacity: 0.7;"> / ${totalPossibleMarks}</span></div>
               </div>
             </div>
 
@@ -6306,6 +6450,7 @@ function TeacherSqaafPage() {
         const completedCount = completedStdsSet.size;
         let obtainedMarks = 0;
         let totalPossible = 0;
+        let notApplicableCount = 0;
         for (let i = 1; i <= 128; i++) {
           const selectedIdx = selectedOptionsMap[i.toString()];
 
@@ -6313,8 +6458,16 @@ function TeacherSqaafPage() {
             totalPossible += 4;
           } else {
             if (selectedIdx !== undefined && selectedIdx !== null) {
-              if (selectedIdx >= 0 && selectedIdx <= 3) {
+              const opts = getGroupedOptions(i, pdfLang);
+              const optText = opts[selectedIdx]?.text?.trim() || "";
+              const isNotApplicable = optText === "लागू नाही" || optText === "Not applicable" || selectedIdx === opts.length - 1;
+              if (isNotApplicable) {
+                notApplicableCount++;
+              }
+              if (selectedIdx >= 0 && selectedIdx <= 3 && !isNotApplicable) {
                 obtainedMarks += (selectedIdx + 1);
+                totalPossible += 4;
+              } else {
                 totalPossible += 4;
               }
             } else {
@@ -6322,6 +6475,7 @@ function TeacherSqaafPage() {
             }
           }
         }
+        const applicableCount = 128 - notApplicableCount;
 
         const A4_WIDTH_PX = 1122;
         const A4_HEIGHT_PX = 793;
@@ -6383,22 +6537,30 @@ function TeacherSqaafPage() {
                </div>
             </div>
             
-            <div style="display: flex; gap: 24px; margin-top: 24px;">
-               <div style="background-color: #2563eb; color: white; border-radius: 12px; padding: 20px; flex: 1;">
-                  <div style="font-size: 14px; opacity: 0.9; font-weight: 500;">${isMr ? "एकूण मानके" : "TOTAL STANDARDS"}</div>
-                  <div style="font-size: 36px; font-weight: bold; margin-top: 8px;">128</div>
+            <div style="display: flex; gap: 16px; margin-top: 24px;">
+               <div style="background-color: #2563eb; color: white; border-radius: 12px; padding: 16px; flex: 1;">
+                  <div style="font-size: 12px; opacity: 0.9; font-weight: 500;">${isMr ? "एकूण मानके" : "TOTAL STANDARDS"}</div>
+                  <div style="font-size: 28px; font-weight: bold; margin-top: 8px;">128</div>
                </div>
-               <div style="background-color: #16a34a; color: white; border-radius: 12px; padding: 20px; flex: 1;">
-                  <div style="font-size: 14px; opacity: 0.9; font-weight: 500;">${isMr ? "प्रतिसाद नोंदवलेले" : "RESPONDED"}</div>
-                  <div style="font-size: 36px; font-weight: bold; margin-top: 8px;">${completedCount}</div>
+               <div style="background-color: #16a34a; color: white; border-radius: 12px; padding: 16px; flex: 1;">
+                  <div style="font-size: 12px; opacity: 0.9; font-weight: 500;">${isMr ? "प्रतिसाद नोंदवलेले" : "RESPONDED"}</div>
+                  <div style="font-size: 28px; font-weight: bold; margin-top: 8px;">${completedCount}</div>
                </div>
-               <div style="background-color: #ea580c; color: white; border-radius: 12px; padding: 20px; flex: 1;">
-                  <div style="font-size: 14px; opacity: 0.9; font-weight: 500;">${isMr ? "प्रतिसाद बाकी" : "PENDING"}</div>
-                  <div style="font-size: 36px; font-weight: bold; margin-top: 8px;">${128 - completedCount}</div>
+               <div style="background-color: #ea580c; color: white; border-radius: 12px; padding: 16px; flex: 1;">
+                  <div style="font-size: 12px; opacity: 0.9; font-weight: 500;">${isMr ? "प्रतिसाद बाकी" : "PENDING"}</div>
+                  <div style="font-size: 28px; font-weight: bold; margin-top: 8px;">${128 - completedCount}</div>
                </div>
-               <div style="background-color: #7c3aed; color: white; border-radius: 12px; padding: 20px; flex: 1;">
-                  <div style="font-size: 14px; opacity: 0.9; font-weight: 500;">${isMr ? "गुण" : "MARKS"}</div>
-                  <div style="font-size: 36px; font-weight: bold; margin-top: 8px;">${obtainedMarks} / ${totalPossible}</div>
+               <div style="background-color: #0284c7; color: white; border-radius: 12px; padding: 16px; flex: 1;">
+                  <div style="font-size: 12px; opacity: 0.9; font-weight: 500;">${isMr ? "लागू असलेले मानक" : "APPLICABLE"}</div>
+                  <div style="font-size: 28px; font-weight: bold; margin-top: 8px;">${applicableCount}</div>
+               </div>
+               <div style="background-color: #64748b; color: white; border-radius: 12px; padding: 16px; flex: 1;">
+                  <div style="font-size: 12px; opacity: 0.9; font-weight: 500;">${isMr ? "लागू नसलेले मानक" : "NOT APPLICABLE"}</div>
+                  <div style="font-size: 28px; font-weight: bold; margin-top: 8px;">${notApplicableCount}</div>
+               </div>
+               <div style="background-color: #7c3aed; color: white; border-radius: 12px; padding: 16px; flex: 1;">
+                  <div style="font-size: 12px; opacity: 0.9; font-weight: 500;">${isMr ? "गुण" : "MARKS"}</div>
+                  <div style="font-size: 28px; font-weight: bold; margin-top: 8px;">${obtainedMarks} / ${totalPossible}</div>
                </div>
             </div>
           </div>
@@ -6407,12 +6569,12 @@ function TeacherSqaafPage() {
 
         let pageCount = 0;
         const saveCurrentPageToPdf = async () => {
-          const canvas = await html2canvas(renderContainer, { scale: 2, useCORS: true, logging: false });
-          const imgData = canvas.toDataURL("image/jpeg", 1.0);
+          const canvas = await html2canvas(renderContainer, { scale: 1.5, useCORS: true, logging: false });
+          const imgData = canvas.toDataURL("image/jpeg", 0.95);
           if (pageCount > 0) doc.addPage();
           const pdfWidth = 297;
           const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-          doc.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
+          doc.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight, undefined, "FAST");
           pageCount++;
         };
 
@@ -6576,8 +6738,7 @@ function TeacherSqaafPage() {
           let obtainedMarks_ = 0;
           let totalPossibleMarks = 0;
 
-          let summaryRowsPart1 = "";
-          let summaryRowsPart2 = "";
+          let summaryRowsHtml = "";
 
           domainsDataLegacy.forEach((dom, idx) => {
             let selfL1 = 0, selfL2 = 0, selfL3 = 0, selfL4 = 0;
@@ -6634,25 +6795,18 @@ function TeacherSqaafPage() {
 
             const naText = formatRanges(naStds);
 
-            summaryRowsPart1 += `
+            summaryRowsHtml += `
                 <tr style="text-align: center;">
-                  <td style="border: 1px solid #ccc; padding: 4px;">${idx + 1}</td>
-                  <td style="border: 1px solid #ccc; padding: 4px; text-align: left; font-size: 11px;">${dom.nameMr}</td>
-                  <td style="border: 1px solid #ccc; padding: 4px;">${dom.start} ते ${dom.end}</td>
-                  <td style="border: 1px solid #ccc; padding: 4px;">${naText}</td>
-                  <td style="border: 1px solid #ccc; padding: 4px; font-weight: bold;">${appCount}</td>
-                </tr>
-            `;
-
-            summaryRowsPart2 += `
-                <tr style="text-align: center;">
-                  <td style="border: 1px solid #ccc; padding: 4px;">${idx + 1}</td>
-                  <td style="border: 1px solid #ccc; padding: 4px; text-align: left; font-size: 11px;">${dom.nameMr}</td>
-                  <td style="border: 1px solid #ccc; padding: 4px;">${selfL1 || "-"}</td>
-                  <td style="border: 1px solid #ccc; padding: 4px;">${selfL2 || "-"}</td>
-                  <td style="border: 1px solid #ccc; padding: 4px;">${selfL3 || "-"}</td>
-                  <td style="border: 1px solid #ccc; padding: 4px;">${selfL4 || "-"}</td>
-                  <td style="border: 1px solid #ccc; padding: 4px; font-weight: bold;">${selfObt}</td>
+                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px;">${idx + 1}</td>
+                  <td style="border: 1px solid #cbd5e1; padding: 4px 5px; text-align: left; font-size: 9px; line-height: 1.3; word-wrap: break-word; overflow-wrap: break-word; word-break: normal;">${dom.nameMr}</td>
+                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; white-space: nowrap;">${dom.start} ते ${dom.end}</td>
+                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; word-wrap: break-word; overflow-wrap: break-word;">${naText}</td>
+                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; color: #1e1b4b;">${appCount}</td>
+                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; background-color: #fef2f2; color: #991b1b;">${selfL1 || "-"}</td>
+                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; background-color: #fff7ed; color: #c2410c;">${selfL2 || "-"}</td>
+                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; background-color: #fffbeb; color: #b45309;">${selfL3 || "-"}</td>
+                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; background-color: #f0fdf4; color: #166534;">${selfL4 || "-"}</td>
+                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; color: #1e1b4b;">${selfObt}</td>
                 </tr>
             `;
           });
@@ -6669,112 +6823,97 @@ function TeacherSqaafPage() {
           const overallSelfPct = totalPossibleMarks > 0 ? Math.round((obtainedMarks_ / totalPossibleMarks) * 100) : 0;
 
           finalHtml = `
-            <div style="font-family: sans-serif; font-size: 12px; padding: 20px; background: white;">
-              <div style="text-align: center; margin-bottom: 20px;">
-                <h2 style="font-size: 18px; font-weight: bold; margin: 0 0 5px 0;">SQAAF एकत्रित गुणनोंद तक्ता</h2>
-                <div style="font-size: 11px; color: #555;">गट: पायाभूत (अंगणवाडी ते १ली २री / पूर्वतयारी ३री ते ५ वी / पूर्व माध्यमिक ६वी ते ८वी )</div>
+            <div style="font-family: Arial, sans-serif; font-size: 10px; padding: 10px 15px; background: white; width: 100%; box-sizing: border-box;">
+              <!-- Premium Header Bar matching View -->
+              <div style="background-color: #ffaf66; padding: 8px 15px; margin-bottom: 12px; text-align: center; border: 1px solid #e2e8f0;">
+                <h2 style="font-size: 15px; font-weight: 900; margin: 0; color: #0f172a; letter-spacing: -0.3px;">SQAAF एकत्रित गुणनोंद तक्ता</h2>
+                <div style="font-size: 9px; color: #1e293b; font-weight: 800; margin-top: 1px; opacity: 0.85;">गट: पायाभूत (अंगणवाडी ते १ली २री / पूर्वतयारी ३री ते ५ वी / पूर्व माध्यमिक ६वी ते ८वी )</div>
               </div>
 
-              <div style="margin-bottom: 20px;">
-                <h3 style="font-size: 14px; font-weight: bold; margin-bottom: 5px;">शाळेची माहिती</h3>
-                <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;">
+              <div style="margin-bottom: 12px;">
+                <h3 style="font-size: 11px; font-weight: bold; margin: 0 0 5px 0; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 3px;">शाळेची माहिती</h3>
+                <table style="width: 100%; border-collapse: collapse; font-size: 10px; text-align: left; table-layout: fixed;">
                   <tr>
-                    <td style="border: 1px solid #ccc; padding: 4px; font-weight: bold; width: 15%; background-color: #f8f9fa;">शाळेचे नाव</td>
-                    <td style="border: 1px solid #ccc; padding: 4px; width: 35%;">${schoolName || "-"}</td>
-                    <td style="border: 1px solid #ccc; padding: 4px; font-weight: bold; width: 15%; background-color: #f8f9fa;">U Dise No</td>
-                    <td style="border: 1px solid #ccc; padding: 4px; width: 35%;">${udise || "-"}</td>
+                    <td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: bold; width: 15%; background-color: #f8fafc; word-wrap: break-word;">शाळेचे नाव</td>
+                    <td style="border: 1px solid #cbd5e1; padding: 4px; width: 35%; word-wrap: break-word;">${schoolName || "-"}</td>
+                    <td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: bold; width: 15%; background-color: #f8fafc; word-wrap: break-word;">U Dise No</td>
+                    <td style="border: 1px solid #cbd5e1; padding: 4px; width: 35%; word-wrap: break-word;">${udise || "-"}</td>
                   </tr>
                   <tr>
-                    <td style="border: 1px solid #ccc; padding: 4px; font-weight: bold; background-color: #f8f9fa;">तालुका</td>
-                    <td style="border: 1px solid #ccc; padding: 4px;">${taluka || "-"}</td>
-                    <td style="border: 1px solid #ccc; padding: 4px; font-weight: bold; background-color: #f8f9fa;">जिल्हा</td>
-                    <td style="border: 1px solid #ccc; padding: 4px;">${district || "सांगली"}</td>
+                    <td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: bold; background-color: #f8fafc; word-wrap: break-word;">तालुका</td>
+                    <td style="border: 1px solid #cbd5e1; padding: 4px; word-wrap: break-word;">${taluka || "-"}</td>
+                    <td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: bold; background-color: #f8fafc; word-wrap: break-word;">जिल्हा</td>
+                    <td style="border: 1px solid #cbd5e1; padding: 4px; word-wrap: break-word;">${district || "सांगली"}</td>
                   </tr>
                 </table>
               </div>
 
-              <div style="margin-bottom: 20px;">
-                <h3 style="font-size: 14px; font-weight: bold; margin-bottom: 5px;">मूल्यांकन तपशील - भाग १ (मानके)</h3>
-                <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+              <div style="margin-bottom: 12px;">
+                <h3 style="font-size: 11px; font-weight: bold; margin: 0 0 5px 0; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 3px;">मूल्यांकन तपशील</h3>
+                <table style="width: 100%; border-collapse: collapse; font-size: 9px; table-layout: fixed; word-wrap: break-word;">
                   <thead>
-                    <tr style="background-color: #f8f9fa;">
-                      <th style="border: 1px solid #ccc; padding: 4px; width: 8%;">अ. क्र.</th>
-                      <th style="border: 1px solid #ccc; padding: 4px; width: 32%;">क्षेत्राचे नाव</th>
-                      <th style="border: 1px solid #ccc; padding: 4px; width: 20%;">मानक क्र.</th>
-                      <th style="border: 1px solid #ccc; padding: 4px; width: 25%;">लागू नसलेली मानके</th>
-                      <th style="border: 1px solid #ccc; padding: 4px; width: 15%;">लागू मानक संख्या</th>
+                    <tr style="background-color: #f1f5f9; text-align: center;">
+                      <th style="border: 1px solid #cbd5e1; padding: 5px 3px; width: 4%;">अ. क्र.</th>
+                      <th style="border: 1px solid #cbd5e1; padding: 5px 3px; width: 28%; text-align: left;">क्षेत्राचे नाव</th>
+                      <th style="border: 1px solid #cbd5e1; padding: 5px 3px; width: 10%;">मानक क्र.</th>
+                      <th style="border: 1px solid #cbd5e1; padding: 5px 3px; width: 14%;">लागू नसलेली मानके</th>
+                      <th style="border: 1px solid #cbd5e1; padding: 5px 3px; width: 10%;">लागू मानक संख्या</th>
+                      <th style="border: 1px solid #cbd5e1; padding: 5px 3px; width: 7%;">स्तर १</th>
+                      <th style="border: 1px solid #cbd5e1; padding: 5px 3px; width: 7%;">स्तर २</th>
+                      <th style="border: 1px solid #cbd5e1; padding: 5px 3px; width: 7%;">स्तर ३</th>
+                      <th style="border: 1px solid #cbd5e1; padding: 5px 3px; width: 7%;">स्तर ४</th>
+                      <th style="border: 1px solid #cbd5e1; padding: 5px 3px; width: 6%;">एकूण गुण</th>
                     </tr>
                   </thead>
                   <tbody>
-                    ${summaryRowsPart1}
-                    <tr style="background-color: #f8f9fa; font-weight: bold; text-align: center;">
-                      <td style="border: 1px solid #ccc; padding: 4px;" colspan="3"></td>
-                      <td style="border: 1px solid #ccc; padding: 4px; text-align: right;">एकूण लागू मानके</td>
-                      <td style="border: 1px solid #ccc; padding: 4px; font-size: 13px;">${totalApplicable}</td>
+                    ${summaryRowsHtml}
+                    <tr style="background-color: #f8fafc; font-weight: bold; text-align: center;">
+                      <td style="border: 1px solid #cbd5e1; padding: 4px 3px;" colspan="3"></td>
+                      <td style="border: 1px solid #cbd5e1; padding: 4px 3px; text-align: right; font-size: 9px;">एकूण</td>
+                      <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 10px; text-align: center; color: #1e1b4b;">${totalApplicable}</td>
+                      <td style="border: 1px solid #cbd5e1; padding: 4px 3px;" colspan="4"></td>
+                      <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 10px; text-align: center; color: #1e1b4b;">${obtainedMarks_}</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
 
-              <div style="margin-bottom: 20px;">
-                <h3 style="font-size: 14px; font-weight: bold; margin-bottom: 5px;">मूल्यांकन तपशील - भाग २ (प्राप्त स्तर आणि गुण)</h3>
-                <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
-                  <thead>
-                    <tr style="background-color: #f8f9fa;">
-                      <th style="border: 1px solid #ccc; padding: 4px; width: 8%;">अ. क्र.</th>
-                      <th style="border: 1px solid #ccc; padding: 4px; width: 32%;">क्षेत्राचे नाव</th>
-                      <th style="border: 1px solid #ccc; padding: 4px; width: 10%;">स्तर १</th>
-                      <th style="border: 1px solid #ccc; padding: 4px; width: 10%;">स्तर २</th>
-                      <th style="border: 1px solid #ccc; padding: 4px; width: 10%;">स्तर ३</th>
-                      <th style="border: 1px solid #ccc; padding: 4px; width: 10%;">स्तर ४</th>
-                      <th style="border: 1px solid #ccc; padding: 4px; width: 20%;">एकूण गुण</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${summaryRowsPart2}
-                    <tr style="background-color: #f8f9fa; font-weight: bold; text-align: center;">
-                      <td style="border: 1px solid #ccc; padding: 4px;" colspan="5"></td>
-                      <td style="border: 1px solid #ccc; padding: 4px; text-align: right;">एकूण गुण</td>
-                      <td style="border: 1px solid #ccc; padding: 4px; font-size: 13px;">${obtainedMarks_}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <table style="width: 100%; border-collapse: collapse;">
+              <table style="width: 100%; border-collapse: collapse; margin-top: 10px; table-layout: fixed;">
                 <tr>
-                  <td style="width: 50%; vertical-align: top; padding-right: 10px;">
-                    <h3 style="font-size: 13px; font-weight: bold; margin-bottom: 5px;">श्रेणी तक्ता</h3>
-                    <table style="width: 100%; border-collapse: collapse; font-size: 11px; text-align: center;">
+                  <td style="width: 48%; vertical-align: top; padding: 0;">
+                    <h3 style="font-size: 11px; font-weight: bold; margin: 0 0 4px 0; color: #0f172a;">श्रेणी तक्ता</h3>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 9px; text-align: center;">
                       <thead>
-                        <tr style="background-color: #f8f9fa;">
-                          <th style="border: 1px solid #ccc; padding: 4px;">श्रेणी</th>
-                          <th style="border: 1px solid #ccc; padding: 4px;">टक्केवारी</th>
+                        <tr style="background-color: #f1f5f9;">
+                          <th style="border: 1px solid #cbd5e1; padding: 4px; width: 50%;">श्रेणी</th>
+                          <th style="border: 1px solid #cbd5e1; padding: 4px; width: 50%;">टक्केवारी</th>
                         </tr>
                       </thead>
                       <tbody>
-                        <tr><td style="border: 1px solid #ccc; padding: 4px; font-weight: bold;">A+</td><td style="border: 1px solid #ccc; padding: 4px;">९१ ते १००</td></tr>
-                        <tr><td style="border: 1px solid #ccc; padding: 4px; font-weight: bold;">A</td><td style="border: 1px solid #ccc; padding: 4px;">८१ ते ९०</td></tr>
-                        <tr><td style="border: 1px solid #ccc; padding: 4px; font-weight: bold;">B+</td><td style="border: 1px solid #ccc; padding: 4px;">७१ ते ८०</td></tr>
-                        <tr><td style="border: 1px solid #ccc; padding: 4px; font-weight: bold;">B</td><td style="border: 1px solid #ccc; padding: 4px;">६१ ते ७०</td></tr>
-                        <tr><td style="border: 1px solid #ccc; padding: 4px; font-weight: bold;">C+</td><td style="border: 1px solid #ccc; padding: 4px;">५१ ते ६०</td></tr>
-                        <tr><td style="border: 1px solid #ccc; padding: 4px; font-weight: bold;">C</td><td style="border: 1px solid #ccc; padding: 4px;">५० पेक्षा कमी</td></tr>
+                        <tr><td style="border: 1px solid #cbd5e1; padding: 3px; font-weight: bold; color: #15803d;">A+</td><td style="border: 1px solid #cbd5e1; padding: 3px;">९१ ते १००</td></tr>
+                        <tr><td style="border: 1px solid #cbd5e1; padding: 3px; font-weight: bold; color: #16a34a;">A</td><td style="border: 1px solid #cbd5e1; padding: 3px;">८१ ते ९०</td></tr>
+                        <tr><td style="border: 1px solid #cbd5e1; padding: 3px; font-weight: bold; color: #ca8a04;">B+</td><td style="border: 1px solid #cbd5e1; padding: 3px;">७१ ते ८०</td></tr>
+                        <tr><td style="border: 1px solid #cbd5e1; padding: 3px; font-weight: bold; color: #f97316;">B</td><td style="border: 1px solid #cbd5e1; padding: 3px;">६१ ते ७०</td></tr>
+                        <tr><td style="border: 1px solid #cbd5e1; padding: 3px; font-weight: bold; color: #ea580c;">C+</td><td style="border: 1px solid #cbd5e1; padding: 3px;">५१ ते ६०</td></tr>
+                        <tr><td style="border: 1px solid #cbd5e1; padding: 3px; font-weight: bold; color: #dc2626;">C</td><td style="border: 1px solid #cbd5e1; padding: 3px;">५० पेक्षा कमी</td></tr>
                       </tbody>
                     </table>
                   </td>
-                  <td style="width: 50%; vertical-align: top; padding-left: 10px;">
-                    <div style="border: 1px solid #ccc; padding: 15px; background: #f8f9fa; border-radius: 4px;">
-                      <div style="margin-bottom: 8px;">
-                        <span style="font-weight: bold;">एकूण शक्य गुण:</span>
-                        <span style="float: right;">${totalApplicable * 4}</span>
+                  <td style="width: 4%;"></td>
+                  <td style="width: 48%; vertical-align: top; padding: 0;">
+                    <h3 style="font-size: 11px; font-weight: bold; margin: 0 0 4px 0; color: #0f172a;">निकाल तपशील</h3>
+                    <div style="border: 1px solid #cbd5e1; padding: 10px 15px; background: #f8fafc; min-height: 100px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; gap: 6px;">
+                      <div style="font-size: 10px;">
+                        <span style="font-weight: bold; color: #475569;">एकूण शक्य गुण:</span>
+                        <span style="float: right; font-weight: bold; color: #0f172a;">${totalApplicable * 4}</span>
                       </div>
-                      <div style="margin-bottom: 8px;">
-                        <span style="font-weight: bold;">शाळा प्राप्त गुण:</span>
-                        <span style="float: right; font-weight: bold;">${obtainedMarks_}</span>
+                      <div style="font-size: 10px;">
+                        <span style="font-weight: bold; color: #475569;">शाळा प्राप्त गुण:</span>
+                        <span style="float: right; font-weight: bold; color: #0f172a;">${obtainedMarks_}</span>
                       </div>
-                      <div style="border-top: 1px solid #ccc; padding-top: 8px; margin-top: 8px;">
-                        <span style="font-weight: bold;">प्राप्त श्रेणी:</span>
-                        <span style="float: right; font-weight: bold; font-size: 16px;">${getGrade(overallSelfPct)}</span>
+                      <div style="border-top: 2px solid #e2e8f0; padding-top: 6px; margin-top: 2px; font-size: 11px;">
+                        <span style="font-weight: bold; color: #475569;">प्राप्त श्रेणी:</span>
+                        <span style="float: right; font-weight: bold; font-size: 15px; color: #16a34a;">${getGrade(overallSelfPct)}</span>
                       </div>
                     </div>
                   </td>
@@ -6784,34 +6923,54 @@ function TeacherSqaafPage() {
           `;
         }
 
-        // For summary, we use a string-based approach. 
-        // This creates an isolated iframe internally, 100% immune to viewport cropping, overflow hidden, or blank page scroll bugs.
+        // For summary, we use an off-screen DOM wrapper approach.
+        // The container is static so html2canvas renders it correctly, while the parent wrapper hides it offscreen.
         if (currentFormat === "summary") {
-          const htmlString = `
-            <div style="width: 793px; background-color: white; padding: 20px; box-sizing: border-box; margin: 0; position: relative;">
-              ${finalHtml}
-            </div>
-          `;
+          const wrapper = document.createElement("div");
+          wrapper.style.position = "fixed";
+          wrapper.style.top = "0";
+          wrapper.style.left = "-9999px";
+          wrapper.style.width = "1040px";
+          wrapper.style.height = "0";
+          wrapper.style.overflow = "hidden";
+
+          container.innerHTML = finalHtml;
+          container.style.position = "static";
+          container.style.width = "1040px";
+          container.style.padding = "12px 15px";
+          container.style.boxSizing = "border-box";
+          container.style.backgroundColor = "white";
+          
+          wrapper.appendChild(container);
+          document.body.appendChild(wrapper);
           
           const pdfOptions = {
-            margin: [12.7, 12.7, 12.7, 12.7],
+            margin: [8, 8, 8, 8],
             filename: `SQAAF_Summary_${schoolName.replace(/\s+/g, "_") || "School"}_${new Date().toISOString().slice(0, 10)}.pdf`,
-            image: { type: "jpeg", quality: 1.0 },
-            html2canvas: { scale: 2, useCORS: true, logging: false },
-            jsPDF: { unit: "mm", format: "a4", orientation: "portrait", compress: true },
+            image: { type: "jpeg", quality: 0.95 },
+            html2canvas: { 
+              scale: 1.5, 
+              useCORS: true, 
+              logging: false,
+              windowWidth: 1120
+            },
+            jsPDF: { unit: "mm", format: "a4", orientation: "landscape", compress: false },
             pagebreak: { mode: ["css", "legacy"] },
           };
 
           if (action === "download") {
-            await html2pdf().set(pdfOptions).from(htmlString).save();
+            await html2pdf().set(pdfOptions).from(container).save();
+            document.body.removeChild(wrapper);
             if (toastId) toast.dismiss(toastId);
             toast.success(pdfLang === "mr" ? "PDF डाउनलोड झाली!" : "PDF downloaded!");
           } else if (action === "view") {
-            html2pdf().set(pdfOptions).from(htmlString).output('bloburl').then((url: any) => {
+            html2pdf().set(pdfOptions).from(container).output('bloburl').then((url: any) => {
               setPreviewPdfUrl(url);
+              document.body.removeChild(wrapper);
               if (toastId) toast.dismiss(toastId);
             }).catch((err: any) => {
               console.error("PDF View Error:", err);
+              if (document.body.contains(wrapper)) document.body.removeChild(wrapper);
               if (toastId) toast.dismiss(toastId);
               toast.error(pdfLang === "mr" ? "PDF उघडताना त्रुटी आली." : "Error opening PDF.");
             });
@@ -6819,49 +6978,52 @@ function TeacherSqaafPage() {
           return;
         }
 
-        // For responses, we must append to DOM to inherit Tailwind CSS
-        // container is already declared at line 6519
+        // For responses, we also use an off-screen DOM wrapper approach.
+        const wrapper = document.createElement("div");
+        wrapper.style.position = "fixed";
+        wrapper.style.top = "0";
+        wrapper.style.left = "-9999px";
+        wrapper.style.width = "1040px";
+        wrapper.style.height = "0";
+        wrapper.style.overflow = "hidden";
+
         container.innerHTML = finalHtml;
-        container.style.width = "1122px"; // Landscape
-        container.style.padding = "20px";
+        container.style.position = "static";
+        container.style.width = "1040px";
+        container.style.padding = "12px 15px";
         container.style.boxSizing = "border-box";
         container.style.backgroundColor = "white";
         
-        const originalOverflowX = document.body.style.overflowX;
-        document.body.style.overflowX = "visible";
-        
-        document.body.appendChild(container);
+        wrapper.appendChild(container);
+        document.body.appendChild(wrapper);
 
         const pdfOptions = {
-          margin: [10, 10, 10, 10],
+          margin: [8, 8, 8, 8],
           filename: `SQAAF_Responses_${schoolName.replace(/\s+/g, "_") || "School"}_${new Date().toISOString().slice(0, 10)}.pdf`,
-          image: { type: "jpeg", quality: 1.0 },
+          image: { type: "jpeg", quality: 0.95 },
           html2canvas: { 
-            scale: 2, 
+            scale: 1.5, 
             useCORS: true, 
             logging: false,
-            windowWidth: 1200
+            windowWidth: 1120
           },
-          jsPDF: { unit: "mm", format: "a4", orientation: "landscape", compress: true },
+          jsPDF: { unit: "mm", format: "a4", orientation: "landscape", compress: false },
           pagebreak: { mode: ["css", "legacy"] },
         };
 
         if (action === "download") {
           await html2pdf().set(pdfOptions).from(container).save();
-          document.body.removeChild(container);
-          document.body.style.overflowX = originalOverflowX;
+          document.body.removeChild(wrapper);
           if (toastId) toast.dismiss(toastId);
           toast.success(pdfLang === "mr" ? "PDF डाउनलोड झाली!" : "PDF downloaded!");
         } else {
           html2pdf().set(pdfOptions).from(container).output('bloburl').then((url: any) => {
             setPreviewPdfUrl(url);
-            document.body.removeChild(container);
-            document.body.style.overflowX = originalOverflowX;
+            document.body.removeChild(wrapper);
             if (toastId) toast.dismiss(toastId);
           }).catch((err: any) => {
             console.error("PDF View Error:", err);
-            if (document.body.contains(container)) document.body.removeChild(container);
-            document.body.style.overflowX = originalOverflowX;
+            if (document.body.contains(wrapper)) document.body.removeChild(wrapper);
             if (toastId) toast.dismiss(toastId);
             toast.error(pdfLang === "mr" ? "PDF उघडताना त्रुटी आली." : "Error opening PDF.");
           });
@@ -6960,14 +7122,14 @@ function TeacherSqaafPage() {
           <path d="M 200,0 L 200,90 C 185,75 160,50 130,35 C 100,20 70,10 30,0 Z" fill="url(#gold-grad-print)" opacity="0.5" />
           <path d="M 200,0 L 200,60 C 190,50 170,30 145,20 C 120,10 90,5 50,0 Z" fill="url(#gold-grad-print)" opacity="0.8" />
         </svg>
-
+ 
         <svg style="position: absolute; bottom: 0; left: 0; width: 350px; height: 350px; pointer-events: none;" viewBox="0 0 200 200" preserveAspectRatio="none">
           <path d="M 0,200 L 0,50 C 20,80 50,120 80,140 C 110,160 150,180 200,200 Z" fill="url(#gold-grad-print)" opacity="0.15" />
           <path d="M 0,200 L 0,80 C 30,100 55,140 85,155 C 115,170 145,185 185,200 Z" fill="url(#gold-grad-print)" opacity="0.3" />
           <path d="M 0,200 L 0,110 C 15,125 40,150 70,165 C 100,180 130,190 170,200 Z" fill="url(#gold-grad-print)" opacity="0.5" />
           <path d="M 0,200 L 0,140 C 10,150 30,170 55,180 C 80,190 110,195 150,200 Z" fill="url(#gold-grad-print)" opacity="0.8" />
         </svg>
-
+ 
         <!-- Content -->
         <div style="position: relative; z-index: 10; display: flex; flex-direction: column; align-items: center; text-align: center; width: 100%; max-width: 600px;">
           <h1 style="color: #1e3b8b; font-family: 'Georgia', serif; font-weight: 900; font-size: 26px; line-height: 1.4; text-transform: uppercase; margin: 0; letter-spacing: 0.5px;">
@@ -6975,29 +7137,27 @@ function TeacherSqaafPage() {
           </h1>
           
           <div style="height: 2px; width: 120px; background-color: #bf953f; margin: 25px 0;"></div>
-
+ 
           <h2 style="color: #0e7490; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 900; font-size: 14px; tracking: 0.25em; text-transform: uppercase; margin: 0 0 50px 0; letter-spacing: 2.5px;">
             ${title}
           </h2>
-
+ 
           <p style="color: #64748b; font-family: 'Georgia', serif; font-style: italic; font-size: 18px; margin: 0 0 20px 0;">
             ${certifyText}
           </p>
-
-          <h3 style="color: #0f172a; font-family: 'Georgia', serif; font-weight: 800; font-size: 24px; text-transform: uppercase; border-bottom: 2px solid #cbd5e1; padding-bottom: 5px; margin: 0 0 10px 0; display: inline-block; width: 90%; letter-spacing: 0.5px;">
+ 
+          <h3 style="color: #0f172a; font-family: 'Georgia', serif; font-weight: 800; font-size: 24px; text-transform: uppercase; border-bottom: 2px solid #cbd5e1; padding-bottom: 5px; margin: 0 0 15px 0; display: inline-block; width: 90%; letter-spacing: 0.5px;">
             ${schoolName}
           </h3>
-
-          <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 45px; color: #334155; font-family: 'Georgia', serif; font-weight: bold; font-size: 19px;">
-            <span style="color: #bf953f;">—</span>
-            <span style="letter-spacing: 3px;">${udise}</span>
-            <span style="color: #bf953f;">—</span>
+ 
+          <div style="color: #334155; font-family: 'Georgia', serif; font-weight: bold; font-size: 19px; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; margin-bottom: 45px; display: inline-block; width: 60%; letter-spacing: 3px; text-align: center;">
+            ${udise}
           </div>
-
+ 
           <p style="color: #334155; font-family: 'Georgia', serif; font-size: 16px; line-height: 1.6; max-width: 520px; margin: 0 0 70px 0;">
             ${description}
           </p>
-
+ 
           <div style="margin-top: 20px;">
             <p style="color: #1e3b8b; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: 900; font-size: 13px; text-transform: uppercase; margin: 0 0 5px 0; letter-spacing: 1px;">
               ${sigHeader}
@@ -7009,32 +7169,23 @@ function TeacherSqaafPage() {
         </div>
       </div>
     `;
-
+ 
     printContainer.innerHTML = html;
-
-    const { default: printJS } = await import("print-js");
-    printJS({
-      printable: printContainer.innerHTML,
-      type: 'raw-html',
-      style: `
-        @media print {
-          @page {
-            size: portrait;
-            margin: 0;
-          }
-          body {
-            margin: 0;
-            padding: 0;
-            background-color: #fff;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-          * {
-            box-sizing: border-box;
-          }
-        }
-      `
-    });
+ 
+    const html2pdf = (await import("html2pdf.js")).default;
+    const pdfOptions = {
+      margin: [0, 0, 0, 0],
+      filename: `SQAAF_Certificate_${schoolName.replace(/\s+/g, "_") || "School"}.pdf`,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { 
+        scale: 2, 
+        useCORS: true, 
+        logging: false,
+      },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait", compress: false },
+    };
+    
+    await html2pdf().set(pdfOptions).from(printContainer).save();
   };
 
   const standards = Array.from({ length: 128 }, (_, i) => i + 1);
@@ -7517,18 +7668,6 @@ function TeacherSqaafPage() {
                       <div>
                         <div className="flex justify-between items-center mb-4">
                           <h4 className="text-[16px] font-bold text-slate-900">{t.viewSub}</h4>
-                          <div
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleCard1();
-                            }}
-                            className={`size-6 border-2 rounded flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 transition-transform ${card1Checked
-                              ? "border-slate-900 bg-slate-900 text-white"
-                              : "border-slate-400 bg-white text-transparent"
-                              }`}
-                          >
-                            {card1Checked && <CheckCircle2 className="size-4" />}
-                          </div>
                         </div>
                         <hr className="border-slate-900/40 mb-4" />
                         <p className="text-[14px] text-slate-700 mb-6">{t.viewDesc}</p>
@@ -7550,9 +7689,6 @@ function TeacherSqaafPage() {
                           <h4 className="text-[16px] font-bold text-slate-900">
                             {selectedLang === "mr" ? "स्वयं मूल्यांकन व बाह्य मूल्यांकन अहवाल" : "Self & External Evaluation Report"}
                           </h4>
-                          <div className="size-6 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center shrink-0">
-                            <FileText className="size-4" />
-                          </div>
                         </div>
                         <hr className="border-slate-900/40 mb-4" />
                         <p className="text-[14px] text-slate-700 mb-6">
@@ -7586,9 +7722,6 @@ function TeacherSqaafPage() {
                           <h4 className="text-[16px] font-bold text-slate-900">
                             {selectedLang === "mr" ? "शाळा प्रतिसाद अहवाल" : "School Responses Report"}
                           </h4>
-                          <div className="size-6 bg-amber-50 text-amber-600 rounded-lg flex items-center justify-center shrink-0">
-                            <FileText className="size-4" />
-                          </div>
                         </div>
                         <hr className="border-slate-900/40 mb-4" />
                         <p className="text-[14px] text-slate-700 mb-6">
@@ -7647,6 +7780,39 @@ function TeacherSqaafPage() {
                         >
                           <Download className="size-4" />
                           <span>{selectedLang === "mr" ? "डाऊनलोड करा" : "Download PDF"}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Card 5: Certificate Download */}
+                    <div className="bg-white border border-slate-900 rounded-[1.5rem] p-6 w-full relative shadow-sm flex flex-col justify-between h-full">
+                      <div>
+                        <div className="flex justify-between items-center mb-4">
+                          <h4 className="text-[16px] font-bold text-slate-900">
+                            {selectedLang === "mr" ? "प्रमाणपत्र डाऊनलोड करा" : "Download Certificate"}
+                          </h4>
+                        </div>
+                        <hr className="border-slate-900/40 mb-4" />
+                        <p className="text-[14px] text-slate-700 mb-6">
+                          {selectedLang === "mr"
+                            ? "तुमचे प्रमाणपत्र डाऊनलोड करा."
+                            : "Download your certificate."}
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 mt-auto">
+                        <button
+                          onClick={() => setView("certificate")}
+                          className="py-3 px-4 bg-[#1e1b4b] text-white rounded-3xl text-[13px] font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                        >
+                          <Eye className="size-4" />
+                          <span>{selectedLang === "mr" ? "पहा" : "View"}</span>
+                        </button>
+                        <button
+                          onClick={handleSavePdf}
+                          className="py-3 px-4 bg-[#1e1b4b] text-white rounded-3xl text-[13px] font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                        >
+                          <Download className="size-4" />
+                          <span>{selectedLang === "mr" ? "डाऊनलोड करा" : "Download"}</span>
                         </button>
                       </div>
                     </div>
@@ -8324,10 +8490,8 @@ function TeacherSqaafPage() {
                           </div>
                         </div>
                       ) : (
-                        <div className="flex items-center justify-center gap-1.5 text-slate-700 font-serif font-bold text-sm sm:text-base">
-                          <span className="text-[#bf953f] text-lg">—</span>
-                          <span className="tracking-widest">{certUdise}</span>
-                          <span className="text-[#bf953f] text-lg">—</span>
+                        <div className="text-slate-700 font-serif font-bold text-xs sm:text-sm md:text-base border-b border-slate-300 pb-1 px-4 min-w-[50%] tracking-widest text-center mt-2">
+                          {certUdise}
                         </div>
                       )}
 
