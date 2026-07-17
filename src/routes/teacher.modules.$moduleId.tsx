@@ -69,6 +69,7 @@ import html2pdf from "html2pdf.js";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import { TeacherStatisticsEditor } from "@/components/teacher/TeacherStatisticsEditor";
+import { MonthlyParipathRegister } from "@/components/teacher/MonthlyParipathRegister";
 import { PinGate } from "@/components/teacher/PinGate";
 import class1SyllabusData from "./class1_syllabus.json";
 import { DEFAULT_FORM_DATA, ASSEMBLY_TRANSLATIONS, DEFAULT_ASSEMBLY_ITEMS } from "@/lib/assemblyTranslations";
@@ -1745,26 +1746,83 @@ function AssemblyBookViewer() {
    DailyAssemblyContent — Full Paripath / परीपाठ Structured View
    ═══════════════════════════════════════════════════════════════ */
 function DailyAssemblyContent() {
+  const [assemblyMode, setAssemblyMode] = useState<"daily" | "monthly">("daily");
   const [lang, setLang] = useState<"mr" | "en" | "hi">("mr");
+
+  const getLocalDateString = (d = new Date()): string => {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
+
+  const [selectedDate, setSelectedDate] = useState<string>(() => getLocalDateString());
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const [dbFormData, setDbFormData] = useState<any>(null);
 
   useEffect(() => {
-    const docRef = doc(db, "admin_daily_paripath", "current");
-    const unsubscribe = onSnapshot(docRef, (docSnap) => {
-      if (docSnap.exists()) {
-        setDbFormData(docSnap.data());
-      }
-    }, (err) => {
-      console.error("Error fetching live paripath data:", err);
-    });
+    const todayLocalStr = getLocalDateString();
 
-    return () => unsubscribe();
-  }, []);
+    const archiveRef = doc(db, "daily_paripath_archive", selectedDate);
+    const unsubscribeArchive = onSnapshot(
+      archiveRef,
+      async (docSnap) => {
+        if (docSnap.exists()) {
+          setDbFormData(docSnap.data());
+        } else if (selectedDate === todayLocalStr) {
+          const currentRef = doc(db, "admin_daily_paripath", "current");
+          const currentSnap = await getDoc(currentRef);
+          if (currentSnap.exists()) {
+            setDbFormData(currentSnap.data());
+          } else {
+            setDbFormData(null);
+          }
+        } else {
+          setDbFormData(null);
+        }
+      },
+      (err) => {
+        console.error("Error fetching date paripath data:", err);
+      }
+    );
+
+    return () => unsubscribeArchive();
+  }, [selectedDate]);
+
+  const MARATHI_DAYS_LIST = ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
+  const MARATHI_MONTHS_LIST = ["जानेवारी", "फेब्रुवारी", "मार्च", "एप्रिल", "मे", "जून", "जुलै", "ऑगस्ट", "सप्टेंबर", "ऑक्टोबर", "नोव्हेंबर", "डिसेंबर"];
+
+  const toDevanagariDigits = (str: string | number): string => {
+    const devanagariDigits = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
+    return String(str).replace(/[0-9]/g, (w) => devanagariDigits[parseInt(w, 10)]);
+  };
+
+  const getDynamicFormDataForDate = (dateStr: string, currentLang: "mr" | "en" | "hi") => {
+    const baseData = dbFormData || DEFAULT_FORM_DATA[currentLang];
+    
+    const parts = dateStr.split("-").map(Number);
+    if (parts.length !== 3 || isNaN(parts[0])) return baseData;
+    const [y, m, d] = parts;
+    const dateObj = new Date(y, m - 1, d);
+
+    const dayName = MARATHI_DAYS_LIST[dateObj.getDay()];
+    const monthName = MARATHI_MONTHS_LIST[dateObj.getMonth()];
+    const formattedDayNum = String(d).padStart(2, "0");
+    const dateMonthStr = `${toDevanagariDigits(formattedDayNum)} ${monthName}`;
+
+    const startOfYear = new Date(y, 0, 0);
+    const diff = dateObj.getTime() - startOfYear.getTime();
+    const oneDay = 1000 * 60 * 60 * 24;
+    const dayOfYear = Math.floor(diff / oneDay);
+    const yearDayStr = toDevanagariDigits(dayOfYear);
+
+    return {
+      ...baseData,
+      day: dbFormData?.day || dayName,
+      dateMonth: dbFormData?.dateMonth || dateMonthStr,
+      yearDay: dbFormData?.yearDay || yearDayStr,
+    };
+  };
 
   const t = ASSEMBLY_TRANSLATIONS[lang];
-  // Use DB data for Marathi if available, else fallback to defaults
-  const formData = (lang === "mr" && dbFormData) ? dbFormData : DEFAULT_FORM_DATA[lang];
+  const formData = getDynamicFormDataForDate(selectedDate, lang);
   const assemblyItems = DEFAULT_ASSEMBLY_ITEMS[lang];
 
   const toggleSection = (id: string) => {
@@ -1772,6 +1830,13 @@ function DailyAssemblyContent() {
   };
 
   const handleDownloadPdf = async () => {
+    // If a pre-generated Bunny PDF exists for this assembly, use it!
+    if (formData.bunnyPdfUrl) {
+      toast.success("Downloading pre-generated PDF from Bunny Storage... ☁️");
+      window.open(formData.bunnyPdfUrl, "_blank");
+      return;
+    }
+
     const element = document.getElementById("daily-assembly-content");
     if (!element) {
       toast.error("Could not find the assembly content to download.");
@@ -1794,7 +1859,7 @@ function DailyAssemblyContent() {
       }
 
       const opt = {
-        margin: [10, 10, 10, 10],
+        margin: [10, 15, 10, 15],
         filename: `Paripath_${new Date().toISOString().split("T")[0]}.pdf`,
         image: { type: "jpeg", quality: 0.98 },
         html2canvas: {
@@ -1811,21 +1876,20 @@ function DailyAssemblyContent() {
             if (container) {
               container.style.width = "794px";
               container.style.margin = "0 auto";
-              container.style.padding = "16px";
+              container.style.padding = "0px";
               container.style.background = "#FFFFFF";
               container.style.borderRadius = "0";
               container.style.overflow = "visible";
             }
 
-            // Remove ALL problematic CSS effects
+            // Remove ALL problematic CSS effects except pdf-page-break
             const elements = clonedDoc.querySelectorAll("*");
             elements.forEach((el: any) => {
               if (el.classList) {
                 const classesToRemove = Array.from(el.classList).filter((c: any) =>
                   c.includes("blur") || c.includes("drop-shadow") || c.includes("mix-blend") ||
                   c.includes("backdrop") || c.includes("hover:") || c.includes("group-hover") ||
-                  c.includes("transition") || c.includes("animate") || c.includes("scale") ||
-                  c.includes("pdf-page-break")
+                  c.includes("transition") || c.includes("animate") || c.includes("scale")
                 );
                 classesToRemove.forEach((c: any) => el.classList.remove(c));
               }
@@ -1847,6 +1911,45 @@ function DailyAssemblyContent() {
               }
             });
 
+            // Dynamically scale font size based on text length of the entire card content
+            const cards = clonedDoc.querySelectorAll(".assembly-section-card");
+            cards.forEach((card: any) => {
+              const contentEl = card.children[1];
+              if (contentEl) {
+                const text = contentEl.textContent || "";
+                const charCount = text.trim().length;
+                
+                let fontSize = "16.5px";
+                let lineHeight = "1.6";
+                
+                if (charCount > 1500) {
+                  fontSize = "10px";
+                  lineHeight = "1.25";
+                } else if (charCount > 1000) {
+                  fontSize = "11px";
+                  lineHeight = "1.3";
+                } else if (charCount > 700) {
+                  fontSize = "12px";
+                  lineHeight = "1.35";
+                } else if (charCount > 400) {
+                  fontSize = "13.5px";
+                  lineHeight = "1.4";
+                } else if (charCount > 200) {
+                  fontSize = "15px";
+                  lineHeight = "1.5";
+                }
+                
+                contentEl.style.fontSize = fontSize;
+                contentEl.style.lineHeight = lineHeight;
+                
+                const allTexts = contentEl.querySelectorAll("p, span, td, div, label, li");
+                allTexts.forEach((tNode: any) => {
+                  tNode.style.fontSize = fontSize;
+                  tNode.style.lineHeight = lineHeight;
+                });
+              }
+            });
+
             // Inject clean print styles
             const style = clonedDoc.createElement('style');
             style.innerHTML = `
@@ -1854,15 +1957,239 @@ function DailyAssemblyContent() {
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
                 font-family: 'Noto Sans Devanagari', 'Mukta', 'Hind', sans-serif !important;
+                box-sizing: border-box !important;
               }
-              [class*="bg-white/"] {
-                background-color: #FFFFFF !important;
+              body {
+                background-color: #ffffff !important;
+                margin: 0 !important;
+                padding: 0 !important;
+              }
+              #daily-assembly-content {
+                width: 794px !important;
+                max-width: 794px !important;
+                margin: 0 auto !important;
+                padding: 0 !important;
+                background: #ffffff !important;
+                border-radius: 0 !important;
+                overflow: visible !important;
+                box-shadow: none !important;
+              }
+              
+              /* Force proper word wrapping and flex containment to prevent right-side text cutoff */
+              .assembly-section-card * {
+                max-width: 100% !important;
+                min-width: 0 !important;
+                box-sizing: border-box !important;
+              }
+              
+              .assembly-section-card p,
+              .assembly-section-card span,
+              .assembly-section-card div,
+              .assembly-section-card td,
+              .assembly-section-card th,
+              .assembly-section-card label,
+              .assembly-section-card li {
+                white-space: normal !important;
+                word-wrap: break-word !important;
+                overflow-wrap: break-word !important;
+                word-break: break-word !important;
+                overflow: visible !important;
+              }
+              
+              /* Each section card represents exactly one A4 page */
+              .assembly-section-card {
+                width: 100% !important;
+                max-width: 100% !important;
+                height: 275mm !important;
+                max-height: 275mm !important;
+                min-height: 275mm !important;
+                page-break-after: always !important;
+                break-after: page !important;
+                margin: 0 !important;
+                padding: 30px 45px !important; /* Increased left/right padding to 45px */
+                background: #ffffff !important;
+                border: none !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: flex-start !important;
+                align-items: stretch !important;
+                position: relative !important;
+                overflow: hidden !important;
+                gap: 12px !important; /* Minimal gap between heading and content */
+              }
+              
+              /* Reset margins of direct child divs inside card to control spacing via gap */
+              .assembly-section-card > div {
+                margin-top: 0 !important;
+                margin-bottom: 0 !important;
+              }
+              
+              /* Professional Green Title Bar for Headings */
+              .assembly-section-card h3,
+              .assembly-section-card label {
+                display: block !important;
+                width: 100% !important;
+                background-color: #2e7d32 !important; /* Professional Dark Green */
+                color: #ffffff !important;
+                font-size: 20px !important;
+                font-weight: 800 !important;
+                text-align: center !important;
+                padding: 10px 16px !important; /* Slightly more compact padding */
+                border-radius: 8px !important;
+                border: none !important;
+                box-shadow: none !important;
+                margin: 0 !important; /* Rely on gap instead of margin-bottom */
+                font-family: 'Noto Sans Devanagari', sans-serif !important;
+                letter-spacing: 1px !important;
+                text-transform: uppercase !important;
+              }
+              
+              /* Hide icons/emojis in headings for professional look */
+              .assembly-section-card h3 span,
+              .assembly-section-card h3 svg {
+                display: none !important;
+              }
+              
+              /* Style clean content text */
+              .assembly-section-card p,
+              .assembly-section-card span,
+              .assembly-section-card div {
+                font-family: 'Noto Sans Devanagari', sans-serif !important;
+              }
+              
+              /* Reset outer wrappers of elements inside the cards */
+              .assembly-section-card > div:last-child {
+                width: 100% !important;
+                flex: 1 !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: center !important;
+                align-items: stretch !important;
+                text-align: center !important;
+                margin: 0 !important;
+                padding: 0 !important;
+              }
+
+              /* Specific section resets */
+              #panchang .grid {
+                display: grid !important;
+                grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+                gap: 12px !important;
+                width: 100% !important;
+                margin: auto 0 !important;
+              }
+              #panchang .grid > div {
+                padding: 14px 10px !important;
+                background: #f8fafc !important;
+                border: 1px solid #e2e8f0 !important;
+                border-radius: 12px !important;
+                box-shadow: none !important;
+                transform: none !important;
+              }
+              #panchang .grid > div .size-12 {
+                display: none !important;
+              }
+
+              #thought .p-10 {
+                padding: 35px !important;
+                background: #f8fafc !important;
+                border: 1px solid #e2e8f0 !important;
+                border-radius: 16px !important;
+                box-shadow: none !important;
+                width: 100% !important;
+                margin: auto 0 !important;
+              }
+
+              #proverb .space-y-6 {
+                width: 100% !important;
+                margin: auto 0 !important;
+              }
+              #proverb .p-8 {
+                padding: 24px !important;
+                background: #f8fafc !important;
+                border: 1px solid #e2e8f0 !important;
+                border-radius: 16px !important;
+                box-shadow: none !important;
+              }
+              #proverb .p-8:last-child {
+                margin-top: 15px !important;
+                background: #ffffff !important;
+              }
+
+              #events .space-y-6 {
+                width: 100% !important;
+                margin: 0 !important;
+              }
+              #events .divide-y {
+                width: 100% !important;
+              }
+              #events .divide-y > div {
+                padding: 10px 0 !important;
+                border-bottom: 1px solid #f1f5f9 !important;
+              }
+
+              #song .space-y-6 {
+                width: 100% !important;
+                margin: 0 !important;
+              }
+              #song .p-8 {
+                padding: 24px !important;
+                background: #f8fafc !important;
+                border: 1px solid #e2e8f0 !important;
+                border-radius: 16px !important;
+                box-shadow: none !important;
+                margin-top: 15px !important;
+              }
+
+              #story .space-y-6 {
+                width: 100% !important;
+                margin: 0 !important;
+              }
+              #story .p-8 {
+                padding: 24px !important;
+                background: #f8fafc !important;
+                border: 1px solid #e2e8f0 !important;
+                border-radius: 16px !important;
+                box-shadow: none !important;
+              }
+              #story .p-8:last-child {
+                margin-top: 15px !important;
+                background: #f0fdf4 !important;
+                border: 1px solid #bbf7d0 !important;
+              }
+
+              #gk .grid {
+                display: grid !important;
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                gap: 14px !important;
+                width: 100% !important;
+                margin: auto 0 !important;
+              }
+              #gk .grid > div {
+                padding: 16px !important;
+                background: #f8fafc !important;
+                border: 1px solid #e2e8f0 !important;
+                border-radius: 16px !important;
+                box-shadow: none !important;
+              }
+              #gk .grid > div .size-14 {
+                display: none !important;
+              }
+
+              #personality .p-8 {
+                padding: 24px !important;
+                background: #f8fafc !important;
+                border: 1px solid #e2e8f0 !important;
+                border-radius: 16px !important;
+                box-shadow: none !important;
               }
             `;
             clonedDoc.head.appendChild(style);
           }
         },
-        pagebreak: { mode: 'avoid-all' },
+        pagebreak: { mode: ["css", "legacy"] },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
       };
 
@@ -1913,7 +2240,7 @@ function DailyAssemblyContent() {
     return (
       <div
         id={id}
-        className={`space-y-8 p-8 md:p-12 bg-gradient-to-br ${gradient || 'from-slate-50/80 to-slate-100/50 border-slate-200/60'} border rounded-[3rem] shadow-sm pdf-page-break mb-8 relative overflow-hidden`}
+        className={`assembly-section-card space-y-8 p-8 md:p-12 bg-gradient-to-br ${gradient || 'from-slate-50/80 to-slate-100/50 border-slate-200/60'} border rounded-[3rem] shadow-sm pdf-page-break mb-8 relative overflow-hidden`}
       >
         <div className="flex justify-center relative z-10">
           <h3 className="text-xl md:text-2xl font-black text-slate-800 inline-flex items-center justify-center gap-3 px-8 py-4 bg-white/90 backdrop-blur-md rounded-full shadow-sm border border-slate-200/60 uppercase tracking-widest">
@@ -1930,350 +2257,414 @@ function DailyAssemblyContent() {
   return (
     <div
       id="daily-assembly-content"
-      className="p-6 md:p-10 space-y-12 relative rounded-[3rem] overflow-hidden bg-[#F8FAFF]"
+      className="p-6 md:p-10 space-y-8 relative rounded-[3rem] overflow-hidden bg-[#F8FAFF]"
     >
-      {/* Header with Language Toggle */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-8 bg-slate-900 rounded-[3rem] shadow-xl border border-slate-800 relative overflow-hidden">
-        <div className="flex items-center gap-5 relative z-10">
-          <div>
-            <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight drop-shadow-md">
-              {lang === "mr" ? "दैनिक परीपाठ" : lang === "hi" ? "दैनिक प्रार्थना सभा" : "Daily Assembly"}
-            </h2>
-            <p className="text-xs font-black text-indigo-200 uppercase tracking-[0.3em] mt-1.5 opacity-80">
-              {lang === "mr" ? "आजचा परिपाठ" : lang === "hi" ? "आज की सभा" : "Today's Assembly"}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 relative z-10 pdf-hide">
-          <div className="flex bg-white/5 p-2 rounded-2xl border border-white/10 backdrop-blur-xl">
-            {(["mr", "en", "hi"] as const).map((l) => (
-              <button
-                key={l}
-                onClick={() => setLang(l)}
-                className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-[0.15em] transition-all duration-300 ${lang === l
-                    ? "bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-lg shadow-indigo-500/25 border border-white/20 scale-105"
-                    : "text-white/50 hover:text-white hover:bg-white/5"
-                  }`}
-              >
-                {l === "mr" ? "मराठी" : l === "hi" ? "हिंदी" : "English"}
-              </button>
-            ))}
-          </div>
+      <style>{`
+        @media print {
+          header, aside, footer, .pdf-hide, button, [role="navigation"] {
+            display: none !important;
+          }
+          #daily-assembly-content {
+            padding: 0 !important;
+            margin: 0 !important;
+            background: white !important;
+          }
+        }
+      `}</style>
+
+      {/* Mode Switcher: Daily Assembly vs Monthly Assembly Register */}
+      <div className="flex justify-center p-3 bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-800 pdf-hide">
+        <div className="flex p-1.5 bg-slate-800/80 rounded-2xl border border-slate-700/60 w-full max-w-2xl">
           <button
-            onClick={handleDownloadPdf}
-            title="Download PDF"
-            className="flex items-center justify-center p-3 rounded-2xl bg-indigo-500/20 text-indigo-200 hover:bg-indigo-500/40 hover:text-white transition-all border border-indigo-500/30 backdrop-blur-xl shadow-lg"
+            onClick={() => setAssemblyMode("daily")}
+            className={`flex-1 py-3 px-6 rounded-xl font-black text-xs md:text-sm tracking-wider uppercase transition-all duration-300 flex items-center justify-center gap-2.5 ${
+              assemblyMode === "daily"
+                ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/25 scale-[1.02]"
+                : "text-slate-400 hover:text-white hover:bg-slate-700/50"
+            }`}
           >
-            <Download className="size-6" />
+            <BookMarked className="size-4" />
+            {lang === "en" ? "Daily Assembly" : "दैनिक परिपाठ"}
+          </button>
+
+          <button
+            onClick={() => setAssemblyMode("monthly")}
+            className={`flex-1 py-3 px-6 rounded-xl font-black text-xs md:text-sm tracking-wider uppercase transition-all duration-300 flex items-center justify-center gap-2.5 ${
+              assemblyMode === "monthly"
+                ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-500/25 scale-[1.02]"
+                : "text-slate-400 hover:text-white hover:bg-slate-700/50"
+            }`}
+          >
+            <Table className="size-4" />
+            {lang === "en" ? "Monthly Assembly" : "मासिक परिपाठ (रजिस्टर)"}
           </button>
         </div>
       </div>
 
-      {/* Assembly Start Items (Anthem, State Song, Pledge, Preamble, Prayer) */}
-      <div className="flex justify-center mb-4">
-        <h4 className="text-xl md:text-2xl font-black text-green-800 inline-flex items-center justify-center gap-3 px-8 py-4 bg-green-50 rounded-full shadow-sm border border-green-100 uppercase tracking-widest">
-          {t.assemblyStart}
-        </h4>
-      </div>
-
-      {[
-        { key: 'nationalAnthem', fallbackIdx: 0 },
-        { key: 'stateAnthem', fallbackIdx: 1 },
-        { key: 'pledge', fallbackIdx: 2 },
-        { key: 'preamble', fallbackIdx: 3 },
-        { key: 'prayer', fallbackIdx: 4 },
-      ].map((itemDef, idx) => {
-        const fallbackItem = assemblyItems[itemDef.fallbackIdx];
-        const content = formData[itemDef.key] || fallbackItem.content;
-
-        return (
-          <div key={idx} className={`bg-white p-6 md:p-10 rounded-[2.5rem] border border-green-100 shadow-md text-center mb-6 ${idx > 0 ? 'pdf-page-break' : ''}`}>
-            <div className="flex justify-center mb-6">
-              <label className="inline-flex items-center justify-center gap-2 px-6 py-2 bg-green-50 text-green-700 rounded-full text-sm font-black uppercase tracking-widest border border-green-100">
-                {fallbackItem.label}
-              </label>
+      {assemblyMode === "monthly" ? (
+        <MonthlyParipathRegister />
+      ) : (
+        <>
+          {/* Header with Language Toggle */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-8 bg-slate-900 rounded-[3rem] shadow-xl border border-slate-800 relative overflow-hidden pdf-hide">
+            <div className="flex items-center gap-5 relative z-10">
+              <div>
+                <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight drop-shadow-md">
+                  दैनिक परिपाठ
+                </h2>
+                <p className="text-xs font-black text-indigo-200 uppercase tracking-[0.3em] mt-1.5 opacity-80">
+                  आजचा परिपाठ
+                </p>
+              </div>
             </div>
-            <div className="text-lg md:text-2xl text-slate-900 font-extrabold leading-loose font-sans text-center">
-              {content.split('\n').map((line: string, i: number) => (
-                <React.Fragment key={i}>
-                  {line}
-                  <br />
-                </React.Fragment>
-              ))}
+            <div className="flex items-center gap-3 relative z-10 pdf-hide">
+              <div className="flex items-center gap-2.5 bg-white/5 px-4 py-2.5 rounded-2xl border border-white/10 text-white shadow-inner">
+                <Calendar className="size-4 text-indigo-300" />
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="bg-transparent border-none text-xs font-black outline-none cursor-pointer text-indigo-200"
+                />
+              </div>
+              <button
+                onClick={handleDownloadPdf}
+                title="Download PDF"
+                className="flex items-center justify-center p-3 rounded-2xl bg-indigo-500/20 text-indigo-200 hover:bg-indigo-500/40 hover:text-white transition-all border border-indigo-500/30 backdrop-blur-xl shadow-lg"
+              >
+                <Download className="size-6" />
+              </button>
             </div>
           </div>
-        );
-      })}
 
-      {/* Panchang */}
-      <SectionCard
-        id="panchang"
-        emoji="🪀"
-        title={t.panchang}
-        icon={Calendar}
-        gradient="from-amber-100/80 via-orange-50/60 to-yellow-100/80"
-      >
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+          {!dbFormData ? (
+            <div className="bg-amber-50/80 border-2 border-dashed border-amber-200 p-10 md:p-14 rounded-[3rem] text-center space-y-4 shadow-sm my-6 pdf-hide">
+              <div className="size-16 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto text-amber-600 shadow-inner">
+                <Calendar className="size-8" />
+              </div>
+              <h3 className="text-xl md:text-2xl font-black text-amber-900">
+                दिनांक {formData.dateMonth} ({formData.day}) साठी परिपाठ उपलब्ध नाही
+              </h3>
+              <p className="text-slate-600 text-sm max-w-md mx-auto font-medium">
+                या दिनांकाचा परिपाठ सुपर ॲडमिन कडून अजून अपलोड केलेला नाही. कृपया कॅलेंडरमधून इतर दिनांक निवडा किंवा ॲडमिन कडून अपडेट होण्याची वाट पहा.
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Assembly Start Items (Anthem, State Song, Pledge, Preamble, Prayer) */}
+              <div className="flex justify-center mb-4 pdf-hide">
+                <h4 className="text-xl md:text-2xl font-black text-green-800 inline-flex items-center justify-center gap-3 px-8 py-4 bg-green-50 rounded-full shadow-sm border border-green-100 uppercase tracking-widest">
+                  {t.assemblyStart}
+                </h4>
+              </div>
+
           {[
-            { label: t.day, value: formData.day, icon: Calendar, color: "text-amber-500", bg: "bg-amber-50", border: "border-amber-100" },
-            { label: t.month, value: formData.month, icon: Clock, color: "text-orange-500", bg: "bg-orange-50", border: "border-orange-100" },
-            { label: t.paksha, value: formData.paksha, icon: Star, color: "text-yellow-500", bg: "bg-yellow-50", border: "border-yellow-100" },
-            { label: t.tithi, value: formData.tithi, icon: Star, color: "text-red-400", bg: "bg-red-50", border: "border-red-100" },
-            { label: t.nakshatra, value: formData.nakshatra, icon: Sparkles, color: "text-rose-500", bg: "bg-rose-50", border: "border-rose-100" },
-            { label: t.yog, value: formData.yog, icon: Sparkles, color: "text-pink-500", bg: "bg-pink-50", border: "border-pink-100" },
-            { label: t.sunrise, value: formData.sunrise, icon: Sunrise, color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-100" },
-            { label: t.sunset, value: formData.sunset, icon: Sunset, color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-100" },
-          ].map((item, i) => (
-            <div
-              key={i}
-              className={`p-6 bg-white/80 backdrop-blur-xl border border-white rounded-[2rem] text-center shadow-xl shadow-amber-900/5 hover:scale-105 hover:shadow-2xl hover:shadow-amber-900/10 transition-all duration-300 relative overflow-hidden group`}
-            >
-              <div className={`absolute -right-4 -top-4 size-20 ${item.bg} rounded-full blur-2xl opacity-50 group-hover:opacity-100 transition-opacity`} />
-              <div className={`size-12 rounded-2xl ${item.bg} ${item.border} border flex items-center justify-center mx-auto mb-4 relative z-10 group-hover:rotate-6 transition-transform`}>
-                <item.icon className={`size-6 ${item.color}`} />
-              </div>
-              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 relative z-10">
-                {item.label}
-              </div>
-              <div className="text-lg font-black text-slate-800 relative z-10">{item.value}</div>
-            </div>
-          ))}
-        </div>
-      </SectionCard>
-
-      {/* Suvichar */}
-      <SectionCard
-        id="thought"
-        emoji="🪀"
-        title={t.thought}
-        icon={Quote}
-        gradient="from-violet-100/80 via-fuchsia-50/60 to-purple-100/80"
-      >
-        <div className="p-10 md:p-14 bg-white/60 backdrop-blur-xl border border-white rounded-[3rem] flex flex-col items-center justify-center text-center shadow-xl shadow-violet-900/5 hover:shadow-2xl hover:shadow-violet-900/10 transition-all duration-500 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-violet-200/40 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 group-hover:bg-violet-300/40 transition-colors" />
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-fuchsia-200/40 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/2 group-hover:bg-fuchsia-300/40 transition-colors" />
-
-          <div className="size-20 rounded-full bg-violet-100 border border-violet-200 flex items-center justify-center mb-8 relative z-10 shadow-inner">
-            <Quote className="size-10 text-violet-500" />
-          </div>
-          <p className="text-2xl md:text-4xl font-black text-slate-800 leading-normal italic relative z-10 drop-shadow-sm">
-            "{formData.thought}"
-          </p>
-        </div>
-      </SectionCard>
-
-      {/* M'han & Arth */}
-      <SectionCard
-        id="proverb"
-        emoji="🪀"
-        title={t.proverbTitle}
-        icon={BookOpen}
-        gradient="from-teal-100/80 via-emerald-50/60 to-cyan-100/80"
-      >
-        <div className="space-y-6">
-          <div className="p-8 md:p-12 bg-white/60 backdrop-blur-xl border border-white rounded-[2.5rem] text-center shadow-xl shadow-teal-900/5 hover:shadow-teal-900/10 transition-all relative overflow-hidden group">
-            <div className="absolute right-0 top-0 w-32 h-32 bg-teal-200/30 blur-[50px] rounded-full" />
-            <div className="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-[10px] font-black text-teal-600 uppercase tracking-widest mb-6 relative z-10">
-              {t.proverb}
-            </div>
-            <p className="text-2xl md:text-3xl font-black text-slate-800 relative z-10 leading-relaxed">"{formData.proverb}"</p>
-          </div>
-          <div className="p-8 md:p-10 bg-white border border-white/80 rounded-[2.5rem] text-center shadow-lg shadow-slate-200/50">
-            <div className="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-slate-50 border border-slate-200 text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">
-              {t.proverbMeaning}
-            </div>
-            <p className="text-lg md:text-xl font-bold text-slate-600 leading-relaxed max-w-3xl mx-auto">{formData.proverbMeaning}</p>
-          </div>
-        </div>
-      </SectionCard>
-
-      {/* Dinvishesh */}
-      <SectionCard
-        id="events"
-        emoji="🪀"
-        title={`${formData.dateMonth} ${t.eventsTitle}`}
-        icon={Calendar}
-        gradient="from-blue-100/80 via-indigo-50/60 to-sky-100/80"
-      >
-        <div className="space-y-6">
-          {formData.yearDay && (
-            <div className="flex justify-center mb-4">
-              <span className="text-sm font-black text-blue-800 bg-blue-50 border border-blue-100 px-6 py-2 rounded-full uppercase tracking-widest">
-                {t.yearDayStr.replace("${yearDay}", formData.yearDay)}
-              </span>
-            </div>
-          )}
-
-          {(() => {
-            const eventsList = (formData.events || "").split("\n").filter((s: string) => s.trim() !== "");
-            const birthdaysList = (formData.birthdays || "").split("\n").filter((s: string) => s.trim() !== "");
-            const deathsList = (formData.deaths || "").split("\n").filter((s: string) => s.trim() !== "");
-
-            const allPoints: string[] = [
-              ...eventsList,
-              ...birthdaysList,
-              ...deathsList,
-            ];
-
-            const limitedPoints = allPoints.slice(0, 10);
-
-            if (limitedPoints.length === 0) {
-              return (
-                <div className="text-center text-slate-500 py-4 font-bold">
-                  कोणतीही माहिती उपलब्ध नाही.
-                </div>
-              );
-            }
+            { key: 'nationalAnthem', fallbackIdx: 0 },
+            { key: 'stateAnthem', fallbackIdx: 1 },
+            { key: 'pledge', fallbackIdx: 2 },
+            { key: 'preamble', fallbackIdx: 3 },
+            { key: 'prayer', fallbackIdx: 4 },
+          ].map((itemDef, idx) => {
+            const fallbackItem = assemblyItems[itemDef.fallbackIdx];
+            const content =
+              formData[itemDef.key] ||
+              formData[`${itemDef.key}_mr`] ||
+              formData[`${itemDef.key}_en`] ||
+              formData[`${itemDef.key}_hi`] ||
+              fallbackItem.content;
 
             return (
-              <div className="divide-y divide-slate-100 max-w-4xl mx-auto">
-                {limitedPoints.map((text, idx) => (
-                  <div key={idx} className="py-3.5 flex items-start gap-4 text-slate-900 font-bold text-base md:text-lg leading-relaxed">
-                    <span className="font-black text-blue-800 bg-blue-50 border border-blue-200 rounded-full size-8 flex items-center justify-center text-sm shrink-0 mt-0.5 shadow-sm">
-                      {idx + 1}
+              <div key={idx} className={`assembly-section-card bg-white p-6 md:p-10 rounded-[2.5rem] border border-green-100 shadow-md text-center mb-6 ${idx > 0 ? 'pdf-page-break' : ''}`}>
+                <div className="flex justify-center mb-6">
+                  <label className="inline-flex items-center justify-center gap-2 px-6 py-2 bg-green-50 text-green-700 rounded-full text-sm font-black uppercase tracking-widest border border-green-100">
+                    {fallbackItem.label}
+                  </label>
+                </div>
+                <div className="text-lg md:text-2xl text-slate-900 font-extrabold leading-loose font-sans text-center">
+                  {content.split('\n').map((line: string, i: number) => (
+                    <React.Fragment key={i}>
+                      {line}
+                      <br />
+                    </React.Fragment>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Panchang */}
+          <SectionCard
+            id="panchang"
+            emoji="🪀"
+            title={t.panchang}
+            icon={Calendar}
+            gradient="from-amber-100/80 via-orange-50/60 to-yellow-100/80"
+          >
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+              {[
+                { label: t.day, value: formData.day, icon: Calendar, color: "text-amber-500", bg: "bg-amber-50", border: "border-amber-100" },
+                { label: t.month, value: formData.month, icon: Clock, color: "text-orange-500", bg: "bg-orange-50", border: "border-orange-100" },
+                { label: t.paksha, value: formData.paksha, icon: Star, color: "text-yellow-500", bg: "bg-yellow-50", border: "border-yellow-100" },
+                { label: t.tithi, value: formData.tithi, icon: Star, color: "text-red-400", bg: "bg-red-50", border: "border-red-100" },
+                { label: t.nakshatra, value: formData.nakshatra, icon: Sparkles, color: "text-rose-500", bg: "bg-rose-50", border: "border-rose-100" },
+                { label: t.yog, value: formData.yog, icon: Sparkles, color: "text-pink-500", bg: "bg-pink-50", border: "border-pink-100" },
+                { label: t.sunrise, value: formData.sunrise, icon: Sunrise, color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-100" },
+                { label: t.sunset, value: formData.sunset, icon: Sunset, color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-100" },
+              ].map((item, i) => (
+                <div
+                  key={i}
+                  className={`p-6 bg-white/80 backdrop-blur-xl border border-white rounded-[2rem] text-center shadow-xl shadow-amber-900/5 hover:scale-105 hover:shadow-2xl hover:shadow-amber-900/10 transition-all duration-300 relative overflow-hidden group`}
+                >
+                  <div className={`absolute -right-4 -top-4 size-20 ${item.bg} rounded-full blur-2xl opacity-50 group-hover:opacity-100 transition-opacity`} />
+                  <div className={`size-12 rounded-2xl ${item.bg} ${item.border} border flex items-center justify-center mx-auto mb-4 relative z-10 group-hover:rotate-6 transition-transform`}>
+                    <item.icon className={`size-6 ${item.color}`} />
+                  </div>
+                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 relative z-10">
+                    {item.label}
+                  </div>
+                  <div className="text-lg font-black text-slate-800 relative z-10">{item.value}</div>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+
+          {/* Suvichar */}
+          {formData.thought && (
+            <SectionCard
+              id="thought"
+              emoji="🪀"
+              title={t.thought}
+              icon={Quote}
+              gradient="from-violet-100/80 via-fuchsia-50/60 to-purple-100/80"
+            >
+              <div className="p-10 md:p-14 bg-white/60 backdrop-blur-xl border border-white rounded-[3rem] flex flex-col items-center justify-center text-center shadow-xl shadow-violet-900/5 hover:shadow-2xl hover:shadow-violet-900/10 transition-all duration-500 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-violet-200/40 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 group-hover:bg-violet-300/40 transition-colors" />
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-fuchsia-200/40 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/2 group-hover:bg-fuchsia-300/40 transition-colors" />
+
+                <div className="size-20 rounded-full bg-violet-100 border border-violet-200 flex items-center justify-center mb-8 relative z-10 shadow-inner">
+                  <Quote className="size-10 text-violet-500" />
+                </div>
+                <p className="text-2xl md:text-4xl font-black text-slate-800 leading-normal italic relative z-10 drop-shadow-sm">
+                  "{formData.thought}"
+                </p>
+              </div>
+            </SectionCard>
+          )}
+
+          {/* M'han & Arth */}
+          {formData.proverb && (
+            <SectionCard
+              id="proverb"
+              emoji="🪀"
+              title={t.proverbTitle}
+              icon={BookOpen}
+              gradient="from-teal-100/80 via-emerald-50/60 to-cyan-100/80"
+            >
+              <div className="space-y-6">
+                <div className="p-8 md:p-12 bg-white/60 backdrop-blur-xl border border-white rounded-[2.5rem] text-center shadow-xl shadow-teal-900/5 hover:shadow-teal-900/10 transition-all relative overflow-hidden group">
+                  <div className="absolute right-0 top-0 w-32 h-32 bg-teal-200/30 blur-[50px] rounded-full" />
+                  <div className="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-[10px] font-black text-teal-600 uppercase tracking-widest mb-6 relative z-10">
+                    {t.proverb}
+                  </div>
+                  <p className="text-2xl md:text-3xl font-black text-slate-800 relative z-10 leading-relaxed">"{formData.proverb}"</p>
+                </div>
+                {formData.proverbMeaning && (
+                  <div className="p-8 md:p-10 bg-white border border-white/80 rounded-[2.5rem] text-center shadow-lg shadow-slate-200/50">
+                    <div className="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-slate-50 border border-slate-200 text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">
+                      {t.proverbMeaning}
+                    </div>
+                    <p className="text-lg md:text-xl font-bold text-slate-600 leading-relaxed max-w-3xl mx-auto">{formData.proverbMeaning}</p>
+                  </div>
+                )}
+              </div>
+            </SectionCard>
+          )}
+
+          {/* Dinvishesh */}
+          {formData.events && (
+            <SectionCard
+              id="events"
+              emoji="🪀"
+              title={`${formData.dateMonth} ${t.eventsTitle}`}
+              icon={Calendar}
+              gradient="from-blue-100/80 via-indigo-50/60 to-sky-100/80"
+            >
+              <div className="space-y-6">
+                {formData.yearDay && (
+                  <div className="flex justify-center mb-4">
+                    <span className="text-sm font-black text-blue-800 bg-blue-50 border border-blue-100 px-6 py-2 rounded-full uppercase tracking-widest">
+                      {t.yearDayStr.replace("${yearDay}", formData.yearDay)}
                     </span>
-                    <span className="flex-1 text-slate-800 font-bold">{text}</span>
+                  </div>
+                )}
+
+                <div className="p-8 md:p-12 bg-white/60 backdrop-blur-xl border border-white rounded-[3rem] shadow-xl shadow-blue-900/5">
+                  <div className="text-lg md:text-xl font-bold text-slate-800 leading-relaxed font-sans">
+                    {formData.events.split('\n').map((line: string, i: number) => (
+                      <React.Fragment key={i}>
+                        {line}
+                        <br />
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </SectionCard>
+          )}
+
+          {/* Patriotic Song */}
+          {formData.patrioticSong && (
+            <SectionCard
+              id="song"
+              emoji="🪀"
+              title={t.patrioticSongTitle}
+              icon={Music}
+              gradient="from-orange-100/80 via-red-50/60 to-amber-100/80"
+            >
+              <div className="space-y-6">
+                {formData.songTitle && (
+                  <div className="flex justify-center">
+                    <div className="inline-flex items-center justify-center gap-3 px-8 py-3 bg-white/80 backdrop-blur-xl border border-white shadow-xl shadow-orange-900/5 rounded-full">
+                      <div className="size-8 rounded-full bg-orange-100 flex items-center justify-center">
+                        <Music className="size-4 text-orange-600" />
+                      </div>
+                      <span className="text-sm font-black text-orange-700 uppercase tracking-widest">{formData.songTitle}</span>
+                    </div>
+                  </div>
+                )}
+                <div className="p-8 md:p-12 bg-white/60 backdrop-blur-xl border border-white rounded-[3rem] text-center shadow-xl shadow-orange-900/5 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-b from-orange-50/30 to-transparent pointer-events-none" />
+                  <div className="text-lg md:text-2xl font-bold text-slate-800 leading-relaxed font-sans relative z-10">
+                    {formData.patrioticSong.split('\n').map((line: string, i: number) => (
+                      <React.Fragment key={i}>
+                        {line}
+                        <br />
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </SectionCard>
+          )}
+
+          {/* Moral Story */}
+          {formData.story && (
+            <SectionCard
+              id="story"
+              emoji="🪀"
+              title={t.storyTitle}
+              icon={BookOpen}
+              gradient="from-pink-100/80 via-rose-50/60 to-red-100/80"
+            >
+              <div className="space-y-6">
+                {formData.storyTitle && (
+                  <div className="flex justify-center">
+                    <div className="inline-flex items-center justify-center gap-3 px-8 py-3 bg-white/80 backdrop-blur-xl border border-white shadow-xl shadow-pink-900/5 rounded-full">
+                      <div className="size-8 rounded-full bg-pink-100 flex items-center justify-center">
+                        <BookOpen className="size-4 text-pink-600" />
+                      </div>
+                      <span className="text-sm font-black text-pink-700 uppercase tracking-widest">{formData.storyTitle}</span>
+                    </div>
+                  </div>
+                )}
+                <div className="p-8 md:p-12 bg-white/60 backdrop-blur-xl border border-white rounded-[3rem] text-center shadow-xl shadow-pink-900/5">
+                  <div className="text-lg md:text-2xl font-bold text-slate-800 leading-loose">
+                    {formData.story.split('\n').map((line: string, i: number) => (
+                      <React.Fragment key={i}>
+                        {line}
+                        <br />
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+                {formData.moral && (
+                  <div className="p-8 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/60 rounded-[3rem] flex flex-col items-center text-center gap-4 shadow-lg shadow-amber-900/5 relative overflow-hidden group">
+                    <div className="absolute inset-0 bg-white/40 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="size-16 rounded-full bg-amber-100 flex items-center justify-center shadow-inner relative z-10">
+                      <Star className="size-8 text-amber-500" />
+                    </div>
+                    <div className="relative z-10">
+                      <div className="inline-block px-4 py-1 rounded-full bg-amber-200/50 text-[10px] font-black text-amber-700 uppercase tracking-widest mb-4">{t.moral}</div>
+                      <p className="text-xl md:text-3xl font-black text-amber-900 leading-relaxed">{formData.moral}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </SectionCard>
+          )}
+
+          {/* General Knowledge */}
+          {(formData.gkQ1 || formData.gkQ2 || formData.gkQ3 || formData.gkQ4) && (
+            <SectionCard
+              id="gk"
+              emoji="🪀"
+              title={t.gkTitle}
+              icon={HelpCircle}
+              gradient="from-cyan-100/80 via-sky-50/60 to-blue-100/80"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {[
+                  { q: formData.gkQ1, a: formData.gkA1, label: t.q1, aLabel: t.a1, iconColor: "text-cyan-500", bg: "bg-cyan-50", border: "border-cyan-200" },
+                  { q: formData.gkQ2, a: formData.gkA2, label: t.q2, aLabel: t.a2, iconColor: "text-sky-500", bg: "bg-sky-50", border: "border-sky-200" },
+                  { q: formData.gkQ3, a: formData.gkA3, label: t.q3, aLabel: t.a3, iconColor: "text-blue-500", bg: "bg-blue-50", border: "border-blue-200" },
+                  { q: formData.gkQ4, a: formData.gkA4, label: t.q4, aLabel: t.a4, iconColor: "text-indigo-500", bg: "bg-indigo-50", border: "border-indigo-200" },
+                ].filter(item => item.q).map((item, i) => (
+                  <div
+                    key={i}
+                    className="p-8 bg-white/80 backdrop-blur-xl border border-white rounded-[3rem] shadow-xl shadow-cyan-900/5 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 text-center flex flex-col items-center relative overflow-hidden group"
+                  >
+                    <div className={`absolute inset-0 ${item.bg} opacity-30 group-hover:opacity-60 transition-opacity`} />
+                    <div className={`size-14 rounded-full bg-white border ${item.border} flex items-center justify-center mb-6 shadow-sm relative z-10`}>
+                      <HelpCircle className={`size-6 ${item.iconColor}`} />
+                    </div>
+                    <p className="text-lg md:text-xl font-black text-slate-800 mb-8 relative z-10 flex-grow leading-relaxed">{item.q}</p>
+                    <div className={`w-full px-6 py-4 bg-white border ${item.border} rounded-2xl relative z-10 shadow-sm`}>
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">{t.ans}</span>
+                      <span className={`text-base md:text-lg font-black ${item.iconColor} drop-shadow-sm`}>{item.a}</span>
+                    </div>
                   </div>
                 ))}
               </div>
-            );
-          })()}
-        </div>
-      </SectionCard>
+            </SectionCard>
+          )}
 
-      {/* Patriotic Song */}
-      <SectionCard
-        id="song"
-        emoji="🪀"
-        title={t.patrioticSongTitle}
-        icon={Music}
-        gradient="from-orange-100/80 via-red-50/60 to-amber-100/80"
-      >
-        <div className="space-y-6">
-          <div className="flex justify-center">
-            <div className="inline-flex items-center justify-center gap-3 px-8 py-3 bg-white/80 backdrop-blur-xl border border-white shadow-xl shadow-orange-900/5 rounded-full">
-              <div className="size-8 rounded-full bg-orange-100 flex items-center justify-center">
-                <Music className="size-4 text-orange-600" />
-              </div>
-              <span className="text-sm font-black text-orange-700 uppercase tracking-widest">{formData.songTitle}</span>
-            </div>
-          </div>
-          <div className="p-8 md:p-12 bg-white/60 backdrop-blur-xl border border-white rounded-[3rem] text-center shadow-xl shadow-orange-900/5 relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-b from-orange-50/30 to-transparent pointer-events-none" />
-            <div className="text-lg md:text-2xl font-bold text-slate-800 leading-relaxed font-sans relative z-10">
-              {formData.patrioticSong.split('\n').map((line: string, i: number) => (
-                <React.Fragment key={i}>
-                  {line}
-                  <br />
-                </React.Fragment>
-              ))}
-            </div>
-          </div>
-        </div>
-      </SectionCard>
-
-      {/* Moral Story */}
-      <SectionCard
-        id="story"
-        emoji="🪀"
-        title={t.storyTitle}
-        icon={BookOpen}
-        gradient="from-pink-100/80 via-rose-50/60 to-red-100/80"
-      >
-        <div className="space-y-6">
-          <div className="flex justify-center">
-            <div className="inline-flex items-center justify-center gap-3 px-8 py-3 bg-white/80 backdrop-blur-xl border border-white shadow-xl shadow-pink-900/5 rounded-full">
-              <div className="size-8 rounded-full bg-pink-100 flex items-center justify-center">
-                <BookOpen className="size-4 text-pink-600" />
-              </div>
-              <span className="text-sm font-black text-pink-700 uppercase tracking-widest">{formData.storyTitle}</span>
-            </div>
-          </div>
-          <div className="p-8 md:p-12 bg-white/60 backdrop-blur-xl border border-white rounded-[3rem] text-center shadow-xl shadow-pink-900/5">
-            <div className="text-lg md:text-2xl font-bold text-slate-800 leading-loose">
-              {formData.story.split('\n').map((line: string, i: number) => (
-                <React.Fragment key={i}>
-                  {line}
-                  <br />
-                </React.Fragment>
-              ))}
-            </div>
-          </div>
-          <div className="p-8 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/60 rounded-[3rem] flex flex-col items-center text-center gap-4 shadow-lg shadow-amber-900/5 relative overflow-hidden group">
-            <div className="absolute inset-0 bg-white/40 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="size-16 rounded-full bg-amber-100 flex items-center justify-center shadow-inner relative z-10">
-              <Star className="size-8 text-amber-500" />
-            </div>
-            <div className="relative z-10">
-              <div className="inline-block px-4 py-1 rounded-full bg-amber-200/50 text-[10px] font-black text-amber-700 uppercase tracking-widest mb-4">{t.moral}</div>
-              <p className="text-xl md:text-3xl font-black text-amber-900 leading-relaxed">{formData.moral}</p>
-            </div>
-          </div>
-        </div>
-      </SectionCard>
-
-      {/* General Knowledge */}
-      <SectionCard
-        id="gk"
-        emoji="🪀"
-        title={t.gkTitle}
-        icon={HelpCircle}
-        gradient="from-cyan-100/80 via-sky-50/60 to-blue-100/80"
-      >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {[
-            { q: formData.gkQ1, a: formData.gkA1, label: t.q1, aLabel: t.a1, iconColor: "text-cyan-500", bg: "bg-cyan-50", border: "border-cyan-200" },
-            { q: formData.gkQ2, a: formData.gkA2, label: t.q2, aLabel: t.a2, iconColor: "text-sky-500", bg: "bg-sky-50", border: "border-sky-200" },
-            { q: formData.gkQ3, a: formData.gkA3, label: t.q3, aLabel: t.a3, iconColor: "text-blue-500", bg: "bg-blue-50", border: "border-blue-200" },
-            { q: formData.gkQ4, a: formData.gkA4, label: t.q4, aLabel: t.a4, iconColor: "text-indigo-500", bg: "bg-indigo-50", border: "border-indigo-200" },
-          ].map((item, i) => (
-            <div
-              key={i}
-              className="p-8 bg-white/80 backdrop-blur-xl border border-white rounded-[3rem] shadow-xl shadow-cyan-900/5 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 text-center flex flex-col items-center relative overflow-hidden group"
+          {/* Personality */}
+          {formData.personality && (
+            <SectionCard
+              id="personality"
+              emoji="🪀"
+              title={t.personalityTitle}
+              icon={User}
+              gradient="from-fuchsia-100/80 via-purple-50/60 to-pink-100/80"
             >
-              <div className={`absolute inset-0 ${item.bg} opacity-30 group-hover:opacity-60 transition-opacity`} />
-              <div className={`size-14 rounded-full bg-white border ${item.border} flex items-center justify-center mb-6 shadow-sm relative z-10`}>
-                <HelpCircle className={`size-6 ${item.iconColor}`} />
+              <div className="space-y-6">
+                {formData.personalityTitle && (
+                  <div className="flex justify-center">
+                    <div className="inline-flex items-center justify-center gap-3 px-8 py-3 bg-white/80 backdrop-blur-xl border border-white shadow-xl shadow-fuchsia-900/5 rounded-full">
+                      <div className="size-8 rounded-full bg-fuchsia-100 flex items-center justify-center">
+                        <User className="size-4 text-fuchsia-600" />
+                      </div>
+                      <span className="text-sm font-black text-fuchsia-700 uppercase tracking-widest">{formData.personalityTitle}</span>
+                    </div>
+                  </div>
+                )}
+                <div className="p-8 md:p-12 bg-white/60 backdrop-blur-xl border border-white rounded-[3rem] text-center shadow-xl shadow-fuchsia-900/5">
+                  <div className="text-lg md:text-2xl font-bold text-slate-800 leading-loose">
+                    {formData.personality.split('\n').map((line: string, i: number) => (
+                      <React.Fragment key={i}>
+                        {line}
+                        <br />
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <p className="text-lg md:text-xl font-black text-slate-800 mb-8 relative z-10 flex-grow leading-relaxed">{item.q}</p>
-              <div className={`w-full px-6 py-4 bg-white border ${item.border} rounded-2xl relative z-10 shadow-sm`}>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">{t.ans}</span>
-                <span className={`text-base md:text-lg font-black ${item.iconColor} drop-shadow-sm`}>{item.a}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </SectionCard>
-
-      {/* Personality */}
-      <SectionCard
-        id="personality"
-        emoji="🪀"
-        title={t.personalityTitle}
-        icon={User}
-        gradient="from-fuchsia-100/80 via-purple-50/60 to-pink-100/80"
-      >
-        <div className="space-y-6">
-          <div className="flex justify-center">
-            <div className="inline-flex items-center justify-center gap-3 px-8 py-3 bg-white/80 backdrop-blur-xl border border-white shadow-xl shadow-fuchsia-900/5 rounded-full">
-              <div className="size-8 rounded-full bg-fuchsia-100 flex items-center justify-center">
-                <User className="size-4 text-fuchsia-600" />
-              </div>
-              <span className="text-sm font-black text-fuchsia-700 uppercase tracking-widest">{formData.personalityTitle}</span>
-            </div>
-          </div>
-          <div className="p-8 md:p-12 bg-white/60 backdrop-blur-xl border border-white rounded-[3rem] text-center shadow-xl shadow-fuchsia-900/5">
-            <div className="text-lg md:text-2xl font-bold text-slate-800 leading-loose">
-              {formData.personality.split('\n').map((line: string, i: number) => (
-                <React.Fragment key={i}>
-                  {line}
-                  <br />
-                </React.Fragment>
-              ))}
-            </div>
-          </div>
-        </div>
-      </SectionCard>
+            </SectionCard>
+          )}
+        </>
+      )}
+        </>
+      )}
     </div>
   );
 }
@@ -2454,6 +2845,15 @@ function SpecialDayEditor({
       bg: "bg-blue-50",
       gradient: "from-blue-50 to-white",
     },
+    {
+      id: "month-paripath",
+      label: lang === "en" ? "Month Register" : "मासिक परिपाठ नोंदवही",
+      sub: lang === "en" ? "Paripath Register" : "मासिक नोंद तक्ता",
+      icon: Table,
+      color: "text-emerald-500",
+      bg: "bg-emerald-50",
+      gradient: "from-emerald-50 to-white",
+    },
   ];
 
   const current = sections.find((s) => s.id === activeSection) || sections[0];
@@ -2564,6 +2964,8 @@ function SpecialDayEditor({
               <DailyAssemblyContent />
             ) : activeSection === "assembly-book" ? (
               <AssemblyBookViewer />
+            ) : activeSection === "month-paripath" ? (
+              <MonthlyParipathRegister />
             ) : (
               <>
                 <div className="flex items-center justify-between px-8 py-5 bg-[#FAFAF7] border border-[#E8DFD1]/40 rounded-[2.5rem] shadow-sm">

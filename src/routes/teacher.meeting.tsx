@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { showToast as toast } from "@/lib/custom-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { useLanguage } from "@/hooks/use-language";
 import { db } from "@/lib/firebase";
 import {
   collection,
@@ -282,6 +283,7 @@ function TeacherMeetingPage() {
   const { user, profile, loading: authLoading } = useAuth();
   const navigate = useNavigate({ from: Route.fullPath });
   const search = Route.useSearch();
+  const { lang } = useLanguage();
 
   // Helper to dynamically calculate the current academic year based on current date
   const getCurrentAcademicYear = () => {
