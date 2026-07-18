@@ -45,6 +45,7 @@ import { showToast as toast } from "@/lib/custom-toast";
 import { useLanguage } from "@/hooks/use-language";
 import { db } from "@/lib/firebase";
 import { collection, addDoc } from "firebase/firestore";
+import { toPng } from "html-to-image";
 
 export const Route = createFileRoute("/teacher/templates/edit/$templateId")({
   component: TemplateEditorPage,
@@ -347,6 +348,19 @@ function TemplateEditorPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const templateRef = useRef<HTMLDivElement>(null);
+  const [studentPhoto, setStudentPhoto] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setStudentPhoto(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const config = useMemo(() => {
     if (TEMPLATE_CONFIGS[templateId]) return TEMPLATE_CONFIGS[templateId];
@@ -610,6 +624,7 @@ function TemplateEditorPage() {
         studentClass,
         title: cardTitle,
         quote: cardQuote,
+        studentPhoto: studentPhoto || "",
         createdAt: new Date().toISOString(),
         type,
       });
@@ -629,6 +644,8 @@ function TemplateEditorPage() {
     }
   };
 
+
+
   const handleDownloadTemplate = async () => {
     if (!templateRef.current) return;
     setIsDownloading(true);
@@ -636,52 +653,12 @@ function TemplateEditorPage() {
     // Wait for React to re-render the DOM with isDownloading = true
     setTimeout(async () => {
       try {
-        const { default: html2canvas } = await import("html2canvas");
-        const canvas = await html2canvas(templateRef.current!, {
-          scale: 2,
-          useCORS: true,
-          allowTaint: false,
-          logging: true,
-          backgroundColor: null,
-          onclone: (clonedDoc) => {
-            // Remove cross-origin stylesheets/fonts to prevent canvas tainting
-            const links = Array.from(clonedDoc.getElementsByTagName("link"));
-            links.forEach((link) => {
-              if (
-                link.href &&
-                (link.href.includes("fonts.googleapis.com") ||
-                  link.href.includes("fonts.gstatic.com") ||
-                  link.href.includes("use.typekit.net") ||
-                  (!link.href.startsWith(window.location.origin) && !link.href.startsWith("/")))
-              ) {
-                link.parentNode?.removeChild(link);
-              }
-            });
-
-            // Clean style tags: remove all @import statements to prevent loading cross-origin fonts
-            const styles = Array.from(clonedDoc.getElementsByTagName("style"));
-            styles.forEach((style) => {
-              if (style.textContent && style.textContent.includes("@import")) {
-                style.textContent = style.textContent.replace(/@import\s+url\([^)]+\);?/g, "");
-                style.textContent = style.textContent.replace(/@import\s+['"][^'"]+['"];?/g, "");
-              }
-            });
-
-            // SVGs are natively supported by html2canvas, converting them to data URIs can taint the canvas.
-
-            // Prevent external images from tainting the canvas
-            const imgs = Array.from(clonedDoc.getElementsByTagName("img"));
-            imgs.forEach((img) => {
-              if (img.src && !img.src.startsWith("data:")) {
-                img.setAttribute("crossorigin", "anonymous");
-                const src = img.src;
-                img.src = "";
-                img.src = src;
-              }
-            });
-          },
+        const dataUrl = await toPng(templateRef.current!, {
+          quality: 0.95,
+          pixelRatio: 2,
+          cacheBust: true,
+          fontEmbedCSS: "", // Skip embedding web fonts to avoid CORS issues
         });
-        const dataUrl = canvas.toDataURL("image/png");
         const link = document.createElement("a");
         const safeStudentName = (studentName || "student").replace(/\s+/g, '_');
         const safeTitle = (configToUse.title || "template").replace(/\s+/g, '_');
@@ -737,59 +714,16 @@ function TemplateEditorPage() {
     });
 
     try {
-      const { default: html2canvas } = await import("html2canvas");
-      const canvas = await html2canvas(templateRef.current!, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: false,
-        logging: true,
-        backgroundColor: null,
-        onclone: (clonedDoc) => {
-          // Remove cross-origin stylesheets/fonts to prevent canvas tainting
-          const links = Array.from(clonedDoc.getElementsByTagName("link"));
-          links.forEach((link) => {
-            if (
-              link.href &&
-              (link.href.includes("fonts.googleapis.com") ||
-                link.href.includes("fonts.gstatic.com") ||
-                link.href.includes("use.typekit.net") ||
-                (!link.href.startsWith(window.location.origin) && !link.href.startsWith("/")))
-            ) {
-              link.parentNode?.removeChild(link);
-            }
-          });
-
-          // Clean style tags: remove all @import statements to prevent loading cross-origin fonts
-          const styles = Array.from(clonedDoc.getElementsByTagName("style"));
-          styles.forEach((style) => {
-            if (style.textContent && style.textContent.includes("@import")) {
-              style.textContent = style.textContent.replace(/@import\s+url\([^)]+\);?/g, "");
-              style.textContent = style.textContent.replace(/@import\s+['"][^'"]+['"];?/g, "");
-            }
-          });
-
-          // SVGs are natively supported by html2canvas, converting them to data URIs can taint the canvas.
-
-          // Prevent external images from tainting the canvas
-          const imgs = Array.from(clonedDoc.getElementsByTagName("img"));
-          imgs.forEach((img) => {
-            if (img.src && !img.src.startsWith("data:")) {
-              img.setAttribute("crossorigin", "anonymous");
-              const src = img.src;
-              img.src = "";
-              img.src = src;
-            }
-          });
-        },
+      const dataUrl = await toPng(templateRef.current!, {
+        quality: 0.95,
+        pixelRatio: 2,
+        cacheBust: true,
+        fontEmbedCSS: "",
       });
 
-      const blob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob((b) => {
-          if (b) resolve(b);
-          else reject(new Error("Failed to create blob from canvas"));
-        }, "image/png");
-      });
-      const dataUrl = canvas.toDataURL("image/png");
+      // Convert dataUrl to blob
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
 
       const safeStudentName = (studentName || "student").replace(/\s+/g, '_');
       const safeTitle = (configToUse.title || "template").replace(/\s+/g, '_');
@@ -997,6 +931,39 @@ function TemplateEditorPage() {
                   </div>
                 </div>
 
+                {/* Photo Upload Option */}
+                <div className="space-y-2 group">
+                  <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">
+                    {lang === "mr" ? "विद्यार्थ्याचा फोटो जोडा" : lang === "hi" ? "छात्र का फोटो जोड़ें" : "Add Student Photo"}
+                  </label>
+                  <div className="flex gap-4 items-center">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      ref={fileInputRef}
+                      onChange={handlePhotoUpload}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors font-bold text-xs uppercase tracking-wider rounded-2xl px-6 py-4 flex items-center gap-2 cursor-pointer shadow-sm"
+                    >
+                      <ImageIcon className="size-4" />
+                      {studentPhoto ? (lang === "mr" ? "फोटो बदला" : "Change Photo") : (lang === "mr" ? "फोटो निवडा" : "Select Photo")}
+                    </button>
+                    {studentPhoto && (
+                      <button
+                        type="button"
+                        onClick={() => setStudentPhoto(null)}
+                        className="bg-red-50 border border-red-150 text-red-600 hover:bg-red-100 transition-colors font-bold text-xs uppercase tracking-wider rounded-2xl px-6 py-4 cursor-pointer shadow-sm"
+                      >
+                        {lang === "mr" ? "काढून टाका" : "Remove"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 <div className="pt-6 space-y-4">
                   <button
                     onClick={handleShareToStudent}
@@ -1106,7 +1073,15 @@ function TemplateEditorPage() {
                     transition={{ type: "spring", damping: 12 }}
                     className={`size-28 bg-white/10 rounded-[2.5rem] flex items-center justify-center mb-10 border border-white/20 shadow-2xl relative ${isDownloading ? "" : "backdrop-blur-2xl"}`}
                   >
-                    <configToUse.icon className={`size-14 text-white ${isDownloading ? "" : "drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]"}`} />
+                    {studentPhoto ? (
+                      <img 
+                        src={studentPhoto} 
+                        alt="Student" 
+                        className="w-full h-full object-cover rounded-[2.5rem]" 
+                      />
+                    ) : (
+                      <configToUse.icon className={`size-14 text-white ${isDownloading ? "" : "drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]"}`} />
+                    )}
                     <div
                       className="absolute -top-4 -right-4 size-10 bg-pink-500 rounded-2xl flex items-center justify-center shadow-lg rotate-12 animate-pulse"
                     >

@@ -450,11 +450,11 @@ const generateDefaultGrid = (classId: string, classNameMr: string) => {
       tuesday: monThu.tuesday || "",
       wednesday: monThu.wednesday || "",
       thursday: monThu.thursday || "",
-      
+
       friPeriod: fri.period || "",
       friTime: fri.time || "",
       friday: fri.friday || "",
-      
+
       satPeriod: sat.period || "",
       satTime: sat.time || "",
       saturday: sat.saturday || ""
@@ -468,7 +468,7 @@ const generateDefaultGrid = (classId: string, classNameMr: string) => {
     schoolName: "जिल्हा परिषद प्राथमिक शाळा",
     center: "",
     taluka: "",
-    district: "सोलापूर",
+    district: "",
     academicYear: "2026-27",
     headmasterName: "ZP Headmaster",
     teacherName: "वर्गशिक्षक",
@@ -548,25 +548,25 @@ function ClassTimetablePage() {
     setGridData((prev: any) => {
       const updated = [...prev.rows];
       const targetRow = updated[index];
-      
+
       const isRecessValue = (val: string) => {
         if (!val) return false;
         const clean = val.trim();
         return clean === "लहान सुट्टी" || clean === "मोठी सुट्टी" || clean === "सफाई" || clean === "परिपाठ";
       };
 
-      const isCurrentRecess = isRecessValue(targetRow.monday) || 
-                              isRecessValue(targetRow.tuesday) || 
-                              isRecessValue(targetRow.wednesday) || 
-                              isRecessValue(targetRow.thursday) ||
-                              isRecessValue(value);
+      const isCurrentRecess = isRecessValue(targetRow.monday) ||
+        isRecessValue(targetRow.tuesday) ||
+        isRecessValue(targetRow.wednesday) ||
+        isRecessValue(targetRow.thursday) ||
+        isRecessValue(value);
 
       if (
         (field === "monday" || field === "tuesday" || field === "wednesday" || field === "thursday") &&
         isCurrentRecess
       ) {
-        updated[index] = { 
-          ...targetRow, 
+        updated[index] = {
+          ...targetRow,
           monday: value,
           tuesday: value,
           wednesday: value,
@@ -575,7 +575,7 @@ function ClassTimetablePage() {
       } else {
         updated[index] = { ...targetRow, [field]: value };
       }
-      
+
       return { ...prev, rows: updated };
     });
   };
@@ -598,7 +598,7 @@ function ClassTimetablePage() {
         [field]: value
       }
     }));
-  };  useEffect(() => {
+  }; useEffect(() => {
     setLoading(true);
     setGridData(null);
 
@@ -607,14 +607,17 @@ function ClassTimetablePage() {
     const unsubscribe = onSnapshot(docRef, async (snapshot) => {
       if (snapshot.exists()) {
         const docData = snapshot.data();
+        if (docData && docData.district === "सोलापूर") {
+          docData.district = "";
+        }
         const selectedClassNameMr = CLASS_NAME_MAP[selectedClass]?.mr || selectedClass;
         const defaultGrid = generateDefaultGrid(selectedClass, selectedClassNameMr);
-        
+
         const hasOldITDefault = docData.rows && docData.rows.some((r: any) => r.friday === "माहिती तंत्रज्ञान");
         const hasWrongRowCount = docData.rows && docData.rows.length !== 14;
         const isOldAcademicYear = docData.academicYear !== "2026-27";
         const hasOldClassName = docData.classNameMr !== selectedClassNameMr;
-        
+
         if (isOldAcademicYear || ((selectedClass === "1st" || selectedClass === "2nd") && (hasOldITDefault || hasWrongRowCount))) {
           setGridData(defaultGrid);
           try {
@@ -641,7 +644,11 @@ function ClassTimetablePage() {
             const oldRef = doc(db, "teacher_edited_timetables", `${user.uid}_${selectedClass}`);
             const oldSnap = await getDoc(oldRef);
             if (oldSnap.exists()) {
-              setGridData(oldSnap.data());
+              const oldData = oldSnap.data();
+              if (oldData && oldData.district === "सोलापूर") {
+                oldData.district = "";
+              }
+              setGridData(oldData);
               setLoading(false);
               return;
             }
@@ -649,11 +656,11 @@ function ClassTimetablePage() {
         } catch (e) {
           console.error("Fallback load error:", e);
         }
-        
+
         // If neither exists, generate a default ZP timetable template
         const selectedClassNameMr = CLASS_NAME_MAP[selectedClass]?.mr || selectedClass;
         const defaultGrid = generateDefaultGrid(selectedClass, selectedClassNameMr);
-        
+
         // Pre-populate ZP school info from teacher profile lock cached details if available
         const cachedSetup = localStorage.getItem("teacher_module_setup_data");
         if (cachedSetup) {
@@ -705,7 +712,7 @@ function ClassTimetablePage() {
   const handleDownloadPDFDirectly = async () => {
     const element = document.getElementById("editable-timetable-container");
     if (!element) return;
-    
+
     const inputs = element.querySelectorAll('input');
     const tempSpans: { input: HTMLInputElement; span: HTMLSpanElement }[] = [];
 
@@ -718,7 +725,7 @@ function ClassTimetablePage() {
       textNode.style.textAlign = input.style.textAlign || 'center';
       textNode.style.border = 'none';
       textNode.style.outline = 'none';
-      
+
       const isTableInput = input.closest('table') !== null;
       if (isTableInput) {
         textNode.style.whiteSpace = 'nowrap';
@@ -728,7 +735,7 @@ function ClassTimetablePage() {
         textNode.style.verticalAlign = 'middle';
         textNode.style.height = 'auto';
       }
-      
+
       input.style.setProperty('display', 'none', 'important');
       input.parentNode?.insertBefore(textNode, input.nextSibling);
       tempSpans.push({ input, span: textNode });
@@ -752,7 +759,7 @@ function ClassTimetablePage() {
     };
 
     toast.success(lang === "mr" ? "PDF तयार होत आहे..." : "Generating PDF...");
-    
+
     const prevZoom = element.style.zoom;
     const prevWebkitZoom = (element.style as any).WebkitZoom;
 
@@ -761,7 +768,7 @@ function ClassTimetablePage() {
       (element.style as any).WebkitZoom = '1';
       element.style.transform = 'scale(0.90)';
       element.style.transformOrigin = 'top center';
-      
+
       await html2pdf().set(opt).from(element).save();
     } catch (err) {
       console.error("PDF generation error:", err);
@@ -864,8 +871,8 @@ function ClassTimetablePage() {
                 </div>
 
                 <div className="w-full overflow-x-auto pb-4" ref={containerRef}>
-                  <div 
-                    id="editable-timetable-container" 
+                  <div
+                    id="editable-timetable-container"
                     className="p-4 bg-white text-slate-900 border border-black shadow-sm font-sans space-y-2 w-[1000px] mx-auto overflow-hidden origin-top"
                     style={{
                       ["zoom" as any]: scale,
@@ -873,7 +880,7 @@ function ClassTimetablePage() {
                       transformOrigin: "top center",
                     }}
                   >
-                    <div 
+                    <div
                       className="flex items-center justify-between p-2 border border-black rounded-lg"
                       style={{
                         background: "linear-gradient(to right, #00d2ff, #0072ff)"
@@ -947,11 +954,11 @@ function ClassTimetablePage() {
                             <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '9%', textAlign: 'center' }}>मंगळवार</th>
                             <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '9%', textAlign: 'center' }}>बुधवार</th>
                             <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '9%', textAlign: 'center' }}>गुरुवार</th>
-                            
+
                             <th style={{ backgroundColor: '#C6E0B4', border: '1px solid black', width: '4%', textAlign: 'center' }}>तासिका</th>
                             <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '8%', textAlign: 'center' }}>वेळ</th>
                             <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '10%', textAlign: 'center' }}>शुक्रवार</th>
-                            
+
                             <th style={{ backgroundColor: '#C6E0B4', border: '1px solid black', width: '4%', textAlign: 'center' }}>तासिका</th>
                             <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '8%', textAlign: 'center' }}>वेळ</th>
                             <th style={{ backgroundColor: '#FFF2CC', border: '1px solid black', width: '10%', textAlign: 'center' }}>शनिवार</th>
@@ -964,7 +971,7 @@ function ClassTimetablePage() {
                               const clean = val.trim();
                               return clean === "लहान सुट्टी" || clean === "मोठी सुट्टी" || clean === "सफाई" || clean === "परिपाठ";
                             };
-                            
+
                             const getRecessStyle = (val: string) => {
                               if (val.includes("परिपाठ")) return { backgroundColor: '#F2DCDB' };
                               return { backgroundColor: '#C6E0B4' };
@@ -973,7 +980,7 @@ function ClassTimetablePage() {
                             const hasMonThu = row.monThuPeriod && row.monThuPeriod.trim() !== "";
                             const monThuPeriodBg = hasMonThu ? "#C6E0B4" : "white";
                             const monThuTimeBg = row.monThuTime && row.monThuTime.trim() !== "" ? "#F2DCDB" : "white";
-                            
+
                             const getMonThuRecessValue = (r: any) => {
                               if (isRecessValue(r.monday)) return r.monday;
                               if (isRecessValue(r.tuesday)) return r.tuesday;
@@ -1052,12 +1059,12 @@ function ClassTimetablePage() {
                             <tr style={{ backgroundColor: '#FFFF00' }}>
                               {(CLASS_SUBJECTS_MAP[selectedClass] || CLASS_SUBJECTS_MAP["8th"]).map((subj) => (
                                 <td key={subj.key} style={{ backgroundColor: '#FFFF00', border: '1px solid black', padding: '2px' }}>
-                                  <input 
-                                    type="text" 
-                                    value={gridData.subjectDistribution?.[subj.key] || "0"} 
-                                    onChange={(e) => handleSubjectDistChange(subj.key, e.target.value)} 
-                                    style={cellInputStyle} 
-                                    className="font-bold text-[9px] text-center bg-transparent outline-none" 
+                                  <input
+                                    type="text"
+                                    value={gridData.subjectDistribution?.[subj.key] || "0"}
+                                    onChange={(e) => handleSubjectDistChange(subj.key, e.target.value)}
+                                    style={cellInputStyle}
+                                    className="font-bold text-[9px] text-center bg-transparent outline-none"
                                   />
                                 </td>
                               ))}
@@ -1068,15 +1075,15 @@ function ClassTimetablePage() {
                           </tbody>
                         </table>
                       </div>
-                      <div className="col-span-5 p-3 flex justify-between items-center h-16 rounded-lg" style={{ backgroundColor: '#FCE4D6', border: '1px solid black' }}>
-                        <div className="text-center flex-1 flex flex-col justify-between h-full">
-                          <input type="text" value={gridData.teacherName} onChange={(e) => handleHeaderChange("teacherName", e.target.value)} style={{ ...cellInputStyle, fontSize: '9px' }} className="font-black text-slate-800 text-center bg-transparent outline-none" />
-                          <div className="border-t border-dashed border-black mt-1 pt-1 text-[8px] font-black text-slate-700 text-center uppercase tracking-wider">वर्गशिक्षक</div>
+                      <div className="col-span-5 p-3 flex justify-between items-center h-16 rounded-[1.8rem]" style={{ backgroundColor: '#FCE4D6', border: '1px solid black' }}>
+                        <div className="text-center flex-1 flex flex-col justify-between h-full px-2">
+                          <input type="text" value={gridData.teacherName} onChange={(e) => handleHeaderChange("teacherName", e.target.value)} style={{ ...cellInputStyle, fontSize: '9px' }} className="font-black text-slate-800 text-center bg-transparent outline-none w-full" />
+                          <div className="border-t border-dashed border-black mt-1 pt-1 text-[8px] font-black text-slate-700 text-center uppercase tracking-wider">वर्गशिक्षकाचे नाव व स्वाक्षरी</div>
                         </div>
                         <div className="h-full w-px bg-black/20 mx-4" />
-                        <div className="text-center flex-1 flex flex-col justify-between h-full">
-                          <input type="text" value={gridData.headmasterName} onChange={(e) => handleHeaderChange("headmasterName", e.target.value)} style={{ ...cellInputStyle, fontSize: '9px' }} className="font-black text-slate-800 text-center bg-transparent outline-none" />
-                          <div className="border-t border-dashed border-black mt-1 pt-1 text-[8px] font-black text-slate-700 text-center uppercase tracking-wider">मुख्याध्यापक</div>
+                        <div className="text-center flex-1 flex flex-col justify-between h-full px-2">
+                          <input type="text" value={gridData.headmasterName} onChange={(e) => handleHeaderChange("headmasterName", e.target.value)} style={{ ...cellInputStyle, fontSize: '9px' }} className="font-black text-slate-800 text-center bg-transparent outline-none w-full" />
+                          <div className="border-t border-dashed border-black mt-1 pt-1 text-[8px] font-black text-slate-700 text-center uppercase tracking-wider">मुख्याध्यापकांचे नाव व स्वाक्षरी</div>
                         </div>
                       </div>
                     </div>

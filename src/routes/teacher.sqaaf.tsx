@@ -4845,6 +4845,233 @@ export const standardsDetailData: Record<number, {
   }
 };
 
+interface SqaafResponseCardProps {
+  num: number;
+  idx: number | undefined;
+  selectedLang: "mr" | "en";
+  selectedOptions: Record<number, number>;
+}
+
+const SqaafResponseCard = ({ num, idx, selectedLang, selectedOptions }: SqaafResponseCardProps) => {
+  const [drivePhotos, setDrivePhotos] = useState<{ src: string; label: string }[]>([]);
+  const [loadingDrive, setLoadingDrive] = useState(false);
+
+  const detail = getStandardDetail(num);
+  const langData = detail?.[selectedLang];
+  const orangeDesc = langData?.orangeDesc || (selectedLang === "mr" ? `मानक क्र. ${toMarathiNumerals(num)}` : `Standard No. ${num}`);
+  const options = getGroupedOptions(num, selectedLang);
+  const isSelected = idx !== undefined && idx !== null;
+  const isNotApplicable = isSelected && idx === options.length - 1;
+  const responseText = !isSelected
+    ? "—"
+    : isNotApplicable
+      ? (selectedLang === "mr" ? "लागू नाही" : "Not applicable")
+      : (options[idx]?.text || "—");
+
+  // Local evidence & drive links config
+  const { subOptions, localPhotos, driveLinksList } = useMemo(() => {
+    let subOptions: string[] = [];
+    let localPhotos: { src: string; label: string }[] = [];
+    let driveLinksList: { url: string; label: string }[] = [];
+
+    if (isSelected && !isNotApplicable) {
+      // Sub options
+      const savedOpts = localStorage.getItem(`sqaaf_evidence_options_config_${num}_${idx}`);
+      let parsedOpts: string[] = [];
+      if (savedOpts) {
+        try { parsedOpts = JSON.parse(savedOpts); } catch { }
+      } else if (idx === 0) {
+        const oldOpts = localStorage.getItem(`sqaaf_evidence_options_config_${num}`);
+        if (oldOpts) {
+          try { parsedOpts = JSON.parse(oldOpts); } catch { }
+        }
+      }
+      if (parsedOpts.length === 0) {
+        parsedOpts = [selectedLang === "mr" ? "सर्वसाधारण पुरावे / General Evidences" : "General Evidences"];
+      }
+      const optsLength = parsedOpts.length;
+
+      for (let pIdx = 0; pIdx < optsLength; pIdx++) {
+        let isChecked = localStorage.getItem(`sqaaf_checked_${num}_${idx}_${pIdx}`) === "true";
+        if (!isChecked && idx === 0) {
+          isChecked = localStorage.getItem(`sqaaf_evidence_checked_${num}_${pIdx}`) === "true";
+        }
+        if (isChecked) {
+          subOptions.push(parsedOpts[pIdx]);
+        }
+
+        let preview = localStorage.getItem(`sqaaf_file_preview_${num}_${idx}_${pIdx}`);
+        if (!preview && idx === 0) {
+          preview = localStorage.getItem(`sqaaf_evidence_file_preview_${num}_${pIdx}`);
+        }
+        if (preview && preview.startsWith("data:image")) {
+          localPhotos.push({
+            src: preview,
+            label: parsedOpts[pIdx] || ""
+          });
+        }
+      }
+
+      // Drive Links
+      const driveLinksKey = `sqaf_drive_links_${num}`;
+      const savedDriveLinks = localStorage.getItem(driveLinksKey);
+      if (savedDriveLinks) {
+        try { driveLinksList = JSON.parse(savedDriveLinks); } catch { }
+      }
+    }
+
+    return { subOptions, localPhotos, driveLinksList };
+  }, [num, idx, isSelected, isNotApplicable, selectedLang]);
+
+  // Load Google Drive photos asynchronously
+  useEffect(() => {
+    const activeLinks = driveLinksList.filter(d => d.url);
+    if (activeLinks.length === 0) {
+      setDrivePhotos([]);
+      return;
+    }
+
+    let isMounted = true;
+    const fetchAll = async () => {
+      setLoadingDrive(true);
+      const allFetched: { src: string; label: string }[] = [];
+      try {
+        for (const link of activeLinks) {
+          const items = await fetchGoogleDriveImages(link.url);
+          if (items && items.length > 0) {
+            items.forEach(item => {
+              allFetched.push({
+                src: item.src,
+                label: link.label || (selectedLang === "mr" ? "ड्राइव्ह फोटो" : "Drive Photo")
+              });
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Error loading drive images in responses card view:", err);
+      }
+      if (isMounted) {
+        setDrivePhotos(allFetched);
+        setLoadingDrive(false);
+      }
+    };
+
+    fetchAll();
+    return () => {
+      isMounted = false;
+    };
+  }, [driveLinksList, selectedLang]);
+
+  return (
+    <div
+      className={`border rounded-xl p-5 bg-white shadow-sm transition-all flex flex-col justify-between ${!isSelected ? 'border-slate-200 opacity-75' : 'border-slate-300'}`}
+    >
+      <div>
+        <h3 className="text-[16px] font-bold text-slate-900 mb-3">
+          {selectedLang === "mr" ? `मानक क्र. ${toMarathiNumerals(num)}` : `Standard No. ${num}`}
+        </h3>
+        <p className="text-[13px] text-slate-700 leading-relaxed mb-4 font-medium">
+          {orangeDesc}
+        </p>
+
+        {/* Chosen Level Badge & Response */}
+        {isSelected && !isNotApplicable ? (
+          <div className="space-y-3">
+            <div className="flex justify-between items-center bg-[#f0fdf4] border border-[#86efac] rounded-lg px-3 py-1.5 text-xs font-bold text-[#15803d]">
+              <span>{selectedLang === "mr" ? `निवडलेला स्तर: स्तर ${toMarathiNumerals(idx + 1)}` : `Selected Level: Level ${idx + 1}`}</span>
+              <span>{selectedLang === "mr" ? `प्राप्त गुण: ${toMarathiNumerals(idx + 1)} / ४` : `Obtained Marks: ${idx + 1} / 4`}</span>
+            </div>
+            <div>
+              <p className="text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1">
+                {selectedLang === "mr" ? "प्रतिसाद तपशील" : "RESPONSE DETAILS"}
+              </p>
+              <p className="text-[13px] text-slate-900 font-semibold leading-relaxed bg-[#f8fafc] border border-slate-200 rounded-lg p-3 whitespace-pre-line">
+                {responseText}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="text-[13px] font-bold text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3">
+            {isSelected && isNotApplicable 
+              ? (selectedLang === "mr" ? "लागू नाही" : "Not applicable")
+              : (selectedLang === "mr" ? "अपूर्ण / प्रतिसाद दिलेला नाही" : "Incomplete / No response")}
+          </div>
+        )}
+
+        {/* Sub-options checklist */}
+        {subOptions.length > 0 && (
+          <div className="mt-4 border-t border-dashed border-slate-200 pt-3">
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-2">
+              {selectedLang === "mr" ? "निवडलेले पुरावे / पर्याय" : "Selected Evidence Details"}
+            </span>
+            <div className="space-y-1.5">
+              {subOptions.map((optText, index) => (
+                <div key={index} className="flex items-start gap-2 text-xs font-semibold text-slate-700">
+                  <span className="text-green-600 font-black">✓</span>
+                  <span className="leading-relaxed">{optText}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Uploaded Local Photos (Showing Full Image without cropping) */}
+        {localPhotos.length > 0 && (
+          <div className="mt-4 border-t border-dashed border-slate-200 pt-3">
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-2">
+              {selectedLang === "mr" ? "अहवाल पुरावे फोटो" : "Evidence Photos"}
+            </span>
+            <div className="grid grid-cols-2 gap-3">
+              {localPhotos.map((photo, index) => (
+                <div key={index} className="border border-slate-100 rounded-lg p-2 bg-slate-50 flex flex-col items-center justify-center min-h-[140px]">
+                  <img
+                    src={photo.src}
+                    alt={photo.label}
+                    className="max-h-36 max-w-full object-contain rounded-md shadow-sm"
+                  />
+                  <span className="text-[9px] font-black text-slate-500 text-center mt-2 leading-tight">
+                    {photo.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Google Drive Photos (Fetched dynamically inline) */}
+        {(drivePhotos.length > 0 || loadingDrive) && (
+          <div className="mt-4 border-t border-dashed border-slate-200 pt-3">
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-2">
+              {selectedLang === "mr" ? "ड्राइव्ह पुरावे फोटो" : "Google Drive Photos"}
+            </span>
+            {loadingDrive ? (
+              <div className="flex items-center justify-center py-6 gap-2 text-xs font-bold text-slate-500">
+                <div className="size-4 border-2 border-slate-300 border-t-indigo-600 rounded-full animate-spin"></div>
+                <span>{selectedLang === "mr" ? "फोटो लोड होत आहेत..." : "Loading photos..."}</span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {drivePhotos.map((photo, index) => (
+                  <div key={index} className="border border-slate-100 rounded-lg p-2 bg-slate-50 flex flex-col items-center justify-center min-h-[140px]">
+                    <img
+                      src={photo.src}
+                      alt={photo.label}
+                      className="max-h-36 max-w-full object-contain rounded-md shadow-sm"
+                    />
+                    <span className="text-[9px] font-black text-slate-500 text-center mt-2 leading-tight">
+                      {photo.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 function TeacherSqaafPage() {
   const { profile } = useAuth();
   const [view, setView] = useState<"info" | "dashboard" | "summary" | "certificate" | "responses" | "table_report" | "manual_summary">(() => {
@@ -7232,6 +7459,127 @@ function TeacherSqaafPage() {
     return { obtainedMarks: obtained, totalMarks: total, applicableCount: applicable, notApplicableCount: notApplicable };
   }, [completedStandards, selectedOptions, selectedLang]);
 
+  const domainSummaryData = useMemo(() => {
+    const domainsDataLegacy = [
+      { id: 1, nameMr: "क्षेत्र १ : अभ्यासक्रम,अध्यापनशास्त्र आणि मूल्यांकन", nameEn: "Domain 1: Curriculum, Pedagogy and Assessment", start: 1, end: 44 },
+      { id: 2, nameMr: "क्षेत्र २ : पायाभूत सुविधा", nameEn: "Domain 2: Infrastructure", start: 45, end: 74 },
+      { id: 3, nameMr: "क्षेत्र ३ : मानवी संसाधने आणि शालेय नेतृत्व", nameEn: "Domain 3: Human Resources and School Leadership", start: 75, end: 86 },
+      { id: 4, nameMr: "क्षेत्र ४ : समावेशित पद्धती आणि लिंगसमभाव", nameEn: "Domain 4: Inclusive Practices and Gender Equality", start: 87, end: 100 },
+      { id: 5, nameMr: "क्षेत्र ५ : व्यवस्थापन ,संनियंत्रण आणि प्रशासन", nameEn: "Domain 5: Management, Monitoring and Administration", start: 101, end: 117 },
+      { id: 6, nameMr: "क्षेत्र ६ :लाभार्थ्यांचे समाधान", nameEn: "Domain 6: Beneficiary Satisfaction", start: 118, end: 128 },
+    ];
+
+    let totalApplicable = 0;
+    let totalPossibleMarks = 0;
+    let selfObtTotal = 0;
+    let extObtTotal = 0;
+    let overallExtTot = 0;
+
+    const marathiDigits = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
+    const formatRanges = (nums: number[]) => {
+      if (nums.length === 0) return "";
+      let ranges = [];
+      let start = nums[0];
+      let end = nums[0];
+      for (let k = 1; k < nums.length; k++) {
+        if (nums[k] === end + 1) {
+          end = nums[k];
+        } else {
+          ranges.push(start === end ? `${start}` : `${start} ते ${end}`);
+          start = nums[k];
+          end = nums[k];
+        }
+      }
+      ranges.push(start === end ? `${start}` : `${start} ते ${end}`);
+      const combined = ranges.join(", ");
+      return selectedLang === "mr" ? combined.replace(/[0-9]/g, d => marathiDigits[parseInt(d)]) : combined;
+    };
+
+    const rows = domainsDataLegacy.map(dom => {
+      let selfL1 = 0, selfL2 = 0, selfL3 = 0, selfL4 = 0;
+      let extL1 = 0, extL2 = 0, extL3 = 0, extL4 = 0;
+      let selfObt = 0, extObt = 0;
+      let appCount = 0;
+      const naStds: number[] = [];
+
+      for (let i = dom.start; i <= dom.end; i++) {
+        // Self
+        const selIdx = selectedOptions[i];
+        let isApplicable = false;
+
+        if (selIdx !== undefined && selIdx !== null) {
+          if (selIdx >= 0 && selIdx <= 3) {
+            isApplicable = true;
+            if (selIdx === 0) selfL1++;
+            if (selIdx === 1) selfL2++;
+            if (selIdx === 2) selfL3++;
+            if (selIdx === 3) selfL4++;
+            selfObt += (selIdx + 1);
+          } else if (selIdx > 3) {
+            naStds.push(i);
+          }
+        } else if (!completedStandards.has(i)) {
+          isApplicable = true;
+        }
+
+        if (isApplicable) {
+          appCount++;
+          totalPossibleMarks += 4;
+        }
+
+        // Ext
+        const extIdx = externalOptions[i];
+        if (extIdx !== undefined && extIdx !== null) {
+          if (extIdx >= 0 && extIdx <= 3) {
+            if (extIdx === 0) extL1++;
+            if (extIdx === 1) extL2++;
+            if (extIdx === 2) extL3++;
+            if (extIdx === 3) extL4++;
+            extObt += (extIdx + 1);
+            overallExtTot += 4;
+          }
+        }
+      }
+
+      totalApplicable += appCount;
+      selfObtTotal += selfObt;
+      extObtTotal += extObt;
+
+      return {
+        ...dom,
+        appCount,
+        selfL1, selfL2, selfL3, selfL4, selfObt,
+        extL1, extL2, extL3, extL4, extObt,
+        naStds,
+        naText: formatRanges(naStds)
+      };
+    });
+
+    const getGrade = (pct: number) => {
+      if (pct >= 91) return "A+";
+      if (pct >= 81) return "A";
+      if (pct >= 71) return "B+";
+      if (pct >= 61) return "B";
+      if (pct >= 51) return "C+";
+      return "C";
+    };
+
+    const overallSelfPct = totalPossibleMarks > 0 ? Math.round((selfObtTotal / totalPossibleMarks) * 100) : 0;
+    const overallExtPct = overallExtTot > 0 ? Math.round((extObtTotal / overallExtTot) * 100) : 0;
+
+    return {
+      rows,
+      totalApplicable,
+      selfObtTotal,
+      extObtTotal,
+      totalPossibleMarks,
+      overallSelfPct,
+      overallExtPct,
+      selfGrade: getGrade(overallSelfPct),
+      extGrade: getGrade(overallExtPct)
+    };
+  }, [completedStandards, selectedOptions, externalOptions, selectedLang]);
+
   const t = {
     mr: {
       title: "स्वयं मूल्यांकन",
@@ -7699,7 +8047,7 @@ function TeacherSqaafPage() {
                       </div>
                       <div className="grid grid-cols-2 gap-3 mt-auto">
                         <button
-                          onClick={() => handleDownloadPdf("table", "view")}
+                          onClick={() => setView("table_report")}
                           className="py-3 px-4 bg-[#1e1b4b] text-white rounded-3xl text-[13px] font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
                         >
                           <Eye className="size-4" />
@@ -7732,7 +8080,7 @@ function TeacherSqaafPage() {
                       </div>
                       <div className="grid grid-cols-2 gap-3 mt-auto">
                         <button
-                          onClick={() => handleDownloadPdf("responses", "view")}
+                          onClick={() => setView("responses")}
                           className="py-3 px-4 bg-[#1e1b4b] text-white rounded-3xl text-[13px] font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
                         >
                           <Eye className="size-4" />
@@ -7827,10 +8175,10 @@ function TeacherSqaafPage() {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-white min-h-screen w-full flex flex-col"
+                className="bg-white h-screen w-full flex flex-col overflow-hidden relative"
               >
                 {/* Header bar */}
-                <div className="bg-[#ffaf66] px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between text-slate-900 border-b border-black/5 relative z-20 w-full gap-4">
+                <div className="bg-[#ffaf66] px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between text-slate-900 border-b border-black/5 z-30 w-full gap-4 shadow-sm flex-shrink-0">
                   <div className="flex items-center gap-4">
                     <button
                       onClick={() => setView("dashboard")}
@@ -7893,7 +8241,8 @@ function TeacherSqaafPage() {
                 </div>
 
                 {/* Content */}
-                <div className="w-full max-w-7xl mx-auto px-5 md:px-8 py-6 flex-1 space-y-6">
+                <div className="w-full flex-1 overflow-y-auto">
+                  <div className="max-w-7xl mx-auto px-5 md:px-8 py-6 space-y-6 pb-24">
                   <div className="flex justify-between items-center">
                     <h2 className="text-[22px] font-bold text-slate-900 mb-1">
                       {selectedLang === "mr" ? "मूल्यांकन तक्ता अहवाल" : "Assessment Table Report"}
@@ -8195,10 +8544,106 @@ function TeacherSqaafPage() {
                       </tbody>
                     </table>
                   </div>
+
+                  {/* Summary Totals Table */}
+                  <div className="overflow-x-auto border border-slate-300 rounded-[2rem] bg-white shadow-md p-6 w-full space-y-4 mt-10">
+                    <h3 className="text-[14px] md:text-[16px] font-black text-slate-900 uppercase tracking-wider text-center">
+                      {selectedLang === "mr" ? "SQAAF - क्षेत्र, उपक्षेत्र, आणि मानके / बेंच मार्किंग व बाह्यमूल्यांकन स्टेटमेंट" : "SQAAF - Domain, Sub-domain and Standards / Benchmarking & External Evaluation Statement"}
+                    </h3>
+                    <table className="min-w-full border-collapse border border-slate-300 text-xs text-slate-950">
+                      <thead>
+                        <tr className="bg-slate-50 text-slate-900 font-bold border-b border-slate-300">
+                          <th rowSpan={2} className="border border-slate-300 px-3 py-3 text-center w-[10%]">{selectedLang === "mr" ? "मानक क्र." : "Standard Range"}</th>
+                          <th rowSpan={2} className="border border-slate-300 px-3 py-3 text-center w-[8%]">{selectedLang === "mr" ? "लागू मानके" : "Applicable Standards"}</th>
+                          <th rowSpan={2} className="border border-slate-300 px-3 py-3 text-left w-[32%]">{selectedLang === "mr" ? "क्षेत्र" : "Domain"}</th>
+                          <th colSpan={5} className="border border-slate-300 px-3 py-2 text-center bg-amber-500/5">{selectedLang === "mr" ? "स्वयं मूल्यमापन (Self Evaluation)" : "Self Evaluation"}</th>
+                          <th colSpan={5} className="border border-slate-300 px-3 py-2 text-center bg-indigo-500/5">{selectedLang === "mr" ? "बाह्य मूल्यमापन (External Evaluation)" : "External Evaluation"}</th>
+                        </tr>
+                        <tr className="bg-slate-50 text-slate-900 font-bold border-b border-slate-300">
+                          <th className="border border-slate-300 px-2 py-2 text-center">{selectedLang === "mr" ? "स्तर १" : "Lvl 1"}</th>
+                          <th className="border border-slate-300 px-2 py-2 text-center">{selectedLang === "mr" ? "स्तर २" : "Lvl 2"}</th>
+                          <th className="border border-slate-300 px-2 py-2 text-center">{selectedLang === "mr" ? "स्तर ३" : "Lvl 3"}</th>
+                          <th className="border border-slate-300 px-2 py-2 text-center">{selectedLang === "mr" ? "स्तर ४" : "Lvl 4"}</th>
+                          <th className="border border-slate-300 px-2 py-2 text-center bg-amber-100 font-black">{selectedLang === "mr" ? "एकूण" : "Total"}</th>
+                          <th className="border border-slate-300 px-2 py-2 text-center">{selectedLang === "mr" ? "स्तर १" : "Lvl 1"}</th>
+                          <th className="border border-slate-300 px-2 py-2 text-center">{selectedLang === "mr" ? "स्तर २" : "Lvl 2"}</th>
+                          <th className="border border-slate-300 px-2 py-2 text-center">{selectedLang === "mr" ? "स्तर ३" : "Lvl 3"}</th>
+                          <th className="border border-slate-300 px-2 py-2 text-center">{selectedLang === "mr" ? "स्तर ४" : "Lvl 4"}</th>
+                          <th className="border border-slate-300 px-2 py-2 text-center bg-indigo-100 font-black">{selectedLang === "mr" ? "एकूण" : "Total"}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {domainSummaryData.rows.map((row) => (
+                          <tr key={row.id} className="hover:bg-slate-50 font-semibold border-b border-slate-300">
+                            <td className="border border-slate-300 px-3 py-3 text-center leading-relaxed">
+                              <div>{selectedLang === "mr" ? `${toMarathiNumerals(row.start)} ते ${toMarathiNumerals(row.end)}` : `${row.start} to ${row.end}`}</div>
+                              {row.naText && (
+                                <div className="text-[10px] text-slate-500 font-bold mt-1">
+                                  {selectedLang === "mr" 
+                                    ? `${row.naText} लागू नाही` 
+                                    : `${row.naText} N/A`}
+                                </div>
+                              )}
+                            </td>
+                            <td className="border border-slate-300 px-3 py-3 text-center font-black">{selectedLang === "mr" ? toMarathiNumerals(row.appCount) : row.appCount}</td>
+                            <td className="border border-slate-300 px-3 py-3 text-left font-bold text-slate-800 leading-relaxed">{selectedLang === "mr" ? row.nameMr : row.nameEn}</td>
+                            
+                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.selfL1 ? (selectedLang === "mr" ? toMarathiNumerals(row.selfL1) : row.selfL1) : ""}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.selfL2 ? (selectedLang === "mr" ? toMarathiNumerals(row.selfL2) : row.selfL2) : ""}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.selfL3 ? (selectedLang === "mr" ? toMarathiNumerals(row.selfL3) : row.selfL3) : ""}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.selfL4 ? (selectedLang === "mr" ? toMarathiNumerals(row.selfL4) : row.selfL4) : ""}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-black bg-amber-50 text-amber-900">{selectedLang === "mr" ? toMarathiNumerals(row.selfObt) : row.selfObt}</td>
+                            
+                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.extL1 ? (selectedLang === "mr" ? toMarathiNumerals(row.extL1) : row.extL1) : ""}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.extL2 ? (selectedLang === "mr" ? toMarathiNumerals(row.extL2) : row.extL2) : ""}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.extL3 ? (selectedLang === "mr" ? toMarathiNumerals(row.extL3) : row.extL3) : ""}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.extL4 ? (selectedLang === "mr" ? toMarathiNumerals(row.extL4) : row.extL4) : ""}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-black bg-indigo-50 text-indigo-900">{row.extObt ? (selectedLang === "mr" ? toMarathiNumerals(row.extObt) : row.extObt) : ""}</td>
+                          </tr>
+                        ))}
+                        
+                        {/* Summary totals rows */}
+                        <tr className="bg-slate-50 font-black border-b border-slate-300">
+                          <td className="border border-slate-300 px-3 py-3"></td>
+                          <td className="border border-slate-300 px-3 py-3 text-center">{selectedLang === "mr" ? toMarathiNumerals(domainSummaryData.totalApplicable) : domainSummaryData.totalApplicable}</td>
+                          <td className="border border-slate-300 px-3 py-3 text-right">{selectedLang === "mr" ? "एकूण" : "Total"}</td>
+                          <td colSpan={4} className="border border-slate-300 px-3 py-3"></td>
+                          <td className="border border-slate-300 px-2 py-3 text-center bg-amber-100 text-amber-950 font-black text-sm">{selectedLang === "mr" ? toMarathiNumerals(domainSummaryData.selfObtTotal) : domainSummaryData.selfObtTotal}</td>
+                          <td colSpan={4} className="border border-slate-300 px-3 py-3"></td>
+                          <td className="border border-slate-300 px-2 py-3 text-center bg-indigo-100 text-indigo-950 font-black text-sm">{domainSummaryData.extObtTotal ? (selectedLang === "mr" ? toMarathiNumerals(domainSummaryData.extObtTotal) : domainSummaryData.extObtTotal) : ""}</td>
+                        </tr>
+                        <tr className="bg-slate-50 font-black border-b border-slate-300">
+                          <td colSpan={2} className="border border-slate-300 px-3 py-3"></td>
+                          <td className="border border-slate-300 px-3 py-3 text-right">{selectedLang === "mr" ? "एकूण पैकी" : "Out of Total"}</td>
+                          <td colSpan={4} className="border border-slate-300 px-3 py-3"></td>
+                          <td className="border border-slate-300 px-2 py-3 text-center bg-amber-150 text-slate-900 text-sm font-black">{selectedLang === "mr" ? toMarathiNumerals(domainSummaryData.totalPossibleMarks) : domainSummaryData.totalPossibleMarks}</td>
+                          <td colSpan={4} className="border border-slate-300 px-3 py-3"></td>
+                          <td className="border border-slate-300 px-2 py-3 text-center bg-indigo-150 text-slate-900 text-sm font-black"></td>
+                        </tr>
+                        <tr className="bg-slate-50 font-black border-b border-slate-300">
+                          <td colSpan={2} className="border border-slate-300 px-3 py-3"></td>
+                          <td className="border border-slate-300 px-3 py-3 text-right">{selectedLang === "mr" ? "टक्केवारी" : "Percentage"}</td>
+                          <td colSpan={4} className="border border-slate-300 px-3 py-3"></td>
+                          <td className="border border-slate-300 px-2 py-3 text-center bg-green-50 text-green-700 text-sm font-black">{selectedLang === "mr" ? toMarathiNumerals(domainSummaryData.overallSelfPct) : domainSummaryData.overallSelfPct}%</td>
+                          <td colSpan={4} className="border border-slate-300 px-3 py-3"></td>
+                          <td className="border border-slate-300 px-2 py-3 text-center bg-green-50 text-green-700 text-sm font-black">{domainSummaryData.overallExtPct ? `${selectedLang === "mr" ? toMarathiNumerals(domainSummaryData.overallExtPct) : domainSummaryData.overallExtPct}%` : ""}</td>
+                        </tr>
+                        <tr className="bg-slate-50 font-black border-b border-slate-300">
+                          <td colSpan={2} className="border border-slate-300 px-3 py-3"></td>
+                          <td className="border border-slate-300 px-3 py-3 text-right">{selectedLang === "mr" ? "श्रेणी" : "Grade"}</td>
+                          <td colSpan={4} className="border border-slate-300 px-3 py-3"></td>
+                          <td className="border border-slate-300 px-2 py-3 text-center bg-blue-50 text-blue-800 text-base font-black">{domainSummaryData.selfGrade}</td>
+                          <td colSpan={4} className="border border-slate-300 px-3 py-3"></td>
+                          <td className="border border-slate-300 px-2 py-3 text-center bg-blue-50 text-blue-800 text-base font-black">{domainSummaryData.overallExtPct ? domainSummaryData.extGrade : ""}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
+              </div>
 
                 {/* Fixed Save Button */}
-                <div className="sticky bottom-0 w-full bg-gradient-to-t from-white via-white to-white/0 z-20">
+                <div className="absolute bottom-0 left-0 right-0 w-full bg-gradient-to-t from-white via-white to-white/0 z-20">
                   <div className="max-w-7xl mx-auto w-full flex justify-end px-5 md:px-8 py-4">
                     <button
                       onClick={() => handleDownloadPdf("table")}
@@ -8216,23 +8661,27 @@ function TeacherSqaafPage() {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-white min-h-screen w-full flex flex-col"
+                className="bg-white h-screen w-full flex flex-col overflow-hidden relative"
               >
                 {/* Orange Header bar */}
-                <div className="bg-[#ffaf66] px-6 py-4 w-full">
+                <div className="bg-[#ffaf66] px-6 py-4 w-full z-30 shadow-sm flex-shrink-0 flex items-center gap-4 text-slate-900">
                   <button
                     onClick={() => setView("dashboard")}
-                    className="p-2 hover:bg-black/10 rounded-full transition-colors"
+                    className="p-2 hover:bg-black/10 rounded-full transition-colors flex items-center justify-center"
                   >
                     <ArrowLeft className="size-6 text-slate-900" strokeWidth={2.5} />
                   </button>
+                  <span className="text-lg font-bold tracking-tight">
+                    {selectedLang === "mr" ? "शाळा प्रतिसाद अहवाल" : "School Responses Report"}
+                  </span>
                 </div>
 
                 {/* Content */}
-                <div className="w-full max-w-7xl mx-auto px-5 md:px-8 py-6 flex-1">
+                <div className="w-full flex-1 overflow-y-auto">
+                  <div className="max-w-7xl mx-auto px-5 md:px-8 py-6 pb-24">
                   <hr className="border-slate-300 mb-6" />
                   <h2 className="text-[22px] font-bold text-slate-900 mb-1">
-                    {selectedLang === "mr" ? "शाळा प्रतिसाद" : "School Responses"}
+                    {selectedLang === "mr" ? "शाळा प्रतिसाद अहवाल" : "School Responses Report"}
                   </h2>
                   <hr className="border-slate-900 mb-6" />
 
@@ -8241,46 +8690,26 @@ function TeacherSqaafPage() {
                     {(() => {
                       const answeredEntries = Array.from({ length: 128 }, (_, i) => {
                         const num = i + 1;
-                        const idx = selectedOptions[num] !== undefined ? selectedOptions[num] : 3;
+                        const idx = selectedOptions[num];
                         return { num, idx };
                       });
 
-                      return answeredEntries.map(({ num, idx }) => {
-                        const detail = getStandardDetail(num);
-                        const langData = detail?.[selectedLang];
-                        const orangeDesc = langData?.orangeDesc || (selectedLang === "mr" ? `मानक क्र. ${toMarathiNumerals(num)}` : `Standard No. ${num}`);
-                        const options = getGroupedOptions(num, selectedLang);
-                        const isNotApplicable = idx === options.length - 1;
-                        const responseText = isNotApplicable
-                          ? (selectedLang === "mr" ? "लागू नाही" : "Not applicable")
-                          : (options[idx]?.text || "-");
-
-                        return (
-                          <div
-                            key={num}
-                            className="border border-slate-300 rounded-xl p-5 bg-white"
-                          >
-                            <h3 className="text-[16px] font-bold text-slate-900 mb-3">
-                              {selectedLang === "mr" ? `मानक क्र.${toMarathiNumerals(num)}` : `Standard No.${num}`}
-                            </h3>
-                            <p className="text-[13px] text-slate-700 leading-relaxed mb-4">
-                              {orangeDesc}
-                            </p>
-                            <p className="text-[13px] font-bold text-slate-900 mb-2">
-                              {selectedLang === "mr" ? "प्रतिसाद" : "RESPONSE"}
-                            </p>
-                            <p className="text-[13px] text-slate-700 leading-relaxed whitespace-pre-line">
-                              {responseText}
-                            </p>
-                          </div>
-                        );
-                      });
+                      return answeredEntries.map(({ num, idx }) => (
+                        <SqaafResponseCard
+                          key={num}
+                          num={num}
+                          idx={idx}
+                          selectedLang={selectedLang}
+                          selectedOptions={selectedOptions}
+                        />
+                      ));
                     })()}
                   </div>
                 </div>
+              </div>
 
                 {/* Fixed Save Button */}
-                <div className="sticky bottom-0 w-full bg-gradient-to-t from-white via-white to-white/0 z-20">
+                <div className="absolute bottom-0 left-0 right-0 w-full bg-gradient-to-t from-white via-white to-white/0 z-20">
                   <div className="max-w-7xl mx-auto w-full flex justify-end px-5 md:px-8 py-4">
                     <button
                       onClick={() => handleDownloadPdf("responses")}
