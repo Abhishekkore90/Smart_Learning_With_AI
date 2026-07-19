@@ -54,12 +54,12 @@ export const Route = createFileRoute("/teacher/meeting")({
   ): {
     committeeId?: string;
     meetingId?: string;
-    tab?: "form" | "history";
+    tab?: "form" | "history" | "invitation";
     edit?: boolean;
   } => ({
     committeeId: search.committeeId as string | undefined,
     meetingId: search.meetingId as string | undefined,
-    tab: search.tab as "form" | "history" | undefined,
+    tab: search.tab as "form" | "history" | "invitation" | undefined,
     edit: search.edit === "true" || search.edit === true || undefined,
   }),
   component: TeacherMeetingPage,
@@ -373,7 +373,7 @@ function TeacherMeetingPage() {
   );
 
   // Tab control: 'form' or 'history'
-  const [activeTab, setActiveTab] = useState<"form" | "history">("form");
+  const [activeTab, setActiveTab] = useState<"form" | "history" | "invitation">("form");
   const [formStep, setFormStep] = useState<1 | 2>(1);
 
   // Form State
@@ -397,6 +397,44 @@ function TeacherMeetingPage() {
   const [formOutroText, setFormOutroText] = useState("ऐन वेळेस उपस्थित होणाऱ्या विषयांवर चर्चा करून समितीचे सचिव यांनी सभेत उपस्थित सर्व सदस्यांचे आभार व्यक्त केले व अध्यक्ष यांच्या संमतीने सभा संपन्न झाली असे घोषीत केले.");
   const [customIntroText, setCustomIntroText] = useState("");
   const [isIntroEdited, setIsIntroEdited] = useState(false);
+
+  // Invitation letter state
+  const [invitationTitle, setInvitationTitle] = useState("");
+  const [invitationSubtitle, setInvitationSubtitle] = useState("सभेचे निमंत्रण पत्र तयार करा");
+  const [invitationVillage, setInvitationVillage] = useState("");
+  const [invitationTaluka, setInvitationTaluka] = useState("");
+  const [invitationDistrict, setInvitationDistrict] = useState("");
+  const [invitationOutwardNo, setInvitationOutwardNo] = useState("");
+  const [invitationLetterDate, setInvitationLetterDate] = useState("");
+
+  const [invitationMemberName, setInvitationMemberName] = useState("");
+  const [invitationMemberPost, setInvitationMemberPost] = useState("");
+  const [invitationDate, setInvitationDate] = useState("");
+  const [invitationDay, setInvitationDay] = useState("");
+  const [invitationTime, setInvitationTime] = useState("");
+  const [invitationVenue, setInvitationVenue] = useState("");
+  const [invitationSubject, setInvitationSubject] = useState("");
+
+  const [invitationSalutation, setInvitationSalutation] = useState("महोदय / महोदया,");
+  const [invitationBodyParagraph1, setInvitationBodyParagraph1] = useState("");
+  const [invitationBodyParagraph2, setInvitationBodyParagraph2] = useState("शाळेच्या शैक्षणिक, प्रशासकीय तसेच सर्वांगीण विकासासंदर्भातील महत्त्वाच्या विषयांवर चर्चा करून आवश्यक निर्णय घेण्यासाठी आपल्या उपस्थितीची आवश्यकता आहे. तरी आपण खालील वेळेनुसार सभेस उपस्थित राहावे, ही नम्र विनंती.");
+
+  const [invitationAgendaItems, setInvitationAgendaItems] = useState<string[]>([]);
+  const [invitationFooterNote, setInvitationFooterNote] = useState("शाळेच्या सर्वांगीण विकासात आणि व्यवस्थापनात आपले योगदान अत्यंत मोलाचे आहे. तरी कृपया आपण या सभेस वेळेवर उपस्थित राहावे, ही नम्र विनंती.");
+  const [invitationSignatoryTitle, setInvitationSignatoryTitle] = useState("मुख्याध्यापक / सचिव");
+  const [invitationSignatoryOrg, setInvitationSignatoryOrg] = useState("");
+
+  const currentCommName = committeeName || selectedCommittee?.name || "शाळा व्यवस्थापन समिती (SMC)";
+
+  useEffect(() => {
+    if (currentCommName) {
+      setInvitationTitle(`॥ ${currentCommName} सभा – निमंत्रण ॥`);
+      setInvitationSubject(`${currentCommName} सभेस उपस्थित राहण्याबाबत.`);
+      setInvitationBodyParagraph1(`आपणास अत्यंत आनंदाने व आदराने आमंत्रित करण्यात येते की, आपल्या शाळेच्या ${currentCommName} ची सभा खालील दिलेल्या वेळ व ठिकाणी आयोजित करण्यात आली आहे.`);
+      setInvitationSignatoryOrg(currentCommName);
+    }
+  }, [currentCommName]);
+
 
   // Auto-generate introductory text if it hasn't been manually edited
   useEffect(() => {
@@ -429,6 +467,24 @@ function TeacherMeetingPage() {
   const [cachedAdminTemplates, setCachedAdminTemplates] = useState<Record<string, any>>({});
   const [cachedCustomTemplates, setCachedCustomTemplates] = useState<Record<string, any>>({});
   const [isTemplatesLoading, setIsTemplatesLoading] = useState<boolean>(false);
+
+  // Auto-fetch agenda items when invitation date changes
+  useEffect(() => {
+    if (!invitationDate || !selectedCommittee) {
+      setInvitationAgendaItems([]);
+      return;
+    }
+    const parts = invitationDate.split("-");
+    if (parts.length !== 3) return;
+    const monthStr = parts[1]; // "01" to "12"
+    const template = cachedAdminTemplates[monthStr];
+    if (template?.subjects?.length > 0) {
+      const subjects = template.subjects.map((s: any) => s.subject || "").filter((s: string) => s.trim());
+      setInvitationAgendaItems(subjects);
+    } else {
+      setInvitationAgendaItems([]);
+    }
+  }, [invitationDate, selectedCommittee, cachedAdminTemplates]);
 
   // Edit Mode States
   const isEditing = search.edit === true;
@@ -1328,6 +1384,40 @@ function TeacherMeetingPage() {
     }
   };
 
+  // Meeting Invitation PDF handler
+  const handleDownloadInvitationPdf = async () => {
+    try {
+      const element = document.getElementById("invitation-pdf-content");
+      if (!element) return;
+
+      toast.info("सभेचे निमंत्रण पत्र PDF तयार होत आहे, कृपया प्रतीक्षा करा...");
+
+      const html2pdf = (await import("html2pdf.js")).default;
+
+      const opt = {
+        margin: [0, 0, 0, 0],
+        filename: `${currentCommName}_सभा_निमंत्रण.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          letterRendering: true,
+          scrollX: 0,
+          scrollY: 0,
+          windowWidth: 794
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      };
+
+      await html2pdf().from(element).set(opt).save();
+      toast.success("निमंत्रण पत्र PDF यशस्वीरित्या डाउनलोड झाली!");
+    } catch (error) {
+      console.error("Error generating invitation PDF", error);
+      toast.error("PDF तयार करताना त्रुटी आली. कृपया पुन्हा प्रयत्न करा.");
+    }
+  };
+
   if (authLoading)
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -1530,6 +1620,7 @@ function TeacherMeetingPage() {
                       >
                         मागील अहवाल ({savedMeetings.length})
                       </button>
+
                     </div>
                   </div>
 
@@ -2560,12 +2651,12 @@ function TeacherMeetingPage() {
                               <table className="w-full text-left border-collapse text-base">
                                 <thead>
                                   <tr className="bg-slate-100 text-slate-800 font-extrabold border-b-2 border-slate-300">
-                                    <th className="px-1.5 py-4 text-center w-16">
+                                    <th className="px-1 py-4 text-center w-10">
                                       अ.क्र.
                                     </th>
-                                    <th className="px-4 py-4 w-[35%] min-w-[250px]">सदस्याचे नाव</th>
-                                    <th className="px-6 py-4">पदनाम (Designation)</th>
-                                    <th className="px-6 py-4">पद (Post)</th>
+                                    <th className="px-4 py-4 w-[40%] min-w-[300px]">सदस्याचे नाव</th>
+                                    <th className="px-6 py-4 min-w-[200px]">पदनाम (Designation)</th>
+                                    <th className="px-6 py-4 min-w-[180px]">पद (Post)</th>
                                     <th className="px-6 py-4 text-center w-24">स्वाक्षरी</th>
                                     <th className="px-6 py-4 text-center w-24">
                                       कृती
@@ -2575,7 +2666,7 @@ function TeacherMeetingPage() {
                                 <tbody className="divide-y divide-slate-200 font-extrabold text-slate-950">
                                   {formMembers.map((m: any, idx: number) => (
                                     <tr key={idx} className="hover:bg-slate-50/50">
-                                      <td className="px-2 py-4 text-center text-slate-500 font-extrabold text-lg">
+                                      <td className="px-1 py-4 text-center text-slate-500 font-extrabold text-lg">
                                         {idx + 1}
                                       </td>
                                       <td className="px-4 py-4">
@@ -2593,7 +2684,7 @@ function TeacherMeetingPage() {
                                           className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 font-extrabold text-slate-950 bg-white text-lg"
                                         />
                                       </td>
-                                      <td className="px-6 py-4">
+                                      <td className="px-6 py-4 min-w-[200px]">
                                         {m.isCustomPost ? (
                                           <div className="flex gap-2">
                                             <input
@@ -2637,7 +2728,7 @@ function TeacherMeetingPage() {
                                           </select>
                                         )}
                                       </td>
-                                      <td className="px-6 py-4">
+                                      <td className="px-6 py-4 min-w-[180px]">
                                         {m.isCustomRole ? (
                                           <div className="flex gap-2">
                                             <input
@@ -2745,10 +2836,10 @@ function TeacherMeetingPage() {
                       {formStep === 2 && (
                         <div className="space-y-12">
                           {/* Month Selection Navbar & Metadata */}
-                          <div className="bg-slate-50 border border-slate-200/80 p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-[2rem] space-y-6">
-                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                              <div className="space-y-1">
-                                <label className="text-sm font-black text-slate-800 uppercase tracking-wider block">
+                          <div className="bg-slate-50 border border-slate-200/80 p-4 sm:p-5 rounded-2xl space-y-4">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                              <div className="space-y-0.5">
+                                <label className="text-xs sm:text-sm font-black text-slate-800 uppercase tracking-wider block">
                                   मासिक सभा महिना निवडा (Select Meeting Month)
                                 </label>
                                 <p className="text-xs text-slate-500 font-bold">
@@ -2756,15 +2847,15 @@ function TeacherMeetingPage() {
                                 </p>
                               </div>
                               {loadingTemplate && (
-                                <div className="flex items-center gap-2 text-xs font-black text-blue-600 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-xl self-start md:self-auto animate-pulse">
+                                <div className="flex items-center gap-2 text-xs font-black text-blue-600 bg-blue-50 border border-blue-100 px-3 py-1 rounded-xl self-start md:self-auto animate-pulse">
                                   <div className="size-3.5 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin" />
                                   <span>टेम्पलेट लोड होत आहे...</span>
                                 </div>
                               )}
                             </div>
 
-                            {/* Horizontal Month Navbar */}
-                            <div className="flex overflow-x-auto gap-2.5 pb-2 pt-1 -mx-2 px-2 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
+                            {/* Compact Month Grid Navbar */}
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-2.5 pt-0.5">
                               {(selectedCommittee?.id === "alumni" ? ALUMNI_MEETINGS : ACADEMIC_MONTHS).map((m) => {
                                 const isSelected = selectedMonth === m.id;
                                 const currentIdx = ACADEMIC_MONTHS.findIndex(x => x.id === currentMonth);
@@ -2776,20 +2867,32 @@ function TeacherMeetingPage() {
                                     type="button"
                                     disabled={loadingTemplate || isFuture}
                                     onClick={() => handleMonthChange(m.id)}
-                                    className={`px-5 py-3 rounded-xl text-sm font-black uppercase tracking-wider transition-all duration-300 shrink-0 cursor-pointer ${isSelected
-                                      ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25 scale-[1.03]"
+                                    className={`px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer flex items-center justify-center text-center leading-tight min-h-[38px] ${isSelected
+                                      ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/25 scale-[1.02]"
                                       : "bg-white text-slate-600 hover:text-slate-955 border border-slate-200 hover:bg-slate-50 hover:border-slate-300 active:scale-95 disabled:opacity-50"
                                       }`}
                                   >
-                                    {m.name} ({m.english}) {isFuture && "(येणार)"}
+                                    {m.name} ({m.english})
                                   </button>
                                 );
                               })}
                             </div>
 
+                            {/* सभा निमंत्रण Button */}
+                            <button
+                              type="button"
+                              onClick={() => { setSelectedMonth("invitation"); }}
+                              className={`w-full px-3 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer flex items-center justify-center text-center leading-tight min-h-[38px] ${selectedMonth === "invitation"
+                                ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-amber-500/25 scale-[1.02]"
+                                : "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 active:scale-95"
+                                }`}
+                            >
+                              सभा निमंत्रण
+                            </button>
+
                             {/* Year & Date Selection options appearing after month selection */}
                             <AnimatePresence>
-                              {selectedMonth && (
+                              {selectedMonth && selectedMonth !== "invitation" && (
                                 <motion.div
                                   initial={{ opacity: 0, height: 0 }}
                                   animate={{ opacity: 1, height: "auto" }}
@@ -2845,7 +2948,7 @@ function TeacherMeetingPage() {
                             </AnimatePresence>
                           </div>
 
-                          {selectedMonth && (
+                          {selectedMonth && selectedMonth !== "invitation" && (
                             <>
                               {/* Complete Primary Info, Intro Paragraph & Committee Members Table Structure (Fully Editable) */}
                               <div className="bg-white border-2 border-slate-300 p-6 sm:p-8 rounded-2xl space-y-8 shadow-sm">
@@ -3116,25 +3219,6 @@ function TeacherMeetingPage() {
                                   </div>
                                 </div>
                               </div>
-
-                              {/* Introductory Paragraph Preview */}
-                              {selectedMonth && (
-                                <div className="pt-8 pb-4 font-sans">
-                                  <div className="bg-white border-2 border-slate-300 p-8 rounded-2xl relative space-y-4 shadow-sm">
-                                    <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest border-b-2 border-slate-100 pb-3">
-                                      २. प्रास्ताविक (Introductory Paragraph)
-                                    </h3>
-                                    <textarea
-                                      value={customIntroText}
-                                      onChange={(e) => {
-                                        setCustomIntroText(e.target.value);
-                                        setIsIntroEdited(true);
-                                      }}
-                                      className="w-full h-32 px-6 py-5 border-2 border-slate-300 rounded-xl bg-slate-50 font-extrabold text-slate-950 text-lg leading-relaxed shadow-inner outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 resize-y"
-                                    />
-                                  </div>
-                                </div>
-                              )}
 
                               {/* Dynamic Subjects and Resolutions Section */}
                               {selectedMonth && formResolutions.length === 0 ? (
@@ -3662,6 +3746,432 @@ function TeacherMeetingPage() {
                           )}
                         </div>
                       )}
+                    </div>
+                  )}
+
+
+
+                  {/* Inline सभा निमंत्रण content when selectedMonth is 'invitation' */}
+                  {activeTab === "form" && selectedMonth === "invitation" && (
+                    <div className="p-4 sm:p-8 md:p-12 space-y-8 md:space-y-10">
+                      {/* Title & Subtitle */}
+                      <div className="text-center space-y-3 bg-gradient-to-r from-blue-50/50 via-slate-50 to-indigo-50/50 p-6 rounded-2xl border border-slate-200">
+                        <input
+                          type="text"
+                          value={invitationTitle}
+                          onChange={(e) => setInvitationTitle(e.target.value)}
+                          className="w-full text-center text-xl md:text-2xl font-black text-slate-800 tracking-tight bg-transparent border-b-2 border-dashed border-slate-300 focus:border-blue-600 outline-none pb-1"
+                        />
+                        <input
+                          type="text"
+                          value={invitationSubtitle}
+                          onChange={(e) => setInvitationSubtitle(e.target.value)}
+                          className="w-full text-center text-base text-slate-500 font-bold bg-transparent border-b border-dashed border-slate-200 focus:border-blue-400 outline-none"
+                        />
+                      </div>
+
+                      {/* School Info Row */}
+                      <div className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <label className="text-sm font-black text-slate-700 block">शाळेचे नाव</label>
+                            <input
+                              type="text"
+                              value={schoolName}
+                              onChange={(e) => setSchoolName(e.target.value)}
+                              placeholder="शाळेचे नाव प्रविष्ट करा..."
+                              className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 font-bold text-slate-950 bg-white text-base"
+                            />
+                          </div>
+                          <div className="grid grid-cols-3 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-sm font-black text-slate-700 block">गाव</label>
+                              <input
+                                type="text"
+                                value={invitationVillage}
+                                onChange={(e) => setInvitationVillage(e.target.value)}
+                                placeholder="गाव"
+                                className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 font-bold text-slate-950 bg-white text-base"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-black text-slate-700 block">तालुका</label>
+                              <input
+                                type="text"
+                                value={invitationTaluka}
+                                onChange={(e) => setInvitationTaluka(e.target.value)}
+                                placeholder="ता."
+                                className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 font-bold text-slate-950 bg-white text-base"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-black text-slate-700 block">जिल्हा</label>
+                              <input
+                                type="text"
+                                value={invitationDistrict}
+                                onChange={(e) => setInvitationDistrict(e.target.value)}
+                                placeholder="जि."
+                                className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 font-bold text-slate-950 bg-white text-base"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <label className="text-sm font-black text-slate-700 block">पत्र क्र.</label>
+                            <input
+                              type="text"
+                              value={invitationOutwardNo}
+                              onChange={(e) => setInvitationOutwardNo(e.target.value)}
+                              placeholder="पत्र क्रमांक"
+                              className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 font-bold text-slate-950 bg-white text-base"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-black text-slate-700 block">पत्र दिनांक</label>
+                            <input
+                              type="date"
+                              value={invitationLetterDate}
+                              onChange={(e) => setInvitationLetterDate(e.target.value)}
+                              className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 font-bold text-slate-950 bg-white text-base"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Recipient Section */}
+                      <div className="bg-slate-50 border-2 border-slate-200 rounded-2xl p-6 space-y-4">
+                        <h3 className="text-base font-black text-slate-800 uppercase tracking-wider border-b border-slate-200 pb-2">प्रति</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <label className="text-sm font-black text-slate-700 block">श्री./सौ.</label>
+                            <div className="space-y-2">
+                              <select
+                                value={invitationMemberName}
+                                onChange={(e) => {
+                                  const selectedName = e.target.value;
+                                  setInvitationMemberName(selectedName);
+                                  const member = formMembers.find((m: any) => m.name === selectedName);
+                                  if (member) {
+                                    setInvitationMemberPost(member?.post || member?.role || "");
+                                  }
+                                }}
+                                className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 font-bold text-slate-950 bg-white text-base cursor-pointer"
+                              >
+                                <option value="">-- सदस्य निवडा किंवा खाली नाव टाइप करा --</option>
+                                {formMembers.filter((m: any) => m.name?.trim()).map((m: any, i: number) => (
+                                  <option key={i} value={m.name}>{m.name}</option>
+                                ))}
+                              </select>
+                              <input
+                                type="text"
+                                value={invitationMemberName}
+                                onChange={(e) => setInvitationMemberName(e.target.value)}
+                                placeholder="किंवा सदस्याचे नाव टाइप करा..."
+                                className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 font-bold text-slate-950 bg-white text-base"
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-black text-slate-700 block">पद / सदस्य</label>
+                            <input
+                              type="text"
+                              value={invitationMemberPost}
+                              onChange={(e) => setInvitationMemberPost(e.target.value)}
+                              placeholder="पद / सदस्य"
+                              className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 font-bold text-slate-950 bg-white text-base"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Subject */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-black text-slate-700 block">विषय</label>
+                        <input
+                          type="text"
+                          value={invitationSubject}
+                          onChange={(e) => setInvitationSubject(e.target.value)}
+                          className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 font-bold text-slate-950 bg-white text-base"
+                        />
+                      </div>
+
+                      {/* Body Text */}
+                      <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-6 space-y-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-black text-slate-700 block">आदरार्थी संबोधन</label>
+                          <input
+                            type="text"
+                            value={invitationSalutation}
+                            onChange={(e) => setInvitationSalutation(e.target.value)}
+                            className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl font-bold text-slate-950 bg-white text-base outline-none focus:border-blue-600"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-black text-slate-700 block">निमंत्रण मजकूर (परिच्छेद १)</label>
+                          <textarea
+                            rows={3}
+                            value={invitationBodyParagraph1}
+                            onChange={(e) => setInvitationBodyParagraph1(e.target.value)}
+                            className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl font-bold text-slate-900 bg-white text-base outline-none focus:border-blue-600 leading-relaxed"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-black text-slate-700 block">निमंत्रण मजकूर (परिच्छेद २)</label>
+                          <textarea
+                            rows={3}
+                            value={invitationBodyParagraph2}
+                            onChange={(e) => setInvitationBodyParagraph2(e.target.value)}
+                            className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl font-bold text-slate-900 bg-white text-base outline-none focus:border-blue-600 leading-relaxed"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Meeting Details */}
+                      <div className="bg-white border-2 border-slate-200 rounded-2xl p-6 space-y-4">
+                        <h3 className="text-base font-black text-slate-800 uppercase tracking-wider border-b border-slate-200 pb-2">सभेचा तपशील</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <label className="text-sm font-black text-slate-700 block">दिनांक</label>
+                            <input
+                              type="date"
+                              value={invitationDate}
+                              onChange={(e) => {
+                                const dateVal = e.target.value;
+                                setInvitationDate(dateVal);
+                                if (dateVal) {
+                                  const dayNames = ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
+                                  const d = new Date(dateVal);
+                                  setInvitationDay(dayNames[d.getDay()] || "");
+                                } else {
+                                  setInvitationDay("");
+                                }
+                              }}
+                              className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 font-bold text-slate-950 bg-white text-base"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-black text-slate-700 block">वार</label>
+                            <select
+                              value={invitationDay}
+                              onChange={(e) => setInvitationDay(e.target.value)}
+                              className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 font-bold text-slate-950 bg-white text-base cursor-pointer"
+                            >
+                              <option value="">-- वार निवडा --</option>
+                              <option value="सोमवार">सोमवार</option>
+                              <option value="मंगळवार">मंगळवार</option>
+                              <option value="बुधवार">बुधवार</option>
+                              <option value="गुरुवार">गुरुवार</option>
+                              <option value="शुक्रवार">शुक्रवार</option>
+                              <option value="शनिवार">शनिवार</option>
+                              <option value="रविवार">रविवार</option>
+                            </select>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-black text-slate-700 block">वेळ</label>
+                            <input
+                              type="time"
+                              value={invitationTime}
+                              onChange={(e) => setInvitationTime(e.target.value)}
+                              className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 font-bold text-slate-950 bg-white text-base"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-black text-slate-700 block">स्थळ</label>
+                            <input
+                              type="text"
+                              value={invitationVenue}
+                              onChange={(e) => setInvitationVenue(e.target.value)}
+                              placeholder="उदा. जिल्हा परिषद प्राथमिक शाळा..."
+                              className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 font-bold text-slate-950 bg-white text-base"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Agenda Items */}
+                      <div className="bg-white border-2 border-slate-200 rounded-2xl p-6 space-y-4">
+                        <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                          <h3 className="text-base font-black text-slate-800 uppercase tracking-wider">सभेची विषयपत्रिका</h3>
+                          <button
+                            type="button"
+                            onClick={() => setInvitationAgendaItems([...invitationAgendaItems, ""])}
+                            className="flex items-center gap-1.5 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-sm font-black hover:bg-blue-100 transition-all cursor-pointer border border-blue-200"
+                          >
+                            <Plus size={16} /> नवीन विषय जोडा
+                          </button>
+                        </div>
+                        {invitationAgendaItems.length > 0 ? (
+                          <div className="space-y-3">
+                            {invitationAgendaItems.map((item, i) => (
+                              <div key={i} className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2">
+                                <span className="text-base font-black text-blue-600 shrink-0">{i + 1}.</span>
+                                <input
+                                  type="text"
+                                  value={item}
+                                  onChange={(e) => {
+                                    const updated = [...invitationAgendaItems];
+                                    updated[i] = e.target.value;
+                                    setInvitationAgendaItems(updated);
+                                  }}
+                                  placeholder={`विषय ${i + 1} प्रविष्ट करा...`}
+                                  className="w-full bg-white px-4 py-3 border-2 border-slate-300 rounded-xl text-base font-bold text-slate-950 outline-none focus:border-blue-600"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const updated = invitationAgendaItems.filter((_, idx) => idx !== i);
+                                    setInvitationAgendaItems(updated);
+                                  }}
+                                  className="p-2 text-slate-400 hover:text-red-600 transition-colors shrink-0 cursor-pointer"
+                                  title="विषय हटवा"
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-6 text-slate-400">
+                            <p className="text-base font-bold">{invitationDate ? "या महिन्यासाठी विषय आढळले नाहीत." : "विषय पाहण्यासाठी सभेचा दिनांक निवडा अथवा वरील बटनावरून नवीन विषय जोडा."}</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Footer Note */}
+                      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 space-y-2">
+                        <label className="text-sm font-black text-amber-900 block">तळटीप / विनंती मजकूर</label>
+                        <textarea
+                          rows={2}
+                          value={invitationFooterNote}
+                          onChange={(e) => setInvitationFooterNote(e.target.value)}
+                          className="w-full px-4 py-3 border border-amber-300 rounded-xl font-bold text-slate-900 bg-white text-base outline-none focus:border-amber-500 leading-relaxed"
+                        />
+                      </div>
+
+                      {/* Signature */}
+                      <div className="flex justify-end pt-4">
+                        <div className="text-center space-y-2 w-72">
+                          <div className="w-full border-b-2 border-slate-400 h-10" />
+                          <input
+                            type="text"
+                            value={invitationSignatoryTitle}
+                            onChange={(e) => setInvitationSignatoryTitle(e.target.value)}
+                            className="w-full text-center text-base font-black text-slate-800 bg-transparent border-b border-dashed border-slate-300 focus:border-blue-600 outline-none"
+                          />
+                          <input
+                            type="text"
+                            value={invitationSignatoryOrg}
+                            onChange={(e) => setInvitationSignatoryOrg(e.target.value)}
+                            className="w-full text-center text-base font-bold text-slate-600 bg-transparent border-b border-dashed border-slate-300 focus:border-blue-600 outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Download PDF Action Button */}
+                      <div className="flex justify-center pt-6 border-t-2 border-slate-200">
+                        <button
+                          type="button"
+                          onClick={handleDownloadInvitationPdf}
+                          className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white rounded-2xl px-12 py-4 shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-95 transition-all text-base font-black uppercase tracking-wider flex items-center gap-3 cursor-pointer"
+                        >
+                          <Download size={22} /> निमंत्रण पत्र PDF डाउनलोड करा
+                        </button>
+                      </div>
+
+                      {/* Off-screen PDF Printable Container (exact match with docx template reference) */}
+                      <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
+                        <div
+                          id="invitation-pdf-content"
+                          style={{ width: "794px", boxSizing: "border-box", margin: "0 auto" }}
+                          className="p-8 bg-white text-slate-900 font-serif leading-relaxed text-sm space-y-4 border-4 border-double border-slate-900"
+                        >
+                          {/* Title Header */}
+                          <div className="text-center pb-2 border-b-2 border-slate-900">
+                            <h1 className="text-xl font-black tracking-wide text-slate-900">
+                              {invitationTitle || `॥ ${currentCommName} सभा – निमंत्रण ॥`}
+                            </h1>
+                          </div>
+
+                          {/* Metadata Header Row */}
+                          <div className="space-y-1 text-sm font-bold pt-1">
+                            <div className="flex justify-between items-center border-b border-slate-300 pb-1.5">
+                              <div><span className="font-black">शाळेचे नाव :</span> {schoolName || "____________________"}</div>
+                              <div><span className="font-black">गाव :</span> {invitationVillage || "____________"}</div>
+                              <div><span className="font-black">ता. :</span> {invitationTaluka || "____________"}</div>
+                              <div><span className="font-black">जि. :</span> {invitationDistrict || "____________"}</div>
+                            </div>
+                            <div className="flex justify-between items-center pt-1">
+                              <div><span className="font-black">पत्र क्र. :</span> {invitationOutwardNo || "____________"}</div>
+                              <div><span className="font-black">दिनांक :</span> {invitationLetterDate ? invitationLetterDate.split("-").reverse().join("/") : "____/____/20____"}</div>
+                            </div>
+                          </div>
+
+                          {/* Recipient Section */}
+                          <div className="space-y-0.5 pt-2 text-sm font-bold">
+                            <p className="font-black text-base">प्रति,</p>
+                            <p><span className="font-black">श्री./सौ. :</span> {invitationMemberName || "____________________________"}</p>
+                            <p><span className="font-black">पद / सदस्य :</span> {invitationMemberPost || "________________________"}</p>
+                          </div>
+
+                          {/* Subject */}
+                          <div className="pt-1 text-sm font-black underline underline-offset-4">
+                            विषय : {invitationSubject || `${currentCommName} सभेस उपस्थित राहण्याबाबत.`}
+                          </div>
+
+                          {/* Body Paragraphs */}
+                          <div className="space-y-2 pt-1 text-sm font-medium text-justify leading-relaxed">
+                            <p className="font-black">{invitationSalutation || "महोदय / महोदया,"}</p>
+                            <p className="indent-6">
+                              {invitationBodyParagraph1 || `आपणास अत्यंत आनंदाने व आदराने आमंत्रित करण्यात येते की, आपल्या शाळेच्या ${currentCommName} ची सभा खालील दिलेल्या वेळ व ठिकाणी आयोजित करण्यात आली आहे.`}
+                            </p>
+                            <p className="indent-6">
+                              {invitationBodyParagraph2 || "शाळेच्या शैक्षणिक, प्रशासकीय तसेच सर्वांगीण विकासासंदर्भातील महत्त्वाच्या विषयांवर चर्चा करून आवश्यक निर्णय घेण्यासाठी आपल्या उपस्थितीची आवश्यकता आहे. तरी आपण खालील वेळेनुसार सभेस उपस्थित राहावे, ही नम्र विनंती."}
+                            </p>
+                          </div>
+
+                          {/* Meeting Details Box */}
+                          <div className="border-2 border-slate-900 rounded-lg p-3 space-y-1.5 bg-slate-50/50">
+                            <h2 className="text-sm font-black underline border-b border-slate-300 pb-1 text-slate-900">सभेचा तपशील</h2>
+                            <div className="grid grid-cols-2 gap-2 text-sm font-bold">
+                              <div><span className="font-black">दिनांक :</span> {invitationDate ? invitationDate.split("-").reverse().join("/") : "__________________"}</div>
+                              <div><span className="font-black">वार :</span> {invitationDay || "__________________"}</div>
+                              <div><span className="font-black">वेळ :</span> {invitationTime || "__________________"}</div>
+                              <div><span className="font-black">स्थळ :</span> {invitationVenue || schoolName || "__________________"}</div>
+                            </div>
+                          </div>
+
+                          {/* Agenda Items */}
+                          <div className="space-y-1.5 pt-1">
+                            <h2 className="text-sm font-black underline border-b border-slate-300 pb-1 text-slate-900">सभेची विषयपत्रिका</h2>
+                            {invitationAgendaItems.length > 0 ? (
+                              <ol className="list-decimal list-inside space-y-1 text-sm font-bold pl-2">
+                                {invitationAgendaItems.map((item, idx) => (
+                                  <li key={idx} className="leading-snug">{item}</li>
+                                ))}
+                              </ol>
+                            ) : (
+                              <p className="text-xs italic text-slate-500">कोणतेही विषय नोंदवले नाहीत.</p>
+                            )}
+                          </div>
+
+                          {/* Footer Note */}
+                          <div className="pt-2 border-t border-slate-300">
+                            <p className="text-sm font-bold text-center leading-relaxed">
+                              {invitationFooterNote || "शाळेच्या सर्वांगीण विकासात आणि व्यवस्थापनात आपले योगदान अत्यंत मोलाचे आहे. तरी कृपया आपण या सभेस वेळेवर उपस्थित राहावे, ही नम्र विनंती."}
+                            </p>
+                          </div>
+
+                          {/* Signature Section */}
+                          <div className="flex justify-end pt-6">
+                            <div className="text-center space-y-1.5 w-64">
+                              <div className="w-full border-b-2 border-slate-900 h-8" />
+                              <p className="text-sm font-black text-slate-900">{invitationSignatoryTitle || "मुख्याध्यापक / सचिव"}</p>
+                              <p className="text-xs font-bold text-slate-800">{invitationSignatoryOrg || currentCommName}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </motion.div>

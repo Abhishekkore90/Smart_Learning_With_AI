@@ -5493,26 +5493,54 @@ function TeacherSqafPage() {
                     transition={{ delay: 0.1 }}
                     className="bg-[#eef5cb] border border-slate-900 rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-8 space-y-6 shadow-sm w-full"
                   >
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                      <h2 className="text-xl md:text-2xl font-bold text-slate-900 uppercase tracking-wide">
-                        {infoSchoolName || profile?.schoolName || "Z.P SCHOOL DHONDEWADIPED"}
-                      </h2>
+                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                      <div>
+                        <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1 uppercase">{t.infoSchoolName}</span>
+                        <h2 className="text-xl md:text-2xl font-bold text-slate-900 uppercase tracking-wide">
+                          {infoSchoolName || profile?.schoolName || ""}
+                        </h2>
+                      </div>
 
-                      <div className="inline-block bg-[#c4b5fd] text-slate-900 text-sm md:text-base font-bold px-5 py-2 rounded-xl border border-slate-900/10">
-                        {infoUdise || profile?.udise || "27350800701"}
+                      <div className="flex items-center gap-3 self-start md:self-auto mt-2 md:mt-0">
+                        {(infoUdise || profile?.udise) && (
+                          <div className="inline-block bg-[#c4b5fd] text-slate-900 text-sm md:text-base font-bold px-5 py-2 rounded-xl border border-slate-900/10">
+                            {infoUdise || profile?.udise}
+                          </div>
+                        )}
+                        <button
+                          onClick={() => setView("info")}
+                          className="bg-slate-900 text-[#eef5cb] p-2.5 rounded-full shadow-md flex items-center justify-center hover:scale-110 transition-transform flex-shrink-0"
+                          title={selectedLang === "mr" ? "माहिती संपादित करा" : "Edit Information"}
+                        >
+                          <Edit className="size-4" />
+                        </button>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-slate-800 text-[13px] md:text-[15px] font-medium leading-relaxed uppercase tracking-wide border-t border-slate-900/10 pt-6">
-                      <div>
-                        <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1">Teacher In-Charge</span>
-                        <p>{infoHeadmaster || profile?.fullName || "BALASAHEB RAMKISHAN KENDRE"}</p>
-                      </div>
-                      <div>
-                        <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1">Jurisdiction</span>
-                        <p>{infoAddress || profile?.address || "NARASEWADI, TASGAON, SANGLI"}</p>
-                      </div>
-                    </div>
+                    {(() => {
+                      const fields = [
+                        { label: t.infoHeadmaster, val: infoHeadmaster || profile?.fullName },
+                        { label: t.infoAddress, val: infoAddress || profile?.address },
+                        { label: t.infoCenterName, val: infoCenterName },
+                        { label: t.infoTaluka, val: infoTaluka },
+                        { label: t.infoDistrict, val: infoDistrict },
+                      ].filter((f) => f.val && f.val.trim() !== "");
+
+                      if (fields.length === 0) return null;
+
+                      return (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 text-slate-800 text-[13px] md:text-[15px] font-medium leading-relaxed uppercase tracking-wide border-t border-slate-900/10 pt-6">
+                          {fields.map((f, idx) => (
+                            <div key={idx}>
+                              <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1 uppercase">
+                                {f.label}
+                              </span>
+                              <p className="font-bold text-slate-900">{f.val}</p>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </motion.div>
 
                   {/* Actions Grid */}
@@ -5606,36 +5634,7 @@ function TeacherSqafPage() {
                       </div>
                     </div>
 
-                    {/* Card 3: Download Certificate */}
-                    <div className="bg-white border border-slate-900 rounded-[1.5rem] p-6 w-full relative shadow-sm flex flex-col justify-between h-full">
-                      <div>
-                        <div className="flex justify-between items-center mb-4">
-                          <h4 className="text-[16px] font-bold text-slate-900">{t.downloadCertSub}</h4>
-                          <div
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleCard3();
-                            }}
-                            className={`size-6 border-2 rounded flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 transition-transform ${card3Checked
-                                ? "border-slate-900 bg-slate-900 text-white"
-                                : "border-slate-400 bg-white text-transparent"
-                              }`}
-                          >
-                            {card3Checked && <CheckCircle2 className="size-4" />}
-                          </div>
-                        </div>
-                        <hr className="border-slate-900/40 mb-4" />
-                        <p className="text-[14px] text-slate-700 mb-6">{t.downloadCertDesc}</p>
-                      </div>
-                      <div className="flex justify-end mt-auto">
-                        <button
-                          onClick={() => setView("certificate")}
-                          className="bg-[#1e1b4b] text-white px-8 py-3 rounded-3xl text-sm font-medium hover:bg-slate-800 transition-colors shadow-sm"
-                        >
-                          {t.certBtn}
-                        </button>
-                      </div>
-                    </div>
+
                   </div>
                 </div>
 

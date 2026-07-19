@@ -46,6 +46,11 @@ async function fetchGoogleDriveImages(url: string): Promise<{ src: string }[]> {
       }
       return fileIds.map(id => ({ src: `https://lh3.googleusercontent.com/d/${id}` }));
     }
+
+    // 4. Fallback for any public image URL
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+      return [{ src: trimmed }];
+    }
   } catch (err) {
     console.error("Error fetching drive images:", err);
   }
@@ -56,7 +61,54 @@ export const Route = createFileRoute("/teacher/sqaaf")({
   component: TeacherSqaafPage,
 });
 
-// Photo Uploader Component for Evidences with option list support and PDF support
+// Image compression helper to optimize uploaded photo size before saving
+function compressImage(file: File, maxWidth = 1000, quality = 0.75): Promise<string> {
+  return new Promise((resolve) => {
+    if (!file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(file);
+      return;
+    }
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      img.src = reader.result as string;
+    };
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      let width = img.width;
+      let height = img.height;
+
+      if (width > maxWidth || height > maxWidth) {
+        if (width > height) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        } else {
+          width = Math.round((width * maxWidth) / height);
+          height = maxWidth;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      } else {
+        resolve(reader.result as string);
+      }
+    };
+    img.onerror = () => {
+      const fallbackReader = new FileReader();
+      fallbackReader.onloadend = () => resolve(fallbackReader.result as string);
+      fallbackReader.readAsDataURL(file);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 // Photo Uploader Component for Evidences with option list support and PDF support
 const PhotoUploader = ({
   standardId,
@@ -237,29 +289,11 @@ const PhotoUploader = ({
     try {
       const docId = `${udise}_${standardId}_${selectedOptionIdx}`;
       const cleanPreviews: Record<number, string> = {};
-      let totalSize = 0;
 
       Object.keys(previews).forEach((key) => {
         const idx = Number(key);
-        const preview = previews[idx] || "";
-        totalSize += preview.length;
-        cleanPreviews[idx] = preview;
+        cleanPreviews[idx] = previews[idx] || "";
       });
-
-      // Handle Document Size Limit: if base64 payloads exceed 800KB, strip large ones
-      if (totalSize > 800 * 1024) {
-        Object.keys(cleanPreviews).forEach((key) => {
-          const idx = Number(key);
-          if (cleanPreviews[idx].length > 150 * 1024) {
-            cleanPreviews[idx] = ""; // strip large preview to save space
-            toast.warning(
-              lang === "mr"
-                ? `मोठ्या आकाराची फाईल (${names[idx]}) डेटाबेसमध्ये जतन केली नाही, परंतु स्थानिक पातळीवर उपलब्ध आहे.`
-                : `Large file (${names[idx]}) preview stripped from database sync, but remains saved locally.`
-            );
-          }
-        });
-      }
 
       await setDoc(doc(db, "sqaaf_evidence_responses", docId), {
         udise,
@@ -331,21 +365,14 @@ const PhotoUploader = ({
         console.warn("Bunny Storage upload error fallback:", err);
       }
 
-      // Fallback to local base64
-      await new Promise<void>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64 = reader.result as string;
-          newPreviews[idx] = base64;
-          try {
-            localStorage.setItem(`sqaaf_file_name_${standardId}_${selectedOptionIdx}_${idx}`, file.name);
-            localStorage.setItem(`sqaaf_file_preview_${standardId}_${selectedOptionIdx}_${idx}`, base64);
-            localStorage.setItem(`sqaaf_file_type_${standardId}_${selectedOptionIdx}_${idx}`, file.type);
-          } catch (err) {}
-          resolve();
-        };
-        reader.readAsDataURL(file);
-      });
+      // Fallback to compressed base64
+      const compressed = await compressImage(file, 1000, 0.75);
+      newPreviews[idx] = compressed;
+      try {
+        localStorage.setItem(`sqaaf_file_name_${standardId}_${selectedOptionIdx}_${idx}`, file.name);
+        localStorage.setItem(`sqaaf_file_preview_${standardId}_${selectedOptionIdx}_${idx}`, compressed);
+        localStorage.setItem(`sqaaf_file_type_${standardId}_${selectedOptionIdx}_${idx}`, file.type);
+      } catch (err) {}
     });
 
     toast.info(lang === "mr" ? "फाईल्स Bunny Storage वर अपलोड होत आहेत..." : "Uploading files to Bunny Storage...");
@@ -578,6 +605,120 @@ const PhotoUploader = ({
   );
 };
 
+// Sub-component for individual Drive Link card with live photo preview
+const DriveLinkCardItem = ({
+  item,
+  idx,
+  lang,
+  handleRemove,
+  isDriveLink
+}: {
+  item: { url: string; label: string };
+  idx: number;
+  lang: "mr" | "en";
+  handleRemove: (idx: number) => void;
+  isDriveLink: (url: string) => boolean;
+}) => {
+  const [photos, setPhotos] = useState<{ src: string }[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!item.url) return;
+    setLoading(true);
+    fetchGoogleDriveImages(item.url)
+      .then((res) => {
+        if (isMounted) {
+          setPhotos(res || []);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (isMounted) setLoading(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [item.url]);
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all space-y-3">
+      {/* Link Header */}
+      <div className="flex items-center gap-3">
+        <div
+          className="size-10 rounded-xl flex items-center justify-center flex-shrink-0"
+          style={{ background: isDriveLink(item.url) ? "#e8f5e9" : "#e3f2fd" }}
+        >
+          {isDriveLink(item.url) ? (
+            <svg className="size-5" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2L2 19h20L12 2z" fill="#34a853" opacity=".3" />
+              <path d="M2 19h8l-4-7-4 7z" fill="#4285f4" />
+              <path d="M22 19h-8l4-7 4 7z" fill="#ea4335" />
+              <path d="M8 19h8L12 12 8 19z" fill="#fbbc05" />
+            </svg>
+          ) : (
+            <ImageIcon className="size-5 text-blue-500" />
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold text-slate-800 truncate">{item.label}</p>
+          <p className="text-[11px] text-slate-400 truncate">{item.url}</p>
+        </div>
+        <div className="flex gap-1.5 shrink-0">
+          <a
+            href={item.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="size-8 flex items-center justify-center rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors"
+            title={lang === "mr" ? "उघडा" : "Open"}
+          >
+            <ExternalLink className="size-3.5" />
+          </a>
+          <button
+            onClick={() => handleRemove(idx)}
+            className="size-8 flex items-center justify-center rounded-xl bg-red-50 hover:bg-red-100 text-red-500 transition-colors"
+            title={lang === "mr" ? "काढा" : "Remove"}
+          >
+            <Trash2 className="size-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Inline Image Preview */}
+      {loading ? (
+        <div className="flex items-center gap-2 py-2.5 px-3 bg-slate-50 rounded-xl text-xs font-semibold text-slate-500">
+          <div className="size-3.5 border-2 border-slate-300 border-t-blue-600 rounded-full animate-spin" />
+          <span>{lang === "mr" ? "फोटो शोधात आहे..." : "Fetching photo preview..."}</span>
+        </div>
+      ) : photos.length > 0 ? (
+        <div className="pt-2.5 border-t border-slate-100">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-2">
+            {lang === "mr" ? "फोटो पूर्वावलोकन (Photo Preview)" : "Photo Preview"}
+          </span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {photos.map((p, pIdx) => (
+              <div key={pIdx} className="bg-slate-50 border border-slate-200 rounded-xl p-2 flex items-center justify-center h-36 relative overflow-hidden">
+                <img
+                  src={p.src}
+                  alt={item.label}
+                  onError={(e) => {
+                    const fileIdMatch = item.url.match(/(?:file\/d\/|id=)([a-zA-Z0-9_-]{25,})/);
+                    if (fileIdMatch && !e.currentTarget.dataset.fallbackTried) {
+                      e.currentTarget.dataset.fallbackTried = "true";
+                      e.currentTarget.src = `https://drive.google.com/thumbnail?id=${fileIdMatch[1]}&sz=w800`;
+                    }
+                  }}
+                  className="max-h-full max-w-full object-contain rounded-md"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
 // ─── Drive / Photo Tab Component ───────────────────────────────────────────────
 const DrivePhotoTab = ({ standardId, lang }: { standardId: number; lang: "mr" | "en" }) => {
   const { profile } = useAuth();
@@ -724,7 +865,7 @@ const DrivePhotoTab = ({ standardId, lang }: { standardId: number; lang: "mr" | 
         )}
       </AnimatePresence>
 
-      {/* Links List */}
+      {/* Links List with Live Photo Previews */}
       {links.length === 0 ? (
         <div className="border-2 border-dashed border-blue-100 rounded-2xl p-6 flex flex-col items-center gap-2 text-center">
           <div className="size-10 bg-blue-50 rounded-full flex items-center justify-center">
@@ -740,38 +881,14 @@ const DrivePhotoTab = ({ standardId, lang }: { standardId: number; lang: "mr" | 
       ) : (
         <div className="space-y-3">
           {links.map((item, idx) => (
-            <div key={idx} className="flex items-center gap-3 bg-white border border-slate-100 rounded-2xl p-3.5 shadow-sm hover:shadow-md transition-all group">
-              <div className="size-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{ background: isDriveLink(item.url) ? "#e8f5e9" : "#e3f2fd" }}
-              >
-                {isDriveLink(item.url)
-                  ? <svg className="size-5" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 19h20L12 2z" fill="#34a853" opacity=".3" /><path d="M2 19h8l-4-7-4 7z" fill="#4285f4" /><path d="M22 19h-8l4-7 4 7z" fill="#ea4335" /><path d="M8 19h8L12 12 8 19z" fill="#fbbc05" /></svg>
-                  : <ImageIcon className="size-5 text-blue-500" />
-                }
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-slate-800 truncate">{item.label}</p>
-                <p className="text-[11px] text-slate-400 truncate">{item.url}</p>
-              </div>
-              <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                <a
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="size-8 flex items-center justify-center rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-600 transition-colors"
-                  title={lang === "mr" ? "उघडा" : "Open"}
-                >
-                  <ExternalLink className="size-3.5" />
-                </a>
-                <button
-                  onClick={() => handleRemove(idx)}
-                  className="size-8 flex items-center justify-center rounded-xl bg-red-50 hover:bg-red-100 text-red-500 transition-colors"
-                  title={lang === "mr" ? "काढा" : "Remove"}
-                >
-                  <Trash2 className="size-3.5" />
-                </button>
-              </div>
-            </div>
+            <DriveLinkCardItem
+              key={idx}
+              item={item}
+              idx={idx}
+              lang={lang}
+              handleRemove={handleRemove}
+              isDriveLink={isDriveLink}
+            />
           ))}
         </div>
       )}
@@ -3824,8 +3941,7 @@ export const standardsDetailData: Record<number, {
         text: "३.१ शाळा विद्यार्थ्यांची गैरहजेरी व गळती रोखण्यासाठी पावले उचलते."
       }, {
         text: "४.१ सर्व नोंदणीकृत मुले कायम ठेवली आणि पुढील इयत्तेमध्ये शंभर टक्के संक्रमण केली जातात.",
-        isGreen: true
-      }],
+}],
       evidenceUrl: "https://drive.google.com/drive/folders/1EzfcyGjMuW1XolVe7nCyopoHkLT6"
     },
     en: {
@@ -4904,7 +5020,7 @@ const SqaafResponseCard = ({ num, idx, selectedLang, selectedOptions }: SqaafRes
         if (!preview && idx === 0) {
           preview = localStorage.getItem(`sqaaf_evidence_file_preview_${num}_${pIdx}`);
         }
-        if (preview && preview.startsWith("data:image")) {
+        if (preview && (preview.startsWith("data:image") || preview.startsWith("https://"))) {
           localPhotos.push({
             src: preview,
             label: parsedOpts[pIdx] || ""
@@ -5015,21 +5131,23 @@ const SqaafResponseCard = ({ num, idx, selectedLang, selectedOptions }: SqaafRes
           </div>
         )}
 
-        {/* Uploaded Local Photos (Showing Full Image without cropping) */}
+        {/* Uploaded Local Photos (Showing 3 photos per line) */}
         {localPhotos.length > 0 && (
           <div className="mt-4 border-t border-dashed border-slate-200 pt-3">
             <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-2">
               {selectedLang === "mr" ? "अहवाल पुरावे फोटो" : "Evidence Photos"}
             </span>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {localPhotos.map((photo, index) => (
-                <div key={index} className="border border-slate-100 rounded-lg p-2 bg-slate-50 flex flex-col items-center justify-center min-h-[140px]">
-                  <img
-                    src={photo.src}
-                    alt={photo.label}
-                    className="max-h-36 max-w-full object-contain rounded-md shadow-sm"
-                  />
-                  <span className="text-[9px] font-black text-slate-500 text-center mt-2 leading-tight">
+                <div key={index} className="border border-slate-200 rounded-xl p-2.5 bg-slate-50/80 flex flex-col items-center justify-between min-h-[160px] shadow-sm hover:shadow transition-shadow">
+                  <div className="w-full h-32 flex items-center justify-center bg-white rounded-lg p-1 border border-slate-100 overflow-hidden">
+                    <img
+                      src={photo.src}
+                      alt={photo.label}
+                      className="max-h-full max-w-full object-contain rounded-md"
+                    />
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-700 text-center mt-2 leading-tight break-words w-full px-1">
                     {photo.label}
                   </span>
                 </div>
@@ -5038,7 +5156,7 @@ const SqaafResponseCard = ({ num, idx, selectedLang, selectedOptions }: SqaafRes
           </div>
         )}
 
-        {/* Google Drive Photos (Fetched dynamically inline) */}
+        {/* Google Drive Photos (Showing 3 photos per line) */}
         {(drivePhotos.length > 0 || loadingDrive) && (
           <div className="mt-4 border-t border-dashed border-slate-200 pt-3">
             <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-2">
@@ -5050,15 +5168,17 @@ const SqaafResponseCard = ({ num, idx, selectedLang, selectedOptions }: SqaafRes
                 <span>{selectedLang === "mr" ? "फोटो लोड होत आहेत..." : "Loading photos..."}</span>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {drivePhotos.map((photo, index) => (
-                  <div key={index} className="border border-slate-100 rounded-lg p-2 bg-slate-50 flex flex-col items-center justify-center min-h-[140px]">
-                    <img
-                      src={photo.src}
-                      alt={photo.label}
-                      className="max-h-36 max-w-full object-contain rounded-md shadow-sm"
-                    />
-                    <span className="text-[9px] font-black text-slate-500 text-center mt-2 leading-tight">
+                  <div key={index} className="border border-slate-200 rounded-xl p-2.5 bg-slate-50/80 flex flex-col items-center justify-between min-h-[160px] shadow-sm hover:shadow transition-shadow">
+                    <div className="w-full h-32 flex items-center justify-center bg-white rounded-lg p-1 border border-slate-100 overflow-hidden">
+                      <img
+                        src={photo.src}
+                        alt={photo.label}
+                        className="max-h-full max-w-full object-contain rounded-md"
+                      />
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-700 text-center mt-2 leading-tight break-words w-full px-1">
                       {photo.label}
                     </span>
                   </div>
@@ -5468,7 +5588,13 @@ function TeacherSqaafPage() {
         </div>
         
         <div style="font-size: 10px; font-weight: bold; margin-bottom: 10px;">
-          शाळेचे नाव: ${infoSchoolName} &nbsp;&nbsp;&nbsp; U Dise No: ${infoUdise} &nbsp;&nbsp;&nbsp; तालुका: ${infoTaluka || "-"} &nbsp;&nbsp;&nbsp; जिल्हा: ${infoDistrict || "सांगली"}
+          ${infoSchoolName ? `शाळेचे नाव: ${infoSchoolName} &nbsp;&nbsp;&nbsp;` : ""}
+          ${infoUdise ? `U Dise No: ${infoUdise} &nbsp;&nbsp;&nbsp;` : ""}
+          ${infoHeadmaster ? `मुख्याध्यापक: ${infoHeadmaster} &nbsp;&nbsp;&nbsp;` : ""}
+          ${infoAddress ? `पत्ता: ${infoAddress} &nbsp;&nbsp;&nbsp;` : ""}
+          ${infoCenterName ? `केंद्र: ${infoCenterName} &nbsp;&nbsp;&nbsp;` : ""}
+          ${infoTaluka ? `तालुका: ${infoTaluka} &nbsp;&nbsp;&nbsp;` : ""}
+          ${infoDistrict ? `जिल्हा: ${infoDistrict}` : ""}
         </div>
         
         <table style="width: 100%; border-collapse: collapse; border: 1px solid black; font-size: 9px; table-layout: fixed; word-wrap: break-word; word-break: break-word;">
@@ -5697,7 +5823,7 @@ function TeacherSqaafPage() {
                 if (!preview && idx === 0) {
                   preview = localStorage.getItem(`sqaaf_evidence_file_preview_${num}_${pIdx}`);
                 }
-                if (preview && preview.startsWith("data:image")) {
+                if (preview && (preview.startsWith("data:image") || preview.startsWith("https://"))) {
                   localPhotos.push({
                     src: preview,
                     label: parsedOpts[pIdx] || ""
@@ -5747,20 +5873,19 @@ function TeacherSqaafPage() {
               const allPhotos = [...localPhotos, ...drivePhotos];
               if (allPhotos.length > 0) {
                 const imagesHtml = allPhotos.map(p => `
-                  <div style="display: inline-block; margin-right: 12px; margin-top: 8px; width: 140px; vertical-align: top; text-align: center;">
-                    <img src="${p.src}" style="max-height: 100px; max-width: 140px; border: 1px solid #cbd5e1; box-sizing: border-box; object-fit: contain;" />
-                    <div style="font-size: 8px; font-weight: 700; color: #475569; margin-top: 4px; line-height: 1.2; word-break: break-word;">
-                      ${p.label}
+                  <div style="width: 32%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px; background-color: #f8fafc; display: flex; flex-direction: column; align-items: center; justify-content: center; box-sizing: border-box; text-align: center; margin-bottom: 10px;">
+                    <div style="width: 100%; height: 105px; display: flex; align-items: center; justify-content: center; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; padding: 4px; box-sizing: border-box;">
+                      <img src="${p.src}" style="max-height: 98px; max-width: 100%; object-fit: contain; border-radius: 4px;" />
                     </div>
                   </div>
                 `).join("");
 
                 photosHtml = `
                   <div style="margin-top: 10px; border-top: 1px dashed #cbd5e1; padding-top: 8px; page-break-inside: avoid; break-inside: avoid;">
-                    <div style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 4px;">
+                    <div style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 6px;">
                       ${isMr ? "अहवाल पुरावे फोटो (Evidence Photos)" : "Evidence Photos"}
                     </div>
-                    <div style="display: block;">
+                    <div style="display: flex; flex-wrap: wrap; gap: 2%; width: 100%; box-sizing: border-box;">
                       ${imagesHtml}
                     </div>
                   </div>
@@ -6066,15 +6191,31 @@ function TeacherSqaafPage() {
                   <div style="font-size: 7px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8; margin-bottom: 2px;">${isMr ? "शाळेचे नाव" : "School Name"}</div>
                   <div style="font-size: 15px; font-weight: 900; color: #0f172a; text-transform: uppercase;">${schoolName}</div>
                 </div>
-                <div style="background: #6d28d9; color: white; padding: 4px 10px; font-weight: 800; font-size: 11px; border-radius: 4px;">
+                ${udise ? `<div style="background: #6d28d9; color: white; padding: 4px 10px; font-weight: 800; font-size: 11px; border-radius: 4px;">
                   ${isMr ? "युडायस कोड" : "UDISE CODE"}: ${udise}
-                </div>
+                </div>` : ""}
               </div>
               <div style="display: flex; gap: 20px; flex-wrap: wrap; font-size: 10px;">
-                <div>
+                ${headmaster ? `<div>
                   <span style="font-weight: 800; color: #94a3b8; text-transform: uppercase; font-size: 7px; letter-spacing: 1px;">${isMr ? "मुख्याध्यापक" : "Headmaster"}</span>
                   <div style="font-weight: 700; color: #334155;">${headmaster}</div>
-                </div>
+                </div>` : ""}
+                ${address ? `<div>
+                  <span style="font-weight: 800; color: #94a3b8; text-transform: uppercase; font-size: 7px; letter-spacing: 1px;">${isMr ? "पत्ता" : "Address"}</span>
+                  <div style="font-weight: 700; color: #334155;">${address}</div>
+                </div>` : ""}
+                ${centerName ? `<div>
+                  <span style="font-weight: 800; color: #94a3b8; text-transform: uppercase; font-size: 7px; letter-spacing: 1px;">${isMr ? "केंद्र" : "Center"}</span>
+                  <div style="font-weight: 700; color: #334155;">${centerName}</div>
+                </div>` : ""}
+                ${taluka ? `<div>
+                  <span style="font-weight: 800; color: #94a3b8; text-transform: uppercase; font-size: 7px; letter-spacing: 1px;">${isMr ? "तालुका" : "Taluka"}</span>
+                  <div style="font-weight: 700; color: #334155;">${taluka}</div>
+                </div>` : ""}
+                ${district ? `<div>
+                  <span style="font-weight: 800; color: #94a3b8; text-transform: uppercase; font-size: 7px; letter-spacing: 1px;">${isMr ? "जिल्हा" : "District"}</span>
+                  <div style="font-weight: 700; color: #334155;">${district}</div>
+                </div>` : ""}
                 <div>
                   <span style="font-weight: 800; color: #94a3b8; text-transform: uppercase; font-size: 7px; letter-spacing: 1px;">${isMr ? "दिनांक" : "Date"}</span>
                   <div style="font-weight: 700; color: #334155;">${new Date().toLocaleDateString(isMr ? "mr-IN" : "en-IN", { year: "numeric", month: "long", day: "numeric" })}</div>
@@ -6431,9 +6572,6 @@ function TeacherSqaafPage() {
             <!-- Header -->
             <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid #f97316; padding-bottom: 16px; margin-bottom: 20px;">
               <div>
-                <div style="font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 3px; color: #f97316; margin-bottom: 6px;">
-                  ${isMr ? "राज्य शैक्षणिक संशोधन व प्रशिक्षण परिषद, महाराष्ट्र" : "State Council For Educational Research and Training, Maharashtra"}
-                </div>
                 <h1 style="font-size: 26px; font-weight: 900; color: #0f172a; margin: 0 0 4px 0; letter-spacing: -0.5px;">
                   ${isMr ? "SQAAF स्वयं मूल्यांकन अहवाल" : "SQAAF Self Evaluation Report"}
                 </h1>
@@ -6456,19 +6594,19 @@ function TeacherSqaafPage() {
                   <div style="font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: #94a3b8; margin-bottom: 3px;">${isMr ? "शाळेचे नाव" : "School Name"}</div>
                   <div style="font-size: 18px; font-weight: 900; color: #0f172a; text-transform: uppercase;">${schoolName}</div>
                 </div>
-                <div style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: white; padding: 8px 18px; border-radius: 10px; font-weight: 800; font-size: 13px; letter-spacing: 1px;">
+                ${udise ? `<div style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: white; padding: 8px 18px; border-radius: 10px; font-weight: 800; font-size: 13px; letter-spacing: 1px;">
                   ${udise}
-                </div>
+                </div>` : ""}
               </div>
               <div style="display: flex; gap: 30px; flex-wrap: wrap;">
-                <div>
+                ${headmaster ? `<div>
                   <div style="font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8;">${isMr ? "मुख्याध्यापक" : "Headmaster"}</div>
                   <div style="font-size: 12px; font-weight: 700; color: #334155; text-transform: uppercase;">${headmaster}</div>
-                </div>
-                <div>
+                </div>` : ""}
+                ${address ? `<div>
                   <div style="font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8;">${isMr ? "पत्ता" : "Address"}</div>
                   <div style="font-size: 12px; font-weight: 700; color: #334155; text-transform: uppercase;">${address}</div>
-                </div>
+                </div>` : ""}
                 ${centerName ? `<div>
                   <div style="font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8;">${isMr ? "केंद्र" : "Center"}</div>
                   <div style="font-size: 12px; font-weight: 700; color: #334155; text-transform: uppercase;">${centerName}</div>
@@ -6557,10 +6695,13 @@ function TeacherSqaafPage() {
                   </tr>
                   <tr>
                     <th colspan="13" style="border: 1px solid black; padding: 6px; text-align: center; font-size: 11px; font-weight: normal;">
-                      <span style="font-weight: bold;">शाळेचे नाव -</span> ${schoolName} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
-                      <span style="font-weight: bold;">केंद्र -</span> ${centerName || "-"} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
-                      <span style="font-weight: bold;">ता.</span>${taluka || "-"} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
-                      <span style="font-weight: bold;">जि.</span>${district || "सांगली"} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+                      ${schoolName ? `<span style="font-weight: bold;">शाळेचे नाव -</span> ${schoolName} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;` : ""}
+                      ${udise ? `<span style="font-weight: bold;">यू-डायस -</span> ${udise} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;` : ""}
+                      ${headmaster ? `<span style="font-weight: bold;">मुख्याध्यापक -</span> ${headmaster} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;` : ""}
+                      ${address ? `<span style="font-weight: bold;">पत्ता -</span> ${address} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;` : ""}
+                      ${centerName ? `<span style="font-weight: bold;">केंद्र -</span> ${centerName} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;` : ""}
+                      ${taluka ? `<span style="font-weight: bold;">ता.</span> ${taluka} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;` : ""}
+                      ${district ? `<span style="font-weight: bold;">जि.</span> ${district} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;` : ""}
                       <span style="font-weight: bold;">सन -</span> २०२४ - २५
                     </th>
                   </tr>
@@ -6730,9 +6871,6 @@ function TeacherSqaafPage() {
 
         const headerHtml = `
           <div style="font-family: sans-serif; margin-bottom: 30px;">
-            <div style="color: #ea580c; font-size: 18px; font-weight: bold;">
-              ${isMr ? "राज्य शैक्षणिक संशोधन व प्रशिक्षण परिषद, महाराष्ट्र" : "State Council For Educational Research and Training, Maharashtra"}
-            </div>
             <div style="color: #0f172a; font-size: 34px; font-weight: 900; margin-top: 8px;">
               ${isMr ? "SQAAF स्वयं मूल्यांकन अहवाल" : "SQAAF Self Evaluation Report"}
             </div>
@@ -6745,23 +6883,35 @@ function TeacherSqaafPage() {
                  <div style="color: #94a3b8; font-size: 14px; font-weight: bold;">${isMr ? "शाळेचे नाव" : "SCHOOL NAME"}</div>
                  <div style="color: #0f172a; font-size: 24px; font-weight: bold; margin-top: 4px;">${schoolName.toUpperCase()}</div>
                </div>
-               <div style="text-align: right;">
+               ${udise ? `<div style="text-align: right;">
                  <div style="color: #94a3b8; font-size: 14px; font-weight: bold; margin-bottom: 6px;">${isMr ? "युडायस कोड" : "UDISE CODE"}</div>
                  <div style="background-color: #6d28d9; color: white; padding: 10px 20px; border-radius: 8px; font-weight: bold; font-size: 18px; display: inline-block;">
                    ${udise}
                  </div>
-               </div>
+               </div>` : ""}
             </div>
             
-            <div style="display: flex; gap: 60px; margin-top: 20px;">
-               <div>
+            <div style="display: flex; gap: 40px; flex-wrap: wrap; margin-top: 20px;">
+               ${headmaster ? `<div>
                  <div style="color: #94a3b8; font-size: 14px; font-weight: bold;">${isMr ? "मुख्याध्यापक" : "HEADMASTER"}</div>
                  <div style="color: #334155; font-size: 18px; font-weight: bold; margin-top: 4px;">${headmaster.toUpperCase()}</div>
-               </div>
-               <div>
+               </div>` : ""}
+               ${address ? `<div>
                  <div style="color: #94a3b8; font-size: 14px; font-weight: bold;">${isMr ? "पत्ता" : "ADDRESS"}</div>
                  <div style="color: #334155; font-size: 18px; font-weight: bold; margin-top: 4px;">${address.toUpperCase()}</div>
-               </div>
+               </div>` : ""}
+               ${centerName ? `<div>
+                 <div style="color: #94a3b8; font-size: 14px; font-weight: bold;">${isMr ? "केंद्र" : "CENTER"}</div>
+                 <div style="color: #334155; font-size: 18px; font-weight: bold; margin-top: 4px;">${centerName.toUpperCase()}</div>
+               </div>` : ""}
+               ${taluka ? `<div>
+                 <div style="color: #94a3b8; font-size: 14px; font-weight: bold;">${isMr ? "तालुका" : "TALUKA"}</div>
+                 <div style="color: #334155; font-size: 18px; font-weight: bold; margin-top: 4px;">${taluka.toUpperCase()}</div>
+               </div>` : ""}
+               ${district ? `<div>
+                 <div style="color: #94a3b8; font-size: 14px; font-weight: bold;">${isMr ? "जिल्हा" : "DISTRICT"}</div>
+                 <div style="color: #334155; font-size: 18px; font-weight: bold; margin-top: 4px;">${district.toUpperCase()}</div>
+               </div>` : ""}
             </div>
             
             <div style="display: flex; gap: 16px; margin-top: 24px;">
@@ -7060,18 +7210,32 @@ function TeacherSqaafPage() {
               <div style="margin-bottom: 12px;">
                 <h3 style="font-size: 11px; font-weight: bold; margin: 0 0 5px 0; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 3px;">शाळेची माहिती</h3>
                 <table style="width: 100%; border-collapse: collapse; font-size: 10px; text-align: left; table-layout: fixed;">
-                  <tr>
-                    <td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: bold; width: 15%; background-color: #f8fafc; word-wrap: break-word;">शाळेचे नाव</td>
-                    <td style="border: 1px solid #cbd5e1; padding: 4px; width: 35%; word-wrap: break-word;">${schoolName || "-"}</td>
-                    <td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: bold; width: 15%; background-color: #f8fafc; word-wrap: break-word;">U Dise No</td>
-                    <td style="border: 1px solid #cbd5e1; padding: 4px; width: 35%; word-wrap: break-word;">${udise || "-"}</td>
-                  </tr>
-                  <tr>
-                    <td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: bold; background-color: #f8fafc; word-wrap: break-word;">तालुका</td>
-                    <td style="border: 1px solid #cbd5e1; padding: 4px; word-wrap: break-word;">${taluka || "-"}</td>
-                    <td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: bold; background-color: #f8fafc; word-wrap: break-word;">जिल्हा</td>
-                    <td style="border: 1px solid #cbd5e1; padding: 4px; word-wrap: break-word;">${district || "सांगली"}</td>
-                  </tr>
+                  ${(() => {
+                    const infoFields = [
+                      { label: "शाळेचे नाव", val: schoolName },
+                      { label: "U Dise No", val: udise },
+                      { label: "मुख्याध्यापक", val: headmaster },
+                      { label: "पत्ता", val: address },
+                      { label: "केंद्र", val: centerName },
+                      { label: "तालुका", val: taluka },
+                      { label: "जिल्हा", val: district }
+                    ].filter(f => f.val && f.val.trim() !== "");
+
+                    let rowsHtml = "";
+                    for (let i = 0; i < infoFields.length; i += 2) {
+                      const f1 = infoFields[i];
+                      const f2 = infoFields[i+1];
+                      rowsHtml += `<tr>
+                        <td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: bold; width: 15%; background-color: #f8fafc; word-wrap: break-word;">${f1.label}</td>
+                        <td style="border: 1px solid #cbd5e1; padding: 4px; width: 35%; word-wrap: break-word;">${f1.val}</td>
+                        ${f2 ? `
+                        <td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: bold; width: 15%; background-color: #f8fafc; word-wrap: break-word;">${f2.label}</td>
+                        <td style="border: 1px solid #cbd5e1; padding: 4px; width: 35%; word-wrap: break-word;">${f2.val}</td>
+                        ` : `<td style="border: 1px solid #cbd5e1; padding: 4px;" colspan="2"></td>`}
+                      </tr>`;
+                    }
+                    return rowsHtml;
+                  })()}
                 </table>
               </div>
 
@@ -7968,7 +8132,7 @@ function TeacherSqaafPage() {
 
                 {/* Content */}
                 <div className="p-6 md:p-10 space-y-10 flex flex-col flex-1 w-full max-w-6xl mx-auto">
-                  {/* Read-only School details card matching first image */}
+                  {/* Read-only School details card matching image 2 */}
                   <motion.div
                     initial={{ opacity: 0, scale: 0.98 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -7984,9 +8148,11 @@ function TeacherSqaafPage() {
                       </div>
 
                       <div className="flex items-center gap-3 self-start md:self-auto mt-2 md:mt-0">
-                        <div className="inline-block bg-[#c4b5fd] text-slate-900 text-sm md:text-base font-bold px-5 py-2 rounded-xl border border-slate-900/10">
-                          {infoUdise || profile?.udise || ""}
-                        </div>
+                        {(infoUdise || profile?.udise) && (
+                          <div className="inline-block bg-[#c4b5fd] text-slate-900 text-sm md:text-base font-bold px-5 py-2 rounded-xl border border-slate-900/10">
+                            {infoUdise || profile?.udise}
+                          </div>
+                        )}
                         <button
                           onClick={() => setView("info")}
                           className="bg-slate-900 text-[#eef5cb] p-2.5 rounded-full shadow-md flex items-center justify-center hover:scale-110 transition-transform flex-shrink-0"
@@ -7997,16 +8163,30 @@ function TeacherSqaafPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-slate-800 text-[13px] md:text-[15px] font-medium leading-relaxed uppercase tracking-wide border-t border-slate-900/10 pt-6">
-                      <div>
-                        <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1 uppercase">{t.infoHeadmaster}</span>
-                        <p>{infoHeadmaster || profile?.fullName || ""}</p>
-                      </div>
-                      <div>
-                        <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1 uppercase">{t.infoAddress}</span>
-                        <p>{infoAddress || profile?.address || ""}</p>
-                      </div>
-                    </div>
+                    {(() => {
+                      const fields = [
+                        { label: t.infoHeadmaster, val: infoHeadmaster || profile?.fullName },
+                        { label: t.infoAddress, val: infoAddress || profile?.address },
+                        { label: t.infoCenterName, val: infoCenterName },
+                        { label: t.infoTaluka, val: infoTaluka },
+                        { label: t.infoDistrict, val: infoDistrict },
+                      ].filter((f) => f.val && f.val.trim() !== "");
+
+                      if (fields.length === 0) return null;
+
+                      return (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 text-slate-800 text-[13px] md:text-[15px] font-medium leading-relaxed uppercase tracking-wide border-t border-slate-900/10 pt-6">
+                          {fields.map((f, idx) => (
+                            <div key={idx}>
+                              <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1 uppercase">
+                                {f.label}
+                              </span>
+                              <p className="font-bold text-slate-900">{f.val}</p>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </motion.div>
 
                   {/* Actions Grid */}
@@ -8132,38 +8312,7 @@ function TeacherSqaafPage() {
                       </div>
                     </div>
 
-                    {/* Card 5: Certificate Download */}
-                    <div className="bg-white border border-slate-900 rounded-[1.5rem] p-6 w-full relative shadow-sm flex flex-col justify-between h-full">
-                      <div>
-                        <div className="flex justify-between items-center mb-4">
-                          <h4 className="text-[16px] font-bold text-slate-900">
-                            {selectedLang === "mr" ? "प्रमाणपत्र डाऊनलोड करा" : "Download Certificate"}
-                          </h4>
-                        </div>
-                        <hr className="border-slate-900/40 mb-4" />
-                        <p className="text-[14px] text-slate-700 mb-6">
-                          {selectedLang === "mr"
-                            ? "तुमचे प्रमाणपत्र डाऊनलोड करा."
-                            : "Download your certificate."}
-                        </p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3 mt-auto">
-                        <button
-                          onClick={() => setView("certificate")}
-                          className="py-3 px-4 bg-[#1e1b4b] text-white rounded-3xl text-[13px] font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
-                        >
-                          <Eye className="size-4" />
-                          <span>{selectedLang === "mr" ? "पहा" : "View"}</span>
-                        </button>
-                        <button
-                          onClick={handleSavePdf}
-                          className="py-3 px-4 bg-[#1e1b4b] text-white rounded-3xl text-[13px] font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
-                        >
-                          <Download className="size-4" />
-                          <span>{selectedLang === "mr" ? "डाऊनलोड करा" : "Download"}</span>
-                        </button>
-                      </div>
-                    </div>
+
 
 
                   </div>
@@ -8365,39 +8514,37 @@ function TeacherSqaafPage() {
                           {infoSchoolName || profile?.schoolName || ""}
                         </h2>
 
-                        <div className="inline-block bg-[#c4b5fd] text-slate-900 text-sm md:text-base font-bold px-5 py-2 rounded-xl border border-slate-900/10">
-                          {infoUdise || profile?.udise || ""}
-                        </div>
+                        {(infoUdise || profile?.udise) && (
+                          <div className="inline-block bg-[#c4b5fd] text-slate-900 text-sm md:text-base font-bold px-5 py-2 rounded-xl border border-slate-900/10">
+                            {infoUdise || profile?.udise}
+                          </div>
+                        )}
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-6 text-slate-800 text-[13px] md:text-[15px] font-medium leading-relaxed uppercase tracking-wide border-t border-slate-900/10 pt-6">
-                        <div>
-                          <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1">Teacher In-Charge</span>
-                          <p>{infoHeadmaster || profile?.fullName || ""}</p>
-                        </div>
-                        <div>
-                          <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1">Address</span>
-                          <p>{infoAddress || profile?.address || ""}</p>
-                        </div>
-                        {infoCenterName && (
-                          <div>
-                            <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1">Center</span>
-                            <p>{infoCenterName}</p>
+                      {(() => {
+                        const fields = [
+                          { label: t.infoHeadmaster, val: infoHeadmaster || profile?.fullName },
+                          { label: t.infoAddress, val: infoAddress || profile?.address },
+                          { label: t.infoCenterName, val: infoCenterName },
+                          { label: t.infoTaluka, val: infoTaluka },
+                          { label: t.infoDistrict, val: infoDistrict },
+                        ].filter((f) => f.val && f.val.trim() !== "");
+
+                        if (fields.length === 0) return null;
+
+                        return (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 text-slate-800 text-[13px] md:text-[15px] font-medium leading-relaxed uppercase tracking-wide border-t border-slate-900/10 pt-6">
+                            {fields.map((f, idx) => (
+                              <div key={idx}>
+                                <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1 uppercase">
+                                  {f.label}
+                                </span>
+                                <p className="font-bold text-slate-900">{f.val}</p>
+                              </div>
+                            ))}
                           </div>
-                        )}
-                        {infoTaluka && (
-                          <div>
-                            <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1">Taluka</span>
-                            <p>{infoTaluka}</p>
-                          </div>
-                        )}
-                        {infoDistrict && (
-                          <div>
-                            <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1">District</span>
-                            <p>{infoDistrict}</p>
-                          </div>
-                        )}
-                      </div>
+                        );
+                      })()}
                     </div>
                   )}
 
