@@ -188,12 +188,12 @@ export function MonthlyParipathRegister() {
               date: d,
               day: dayName,
               isSunday: false,
-              // राष्ट्रगीत - write "राष्ट्रगीत" and language in bracket
-              rashtrageet: `राष्ट्रगीत (${anthemLang})`,
-              // प्रतिज्ञा - write "प्रतिज्ञा" and language in bracket
-              pratigya: `प्रतिज्ञा (${pledgeLang})`,
-              // संविधान - write "संविधान" and language in bracket
-              sanvidhan: `संविधान (${preambleLang})`,
+              // राष्ट्रगीत - जन गण मन
+              rashtrageet: "जन गण मन",
+              // प्रतिज्ञा - भारत माझा देश आहे
+              pratigya: "भारत माझा देश आहे",
+              // संविधान - आम्ही भारताचे नागरिक
+              sanvidhan: "आम्ही भारताचे नागरिक",
               // प्रार्थना - short name of prayer
               prarthana: getPrayerShortName(prayerContent),
               // श्लोक - full shlok text
@@ -250,9 +250,9 @@ export function MonthlyParipathRegister() {
                 date: d,
                 day: dayName,
                 isSunday: false,
-                rashtrageet: "राष्ट्रगीत (मराठी)",
-                pratigya: "प्रतिज्ञा (मराठी)",
-                sanvidhan: "संविधान (हिंदी)",
+                rashtrageet: "जन गण मन",
+                pratigya: "भारत माझा देश आहे",
+                sanvidhan: "आम्ही भारताचे नागरिक",
                 prarthana: "प्रार्थना",
                 shlok: "",
                 suvichar: "",
@@ -467,11 +467,11 @@ export function MonthlyParipathRegister() {
             break-before: page !important;
           }
           table {
-            font-size: 8px !important;
+            font-size: 10px !important;
             border-collapse: collapse !important;
           }
           td, th {
-            padding: 2px 2px !important;
+            padding: 2px 3px !important;
             border: 1px solid #000000 !important;
             word-break: break-word !important;
           }
@@ -479,7 +479,7 @@ export function MonthlyParipathRegister() {
             border: none !important;
             background: transparent !important;
             box-shadow: none !important;
-            font-size: 7px !important;
+            font-size: 9px !important;
             padding: 0 !important;
             resize: none !important;
           }
@@ -669,17 +669,17 @@ export function MonthlyParipathRegister() {
 
           {/* Page 1 Table */}
           <div className="overflow-x-auto border-2 border-slate-900 rounded-none bg-white">
-            <table className="w-full text-left text-[10px] text-slate-900 border-collapse">
+            <table className="w-full table-fixed text-left text-[10px] text-slate-900 border-collapse">
               <thead>
-                <tr className="bg-slate-100 border-b-2 border-slate-900 text-center font-black text-slate-900 uppercase text-[10px]">
-                  <th className="p-1.5 border-r border-slate-900 w-[4%]">दिनांक</th>
-                  <th className="p-1.5 border-r border-slate-900 w-[7%]">वार</th>
-                  <th className="p-1.5 border-r border-slate-900 w-[11%]">राष्ट्रगीत</th>
-                  <th className="p-1.5 border-r border-slate-900 w-[11%]">प्रतिज्ञा</th>
-                  <th className="p-1.5 border-r border-slate-900 w-[12%]">भारताचे संविधान</th>
-                  <th className="p-1.5 border-r border-slate-900 w-[13%]">प्रार्थना</th>
-                  <th className="p-1.5 border-r border-slate-900 w-[18%]">श्लोक</th>
-                  <th className="p-1.5 w-[24%]">सुविचार</th>
+                <tr className="bg-slate-100 border-b-2 border-slate-900 text-center font-black text-slate-900 uppercase text-xs">
+                  <th className="p-1.5 border-r border-slate-900 w-[2%]">दिनांक</th>
+                  <th className="p-1.5 border-r border-slate-900 w-[6%]">वार</th>
+                  <th className="p-1.5 border-r border-slate-900 w-[10%]">राष्ट्रगीत</th>
+                  <th className="p-1.5 border-r border-slate-900 w-[10%]">प्रतिज्ञा</th>
+                  <th className="p-1.5 border-r border-slate-900 w-[11%]">भारताचे संविधान</th>
+                  <th className="p-1.5 border-r border-slate-900 w-[11%]">प्रार्थना</th>
+                  <th className="p-1.5 border-r border-slate-900 w-[16%]">श्लोक</th>
+                  <th className="p-1.5 w-[34%]">सुविचार</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800 font-medium">
@@ -692,89 +692,97 @@ export function MonthlyParipathRegister() {
                         : "hover:bg-slate-50"
                     }`}
                   >
-                    {/* Date */}
+                     {/* Date */}
                     <td className="p-1 border-r border-slate-800 text-center font-black text-slate-900">
                       {row.date}
                     </td>
 
                     {/* Day */}
-                    <td className="p-1 border-r border-slate-800 text-center font-bold text-[9px]">
+                    <td className="p-1 border-r border-slate-800 text-center font-bold text-[11px]">
                       {row.day}
                     </td>
 
-                    {/* Rashtrageet */}
-                    <td className="p-0.5 border-r border-slate-800">
-                      <textarea
-                        value={row.rashtrageet}
-                        onChange={(e) =>
-                          handleCellChange(row.date, "rashtrageet", e.target.value)
-                        }
-                        className="w-full bg-transparent text-center outline-none font-bold text-[9px] resize-none leading-tight"
-                        rows={1}
-                      />
-                    </td>
+                    {row.isSunday ? (
+                      <td colSpan={6} className="p-1 text-center font-black text-rose-700 text-[13px] tracking-widest">
+                        रविवार
+                      </td>
+                    ) : (
+                      <>
+                        {/* Rashtrageet */}
+                        <td className="p-0.5 border-r border-slate-800">
+                          <textarea
+                            value={row.rashtrageet}
+                            onChange={(e) =>
+                              handleCellChange(row.date, "rashtrageet", e.target.value)
+                            }
+                            className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight"
+                            rows={1}
+                          />
+                        </td>
 
-                    {/* Pratigya */}
-                    <td className="p-0.5 border-r border-slate-800">
-                      <textarea
-                        value={row.pratigya}
-                        onChange={(e) =>
-                          handleCellChange(row.date, "pratigya", e.target.value)
-                        }
-                        className="w-full bg-transparent text-center outline-none font-bold text-[9px] resize-none leading-tight"
-                        rows={1}
-                      />
-                    </td>
+                        {/* Pratigya */}
+                        <td className="p-0.5 border-r border-slate-800">
+                          <textarea
+                            value={row.pratigya}
+                            onChange={(e) =>
+                              handleCellChange(row.date, "pratigya", e.target.value)
+                            }
+                            className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight"
+                            rows={1}
+                          />
+                        </td>
 
-                    {/* Sanvidhan */}
-                    <td className="p-0.5 border-r border-slate-800">
-                      <textarea
-                        value={row.sanvidhan}
-                        onChange={(e) =>
-                          handleCellChange(row.date, "sanvidhan", e.target.value)
-                        }
-                        className="w-full bg-transparent text-center outline-none font-bold text-[9px] resize-none leading-tight"
-                        rows={1}
-                      />
-                    </td>
+                        {/* Sanvidhan */}
+                        <td className="p-0.5 border-r border-slate-800">
+                          <textarea
+                            value={row.sanvidhan}
+                            onChange={(e) =>
+                              handleCellChange(row.date, "sanvidhan", e.target.value)
+                            }
+                            className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight"
+                            rows={1}
+                          />
+                        </td>
 
-                    {/* Prarthana - short prayer name */}
-                    <td className="p-0.5 border-r border-slate-800">
-                      <textarea
-                        value={row.prarthana}
-                        onChange={(e) =>
-                          handleCellChange(row.date, "prarthana", e.target.value)
-                        }
-                        className="w-full bg-transparent text-center outline-none font-bold text-[9px] resize-none leading-tight"
-                        rows={1}
-                      />
-                    </td>
+                        {/* Prarthana */}
+                        <td className="p-0.5 border-r border-slate-800">
+                          <textarea
+                            value={row.prarthana}
+                            onChange={(e) =>
+                              handleCellChange(row.date, "prarthana", e.target.value)
+                            }
+                            className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight"
+                            rows={1}
+                          />
+                        </td>
 
-                    {/* Shlok - full shlok */}
-                    <td className="p-0.5 border-r border-slate-800">
-                      <textarea
-                        value={row.shlok}
-                        onChange={(e) =>
-                          handleCellChange(row.date, "shlok", e.target.value)
-                        }
-                        className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[8px] resize-none leading-tight"
-                        rows={2}
-                        placeholder="श्लोक..."
-                      />
-                    </td>
+                        {/* Shlok */}
+                        <td className="p-0.5 border-r border-slate-800">
+                          <textarea
+                            value={row.shlok}
+                            onChange={(e) =>
+                              handleCellChange(row.date, "shlok", e.target.value)
+                            }
+                            className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[10px] resize-none leading-tight"
+                            rows={2}
+                            placeholder="श्लोक..."
+                          />
+                        </td>
 
-                    {/* Suvichar - full thought */}
-                    <td className="p-0.5">
-                      <textarea
-                        value={row.suvichar}
-                        onChange={(e) =>
-                          handleCellChange(row.date, "suvichar", e.target.value)
-                        }
-                        className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[8px] resize-none leading-tight"
-                        rows={2}
-                        placeholder="सुविचार..."
-                      />
-                    </td>
+                        {/* Suvichar */}
+                        <td className="p-0.5">
+                          <textarea
+                            value={row.suvichar}
+                            onChange={(e) =>
+                              handleCellChange(row.date, "suvichar", e.target.value)
+                            }
+                            className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[10px] resize-none leading-tight"
+                            rows={2}
+                            placeholder="सुविचार..."
+                          />
+                        </td>
+                      </>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -815,7 +823,7 @@ export function MonthlyParipathRegister() {
           <div className="overflow-x-auto border-2 border-slate-900 rounded-none bg-white">
             <table className="w-full text-left text-[10px] text-slate-900 border-collapse">
               <thead>
-                <tr className="bg-slate-100 border-b-2 border-slate-900 text-center font-black text-slate-900 uppercase text-[9px]">
+                <tr className="bg-slate-100 border-b-2 border-slate-900 text-center font-black text-slate-900 uppercase text-[11px]">
                   <th className="p-1.5 border-r border-slate-900 w-[14%]">
                     सुसंस्कारक्षम बातम्या
                   </th>
@@ -844,100 +852,108 @@ export function MonthlyParipathRegister() {
                         : "hover:bg-slate-50"
                     }`}
                   >
-                    {/* बातम्या - all news */}
-                    <td className="p-0.5 border-r border-slate-800">
-                      <textarea
-                        value={row.batmya}
-                        onChange={(e) =>
-                          handleCellChange(row.date, "batmya", e.target.value)
-                        }
-                        className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[8px] resize-none leading-tight"
-                        rows={2}
-                        placeholder={row.isSunday ? "" : "बातम्या..."}
-                      />
-                    </td>
+                    {row.isSunday ? (
+                      <td colSpan={8} className="p-1 text-center font-black text-rose-700 text-[13px] tracking-widest">
+                        रविवार
+                      </td>
+                    ) : (
+                      <>
+                        {/* बातम्या - all news */}
+                        <td className="p-0.5 border-r border-slate-800">
+                          <textarea
+                            value={row.batmya}
+                            onChange={(e) =>
+                              handleCellChange(row.date, "batmya", e.target.value)
+                            }
+                            className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[10px] resize-none leading-tight"
+                            rows={2}
+                            placeholder="बातम्या..."
+                          />
+                        </td>
 
-                    {/* दिनविशेष - full */}
-                    <td className="p-0.5 border-r border-slate-800">
-                      <textarea
-                        value={row.dinvishesh}
-                        onChange={(e) =>
-                          handleCellChange(row.date, "dinvishesh", e.target.value)
-                        }
-                        className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[8px] resize-none leading-tight"
-                        rows={2}
-                        placeholder={row.isSunday ? "" : "दिनविशेष..."}
-                      />
-                    </td>
+                        {/* दिनविशेष - full */}
+                        <td className="p-0.5 border-r border-slate-800">
+                          <textarea
+                            value={row.dinvishesh}
+                            onChange={(e) =>
+                              handleCellChange(row.date, "dinvishesh", e.target.value)
+                            }
+                            className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[10px] resize-none leading-tight"
+                            rows={2}
+                            placeholder="दिनविशेष..."
+                          />
+                        </td>
 
-                    {/* चिंतन - short */}
-                    <td className="p-0.5 border-r border-slate-800">
-                      <textarea
-                        value={row.chintan}
-                        onChange={(e) =>
-                          handleCellChange(row.date, "chintan", e.target.value)
-                        }
-                        className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[8px] resize-none leading-tight"
-                        rows={2}
-                        placeholder={row.isSunday ? "" : "चिंतन..."}
-                      />
-                    </td>
+                        {/* चिंतन - short */}
+                        <td className="p-0.5 border-r border-slate-800">
+                          <textarea
+                            value={row.chintan}
+                            onChange={(e) =>
+                              handleCellChange(row.date, "chintan", e.target.value)
+                            }
+                            className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[10px] resize-none leading-tight"
+                            rows={2}
+                            placeholder="चिंतन..."
+                          />
+                        </td>
 
-                    {/* बोधकथा - only heading */}
-                    <td className="p-0.5 border-r border-slate-800">
-                      <textarea
-                        value={row.bodhkatha}
-                        onChange={(e) =>
-                          handleCellChange(row.date, "bodhkatha", e.target.value)
-                        }
-                        className="w-full bg-transparent text-center outline-none font-bold text-[9px] resize-none leading-tight"
-                        rows={1}
-                        placeholder={row.isSunday ? "" : "शीर्षक..."}
-                      />
-                    </td>
+                        {/* बोधकथा - only heading */}
+                        <td className="p-0.5 border-r border-slate-800">
+                          <textarea
+                            value={row.bodhkatha}
+                            onChange={(e) =>
+                              handleCellChange(row.date, "bodhkatha", e.target.value)
+                            }
+                            className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight"
+                            rows={1}
+                            placeholder="शीर्षक..."
+                          />
+                        </td>
 
-                    {/* समूहगीत - only heading */}
-                    <td className="p-0.5 border-r border-slate-800">
-                      <textarea
-                        value={row.samuhgeet}
-                        onChange={(e) =>
-                          handleCellChange(row.date, "samuhgeet", e.target.value)
-                        }
-                        className="w-full bg-transparent text-center outline-none font-bold text-[9px] resize-none leading-tight"
-                        rows={1}
-                        placeholder={row.isSunday ? "" : "गीत शीर्षक..."}
-                      />
-                    </td>
+                        {/* समूहगीत - only heading */}
+                        <td className="p-0.5 border-r border-slate-800">
+                          <textarea
+                            value={row.samuhgeet}
+                            onChange={(e) =>
+                              handleCellChange(row.date, "samuhgeet", e.target.value)
+                            }
+                            className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight"
+                            rows={1}
+                            placeholder="गीत शीर्षक..."
+                          />
+                        </td>
 
-                    {/* शालेय सूचना - short */}
-                    <td className="p-0.5 border-r border-slate-800">
-                      <textarea
-                        value={row.suchana}
-                        onChange={(e) =>
-                          handleCellChange(row.date, "suchana", e.target.value)
-                        }
-                        className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[8px] resize-none leading-tight"
-                        rows={1}
-                        placeholder={row.isSunday ? "" : "सूचना..."}
-                      />
-                    </td>
+                        {/* शालेय सूचना - short */}
+                        <td className="p-0.5 border-r border-slate-800">
+                          <textarea
+                            value={row.suchana}
+                            onChange={(e) =>
+                              handleCellChange(row.date, "suchana", e.target.value)
+                            }
+                            className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[11px] resize-none leading-tight"
+                            rows={1}
+                            placeholder="सूचना..."
+                          />
+                        </td>
 
-                    {/* मौन पसायदान - just "पसायदान" */}
-                    <td className="p-0.5 border-r border-slate-800">
-                      <textarea
-                        value={row.maun}
-                        onChange={(e) =>
-                          handleCellChange(row.date, "maun", e.target.value)
-                        }
-                        className="w-full bg-transparent text-center outline-none font-bold text-[9px] resize-none leading-tight"
-                        rows={1}
-                      />
-                    </td>
+                        {/* मौन पसायदान */}
+                        <td className="p-0.5 border-r border-slate-800">
+                          <textarea
+                            value={row.maun}
+                            onChange={(e) =>
+                              handleCellChange(row.date, "maun", e.target.value)
+                            }
+                            className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight"
+                            rows={1}
+                          />
+                        </td>
 
-                    {/* वर्गशिक्षकांची स्वाक्षरी - blank */}
-                    <td className="p-1">
-                      <div className="h-6 w-full"></div>
-                    </td>
+                        {/* वर्गशिक्षकांची स्वाक्षरी - blank */}
+                        <td className="p-1">
+                          <div className="h-6 w-full"></div>
+                        </td>
+                      </>
+                    )}
                   </tr>
                 ))}
               </tbody>

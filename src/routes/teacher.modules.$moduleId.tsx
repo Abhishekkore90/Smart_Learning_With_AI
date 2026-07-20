@@ -1859,7 +1859,7 @@ function DailyAssemblyContent() {
       }
 
       const opt = {
-        margin: [10, 15, 10, 15],
+        margin: 0,
         filename: `Paripath_${new Date().toISOString().split("T")[0]}.pdf`,
         image: { type: "jpeg", quality: 0.98 },
         html2canvas: {
@@ -1872,10 +1872,30 @@ function DailyAssemblyContent() {
             return node.classList && node.classList.contains("pdf-hide");
           },
           onclone: (clonedDoc: any) => {
+            // Reset body/html styles to prevent parent offsets
+            clonedDoc.body.style.margin = "0";
+            clonedDoc.body.style.padding = "0";
+            clonedDoc.documentElement.style.margin = "0";
+            clonedDoc.documentElement.style.padding = "0";
+
             const container = clonedDoc.getElementById("daily-assembly-content");
             if (container) {
+              // Reset all parents to prevent centering and negative offsets
+              let parent = container.parentElement;
+              while (parent && parent !== clonedDoc.body) {
+                parent.style.margin = "0";
+                parent.style.padding = "0";
+                parent.style.width = "auto";
+                parent.style.maxWidth = "none";
+                parent.style.minWidth = "auto";
+                parent.style.display = "block";
+                parent.style.position = "static";
+                parent.style.transform = "none";
+                parent = parent.parentElement;
+              }
+
               container.style.width = "794px";
-              container.style.margin = "0 auto";
+              container.style.margin = "0";
               container.style.padding = "0px";
               container.style.background = "#FFFFFF";
               container.style.borderRadius = "0";
@@ -1913,30 +1933,30 @@ function DailyAssemblyContent() {
 
             // Dynamically scale font size based on text length of the entire card content
             const cards = clonedDoc.querySelectorAll(".assembly-section-card");
-            cards.forEach((card: any) => {
+            cards.forEach((card: any, index: number) => {
               const contentEl = card.children[1];
               if (contentEl) {
                 const text = contentEl.textContent || "";
                 const charCount = text.trim().length;
                 
-                let fontSize = "16.5px";
-                let lineHeight = "1.6";
+                let fontSize = "23px";
+                let lineHeight = "1.85";
                 
                 if (charCount > 1500) {
-                  fontSize = "10px";
-                  lineHeight = "1.25";
-                } else if (charCount > 1000) {
-                  fontSize = "11px";
-                  lineHeight = "1.3";
-                } else if (charCount > 700) {
-                  fontSize = "12px";
+                  fontSize = "12.5px";
                   lineHeight = "1.35";
+                } else if (charCount > 1000) {
+                  fontSize = "14.5px";
+                  lineHeight = "1.45";
+                } else if (charCount > 700) {
+                  fontSize = "16.5px";
+                  lineHeight = "1.55";
                 } else if (charCount > 400) {
-                  fontSize = "13.5px";
-                  lineHeight = "1.4";
+                  fontSize = "19px";
+                  lineHeight = "1.65";
                 } else if (charCount > 200) {
-                  fontSize = "15px";
-                  lineHeight = "1.5";
+                  fontSize = "21.5px";
+                  lineHeight = "1.75";
                 }
                 
                 contentEl.style.fontSize = fontSize;
@@ -1948,6 +1968,27 @@ function DailyAssemblyContent() {
                   tNode.style.lineHeight = lineHeight;
                 });
               }
+
+              // Create Header
+              const header = clonedDoc.createElement("div");
+              header.className = "pdf-page-header";
+              header.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #2e7d32; padding-bottom: 4px; margin-bottom: 6px; width: 100%; box-sizing: border-box;">
+                  <div style="font-size: 12px; font-weight: 800; color: #2e7d32; font-family: 'Noto Sans Devanagari', sans-serif;">दैनिक परिपाठ</div>
+                  <div style="font-size: 12px; font-weight: 800; color: #2e7d32; font-family: 'Noto Sans Devanagari', sans-serif;">${formData.dateMonth}</div>
+                </div>
+              `;
+
+              // Wrap all existing content
+              const contentWrapper = clonedDoc.createElement("div");
+              contentWrapper.className = "pdf-page-content-wrapper";
+              while (card.firstChild) {
+                contentWrapper.appendChild(card.firstChild);
+              }
+
+              // Re-assemble card
+              card.appendChild(header);
+              card.appendChild(contentWrapper);
             });
 
             // Inject clean print styles
@@ -1964,10 +2005,16 @@ function DailyAssemblyContent() {
                 margin: 0 !important;
                 padding: 0 !important;
               }
+              .pdf-hide {
+                display: none !important;
+              }
+              .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+                margin-top: 0 !important;
+              }
               #daily-assembly-content {
                 width: 794px !important;
                 max-width: 794px !important;
-                margin: 0 auto !important;
+                margin: 0 !important;
                 padding: 0 !important;
                 background: #ffffff !important;
                 border-radius: 0 !important;
@@ -1975,38 +2022,17 @@ function DailyAssemblyContent() {
                 box-shadow: none !important;
               }
               
-              /* Force proper word wrapping and flex containment to prevent right-side text cutoff */
-              .assembly-section-card * {
-                max-width: 100% !important;
-                min-width: 0 !important;
-                box-sizing: border-box !important;
-              }
-              
-              .assembly-section-card p,
-              .assembly-section-card span,
-              .assembly-section-card div,
-              .assembly-section-card td,
-              .assembly-section-card th,
-              .assembly-section-card label,
-              .assembly-section-card li {
-                white-space: normal !important;
-                word-wrap: break-word !important;
-                overflow-wrap: break-word !important;
-                word-break: break-word !important;
-                overflow: visible !important;
-              }
-              
               /* Each section card represents exactly one A4 page */
               .assembly-section-card {
                 width: 100% !important;
                 max-width: 100% !important;
-                height: 275mm !important;
-                max-height: 275mm !important;
-                min-height: 275mm !important;
+                height: 297mm !important;
+                max-height: 297mm !important;
+                min-height: 297mm !important;
                 page-break-after: always !important;
                 break-after: page !important;
                 margin: 0 !important;
-                padding: 30px 45px !important; /* Increased left/right padding to 45px */
+                padding: 15mm 20mm !important; /* Proper standard margins */
                 background: #ffffff !important;
                 border: none !important;
                 border-radius: 0 !important;
@@ -2017,173 +2043,223 @@ function DailyAssemblyContent() {
                 align-items: stretch !important;
                 position: relative !important;
                 overflow: hidden !important;
-                gap: 12px !important; /* Minimal gap between heading and content */
+                box-sizing: border-box !important;
+              }
+              .assembly-section-card .space-y-5 > :not([hidden]) ~ :not([hidden]),
+              .assembly-section-card .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+                margin-top: 4px !important;
+              }
+              .assembly-section-card .mb-4, .assembly-section-card .mb-6 {
+                margin-bottom: 2px !important;
+              }
+
+              .pdf-page-content-wrapper {
+                flex-grow: 1 !important;
+                width: 100% !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: flex-start !important;
+                align-items: stretch !important;
+                gap: 15px !important;
+                box-sizing: border-box !important;
+                margin-top: 15px !important;
               }
               
               /* Reset margins of direct child divs inside card to control spacing via gap */
-              .assembly-section-card > div {
-                margin-top: 0 !important;
+              .pdf-page-content-wrapper > div {
                 margin-bottom: 0 !important;
               }
               
               /* Professional Green Title Bar for Headings */
-              .assembly-section-card h3,
-              .assembly-section-card label {
+              .pdf-page-content-wrapper h3,
+              .pdf-page-content-wrapper label {
                 display: block !important;
                 width: 100% !important;
-                background-color: #2e7d32 !important; /* Professional Dark Green */
+                background-color: #2e7d32 !important;
                 color: #ffffff !important;
-                font-size: 20px !important;
+                font-size: 22px !important;
                 font-weight: 800 !important;
                 text-align: center !important;
-                padding: 10px 16px !important; /* Slightly more compact padding */
+                padding: 10px 20px !important;
                 border-radius: 8px !important;
                 border: none !important;
                 box-shadow: none !important;
-                margin: 0 !important; /* Rely on gap instead of margin-bottom */
+                margin: 0 auto !important;
                 font-family: 'Noto Sans Devanagari', sans-serif !important;
                 letter-spacing: 1px !important;
                 text-transform: uppercase !important;
               }
               
               /* Hide icons/emojis in headings for professional look */
-              .assembly-section-card h3 span,
-              .assembly-section-card h3 svg {
+              .pdf-page-content-wrapper h3 span,
+              .pdf-page-content-wrapper h3 svg {
                 display: none !important;
               }
               
               /* Style clean content text */
-              .assembly-section-card p,
-              .assembly-section-card span,
-              .assembly-section-card div {
+              .pdf-page-content-wrapper p,
+              .pdf-page-content-wrapper span,
+              .pdf-page-content-wrapper div {
                 font-family: 'Noto Sans Devanagari', sans-serif !important;
               }
               
               /* Reset outer wrappers of elements inside the cards */
-              .assembly-section-card > div:last-child {
+              .pdf-page-content-wrapper > div:last-child {
                 width: 100% !important;
-                flex: 1 !important;
                 display: flex !important;
                 flex-direction: column !important;
-                justify-content: center !important;
+                justify-content: flex-start !important;
                 align-items: stretch !important;
                 text-align: center !important;
-                margin: 0 !important;
+                margin-top: 40px !important;
                 padding: 0 !important;
               }
-
+ 
               /* Specific section resets */
               #panchang .grid {
                 display: grid !important;
                 grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-                gap: 12px !important;
+                gap: 8px !important;
                 width: 100% !important;
-                margin: auto 0 !important;
+                margin: 40px 0 0 0 !important;
+                box-sizing: border-box !important;
               }
               #panchang .grid > div {
-                padding: 14px 10px !important;
+                padding: 10px 8px !important;
+                background: #f8fafc !important;
+                border: 1px solid #e2e8f0 !important;
+                border-radius: 8px !important;
+                box-shadow: none !important;
+                transform: none !important;
+                box-sizing: border-box !important;
+              }
+              #panchang .grid > div .size-10, #panchang .grid > div .size-12 {
+                display: none !important;
+              }
+ 
+              #thought > div:last-child > div {
+                padding: 20px !important;
                 background: #f8fafc !important;
                 border: 1px solid #e2e8f0 !important;
                 border-radius: 12px !important;
                 box-shadow: none !important;
-                transform: none !important;
-              }
-              #panchang .grid > div .size-12 {
-                display: none !important;
-              }
-
-              #thought .p-10 {
-                padding: 35px !important;
-                background: #f8fafc !important;
-                border: 1px solid #e2e8f0 !important;
-                border-radius: 16px !important;
-                box-shadow: none !important;
                 width: 100% !important;
-                margin: auto 0 !important;
+                box-sizing: border-box !important;
+                margin: 40px 0 0 0 !important;
               }
-
-              #proverb .space-y-6 {
+ 
+              #proverb > div:last-child > div {
                 width: 100% !important;
-                margin: auto 0 !important;
+                margin: 40px 0 0 0 !important;
+                box-sizing: border-box !important;
               }
-              #proverb .p-8 {
-                padding: 24px !important;
-                background: #f8fafc !important;
-                border: 1px solid #e2e8f0 !important;
-                border-radius: 16px !important;
-                box-shadow: none !important;
-              }
-              #proverb .p-8:last-child {
-                margin-top: 15px !important;
-                background: #ffffff !important;
-              }
-
-              #events .space-y-6 {
-                width: 100% !important;
-                margin: 0 !important;
-              }
-              #events .divide-y {
-                width: 100% !important;
-              }
-              #events .divide-y > div {
-                padding: 10px 0 !important;
-                border-bottom: 1px solid #f1f5f9 !important;
-              }
-
-              #song .space-y-6 {
-                width: 100% !important;
-                margin: 0 !important;
-              }
-              #song .p-8 {
-                padding: 24px !important;
-                background: #f8fafc !important;
-                border: 1px solid #e2e8f0 !important;
-                border-radius: 16px !important;
-                box-shadow: none !important;
-                margin-top: 15px !important;
-              }
-
-              #story .space-y-6 {
-                width: 100% !important;
-                margin: 0 !important;
-              }
-              #story .p-8 {
-                padding: 24px !important;
-                background: #f8fafc !important;
-                border: 1px solid #e2e8f0 !important;
-                border-radius: 16px !important;
-                box-shadow: none !important;
-              }
-              #story .p-8:last-child {
-                margin-top: 15px !important;
-                background: #f0fdf4 !important;
-                border: 1px solid #bbf7d0 !important;
-              }
-
-              #gk .grid {
-                display: grid !important;
-                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-                gap: 14px !important;
-                width: 100% !important;
-                margin: auto 0 !important;
-              }
-              #gk .grid > div {
+              #proverb > div:last-child > div > div {
                 padding: 16px !important;
                 background: #f8fafc !important;
                 border: 1px solid #e2e8f0 !important;
-                border-radius: 16px !important;
+                border-radius: 12px !important;
                 box-shadow: none !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
               }
-              #gk .grid > div .size-14 {
+              #proverb > div:last-child > div > div:last-child {
+                margin-top: 10px !important;
+                background: #ffffff !important;
+              }
+ 
+              #events > div:last-child > div {
+                width: 100% !important;
+                margin: 40px 0 0 0 !important;
+                box-sizing: border-box !important;
+              }
+              #events > div:last-child > div > div.divide-y {
+                width: 100% !important;
+                box-sizing: border-box !important;
+              }
+              #events > div:last-child > div > div.divide-y > div {
+                padding: 6px 0 !important;
+                border-bottom: 1px solid #f1f5f9 !important;
+              }
+              #events > div:last-child > div > div:last-child {
+                padding: 16px !important;
+                background: #f8fafc !important;
+                border: 1px solid #e2e8f0 !important;
+                border-radius: 12px !important;
+                box-shadow: none !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+              }
+ 
+              #song > div:last-child > div {
+                width: 100% !important;
+                margin: 40px 0 0 0 !important;
+                box-sizing: border-box !important;
+              }
+              #song > div:last-child > div > div:last-child {
+                padding: 16px !important;
+                background: #f8fafc !important;
+                border: 1px solid #e2e8f0 !important;
+                border-radius: 12px !important;
+                box-shadow: none !important;
+                margin-top: 10px !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+              }
+ 
+              #story > div:last-child > div {
+                width: 100% !important;
+                margin: 40px 0 0 0 !important;
+                box-sizing: border-box !important;
+              }
+              #story > div:last-child > div > div {
+                padding: 16px !important;
+                background: #f8fafc !important;
+                border: 1px solid #e2e8f0 !important;
+                border-radius: 12px !important;
+                box-shadow: none !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+              }
+              #story > div:last-child > div > div:last-child {
+                margin-top: 10px !important;
+                background: #f0fdf4 !important;
+                border: 1px solid #bbf7d0 !important;
+              }
+ 
+              #gk .grid {
+                display: grid !important;
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                gap: 8px !important;
+                width: 100% !important;
+                margin: 40px 0 0 0 !important;
+                box-sizing: border-box !important;
+              }
+              #gk .grid > div {
+                padding: 12px !important;
+                background: #f8fafc !important;
+                border: 1px solid #e2e8f0 !important;
+                border-radius: 12px !important;
+                box-shadow: none !important;
+                box-sizing: border-box !important;
+              }
+              #gk .grid > div .size-14, #gk .grid > div .size-12 {
                 display: none !important;
               }
-
-              #personality .p-8 {
+ 
+              #personality > div:last-child > div {
+                width: 100% !important;
+                margin: 40px 0 0 0 !important;
+                box-sizing: border-box !important;
+              }
+              #personality > div:last-child > div > div:last-child {
                 padding: 24px !important;
                 background: #f8fafc !important;
                 border: 1px solid #e2e8f0 !important;
                 border-radius: 16px !important;
                 box-shadow: none !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+                margin-top: 15px !important;
               }
             `;
             clonedDoc.head.appendChild(style);
@@ -2240,10 +2316,10 @@ function DailyAssemblyContent() {
     return (
       <div
         id={id}
-        className={`assembly-section-card space-y-8 p-8 md:p-12 bg-gradient-to-br ${gradient || 'from-slate-50/80 to-slate-100/50 border-slate-200/60'} border rounded-[3rem] shadow-sm pdf-page-break mb-8 relative overflow-hidden`}
+        className={`assembly-section-card space-y-5 p-5 md:p-8 bg-gradient-to-br ${gradient || 'from-slate-50/80 to-slate-100/50 border-slate-200/60'} border rounded-[2rem] shadow-sm pdf-page-break mb-6 relative overflow-visible`}
       >
         <div className="flex justify-center relative z-10">
-          <h3 className="text-xl md:text-2xl font-black text-slate-800 inline-flex items-center justify-center gap-3 px-8 py-4 bg-white/90 backdrop-blur-md rounded-full shadow-sm border border-slate-200/60 uppercase tracking-widest">
+          <h3 className="text-lg md:text-xl font-black text-slate-800 inline-flex items-center justify-center gap-2 px-5 py-3 bg-white/90 backdrop-blur-md rounded-full shadow-sm border border-slate-200/60 uppercase tracking-wider">
             {emoji && <span>{emoji}</span>} {title}
           </h3>
         </div>
@@ -2257,7 +2333,7 @@ function DailyAssemblyContent() {
   return (
     <div
       id="daily-assembly-content"
-      className="p-6 md:p-10 space-y-8 relative rounded-[3rem] overflow-hidden bg-[#F8FAFF]"
+      className="p-4 md:p-6 space-y-6 relative rounded-[2rem] overflow-visible bg-[#F8FAFF]"
     >
       <style>{`
         @media print {
@@ -2329,10 +2405,10 @@ function DailyAssemblyContent() {
               </div>
               <button
                 onClick={handleDownloadPdf}
-                title="Download PDF"
-                className="flex items-center justify-center p-3 rounded-2xl bg-indigo-500/20 text-indigo-200 hover:bg-indigo-500/40 hover:text-white transition-all border border-indigo-500/30 backdrop-blur-xl shadow-lg"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-black text-xs md:text-sm uppercase tracking-wider transition-all shadow-lg shadow-indigo-500/25 active:scale-95 border border-indigo-400/30"
               >
-                <Download className="size-6" />
+                <Download className="size-4" />
+                <span>{lang === "en" ? "Download PDF" : "PDF डाउनलोड"}</span>
               </button>
             </div>
           </div>
@@ -2374,13 +2450,13 @@ function DailyAssemblyContent() {
               fallbackItem.content;
 
             return (
-              <div key={idx} className={`assembly-section-card bg-white p-6 md:p-10 rounded-[2.5rem] border border-green-100 shadow-md text-center mb-6 ${idx > 0 ? 'pdf-page-break' : ''}`}>
-                <div className="flex justify-center mb-6">
-                  <label className="inline-flex items-center justify-center gap-2 px-6 py-2 bg-green-50 text-green-700 rounded-full text-sm font-black uppercase tracking-widest border border-green-100">
+              <div key={idx} className={`assembly-section-card bg-white p-4 md:p-8 rounded-[2rem] border border-green-100 shadow-md text-center mb-4 ${idx > 0 ? 'pdf-page-break' : ''}`}>
+                <div className="flex justify-center mb-4">
+                  <label className="inline-flex items-center justify-center gap-2 px-5 py-2 bg-green-50 text-green-700 rounded-full text-sm font-black uppercase tracking-wider border border-green-100">
                     {fallbackItem.label}
                   </label>
                 </div>
-                <div className="text-lg md:text-2xl text-slate-900 font-extrabold leading-loose font-sans text-center">
+                <div className="text-base md:text-xl text-slate-900 font-extrabold leading-relaxed font-sans text-center">
                   {content.split('\n').map((line: string, i: number) => (
                     <React.Fragment key={i}>
                       {line}
@@ -2413,16 +2489,16 @@ function DailyAssemblyContent() {
               ].map((item, i) => (
                 <div
                   key={i}
-                  className={`p-6 bg-white/80 backdrop-blur-xl border border-white rounded-[2rem] text-center shadow-xl shadow-amber-900/5 hover:scale-105 hover:shadow-2xl hover:shadow-amber-900/10 transition-all duration-300 relative overflow-hidden group`}
+                  className={`p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white rounded-xl md:rounded-2xl text-center shadow-lg shadow-amber-900/5 hover:scale-105 hover:shadow-xl hover:shadow-amber-900/10 transition-all duration-300 relative overflow-hidden group`}
                 >
-                  <div className={`absolute -right-4 -top-4 size-20 ${item.bg} rounded-full blur-2xl opacity-50 group-hover:opacity-100 transition-opacity`} />
-                  <div className={`size-12 rounded-2xl ${item.bg} ${item.border} border flex items-center justify-center mx-auto mb-4 relative z-10 group-hover:rotate-6 transition-transform`}>
-                    <item.icon className={`size-6 ${item.color}`} />
+                  <div className={`absolute -right-4 -top-4 size-16 ${item.bg} rounded-full blur-2xl opacity-50 group-hover:opacity-100 transition-opacity`} />
+                  <div className={`size-10 rounded-xl ${item.bg} ${item.border} border flex items-center justify-center mx-auto mb-2 relative z-10 group-hover:rotate-6 transition-transform`}>
+                    <item.icon className={`size-5 ${item.color}`} />
                   </div>
-                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 relative z-10">
+                  <div className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5 relative z-10">
                     {item.label}
                   </div>
-                  <div className="text-lg font-black text-slate-800 relative z-10">{item.value}</div>
+                  <div className="text-sm md:text-lg font-black text-slate-800 relative z-10">{item.value}</div>
                 </div>
               ))}
             </div>
@@ -2437,14 +2513,14 @@ function DailyAssemblyContent() {
               icon={Quote}
               gradient="from-violet-100/80 via-fuchsia-50/60 to-purple-100/80"
             >
-              <div className="p-10 md:p-14 bg-white/60 backdrop-blur-xl border border-white rounded-[3rem] flex flex-col items-center justify-center text-center shadow-xl shadow-violet-900/5 hover:shadow-2xl hover:shadow-violet-900/10 transition-all duration-500 relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-violet-200/40 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 group-hover:bg-violet-300/40 transition-colors" />
-                <div className="absolute bottom-0 left-0 w-64 h-64 bg-fuchsia-200/40 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/2 group-hover:bg-fuchsia-300/40 transition-colors" />
+              <div className="p-6 md:p-10 bg-white/60 backdrop-blur-xl border border-white rounded-[2rem] flex flex-col items-center justify-center text-center shadow-xl shadow-violet-900/5 hover:shadow-2xl hover:shadow-violet-900/10 transition-all duration-500 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-48 h-48 bg-violet-200/40 rounded-full blur-[60px] -translate-y-1/2 translate-x-1/2 group-hover:bg-violet-300/40 transition-colors" />
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-fuchsia-200/40 rounded-full blur-[60px] translate-y-1/2 -translate-x-1/2 group-hover:bg-fuchsia-300/40 transition-colors" />
 
-                <div className="size-20 rounded-full bg-violet-100 border border-violet-200 flex items-center justify-center mb-8 relative z-10 shadow-inner">
-                  <Quote className="size-10 text-violet-500" />
+                <div className="size-14 rounded-full bg-violet-100 border border-violet-200 flex items-center justify-center mb-5 relative z-10 shadow-inner">
+                  <Quote className="size-7 text-violet-500" />
                 </div>
-                <p className="text-2xl md:text-4xl font-black text-slate-800 leading-normal italic relative z-10 drop-shadow-sm">
+                <p className="text-xl md:text-2xl font-black text-slate-800 leading-relaxed italic relative z-10 drop-shadow-sm">
                   "{formData.thought}"
                 </p>
               </div>
@@ -2460,20 +2536,20 @@ function DailyAssemblyContent() {
               icon={BookOpen}
               gradient="from-teal-100/80 via-emerald-50/60 to-cyan-100/80"
             >
-              <div className="space-y-6">
-                <div className="p-8 md:p-12 bg-white/60 backdrop-blur-xl border border-white rounded-[2.5rem] text-center shadow-xl shadow-teal-900/5 hover:shadow-teal-900/10 transition-all relative overflow-hidden group">
-                  <div className="absolute right-0 top-0 w-32 h-32 bg-teal-200/30 blur-[50px] rounded-full" />
-                  <div className="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-[10px] font-black text-teal-600 uppercase tracking-widest mb-6 relative z-10">
+              <div className="space-y-4">
+                <div className="p-5 md:p-8 bg-white/60 backdrop-blur-xl border border-white rounded-[2rem] text-center shadow-xl shadow-teal-900/5 hover:shadow-teal-900/10 transition-all relative overflow-hidden group">
+                  <div className="absolute right-0 top-0 w-24 h-24 bg-teal-200/30 blur-[40px] rounded-full" />
+                  <div className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-teal-50 border border-teal-200 text-[10px] font-black text-teal-600 uppercase tracking-wider mb-4 relative z-10">
                     {t.proverb}
                   </div>
-                  <p className="text-2xl md:text-3xl font-black text-slate-800 relative z-10 leading-relaxed">"{formData.proverb}"</p>
+                  <p className="text-lg md:text-2xl font-black text-slate-800 relative z-10 leading-relaxed">"{formData.proverb}"</p>
                 </div>
                 {formData.proverbMeaning && (
-                  <div className="p-8 md:p-10 bg-white border border-white/80 rounded-[2.5rem] text-center shadow-lg shadow-slate-200/50">
-                    <div className="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-slate-50 border border-slate-200 text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">
+                  <div className="p-5 md:p-8 bg-white border border-white/80 rounded-[2rem] text-center shadow-lg shadow-slate-200/50">
+                    <div className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-slate-50 border border-slate-200 text-[10px] font-black text-slate-500 uppercase tracking-wider mb-3">
                       {t.proverbMeaning}
                     </div>
-                    <p className="text-lg md:text-xl font-bold text-slate-600 leading-relaxed max-w-3xl mx-auto">{formData.proverbMeaning}</p>
+                    <p className="text-base md:text-lg font-bold text-slate-600 leading-relaxed max-w-3xl mx-auto">{formData.proverbMeaning}</p>
                   </div>
                 )}
               </div>
@@ -2498,8 +2574,8 @@ function DailyAssemblyContent() {
                   </div>
                 )}
 
-                <div className="p-8 md:p-12 bg-white/60 backdrop-blur-xl border border-white rounded-[3rem] shadow-xl shadow-blue-900/5">
-                  <div className="text-lg md:text-xl font-bold text-slate-800 leading-relaxed font-sans">
+                <div className="p-5 md:p-8 bg-white/60 backdrop-blur-xl border border-white rounded-[2rem] shadow-xl shadow-blue-900/5">
+                  <div className="text-sm md:text-base font-bold text-slate-800 leading-relaxed font-sans">
                     {formData.events.split('\n').map((line: string, i: number) => (
                       <React.Fragment key={i}>
                         {line}
@@ -2532,9 +2608,9 @@ function DailyAssemblyContent() {
                     </div>
                   </div>
                 )}
-                <div className="p-8 md:p-12 bg-white/60 backdrop-blur-xl border border-white rounded-[3rem] text-center shadow-xl shadow-orange-900/5 relative overflow-hidden">
+                <div className="p-5 md:p-8 bg-white/60 backdrop-blur-xl border border-white rounded-[2rem] text-center shadow-xl shadow-orange-900/5 relative overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-b from-orange-50/30 to-transparent pointer-events-none" />
-                  <div className="text-lg md:text-2xl font-bold text-slate-800 leading-relaxed font-sans relative z-10">
+                  <div className="text-base md:text-xl font-bold text-slate-800 leading-relaxed font-sans relative z-10">
                     {formData.patrioticSong.split('\n').map((line: string, i: number) => (
                       <React.Fragment key={i}>
                         {line}
@@ -2567,8 +2643,8 @@ function DailyAssemblyContent() {
                     </div>
                   </div>
                 )}
-                <div className="p-8 md:p-12 bg-white/60 backdrop-blur-xl border border-white rounded-[3rem] text-center shadow-xl shadow-pink-900/5">
-                  <div className="text-lg md:text-2xl font-bold text-slate-800 leading-loose">
+                <div className="p-5 md:p-8 bg-white/60 backdrop-blur-xl border border-white rounded-[2rem] text-center shadow-xl shadow-pink-900/5">
+                  <div className="text-sm md:text-base font-bold text-slate-800 leading-relaxed">
                     {formData.story.split('\n').map((line: string, i: number) => (
                       <React.Fragment key={i}>
                         {line}
@@ -2578,14 +2654,14 @@ function DailyAssemblyContent() {
                   </div>
                 </div>
                 {formData.moral && (
-                  <div className="p-8 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/60 rounded-[3rem] flex flex-col items-center text-center gap-4 shadow-lg shadow-amber-900/5 relative overflow-hidden group">
+                  <div className="p-5 md:p-6 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/60 rounded-[2rem] flex flex-col items-center text-center gap-3 shadow-lg shadow-amber-900/5 relative overflow-hidden group">
                     <div className="absolute inset-0 bg-white/40 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <div className="size-16 rounded-full bg-amber-100 flex items-center justify-center shadow-inner relative z-10">
-                      <Star className="size-8 text-amber-500" />
+                    <div className="size-12 rounded-full bg-amber-100 flex items-center justify-center shadow-inner relative z-10">
+                      <Star className="size-6 text-amber-500" />
                     </div>
                     <div className="relative z-10">
-                      <div className="inline-block px-4 py-1 rounded-full bg-amber-200/50 text-[10px] font-black text-amber-700 uppercase tracking-widest mb-4">{t.moral}</div>
-                      <p className="text-xl md:text-3xl font-black text-amber-900 leading-relaxed">{formData.moral}</p>
+                      <div className="inline-block px-3 py-1 rounded-full bg-amber-200/50 text-[10px] font-black text-amber-700 uppercase tracking-wider mb-3">{t.moral}</div>
+                      <p className="text-lg md:text-xl font-black text-amber-900 leading-relaxed">{formData.moral}</p>
                     </div>
                   </div>
                 )}
@@ -2611,16 +2687,16 @@ function DailyAssemblyContent() {
                 ].filter(item => item.q).map((item, i) => (
                   <div
                     key={i}
-                    className="p-8 bg-white/80 backdrop-blur-xl border border-white rounded-[3rem] shadow-xl shadow-cyan-900/5 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 text-center flex flex-col items-center relative overflow-hidden group"
+                    className="p-5 md:p-6 bg-white/80 backdrop-blur-xl border border-white rounded-[2rem] shadow-xl shadow-cyan-900/5 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 text-center flex flex-col items-center relative overflow-hidden group"
                   >
                     <div className={`absolute inset-0 ${item.bg} opacity-30 group-hover:opacity-60 transition-opacity`} />
-                    <div className={`size-14 rounded-full bg-white border ${item.border} flex items-center justify-center mb-6 shadow-sm relative z-10`}>
-                      <HelpCircle className={`size-6 ${item.iconColor}`} />
+                    <div className={`size-12 rounded-full bg-white border ${item.border} flex items-center justify-center mb-4 shadow-sm relative z-10`}>
+                      <HelpCircle className={`size-5 ${item.iconColor}`} />
                     </div>
-                    <p className="text-lg md:text-xl font-black text-slate-800 mb-8 relative z-10 flex-grow leading-relaxed">{item.q}</p>
-                    <div className={`w-full px-6 py-4 bg-white border ${item.border} rounded-2xl relative z-10 shadow-sm`}>
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">{t.ans}</span>
-                      <span className={`text-base md:text-lg font-black ${item.iconColor} drop-shadow-sm`}>{item.a}</span>
+                    <p className="text-base md:text-lg font-black text-slate-800 mb-5 relative z-10 flex-grow leading-relaxed">{item.q}</p>
+                    <div className={`w-full px-4 py-3 bg-white border ${item.border} rounded-xl relative z-10 shadow-sm`}>
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">{t.ans}</span>
+                      <span className={`text-sm md:text-base font-black ${item.iconColor} drop-shadow-sm`}>{item.a}</span>
                     </div>
                   </div>
                 ))}
@@ -2648,8 +2724,8 @@ function DailyAssemblyContent() {
                     </div>
                   </div>
                 )}
-                <div className="p-8 md:p-12 bg-white/60 backdrop-blur-xl border border-white rounded-[3rem] text-center shadow-xl shadow-fuchsia-900/5">
-                  <div className="text-lg md:text-2xl font-bold text-slate-800 leading-loose">
+                <div className="p-5 md:p-8 bg-white/60 backdrop-blur-xl border border-white rounded-[2rem] text-center shadow-xl shadow-fuchsia-900/5">
+                  <div className="text-sm md:text-base font-bold text-slate-800 leading-relaxed">
                     {formData.personality.split('\n').map((line: string, i: number) => (
                       <React.Fragment key={i}>
                         {line}
