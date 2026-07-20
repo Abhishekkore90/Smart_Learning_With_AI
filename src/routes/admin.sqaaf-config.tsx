@@ -15,6 +15,7 @@ import {
   Mic
 } from "lucide-react";
 import { showToast as toast } from "@/lib/custom-toast";
+import { uploadBlobToBunny } from "@/lib/bunnyStorage";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { getGroupedOptions, getStandardDetail, toMarathiNumerals } from "./teacher.sqaaf";
@@ -231,6 +232,17 @@ function SQAAFConfigAdmin() {
 
     try {
       await Promise.all(savePromises);
+
+      // Upload SQAAF evidence config backup to Bunny Storage
+      try {
+        const jsonBlob = new Blob([JSON.stringify(allOptions, null, 2)], { type: "application/json" });
+        const fileName = `sqaaf_config_standard_${selectedStandard}_${Date.now()}.json`;
+        const cdnUrl = await uploadBlobToBunny(`sqaaf/admin_configs/${fileName}`, jsonBlob);
+        console.log("Uploaded SQAAF Config to Bunny Storage:", cdnUrl);
+      } catch (uploadErr: any) {
+        console.warn("Could not upload SQAAF Config to Bunny Storage:", uploadErr);
+      }
+
       toast.success(`मानक ${selectedStandard} चे सर्व पुरावे पर्याय यशस्वीरित्या सेव्ह केले! / Saved all evidence options for standard ${selectedStandard} successfully!`);
     } catch (error) {
       console.error("Error saving configs to Firestore:", error);

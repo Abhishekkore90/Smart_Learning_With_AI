@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { showToast as toast } from "@/lib/custom-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useLanguage } from "@/hooks/use-language";
+import { uploadBlobToBunny } from "@/lib/bunnyStorage";
 import { db } from "@/lib/firebase";
 import {
   collection,
@@ -423,6 +424,7 @@ function TeacherMeetingPage() {
   const [invitationFooterNote, setInvitationFooterNote] = useState("शाळेच्या सर्वांगीण विकासात आणि व्यवस्थापनात आपले योगदान अत्यंत मोलाचे आहे. तरी कृपया आपण या सभेस वेळेवर उपस्थित राहावे, ही नम्र विनंती.");
   const [invitationSignatoryTitle, setInvitationSignatoryTitle] = useState("मुख्याध्यापक / सचिव");
   const [invitationSignatoryOrg, setInvitationSignatoryOrg] = useState("");
+  const [invitationSelectedMonth, setInvitationSelectedMonth] = useState("");
 
   const currentCommName = committeeName || selectedCommittee?.name || "शाळा व्यवस्थापन समिती (SMC)";
 
@@ -468,23 +470,42 @@ function TeacherMeetingPage() {
   const [cachedCustomTemplates, setCachedCustomTemplates] = useState<Record<string, any>>({});
   const [isTemplatesLoading, setIsTemplatesLoading] = useState<boolean>(false);
 
-  // Auto-fetch agenda items when invitation date changes
+  // Sync invitationSelectedMonth with invitationDate
   useEffect(() => {
-    if (!invitationDate || !selectedCommittee) {
+    if (invitationDate) {
+      const parts = invitationDate.split("-");
+      if (parts.length === 3) {
+        const monthStr = parts[1];
+        if (invitationSelectedMonth !== monthStr) {
+          setInvitationSelectedMonth(monthStr);
+        }
+      }
+    }
+  }, [invitationDate]);
+
+  // Auto-fetch agenda items when selected month changes
+  useEffect(() => {
+    if (!invitationSelectedMonth || !selectedCommittee) {
       setInvitationAgendaItems([]);
       return;
     }
-    const parts = invitationDate.split("-");
-    if (parts.length !== 3) return;
-    const monthStr = parts[1]; // "01" to "12"
-    const template = cachedAdminTemplates[monthStr];
+    // Do not fetch subjects for future months
+    if (selectedCommittee?.id !== "alumni") {
+      const currentIdx = ACADEMIC_MONTHS.findIndex(x => x.id === currentMonth);
+      const mIdx = ACADEMIC_MONTHS.findIndex(x => x.id === invitationSelectedMonth);
+      if (currentIdx !== -1 && mIdx > currentIdx) {
+        setInvitationAgendaItems([]);
+        return;
+      }
+    }
+    const template = cachedAdminTemplates[invitationSelectedMonth];
     if (template?.subjects?.length > 0) {
       const subjects = template.subjects.map((s: any) => s.subject || "").filter((s: string) => s.trim());
       setInvitationAgendaItems(subjects);
     } else {
       setInvitationAgendaItems([]);
     }
-  }, [invitationDate, selectedCommittee, cachedAdminTemplates]);
+  }, [invitationSelectedMonth, selectedCommittee, cachedAdminTemplates, currentMonth]);
 
   // Edit Mode States
   const isEditing = search.edit === true;
@@ -1376,8 +1397,20 @@ function TeacherMeetingPage() {
         pagebreak: { mode: ['css', 'legacy'] }
       };
 
-      await html2pdf().from(element).set(opt).save();
+      const worker = html2pdf().from(element).set(opt);
+      await worker.save();
       toast.success("PDF यशस्वीरित्या डाउनलोड झाली!");
+
+      try {
+        const pdfBlob = (await worker.output("blob")) as Blob;
+        const folderPath = `meetings/reports/${udise || "default"}`;
+        const fileName = `${selectedCommittee?.id || "meeting"}_report_${selectedMonth}_${Date.now()}.pdf`;
+        const cdnUrl = await uploadBlobToBunny(`${folderPath}/${fileName}`, pdfBlob);
+        console.log("Uploaded Meeting Report to Bunny Storage:", cdnUrl);
+        toast.success("सभा अहवाल बन्नी स्टोरेजवर जतन झाला!");
+      } catch (uploadErr: any) {
+        console.warn("Could not upload Meeting Report to Bunny Storage:", uploadErr);
+      }
     } catch (error) {
       console.error("Error generating PDF", error);
       toast.error("PDF तयार करताना त्रुटी आली. कृपया पुन्हा प्रयत्न करा.");
@@ -1410,8 +1443,22 @@ function TeacherMeetingPage() {
         pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
       };
 
-      await html2pdf().from(element).set(opt).save();
+      const worker = html2pdf().from(element).set(opt);
+      await worker.save();
       toast.success("निमंत्रण पत्र PDF यशस्वीरित्या डाउनलोड झाली!");
+
+      // Convert to blob and upload to Bunny Storage in background
+      try {
+        const pdfBlob = (await worker.output("blob")) as Blob;
+        const folderPath = `meetings/invitations/${udise || "default"}`;
+        const fileName = `${selectedCommittee?.id || "meeting"}_invitation_${Date.now()}.pdf`;
+        const cdnUrl = await uploadBlobToBunny(`${folderPath}/${fileName}`, pdfBlob);
+        console.log("Uploaded PDF to Bunny Storage:", cdnUrl);
+        toast.success("निमंत्रण पत्र बन्नी स्टोरेजवर सुरक्षितरित्या जतन झाले!");
+      } catch (uploadErr: any) {
+        console.warn("Could not upload PDF to Bunny Storage:", uploadErr);
+        toast.error("बन्नी स्टोरेजवर पीडीएफ जतन करू शकलो नाही.");
+      }
     } catch (error) {
       console.error("Error generating invitation PDF", error);
       toast.error("PDF तयार करताना त्रुटी आली. कृपया पुन्हा प्रयत्न करा.");
@@ -2835,117 +2882,132 @@ function TeacherMeetingPage() {
 
                       {formStep === 2 && (
                         <div className="space-y-12">
-                          {/* Month Selection Navbar & Metadata */}
-                          <div className="bg-slate-50 border border-slate-200/80 p-4 sm:p-5 rounded-2xl space-y-4">
-                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                              <div className="space-y-0.5">
-                                <label className="text-xs sm:text-sm font-black text-slate-800 uppercase tracking-wider block">
-                                  मासिक सभा महिना निवडा (Select Meeting Month)
-                                </label>
-                                <p className="text-xs text-slate-500 font-bold">
-                                  प्रत्येक महिन्यासाठी पूर्व-निर्धारित विषय आणि ठराव लोड करण्यासाठी महिना निवडा.
-                                </p>
-                              </div>
-                              {loadingTemplate && (
-                                <div className="flex items-center gap-2 text-xs font-black text-blue-600 bg-blue-50 border border-blue-100 px-3 py-1 rounded-xl self-start md:self-auto animate-pulse">
-                                  <div className="size-3.5 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin" />
-                                  <span>टेम्पलेट लोड होत आहे...</span>
+                          <div className="space-y-6">
+                            {/* Month Selection Navbar & Metadata */}
+                            <div className="bg-slate-50 border border-slate-200/80 p-4 sm:p-5 rounded-2xl space-y-4">
+                              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                                <div className="space-y-0.5">
+                                  <label className="text-xs sm:text-sm font-black text-slate-800 uppercase tracking-wider block">
+                                    मासिक सभा महिना निवडा (Select Meeting Month)
+                                  </label>
+                                  <p className="text-xs text-slate-500 font-bold">
+                                    प्रत्येक महिन्यासाठी पूर्व-निर्धारित विषय आणि ठराव लोड करण्यासाठी महिना निवडा.
+                                  </p>
                                 </div>
-                              )}
-                            </div>
+                                {loadingTemplate && (
+                                  <div className="flex items-center gap-2 text-xs font-black text-amber-600 bg-amber-50 border border-amber-100 px-3 py-1 rounded-xl self-start md:self-auto animate-pulse">
+                                    <div className="size-3.5 border-2 border-amber-600/30 border-t-amber-600 rounded-full animate-spin" />
+                                    <span>टेम्पलेट लोड होत आहे...</span>
+                                  </div>
+                                )}
+                              </div>
 
-                            {/* Compact Month Grid Navbar */}
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-2.5 pt-0.5">
-                              {(selectedCommittee?.id === "alumni" ? ALUMNI_MEETINGS : ACADEMIC_MONTHS).map((m) => {
-                                const isSelected = selectedMonth === m.id;
-                                const currentIdx = ACADEMIC_MONTHS.findIndex(x => x.id === currentMonth);
-                                const mIdx = ACADEMIC_MONTHS.findIndex(x => x.id === m.id);
-                                const isFuture = selectedCommittee?.id !== "alumni" && mIdx > currentIdx && currentIdx !== -1;
-                                return (
-                                  <button
-                                    key={m.id}
-                                    type="button"
-                                    disabled={loadingTemplate || isFuture}
-                                    onClick={() => handleMonthChange(m.id)}
-                                    className={`px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer flex items-center justify-center text-center leading-tight min-h-[38px] ${isSelected
-                                      ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/25 scale-[1.02]"
-                                      : "bg-white text-slate-600 hover:text-slate-955 border border-slate-200 hover:bg-slate-50 hover:border-slate-300 active:scale-95 disabled:opacity-50"
-                                      }`}
-                                  >
-                                    {m.name} ({m.english})
-                                  </button>
-                                );
-                              })}
-                            </div>
-
-                            {/* सभा निमंत्रण Button */}
-                            <button
-                              type="button"
-                              onClick={() => { setSelectedMonth("invitation"); }}
-                              className={`w-full px-3 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer flex items-center justify-center text-center leading-tight min-h-[38px] ${selectedMonth === "invitation"
-                                ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-amber-500/25 scale-[1.02]"
-                                : "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 active:scale-95"
-                                }`}
-                            >
-                              सभा निमंत्रण
-                            </button>
-
-                            {/* Year & Date Selection options appearing after month selection */}
-                            <AnimatePresence>
-                              {selectedMonth && selectedMonth !== "invitation" && (
-                                <motion.div
-                                  initial={{ opacity: 0, height: 0 }}
-                                  animate={{ opacity: 1, height: "auto" }}
-                                  exit={{ opacity: 0, height: 0 }}
-                                  transition={{ duration: 0.3 }}
-                                  className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4 border-t border-slate-200 overflow-hidden"
-                                >
-                                  <div className="space-y-2">
-                                    <label className="text-sm font-black text-slate-800 block">
-                                      शैक्षणिक वर्ष निवडा (Select Academic Year)
-                                    </label>
-                                    <select
-                                      value={academicYear}
-                                      onChange={(e) => setAcademicYear(e.target.value)}
-                                      className="w-full px-5 py-4 bg-white border-2 border-slate-300 rounded-xl text-base font-extrabold outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 text-slate-955 shadow-md cursor-pointer transition-all"
+                              {/* Compact Month Grid Navbar */}
+                              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-2.5 pt-0.5">
+                                {(selectedCommittee?.id === "alumni" ? ALUMNI_MEETINGS : ACADEMIC_MONTHS).map((m) => {
+                                  const isSelected = selectedMonth === m.id;
+                                  const currentIdx = ACADEMIC_MONTHS.findIndex(x => x.id === currentMonth);
+                                  const mIdx = ACADEMIC_MONTHS.findIndex(x => x.id === m.id);
+                                  const isFuture = selectedCommittee?.id !== "alumni" && mIdx > currentIdx && currentIdx !== -1;
+                                  return (
+                                    <button
+                                      key={m.id}
+                                      type="button"
+                                      disabled={loadingTemplate || isFuture}
+                                      onClick={() => handleMonthChange(m.id)}
+                                      className={`px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer flex items-center justify-center text-center leading-tight min-h-[38px] ${isSelected
+                                        ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-amber-500/25 scale-[1.02]"
+                                        : "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 active:scale-95 disabled:opacity-50"
+                                        }`}
                                     >
-                                      <option value="२०२४-२५">२०२४-२५</option>
-                                      <option value="२०२५-२६">२०२५-२६</option>
-                                      <option value="२०२६-२७">२०२६-२७</option>
-                                      <option value="२०२७-२८">२०२७-२८</option>
-                                    </select>
-                                  </div>
+                                      {m.name} ({m.english})
+                                    </button>
+                                  );
+                                })}
+                              </div>
 
-                                  <div className="space-y-2">
-                                    <label className="text-sm font-black text-slate-800 block">
-                                      सभा क्रमांक प्रविष्ट करा (Enter Meeting Number)
-                                    </label>
-                                    <input
-                                      type="text"
-                                      value={meetingNumber}
-                                      onChange={(e) => setMeetingNumber(e.target.value)}
-                                      placeholder="उदा. १, २, ३..."
-                                      className="w-full px-5 py-4 bg-white border-2 border-slate-300 rounded-xl text-base font-extrabold outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 text-slate-955 shadow-md transition-all"
-                                    />
-                                  </div>
+                              {/* Year & Date Selection options appearing after month selection */}
+                              <AnimatePresence>
+                                {selectedMonth && selectedMonth !== "invitation" && (
+                                  <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: "auto" }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    transition={{ duration: 0.3 }}
+                                    className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4 border-t border-slate-200 overflow-hidden"
+                                  >
+                                    <div className="space-y-2">
+                                      <label className="text-sm font-black text-slate-800 block">
+                                        शैक्षणिक वर्ष निवडा (Select Academic Year)
+                                      </label>
+                                      <select
+                                        value={academicYear}
+                                        onChange={(e) => setAcademicYear(e.target.value)}
+                                        className="w-full px-5 py-4 bg-white border-2 border-slate-300 rounded-xl text-base font-extrabold outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 text-slate-955 shadow-md cursor-pointer transition-all"
+                                      >
+                                        <option value="२०२४-२५">२०२४-२५</option>
+                                        <option value="२०२५-२६">२०२५-२६</option>
+                                        <option value="२०२६-२७">२०२६-२७</option>
+                                        <option value="२०२७-२८">२०२७-२८</option>
+                                      </select>
+                                    </div>
 
-                                  <div className="space-y-2">
-                                    <label className="text-sm font-black text-slate-800 block">
-                                      सभा दिनांक निवडा (Select Meeting Date)
-                                    </label>
-                                    <div className="relative">
-                                      <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 size-5 pointer-events-none" />
+                                    <div className="space-y-2">
+                                      <label className="text-sm font-black text-slate-800 block">
+                                        सभा क्रमांक प्रविष्ट करा (Enter Meeting Number)
+                                      </label>
                                       <input
-                                        type="date"
-                                        value={meetingDate}
-                                        onChange={(e) => handleDateChange(e.target.value)}
-                                        className="w-full pl-12 pr-5 py-3.5 bg-white border-2 border-slate-300 rounded-xl text-base font-extrabold outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 text-slate-955 cursor-pointer shadow-md transition-all"
+                                        type="text"
+                                        value={meetingNumber}
+                                        onChange={(e) => setMeetingNumber(e.target.value)}
+                                        placeholder="उदा. १, २, ३..."
+                                        className="w-full px-5 py-4 bg-white border-2 border-slate-300 rounded-xl text-base font-extrabold outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 text-slate-955 shadow-md transition-all"
                                       />
                                     </div>
-                                  </div>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
+
+                                    <div className="space-y-2">
+                                      <label className="text-sm font-black text-slate-800 block">
+                                        सभा दिनांक निवडा (Select Meeting Date)
+                                      </label>
+                                      <div className="relative">
+                                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 size-5 pointer-events-none" />
+                                        <input
+                                          type="date"
+                                          value={meetingDate}
+                                          onChange={(e) => handleDateChange(e.target.value)}
+                                          className="w-full pl-12 pr-5 py-3.5 bg-white border-2 border-slate-300 rounded-xl text-base font-extrabold outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 text-slate-955 cursor-pointer shadow-md transition-all"
+                                        />
+                                      </div>
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+
+                            {/* Meeting Invitation Navbar & Metadata */}
+                            <div className="bg-slate-50 border border-slate-200/80 p-4 sm:p-5 rounded-2xl space-y-4">
+                              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                                <div className="space-y-0.5">
+                                  <label className="text-xs sm:text-sm font-black text-slate-800 uppercase tracking-wider block">
+                                    सभा निमंत्रण पत्र (Select Meeting Invitation)
+                                  </label>
+                                  <p className="text-xs text-slate-500 font-bold">
+                                    सभेचे निमंत्रण पत्र व विषय पत्रिका तयार करण्यासाठी खालील पर्यायावर क्लिक करा.
+                                  </p>
+                                </div>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => { setSelectedMonth("invitation"); }}
+                                className={`w-full px-3 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer flex items-center justify-center text-center leading-tight min-h-[38px] ${selectedMonth === "invitation"
+                                  ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-amber-500/25 scale-[1.02]"
+                                  : "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 hover:border-amber-300 active:scale-95"
+                                  }`}
+                              >
+                                सभा निमंत्रण
+                              </button>
+                            </div>
                           </div>
 
                           {selectedMonth && selectedMonth !== "invitation" && (
@@ -3991,12 +4053,30 @@ function TeacherMeetingPage() {
 
                       {/* Agenda Items */}
                       <div className="bg-white border-2 border-slate-200 rounded-2xl p-6 space-y-4">
-                        <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-3">
                           <h3 className="text-base font-black text-slate-800 uppercase tracking-wider">सभेची विषयपत्रिका</h3>
+
+                          {/* Month Selector inside सभेची विषयपत्रिका */}
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 shrink-0">
+                            <label className="text-sm font-black text-slate-700">महिना निवडा (Select Month):</label>
+                            <select
+                              value={invitationSelectedMonth}
+                              onChange={(e) => setInvitationSelectedMonth(e.target.value)}
+                              className="px-4 py-2 border-2 border-slate-300 rounded-xl font-black text-slate-900 bg-white text-sm outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 cursor-pointer shadow-sm min-h-[38px] transition-all"
+                            >
+                              <option value="">-- महिना निवडा --</option>
+                              {(selectedCommittee?.id === "alumni" ? ALUMNI_MEETINGS : ACADEMIC_MONTHS).map((m) => (
+                                <option key={m.id} value={m.id}>
+                                  {m.name} ({m.english})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
                           <button
                             type="button"
                             onClick={() => setInvitationAgendaItems([...invitationAgendaItems, ""])}
-                            className="flex items-center gap-1.5 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-sm font-black hover:bg-blue-100 transition-all cursor-pointer border border-blue-200"
+                            className="flex items-center gap-1.5 px-4 py-2 bg-amber-50 text-amber-700 rounded-xl text-sm font-black hover:bg-amber-100 transition-all cursor-pointer border border-amber-200 self-start md:self-auto shrink-0 shadow-sm"
                           >
                             <Plus size={16} /> नवीन विषय जोडा
                           </button>
@@ -4005,7 +4085,7 @@ function TeacherMeetingPage() {
                           <div className="space-y-3">
                             {invitationAgendaItems.map((item, i) => (
                               <div key={i} className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2">
-                                <span className="text-base font-black text-blue-600 shrink-0">{i + 1}.</span>
+                                <span className="text-base font-black text-amber-600 shrink-0">{i + 1}.</span>
                                 <input
                                   type="text"
                                   value={item}
@@ -4033,7 +4113,20 @@ function TeacherMeetingPage() {
                           </div>
                         ) : (
                           <div className="text-center py-6 text-slate-400">
-                            <p className="text-base font-bold">{invitationDate ? "या महिन्यासाठी विषय आढळले नाहीत." : "विषय पाहण्यासाठी सभेचा दिनांक निवडा अथवा वरील बटनावरून नवीन विषय जोडा."}</p>
+                            <p className="text-base font-bold">
+                              {(() => {
+                                if (selectedCommittee?.id !== "alumni" && invitationSelectedMonth) {
+                                  const currentIdx = ACADEMIC_MONTHS.findIndex(x => x.id === currentMonth);
+                                  const mIdx = ACADEMIC_MONTHS.findIndex(x => x.id === invitationSelectedMonth);
+                                  if (currentIdx !== -1 && mIdx > currentIdx) {
+                                    return "भविष्यातील महिन्याचे विषय पाहता येणार नाहीत (चालू किंवा मागील महिना निवडा).";
+                                  }
+                                }
+                                return (invitationSelectedMonth || invitationDate)
+                                  ? "या महिन्यासाठी विषय आढळले नाहीत."
+                                  : "विषय पाहण्यासाठी महिना किंवा दिनांक निवडा अथवा वरील बतनावरून नवीन विषय जोडा.";
+                              })()}
+                            </p>
                           </div>
                         )}
                       </div>

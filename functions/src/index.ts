@@ -23,7 +23,7 @@ export const generateAIResponse = functions.https.onCall(async (data: any, conte
     // CHATGPT (OpenAI)
     // -------------------------------------------------------------
     if (model === "chatgpt") {
-      const apiKey = process.env.OPENAI_API_KEY || functions.config().openai?.key;
+      const apiKey = process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY || functions.config().openai?.key;
       if (!apiKey) throw new functions.https.HttpsError("failed-precondition", "Missing OpenAI API Key.");
 
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -56,7 +56,7 @@ export const generateAIResponse = functions.https.onCall(async (data: any, conte
     // CLAUDE (Anthropic)
     // -------------------------------------------------------------
     else if (model === "claude") {
-      const apiKey = process.env.CLAUDE_API_KEY || functions.config().claude?.key;
+      const apiKey = process.env.CLAUDE_API_KEY || process.env.VITE_CLAUDE_API_KEY || functions.config().claude?.key;
       if (!apiKey) throw new functions.https.HttpsError("failed-precondition", "Missing Claude API Key.");
 
       const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -92,7 +92,7 @@ export const generateAIResponse = functions.https.onCall(async (data: any, conte
     // GEMINI (Google)
     // -------------------------------------------------------------
     else if (model === "gemini") {
-      const apiKey = process.env.GEMINI_API_KEY || functions.config().gemini?.key;
+      const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || functions.config().gemini?.key;
       if (!apiKey) throw new functions.https.HttpsError("failed-precondition", "Missing Gemini API Key.");
 
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
@@ -119,5 +119,44 @@ export const generateAIResponse = functions.https.onCall(async (data: any, conte
     // Re-throw standardized Firebase HttpsErrors
     if (error instanceof functions.https.HttpsError) { throw error; }
     throw new functions.https.HttpsError("internal", error?.message || "Internal server error");
+  }
+});
+
+export const uploadToBunnyStorage = functions.https.onCall(async (data: any, context: functions.https.CallableContext) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "Authentication is required.");
+  }
+
+  const { filePath, base64Data, contentType } = data;
+  if (!filePath || !base64Data) {
+    throw new functions.https.HttpsError("invalid-argument", "Missing filePath or base64Data.");
+  }
+
+  const storageZoneName = process.env.VITE_BUNNY_STORAGE_ZONE || "sgkbrainova";
+  const accessKey = process.env.VITE_BUNNY_STORAGE_API_KEY || "";
+  const host = process.env.VITE_BUNNY_STORAGE_HOST || "storage.bunnycdn.com";
+
+  try {
+    const buffer = Buffer.from(base64Data, "base64");
+    const uploadUrl = `https://${host}/${storageZoneName}/${filePath.replace(/^\//, "")}`;
+
+    const response = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: {
+        "AccessKey": accessKey,
+        "Content-Type": contentType || "application/octet-stream",
+      },
+      body: buffer,
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`Bunny upload error (${response.status}): ${errText}`);
+    }
+
+    const cdnUrl = `https://${process.env.VITE_BUNNY_STORAGE_CDN_HOSTNAME || "SGKBRAINOVA.b-cdn.net"}/${filePath.replace(/^\//, "")}`;
+    return { success: true, url: cdnUrl };
+  } catch (error: any) {
+    throw new functions.https.HttpsError("internal", error?.message || "Bunny upload failed");
   }
 });

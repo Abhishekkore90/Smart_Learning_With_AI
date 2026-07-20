@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import { showToast as toast } from "@/lib/custom-toast";
+import { uploadBlobToBunny } from "@/lib/bunnyStorage";
 import {
   Utensils,
   Save,
@@ -362,8 +363,19 @@ function TeacherMDMPage() {
         pagebreak: { mode: ["css", "legacy"] }
       };
 
-      await html2pdfFn().set(opt).from(element).save();
+      const worker = html2pdfFn().set(opt).from(element);
+      await worker.save();
       toast.success(t("PDF यशस्वीरित्या डाउनलोड झाली!", "PDF downloaded successfully!", "पीडीएफ सफलतापूर्वक डाउनलोड हो गया!"));
+
+      try {
+        const pdfBlob = (await worker.output("blob")) as Blob;
+        const folderPath = `mdm/monthly_reports/${getUdise() || "default"}`;
+        const fileName = `MDM_Monthly_${monthlyReportMonth}_${Date.now()}.pdf`;
+        const cdnUrl = await uploadBlobToBunny(`${folderPath}/${fileName}`, pdfBlob);
+        console.log("Uploaded MDM Monthly PDF to Bunny Storage:", cdnUrl);
+      } catch (uploadErr: any) {
+        console.warn("Could not upload MDM Monthly PDF to Bunny Storage:", uploadErr);
+      }
     } catch (err: any) {
       toast.error(t(`PDF डाउनलोड करण्यात अडथळा आला: ${err?.message || String(err)}`, `Error downloading PDF: ${err?.message || String(err)}`, `पीडीएफ डाउनलोड करने में त्रुटि: ${err?.message || String(err)}`));
     } finally {
