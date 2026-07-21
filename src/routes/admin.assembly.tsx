@@ -14,6 +14,8 @@ import {
   Edit3,
   Save,
   MessageSquare,
+  Newspaper,
+  Sparkles,
 } from "lucide-react";
 import { collection, addDoc, getDocs, deleteDoc, doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -103,6 +105,7 @@ function AssemblyBookAdmin() {
       birthdays: "",
       deaths: "",
       thought: "",
+      shlok: "",
       proverb: "",
       proverbMeaning: "",
       storyTitle: "",
@@ -166,27 +169,20 @@ function AssemblyBookAdmin() {
   
         <!-- Grid for core sections -->
         <div style="display: flex; flex-direction: column; gap: 24px;">
-          <!-- Panchang -->
-          <div style="background: #FFFBEB; border: 1px solid #FEF3C7; border-radius: 1rem; padding: 20px;">
-            <h2 style="font-size: 18px; font-weight: 700; color: #92400E; margin-top: 0; margin-bottom: 12px; border-bottom: 1px solid #FEF3C7; padding-bottom: 6px;">☀️ आजचे पंचांग</h2>
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; font-size: 12px; font-weight: 600;">
-              <div>वार: <span style="color: #1F2937;">${data.day || "-"}</span></div>
-              <div>महिना: <span style="color: #1F2937;">${data.month || "-"}</span></div>
-              <div>पक्ष: <span style="color: #1F2937;">${data.paksha || "-"}</span></div>
-              <div>तिथी: <span style="color: #1F2937;">${data.tithi || "-"}</span></div>
-              <div>नक्षत्र: <span style="color: #1F2937;">${data.nakshatra || "-"}</span></div>
-              <div>योग: <span style="color: #1F2937;">${data.yog || "-"}</span></div>
-              <div>सूर्योदय: <span style="color: #1F2937;">${data.sunrise || "-"}</span></div>
-              <div>सूर्यास्त: <span style="color: #1F2937;">${data.sunset || "-"}</span></div>
-            </div>
-          </div>
+
   
-          <!-- Suvichar & Proverb -->
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+          <!-- Suvichar, Shlok & Proverb -->
+          <div style="display: grid; grid-template-columns: ${data.shlok ? '1fr 1fr 1fr' : '1fr 1fr'}; gap: 20px;">
             <div style="background: #F5F3FF; border: 1px solid #EDE9FE; border-radius: 1rem; padding: 20px;">
               <h2 style="font-size: 18px; font-weight: 700; color: #5B21B6; margin-top: 0; margin-bottom: 8px;">💭 आजचा सुविचार</h2>
               <p style="font-size: 14px; font-weight: 600; line-height: 1.6; color: #1F2937; margin: 0;">"${data.thought || "-"}"</p>
             </div>
+            ${data.shlok ? `
+            <div style="background: #FFF5F5; border: 1px solid #FED7D7; border-radius: 1rem; padding: 20px;">
+              <h2 style="font-size: 18px; font-weight: 700; color: #C53030; margin-top: 0; margin-bottom: 8px;">🕉️ आजचा श्लोक</h2>
+              <p style="font-size: 14px; font-weight: 600; line-height: 1.6; color: #1F2937; margin: 0; white-space: pre-line;">"${data.shlok}"</p>
+            </div>
+            ` : ''}
             <div style="background: #FDF2F8; border: 1px solid #FCE7F3; border-radius: 1rem; padding: 20px;">
               <h2 style="font-size: 18px; font-weight: 700; color: #9D174D; margin-top: 0; margin-bottom: 8px;">📖 आजची म्हण</h2>
               <p style="font-size: 14px; font-weight: 700; color: #1F2937; margin: 0 0 6px 0;">"${data.proverb || "-"}"</p>
@@ -196,9 +192,17 @@ function AssemblyBookAdmin() {
   
           <!-- Dinvishesh -->
           <div style="background: #EFF6FF; border: 1px solid #DBEAFE; border-radius: 1rem; padding: 20px;">
-            <h2 style="font-size: 18px; font-weight: 700; color: #1E40AF; margin-top: 0; margin-bottom: 12px; border-bottom: 1px solid #DBEAFE; padding-bottom: 6px;">📅 दिनविशेष (घटना व दिनविशेष)</h2>
-            <div style="font-size: 13px; line-height: 1.6; color: #1F2937; white-space: pre-line;">${data.events || "-"}</div>
+            <h2 style="font-size: 18px; font-weight: 700; color: #1E40AF; margin-top: 0; margin-bottom: 12px; border-bottom: 1px solid #DBEAFE; padding-bottom: 6px;">📅 दिनविशेष</h2>
+            <div style="font-size: 13px; line-height: 1.6; color: #1F2937; white-space: pre-line;">${data.events || data.dinvishesh || "-"}</div>
           </div>
+  
+          <!-- Batmya -->
+          ${(data.batmya || data.news) ? `
+          <div style="background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 1rem; padding: 20px;">
+            <h2 style="font-size: 18px; font-weight: 700; color: #065F46; margin-top: 0; margin-bottom: 12px; border-bottom: 1px solid #A7F3D0; padding-bottom: 6px;">📰 आजच्या बातम्या</h2>
+            <div style="font-size: 13px; line-height: 1.6; color: #1F2937; white-space: pre-line;">${data.batmya || data.news || "-"}</div>
+          </div>
+          ` : ''}
   
           <!-- Story -->
           <div style="background: #FFF7ED; border: 1px solid #FFEDD5; border-radius: 1rem; padding: 20px;">
@@ -221,18 +225,10 @@ function AssemblyBookAdmin() {
               </div>
             </div>
             <div style="background: #EEF2F6; border: 1px solid #E2E8F0; border-radius: 1rem; padding: 20px;">
-              <h2 style="font-size: 18px; font-weight: 700; color: #334155; margin-top: 0; margin-bottom: 8px;">🎵 समूहगीत: ${data.songTitle || "-"}</h2>
-              <p style="font-size: 11px; line-height: 1.6; color: #475569; white-space: pre-line; margin: 0; text-align: center;">${data.patrioticSong || "-"}</p>
+              <h2 style="font-size: 18px; font-weight: 700; color: #334155; margin-top: 0; margin-bottom: 8px;">🎵 देशभक्ती गीत</h2>
+              <p style="font-size: 14px; font-weight: 700; color: #1F2937; margin: 0; text-align: center;">${data.songTitle || "-"}</p>
             </div>
           </div>
-  
-          <!-- Personality -->
-          ${data.personalityTitle ? `
-            <div style="background: #F0FDFA; border: 1px solid #CCFBF1; border-radius: 1rem; padding: 20px;">
-              <h2 style="font-size: 18px; font-weight: 700; color: #0F766E; margin-top: 0; margin-bottom: 8px;">👤 थोरव्यक्ती परिचय: ${data.personalityTitle}</h2>
-              <p style="font-size: 13px; line-height: 1.6; color: #1F2937; white-space: pre-line; margin: 0;">${data.personality || "-"}</p>
-            </div>
-          ` : ''}
   
         </div>
       </div>
@@ -540,7 +536,7 @@ function AssemblyBookAdmin() {
           </div>
 
           {/* Tabs */}
-          <div className="flex bg-white p-1.5 rounded-2xl border border-slate-200 w-fit">
+          <div className="flex bg-white p-1.5 rounded-2xl border border-slate-200 w-fit flex-wrap gap-1">
             <button
               onClick={() => setActiveTab("paripath")}
               className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-2 ${
@@ -837,35 +833,27 @@ function AssemblyBookAdmin() {
                 </div>
               </div>
 
-              {/* Panchang Section */}
-              <div className="space-y-8 p-8 md:p-12 bg-gradient-to-br from-amber-50/80 to-yellow-100/50 border border-amber-200/60 rounded-[3rem] shadow-[0_8px_30px_rgb(245,158,11,0.12)] relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-64 h-64 bg-amber-300/20 rounded-full blur-3xl -translate-y-1/2 -translate-x-1/3"></div>
-                
-                <div className="flex justify-center relative">
-                  <h4 className="text-xl md:text-2xl font-black text-amber-800 inline-flex items-center justify-center gap-3 px-8 py-4 bg-white/80 backdrop-blur-md rounded-full shadow-sm border border-amber-100/50 uppercase tracking-widest">
-                    🪀 पंचांग (Panchang)
-                  </h4>
-                </div>
-                
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 relative">
-                  {['day', 'month', 'paksha', 'tithi', 'nakshatra', 'yog', 'sunrise', 'sunset'].map((field) => (
-                    <div key={field} className="text-center bg-white/90 backdrop-blur-sm p-5 rounded-[2rem] border border-amber-100 shadow-xl shadow-amber-900/5 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-amber-600 mb-3">{field}</label>
-                      <input
-                        type="text"
-                        value={paripathData[field] || ''}
-                        onChange={(e) => setParipathData({ ...paripathData, [field]: e.target.value })}
-                        className="w-full px-4 py-3 bg-amber-50/30 border border-amber-100 hover:border-amber-300 focus:bg-white rounded-xl focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all text-center font-bold text-slate-800"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Suvichar & Proverb */}
+              {/* Shlok & Suvichar */}
               <div className="space-y-8 p-8 md:p-12 bg-gradient-to-br from-violet-50/80 to-fuchsia-100/50 border border-violet-200/60 rounded-[3rem] shadow-[0_8px_30px_rgb(139,92,246,0.12)] relative overflow-hidden">
                 <div className="absolute bottom-0 right-0 w-64 h-64 bg-fuchsia-300/20 rounded-full blur-3xl translate-y-1/3 translate-x-1/3"></div>
                 
+                {/* Shlok */}
+                <div className="bg-white/90 backdrop-blur-sm p-8 md:p-10 rounded-[2.5rem] border border-amber-100 shadow-xl shadow-amber-900/5 hover:shadow-2xl hover:shadow-amber-900/10 transition-all duration-300 text-center relative">
+                  <div className="flex justify-center mb-6">
+                    <span className="inline-flex items-center justify-center gap-2 px-6 py-2 bg-amber-50 text-amber-700 rounded-full text-xs font-black uppercase tracking-widest border border-amber-100">
+                      🕉️ श्लोक (Shlok)
+                    </span>
+                  </div>
+                  <textarea
+                    rows={3}
+                    value={paripathData.shlok || ''}
+                    onChange={(e) => setParipathData({ ...paripathData, shlok: e.target.value })}
+                    className="w-full px-6 py-5 bg-amber-50/30 border border-amber-100 hover:border-amber-300 focus:bg-white rounded-2xl focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all resize-none text-center font-bold text-slate-800 text-lg md:text-xl leading-relaxed"
+                    placeholder="उदा. वक्रतुण्ड महाकाय सूर्यकोटि समप्रभ..."
+                  />
+                </div>
+
+                {/* Suvichar */}
                 <div className="bg-white/90 backdrop-blur-sm p-8 md:p-10 rounded-[2.5rem] border border-violet-100 shadow-xl shadow-violet-900/5 hover:shadow-2xl hover:shadow-violet-900/10 transition-all duration-300 text-center relative">
                   <div className="flex justify-center mb-6">
                     <span className="inline-flex items-center justify-center gap-2 px-6 py-2 bg-violet-50 text-violet-700 rounded-full text-xs font-black uppercase tracking-widest border border-violet-100">
@@ -879,30 +867,25 @@ function AssemblyBookAdmin() {
                     className="w-full px-6 py-5 bg-violet-50/30 border border-violet-100 hover:border-violet-300 focus:bg-white rounded-2xl focus:outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10 transition-all resize-none text-center font-bold text-slate-800 text-lg md:text-xl leading-relaxed"
                   />
                 </div>
+              </div>
+
+              {/* Batmya (News) */}
+              <div className="space-y-8 p-8 md:p-12 bg-gradient-to-br from-emerald-50/80 to-teal-100/50 border border-emerald-200/60 rounded-[3rem] shadow-[0_8px_30px_rgb(16,185,129,0.12)] relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-300/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
                 
-                <div className="bg-white/90 backdrop-blur-sm p-8 md:p-10 rounded-[2.5rem] border border-violet-100 shadow-xl shadow-violet-900/5 hover:shadow-2xl hover:shadow-violet-900/10 transition-all duration-300 text-center space-y-8 relative">
-                  <div>
-                    <div className="flex justify-center mb-6">
-                      <span className="inline-flex items-center justify-center gap-2 px-6 py-2 bg-fuchsia-50 text-fuchsia-700 rounded-full text-xs font-black uppercase tracking-widest border border-fuchsia-100">
-                        🪀 म्हण (Proverb)
-                      </span>
-                    </div>
-                    <input
-                      type="text"
-                      value={paripathData.proverb || ''}
-                      onChange={(e) => setParipathData({ ...paripathData, proverb: e.target.value })}
-                      className="w-full px-6 py-5 bg-fuchsia-50/30 border border-fuchsia-100 hover:border-fuchsia-300 focus:bg-white rounded-2xl focus:outline-none focus:border-fuchsia-500 focus:ring-4 focus:ring-fuchsia-500/10 transition-all text-center font-bold text-slate-800 text-lg md:text-xl"
-                    />
+                <div className="bg-white/90 backdrop-blur-sm p-8 rounded-[2.5rem] border border-emerald-100 shadow-xl shadow-emerald-900/5 hover:shadow-2xl hover:shadow-emerald-900/10 transition-all duration-300 text-center relative">
+                  <div className="flex justify-center mb-6">
+                    <span className="inline-flex items-center justify-center gap-2 px-6 py-2 bg-emerald-50 text-emerald-700 rounded-full text-xs font-black uppercase tracking-widest border border-emerald-100">
+                      📰 सुसंस्कारक्षम बातम्या (News / Batmya)
+                    </span>
                   </div>
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-violet-500 mb-4">अर्थ (Meaning)</label>
-                    <textarea
-                      rows={2}
-                      value={paripathData.proverbMeaning || ''}
-                      onChange={(e) => setParipathData({ ...paripathData, proverbMeaning: e.target.value })}
-                      className="w-full px-6 py-5 bg-violet-50/30 border border-violet-100 hover:border-violet-300 focus:bg-white rounded-2xl focus:outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10 transition-all resize-none text-center font-bold text-slate-800 leading-relaxed"
-                    />
-                  </div>
+                  <textarea
+                    rows={6}
+                    value={paripathData.batmya || ''}
+                    onChange={(e) => setParipathData({ ...paripathData, batmya: e.target.value, news: e.target.value })}
+                    className="w-full px-6 py-5 bg-emerald-50/30 border border-emerald-100 hover:border-emerald-300 focus:bg-white rounded-2xl focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all resize-none text-center font-bold text-slate-800 leading-relaxed text-base"
+                    placeholder="येथे आजच्या मुख्य बातम्या (अंतरराष्ट्रीय, राष्ट्रीय, राज्यस्तरीय, क्रीडा इ.) टाका..."
+                  />
                 </div>
               </div>
 
@@ -934,43 +917,44 @@ function AssemblyBookAdmin() {
                 <div className="bg-white/90 backdrop-blur-sm p-8 rounded-[2.5rem] border border-blue-100 shadow-xl shadow-blue-900/5 hover:shadow-2xl hover:shadow-blue-900/10 transition-all duration-300 text-center relative">
                   <div className="flex justify-center mb-6">
                     <span className="inline-flex items-center justify-center gap-2 px-6 py-2 bg-blue-50 text-blue-700 rounded-full text-xs font-black uppercase tracking-widest border border-blue-100">
-                      🪀 महत्त्वाच्या घटना (Events)
+                      📅 दिनविशेष (Dinvishesh)
                     </span>
                   </div>
                   <textarea
-                    rows={4}
+                    rows={6}
                     value={paripathData.events || ''}
-                    onChange={(e) => setParipathData({ ...paripathData, events: e.target.value })}
-                    className="w-full px-6 py-5 bg-blue-50/30 border border-blue-100 hover:border-blue-300 focus:bg-white rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all resize-none text-center font-bold text-slate-800 leading-relaxed"
+                    onChange={(e) => setParipathData({ ...paripathData, events: e.target.value, dinvishesh: e.target.value })}
+                    className="w-full px-6 py-5 bg-blue-50/30 border border-blue-100 hover:border-blue-300 focus:bg-white rounded-2xl focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all resize-none text-center font-bold text-slate-800 leading-relaxed text-base"
+                    placeholder="येथे दिनविशेष (घटना, जन्मदिवस, पुण्यतिथी इत्यादी) टाका..."
                   />
                 </div>
-                
-                <div className="bg-white/90 backdrop-blur-sm p-8 rounded-[2.5rem] border border-emerald-100 shadow-xl shadow-emerald-900/5 hover:shadow-2xl hover:shadow-emerald-900/10 transition-all duration-300 text-center relative">
-                  <div className="flex justify-center mb-6">
-                    <span className="inline-flex items-center justify-center gap-2 px-6 py-2 bg-emerald-50 text-emerald-700 rounded-full text-xs font-black uppercase tracking-widest border border-emerald-100">
-                      🪀 जन्मदिवस (Birthdays)
-                    </span>
+              </div>
+
+              {/* Proverb */}
+              <div className="space-y-8 p-8 md:p-12 bg-gradient-to-br from-fuchsia-50/80 to-pink-100/50 border border-fuchsia-200/60 rounded-[3rem] shadow-[0_8px_30px_rgb(217,70,239,0.12)] relative overflow-hidden">
+                <div className="bg-white/90 backdrop-blur-sm p-8 md:p-10 rounded-[2.5rem] border border-fuchsia-100 shadow-xl shadow-fuchsia-900/5 hover:shadow-2xl hover:shadow-fuchsia-900/10 transition-all duration-300 text-center space-y-8 relative">
+                  <div>
+                    <div className="flex justify-center mb-6">
+                      <span className="inline-flex items-center justify-center gap-2 px-6 py-2 bg-fuchsia-50 text-fuchsia-700 rounded-full text-xs font-black uppercase tracking-widest border border-fuchsia-100">
+                        🪀 म्हण (Proverb)
+                      </span>
+                    </div>
+                    <input
+                      type="text"
+                      value={paripathData.proverb || ''}
+                      onChange={(e) => setParipathData({ ...paripathData, proverb: e.target.value })}
+                      className="w-full px-6 py-5 bg-fuchsia-50/30 border border-fuchsia-100 hover:border-fuchsia-300 focus:bg-white rounded-2xl focus:outline-none focus:border-fuchsia-500 focus:ring-4 focus:ring-fuchsia-500/10 transition-all text-center font-bold text-slate-800 text-lg md:text-xl"
+                    />
                   </div>
-                  <textarea
-                    rows={3}
-                    value={paripathData.birthdays || ''}
-                    onChange={(e) => setParipathData({ ...paripathData, birthdays: e.target.value })}
-                    className="w-full px-6 py-5 bg-emerald-50/30 border border-emerald-100 hover:border-emerald-300 focus:bg-white rounded-2xl focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all resize-none text-center font-bold text-slate-800 leading-relaxed"
-                  />
-                </div>
-                
-                <div className="bg-white/90 backdrop-blur-sm p-8 rounded-[2.5rem] border border-rose-100 shadow-xl shadow-rose-900/5 hover:shadow-2xl hover:shadow-rose-900/10 transition-all duration-300 text-center relative">
-                  <div className="flex justify-center mb-6">
-                    <span className="inline-flex items-center justify-center gap-2 px-6 py-2 bg-rose-50 text-rose-700 rounded-full text-xs font-black uppercase tracking-widest border border-rose-100">
-                      🪀 मृत्यू / पुण्यतिथी (Deaths)
-                    </span>
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-fuchsia-500 mb-4">अर्थ (Meaning)</label>
+                    <textarea
+                      rows={2}
+                      value={paripathData.proverbMeaning || ''}
+                      onChange={(e) => setParipathData({ ...paripathData, proverbMeaning: e.target.value })}
+                      className="w-full px-6 py-5 bg-fuchsia-50/30 border border-fuchsia-100 hover:border-fuchsia-300 focus:bg-white rounded-2xl focus:outline-none focus:border-fuchsia-500 focus:ring-4 focus:ring-fuchsia-500/10 transition-all resize-none text-center font-bold text-slate-800 leading-relaxed"
+                    />
                   </div>
-                  <textarea
-                    rows={3}
-                    value={paripathData.deaths || ''}
-                    onChange={(e) => setParipathData({ ...paripathData, deaths: e.target.value })}
-                    className="w-full px-6 py-5 bg-rose-50/30 border border-rose-100 hover:border-rose-300 focus:bg-white rounded-2xl focus:outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 transition-all resize-none text-center font-bold text-slate-800 leading-relaxed"
-                  />
                 </div>
               </div>
 
@@ -982,7 +966,7 @@ function AssemblyBookAdmin() {
                   <div>
                     <div className="flex justify-center mb-6">
                       <span className="inline-flex items-center justify-center gap-2 px-6 py-2 bg-orange-50 text-orange-700 rounded-full text-xs font-black uppercase tracking-widest border border-orange-100">
-                        🪀 बोधकथा (Story Title)
+                        📖 बोधकथा (Story Title)
                       </span>
                     </div>
                     <input
@@ -1017,26 +1001,25 @@ function AssemblyBookAdmin() {
                 </div>
               </div>
 
-              {/* Patriotic Song & GK */}
+              {/* Patriotic Song */}
               <div className="space-y-8 p-8 md:p-12 bg-gradient-to-br from-indigo-50/80 to-purple-100/50 border border-indigo-200/60 rounded-[3rem] shadow-[0_8px_30px_rgb(99,102,241,0.12)] relative overflow-hidden">
-                <div className="absolute bottom-0 right-0 w-64 h-64 bg-indigo-300/20 rounded-full blur-3xl translate-y-1/3 translate-x-1/3"></div>
-                
                 <div className="bg-white/90 backdrop-blur-sm p-8 md:p-10 rounded-[2.5rem] border border-indigo-100 shadow-xl shadow-indigo-900/5 hover:shadow-2xl hover:shadow-indigo-900/10 transition-all duration-300 text-center space-y-8 relative">
                   <div>
                     <div className="flex justify-center mb-6">
                       <span className="inline-flex items-center justify-center gap-2 px-6 py-2 bg-indigo-50 text-indigo-700 rounded-full text-xs font-black uppercase tracking-widest border border-indigo-100">
-                        🪀 देशभक्ती गीत (Song Title)
+                        🎵 देशभक्ती गीत (Patriotic Song)
                       </span>
                     </div>
                     <input
                       type="text"
+                      placeholder="गीताचे नाव (Song Title)"
                       value={paripathData.songTitle || ''}
                       onChange={(e) => setParipathData({ ...paripathData, songTitle: e.target.value })}
                       className="w-full px-6 py-5 bg-indigo-50/30 border border-indigo-100 hover:border-indigo-300 focus:bg-white rounded-2xl focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-center font-bold text-slate-800 text-lg md:text-xl"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-indigo-500 mb-4">Lyrics</label>
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-indigo-500 mb-4">Lyrics (संपूर्ण गीत)</label>
                     <textarea
                       rows={6}
                       value={paripathData.patrioticSong || ''}
@@ -1045,11 +1028,53 @@ function AssemblyBookAdmin() {
                     />
                   </div>
                 </div>
-                
+              </div>
+
+              {/* Pasaydan - Standard Fixed Card */}
+              <div className="space-y-8 p-8 md:p-12 bg-gradient-to-br from-amber-50/80 to-yellow-100/50 border border-amber-200/60 rounded-[3rem] shadow-[0_8px_30px_rgb(245,158,11,0.12)] relative overflow-hidden">
+                <div className="bg-white/90 backdrop-blur-sm p-8 rounded-[2.5rem] border border-amber-100 shadow-xl shadow-amber-900/5 hover:shadow-2xl hover:shadow-amber-900/10 transition-all duration-300 text-center relative">
+                  <div className="flex justify-center mb-6">
+                    <span className="inline-flex items-center justify-center gap-2 px-6 py-2 bg-amber-50 text-amber-700 rounded-full text-xs font-black uppercase tracking-widest border border-amber-100">
+                      ✨ मौन पसायदान (Pasaydan - Standard Fixed)
+                    </span>
+                  </div>
+                  <div className="text-sm md:text-base font-bold text-slate-800 leading-relaxed font-sans whitespace-pre-line bg-amber-50/30 p-6 rounded-2xl border border-amber-100/50 max-w-2xl mx-auto">
+{`आता विश्वात्मकें देवें । येणे वाग्यज्ञें तोषावें ।
+तोषोनि मज द्यावे । पसायदान हे ॥ १ ॥
+
+जे खळांची व्यंकटी सांडो । तया सत्कर्मीं रती वाढो ।
+भूतां परस्परे पडो । मैत्र जीवांचे ॥ २ ॥
+
+दुरितांचे तिमिर जावो । विश्व स्वधर्मसूर्ये पाहो ।
+जो जे वांछील तो ते लावो । प्राणिजात ॥ ३ ॥
+
+वर्षत सकळमंङ्गळी । ईश्वरनिष्ठांची मांदियाळी ।
+अनवरत भूमंडळी । भेटतु भूतां ॥ ४ ॥
+
+द्रुम वेली कल्पतरूंचे आरव । चेतना चिंतामणींचे गाव ।
+बोलते जे अर्णव । पीयूषांचे ॥ ५ ॥
+
+चंद्रमे जे अलांछन । मार्तंड जे तापहीन ।
+ते सर्वांही सदा सज्जन । सोयरे होतो ॥ ६ ॥
+
+किंबहुना सर्वसुखी । पूर्ण होवोनि तिही लोकी ।
+भाजिजो आदिपुरुखी । अखंडित ॥ ७ ॥
+
+आणि ग्रंथोपजीविये । विशेषीं लोकीं इये ।
+दृष्टादृष्टविजये । होआवे जी ॥ ८ ॥
+
+येथ म्हणे श्रीविश्वेशराओ । हा होईल दानपसावो ।
+येणे वरे ज्ञानदेवो । सुखी झाला ॥ ९ ॥`}
+                  </div>
+                </div>
+              </div>
+
+              {/* General Knowledge */}
+              <div className="space-y-8 p-8 md:p-12 bg-gradient-to-br from-purple-50/80 to-indigo-100/50 border border-purple-200/60 rounded-[3rem] shadow-[0_8px_30px_rgb(168,85,247,0.12)] relative overflow-hidden">
                 <div className="bg-white/90 backdrop-blur-sm p-8 md:p-10 rounded-[2.5rem] border border-purple-100 shadow-xl shadow-purple-900/5 hover:shadow-2xl hover:shadow-purple-900/10 transition-all duration-300 text-center relative">
                   <div className="flex justify-center mb-8">
                     <span className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-purple-50 text-purple-700 rounded-full text-sm font-black uppercase tracking-widest border border-purple-100">
-                      🪀 सामान्य ज्ञान (GK)
+                      🧠 सामान्य ज्ञान (General Knowledge)
                     </span>
                   </div>
                   <div className="space-y-6">
@@ -1071,36 +1096,6 @@ function AssemblyBookAdmin() {
                         />
                       </div>
                     ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Personality */}
-              <div className="space-y-8 p-8 md:p-12 bg-gradient-to-br from-teal-50/80 to-cyan-100/50 border border-teal-200/60 rounded-[3rem] shadow-[0_8px_30px_rgb(20,184,166,0.12)] relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-teal-300/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
-                
-                <div className="bg-white/90 backdrop-blur-sm p-8 md:p-10 rounded-[2.5rem] border border-teal-100 shadow-xl shadow-teal-900/5 hover:shadow-2xl hover:shadow-teal-900/10 transition-all duration-300 text-center space-y-8 relative">
-                  <div>
-                    <div className="flex justify-center mb-6">
-                      <span className="inline-flex items-center justify-center gap-2 px-6 py-2 bg-teal-50 text-teal-700 rounded-full text-xs font-black uppercase tracking-widest border border-teal-100">
-                        🪀 थोरव्यक्ती परिचय (Name & Dates)
-                      </span>
-                    </div>
-                    <input
-                      type="text"
-                      value={paripathData.personalityTitle || ''}
-                      onChange={(e) => setParipathData({ ...paripathData, personalityTitle: e.target.value })}
-                      className="w-full px-6 py-5 bg-teal-50/30 border border-teal-100 hover:border-teal-300 focus:bg-white rounded-2xl focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all text-center font-bold text-slate-800 text-lg md:text-xl"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-teal-500 mb-4">Biography</label>
-                    <textarea
-                      rows={6}
-                      value={paripathData.personality || ''}
-                      onChange={(e) => setParipathData({ ...paripathData, personality: e.target.value })}
-                      className="w-full px-6 py-5 bg-teal-50/30 border border-teal-100 hover:border-teal-300 focus:bg-white rounded-2xl focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all resize-none text-center font-bold text-slate-800 leading-relaxed"
-                    />
                   </div>
                 </div>
               </div>

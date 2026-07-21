@@ -10,7 +10,6 @@ import {
   FileSpreadsheet,
   Check,
   Building2,
-  GraduationCap,
   Clock,
   CheckCircle2,
   RefreshCw,
@@ -33,10 +32,10 @@ interface DayRowData {
   suvichar: string;
   batmya: string;
   dinvishesh: string;
-  chintan: string;
+  mhan: string;
   bodhkatha: string;
   samuhgeet: string;
-  suchana: string;
+  deshbhaktigeet: string;
   maun: string;
   swakshari: string;
 }
@@ -115,7 +114,6 @@ export function MonthlyParipathRegister() {
   const now = new Date();
 
   const [schoolName, setSchoolName] = useState("जि. प. प्राथमिक शाळा");
-  const [stdClass, setStdClass] = useState("इयत्ता ४ थी");
   const [academicYear, setAcademicYear] = useState("२०२५-२०२६");
   const [selectedMonthIndex, setSelectedMonthIndex] = useState(now.getMonth());
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
@@ -155,10 +153,10 @@ export function MonthlyParipathRegister() {
             suvichar: "रविवार",
             batmya: "रविवार",
             dinvishesh: "रविवार",
-            chintan: "रविवार",
+            mhan: "रविवार",
             bodhkatha: "रविवार",
             samuhgeet: "रविवार",
-            suchana: "रविवार",
+            deshbhaktigeet: "रविवार",
             maun: "रविवार",
             swakshari: "",
           };
@@ -204,14 +202,14 @@ export function MonthlyParipathRegister() {
               batmya: data.events || data.batmya || "",
               // दिनविशेष - full day significance
               dinvishesh: data.events || data.dinvishesh || "",
-              // चिंतन/उतारा/पाठांतर - short text
-              chintan: shortText(data.personality || data.chintan || "", 50),
+              // म्हण - proverb text
+              mhan: data.proverb || data.mhan || "",
               // बोधकथा - only heading/title
               bodhkatha: data.storyTitle || data.bodhkatha || "",
               // समूहगीत - only heading/title
               samuhgeet: data.songTitle || data.samuhgeet || "",
-              // शालेय सूचना/कौतुक/शुभचिंतन - short
-              suchana: shortText(data.moral || data.suchana || "", 50),
+              // देशभक्ती गीत - song title
+              deshbhaktigeet: data.songTitle || data.deshbhaktigeet || "",
               // मौन पसायदान - just "पसायदान"
               maun: "पसायदान",
               // वर्गशिक्षकांची स्वाक्षरी - blank
@@ -237,10 +235,10 @@ export function MonthlyParipathRegister() {
                 suvichar: "",
                 batmya: "",
                 dinvishesh: "",
-                chintan: "",
+                mhan: "",
                 bodhkatha: "",
                 samuhgeet: "",
-                suchana: "",
+                deshbhaktigeet: "",
                 maun: "",
                 swakshari: "",
               };
@@ -258,10 +256,10 @@ export function MonthlyParipathRegister() {
                 suvichar: "",
                 batmya: "",
                 dinvishesh: "",
-                chintan: "",
+                mhan: "",
                 bodhkatha: "",
                 samuhgeet: "",
-                suchana: "",
+                deshbhaktigeet: "",
                 maun: "पसायदान",
                 swakshari: "",
               };
@@ -281,10 +279,10 @@ export function MonthlyParipathRegister() {
             suvichar: "",
             batmya: "",
             dinvishesh: "",
-            chintan: "",
+            mhan: "",
             bodhkatha: "",
             samuhgeet: "",
-            suchana: "",
+            deshbhaktigeet: "",
             maun: "",
             swakshari: "",
           };
@@ -353,10 +351,10 @@ export function MonthlyParipathRegister() {
         suvichar: isSunday ? "रविवार" : "",
         batmya: isSunday ? "रविवार" : "",
         dinvishesh: isSunday ? "रविवार" : "",
-        chintan: isSunday ? "रविवार" : "",
+        mhan: isSunday ? "रविवार" : "",
         bodhkatha: isSunday ? "रविवार" : "",
         samuhgeet: isSunday ? "रविवार" : "",
-        suchana: isSunday ? "रविवार" : "",
+        deshbhaktigeet: isSunday ? "रविवार" : "",
         maun: isSunday ? "रविवार" : "",
         swakshari: "",
       };
@@ -391,7 +389,6 @@ export function MonthlyParipathRegister() {
       const registerKey = `monthly_register_${selectedYear}_${selectedMonthIndex}`;
       await setDoc(doc(db, "monthly_paripath_registers", registerKey), {
         schoolName,
-        stdClass,
         academicYear,
         month: selectedMonthIndex,
         year: selectedYear,
@@ -546,7 +543,7 @@ export function MonthlyParipathRegister() {
         </div>
 
         {/* Inputs row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 pt-4 border-t border-white/10 text-xs font-medium">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-white/10 text-xs font-medium">
           <div className="space-y-1.5">
             <label className="text-indigo-200/80 font-bold uppercase tracking-wider flex items-center gap-1.5">
               <Building2 className="size-3.5" /> शाळेचे नाव
@@ -557,19 +554,6 @@ export function MonthlyParipathRegister() {
               onChange={(e) => setSchoolName(e.target.value)}
               className="w-full px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white outline-none focus:border-indigo-400 font-bold"
               placeholder="शाळेचे नाव टाका"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-indigo-200/80 font-bold uppercase tracking-wider flex items-center gap-1.5">
-              <GraduationCap className="size-3.5" /> इयत्ता
-            </label>
-            <input
-              type="text"
-              value={stdClass}
-              onChange={(e) => setStdClass(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white outline-none focus:border-indigo-400 font-bold"
-              placeholder="उदा. इयत्ता ४ थी"
             />
           </div>
 
@@ -647,12 +631,6 @@ export function MonthlyParipathRegister() {
                 शाळेचे नाव :{" "}
                 <span className="border-b-2 border-dotted border-slate-700 px-3 py-0.5 text-indigo-900">
                   {schoolName || "..................................................."}
-                </span>
-              </div>
-              <div>
-                इयत्ता :{" "}
-                <span className="border-b-2 border-dotted border-slate-700 px-3 py-0.5 text-indigo-900">
-                  {stdClass || ".............."}
                 </span>
               </div>
             </div>
@@ -828,13 +806,11 @@ export function MonthlyParipathRegister() {
                     सुसंस्कारक्षम बातम्या
                   </th>
                   <th className="p-1.5 border-r border-slate-900 w-[14%]">दिनविशेष</th>
-                  <th className="p-1.5 border-r border-slate-900 w-[13%]">
-                    चिंतन सुसंस्कार उतारा पाठांतर
-                  </th>
+                  <th className="p-1.5 border-r border-slate-900 w-[13%]">म्हण</th>
                   <th className="p-1.5 border-r border-slate-900 w-[12%]">बोधकथा</th>
                   <th className="p-1.5 border-r border-slate-900 w-[12%]">समूहगीत</th>
                   <th className="p-1.5 border-r border-slate-900 w-[13%]">
-                    शालेय सूचना कौतुक शुभचिंतन
+                    देशभक्ती गीत
                   </th>
                   <th className="p-1.5 border-r border-slate-900 w-[10%]">
                     मौन पसायदान
@@ -884,16 +860,16 @@ export function MonthlyParipathRegister() {
                           />
                         </td>
 
-                        {/* चिंतन - short */}
+                        {/* म्हण */}
                         <td className="p-0.5 border-r border-slate-800">
                           <textarea
-                            value={row.chintan}
+                            value={row.mhan}
                             onChange={(e) =>
-                              handleCellChange(row.date, "chintan", e.target.value)
+                              handleCellChange(row.date, "mhan", e.target.value)
                             }
                             className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[10px] resize-none leading-tight"
                             rows={2}
-                            placeholder="चिंतन..."
+                            placeholder="म्हण..."
                           />
                         </td>
 
@@ -923,16 +899,16 @@ export function MonthlyParipathRegister() {
                           />
                         </td>
 
-                        {/* शालेय सूचना - short */}
+                        {/* देशभक्ती गीत - title */}
                         <td className="p-0.5 border-r border-slate-800">
                           <textarea
-                            value={row.suchana}
+                            value={row.deshbhaktigeet}
                             onChange={(e) =>
-                              handleCellChange(row.date, "suchana", e.target.value)
+                              handleCellChange(row.date, "deshbhaktigeet", e.target.value)
                             }
-                            className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[11px] resize-none leading-tight"
+                            className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight"
                             rows={1}
-                            placeholder="सूचना..."
+                            placeholder="गीत शीर्षक..."
                           />
                         </td>
 
