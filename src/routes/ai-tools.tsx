@@ -108,14 +108,8 @@ function AIChatWorkspace() {
       return INITIAL_CHATS;
     }
   });
-  const [activeChatId, setActiveChatId] = useState<string>(() => {
-    try {
-      const savedId = localStorage.getItem("smart_learning_ai_active_chat_id");
-      return savedId || "";
-    } catch (e) {
-      return "";
-    }
-  });
+  // Always start with a fresh new chat session when opening AI Suite
+  const [activeChatId, setActiveChatId] = useState<string>("");
   const [inputValue, setInputValue] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [activeModel, setActiveModel] = useState<ModelKey>("chatgpt");
