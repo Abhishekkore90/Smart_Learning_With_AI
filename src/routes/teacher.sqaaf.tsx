@@ -5,6 +5,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { ArrowLeft, Languages, Eye, School, CheckCircle2, ChevronRight, Upload, Trash2, FileText, Edit, MapPin, User, Building2, X, Printer, Download, Link2, ExternalLink, ImageIcon, Plus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { showToast as toast } from "@/lib/custom-toast";
+import { uploadBlobToBunny } from "@/lib/bunnyStorage";
 import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
@@ -5664,7 +5665,7 @@ function TeacherSqaafPage() {
     document.body.appendChild(container);
 
     const html2pdf = (await import("html2pdf.js")).default;
-    await html2pdf().set({
+    const worker = html2pdf().set({
       margin: [10, 10, 10, 10],
       filename: `SQAAF_Summary_Manual_${new Date().toISOString().slice(0, 10)}.pdf`,
       image: { type: "jpeg", quality: 0.82 },
@@ -5675,7 +5676,19 @@ function TeacherSqaafPage() {
         windowWidth: 850
       },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-    }).from(container).save();
+    }).from(container);
+
+    await worker.save();
+
+    try {
+      const pdfBlob = (await worker.output("blob")) as Blob;
+      const fileName = `SQAAF_Summary_${Date.now()}.pdf`;
+      const cdnUrl = await uploadBlobToBunny(`sqaaf/reports/${fileName}`, pdfBlob);
+      console.log("Uploaded SQAAF Summary to Bunny Storage:", cdnUrl);
+    } catch (uploadErr: any) {
+      console.warn("Could not upload SQAAF Summary to Bunny Storage:", uploadErr);
+    }
+
     document.body.removeChild(container);
   };
 

@@ -66,6 +66,7 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, updateDoc, onSnapshot, collection } from "firebase/firestore";
 import { showToast as toast } from "@/lib/custom-toast";
 import html2pdf from "html2pdf.js";
+import { uploadBlobToBunny } from "@/lib/bunnyStorage";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import { TeacherStatisticsEditor } from "@/components/teacher/TeacherStatisticsEditor";
@@ -2275,7 +2276,17 @@ function DailyAssemblyContent() {
       element.style.overflow = "visible";
       element.classList.remove("overflow-hidden");
 
-      await html2pdfFn().set(opt).from(element).save();
+      const worker = html2pdfFn().set(opt).from(element);
+      await worker.save();
+
+      try {
+        const pdfBlob = (await worker.output("blob")) as Blob;
+        const fileName = `Assembly_${Date.now()}.pdf`;
+        const cdnUrl = await uploadBlobToBunny(`modules/${fileName}`, pdfBlob);
+        console.log("Uploaded Module PDF to Bunny Storage:", cdnUrl);
+      } catch (uploadErr: any) {
+        console.warn("Could not upload Module PDF to Bunny Storage:", uploadErr);
+      }
 
       element.style.overflow = originalOverflow;
       element.classList.add("overflow-hidden");
@@ -3912,8 +3923,18 @@ function AnnualMonthlyPlanningEditor({
         pagebreak: { mode: ['css' as const, 'legacy' as const] },
       };
 
-      await html2pdfFn().set(opt).from(clone).save();
+      const worker = html2pdfFn().set(opt).from(clone);
+      await worker.save();
       toast.success('PDF Downloaded Successfully!');
+
+      try {
+        const pdfBlob = (await worker.output("blob")) as Blob;
+        const fileName = `${planType === "annual" ? "Annual" : "Monthly"}_Planning_${selectedClass}_${Date.now()}.pdf`;
+        const cdnUrl = await uploadBlobToBunny(`planning/${fileName}`, pdfBlob);
+        console.log("Uploaded Planning PDF to Bunny Storage:", cdnUrl);
+      } catch (uploadErr: any) {
+        console.warn("Could not upload Planning PDF to Bunny Storage:", uploadErr);
+      }
     } catch (err: any) {
       toast.error(`Failed to download PDF: ${err?.message || String(err)}`);
     } finally {

@@ -20,6 +20,7 @@ import { useLanguage } from "@/hooks/use-language";
 import { useAuth } from "@/hooks/use-auth";
 import { motion, AnimatePresence } from "framer-motion";
 import html2pdf from "html2pdf.js";
+import { uploadBlobToBunny } from "@/lib/bunnyStorage";
 import logoImg from "@/assets/logo.jpeg";
 
 
@@ -769,7 +770,17 @@ function ClassTimetablePage() {
       element.style.transform = 'scale(0.90)';
       element.style.transformOrigin = 'top center';
 
-      await html2pdf().set(opt).from(element).save();
+      const worker = html2pdf().set(opt).from(element);
+      await worker.save();
+
+      try {
+        const pdfBlob = (await worker.output("blob")) as Blob;
+        const fileName = `Class_${selectedClass || "Timetable"}_${Date.now()}.pdf`;
+        const cdnUrl = await uploadBlobToBunny(`timetables/${fileName}`, pdfBlob);
+        console.log("Uploaded Timetable PDF to Bunny Storage:", cdnUrl);
+      } catch (uploadErr: any) {
+        console.warn("Could not upload Timetable PDF to Bunny Storage:", uploadErr);
+      }
     } catch (err) {
       console.error("PDF generation error:", err);
       toast.error("Failed to generate PDF");

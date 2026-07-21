@@ -20,6 +20,7 @@ import { Footer } from "@/components/Footer";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { showToast as toast } from "@/lib/custom-toast";
+import { uploadBlobToBunny } from "@/lib/bunnyStorage";
 
 export const Route = createFileRoute("/admin/meeting-templates")({
   head: () => ({
@@ -225,11 +226,16 @@ function AdminMeetingTemplates() {
         updatedAt: new Date().toISOString(),
       });
 
-      const updatedAllTemplates = {
-        ...allTemplates,
-        [selectedMonth]: subjects,
-      };
-      setAllTemplates(updatedAllTemplates);
+      // Upload Admin template text backup to Bunny Storage
+      try {
+        const textContent = subjects.map(s => `विषय ${s.subjectNo}: ${s.subject}\nठराव ${s.resolutionNo}: ${s.resolution}`).join("\n\n");
+        const blob = new Blob([`मासिक सभा टेम्पलेट (${selectedCommittee} - ${selectedMonth})\n\n${textContent}\n\n${outroText}`], { type: "text/plain;charset=utf-8" });
+        const fileName = `admin_meeting_template_${selectedCommittee}_${selectedMonth}.txt`;
+        const cdnUrl = await uploadBlobToBunny(`admin_templates/${fileName}`, blob);
+        console.log("Uploaded Admin Template to Bunny Storage:", cdnUrl);
+      } catch (uploadErr: any) {
+        console.warn("Could not upload Admin Template to Bunny Storage:", uploadErr);
+      }
 
       toast.success("टेम्पलेट यशस्वीरित्या जतन केले गेले!");
     } catch (err: any) {
