@@ -2480,40 +2480,42 @@ function DailyAssemblyContent() {
           })}
 
           {/* Panchang */}
-          <SectionCard
-            id="panchang"
-            emoji="🪀"
-            title={t.panchang}
-            icon={Calendar}
-            gradient="from-amber-100/80 via-orange-50/60 to-yellow-100/80"
-          >
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-              {[
-                { label: t.day, value: formData.day, icon: Calendar, color: "text-amber-500", bg: "bg-amber-50", border: "border-amber-100" },
-                { label: t.month, value: formData.month, icon: Clock, color: "text-orange-500", bg: "bg-orange-50", border: "border-orange-100" },
-                { label: t.paksha, value: formData.paksha, icon: Star, color: "text-yellow-500", bg: "bg-yellow-50", border: "border-yellow-100" },
-                { label: t.tithi, value: formData.tithi, icon: Star, color: "text-red-400", bg: "bg-red-50", border: "border-red-100" },
-                { label: t.nakshatra, value: formData.nakshatra, icon: Sparkles, color: "text-rose-500", bg: "bg-rose-50", border: "border-rose-100" },
-                { label: t.yog, value: formData.yog, icon: Sparkles, color: "text-pink-500", bg: "bg-pink-50", border: "border-pink-100" },
-                { label: t.sunrise, value: formData.sunrise, icon: Sunrise, color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-100" },
-                { label: t.sunset, value: formData.sunset, icon: Sunset, color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-100" },
-              ].map((item, i) => (
-                <div
-                  key={i}
-                  className={`p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white rounded-xl md:rounded-2xl text-center shadow-lg shadow-amber-900/5 hover:scale-105 hover:shadow-xl hover:shadow-amber-900/10 transition-all duration-300 relative overflow-hidden group`}
-                >
-                  <div className={`absolute -right-4 -top-4 size-16 ${item.bg} rounded-full blur-2xl opacity-50 group-hover:opacity-100 transition-opacity`} />
-                  <div className={`size-10 rounded-xl ${item.bg} ${item.border} border flex items-center justify-center mx-auto mb-2 relative z-10 group-hover:rotate-6 transition-transform`}>
-                    <item.icon className={`size-5 ${item.color}`} />
+          {(formData.month || formData.tithi || formData.nakshatra || formData.yog || formData.sunrise || formData.sunset) && (
+            <SectionCard
+              id="panchang"
+              emoji="🪀"
+              title={t.panchang}
+              icon={Calendar}
+              gradient="from-amber-100/80 via-orange-50/60 to-yellow-100/80"
+            >
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                {[
+                  { label: t.day, value: formData.day, icon: Calendar, color: "text-amber-500", bg: "bg-amber-50", border: "border-amber-100" },
+                  { label: t.month, value: formData.month, icon: Clock, color: "text-orange-500", bg: "bg-orange-50", border: "border-orange-100" },
+                  { label: t.paksha, value: formData.paksha, icon: Star, color: "text-yellow-500", bg: "bg-yellow-50", border: "border-yellow-100" },
+                  { label: t.tithi, value: formData.tithi, icon: Star, color: "text-red-400", bg: "bg-red-50", border: "border-red-100" },
+                  { label: t.nakshatra, value: formData.nakshatra, icon: Sparkles, color: "text-rose-500", bg: "bg-rose-50", border: "border-rose-100" },
+                  { label: t.yog, value: formData.yog, icon: Sparkles, color: "text-pink-500", bg: "bg-pink-50", border: "border-pink-100" },
+                  { label: t.sunrise, value: formData.sunrise, icon: Sunrise, color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-100" },
+                  { label: t.sunset, value: formData.sunset, icon: Sunset, color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-100" },
+                ].filter(item => Boolean(item.value)).map((item, i) => (
+                  <div
+                    key={i}
+                    className={`p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white rounded-xl md:rounded-2xl text-center shadow-lg shadow-amber-900/5 hover:scale-105 hover:shadow-xl hover:shadow-amber-900/10 transition-all duration-300 relative overflow-hidden group`}
+                  >
+                    <div className={`absolute -right-4 -top-4 size-16 ${item.bg} rounded-full blur-2xl opacity-50 group-hover:opacity-100 transition-opacity`} />
+                    <div className={`size-10 rounded-xl ${item.bg} ${item.border} border flex items-center justify-center mx-auto mb-2 relative z-10 group-hover:rotate-6 transition-transform`}>
+                      <item.icon className={`size-5 ${item.color}`} />
+                    </div>
+                    <div className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5 relative z-10">
+                      {item.label}
+                    </div>
+                    <div className="text-sm md:text-lg font-black text-slate-800 relative z-10">{item.value}</div>
                   </div>
-                  <div className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5 relative z-10">
-                    {item.label}
-                  </div>
-                  <div className="text-sm md:text-lg font-black text-slate-800 relative z-10">{item.value}</div>
-                </div>
-              ))}
-            </div>
-          </SectionCard>
+                ))}
+              </div>
+            </SectionCard>
+          )}
 
           {/* Suvichar */}
           {formData.thought && (
@@ -2533,6 +2535,29 @@ function DailyAssemblyContent() {
                 </div>
                 <p className="text-xl md:text-2xl font-black text-slate-800 leading-relaxed italic relative z-10 drop-shadow-sm">
                   "{formData.thought}"
+                </p>
+              </div>
+            </SectionCard>
+          )}
+
+          {/* Shlok */}
+          {formData.shlok && (
+            <SectionCard
+              id="shlok"
+              emoji="🕉️"
+              title={t.shlok || "श्लोक"}
+              icon={Quote}
+              gradient="from-amber-100/80 via-rose-50/60 to-orange-100/80"
+            >
+              <div className="p-6 md:p-10 bg-white/60 backdrop-blur-xl border border-white rounded-[2rem] flex flex-col items-center justify-center text-center shadow-xl shadow-amber-900/5 hover:shadow-2xl hover:shadow-amber-900/10 transition-all duration-500 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-48 h-48 bg-amber-200/40 rounded-full blur-[60px] -translate-y-1/2 translate-x-1/2 group-hover:bg-amber-300/40 transition-colors" />
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-rose-200/40 rounded-full blur-[60px] translate-y-1/2 -translate-x-1/2 group-hover:bg-rose-300/40 transition-colors" />
+
+                <div className="size-14 rounded-full bg-amber-100 border border-amber-200 flex items-center justify-center mb-5 relative z-10 shadow-inner">
+                  <Quote className="size-7 text-amber-600" />
+                </div>
+                <p className="text-xl md:text-2xl font-black text-slate-800 leading-relaxed relative z-10 drop-shadow-sm whitespace-pre-line">
+                  "{formData.shlok}"
                 </p>
               </div>
             </SectionCard>
@@ -2568,11 +2593,11 @@ function DailyAssemblyContent() {
           )}
 
           {/* Dinvishesh */}
-          {formData.events && (
+          {(formData.events || formData.dinvishesh) && (
             <SectionCard
               id="events"
               emoji="🪀"
-              title={`${formData.dateMonth} ${t.eventsTitle}`}
+              title={`${formData.dateMonth ? formData.dateMonth + ' ' : ''}${t.eventsTitle || 'दिनविशेष'}`}
               icon={Calendar}
               gradient="from-blue-100/80 via-indigo-50/60 to-sky-100/80"
             >
@@ -2587,7 +2612,7 @@ function DailyAssemblyContent() {
 
                 <div className="p-5 md:p-8 bg-white/60 backdrop-blur-xl border border-white rounded-[2rem] shadow-xl shadow-blue-900/5">
                   <div className="text-sm md:text-base font-bold text-slate-800 leading-relaxed font-sans">
-                    {formData.events.split('\n').map((line: string, i: number) => (
+                    {((formData.events || formData.dinvishesh) as string).split('\n').map((line: string, i: number) => (
                       <React.Fragment key={i}>
                         {line}
                         <br />
@@ -2715,39 +2740,7 @@ function DailyAssemblyContent() {
             </SectionCard>
           )}
 
-          {/* Personality */}
-          {formData.personality && (
-            <SectionCard
-              id="personality"
-              emoji="🪀"
-              title={t.personalityTitle}
-              icon={User}
-              gradient="from-fuchsia-100/80 via-purple-50/60 to-pink-100/80"
-            >
-              <div className="space-y-6">
-                {formData.personalityTitle && (
-                  <div className="flex justify-center">
-                    <div className="inline-flex items-center justify-center gap-3 px-8 py-3 bg-white/80 backdrop-blur-xl border border-white shadow-xl shadow-fuchsia-900/5 rounded-full">
-                      <div className="size-8 rounded-full bg-fuchsia-100 flex items-center justify-center">
-                        <User className="size-4 text-fuchsia-600" />
-                      </div>
-                      <span className="text-sm font-black text-fuchsia-700 uppercase tracking-widest">{formData.personalityTitle}</span>
-                    </div>
-                  </div>
-                )}
-                <div className="p-5 md:p-8 bg-white/60 backdrop-blur-xl border border-white rounded-[2rem] text-center shadow-xl shadow-fuchsia-900/5">
-                  <div className="text-sm md:text-base font-bold text-slate-800 leading-relaxed">
-                    {formData.personality.split('\n').map((line: string, i: number) => (
-                      <React.Fragment key={i}>
-                        {line}
-                        <br />
-                      </React.Fragment>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </SectionCard>
-          )}
+
         </>
       )}
         </>
