@@ -68,6 +68,7 @@ import { Route as AdminReviewsRouteImport } from './routes/admin.reviews'
 import { Route as AdminMeetingTemplatesRouteImport } from './routes/admin.meeting-templates'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as AdminEnrollmentsRouteImport } from './routes/admin.enrollments'
+import { Route as AdminCceRemarksRouteImport } from './routes/admin.cce-remarks'
 import { Route as AdminAssemblyRouteImport } from './routes/admin.assembly'
 import { Route as AdminAiToolsRouteImport } from './routes/admin.ai-tools'
 import { Route as TeacherActivitiesIndexRouteImport } from './routes/teacher.activities.index'
@@ -389,6 +390,11 @@ const AdminEnrollmentsRoute = AdminEnrollmentsRouteImport.update({
   path: '/admin/enrollments',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminCceRemarksRoute = AdminCceRemarksRouteImport.update({
+  id: '/admin/cce-remarks',
+  path: '/admin/cce-remarks',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminAssemblyRoute = AdminAssemblyRouteImport.update({
   id: '/admin/assembly',
   path: '/admin/assembly',
@@ -544,6 +550,7 @@ export interface FileRoutesByFullPath {
   '/upload': typeof UploadRoute
   '/admin/ai-tools': typeof AdminAiToolsRoute
   '/admin/assembly': typeof AdminAssemblyRoute
+  '/admin/cce-remarks': typeof AdminCceRemarksRoute
   '/admin/enrollments': typeof AdminEnrollmentsRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/meeting-templates': typeof AdminMeetingTemplatesRoute
@@ -629,6 +636,7 @@ export interface FileRoutesByTo {
   '/upload': typeof UploadRoute
   '/admin/ai-tools': typeof AdminAiToolsRoute
   '/admin/assembly': typeof AdminAssemblyRoute
+  '/admin/cce-remarks': typeof AdminCceRemarksRoute
   '/admin/enrollments': typeof AdminEnrollmentsRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/meeting-templates': typeof AdminMeetingTemplatesRoute
@@ -716,6 +724,7 @@ export interface FileRoutesById {
   '/upload': typeof UploadRoute
   '/admin/ai-tools': typeof AdminAiToolsRoute
   '/admin/assembly': typeof AdminAssemblyRoute
+  '/admin/cce-remarks': typeof AdminCceRemarksRoute
   '/admin/enrollments': typeof AdminEnrollmentsRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/meeting-templates': typeof AdminMeetingTemplatesRoute
@@ -804,6 +813,7 @@ export interface FileRouteTypes {
     | '/upload'
     | '/admin/ai-tools'
     | '/admin/assembly'
+    | '/admin/cce-remarks'
     | '/admin/enrollments'
     | '/admin/login'
     | '/admin/meeting-templates'
@@ -889,6 +899,7 @@ export interface FileRouteTypes {
     | '/upload'
     | '/admin/ai-tools'
     | '/admin/assembly'
+    | '/admin/cce-remarks'
     | '/admin/enrollments'
     | '/admin/login'
     | '/admin/meeting-templates'
@@ -975,6 +986,7 @@ export interface FileRouteTypes {
     | '/upload'
     | '/admin/ai-tools'
     | '/admin/assembly'
+    | '/admin/cce-remarks'
     | '/admin/enrollments'
     | '/admin/login'
     | '/admin/meeting-templates'
@@ -1062,6 +1074,7 @@ export interface RootRouteChildren {
   UploadRoute: typeof UploadRoute
   AdminAiToolsRoute: typeof AdminAiToolsRoute
   AdminAssemblyRoute: typeof AdminAssemblyRoute
+  AdminCceRemarksRoute: typeof AdminCceRemarksRoute
   AdminEnrollmentsRoute: typeof AdminEnrollmentsRoute
   AdminLoginRoute: typeof AdminLoginRoute
   AdminMeetingTemplatesRoute: typeof AdminMeetingTemplatesRoute
@@ -1531,6 +1544,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminEnrollmentsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/cce-remarks': {
+      id: '/admin/cce-remarks'
+      path: '/admin/cce-remarks'
+      fullPath: '/admin/cce-remarks'
+      preLoaderRoute: typeof AdminCceRemarksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/assembly': {
       id: '/admin/assembly'
       path: '/admin/assembly'
@@ -1788,6 +1808,7 @@ const rootRouteChildren: RootRouteChildren = {
   UploadRoute: UploadRoute,
   AdminAiToolsRoute: AdminAiToolsRoute,
   AdminAssemblyRoute: AdminAssemblyRoute,
+  AdminCceRemarksRoute: AdminCceRemarksRoute,
   AdminEnrollmentsRoute: AdminEnrollmentsRoute,
   AdminLoginRoute: AdminLoginRoute,
   AdminMeetingTemplatesRoute: AdminMeetingTemplatesRoute,

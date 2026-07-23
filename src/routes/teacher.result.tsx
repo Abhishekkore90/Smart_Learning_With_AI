@@ -164,6 +164,9 @@ function TeacherResultsPage() {
   const [academicYear, setAcademicYear] = useState(() => {
     return localStorage.getItem("cce_academic_year") || getCurrentAcademicYear();
   });
+  const [selectedMedium, setSelectedMedium] = useState(() => {
+    return localStorage.getItem("cce_selected_medium") || "marathi";
+  });
   const [studentsCount, setStudentsCount] = useState(3);
   const [examTitle, setExamTitle] = useState("");
   const [fileData, setFileData] = useState<{ name: string; content: string; type: string } | null>(null);
@@ -176,6 +179,10 @@ function TeacherResultsPage() {
   useEffect(() => {
     localStorage.setItem("cce_academic_year", academicYear);
   }, [academicYear]);
+
+  useEffect(() => {
+    localStorage.setItem("cce_selected_medium", selectedMedium);
+  }, [selectedMedium]);
 
   // Real-time student count sync
   useEffect(() => {
@@ -426,7 +433,8 @@ function TeacherResultsPage() {
                 </div>
 
                 {/* Dropdowns Selector Pills */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
+                  {/* Academic Year Selector */}
                   <div className="flex items-center gap-2 bg-white border border-slate-200 shadow-sm rounded-2xl px-3.5 py-2 hover:border-blue-300 transition-colors">
                     <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">वर्ष:</span>
                     <select 
@@ -442,6 +450,7 @@ function TeacherResultsPage() {
                     </select>
                   </div>
 
+                  {/* Class Selector */}
                   <div className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md shadow-blue-500/20 rounded-2xl px-4 py-2 ring-2 ring-blue-100">
                     <span className="text-xs font-medium text-blue-100 uppercase tracking-wider">इयत्ता:</span>
                     <select 
@@ -449,14 +458,31 @@ function TeacherResultsPage() {
                       value={selectedClass}
                       onChange={(e) => setSelectedClass(e.target.value)}
                     >
-                      <option value="1st" className="text-slate-800">पहिली (1st)</option>
-                      <option value="2nd" className="text-slate-800">दुसरी (2nd)</option>
-                      <option value="3rd" className="text-slate-800">तिसरी (3rd)</option>
-                      <option value="4th" className="text-slate-800">चौथी (4th)</option>
-                      <option value="5th" className="text-slate-800">पाचवी (5th)</option>
-                      <option value="6th" className="text-slate-800">सहावी (6th)</option>
-                      <option value="7th" className="text-slate-800">सातवी (7th)</option>
-                      <option value="8th" className="text-slate-800">आठवी (8th)</option>
+                      <option value="1st" className="text-slate-800 font-bold">पहिली (1st)</option>
+                      <option value="2nd" className="text-slate-800 font-bold">दुसरी (2nd)</option>
+                      <option value="3rd" className="text-slate-800 font-bold">तिसरी (3rd)</option>
+                      <option value="4th" className="text-slate-800 font-bold">चौथी (4th)</option>
+                      <option value="5th" className="text-slate-800 font-bold">पाचवी (5th)</option>
+                      <option value="6th" className="text-slate-800 font-bold">सहावी (6th)</option>
+                      <option value="7th" className="text-slate-800 font-bold">सातवी (7th)</option>
+                      <option value="8th" className="text-slate-800 font-bold">आठवी (8th)</option>
+                    </select>
+                  </div>
+
+                  {/* Medium Selector (मराठी / सेमी) */}
+                  <div className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-500/20 rounded-2xl px-4 py-2 ring-2 ring-purple-100">
+                    <span className="text-xs font-medium text-purple-100 uppercase tracking-wider">माध्यम:</span>
+                    <select 
+                      className="bg-transparent text-white text-xs font-extrabold outline-none cursor-pointer border-none"
+                      value={selectedMedium}
+                      onChange={(e) => setSelectedMedium(e.target.value)}
+                    >
+                      <option value="marathi" className="text-slate-800 font-bold">
+                        मराठी माध्यम (Marathi)
+                      </option>
+                      <option value="semi" className="text-slate-800 font-bold">
+                        सेमी इंग्रजी माध्यम (Semi-English)
+                      </option>
                     </select>
                   </div>
                 </div>
@@ -510,7 +536,7 @@ function TeacherResultsPage() {
                 >
                   <div className="flex items-center gap-3.5">
                     <div className="size-11 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 text-white flex items-center justify-center shadow-lg shadow-purple-500/25 group-hover:scale-110 transition-transform flex-shrink-0">
-                      <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 024 0M9 17h.01M9 13h.01M12 17h.01M12 13h.01M15 17h.01M15 13h.01" /></svg>
+                      <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 0 1 4 0M9 17h.01M9 13h.01M12 17h.01M12 13h.01M15 17h.01M15 13h.01" /></svg>
                     </div>
                     <div>
                       <h3 className="text-sm font-extrabold text-slate-800 group-hover:text-purple-600 transition-colors">विद्यार्थ्यांची माहिती</h3>
