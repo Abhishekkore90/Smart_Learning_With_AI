@@ -2545,7 +2545,7 @@ function DailyAssemblyContent() {
             <SectionCard
               id="shlok"
               emoji="🕉️"
-              title={t.shlok || "श्लोक"}
+              title={(t as any).shlok || "श्लोक"}
               icon={Quote}
               gradient="from-amber-100/80 via-rose-50/60 to-orange-100/80"
             >

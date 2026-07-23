@@ -2,7 +2,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import { showToast as toast } from "@/lib/custom-toast";
@@ -207,12 +207,18 @@ function TeacherMDMPage() {
   const TABS = [
     { id: "quantity", label: t_global.mdm_quantity, icon: Activity },
     { id: "menu", label: t_global.mdm_menu, icon: ClipboardList },
+    { id: "opening-stock", label: lang === "mr" ? "आरंभीची शिल्लक" : "Initial Stock", icon: Package },
     { id: "incoming", label: t_global.mdm_incoming, icon: Package },
+    { id: "loksahabhag", label: lang === "mr" ? "लोकसहभाग" : "Loksahabhag", icon: Users },
+    { id: "damaged-stock", label: lang === "mr" ? "खराब साठा" : "Damaged Stock", icon: Trash2 },
     { id: "daily-reg", label: t_global.mdm_daily_reg, icon: Calendar },
+    { id: "monthly-calendar", label: lang === "mr" ? "मासिक कॅलेंडर" : "Monthly Calendar", icon: Calendar },
     { id: "stock", label: t_global.mdm_stock_now, icon: Package },
+    { id: "anudan", label: lang === "mr" ? "अनुदान सेटिंग" : "Grant Settings", icon: Sparkles },
     { id: "demand", label: t_global.mdm_demand, icon: FileText },
     { id: "monthly-report", label: lang === "mr" ? "मासिक अहवाल" : "Monthly Report", icon: FileSpreadsheet },
     { id: "annual-report", label: lang === "mr" ? "वार्षिक अहवाल" : "Annual Report", icon: FileSpreadsheet },
+    { id: "swayampaki-kararnama", label: lang === "mr" ? "स्वयंपाकी करारनामा" : "Cook Agreement", icon: Award },
   ];
 
   useEffect(() => {
@@ -1242,6 +1248,241 @@ function TeacherMDMPage() {
   const [showDemandReportModal, setShowDemandReportModal] = useState(false);
   const [showEggBananaReportModal, setShowEggBananaReportModal] =
     useState(false);
+
+  // Damaged Stock States
+  const [damagedItem, setDamagedItem] = useState("");
+  const [damagedQty, setDamagedQty] = useState("");
+  const [damagedDate, setDamagedDate] = useState(
+    new Date().toISOString().split("T")[0],
+  );
+  const [damagedReason, setDamagedReason] = useState("");
+  const [damagedRecords, setDamagedRecords] = useState<
+    { id: string; item: string; qty: string; date: string; reason: string }[]
+  >([]);
+
+  const handleSaveDamagedStock = async () => {
+    if (!user) return;
+    if (!damagedItem || !damagedQty) {
+      toast.warning(t("कृपया साहित्य आणि प्रमाण प्रविष्ट करा.", "Please select item and quantity."));
+      return;
+    }
+    setSaving(true);
+    try {
+      const udise = getUdise();
+      const newRecord = {
+        id: Date.now().toString(),
+        item: damagedItem,
+        qty: damagedQty,
+        date: damagedDate,
+        reason: damagedReason,
+      };
+      const updated = [newRecord, ...damagedRecords];
+      setDamagedRecords(updated);
+      setDamagedItem("");
+      setDamagedQty("");
+      setDamagedReason("");
+
+      await setDoc(
+        doc(db, "school_data", `${udise}_mdm`),
+        { damagedRecords: updated, updatedAt: new Date().toISOString() },
+        { merge: true },
+      );
+    } catch (e) {
+      console.error(e);
+      toast.error(t("नोंद जतन करण्यात अडचण आली.", "Failed to save record"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Opening Stock (Initial Stock) States & Logic
+  const [openingStockValues, setOpeningStockValues] = useState<Record<string, string>>({
+    Rice: "0",
+    Mugdal: "0",
+    Turdal: "0",
+    Masurdal: "0",
+    Matki: "0",
+    Moong: "0",
+    Cowpea: "0",
+    Gram: "0",
+    Pease: "0",
+    "Soyabean Wadi": "0",
+    Cumin: "0",
+    Mustard: "0",
+    Turmeric: "0",
+    Chili: "0",
+    "Onion Garlic Masala": "0",
+    "Garam Masala": "0",
+    Oil: "0",
+    Salt: "0",
+  });
+  const [openingStockSigns, setOpeningStockSigns] = useState<Record<string, "+" | "-">>({});
+
+  const toggleOpeningStockSign = (itemKey: string) => {
+    setOpeningStockSigns((prev) => ({
+      ...prev,
+      [itemKey]: prev[itemKey] === "-" ? "+" : "-",
+    }));
+  };
+
+  const handleOpeningStockChange = (itemKey: string, val: string) => {
+    setOpeningStockValues((prev) => ({
+      ...prev,
+      [itemKey]: val,
+    }));
+  };
+
+  const handleSaveOpeningStock = async () => {
+    if (!user) return;
+    setSaving(true);
+    try {
+      const udise = getUdise();
+      await setDoc(
+        doc(db, "school_data", `${udise}_mdm`),
+        {
+          openingStock: openingStockValues,
+          openingStockSigns,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true },
+      );
+      toast.success(t("आरंभीची शिल्लक यशस्वीरित्या जतन केली!", "Initial Stock saved successfully!"));
+    } catch (e) {
+      console.error(e);
+      toast.error(t("साठा जतन करण्यात अडचण आली.", "Failed to save initial stock"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Loksahabhag (Public Contribution) States & Logic
+  const [lokItem, setLokItem] = useState("");
+  const [lokQty, setLokQty] = useState("");
+  const [lokDate, setLokDate] = useState(
+    new Date().toISOString().split("T")[0],
+  );
+  const [lokDonor, setLokDonor] = useState("");
+  const [lokRemark, setLokRemark] = useState("");
+  const [lokRecords, setLokRecords] = useState<
+    { id: string; item: string; qty: string; date: string; donor: string; remark: string }[]
+  >([]);
+
+  const handleSaveLoksahabhag = async () => {
+    if (!user) return;
+    if (!lokItem || !lokQty) {
+      toast.warning(t("कृपया साहित्य आणि प्रमाण प्रविष्ट करा.", "Please select item and quantity."));
+      return;
+    }
+    setSaving(true);
+    try {
+      const udise = getUdise();
+      const newRecord = {
+        id: Date.now().toString(),
+        item: lokItem,
+        qty: lokQty,
+        date: lokDate,
+        donor: lokDonor,
+        remark: lokRemark,
+      };
+      const updated = [newRecord, ...lokRecords];
+      setLokRecords(updated);
+      setLokItem("");
+      setLokQty("");
+      setLokDonor("");
+      setLokRemark("");
+
+      await setDoc(
+        doc(db, "school_data", `${udise}_mdm`),
+        { lokRecords: updated, updatedAt: new Date().toISOString() },
+        { merge: true },
+      );
+      toast.success(t("लोकसहभाग नोंद यशस्वीरित्या जतन केली!", "Loksahabhag record saved successfully!"));
+    } catch (e) {
+      console.error(e);
+      toast.error(t("नोंद जतन करण्यात अडचण आली.", "Failed to save record"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Anudan (Grant & Cooking Cost Settings) States & Logic
+  const [anudanYear, setAnudanYear] = useState("2026-27");
+  const [primaryRate, setPrimaryRate] = useState("5.45");
+  const [upperRate, setUpperRate] = useState("8.17");
+  const [eggRate, setEggRate] = useState("5.00");
+  const [vegPercent, setVegPercent] = useState("70");
+  const [fuelPercent, setFuelPercent] = useState("30");
+
+  const handleSaveAnudanSettings = async () => {
+    if (!user) return;
+    setSaving(true);
+    try {
+      const udise = getUdise();
+      await setDoc(
+        doc(db, "school_data", `${udise}_mdm`),
+        {
+          anudanSettings: {
+            year: anudanYear,
+            primaryRate,
+            upperRate,
+            eggRate,
+            vegPercent,
+            fuelPercent,
+          },
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true },
+      );
+      toast.success(t("अनुदान सेटिंग यशस्वीरित्या जतन केली!", "Anudan settings saved successfully!"));
+    } catch (e) {
+      console.error(e);
+      toast.error(t("सेटिंग जतन करण्यात अडचण आली.", "Failed to save anudan settings"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Monthly Calendar States & Logic
+  const [calMonth, setCalMonth] = useState<number>(new Date().getMonth() + 1);
+  const [calYear, setCalYear] = useState<number>(new Date().getFullYear());
+  const [calSection, setCalSection] = useState<"1-5" | "6-8">("1-5");
+  const [calEntries, setCalEntries] = useState<
+    Record<string, { beneficiary: string; isHoliday: boolean; holidayReason: string; menu: string }>
+  >({});
+
+  const handleCalEntryChange = (dateStr: string, field: "beneficiary" | "isHoliday" | "holidayReason" | "menu", val: any) => {
+    setCalEntries((prev) => ({
+      ...prev,
+      [dateStr]: {
+        ...(prev[dateStr] || { beneficiary: "0", isHoliday: false, holidayReason: "", menu: "वरण भात" }),
+        [field]: val,
+      },
+    }));
+  };
+
+  const handleSaveMonthlyCalendar = async () => {
+    if (!user) return;
+    setSaving(true);
+    try {
+      const udise = getUdise();
+      await setDoc(
+        doc(db, "school_data", `${udise}_mdm`),
+        {
+          monthlyCalendar: {
+            [`${calYear}_${calMonth}_${calSection}`]: calEntries,
+          },
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true },
+      );
+      toast.success(t("मासिक कॅलेंडर हजेरी जतन केली!", "Monthly Calendar attendance saved successfully!"));
+    } catch (e) {
+      console.error(e);
+      toast.error(t("नोंद जतन करण्यात अडचण आली.", "Failed to save calendar data"));
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // Egg & Banana States
   const [eggBananaDate, setEggBananaDate] = useState(
@@ -3654,37 +3895,158 @@ function TeacherMDMPage() {
         <PinGate sectionKey="mdm">
           <div className="p-6 md:p-10 space-y-6 max-w-7xl mx-auto">
 
-          {/* ===== MDM TAB NAVIGATION BAR ===== */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-lg p-4">
+          {/* ===== MDM CATEGORY GROUPED NAVIGATION BAR ===== */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-lg p-5 space-y-4">
             {/* Title Row */}
-            <div className="flex items-center gap-3 mb-4 pb-3 border-b border-slate-100">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-md">
-                <Utensils className="w-5 h-5 text-white" />
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center shadow-md">
+                  <Utensils className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-lg font-black text-slate-800">Mid-Day Meal (MDM) Portal</h1>
+                  <p className="text-xs text-emerald-600 font-bold">माध्यान्ह भोजन योजना पोर्टल</p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-lg font-black text-slate-800">Mid-Day Meal (MDM)</h1>
-                <p className="text-xs text-slate-500 font-medium">माध्यान्ह भोजन व्यवस्थापन</p>
+              <div className="hidden sm:flex items-center gap-2 text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full">
+                <span>UDISE: {getUdise()}</span>
               </div>
             </div>
-            {/* Tab Buttons Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {TABS.map((tabItem) => {
-                const Icon = tabItem.icon;
-                const isActive = activeTab === tabItem.id;
-                return (
-                  <button
-                    key={tabItem.id}
-                    onClick={() => setActiveTab(tabItem.id)}
-                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 border ${isActive
-                      ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-indigo-500 shadow-md shadow-indigo-200 scale-[1.02]"
-                      : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200"
-                      }`}
-                  >
-                    <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-white" : "text-indigo-400"}`} />
-                    <span className="truncate">{tabItem.label}</span>
-                  </button>
-                );
-              })}
+
+            {/* Grouped Category Tabs */}
+            <div className="space-y-3">
+              {/* Category 1: STOCK (साठा) */}
+              <div className="bg-emerald-50/60 p-3 rounded-xl border border-emerald-100">
+                <div className="flex items-center gap-2 mb-2 text-xs font-black uppercase text-emerald-800 tracking-wider">
+                  <Package className="w-4 h-4 text-emerald-600" />
+                  <span>STOCK (साठा व्यवस्थापन)</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  {[
+                    { id: "opening-stock", label: lang === "mr" ? "आरंभीची शिल्लक" : "Initial Stock", icon: Package },
+                    { id: "incoming", label: lang === "mr" ? "साहित्य आवक" : "Stock Received", icon: Package },
+                    { id: "loksahabhag", label: lang === "mr" ? "लोकसहभाग" : "Loksahabhag", icon: Users },
+                    { id: "damaged-stock", label: lang === "mr" ? "खराब साठा" : "Damaged Stock", icon: Trash2 },
+                    { id: "stock", label: lang === "mr" ? "शिल्लक साठा" : "View Stock", icon: Activity },
+                  ].map((sub) => {
+                    const SubIcon = sub.icon;
+                    const isActive = activeTab === sub.id;
+                    return (
+                      <button
+                        key={sub.id}
+                        onClick={() => setActiveTab(sub.id)}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all border ${
+                          isActive
+                            ? "bg-emerald-600 text-white border-emerald-700 shadow-md scale-[1.02]"
+                            : "bg-white text-slate-700 border-emerald-200 hover:bg-emerald-100/70"
+                        }`}
+                      >
+                        <SubIcon className={`w-3.5 h-3.5 ${isActive ? "text-white" : "text-emerald-600"}`} />
+                        <span className="truncate">{sub.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Other Categories Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {/* MENU SETUP */}
+                <div className="bg-amber-50/60 p-3 rounded-xl border border-amber-100">
+                  <div className="flex items-center gap-2 mb-2 text-xs font-black uppercase text-amber-800 tracking-wider">
+                    <ClipboardList className="w-4 h-4 text-amber-600" />
+                    <span>MENU SETUP (रेसिपी व मेनू)</span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { id: "menu", label: lang === "mr" ? "Recipe Ingredients" : "Recipe Ingredients", icon: ClipboardList },
+                      { id: "quantity", label: lang === "mr" ? "Recipe Formulas" : "Recipe Formulas", icon: Activity },
+                      { id: "anudan", label: lang === "mr" ? "अनुदान सेटिंग" : "Anudan Settings", icon: Sparkles },
+                      { id: "recipe-guide", label: lang === "mr" ? "Recipe Guide" : "Recipe Guide", icon: FileText },
+                    ].map((sub) => {
+                      const SubIcon = sub.icon;
+                      const isActive = activeTab === sub.id;
+                      return (
+                        <button
+                          key={sub.id}
+                          onClick={() => setActiveTab(sub.id)}
+                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                            isActive
+                              ? "bg-amber-600 text-white border-amber-700 shadow-sm"
+                              : "bg-white text-slate-700 border-amber-200 hover:bg-amber-100/70"
+                          }`}
+                        >
+                          <SubIcon className={`w-3.5 h-3.5 ${isActive ? "text-white" : "text-amber-600"}`} />
+                          <span className="truncate">{sub.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* DAILY OPERATIONS */}
+                <div className="bg-blue-50/60 p-3 rounded-xl border border-blue-100">
+                  <div className="flex items-center gap-2 mb-2 text-xs font-black uppercase text-blue-800 tracking-wider">
+                    <Calendar className="w-4 h-4 text-blue-600" />
+                    <span>DAILY & CALENDAR (कामकाज)</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { id: "daily-reg", label: lang === "mr" ? "दैनंदिन नोंद" : "Daily Entry", icon: Calendar },
+                      { id: "monthly-calendar", label: lang === "mr" ? "मासिक कॅलेंडर" : "Monthly Calendar", icon: Calendar },
+                    ].map((sub) => {
+                      const SubIcon = sub.icon;
+                      const isActive = activeTab === sub.id;
+                      return (
+                        <button
+                          key={sub.id}
+                          onClick={() => setActiveTab(sub.id)}
+                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                            isActive
+                              ? "bg-blue-600 text-white border-blue-700 shadow-sm"
+                              : "bg-white text-slate-700 border-blue-200 hover:bg-blue-100/70"
+                          }`}
+                        >
+                          <SubIcon className={`w-3.5 h-3.5 ${isActive ? "text-white" : "text-blue-600"}`} />
+                          <span className="truncate">{sub.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* REPORTS */}
+                <div className="bg-purple-50/60 p-3 rounded-xl border border-purple-100">
+                  <div className="flex items-center gap-2 mb-2 text-xs font-black uppercase text-purple-800 tracking-wider">
+                    <FileSpreadsheet className="w-4 h-4 text-purple-600" />
+                    <span>REPORTS (शासकीय अहवाल)</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: "demand", label: lang === "mr" ? "तांदूळ मागणी" : "Demand", icon: FileText },
+                      { id: "monthly-report", label: lang === "mr" ? "मासिक अहवाल" : "Monthly", icon: FileSpreadsheet },
+                      { id: "annual-report", label: lang === "mr" ? "वार्षिक अहवाल" : "Annual", icon: FileSpreadsheet },
+                    ].map((sub) => {
+                      const SubIcon = sub.icon;
+                      const isActive = activeTab === sub.id;
+                      return (
+                        <button
+                          key={sub.id}
+                          onClick={() => setActiveTab(sub.id)}
+                          className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                            isActive
+                              ? "bg-purple-600 text-white border-purple-700 shadow-sm"
+                              : "bg-white text-slate-700 border-purple-200 hover:bg-purple-100/70"
+                          }`}
+                        >
+                          <SubIcon className={`w-3.5 h-3.5 ${isActive ? "text-white" : "text-purple-600"}`} />
+                          <span className="truncate">{sub.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -3706,6 +4068,787 @@ function TeacherMDMPage() {
                 transition={{ duration: 0.4 }}
                 className="bg-white/60 backdrop-blur-3xl rounded-[3rem] border border-slate-200 shadow-[0_32px_64px_-20px_rgba(0,0,0,0.5)] overflow-hidden p-6 md:p-10"
               >
+                {/* MONTHLY CALENDAR ATTENDANCE & MDM ENTRY TAB */}
+                {activeTab === "monthly-calendar" && (
+                  <div className="space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
+                      <div>
+                        <h2 className="text-xl font-bold text-slate-800">
+                          {lang === "mr" ? "मासिक हजेरी व मेनू कॅलेंडर (Monthly MDM Calendar)" : "Monthly MDM Calendar"}
+                        </h2>
+                        <p className="text-xs text-slate-500">
+                          महिन्यातील प्रत्येक दिवसाची लाभार्थी उपस्थिती व मेनू नोंद
+                        </p>
+                      </div>
+
+                      {/* Header Controls */}
+                      <div className="flex flex-wrap items-center gap-3">
+                        {/* Section Selector */}
+                        <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
+                          <button
+                            onClick={() => setCalSection("1-5")}
+                            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                              calSection === "1-5" ? "bg-blue-600 text-white shadow-sm" : "text-slate-600 hover:text-slate-900"
+                            }`}
+                          >
+                            इयत्ता १ ते ५
+                          </button>
+                          <button
+                            onClick={() => setCalSection("6-8")}
+                            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                              calSection === "6-8" ? "bg-blue-600 text-white shadow-sm" : "text-slate-600 hover:text-slate-900"
+                            }`}
+                          >
+                            इयत्ता ६ ते ८
+                          </button>
+                        </div>
+
+                        {/* Month Selector */}
+                        <select
+                          value={calMonth}
+                          onChange={(e) => setCalMonth(Number(e.target.value))}
+                          className="h-9 px-3 border border-slate-300 rounded-xl text-xs font-bold bg-white text-slate-800"
+                        >
+                          {[
+                            "जानेवारी", "फेब्रुवारी", "मार्च", "एप्रिल", "मे", "जून",
+                            "जुलै", "ऑगस्ट", "सप्टेंबर", "ऑक्टोबर", "नोव्हेंबर", "डिसेंबर"
+                          ].map((m, i) => (
+                            <option key={i} value={i + 1}>{m}</option>
+                          ))}
+                        </select>
+
+                        {/* Year Selector */}
+                        <select
+                          value={calYear}
+                          onChange={(e) => setCalYear(Number(e.target.value))}
+                          className="h-9 px-3 border border-slate-300 rounded-xl text-xs font-bold bg-white text-slate-800"
+                        >
+                          {[2025, 2026, 2027].map((y) => (
+                            <option key={y} value={y}>{y}</option>
+                          ))}
+                        </select>
+
+                        <button
+                          onClick={handleSaveMonthlyCalendar}
+                          disabled={saving}
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-1.5 transition-all"
+                        >
+                          {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                          <span>Save Calendar</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Render Calendar Grid */}
+                    {(() => {
+                      const daysInMonth = new Date(calYear, calMonth, 0).getDate();
+                      const firstDayWeekday = new Date(calYear, calMonth - 1, 1).getDay(); // 0=Sunday
+                      const weekdays = ["रवि", "सोम", "मंगळ", "बुध", "गुरु", "शुक्र", "शनि"];
+                      const rate = calSection === "1-5" ? Number(primaryRate || 5.45) : Number(upperRate || 8.17);
+
+                      // Calculate Totals
+                      let totalWorking = 0;
+                      let totalBeneficiaries = 0;
+
+                      for (let d = 1; d <= daysInMonth; d++) {
+                        const dateStr = `${calYear}-${String(calMonth).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+                        const entry = calEntries[dateStr];
+                        const dayOfWeek = new Date(calYear, calMonth - 1, d).getDay();
+                        const isSunday = dayOfWeek === 0;
+                        const isHol = entry?.isHoliday ?? isSunday;
+
+                        if (!isHol) {
+                          totalWorking++;
+                          totalBeneficiaries += Number(entry?.beneficiary || 0);
+                        }
+                      }
+
+                      const totalCost = totalBeneficiaries * rate;
+
+                      return (
+                        <div className="space-y-6">
+                          {/* Calendar Grid */}
+                          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm overflow-x-auto">
+                            <div className="grid grid-cols-7 gap-2 min-w-[700px]">
+                              {weekdays.map((w, idx) => (
+                                <div key={idx} className="text-center font-bold text-xs text-slate-600 bg-slate-100 py-2 rounded-lg">
+                                  {w}
+                                </div>
+                              ))}
+
+                              {/* Blank padding cells before 1st of month */}
+                              {Array.from({ length: firstDayWeekday }, (_, i) => (
+                                <div key={`pad-${i}`} className="bg-slate-50/50 rounded-xl min-h-[95px]" />
+                              ))}
+
+                              {/* Days of the month */}
+                              {Array.from({ length: daysInMonth }, (_, i) => {
+                                const dayNum = i + 1;
+                                const dateStr = `${calYear}-${String(calMonth).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
+                                const dayOfWeek = new Date(calYear, calMonth - 1, dayNum).getDay();
+                                const isSunday = dayOfWeek === 0;
+                                const entry = calEntries[dateStr] || {
+                                  beneficiary: isSunday ? "0" : "0",
+                                  isHoliday: isSunday,
+                                  holidayReason: isSunday ? "रविवार सुट्टी" : "",
+                                  menu: "वरण भात",
+                                };
+
+                                return (
+                                  <div
+                                    key={dayNum}
+                                    className={`p-2.5 rounded-xl border flex flex-col justify-between min-h-[110px] text-xs transition-all ${
+                                      entry.isHoliday
+                                        ? "bg-rose-50/60 border-rose-200"
+                                        : "bg-white border-slate-200 hover:border-blue-300 shadow-sm"
+                                    }`}
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <span className={`font-black text-sm ${entry.isHoliday ? "text-rose-600" : "text-slate-800"}`}>
+                                        {dayNum}
+                                      </span>
+                                      <label className="flex items-center gap-1 cursor-pointer">
+                                        <input
+                                          type="checkbox"
+                                          checked={entry.isHoliday}
+                                          onChange={(e) => handleCalEntryChange(dateStr, "isHoliday", e.target.checked)}
+                                          className="rounded text-rose-600 focus:ring-rose-500 h-3.5 w-3.5"
+                                        />
+                                        <span className="text-[10px] font-bold text-slate-500">सुट्टी</span>
+                                      </label>
+                                    </div>
+
+                                    {entry.isHoliday ? (
+                                      <input
+                                        type="text"
+                                        placeholder="सुट्टीचे कारण..."
+                                        value={entry.holidayReason || ""}
+                                        onChange={(e) => handleCalEntryChange(dateStr, "holidayReason", e.target.value)}
+                                        className="w-full text-[10px] p-1 border border-rose-200 rounded bg-white text-rose-700 font-medium mt-1"
+                                      />
+                                    ) : (
+                                      <div className="space-y-1.5 mt-1">
+                                        <select
+                                          value={entry.menu || "वरण भात"}
+                                          onChange={(e) => handleCalEntryChange(dateStr, "menu", e.target.value)}
+                                          className="w-full text-[10px] font-bold border border-slate-200 rounded p-1 bg-slate-50 text-slate-800"
+                                        >
+                                          <option value="वरण भात">वरण भात</option>
+                                          <option value="मसाला भात">मसाला भात</option>
+                                          <option value="मूग उसळ व भात">मूग उसळ व भात</option>
+                                          <option value="सोयाबीन भात">सोयाबीन भात</option>
+                                          <option value="डाळ खिचडी">डाळ खिचडी</option>
+                                          <option value="गोड लापशी">गोड लापशी</option>
+                                        </select>
+
+                                        <div className="flex items-center gap-1">
+                                          <span className="text-[10px] font-bold text-slate-500">उपस्थित:</span>
+                                          <input
+                                            type="number"
+                                            value={entry.beneficiary || "0"}
+                                            onChange={(e) => handleCalEntryChange(dateStr, "beneficiary", e.target.value)}
+                                            className="w-full text-[11px] font-bold p-1 border border-slate-300 rounded text-center text-blue-900 bg-white"
+                                          />
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Monthly Summary Cards */}
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div className="bg-blue-50/80 p-4 rounded-2xl border border-blue-200 flex items-center justify-between">
+                              <div>
+                                <span className="text-xs font-bold text-blue-700 uppercase tracking-wider block">कामाचे एकूण दिवस</span>
+                                <span className="text-xl font-black text-blue-900">{totalWorking} दिवस</span>
+                              </div>
+                              <Calendar className="w-8 h-8 text-blue-500 opacity-60" />
+                            </div>
+
+                            <div className="bg-emerald-50/80 p-4 rounded-2xl border border-emerald-200 flex items-center justify-between">
+                              <div>
+                                <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider block">मासिक एकूण लाभार्थी</span>
+                                <span className="text-xl font-black text-emerald-900">{totalBeneficiaries} विद्यार्थी</span>
+                              </div>
+                              <Users className="w-8 h-8 text-emerald-500 opacity-60" />
+                            </div>
+
+                            <div className="bg-amber-50/80 p-4 rounded-2xl border border-amber-200 flex items-center justify-between">
+                              <div>
+                                <span className="text-xs font-bold text-amber-700 uppercase tracking-wider block">अनुमानित खर्च अनुदान</span>
+                                <span className="text-xl font-black text-amber-900">₹{totalCost.toFixed(2)}</span>
+                              </div>
+                              <Sparkles className="w-8 h-8 text-amber-500 opacity-60" />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+
+                {/* ANUDAN SETTINGS (GRANT & COOKING COST) TAB */}
+                {activeTab === "anudan" && (
+                  <div className="space-y-6">
+                    <h2 className="text-xl font-bold text-slate-800 border-b pb-3">
+                      {lang === "mr" ? "अनुदान सेटिंग (Cooking Cost / Conversion Cost Settings)" : "Grant & Cooking Cost Settings"}
+                    </h2>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                      {/* Left Form Card */}
+                      <div className="lg:col-span-6 bg-white p-6 rounded-2xl border border-amber-200 shadow-sm space-y-4">
+                        <h3 className="font-bold text-base text-slate-800 border-b pb-2">
+                          {lang === "mr" ? "प्रति विद्यार्थी शिजवण्याचा खर्च दर (GR दर)" : "Per Student Cooking Cost Rates"}
+                        </h3>
+
+                        <div className="space-y-4">
+                          <div>
+                            <label className="text-xs font-bold text-slate-600 block mb-1">
+                              {lang === "mr" ? "शैक्षणिक वर्ष *" : "Academic Year *"}
+                            </label>
+                            <select
+                              value={anudanYear}
+                              onChange={(e) => setAnudanYear(e.target.value)}
+                              className="w-full h-10 px-3 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-amber-500"
+                            >
+                              <option value="2026-27">2026-27</option>
+                              <option value="2025-26">2025-26</option>
+                            </select>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <label className="text-xs font-bold text-slate-600 block mb-1">
+                                {lang === "mr" ? "प्राथमिक (१ ते ५) प्रति विद्यार्थी दर (₹) *" : "Primary (1-5) Rate (₹) *"}
+                              </label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={primaryRate}
+                                onChange={(e) => setPrimaryRate(e.target.value)}
+                                className="w-full h-10 px-3 border border-slate-300 rounded-xl text-sm font-bold text-amber-900 focus:ring-2 focus:ring-amber-500"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-xs font-bold text-slate-600 block mb-1">
+                                {lang === "mr" ? "उच्च प्राथमिक (६ ते ८) प्रति विद्यार्थी दर (₹) *" : "Upper Primary (6-8) Rate (₹) *"}
+                              </label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={upperRate}
+                                onChange={(e) => setUpperRate(e.target.value)}
+                                className="w-full h-10 px-3 border border-slate-300 rounded-xl text-sm font-bold text-amber-900 focus:ring-2 focus:ring-amber-500"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <label className="text-xs font-bold text-slate-600 block mb-1">
+                                {lang === "mr" ? "अंडी / केळी पूरक आहार दर (₹) *" : "Egg/Banana Rate (₹) *"}
+                              </label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={eggRate}
+                                onChange={(e) => setEggRate(e.target.value)}
+                                className="w-full h-10 px-3 border border-slate-300 rounded-xl text-sm font-bold text-amber-900 focus:ring-2 focus:ring-amber-500"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-xs font-bold text-slate-600 block mb-1">
+                                {lang === "mr" ? "भाजीपाला वाटप (%) *" : "Vegetable % *"}
+                              </label>
+                              <input
+                                type="number"
+                                value={vegPercent}
+                                onChange={(e) => setVegPercent(e.target.value)}
+                                className="w-full h-10 px-3 border border-slate-300 rounded-xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-amber-500"
+                              />
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={handleSaveAnudanSettings}
+                            disabled={saving}
+                            className="w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
+                          >
+                            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                            <span>Save Settings (अनुदान सेटिंग जतन करा)</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Right Information Summary Card */}
+                      <div className="lg:col-span-6 bg-amber-50/70 p-6 rounded-2xl border border-amber-200 space-y-4">
+                        <h3 className="font-bold text-base text-amber-950 border-b border-amber-200 pb-2">
+                          {lang === "mr" ? "शासकीय दर स्पष्टीकरण (GR Summary)" : "Government Standard Rates Summary"}
+                        </h3>
+
+                        <div className="space-y-3 text-xs text-amber-900 leading-relaxed font-medium">
+                          <div className="bg-white p-3.5 rounded-xl border border-amber-200 flex items-center justify-between">
+                            <span>इयत्ता १ ली ते ५ वी (प्राथमिक)</span>
+                            <span className="font-bold text-sm text-amber-800">₹{primaryRate} / विद्यार्थी</span>
+                          </div>
+
+                          <div className="bg-white p-3.5 rounded-xl border border-amber-200 flex items-center justify-between">
+                            <span>इयत्ता ६ वी ते ८ वी (उच्च प्राथमिक)</span>
+                            <span className="font-bold text-sm text-amber-800">₹{upperRate} / विद्यार्थी</span>
+                          </div>
+
+                          <div className="bg-white p-3.5 rounded-xl border border-amber-200 flex items-center justify-between">
+                            <span>बुधवार पूरक आहार (अंडी / केळी)</span>
+                            <span className="font-bold text-sm text-amber-800">₹{eggRate} / विद्यार्थी</span>
+                          </div>
+
+                          <div className="bg-amber-100/80 p-3.5 rounded-xl border border-amber-300">
+                            <span className="font-bold block mb-1">खर्च विभागणी (Cost Splitting Formula):</span>
+                            <span>• भाजीपाला व मसाले: <strong>{vegPercent}%</strong></span> <br />
+                            <span>• इंधन व इतर खर्च: <strong>{fuelPercent}%</strong></span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* RECIPE GUIDE TAB */}
+                {activeTab === "recipe-guide" && (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between border-b pb-3">
+                      <div>
+                        <h2 className="text-xl font-bold text-slate-800">
+                          {lang === "mr" ? "रेसिपी मार्गदर्शक (Recipe Guide)" : "Recipe Guide"}
+                        </h2>
+                        <p className="text-xs text-slate-500">
+                          माध्यान्ह भोजन योजनेअंतर्गत शिजवण्यात येणाऱ्या पाककृतींचे मार्गदर्शन व पोषण मूल्ये
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {[
+                        { title: "वरण भात (Rice & Lentils)", titleMr: "वरण भात", cal: "450 kcal", protein: "12g", items: ["तांदूळ", "तूरडाळ", "हळद", "मीठ", "गोडेतेल"], desc: "स्वच्छ तांदूळ व तुरीची डाळ शिजवून मऊ वरण भात तयार करावा." },
+                        { title: "मसाला भात (Spiced Rice)", titleMr: "मसाला भात", cal: "480 kcal", protein: "10g", items: ["तांदूळ", "जिरे", "मोहरी", "हळद", "कांदा लसूण मसाला", "गोडेतेल"], desc: "जिरे-मोहरी फोडणी देऊन चमचमीत मसाला भात तयार करावा." },
+                        { title: "मूग उसळ व भात (Sprouts & Rice)", titleMr: "मूग उसळ व भात", cal: "510 kcal", protein: "16g", items: ["तांदूळ", "अख्खा मूग", "कांदा लसूण मसाला", "गरम मसाला", "गोडेतेल"], desc: "मोड आलेले मूग परतून चवदार उसळ व भात तयार करावा." },
+                        { title: "सोयाबीन भात (Soyabean Rice)", titleMr: "सोयाबीन भात", cal: "490 kcal", protein: "18g", items: ["तांदूळ", "सोयाबीन वडी", "मसाले", "गोडेतेल", "मीठ"], desc: "सोयाबीन वडी भिजवून फोडणी देऊन पौष्टिक सोयाबीन भात." },
+                        { title: "डाळ खिचडी (Dal Khichdi)", titleMr: "डाळ खिचडी", cal: "460 kcal", protein: "14g", items: ["तांदूळ", "मूगडाळ", "जिरे", "हळद", "मीठ"], desc: "तांदूळ व मूगडाळ एकत्र शिजवून पचायला हलकी डाळ खिचडी." },
+                        { title: "गोड लापशी / खीर (Sweet Kheer/Lapshi)", titleMr: "गोड लापशी / खीर", cal: "530 kcal", protein: "8g", items: ["लापशी रवा / तांदूळ", "गूळ / साखर", "दूध"], desc: "लापशी किंवा तांदळाची खीर गूळ घालून गोड मिष्टान्न तयार करावे." },
+                      ].map((recipe, idx) => (
+                        <div key={idx} className="bg-white p-5 rounded-2xl border border-amber-200 shadow-sm space-y-3 hover:shadow-md transition-shadow">
+                          <div className="flex items-center justify-between border-b pb-2">
+                            <h3 className="font-bold text-base text-slate-800">{recipe.titleMr}</h3>
+                            <span className="bg-amber-100 text-amber-800 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full">{recipe.cal}</span>
+                          </div>
+                          <p className="text-xs text-slate-600 font-medium">{recipe.desc}</p>
+                          <div>
+                            <span className="text-[11px] font-bold text-slate-500 block mb-1">मुख्य घटक:</span>
+                            <div className="flex flex-wrap gap-1">
+                              {recipe.items.map((it, i) => (
+                                <span key={i} className="bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded border border-slate-200">{it}</span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* INITIAL STOCK (OPENING BALANCE) TAB */}
+                {activeTab === "opening-stock" && (
+                  <div className="space-y-6">
+                    {/* Learnify Yellow Notice Banner */}
+                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-amber-900 space-y-2 shadow-sm">
+                      <h3 className="font-extrabold text-base text-amber-950 flex items-center gap-2">
+                        <span>प्रारंभिक साठा (Initial stock)</span>
+                      </h3>
+                      <p className="text-xs leading-relaxed font-medium">
+                        ज्या महिन्यापासून रिपोर्ट्स हवे आहेत त्या महिन्याची <span className="font-bold text-emerald-800">आरंभीची शिल्लक (Opening/Initial Stock)</span> हिरव्या "शिल्लक" कॉलममध्ये भरा. प्राथमिक ( इयत्ता १ ते ५ ) गटाच्या साहित्यासाठी तुम्ही शिल्लक भरणार आहात.
+                      </p>
+                      <p className="text-xs leading-relaxed font-medium">
+                        जर उसना (लोकसहभाग) साहित्य वापरले असेल आणि शिल्लक <span className="font-bold text-rose-700">negative</span> असेल, तर प्रमाण भरा आणि <span className="font-bold">+ / -</span> बटण दाबून <span className="font-bold text-rose-700">- (minus)</span> निवडा — मोबाईलवर Negative टाईप करण्याची गरज नाही.
+                      </p>
+                    </div>
+
+                    {/* Table Container */}
+                    <div className="bg-white rounded-2xl border border-emerald-200 shadow-md overflow-hidden">
+                      {/* Header Title */}
+                      <div className="bg-emerald-50 text-center py-3 border-b border-emerald-200">
+                        <h2 className="font-extrabold text-emerald-900 text-sm md:text-base uppercase tracking-wide">
+                          {profile?.schoolName || "Z P SCHOOL"}
+                        </h2>
+                        <p className="text-xs font-bold text-emerald-700 mt-0.5">
+                          आरंभीची शिल्लक • सन 2026-27
+                        </p>
+                      </div>
+
+                      {/* Horizontal Scrollable Table */}
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-center text-xs border-collapse min-w-[1200px]">
+                          <thead>
+                            <tr className="bg-emerald-100/70 border-b border-emerald-300 text-emerald-950 font-bold">
+                              <th className="p-3 border-r border-emerald-300 w-[180px] bg-emerald-100">साहित्य (Item Name)</th>
+                              {REPORT_ITEMS.slice(0, 18).map((item) => (
+                                <th key={item.key} colSpan={6} className="p-2 border-r border-emerald-300 text-center font-bold text-emerald-900 bg-emerald-100/80">
+                                  {item.nameMr} ({item.unit})
+                                </th>
+                              ))}
+                            </tr>
+                            <tr className="bg-emerald-50 border-b border-emerald-200 text-[11px] font-bold text-slate-700">
+                              <th className="p-2 border-r border-emerald-200 bg-emerald-100/50">तपशील</th>
+                              {REPORT_ITEMS.slice(0, 18).map((item) => (
+                                <React.Fragment key={item.key}>
+                                  <th className="p-1.5 border-r border-emerald-200 bg-emerald-100/80 text-emerald-900 font-extrabold w-[80px]">शिल्लक</th>
+                                  <th className="p-1.5 border-r border-slate-200 text-slate-400 w-[45px]">प्राप्त</th>
+                                  <th className="p-1.5 border-r border-slate-200 text-slate-400 w-[45px]">उसना</th>
+                                  <th className="p-1.5 border-r border-slate-200 text-slate-400 w-[45px]">एकूण</th>
+                                  <th className="p-1.5 border-r border-slate-200 text-slate-400 w-[45px]">खर्च</th>
+                                  <th className="p-1.5 border-r border-emerald-300 text-slate-400 w-[55px]">शिल्लक</th>
+                                </React.Fragment>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr className="border-b border-slate-200 hover:bg-slate-50">
+                              <td className="p-3 border-r border-emerald-200 font-extrabold text-slate-900 bg-amber-50/50 text-left">
+                                आरंभीची शिल्लक <br />
+                                <span className="text-[10px] text-slate-500 font-normal">Opening/Initial Stock</span>
+                              </td>
+                              {REPORT_ITEMS.slice(0, 18).map((item) => {
+                                const isMinus = openingStockSigns[item.key] === "-";
+                                return (
+                                  <React.Fragment key={item.key}>
+                                    <td className="p-1.5 border-r border-emerald-200 bg-emerald-50/60">
+                                      <div className="flex items-center gap-1 justify-center">
+                                        <button
+                                          onClick={() => toggleOpeningStockSign(item.key)}
+                                          className={`px-1.5 py-0.5 text-xs font-bold rounded border ${
+                                            isMinus ? "bg-rose-600 text-white border-rose-700" : "bg-emerald-600 text-white border-emerald-700"
+                                          }`}
+                                          title="Toggle +/- sign"
+                                        >
+                                          {isMinus ? "-" : "+"}
+                                        </button>
+                                        <input
+                                          type="number"
+                                          step="0.001"
+                                          value={openingStockValues[item.key] || "0"}
+                                          onChange={(e) => handleOpeningStockChange(item.key, e.target.value)}
+                                          className="w-14 h-7 text-center border border-emerald-400 rounded font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500"
+                                        />
+                                      </div>
+                                    </td>
+                                    <td className="p-1.5 border-r border-slate-200 text-slate-400">—</td>
+                                    <td className="p-1.5 border-r border-slate-200 text-slate-400">—</td>
+                                    <td className="p-1.5 border-r border-slate-200 text-slate-400">—</td>
+                                    <td className="p-1.5 border-r border-slate-200 text-slate-400">—</td>
+                                    <td className="p-1.5 border-r border-emerald-300 text-slate-400 font-medium">—</td>
+                                  </React.Fragment>
+                                );
+                              })}
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Save Button */}
+                    <div className="pt-2">
+                      <button
+                        onClick={handleSaveOpeningStock}
+                        disabled={saving}
+                        className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm rounded-xl shadow-lg transition-all flex items-center gap-2"
+                      >
+                        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                        <span>Save opening stock (आरंभीची शिल्लक जतन करा)</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* LOKSAHABHAG (PUBLIC CONTRIBUTION) TAB */}
+                {activeTab === "loksahabhag" && (
+                  <div className="space-y-6">
+                    <h2 className="text-xl font-bold text-slate-800 border-b pb-3">
+                      {lang === "mr" ? "लोकसहभाग नोंद" : "Loksahabhag (Public Contribution)"}
+                    </h2>
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                      {/* Left Column: Form Card */}
+                      <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <h3 className="font-bold text-base text-slate-800">
+                          {lang === "mr" ? "लोकसहभाग नोंदवा" : "Report Public Contribution"}
+                        </h3>
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-xs font-bold text-slate-600 block mb-1">
+                              {lang === "mr" ? "साहित्य *" : "Material / Item *"}
+                            </label>
+                            <select
+                              value={lokItem}
+                              onChange={(e) => setLokItem(e.target.value)}
+                              className="w-full h-10 px-3 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500"
+                            >
+                              <option value="">{lang === "mr" ? "साहित्य निवडा" : "Select Material"}</option>
+                              <option value="तांदूळ (kg)">तांदूळ (kg) - Rice</option>
+                              <option value="मूगडाळ (kg)">मूगडाळ (kg) - Moong Dal</option>
+                              <option value="तूरडाळ (kg)">तूरडाळ (kg) - Tur Dal</option>
+                              <option value="मसूरडाळ (kg)">मसूरडाळ (kg) - Masoor Dal</option>
+                              <option value="मटकी (kg)">मटकी (kg) - Moth Beans</option>
+                              <option value="अख्खा मूग (kg)">अख्खा मूग (kg) - Whole Moong</option>
+                              <option value="चवळी (kg)">चवळी (kg) - Cowpea</option>
+                              <option value="हरभरा (kg)">हरभरा (kg) - Chana</option>
+                              <option value="वाटाणा (kg)">वाटाणा (kg) - Peas</option>
+                              <option value="सोयाबीन वडी (kg)">सोयाबीन वडी (kg) - Soyabean Chunks</option>
+                              <option value="जिरे (kg)">जिरे (kg) - Cumin</option>
+                              <option value="मोहरी (kg)">मोहरी (kg) - Mustard</option>
+                              <option value="हळद (kg)">हळद (kg) - Turmeric</option>
+                              <option value="तिखट मसाला (kg)">तिखट मसाला (kg) - Chili Masala</option>
+                              <option value="मीठ (kg)">मीठ (kg) - Salt</option>
+                              <option value="गरम मसाला (kg)">गरम मसाला (kg) - Garam Masala</option>
+                              <option value="तेल (kg)">तेल (kg) - Cooking Oil</option>
+                              <option value="गूळ / साखर (kg)">गूळ / साखर (kg) - Sugar / Jaggery</option>
+                              <option value="दूध / दूध पावडर (L)">दूध / दूध पावडर (L) - Milk</option>
+                              <option value="भाजीपाला (kg)">भाजीपाला (kg) - Vegetables</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-xs font-bold text-slate-600 block mb-1">
+                              {lang === "mr" ? "प्रमाण (kg) *" : "Quantity (kg) *"}
+                            </label>
+                            <input
+                              type="number"
+                              step="0.001"
+                              placeholder="प्रमाण (kg)"
+                              value={lokQty}
+                              onChange={(e) => setLokQty(e.target.value)}
+                              className="w-full h-10 px-3 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-bold text-slate-600 block mb-1">
+                              {lang === "mr" ? "दिनांक *" : "Date *"}
+                            </label>
+                            <input
+                              type="date"
+                              value={lokDate}
+                              onChange={(e) => setLokDate(e.target.value)}
+                              className="w-full h-10 px-3 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-bold text-slate-600 block mb-1">
+                              {lang === "mr" ? "दाताचे नाव (Donor Name)" : "Donor Name"}
+                            </label>
+                            <input
+                              type="text"
+                              placeholder={lang === "mr" ? "उदा. ग्रामपंचायत / पालकांचे नाव" : "Donor name..."}
+                              value={lokDonor}
+                              onChange={(e) => setLokDonor(e.target.value)}
+                              className="w-full h-10 px-3 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-bold text-slate-600 block mb-1">
+                              {lang === "mr" ? "टीप / तपशील" : "Remarks / Details"}
+                            </label>
+                            <textarea
+                              rows={2}
+                              placeholder={lang === "mr" ? "टीप प्रविष्ट करा..." : "Enter remarks..."}
+                              value={lokRemark}
+                              onChange={(e) => setLokRemark(e.target.value)}
+                              className="w-full p-3 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 resize-none"
+                            />
+                          </div>
+                          <button
+                            onClick={handleSaveLoksahabhag}
+                            disabled={saving}
+                            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2"
+                          >
+                            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                            {lang === "mr" ? "Save (जतन करा)" : "Save Record"}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Right Column: Recent Entries Table */}
+                      <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <h3 className="font-bold text-base text-slate-800">
+                          {lang === "mr" ? "अलीकडील नोंदी" : "Recent Entries"}
+                        </h3>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left text-xs border-collapse">
+                            <thead>
+                              <tr className="border-b border-slate-200 bg-slate-50 text-slate-700 font-bold">
+                                <th className="p-2.5">{lang === "mr" ? "दिनांक" : "Date"}</th>
+                                <th className="p-2.5">{lang === "mr" ? "साहित्य" : "Material"}</th>
+                                <th className="p-2.5">{lang === "mr" ? "प्रमाण" : "Quantity"}</th>
+                                <th className="p-2.5">{lang === "mr" ? "दाताचे नाव" : "Donor"}</th>
+                                <th className="p-2.5">{lang === "mr" ? "टीप" : "Remark"}</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {lokRecords.length === 0 ? (
+                                <tr>
+                                  <td colSpan={5} className="p-6 text-center text-slate-400 font-medium">
+                                    {lang === "mr" ? "कोणतीही लोकसहभाग नोंद उपलब्ध नाही." : "No public contribution records found."}
+                                  </td>
+                                </tr>
+                              ) : (
+                                lokRecords.map((r) => (
+                                  <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50/80">
+                                    <td className="p-2.5 font-medium">{r.date}</td>
+                                    <td className="p-2.5 font-bold text-slate-800">{r.item}</td>
+                                    <td className="p-2.5 font-bold text-emerald-600">+{r.qty} kg</td>
+                                    <td className="p-2.5 text-slate-700 font-medium">{r.donor || "-"}</td>
+                                    <td className="p-2.5 text-slate-500">{r.remark || "-"}</td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* DAMAGED STOCK TAB */}
+                {activeTab === "damaged-stock" && (
+                  <div className="space-y-6">
+                    <h2 className="text-xl font-bold text-slate-800 border-b pb-3">
+                      {lang === "mr" ? "खराब साठा नोंद" : "Damaged Stock Register"}
+                    </h2>
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                      {/* Left Column: Form Card */}
+                      <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <h3 className="font-bold text-base text-slate-800">
+                          {lang === "mr" ? "खराब साठा नोंदवा" : "Report Damaged Stock"}
+                        </h3>
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-xs font-bold text-slate-600 block mb-1">
+                              {lang === "mr" ? "साहित्य *" : "Material / Item *"}
+                            </label>
+                            <select
+                              value={damagedItem}
+                              onChange={(e) => setDamagedItem(e.target.value)}
+                              className="w-full h-10 px-3 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500"
+                            >
+                              <option value="">{lang === "mr" ? "साहित्य निवडा" : "Select Material"}</option>
+                              <option value="तांदूळ (kg)">तांदूळ (kg) - Rice</option>
+                              <option value="मूगडाळ (kg)">मूगडाळ (kg) - Moong Dal</option>
+                              <option value="तूरडाळ (kg)">तूरडाळ (kg) - Tur Dal</option>
+                              <option value="मसूरडाळ (kg)">मसूरडाळ (kg) - Masoor Dal</option>
+                              <option value="मटकी (kg)">मटकी (kg) - Moth Beans</option>
+                              <option value="अख्खा मूग (kg)">अख्खा मूग (kg) - Whole Moong</option>
+                              <option value="चवळी (kg)">चवळी (kg) - Cowpea</option>
+                              <option value="हरभरा (kg)">हरभरा (kg) - Chana</option>
+                              <option value="वाटाणा (kg)">वाटाणा (kg) - Peas</option>
+                              <option value="सोयाबीन वडी (kg)">सोयाबीन वडी (kg) - Soyabean Chunks</option>
+                              <option value="जिरे (kg)">जिरे (kg) - Cumin</option>
+                              <option value="मोहरी (kg)">मोहरी (kg) - Mustard</option>
+                              <option value="हळद (kg)">हळद (kg) - Turmeric</option>
+                              <option value="तिखट मसाला (kg)">तिखट मसाला (kg) - Chili Masala</option>
+                              <option value="मीठ (kg)">मीठ (kg) - Salt</option>
+                              <option value="गरम मसाला (kg)">गरम मसाला (kg) - Garam Masala</option>
+                              <option value="तेल (kg)">तेल (kg) - Cooking Oil</option>
+                              <option value="गूळ / साखर (kg)">गूळ / साखर (kg) - Sugar / Jaggery</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-xs font-bold text-slate-600 block mb-1">
+                              {lang === "mr" ? "प्रमाण (kg) *" : "Quantity (kg) *"}
+                            </label>
+                            <input
+                              type="number"
+                              step="0.001"
+                              placeholder="प्रमाण (kg)"
+                              value={damagedQty}
+                              onChange={(e) => setDamagedQty(e.target.value)}
+                              className="w-full h-10 px-3 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-bold text-slate-600 block mb-1">
+                              {lang === "mr" ? "दिनांक *" : "Date *"}
+                            </label>
+                            <input
+                              type="date"
+                              value={damagedDate}
+                              onChange={(e) => setDamagedDate(e.target.value)}
+                              className="w-full h-10 px-3 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-bold text-slate-600 block mb-1">
+                              {lang === "mr" ? "कारण" : "Reason / Remarks"}
+                            </label>
+                            <textarea
+                              rows={3}
+                              placeholder={lang === "mr" ? "कारण प्रविष्ट करा..." : "Enter reason..."}
+                              value={damagedReason}
+                              onChange={(e) => setDamagedReason(e.target.value)}
+                              className="w-full p-3 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 resize-none"
+                            />
+                          </div>
+                          <button
+                            onClick={handleSaveDamagedStock}
+                            disabled={saving}
+                            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2"
+                          >
+                            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                            {lang === "mr" ? "Save (जतन करा)" : "Save Record"}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Right Column: Recent Entries Table */}
+                      <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <h3 className="font-bold text-base text-slate-800">
+                          {lang === "mr" ? "अलीकडील नोंदी" : "Recent Entries"}
+                        </h3>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left text-xs border-collapse">
+                            <thead>
+                              <tr className="border-b border-slate-200 bg-slate-50 text-slate-700 font-bold">
+                                <th className="p-2.5">{lang === "mr" ? "दिनांक" : "Date"}</th>
+                                <th className="p-2.5">{lang === "mr" ? "साहित्य" : "Material"}</th>
+                                <th className="p-2.5">{lang === "mr" ? "प्रमाण" : "Quantity"}</th>
+                                <th className="p-2.5">{lang === "mr" ? "कारण" : "Reason"}</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {damagedRecords.length === 0 ? (
+                                <tr>
+                                  <td colSpan={4} className="p-6 text-center text-slate-400 font-medium">
+                                    {lang === "mr" ? "कोणतीही खराब साठा नोंद उपलब्ध नाही." : "No damaged stock records found."}
+                                  </td>
+                                </tr>
+                              ) : (
+                                damagedRecords.map((r) => (
+                                  <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50/80">
+                                    <td className="p-2.5 font-medium">{r.date}</td>
+                                    <td className="p-2.5 font-bold text-slate-800">{r.item}</td>
+                                    <td className="p-2.5 font-bold text-rose-600">{r.qty} kg</td>
+                                    <td className="p-2.5 text-slate-600">{r.reason || "-"}</td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* 1. QUANTITY TAB */}
                 {activeTab === "quantity" && (
                   <div className="bg-white p-12 border border-slate-300 w-full min-h-[800px] flex flex-col items-center">
