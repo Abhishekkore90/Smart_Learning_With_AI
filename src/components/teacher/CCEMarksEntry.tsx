@@ -103,7 +103,7 @@ export function CCEMarksEntry({ selectedClass, academicYear, onBack }: {
   const [saving, setSaving] = useState(false);
   const [activeSemester, setActiveSemester] = useState<Semester>("sem1");
   const [activeView, setActiveView] = useState<ViewTab>("student");
-  const [selectedExamKey, setSelectedExamKey] = useState(EXAMS_SEM1[0].key);
+  const [selectedExamKey, setSelectedExamKey] = useState<string>("sem1");
   const [allMarks, setAllMarks] = useState<Record<string, Record<string, SubjectMarks>>>({});
   const [weightages, setWeightages] = useState<any>(null);
 
@@ -111,8 +111,13 @@ export function CCEMarksEntry({ selectedClass, academicYear, onBack }: {
   const [subjectIndex, setSubjectIndex] = useState(0);
   const [editingSubject, setEditingSubject] = useState<string | null>(null);
 
-  const currentExams = activeSemester === "sem1" ? EXAMS_SEM1 : EXAMS_SEM2;
+  useEffect(() => {
+    setSelectedExamKey(activeSemester);
+    setEditingStudent(null);
+    setEditingSubject(null);
+  }, [activeSemester]);
 
+  // Instant real-time listener for students
   useEffect(() => {
     const q = query(collection(db, "users"), where("role", "==", "student"), where("class", "==", selectedClass));
     const unsub = onSnapshot(q, (snap) => {
@@ -122,61 +127,37 @@ export function CCEMarksEntry({ selectedClass, academicYear, onBack }: {
     return () => unsub();
   }, [selectedClass]);
 
+  // Instant real-time listener for subjects and marks
   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const settingsSnap = await getDoc(doc(db, "cce_settings", `${selectedClass}_${academicYear}`));
-        if (settingsSnap.exists() && settingsSnap.data().subjects) setSubjects(settingsSnap.data().subjects);
-        const marksSnap = await getDoc(doc(db, "cce_marks_v2", `${selectedClass}_${academicYear}_${selectedExamKey}`));
-        setAllMarks(marksSnap.exists() ? marksSnap.data().records || {} : {});
-      } catch { /* ignore */ }
+    setLoading(true);
+    // Subjects
+    const unsubSettings = onSnapshot(doc(db, "cce_settings", `${selectedClass}_${academicYear}`), (snap) => {
+      if (snap.exists() && snap.data().subjects) {
+        setSubjects(snap.data().subjects);
+      }
+    });
+
+    // Marks
+    const unsubMarks = onSnapshot(doc(db, "cce_marks_v2", `${selectedClass}_${academicYear}_${selectedExamKey}`), (snap) => {
+      setAllMarks(snap.exists() ? snap.data().records || {} : {});
       setLoading(false);
+    });
+
+    return () => {
+      unsubSettings();
+      unsubMarks();
     };
-    load();
   }, [selectedClass, academicYear, selectedExamKey]);
 
+  // Instant real-time listener for weightages
   useEffect(() => {
-    const loadWeightages = async () => {
-      try {
-        const snap = await getDoc(doc(db, "cce_weightage_v2", `${selectedClass}_${academicYear}`));
-        if (snap.exists() && snap.data().data) {
-          setWeightages(snap.data().data);
-        } else {
-          // Fallback to old format
-          const oldSnap = await getDoc(doc(db, "cce_weightage", `${selectedClass}_${academicYear}`));
-          if (oldSnap.exists() && oldSnap.data().rows) {
-            const oldRows = oldSnap.data().rows;
-            const defaultSubjects: any = {};
-            oldRows.forEach((row: any) => {
-               const key = getSubjectKey(row.subject);
-               defaultSubjects[key] = {
-                 tondiKaam: key === "marathi" ? (row.oral || "") : "",
-                 upakramKriti: key === "marathi" ? (row.activity || "") : "",
-                 chaachaniLekhi: key === "marathi" ? (row.test || "") : "",
-               };
-            });
-            setWeightages({
-              semester1: [{ id: "item_1", name: "Default", studentIds: [], subjects: defaultSubjects }],
-              semester2: []
-            });
-          } else {
-            setWeightages(null);
-          }
-        }
-      } catch (e) {
-        console.error("Error loading weightages:", e);
+    const unsubWeightage = onSnapshot(doc(db, "cce_weightage_v2", `${selectedClass}_${academicYear}`), (snap) => {
+      if (snap.exists() && (snap.data().data || snap.data().semester1)) {
+        setWeightages(snap.data().data || snap.data());
       }
-    };
-    loadWeightages();
+    });
+    return () => unsubWeightage();
   }, [selectedClass, academicYear]);
-
-  useEffect(() => {
-    const exams = activeSemester === "sem1" ? EXAMS_SEM1 : EXAMS_SEM2;
-    setSelectedExamKey(exams[0].key);
-    setEditingStudent(null);
-    setEditingSubject(null);
-  }, [activeSemester]);
 
   const getSubjectMarks = (studentId: string, subjectName: string): SubjectMarks => {
     const record = allMarks[studentId]?.[subjectName] || {};
@@ -287,6 +268,15 @@ export function CCEMarksEntry({ selectedClass, academicYear, onBack }: {
   const saveMarks = async () => {
     setSaving(true);
     try {
+      // Save directly to Bunny Storage CDN to stay 100% within free Firebase limits
+      try {
+        const { saveJsonToBunny } = await import("@/lib/bunnyStorage");
+        await saveJsonToBunny(
+          `cce_results/${selectedClass}_${academicYear}_marks_${selectedExamKey}.json`,
+          allMarks
+        );
+      } catch (e) {}
+
       await setDoc(
         doc(db, "cce_marks_v2", `${selectedClass}_${academicYear}_${selectedExamKey}`),
         { class: selectedClass, academicYear, exam: selectedExamKey, records: allMarks, updatedAt: new Date().toISOString() },
@@ -540,22 +530,7 @@ export function CCEMarksEntry({ selectedClass, academicYear, onBack }: {
         ))}
       </div>
 
-      {/* Exam pills */}
-      <div className="px-4 py-3 overflow-x-auto flex-shrink-0" style={{ borderBottom: `1px solid ${T.border}` }}>
-        <div className="flex items-center gap-2">
-          {currentExams.map((e) => (
-            <button key={e.key} onClick={() => setSelectedExamKey(e.key)}
-              className="px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer border"
-              style={{
-                background: e.key === selectedExamKey ? T.accent : T.card,
-                color: e.key === selectedExamKey ? "#ffffff" : T.textLo,
-                borderColor: e.key === selectedExamKey ? T.accent : T.border,
-              }}>
-              {e.label}
-            </button>
-          ))}
-        </div>
-      </div>
+
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-4 py-3">

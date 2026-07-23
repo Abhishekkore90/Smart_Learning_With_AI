@@ -205,36 +205,64 @@ function TeacherResultsPage() {
   const [resultsList, setResultsList] = useState<any[]>([]);
   const [cceInfo, setCceInfo] = useState<any>(null);
 
-  // Load cce_settings for the current class+year
   useEffect(() => {
+    if (cceInfo?.medium) {
+      const isSemi = cceInfo.medium.toLowerCase().includes("semi");
+      const m = isSemi ? "semi" : "marathi";
+      setSelectedMedium(m);
+      localStorage.setItem("cce_selected_medium", m);
+    }
+  }, [cceInfo]);
+
+  // Load cce_settings for the current class+year with instant cache and parallel fallback
+  useEffect(() => {
+    // 1. Instant Cache Hydration
+    try {
+      const cached = localStorage.getItem(`cce_info_${selectedClass}_${academicYear}`) || localStorage.getItem("cce_info_cache");
+      if (cached) {
+        setCceInfo(JSON.parse(cached));
+      }
+    } catch (e) {}
+
     const loadCceInfo = async () => {
       try {
         const { getDoc, doc } = await import("firebase/firestore");
         
-        // 1. Try selected class and year
+        // 2. Try selected class and year first
         let docRef = doc(db, "cce_settings", `${selectedClass}_${academicYear}`);
         let snap = await getDoc(docRef);
         if (snap.exists()) {
-          setCceInfo(snap.data());
+          const data = snap.data();
+          setCceInfo(data);
+          localStorage.setItem(`cce_info_${selectedClass}_${academicYear}`, JSON.stringify(data));
+          localStorage.setItem("cce_info_cache", JSON.stringify(data));
           return;
         }
 
-        // 2. Loop through other common classes and academic years to find ANY saved settings
+        // 3. Parallel fetch instead of 32 sequential queries in nested loops
         const classes = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"];
         const years = ["2025-2026", "2024-25", "2025-26", "2026-27"];
+        const docPromises: Promise<any>[] = [];
+
         for (const cls of classes) {
           for (const yr of years) {
             if (cls === selectedClass && yr === academicYear) continue;
-            docRef = doc(db, "cce_settings", `${cls}_${yr}`);
-            snap = await getDoc(docRef);
-            if (snap.exists()) {
-              setCceInfo(snap.data());
-              return;
-            }
+            docPromises.push(
+              getDoc(doc(db, "cce_settings", `${cls}_${yr}`)).then(s => (s.exists() ? s.data() : null))
+            );
           }
         }
 
-        // 3. Fallback to RTDB schoolData if we have a UDISE code in localStorage
+        const results = await Promise.all(docPromises);
+        const found = results.find(data => data !== null);
+        if (found) {
+          setCceInfo(found);
+          localStorage.setItem(`cce_info_${selectedClass}_${academicYear}`, JSON.stringify(found));
+          localStorage.setItem("cce_info_cache", JSON.stringify(found));
+          return;
+        }
+
+        // 4. Fallback to RTDB schoolData
         const udise = localStorage.getItem("udiseNumber");
         if (udise) {
           const dbUrl = 
@@ -246,23 +274,23 @@ function TeacherResultsPage() {
             if (res.ok) {
               const data = await res.json();
               if (data) {
-                setCceInfo({
+                const info = {
                   schoolName: data.schoolName || "",
                   headmasterName: data.headmasterName || data.hmName || "",
                   principalName: data.headmasterName || data.hmName || "",
                   schoolLogo: data.schoolLogo || "",
                   udiseCode: udise,
-                });
+                };
+                setCceInfo(info);
+                localStorage.setItem(`cce_info_${selectedClass}_${academicYear}`, JSON.stringify(info));
+                localStorage.setItem("cce_info_cache", JSON.stringify(info));
                 return;
               }
             }
           }
         }
-
-        setCceInfo(null);
       } catch (e) {
-        console.error("Error loading CCE settings:", e);
-        setCceInfo(null);
+        console.error("Error loading cce info:", e);
       }
     };
     loadCceInfo();
@@ -469,21 +497,12 @@ function TeacherResultsPage() {
                     </select>
                   </div>
 
-                  {/* Medium Selector (मराठी / सेमी) */}
+                  {/* Medium Display Badge (Read-only from Settings) */}
                   <div className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-500/20 rounded-2xl px-4 py-2 ring-2 ring-purple-100">
                     <span className="text-xs font-medium text-purple-100 uppercase tracking-wider">माध्यम:</span>
-                    <select 
-                      className="bg-transparent text-white text-xs font-extrabold outline-none cursor-pointer border-none"
-                      value={selectedMedium}
-                      onChange={(e) => setSelectedMedium(e.target.value)}
-                    >
-                      <option value="marathi" className="text-slate-800 font-bold">
-                        मराठी माध्यम (Marathi)
-                      </option>
-                      <option value="semi" className="text-slate-800 font-bold">
-                        सेमी इंग्रजी माध्यम (Semi-English)
-                      </option>
-                    </select>
+                    <span className="text-xs font-extrabold">
+                      {selectedMedium === "semi" ? "सेमी इंग्रजी माध्यम (Semi-English)" : "मराठी माध्यम (Marathi)"}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -491,212 +510,223 @@ function TeacherResultsPage() {
               {/* Dashboard Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 relative z-10">
                 
-                {/* विद्यार्थी (Count) */}
-                <button
-                  onClick={() => navigate({ to: "/teacher/result", search: { tab: "student-progress" } as any })}
-                  className="bg-white hover:bg-gradient-to-br hover:from-blue-50/50 hover:to-indigo-50/30 border border-slate-200/90 hover:border-blue-400 rounded-3xl p-5 flex items-center justify-between transition-all duration-300 shadow-sm hover:shadow-xl hover:-translate-y-1 group text-left relative overflow-hidden"
-                >
-                  <div className="flex items-center gap-3.5">
-                    <div className="size-11 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/25 group-hover:scale-110 transition-transform flex-shrink-0">
-                      <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-extrabold text-slate-800 group-hover:text-blue-600 transition-colors">विद्यार्थी ({studentsCount})</h3>
-                      <p className="text-[11px] text-slate-500 font-medium leading-tight mt-0.5">विद्यार्थ्यांची यादी व प्रगती</p>
-                    </div>
-                  </div>
-                  <div className="size-7 rounded-xl bg-slate-100 group-hover:bg-blue-600 text-slate-400 group-hover:text-white flex items-center justify-center transition-all flex-shrink-0">
-                    <span className="font-bold text-xs">➔</span>
-                  </div>
-                </button>
-
-                {/* उपस्थिती */}
-                <button
-                  onClick={() => navigate({ to: "/teacher/result", search: { tab: "daily-register" } as any })}
-                  className="bg-white hover:bg-gradient-to-br hover:from-teal-50/50 hover:to-emerald-50/30 border border-slate-200/90 hover:border-teal-400 rounded-3xl p-5 flex items-center justify-between transition-all duration-300 shadow-sm hover:shadow-xl hover:-translate-y-1 group text-left relative overflow-hidden"
-                >
-                  <div className="flex items-center gap-3.5">
-                    <div className="size-11 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 text-white flex items-center justify-center shadow-lg shadow-teal-500/25 group-hover:scale-110 transition-transform flex-shrink-0">
-                      <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-extrabold text-slate-800 group-hover:text-teal-600 transition-colors">उपस्थिती</h3>
-                      <p className="text-[11px] text-slate-500 font-medium leading-tight mt-0.5">दैनंदिन व मासिक हजेरी</p>
-                    </div>
-                  </div>
-                  <div className="size-7 rounded-xl bg-slate-100 group-hover:bg-teal-600 text-slate-400 group-hover:text-white flex items-center justify-center transition-all flex-shrink-0">
-                    <span className="font-bold text-xs">➔</span>
-                  </div>
-                </button>
-
-                {/* विद्यार्थ्यांची माहिती */}
-                <button
-                  onClick={() => navigate({ to: "/teacher/result", search: { tab: "view-report" } as any })}
-                  className="bg-white hover:bg-gradient-to-br hover:from-purple-50/50 hover:to-violet-50/30 border border-slate-200/90 hover:border-purple-400 rounded-3xl p-5 flex items-center justify-between transition-all duration-300 shadow-sm hover:shadow-xl hover:-translate-y-1 group text-left relative overflow-hidden"
-                >
-                  <div className="flex items-center gap-3.5">
-                    <div className="size-11 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 text-white flex items-center justify-center shadow-lg shadow-purple-500/25 group-hover:scale-110 transition-transform flex-shrink-0">
-                      <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 0 1 4 0M9 17h.01M9 13h.01M12 17h.01M12 13h.01M15 17h.01M15 13h.01" /></svg>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-extrabold text-slate-800 group-hover:text-purple-600 transition-colors">विद्यार्थ्यांची माहिती</h3>
-                      <p className="text-[11px] text-slate-500 font-medium leading-tight mt-0.5">प्रोफाइल व वैयक्तिक तपशील</p>
-                    </div>
-                  </div>
-                  <div className="size-7 rounded-xl bg-slate-100 group-hover:bg-purple-600 text-slate-400 group-hover:text-white flex items-center justify-center transition-all flex-shrink-0">
-                    <span className="font-bold text-xs">➔</span>
-                  </div>
-                </button>
-
-                {/* भारांश निश्चिती */}
-                <button
-                  onClick={() => navigate({ to: "/teacher/result", search: { tab: "grade-wise" } as any })}
-                  className="bg-white hover:bg-gradient-to-br hover:from-amber-50/50 hover:to-orange-50/30 border border-slate-200/90 hover:border-amber-400 rounded-3xl p-5 flex items-center justify-between transition-all duration-300 shadow-sm hover:shadow-xl hover:-translate-y-1 group text-left relative overflow-hidden"
-                >
-                  <div className="flex items-center gap-3.5">
-                    <div className="size-11 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white flex items-center justify-center shadow-lg shadow-amber-500/25 group-hover:scale-110 transition-transform flex-shrink-0">
-                      <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-extrabold text-slate-800 group-hover:text-amber-600 transition-colors">भारांश निश्चिती</h3>
-                      <p className="text-[11px] text-slate-500 font-medium leading-tight mt-0.5">परीक्षेचे भारांश व नियम</p>
-                    </div>
-                  </div>
-                  <div className="size-7 rounded-xl bg-slate-100 group-hover:bg-amber-600 text-slate-400 group-hover:text-white flex items-center justify-center transition-all flex-shrink-0">
-                    <span className="font-bold text-xs">➔</span>
-                  </div>
-                </button>
-
-                {/* गुण नोंदणी */}
-                <button
-                  onClick={() => navigate({ to: "/teacher/result", search: { tab: "marks-entry" } as any })}
-                  className="bg-white hover:bg-gradient-to-br hover:from-indigo-50/50 hover:to-blue-50/30 border border-slate-200/90 hover:border-indigo-400 rounded-3xl p-5 flex items-center justify-between transition-all duration-300 shadow-sm hover:shadow-xl hover:-translate-y-1 group text-left relative overflow-hidden"
-                >
-                  <div className="flex items-center gap-3.5">
-                    <div className="size-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 text-white flex items-center justify-center shadow-lg shadow-indigo-500/25 group-hover:scale-110 transition-transform flex-shrink-0">
-                      <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-extrabold text-slate-800 group-hover:text-indigo-600 transition-colors">गुण नोंदणी</h3>
-                      <p className="text-[11px] text-slate-500 font-medium leading-tight mt-0.5">सत्र १ व सत्र २ गुण प्रविष्ट करा</p>
-                    </div>
-                  </div>
-                  <div className="size-7 rounded-xl bg-slate-100 group-hover:bg-indigo-600 text-slate-400 group-hover:text-white flex items-center justify-center transition-all flex-shrink-0">
-                    <span className="font-bold text-xs">➔</span>
-                  </div>
-                </button>
-
-                {/* वर्णनात्मक नोंदी */}
-                <button
-                  onClick={() => navigate({ to: "/teacher/result", search: { tab: "progress-sheets" } as any })}
-                  className="bg-white hover:bg-gradient-to-br hover:from-emerald-50/50 hover:to-green-50/30 border border-slate-200/90 hover:border-emerald-400 rounded-3xl p-5 flex items-center justify-between transition-all duration-300 shadow-sm hover:shadow-xl hover:-translate-y-1 group text-left relative overflow-hidden"
-                >
-                  <div className="flex items-center gap-3.5">
-                    <div className="size-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 text-white flex items-center justify-center shadow-lg shadow-emerald-500/25 group-hover:scale-110 transition-transform flex-shrink-0">
-                      <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-extrabold text-slate-800 group-hover:text-emerald-600 transition-colors">वर्णनात्मक नोंदी</h3>
-                      <p className="text-[11px] text-slate-500 font-medium leading-tight mt-0.5">विषयनिहाय विशेष प्रगती नोंदी</p>
-                    </div>
-                  </div>
-                  <div className="size-7 rounded-xl bg-slate-100 group-hover:bg-emerald-600 text-slate-400 group-hover:text-white flex items-center justify-center transition-all flex-shrink-0">
-                    <span className="font-bold text-xs">➔</span>
-                  </div>
-                </button>
-
-                {/* अध्ययन निष्पत्तीनिहाय प्रगती */}
-                <button
-                  onClick={() => navigate({ to: "/teacher/result", search: { tab: "subject-wise" } as any })}
-                  className="bg-white hover:bg-gradient-to-br hover:from-sky-50/50 hover:to-cyan-50/30 border border-slate-200/90 hover:border-sky-400 rounded-3xl p-5 flex items-center justify-between transition-all duration-300 shadow-sm hover:shadow-xl hover:-translate-y-1 group text-left relative overflow-hidden"
-                >
-                  <div className="flex items-center gap-3.5">
-                    <div className="size-11 rounded-2xl bg-gradient-to-br from-sky-500 to-cyan-600 text-white flex items-center justify-center shadow-lg shadow-sky-500/25 group-hover:scale-110 transition-transform flex-shrink-0">
-                      <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-extrabold text-slate-800 group-hover:text-sky-600 transition-colors">अध्ययन निष्पत्ती प्रगती</h3>
-                      <p className="text-[11px] text-slate-500 font-medium leading-tight mt-0.5">कौशल्य व गुण निष्पत्ती चार्ट</p>
-                    </div>
-                  </div>
-                  <div className="size-7 rounded-xl bg-slate-100 group-hover:bg-sky-600 text-slate-400 group-hover:text-white flex items-center justify-center transition-all flex-shrink-0">
-                    <span className="font-bold text-xs">➔</span>
-                  </div>
-                </button>
-
-                {/* विषय निश्चिती (Subject Config) */}
-                <button
-                  onClick={() => navigate({ to: "/teacher/result", search: { tab: "subject-config" } as any })}
-                  className="bg-white hover:bg-gradient-to-br hover:from-fuchsia-50/50 hover:to-pink-50/30 border border-slate-200/90 hover:border-fuchsia-400 rounded-3xl p-5 flex items-center justify-between transition-all duration-300 shadow-sm hover:shadow-xl hover:-translate-y-1 group text-left relative overflow-hidden"
-                >
-                  <div className="flex items-center gap-3.5">
-                    <div className="size-11 rounded-2xl bg-gradient-to-br from-fuchsia-500 to-pink-600 text-white flex items-center justify-center shadow-lg shadow-fuchsia-500/25 group-hover:scale-110 transition-transform flex-shrink-0">
-                      <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-extrabold text-slate-800 group-hover:text-fuchsia-600 transition-colors">विषय निश्चिती</h3>
-                      <p className="text-[11px] text-slate-500 font-medium leading-tight mt-0.5">इयत्तानिहाय विषय रचना सेट करा</p>
-                    </div>
-                  </div>
-                  <div className="size-7 rounded-xl bg-slate-100 group-hover:bg-fuchsia-600 text-slate-400 group-hover:text-white flex items-center justify-center transition-all flex-shrink-0">
-                    <span className="font-bold text-xs">➔</span>
-                  </div>
-                </button>
-
-                {/* सेटिंग्स */}
+                {/* 1. शाळेची माहिती */}
                 <button
                   onClick={() => navigate({ to: "/teacher/result", search: { tab: "settings" } as any })}
-                  className="bg-white hover:bg-gradient-to-br hover:from-slate-100 hover:to-zinc-100 border border-slate-200/90 hover:border-slate-400 rounded-3xl p-5 flex items-center justify-between transition-all duration-300 shadow-sm hover:shadow-xl hover:-translate-y-1 group text-left relative overflow-hidden"
+                  className="bg-white/95 hover:bg-white border-2 border-slate-100 hover:border-slate-400/90 rounded-[2.2rem] p-4.5 flex items-center justify-between transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-slate-500/10 hover:-translate-y-1.5 active:scale-[0.98] group text-left relative overflow-hidden cursor-pointer"
                 >
-                  <div className="flex items-center gap-3.5">
-                    <div className="size-11 rounded-2xl bg-gradient-to-br from-slate-600 to-zinc-700 text-white flex items-center justify-center shadow-lg shadow-slate-500/25 group-hover:scale-110 transition-transform flex-shrink-0">
-                      <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                  <div className="absolute -top-10 -right-10 size-28 rounded-full bg-gradient-to-br from-slate-400/10 to-zinc-500/5 opacity-0 group-hover:opacity-100 group-hover:scale-125 transition-all duration-500 pointer-events-none" />
+                  <div className="flex items-center gap-3.5 relative z-10">
+                    <div className="size-12 rounded-2xl bg-gradient-to-br from-slate-700 to-zinc-800 text-white flex items-center justify-center shadow-md shadow-slate-600/30 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 flex-shrink-0">
+                      <svg className="size-5.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                     </div>
                     <div>
-                      <h3 className="text-sm font-extrabold text-slate-800 group-hover:text-slate-900 transition-colors">सेटिंग्ज</h3>
-                      <p className="text-[11px] text-slate-500 font-medium leading-tight mt-0.5">मूल्यमापन व शाळा सेटिंग्ज</p>
+                      <h3 className="text-[14.5px] font-black text-slate-800 group-hover:text-slate-900 transition-colors tracking-tight">शाळेची माहिती</h3>
+                      <p className="text-[11.5px] text-slate-500 font-medium leading-snug mt-0.5">मूल्यमापन व शाळा सेटिंग्ज</p>
                     </div>
                   </div>
-                  <div className="size-7 rounded-xl bg-slate-100 group-hover:bg-slate-700 text-slate-400 group-hover:text-white flex items-center justify-center transition-all flex-shrink-0">
-                    <span className="font-bold text-xs">➔</span>
+                  <div className="size-8 rounded-xl bg-slate-100/90 group-hover:bg-slate-800 text-slate-400 group-hover:text-white flex items-center justify-center transition-all duration-300 flex-shrink-0 shadow-sm group-hover:shadow-md group-hover:translate-x-0.5 relative z-10">
+                    <span className="font-extrabold text-xs">➔</span>
                   </div>
                 </button>
 
-                {/* PDF निर्मिती */}
+                {/* 2. विद्यार्थी */}
+                <button
+                  onClick={() => navigate({ to: "/teacher/result", search: { tab: "student-progress" } as any })}
+                  className="bg-white/95 hover:bg-white border-2 border-slate-100 hover:border-blue-400/90 rounded-[2.2rem] p-4.5 flex items-center justify-between transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-blue-500/10 hover:-translate-y-1.5 active:scale-[0.98] group text-left relative overflow-hidden cursor-pointer"
+                >
+                  <div className="absolute -top-10 -right-10 size-28 rounded-full bg-gradient-to-br from-blue-500/10 to-indigo-500/5 opacity-0 group-hover:opacity-100 group-hover:scale-125 transition-all duration-500 pointer-events-none" />
+                  <div className="flex items-center gap-3.5 relative z-10">
+                    <div className="size-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-blue-500/35 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 flex-shrink-0">
+                      <svg className="size-5.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                    </div>
+                    <div>
+                      <h3 className="text-[14.5px] font-black text-slate-800 group-hover:text-blue-600 transition-colors tracking-tight">विद्यार्थी ({studentsCount})</h3>
+                      <p className="text-[11.5px] text-slate-500 font-medium leading-snug mt-0.5">विद्यार्थ्यांची यादी व प्रगती</p>
+                    </div>
+                  </div>
+                  <div className="size-8 rounded-xl bg-slate-100/90 group-hover:bg-blue-600 text-slate-400 group-hover:text-white flex items-center justify-center transition-all duration-300 flex-shrink-0 shadow-sm group-hover:shadow-md group-hover:translate-x-0.5 relative z-10">
+                    <span className="font-extrabold text-xs">➔</span>
+                  </div>
+                </button>
+
+                {/* 3. उपस्थिती */}
+                <button
+                  onClick={() => navigate({ to: "/teacher/result", search: { tab: "daily-register" } as any })}
+                  className="bg-white/95 hover:bg-white border-2 border-slate-100 hover:border-teal-400/90 rounded-[2.2rem] p-4.5 flex items-center justify-between transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-teal-500/10 hover:-translate-y-1.5 active:scale-[0.98] group text-left relative overflow-hidden cursor-pointer"
+                >
+                  <div className="absolute -top-10 -right-10 size-28 rounded-full bg-gradient-to-br from-teal-500/10 to-emerald-500/5 opacity-0 group-hover:opacity-100 group-hover:scale-125 transition-all duration-500 pointer-events-none" />
+                  <div className="flex items-center gap-3.5 relative z-10">
+                    <div className="size-12 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 text-white flex items-center justify-center shadow-md shadow-teal-500/35 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 flex-shrink-0">
+                      <svg className="size-5.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                    </div>
+                    <div>
+                      <h3 className="text-[14.5px] font-black text-slate-800 group-hover:text-teal-600 transition-colors tracking-tight">उपस्थिती</h3>
+                      <p className="text-[11.5px] text-slate-500 font-medium leading-snug mt-0.5">दैनंदिन व मासिक हजेरी</p>
+                    </div>
+                  </div>
+                  <div className="size-8 rounded-xl bg-slate-100/90 group-hover:bg-teal-600 text-slate-400 group-hover:text-white flex items-center justify-center transition-all duration-300 flex-shrink-0 shadow-sm group-hover:shadow-md group-hover:translate-x-0.5 relative z-10">
+                    <span className="font-extrabold text-xs">➔</span>
+                  </div>
+                </button>
+
+                {/* 4. विद्यार्थ्यांची माहिती */}
+                <button
+                  onClick={() => navigate({ to: "/teacher/result", search: { tab: "view-report" } as any })}
+                  className="bg-white/95 hover:bg-white border-2 border-slate-100 hover:border-purple-400/90 rounded-[2.2rem] p-4.5 flex items-center justify-between transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-purple-500/10 hover:-translate-y-1.5 active:scale-[0.98] group text-left relative overflow-hidden cursor-pointer"
+                >
+                  <div className="absolute -top-10 -right-10 size-28 rounded-full bg-gradient-to-br from-purple-500/10 to-violet-500/5 opacity-0 group-hover:opacity-100 group-hover:scale-125 transition-all duration-500 pointer-events-none" />
+                  <div className="flex items-center gap-3.5 relative z-10">
+                    <div className="size-12 rounded-2xl bg-gradient-to-br from-violet-600 to-purple-600 text-white flex items-center justify-center shadow-md shadow-purple-500/35 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 flex-shrink-0">
+                      <svg className="size-5.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 0 1 4 0M9 17h.01M9 13h.01M12 17h.01M12 13h.01M15 17h.01M15 13h.01" /></svg>
+                    </div>
+                    <div>
+                      <h3 className="text-[14.5px] font-black text-slate-800 group-hover:text-purple-600 transition-colors tracking-tight">विद्यार्थ्यांची माहिती</h3>
+                      <p className="text-[11.5px] text-slate-500 font-medium leading-snug mt-0.5">प्रोफाइल व वैयक्तिक तपशील</p>
+                    </div>
+                  </div>
+                  <div className="size-8 rounded-xl bg-slate-100/90 group-hover:bg-purple-600 text-slate-400 group-hover:text-white flex items-center justify-center transition-all duration-300 flex-shrink-0 shadow-sm group-hover:shadow-md group-hover:translate-x-0.5 relative z-10">
+                    <span className="font-extrabold text-xs">➔</span>
+                  </div>
+                </button>
+
+                {/* 5. भारांश निश्चिती */}
+                <button
+                  onClick={() => navigate({ to: "/teacher/result", search: { tab: "grade-wise" } as any })}
+                  className="bg-white/95 hover:bg-white border-2 border-slate-100 hover:border-amber-400/90 rounded-[2.2rem] p-4.5 flex items-center justify-between transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-amber-500/10 hover:-translate-y-1.5 active:scale-[0.98] group text-left relative overflow-hidden cursor-pointer"
+                >
+                  <div className="absolute -top-10 -right-10 size-28 rounded-full bg-gradient-to-br from-amber-500/10 to-orange-500/5 opacity-0 group-hover:opacity-100 group-hover:scale-125 transition-all duration-500 pointer-events-none" />
+                  <div className="flex items-center gap-3.5 relative z-10">
+                    <div className="size-12 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white flex items-center justify-center shadow-md shadow-amber-500/35 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 flex-shrink-0">
+                      <svg className="size-5.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                    </div>
+                    <div>
+                      <h3 className="text-[14.5px] font-black text-slate-800 group-hover:text-amber-600 transition-colors tracking-tight">भारांश निश्चिती</h3>
+                      <p className="text-[11.5px] text-slate-500 font-medium leading-snug mt-0.5">परीक्षेचे भारांश व नियम</p>
+                    </div>
+                  </div>
+                  <div className="size-8 rounded-xl bg-slate-100/90 group-hover:bg-amber-600 text-slate-400 group-hover:text-white flex items-center justify-center transition-all duration-300 flex-shrink-0 shadow-sm group-hover:shadow-md group-hover:translate-x-0.5 relative z-10">
+                    <span className="font-extrabold text-xs">➔</span>
+                  </div>
+                </button>
+
+                {/* 6. गुण नोंदणी */}
+                <button
+                  onClick={() => navigate({ to: "/teacher/result", search: { tab: "marks-entry" } as any })}
+                  className="bg-white/95 hover:bg-white border-2 border-slate-100 hover:border-indigo-400/90 rounded-[2.2rem] p-4.5 flex items-center justify-between transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-indigo-500/10 hover:-translate-y-1.5 active:scale-[0.98] group text-left relative overflow-hidden cursor-pointer"
+                >
+                  <div className="absolute -top-10 -right-10 size-28 rounded-full bg-gradient-to-br from-indigo-500/10 to-blue-500/5 opacity-0 group-hover:opacity-100 group-hover:scale-125 transition-all duration-500 pointer-events-none" />
+                  <div className="flex items-center gap-3.5 relative z-10">
+                    <div className="size-12 rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-600 text-white flex items-center justify-center shadow-md shadow-indigo-500/35 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 flex-shrink-0">
+                      <svg className="size-5.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                    </div>
+                    <div>
+                      <h3 className="text-[14.5px] font-black text-slate-800 group-hover:text-indigo-600 transition-colors tracking-tight">गुण नोंदणी</h3>
+                      <p className="text-[11.5px] text-slate-500 font-medium leading-snug mt-0.5">सत्र १ व सत्र २ गुण प्रविष्ट करा</p>
+                    </div>
+                  </div>
+                  <div className="size-8 rounded-xl bg-slate-100/90 group-hover:bg-indigo-600 text-slate-400 group-hover:text-white flex items-center justify-center transition-all duration-300 flex-shrink-0 shadow-sm group-hover:shadow-md group-hover:translate-x-0.5 relative z-10">
+                    <span className="font-extrabold text-xs">➔</span>
+                  </div>
+                </button>
+
+                {/* 7. वर्णनात्मक नोंदी */}
+                <button
+                  onClick={() => navigate({ to: "/teacher/result", search: { tab: "progress-sheets" } as any })}
+                  className="bg-white/95 hover:bg-white border-2 border-slate-100 hover:border-emerald-400/90 rounded-[2.2rem] p-4.5 flex items-center justify-between transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-emerald-500/10 hover:-translate-y-1.5 active:scale-[0.98] group text-left relative overflow-hidden cursor-pointer"
+                >
+                  <div className="absolute -top-10 -right-10 size-28 rounded-full bg-gradient-to-br from-emerald-500/10 to-green-500/5 opacity-0 group-hover:opacity-100 group-hover:scale-125 transition-all duration-500 pointer-events-none" />
+                  <div className="flex items-center gap-3.5 relative z-10">
+                    <div className="size-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-green-600 text-white flex items-center justify-center shadow-md shadow-emerald-500/35 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 flex-shrink-0">
+                      <svg className="size-5.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                    </div>
+                    <div>
+                      <h3 className="text-[14.5px] font-black text-slate-800 group-hover:text-emerald-600 transition-colors tracking-tight">वर्णनात्मक नोंदी</h3>
+                      <p className="text-[11.5px] text-slate-500 font-medium leading-snug mt-0.5">विषयनिहाय विशेष प्रगती नोंदी</p>
+                    </div>
+                  </div>
+                  <div className="size-8 rounded-xl bg-slate-100/90 group-hover:bg-emerald-600 text-slate-400 group-hover:text-white flex items-center justify-center transition-all duration-300 flex-shrink-0 shadow-sm group-hover:shadow-md group-hover:translate-x-0.5 relative z-10">
+                    <span className="font-extrabold text-xs">➔</span>
+                  </div>
+                </button>
+
+                {/* 8. अध्ययन निष्पत्ती प्रगती */}
+                <button
+                  onClick={() => navigate({ to: "/teacher/result", search: { tab: "subject-wise" } as any })}
+                  className="bg-white/95 hover:bg-white border-2 border-slate-100 hover:border-sky-400/90 rounded-[2.2rem] p-4.5 flex items-center justify-between transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-sky-500/10 hover:-translate-y-1.5 active:scale-[0.98] group text-left relative overflow-hidden cursor-pointer"
+                >
+                  <div className="absolute -top-10 -right-10 size-28 rounded-full bg-gradient-to-br from-sky-500/10 to-cyan-500/5 opacity-0 group-hover:opacity-100 group-hover:scale-125 transition-all duration-500 pointer-events-none" />
+                  <div className="flex items-center gap-3.5 relative z-10">
+                    <div className="size-12 rounded-2xl bg-gradient-to-br from-sky-500 to-cyan-600 text-white flex items-center justify-center shadow-md shadow-sky-500/35 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 flex-shrink-0">
+                      <svg className="size-5.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                    </div>
+                    <div>
+                      <h3 className="text-[14.5px] font-black text-slate-800 group-hover:text-sky-600 transition-colors tracking-tight">अध्ययन निष्पत्ती प्रगती</h3>
+                      <p className="text-[11.5px] text-slate-500 font-medium leading-snug mt-0.5">कौशल्य व गुण निष्पत्ती चार्ट</p>
+                    </div>
+                  </div>
+                  <div className="size-8 rounded-xl bg-slate-100/90 group-hover:bg-sky-600 text-slate-400 group-hover:text-white flex items-center justify-center transition-all duration-300 flex-shrink-0 shadow-sm group-hover:shadow-md group-hover:translate-x-0.5 relative z-10">
+                    <span className="font-extrabold text-xs">➔</span>
+                  </div>
+                </button>
+
+                {/* 9. विषय निश्चिती */}
+                <button
+                  onClick={() => navigate({ to: "/teacher/result", search: { tab: "subject-config" } as any })}
+                  className="bg-white/95 hover:bg-white border-2 border-slate-100 hover:border-fuchsia-400/90 rounded-[2.2rem] p-4.5 flex items-center justify-between transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-fuchsia-500/10 hover:-translate-y-1.5 active:scale-[0.98] group text-left relative overflow-hidden cursor-pointer"
+                >
+                  <div className="absolute -top-10 -right-10 size-28 rounded-full bg-gradient-to-br from-fuchsia-500/10 to-pink-500/5 opacity-0 group-hover:opacity-100 group-hover:scale-125 transition-all duration-500 pointer-events-none" />
+                  <div className="flex items-center gap-3.5 relative z-10">
+                    <div className="size-12 rounded-2xl bg-gradient-to-br from-fuchsia-500 to-pink-600 text-white flex items-center justify-center shadow-md shadow-fuchsia-500/35 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 flex-shrink-0">
+                      <svg className="size-5.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                    </div>
+                    <div>
+                      <h3 className="text-[14.5px] font-black text-slate-800 group-hover:text-fuchsia-600 transition-colors tracking-tight">विषय निश्चिती</h3>
+                      <p className="text-[11.5px] text-slate-500 font-medium leading-snug mt-0.5">इयत्तानिहाय विषय रचना सेट करा</p>
+                    </div>
+                  </div>
+                  <div className="size-8 rounded-xl bg-slate-100/90 group-hover:bg-fuchsia-600 text-slate-400 group-hover:text-white flex items-center justify-center transition-all duration-300 flex-shrink-0 shadow-sm group-hover:shadow-md group-hover:translate-x-0.5 relative z-10">
+                    <span className="font-extrabold text-xs">➔</span>
+                  </div>
+                </button>
+
+                {/* 10. PDF निर्मिती */}
                 <button
                   onClick={() => navigate({ to: "/teacher/result", search: { tab: "pdf-creation" } as any })}
-                  className="bg-white hover:bg-gradient-to-br hover:from-rose-50/50 hover:to-red-50/30 border border-slate-200/90 hover:border-rose-400 rounded-3xl p-5 flex items-center justify-between transition-all duration-300 shadow-sm hover:shadow-xl hover:-translate-y-1 group text-left relative overflow-hidden"
+                  className="bg-white/95 hover:bg-white border-2 border-slate-100 hover:border-rose-400/90 rounded-[2.2rem] p-4.5 flex items-center justify-between transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-rose-500/10 hover:-translate-y-1.5 active:scale-[0.98] group text-left relative overflow-hidden cursor-pointer"
                 >
-                  <div className="flex items-center gap-3.5">
-                    <div className="size-11 rounded-2xl bg-gradient-to-br from-rose-500 to-red-600 text-white flex items-center justify-center shadow-lg shadow-rose-500/25 group-hover:scale-110 transition-transform flex-shrink-0">
-                      <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                  <div className="absolute -top-10 -right-10 size-28 rounded-full bg-gradient-to-br from-rose-500/10 to-red-500/5 opacity-0 group-hover:opacity-100 group-hover:scale-125 transition-all duration-500 pointer-events-none" />
+                  <div className="flex items-center gap-3.5 relative z-10">
+                    <div className="size-12 rounded-2xl bg-gradient-to-br from-rose-500 to-red-600 text-white flex items-center justify-center shadow-md shadow-rose-500/35 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 flex-shrink-0">
+                      <svg className="size-5.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                     </div>
                     <div>
-                      <h3 className="text-sm font-extrabold text-slate-800 group-hover:text-rose-600 transition-colors">PDF निर्मिती</h3>
-                      <p className="text-[11px] text-slate-500 font-medium leading-tight mt-0.5">प्रगतीपत्रक व गॅझेट PDF</p>
+                      <h3 className="text-[14.5px] font-black text-slate-800 group-hover:text-rose-600 transition-colors tracking-tight">PDF निर्मिती</h3>
+                      <p className="text-[11.5px] text-slate-500 font-medium leading-snug mt-0.5">प्रगतीपत्रक व गॅझेट PDF</p>
                     </div>
                   </div>
-                  <div className="size-7 rounded-xl bg-slate-100 group-hover:bg-rose-600 text-slate-400 group-hover:text-white flex items-center justify-center transition-all flex-shrink-0">
-                    <span className="font-bold text-xs">➔</span>
+                  <div className="size-8 rounded-xl bg-slate-100/90 group-hover:bg-rose-600 text-slate-400 group-hover:text-white flex items-center justify-center transition-all duration-300 flex-shrink-0 shadow-sm group-hover:shadow-md group-hover:translate-x-0.5 relative z-10">
+                    <span className="font-extrabold text-xs">➔</span>
                   </div>
                 </button>
 
-                {/* PDF Files */}
+                {/* 11. PDF Files */}
                 <button
                   onClick={() => navigate({ to: "/teacher/result", search: { tab: "uploads" } as any })}
-                  className="bg-white hover:bg-gradient-to-br hover:from-cyan-50/50 hover:to-blue-50/30 border border-slate-200/90 hover:border-cyan-400 rounded-3xl p-5 flex items-center justify-between transition-all duration-300 shadow-sm hover:shadow-xl hover:-translate-y-1 group text-left relative overflow-hidden"
+                  className="bg-white/95 hover:bg-white border-2 border-slate-100 hover:border-cyan-400/90 rounded-[2.2rem] p-4.5 flex items-center justify-between transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-cyan-500/10 hover:-translate-y-1.5 active:scale-[0.98] group text-left relative overflow-hidden cursor-pointer"
                 >
-                  <div className="flex items-center gap-3.5">
-                    <div className="size-11 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 text-white flex items-center justify-center shadow-lg shadow-cyan-500/25 group-hover:scale-110 transition-transform flex-shrink-0">
-                      <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z" /></svg>
+                  <div className="absolute -top-10 -right-10 size-28 rounded-full bg-gradient-to-br from-cyan-500/10 to-blue-500/5 opacity-0 group-hover:opacity-100 group-hover:scale-125 transition-all duration-500 pointer-events-none" />
+                  <div className="flex items-center gap-3.5 relative z-10">
+                    <div className="size-12 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 text-white flex items-center justify-center shadow-md shadow-cyan-500/35 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 flex-shrink-0">
+                      <svg className="size-5.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 01-2 2v5a2 2 0 01-2 2z" /></svg>
                     </div>
                     <div>
-                      <h3 className="text-sm font-extrabold text-slate-800 group-hover:text-cyan-600 transition-colors">PDF Files</h3>
-                      <p className="text-[11px] text-slate-500 font-medium leading-tight mt-0.5">साठवलेले निकाल व स्टोरेझ</p>
+                      <h3 className="text-[14.5px] font-black text-slate-800 group-hover:text-cyan-600 transition-colors tracking-tight">PDF Files</h3>
+                      <p className="text-[11.5px] text-slate-500 font-medium leading-snug mt-0.5">साठवलेले निकाल व स्टोरेझ</p>
                     </div>
                   </div>
-                  <div className="size-7 rounded-xl bg-slate-100 group-hover:bg-cyan-600 text-slate-400 group-hover:text-white flex items-center justify-center transition-all flex-shrink-0">
-                    <span className="font-bold text-xs">➔</span>
+                  <div className="size-8 rounded-xl bg-slate-100/90 group-hover:bg-cyan-600 text-slate-400 group-hover:text-white flex items-center justify-center transition-all duration-300 flex-shrink-0 shadow-sm group-hover:shadow-md group-hover:translate-x-0.5 relative z-10">
+                    <span className="font-extrabold text-xs">➔</span>
                   </div>
                 </button>
 
@@ -737,6 +767,7 @@ function TeacherResultsPage() {
               <CCERemarks 
                 selectedClass={selectedClass} 
                 academicYear={academicYear} 
+                selectedMedium={selectedMedium}
                 onBack={() => navigate({ to: "/teacher/result", search: { tab: "dashboard" } as any })}
               />
             </motion.div>

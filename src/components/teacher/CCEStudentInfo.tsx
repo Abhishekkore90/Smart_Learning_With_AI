@@ -112,14 +112,14 @@ function FloatInput({
   return (
     <div className="relative mb-4">
       <label
-        className="absolute left-3 transition-all pointer-events-none font-medium z-10"
+        className="absolute left-3 transition-all pointer-events-none font-bold z-10"
         style={{
-          top: focused || filled ? "-9px" : "14px",
-          fontSize: focused || filled ? "11px" : "14px",
-          color: focused ? "#3b82f6" : "#64748b",
-          background: focused || filled ? "white" : "transparent",
-          paddingLeft: focused || filled ? "4px" : "0",
-          paddingRight: focused || filled ? "4px" : "0",
+          top: focused || filled ? "-11px" : "14px",
+          fontSize: focused || filled ? "13px" : "14px",
+          color: focused ? "#2563eb" : "#334155",
+          background: "white",
+          paddingLeft: "4px",
+          paddingRight: "4px",
         }}
       >
         {label}{required && "*"}

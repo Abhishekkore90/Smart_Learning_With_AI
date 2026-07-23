@@ -1043,12 +1043,51 @@ const CLASS_7_REMARKS = CLASS_5_REMARKS;
 const CLASS_8_REMARKS = CLASS_5_REMARKS;
 
 type StudentRemarks = Record<string, string[]>;
+type Medium = "marathi" | "semi";
 
-export function CCERemarks({ selectedClass, academicYear, onBack }: { selectedClass: string; academicYear: string; onBack: () => void }) {
+export function CCERemarks({ selectedClass, academicYear, selectedMedium: propMedium, onBack }: { selectedClass: string; academicYear: string; selectedMedium?: string; onBack: () => void }) {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeSemester, setActiveSemester] = useState<Semester>("sem1");
+  const [selectedMedium, setSelectedMedium] = useState<Medium>(() => {
+    if (propMedium === "semi" || propMedium === "marathi") return propMedium as Medium;
+    const stored = localStorage.getItem("cce_selected_medium") || localStorage.getItem("selectedMedium");
+    if (stored === "semi" || stored === "marathi") return stored as Medium;
+    return "marathi";
+  });
+
+  useEffect(() => {
+    if (propMedium === "semi" || propMedium === "marathi") {
+      setSelectedMedium(propMedium as Medium);
+      return;
+    }
+    const stored = localStorage.getItem("cce_selected_medium") || localStorage.getItem("selectedMedium");
+    if (stored === "semi" || stored === "marathi") {
+      setSelectedMedium(stored as Medium);
+      return;
+    }
+    async function checkSchoolConfig() {
+      try {
+        const udise = localStorage.getItem("teacher_udise") || localStorage.getItem("udiseNumber");
+        if (udise) {
+          const docRef = doc(db, "school_data", `${udise}_class_config`);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists() && docSnap.data().config) {
+            const classCfg = docSnap.data().config[selectedClass];
+            if (classCfg === "semi") {
+              setSelectedMedium("semi");
+            } else if (classCfg === "marathi") {
+              setSelectedMedium("marathi");
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Error checking class config:", err);
+      }
+    }
+    checkSchoolConfig();
+  }, [propMedium, selectedClass]);
   const [allRemarks, setAllRemarks] = useState<Record<string, StudentRemarks>>({});
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   // Custom Admin Uploaded Remarks state
@@ -1060,13 +1099,13 @@ export function CCERemarks({ selectedClass, academicYear, onBack }: { selectedCl
 
   // Load class remarks from classRemarksData and fallback to CDN/LocalStorage if present
   useEffect(() => {
-    // Reset to clean class-specific remarks immediately
-    const masterData = getClassRemarks(selectedClass);
+    // Reset to clean class & medium specific remarks immediately
+    const masterData = getClassRemarks(selectedClass, selectedMedium);
     setCustomClassRemarks(masterData);
 
     async function fetchCustomAdminRemarks() {
       try {
-        const cdnUrl = `https://SGKBRAINOVA.b-cdn.net/cce_remarks/class_${selectedClass}_remarks.json`;
+        const cdnUrl = `https://SGKBRAINOVA.b-cdn.net/cce_remarks/class_${selectedClass}_${selectedMedium}_remarks.json`;
         const res = await fetch(cdnUrl);
         if (res.ok) {
           const data = await res.json();
@@ -1079,7 +1118,7 @@ export function CCERemarks({ selectedClass, academicYear, onBack }: { selectedCl
       }
     }
     fetchCustomAdminRemarks();
-  }, [selectedClass]);
+  }, [selectedClass, selectedMedium]);
 
   useEffect(() => {
     const q = query(collection(db, "users"), where("role", "==", "student"), where("class", "==", selectedClass));
@@ -1090,16 +1129,16 @@ export function CCERemarks({ selectedClass, academicYear, onBack }: { selectedCl
     return () => unsub();
   }, [selectedClass]);
   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const ref = doc(db, "cce_remarks_v2", `${selectedClass}_${academicYear}_${activeSemester}`);
-        const snap = await getDoc(ref);
-        setAllRemarks(snap.exists() ? snap.data().records || {} : {});
-      } catch { /* ignore */ }
+    setLoading(true);
+    const ref = doc(db, "cce_remarks_v2", `${selectedClass}_${academicYear}_${activeSemester}`);
+    const unsub = onSnapshot(ref, (snap) => {
+      setAllRemarks(snap.exists() ? snap.data().records || {} : {});
       setLoading(false);
-    };
-    load();
+    }, (err) => {
+      console.warn("Remarks fetch error:", err);
+      setLoading(false);
+    });
+    return () => unsub();
   }, [selectedClass, academicYear, activeSemester]);
   const openStudent = async (student: Student) => {
     setEditingStudent(student);
@@ -1240,7 +1279,7 @@ export function CCERemarks({ selectedClass, academicYear, onBack }: { selectedCl
                         <div className="max-h-60 overflow-y-auto border border-slate-150 rounded-2xl p-2.5 space-y-1.5 bg-slate-50/30">
                           {((customClassRemarks[sub.key] && customClassRemarks[sub.key].length > 0
                             ? customClassRemarks[sub.key]
-                            : getClassRemarks(selectedClass)[sub.key]) || []
+                            : getClassRemarks(selectedClass, selectedMedium)[sub.key]) || []
                           ).map((s) => {
                             const adjustedS = adjustRemarkGender(s, editingStudent?.gender);
                             const isSelected = remarks.includes(adjustedS);

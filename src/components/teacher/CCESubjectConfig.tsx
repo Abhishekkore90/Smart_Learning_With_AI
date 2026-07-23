@@ -42,6 +42,7 @@ export function CCESubjectConfig({ selectedClass, academicYear, onBack }: {
       await setDoc(doc(db, "cce_settings", `${selectedClass}_${academicYear}`), {
         subjects, class: selectedClass, academicYear, updatedAt: new Date().toISOString(),
       }, { merge: true });
+      localStorage.setItem(`cce_subjects_${selectedClass}_${academicYear}`, JSON.stringify(subjects));
       toast.success("विषय यशस्वीरित्या जतन केले!");
     } catch (err: any) { toast.error("जतन अयशस्वी: " + err.message); }
     setSaving(false);
