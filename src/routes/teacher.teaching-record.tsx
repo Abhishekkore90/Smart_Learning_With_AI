@@ -101,14 +101,14 @@ const normalizeDateStr = (dateStr: string) => {
 
 /* ─── Class & File Data ─── */
 const DIARY_CLASSES = [
-  { id: "1", badge: "1ST", en: "CLASS 1ST", mr: "इयत्ता पहिली" },
-  { id: "2", badge: "2ND", en: "CLASS 2ND", mr: "इयत्ता दुसरी" },
-  { id: "3", badge: "3RD", en: "CLASS 3RD", mr: "इयत्ता तिसरी" },
-  { id: "4", badge: "4TH", en: "CLASS 4TH", mr: "इयत्ता चौथी" },
-  { id: "5", badge: "5TH", en: "CLASS 5TH", mr: "इयत्ता पाचवी" },
-  { id: "6", badge: "6TH", en: "CLASS 6TH", mr: "इयत्ता सहावी" },
-  { id: "7", badge: "7TH", en: "CLASS 7TH", mr: "इयत्ता सातवी" },
-  { id: "8", badge: "8TH", en: "CLASS 8TH", mr: "इयत्ता आठवी" },
+  { id: "1", badge: "1ST", en: "CLASS 1ST", mr: "इयत्ता पहिली", color: "from-blue-500 to-indigo-600" },
+  { id: "2", badge: "2ND", en: "CLASS 2ND", mr: "इयत्ता दुसरी", color: "from-purple-500 to-indigo-600" },
+  { id: "3", badge: "3RD", en: "CLASS 3RD", mr: "इयत्ता तिसरी", color: "from-pink-500 to-rose-600" },
+  { id: "4", badge: "4TH", en: "CLASS 4TH", mr: "इयत्ता चौथी", color: "from-amber-500 to-orange-600" },
+  { id: "5", badge: "5TH", en: "CLASS 5TH", mr: "इयत्ता पाचवी", color: "from-emerald-500 to-teal-600" },
+  { id: "6", badge: "6TH", en: "CLASS 6TH", mr: "इयत्ता सहावी", color: "from-cyan-500 to-blue-600" },
+  { id: "7", badge: "7TH", en: "CLASS 7TH", mr: "इयत्ता सातवी", color: "from-indigo-500 to-violet-600" },
+  { id: "8", badge: "8TH", en: "CLASS 8TH", mr: "इयत्ता आठवी", color: "from-slate-600 to-slate-800" },
 ];
 
 /* ═══════════════ PAGE ═══════════════ */
@@ -138,6 +138,21 @@ function TeachingRecordPage() {
     { id: "Semi English", badge: "S", title: "SEMI ENGLISH", sub: "सेमी इंग्रजी", desc: "Semi English medium annual/monthly planning" },
   ];
 
+  const isValidFirebaseStorageUrl = (url: string) => {
+    if (!url) return false;
+    try {
+      const parsed = new URL(url);
+      return (
+        parsed.hostname === "firebasestorage.googleapis.com" ||
+        parsed.hostname.includes("firebasestorage") ||
+        parsed.hostname === "localhost" ||
+        parsed.hostname === "127.0.0.1"
+      );
+    } catch (e) {
+      return false;
+    }
+  };
+
   useEffect(() => {
     setShowPreview(false); // Reset preview when class or medium changes
     if (selectedClass && selectedMedium) {
@@ -148,14 +163,25 @@ function TeachingRecordPage() {
             await import("firebase/firestore");
           const targetClassName = classMapper[selectedClass] || "";
           const q = query(
-            collection(db, "admin_teaching_diaries"),
-            where("className", "==", targetClassName),
+            collection(db, "teacher_diaries"),
+            where("class", "==", targetClassName),
           );
           const snapshot = await getDocs(q);
-          const fetched: any[] = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
+          const fetched: any[] = snapshot.docs.map((doc) => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              class: data.class || data.className || "",
+              medium: data.medium || "",
+              month: data.month || "",
+              date: data.date || "",
+              fileName: data.fileName || data.name || "",
+              storagePath: data.storagePath || "",
+              downloadURL: data.downloadURL || data.url || "",
+              fileType: data.fileType || data.type || "",
+              uploadedAt: data.uploadedAt || data.createdAt || 0,
+            };
+          });
 
           // Client-side filtering by medium (if the field exists in the document)
           const filtered = fetched.filter((d: any) => {
@@ -165,9 +191,9 @@ function TeachingRecordPage() {
             return true; // fallback if no medium field exists
           });
 
-          // Sort by createdAt descending so newest upload is first
+          // Sort by uploadedAt descending so newest upload is first
           filtered.sort(
-            (a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0),
+            (a: any, b: any) => (b.uploadedAt || 0) - (a.uploadedAt || 0),
           );
 
           setClassDiaries(filtered);
@@ -208,13 +234,13 @@ function TeachingRecordPage() {
     }
   }, [selectedClass, selectedMedium]);
 
-  // Among all entries matching the selected date, pick the newest upload (highest createdAt)
+  // Among all entries matching the selected date, pick the newest upload (highest uploadedAt)
   const activeDiary =
     [...classDiaries]
       .filter(
         (d) => normalizeDateStr(d.date) === normalizeDateStr(selectedDate),
       )
-      .sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0))[0] ||
+      .sort((a: any, b: any) => (b.uploadedAt || 0) - (a.uploadedAt || 0))[0] ||
     null;
   const currentClassObj = DIARY_CLASSES.find((c) => c.id === selectedClass);
 
@@ -283,7 +309,7 @@ function TeachingRecordPage() {
                             setSelectedClass(cls.id);
                             setSelectedMedium(null);
                           }}
-                          className="group p-8 rounded-[2.5rem] border text-center transition-all duration-500 shadow-md hover:shadow-[0_20px_45px_rgba(139,92,246,0.3)] cursor-pointer relative overflow-hidden flex flex-col items-center gap-4 bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white border-[#7c3aed]/30 hover:scale-[1.02]"
+                          className={`group p-8 rounded-[2.5rem] border text-center transition-all duration-500 shadow-md hover:shadow-[0_20px_45px_rgba(108,99,255,0.3)] cursor-pointer relative overflow-hidden flex flex-col items-center gap-4 bg-gradient-to-br ${cls.color} text-white border-black/5 hover:scale-[1.02]`}
                         >
                           <div className="absolute -bottom-6 -right-6 size-24 text-white/5 pointer-events-none group-hover:scale-110 transition-transform duration-700">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-full h-full">
@@ -299,14 +325,13 @@ function TeachingRecordPage() {
                             <h3 className="text-xl font-black leading-tight tracking-tight">
                               {cls.mr}
                             </h3>
-                            <p className="text-[10px] text-[#C4B5FD] font-bold uppercase tracking-wider">
+                            <p className="text-[10px] text-slate-100/70 font-bold uppercase tracking-wider">
                               {cls.en}
                             </p>
                           </div>
 
-                          <div className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-[#C4B5FD] mt-2">
-                            प्रवेश करा{" "}
-                            <ArrowRight className="size-3 group-hover:translate-x-1 transition-transform" />
+                          <div className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-slate-100/70 mt-2">
+                            OPEN / उघडा +
                           </div>
                         </motion.button>
                       );
@@ -459,7 +484,15 @@ function TeachingRecordPage() {
                         {/* View Button */}
                         <button
                           disabled={!activeDiary}
-                          onClick={() => setShowPreview(!showPreview)}
+                          onClick={() => {
+                            if (activeDiary) {
+                              if (!isValidFirebaseStorageUrl(activeDiary.downloadURL)) {
+                                toast.error("Firebase Storage URL Invalid");
+                                return;
+                              }
+                              setShowPreview(!showPreview);
+                            }
+                          }}
                           className={`size-10 rounded-full flex items-center justify-center shadow-md transition-all cursor-pointer ${
                             !activeDiary
                               ? "bg-slate-100 text-slate-300 border border-slate-200 cursor-not-allowed"
@@ -480,11 +513,11 @@ function TeachingRecordPage() {
                         <button
                           disabled={!activeDiary}
                           onClick={() => {
-                            if (activeDiary?.url) {
+                            if (activeDiary?.downloadURL) {
                               const link = document.createElement("a");
-                              link.href = activeDiary.url;
+                              link.href = activeDiary.downloadURL;
                               link.download =
-                                activeDiary.name || "teaching-diary.pdf";
+                                activeDiary.fileName || "teaching-diary.pdf";
                               document.body.appendChild(link);
                               link.click();
                               document.body.removeChild(link);
@@ -521,15 +554,27 @@ function TeachingRecordPage() {
                     showPreview ? (
                       <div className="bg-white border border-slate-100 rounded-[2rem] p-6 shadow-xl space-y-4 max-w-[1000px] mx-auto">
                         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                          <h2
-                            className="text-lg font-bold text-slate-700 truncate max-w-[70%]"
-                            title={activeDiary.name}
-                          >
-                            {currentClassObj
-                              ? `${currentClassObj.en} (${currentClassObj.mr}) - `
-                              : ""}
-                            {activeDiary.name} ({activeDiary.date})
-                          </h2>
+                          <div className="flex flex-col md:flex-row md:items-center gap-3 max-w-[75%]">
+                            <h2
+                              className="text-lg font-bold text-slate-700 truncate"
+                              title={activeDiary.fileName}
+                            >
+                              {currentClassObj
+                                ? `${currentClassObj.en} (${currentClassObj.mr}) - `
+                                : ""}
+                              {activeDiary.fileName} ({activeDiary.date})
+                            </h2>
+                            {(/\.(doc|docx)$/i.test(activeDiary.fileName || "") || activeDiary.fileType?.includes("word") || activeDiary.fileType?.includes("officedocument.wordprocessingml")) && (
+                              <a
+                                href={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(activeDiary.downloadURL)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-3 py-1 bg-violet-50 border border-violet-100 hover:bg-violet-100/70 rounded-lg text-xs font-bold text-violet-600 transition-colors shadow-sm cursor-pointer animate-pulse w-fit"
+                              >
+                                <Eye className="size-3.5" /> Open Full Screen / नवीन टॅबमध्ये उघडा
+                              </a>
+                            )}
+                          </div>
                           <button
                             onClick={() => setShowPreview(false)}
                             className="text-xs font-bold text-red-500 hover:text-red-700 cursor-pointer"
@@ -537,23 +582,35 @@ function TeachingRecordPage() {
                             प्रिव्ह्यू बंद करा (Close Preview)
                           </button>
                         </div>
-                        {activeDiary.url?.startsWith("data:image/") ||
+                        {activeDiary.downloadURL?.startsWith("data:image/") ||
                         /\.(jpg|jpeg|png|gif|webp)$/i.test(
-                          activeDiary.name || "",
+                          activeDiary.fileName || "",
                         ) ? (
                           <div className="w-full flex justify-center bg-slate-50 rounded-2xl p-4 border border-slate-100 overflow-auto max-h-[700px]">
                             <img
-                              src={activeDiary.url}
-                              alt={activeDiary.name}
+                              src={activeDiary.downloadURL}
+                              alt={activeDiary.fileName}
                               className="max-w-full h-auto rounded-xl object-contain shadow-sm"
                             />
                           </div>
-                        ) : (
+                        ) : /\.(pdf)$/i.test(activeDiary.fileName || "") || activeDiary.fileType?.includes("pdf") ? (
                           <iframe
-                            src={activeDiary.url}
-                            title={activeDiary.name}
-                            className="w-full h-[700px] rounded-2xl border border-slate-200 shadow-sm"
+                            src={activeDiary.downloadURL}
+                            title={activeDiary.fileName}
+                            className="w-full h-[700px] rounded-2xl border border-slate-200 shadow-sm bg-white"
                           />
+                        ) : /\.(doc|docx)$/i.test(activeDiary.fileName || "") || activeDiary.fileType?.includes("word") || activeDiary.fileType?.includes("officedocument.wordprocessingml") ? (
+                          <iframe
+                            src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(activeDiary.downloadURL)}`}
+                            title={activeDiary.fileName}
+                            className="w-full h-[800px] rounded-2xl border border-slate-200 shadow-sm bg-slate-50"
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center justify-center p-8 bg-slate-50 border border-slate-100 rounded-2xl text-center">
+                            <span className="text-sm font-bold text-red-500">
+                              Unsupported file type / या फाईल प्रकारासाठी प्रिव्ह्यू उपलब्ध नाही.
+                            </span>
+                          </div>
                         )}
                       </div>
                     ) : (
