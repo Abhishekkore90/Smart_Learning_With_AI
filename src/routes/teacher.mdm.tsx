@@ -229,11 +229,13 @@ function TeacherMDMPage() {
 
   // Monthly Report States
   const [monthlyReportMonth, setMonthlyReportMonth] = useState<string | null>(null);
+  const [selectedReportCategory, setSelectedReportCategory] = useState<"tandul_bhag1" | "dhanyadi_bhag2" | "masik_goshwara" | "anudan_report" | "purak_ahar_report">("tandul_bhag1");
   const [reportSchoolName, setReportSchoolName] = useState("");
   const [reportTeacherName, setReportTeacherName] = useState("");
   const [reportPrincipalName, setReportPrincipalName] = useState("");
   const [monthlySubTab, setMonthlySubTab] = useState<"1-5" | "6-8" | "1-8">("1-8");
-  const [annualSubTab, setAnnualSubTab] = useState<"6-8" | "1-8">("1-8");
+  const [annualSubTab, setAnnualSubTab] = useState<"1-5" | "6-8" | "1-8">("1-5");
+  const [annualReportType, setAnnualReportType] = useState("तांदूळ उपयोगिता (किलोग्रॅम मध्ये)");
 
   const [certPrimaryCookedDays, setCertPrimaryCookedDays] = useState<string>("0");
   const [certUpperCookedDays, setCertUpperCookedDays] = useState<string>("0");
@@ -525,6 +527,8 @@ function TeacherMDMPage() {
       setIsExporting(false);
     }
   };
+
+  const handleAnnualReportDownload = handleDownloadAnnualPdf;
 
   const handleQuantityReportDownload = async () => {
     const element = document.getElementById("quantity-report-print");
@@ -1227,9 +1231,16 @@ function TeacherMDMPage() {
   const [registerDate, setRegisterDate] = useState(
     new Date().toISOString().split("T")[0],
   );
-  const [registerClass, setRegisterClass] = useState("Select Class");
+  const [registerClass, setRegisterClass] = useState("1 To 5");
   const [registerDay, setRegisterDay] = useState("");
   const [registerBeneficiary, setRegisterBeneficiary] = useState("");
+  const [cookedToday, setCookedToday] = useState("yes");
+  const [totalEnrolled, setTotalEnrolled] = useState("");
+  const [presentCount, setPresentCount] = useState("");
+  const [remarks, setRemarks] = useState("");
+  const [purakAhar, setPurakAhar] = useState(false);
+  const [purakAharDetails, setPurakAharDetails] = useState("");
+  const [veggieKg, setVeggieKg] = useState("");
 
   // Demand States
   const [demandFromDate, setDemandFromDate] = useState(
@@ -1472,6 +1483,7 @@ function TeacherMDMPage() {
 
   // Anudan (Grant & Cooking Cost Settings) States & Logic
   const [anudanYear, setAnudanYear] = useState("2026-27");
+  const [effectiveDate, setEffectiveDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [primaryRate, setPrimaryRate] = useState("5.45");
   const [upperRate, setUpperRate] = useState("8.17");
   const [eggRate, setEggRate] = useState("5.00");
@@ -1488,6 +1500,7 @@ function TeacherMDMPage() {
         {
           anudanSettings: {
             year: anudanYear,
+            effectiveDate,
             primaryRate,
             upperRate,
             eggRate,
@@ -3958,35 +3971,36 @@ function TeacherMDMPage() {
 
       <main className="lg:pl-64 pt-20 min-h-screen pb-20 relative z-10">
         <PinGate sectionKey="mdm">
-          <div className="p-6 md:p-10 space-y-6 max-w-7xl mx-auto">
+          <div className="p-4 md:p-8 space-y-6 w-full">
 
           {/* ===== MDM CATEGORY GROUPED NAVIGATION BAR ===== */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-lg p-5 space-y-4">
+          <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xl p-5 md:p-6 space-y-5">
             {/* Title Row */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center shadow-md">
-                  <Utensils className="w-5 h-5 text-white" />
+            <div className="flex flex-wrap items-center justify-between pb-4 border-b border-slate-100 gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/30 text-white">
+                  <Utensils className="w-6 h-6" />
                 </div>
                 <div>
-                  <h1 className="text-lg font-black text-slate-800">Mid-Day Meal (MDM) Portal</h1>
-                  <p className="text-xs text-emerald-600 font-bold">माध्यान्ह भोजन योजना पोर्टल</p>
+                  <h1 className="text-xl font-black text-slate-900 tracking-tight">Mid-Day Meal (MDM) Portal</h1>
+                  <p className="text-xs text-emerald-600 font-bold tracking-wide">माध्यान्ह भोजन योजना पोर्टल</p>
                 </div>
               </div>
-              <div className="hidden sm:flex items-center gap-2 text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full">
+              <div className="flex items-center gap-2 text-xs font-extrabold text-slate-600 bg-slate-100/80 border border-slate-200 px-4 py-2 rounded-full shadow-inner">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
                 <span>UDISE: {getUdise()}</span>
               </div>
             </div>
 
             {/* Grouped Category Tabs */}
-            <div className="space-y-3">
+            <div className="space-y-4">
               {/* Category 1: STOCK (साठा) */}
-              <div className="bg-emerald-50/60 p-3 rounded-xl border border-emerald-100">
-                <div className="flex items-center gap-2 mb-2 text-xs font-black uppercase text-emerald-800 tracking-wider">
+              <div className="bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-transparent p-4 md:p-5 rounded-2xl border border-emerald-200/60 shadow-sm space-y-3">
+                <div className="flex items-center gap-2 text-xs font-black uppercase text-emerald-800 tracking-wider">
                   <Package className="w-4 h-4 text-emerald-600" />
                   <span>STOCK (साठा व्यवस्थापन)</span>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                   {[
                     { id: "opening-stock", label: lang === "mr" ? "आरंभीची शिल्लक" : "Initial Stock", icon: Package },
                     { id: "incoming", label: lang === "mr" ? "साहित्य आवक" : "Stock Received", icon: Package },
@@ -4000,14 +4014,14 @@ function TeacherMDMPage() {
                       <button
                         key={sub.id}
                         onClick={() => setActiveTab(sub.id)}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all border ${
+                        className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 border ${
                           isActive
-                            ? "bg-emerald-600 text-white border-emerald-700 shadow-md scale-[1.02]"
-                            : "bg-white text-slate-700 border-emerald-200 hover:bg-emerald-100/70"
+                            ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-emerald-600 shadow-lg shadow-emerald-500/30 scale-[1.03]"
+                            : "bg-white/90 text-slate-700 border-slate-200 hover:border-emerald-400 hover:text-emerald-700 hover:bg-emerald-50/60 hover:shadow-md"
                         }`}
                       >
-                        <SubIcon className={`w-3.5 h-3.5 ${isActive ? "text-white" : "text-emerald-600"}`} />
-                        <span className="truncate">{sub.label}</span>
+                        <SubIcon className={`w-4 h-4 ${isActive ? "text-white" : "text-emerald-600"}`} />
+                        <span className="whitespace-nowrap">{sub.label}</span>
                       </button>
                     );
                   })}
@@ -4015,19 +4029,18 @@ function TeacherMDMPage() {
               </div>
 
               {/* Other Categories Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 {/* MENU SETUP */}
-                <div className="bg-amber-50/60 p-3 rounded-xl border border-amber-100">
-                  <div className="flex items-center gap-2 mb-2 text-xs font-black uppercase text-amber-800 tracking-wider">
+                <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-transparent p-4 md:p-5 rounded-2xl border border-amber-200/60 shadow-sm flex flex-col justify-between space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-black uppercase text-amber-800 tracking-wider">
                     <ClipboardList className="w-4 h-4 text-amber-600" />
                     <span>MENU SETUP (रेसिपी व मेनू)</span>
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div className="grid grid-cols-3 gap-2.5">
                     {[
-                      { id: "menu", label: lang === "mr" ? "Recipe Ingredients" : "Recipe Ingredients", icon: ClipboardList },
-                      { id: "quantity", label: lang === "mr" ? "Recipe Formulas" : "Recipe Formulas", icon: Activity },
+                      { id: "menu", label: lang === "mr" ? "रेसिपी साहित्य" : "Recipe Ingredients", icon: ClipboardList },
+                      { id: "quantity", label: lang === "mr" ? "प्रमाण (Quantity)" : "Recipe Formulas", icon: Activity },
                       { id: "anudan", label: lang === "mr" ? "अनुदान सेटिंग" : "Anudan Settings", icon: Sparkles },
-                      { id: "recipe-guide", label: lang === "mr" ? "Recipe Guide" : "Recipe Guide", icon: FileText },
                     ].map((sub) => {
                       const SubIcon = sub.icon;
                       const isActive = activeTab === sub.id;
@@ -4035,14 +4048,14 @@ function TeacherMDMPage() {
                         <button
                           key={sub.id}
                           onClick={() => setActiveTab(sub.id)}
-                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                          className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl text-sm font-bold transition-all duration-200 border ${
                             isActive
-                              ? "bg-amber-600 text-white border-amber-700 shadow-sm"
-                              : "bg-white text-slate-700 border-amber-200 hover:bg-amber-100/70"
+                              ? "bg-gradient-to-r from-amber-500 to-orange-600 text-white border-amber-500 shadow-lg shadow-orange-500/30 scale-[1.03]"
+                              : "bg-white/90 text-slate-700 border-slate-200 hover:border-amber-400 hover:text-amber-700 hover:bg-amber-50/60 hover:shadow-md"
                           }`}
                         >
-                          <SubIcon className={`w-3.5 h-3.5 ${isActive ? "text-white" : "text-amber-600"}`} />
-                          <span className="truncate">{sub.label}</span>
+                          <SubIcon className={`w-4 h-4 ${isActive ? "text-white" : "text-amber-600"}`} />
+                          <span className="whitespace-nowrap">{sub.label}</span>
                         </button>
                       );
                     })}
@@ -4050,15 +4063,15 @@ function TeacherMDMPage() {
                 </div>
 
                 {/* DAILY OPERATIONS */}
-                <div className="bg-blue-50/60 p-3 rounded-xl border border-blue-100">
-                  <div className="flex items-center gap-2 mb-2 text-xs font-black uppercase text-blue-800 tracking-wider">
+                <div className="bg-gradient-to-r from-blue-500/10 via-indigo-500/5 to-transparent p-4 md:p-5 rounded-2xl border border-blue-200/60 shadow-sm flex flex-col justify-between space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-black uppercase text-blue-800 tracking-wider">
                     <Calendar className="w-4 h-4 text-blue-600" />
                     <span>DAILY & CALENDAR (कामकाज)</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-2.5">
                     {[
-                      { id: "daily-reg", label: lang === "mr" ? "दैनंदिन नोंद" : "Daily Entry", icon: Calendar },
                       { id: "monthly-calendar", label: lang === "mr" ? "मासिक कॅलेंडर" : "Monthly Calendar", icon: Calendar },
+                      { id: "daily-reg", label: lang === "mr" ? "दैनंदिन नोंद" : "Daily Entry", icon: Calendar },
                     ].map((sub) => {
                       const SubIcon = sub.icon;
                       const isActive = activeTab === sub.id;
@@ -4066,14 +4079,14 @@ function TeacherMDMPage() {
                         <button
                           key={sub.id}
                           onClick={() => setActiveTab(sub.id)}
-                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                          className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl text-sm font-bold transition-all duration-200 border ${
                             isActive
-                              ? "bg-blue-600 text-white border-blue-700 shadow-sm"
-                              : "bg-white text-slate-700 border-blue-200 hover:bg-blue-100/70"
+                              ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-600 shadow-lg shadow-blue-500/30 scale-[1.03]"
+                              : "bg-white/90 text-slate-700 border-slate-200 hover:border-blue-400 hover:text-blue-700 hover:bg-blue-50/60 hover:shadow-md"
                           }`}
                         >
-                          <SubIcon className={`w-3.5 h-3.5 ${isActive ? "text-white" : "text-blue-600"}`} />
-                          <span className="truncate">{sub.label}</span>
+                          <SubIcon className={`w-4 h-4 ${isActive ? "text-white" : "text-blue-600"}`} />
+                          <span className="whitespace-nowrap">{sub.label}</span>
                         </button>
                       );
                     })}
@@ -4081,12 +4094,12 @@ function TeacherMDMPage() {
                 </div>
 
                 {/* REPORTS */}
-                <div className="bg-purple-50/60 p-3 rounded-xl border border-purple-100">
-                  <div className="flex items-center gap-2 mb-2 text-xs font-black uppercase text-purple-800 tracking-wider">
+                <div className="bg-gradient-to-r from-purple-500/10 via-violet-500/5 to-transparent p-4 md:p-5 rounded-2xl border border-purple-200/60 shadow-sm flex flex-col justify-between space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-black uppercase text-purple-800 tracking-wider">
                     <FileSpreadsheet className="w-4 h-4 text-purple-600" />
                     <span>REPORTS (शासकीय अहवाल)</span>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-3 gap-2.5">
                     {[
                       { id: "demand", label: lang === "mr" ? "तांदूळ मागणी" : "Demand", icon: FileText },
                       { id: "monthly-report", label: lang === "mr" ? "मासिक अहवाल" : "Monthly", icon: FileSpreadsheet },
@@ -4098,14 +4111,14 @@ function TeacherMDMPage() {
                         <button
                           key={sub.id}
                           onClick={() => setActiveTab(sub.id)}
-                          className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                          className={`flex items-center justify-center gap-1.5 px-2.5 py-3 rounded-xl text-sm font-bold transition-all duration-200 border ${
                             isActive
-                              ? "bg-purple-600 text-white border-purple-700 shadow-sm"
-                              : "bg-white text-slate-700 border-purple-200 hover:bg-purple-100/70"
+                              ? "bg-gradient-to-r from-purple-600 to-violet-600 text-white border-purple-600 shadow-lg shadow-purple-500/30 scale-[1.03]"
+                              : "bg-white/90 text-slate-700 border-slate-200 hover:border-purple-400 hover:text-purple-700 hover:bg-purple-50/60 hover:shadow-md"
                           }`}
                         >
-                          <SubIcon className={`w-3.5 h-3.5 ${isActive ? "text-white" : "text-purple-600"}`} />
-                          <span className="truncate">{sub.label}</span>
+                          <SubIcon className={`w-4 h-4 ${isActive ? "text-white" : "text-purple-600"}`} />
+                          <span className="whitespace-nowrap">{sub.label}</span>
                         </button>
                       );
                     })}
@@ -4357,27 +4370,57 @@ function TeacherMDMPage() {
 
                 {/* ANUDAN SETTINGS (GRANT & COOKING COST) TAB */}
                 {activeTab === "anudan" && (
-                  <div className="space-y-6">
-                    <h2 className="text-xl font-bold text-slate-800 border-b pb-3">
-                      {lang === "mr" ? "अनुदान सेटिंग (Cooking Cost / Conversion Cost Settings)" : "Grant & Cooking Cost Settings"}
+                  <div className="w-full space-y-5 font-sans">
+                    {/* Page Header Title */}
+                    <h2 className="text-xl font-bold text-slate-800 border-b border-slate-200 pb-3">
+                      {lang === "mr" ? "अनुदान सेटिंग" : "Anudan Settings"}
                     </h2>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    {/* Card 1: Top Information Banner */}
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-2">
+                      <h3 className="text-lg font-bold text-slate-800">
+                        {lang === "mr" ? "अनुदान सेटिंग" : "Anudan Settings"}
+                      </h3>
+                      <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                        GR नुसार शासन दर व अनुदान वर्गीकरण (केंद्र / राज्य हिस्सा) येथे नियंत्रित करा. आपली शाळा: <strong className="text-slate-900">प्राथमिक ( इयत्ता १ ते ५ )</strong> — दैनंदिन नोंद, मासिक तांदूळ अहवाल/बिल व प्रपत्र (ब) यामध्ये <strong className="text-slate-900">लागू दिनांक</strong> नुसार दर वापरले जातात. सध्या प्रणालीचे मूळ दर वापरले जात आहेत.
+                      </p>
+                    </div>
+
+                    {/* Card 2: Effective Date Selector */}
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-2">
+                      <label className="text-sm font-bold text-slate-700 block">
+                        {lang === "mr" ? "लागू दिनांक (Effective from) *" : "Effective Date (Effective from) *"}
+                      </label>
+                      <div className="max-w-xs">
+                        <input
+                          type="date"
+                          value={effectiveDate}
+                          onChange={(e) => setEffectiveDate(e.target.value)}
+                          className="w-full h-10 px-3.5 bg-white border border-slate-300 rounded-lg text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-600 transition-colors"
+                        />
+                      </div>
+                      <p className="text-xs text-slate-500 font-medium">
+                        या दिनांकापासून (सह) नवीन दर लागू होतील. मागील अहवालांसाठी जुने दर वापरले जातील.
+                      </p>
+                    </div>
+
+                    {/* Cards 3 & 4: Form & Share Calculations */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                       {/* Left Form Card */}
-                      <div className="lg:col-span-6 bg-white p-6 rounded-2xl border border-amber-200 shadow-sm space-y-4">
-                        <h3 className="font-bold text-base text-slate-800 border-b pb-2">
+                      <div className="lg:col-span-6 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <h3 className="font-bold text-base text-slate-800 border-b border-slate-100 pb-2">
                           {lang === "mr" ? "प्रति विद्यार्थी शिजवण्याचा खर्च दर (GR दर)" : "Per Student Cooking Cost Rates"}
                         </h3>
 
                         <div className="space-y-4">
                           <div>
-                            <label className="text-xs font-bold text-slate-600 block mb-1">
+                            <label className="text-xs font-bold text-slate-700 block mb-1">
                               {lang === "mr" ? "शैक्षणिक वर्ष *" : "Academic Year *"}
                             </label>
                             <select
                               value={anudanYear}
                               onChange={(e) => setAnudanYear(e.target.value)}
-                              className="w-full h-10 px-3 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-amber-500"
+                              className="w-full h-10 px-3 border border-slate-300 rounded-lg text-sm font-medium focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
                             >
                               <option value="2026-27">2026-27</option>
                               <option value="2025-26">2025-26</option>
@@ -4386,63 +4429,75 @@ function TeacherMDMPage() {
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                              <label className="text-xs font-bold text-slate-600 block mb-1">
-                                {lang === "mr" ? "प्राथमिक (१ ते ५) प्रति विद्यार्थी दर (₹) *" : "Primary (1-5) Rate (₹) *"}
+                              <label className="text-xs font-bold text-slate-700 block mb-1">
+                                {lang === "mr" ? "प्राथमिक (इयत्ता १ ली ते ५ वी) प्रति विद्यार्थी दर (₹) *" : "Primary (1-5) Rate (₹) *"}
                               </label>
                               <input
                                 type="number"
                                 step="0.01"
                                 value={primaryRate}
                                 onChange={(e) => setPrimaryRate(e.target.value)}
-                                className="w-full h-10 px-3 border border-slate-300 rounded-xl text-sm font-bold text-amber-900 focus:ring-2 focus:ring-amber-500"
+                                className="w-full h-10 px-3 border border-slate-300 rounded-lg text-sm font-bold text-slate-800 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
                               />
                             </div>
 
                             <div>
-                              <label className="text-xs font-bold text-slate-600 block mb-1">
-                                {lang === "mr" ? "उच्च प्राथमिक (६ ते ८) प्रति विद्यार्थी दर (₹) *" : "Upper Primary (6-8) Rate (₹) *"}
+                              <label className="text-xs font-bold text-slate-700 block mb-1">
+                                {lang === "mr" ? "उच्च प्राथमिक (इयत्ता ६ वी ते ८ वी) प्रति विद्यार्थी दर (₹) *" : "Upper Primary (6-8) Rate (₹) *"}
                               </label>
                               <input
                                 type="number"
                                 step="0.01"
                                 value={upperRate}
                                 onChange={(e) => setUpperRate(e.target.value)}
-                                className="w-full h-10 px-3 border border-slate-300 rounded-xl text-sm font-bold text-amber-900 focus:ring-2 focus:ring-amber-500"
+                                className="w-full h-10 px-3 border border-slate-300 rounded-lg text-sm font-bold text-slate-800 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
                               />
                             </div>
                           </div>
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                              <label className="text-xs font-bold text-slate-600 block mb-1">
-                                {lang === "mr" ? "अंडी / केळी पूरक आहार दर (₹) *" : "Egg/Banana Rate (₹) *"}
-                              </label>
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={eggRate}
-                                onChange={(e) => setEggRate(e.target.value)}
-                                className="w-full h-10 px-3 border border-slate-300 rounded-xl text-sm font-bold text-amber-900 focus:ring-2 focus:ring-amber-500"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="text-xs font-bold text-slate-600 block mb-1">
-                                {lang === "mr" ? "भाजीपाला वाटप (%) *" : "Vegetable % *"}
+                              <label className="text-xs font-bold text-slate-700 block mb-1">
+                                {lang === "mr" ? "भाजीपाला व मसाले (%) *" : "Vegetables & Spices (%) *"}
                               </label>
                               <input
                                 type="number"
                                 value={vegPercent}
                                 onChange={(e) => setVegPercent(e.target.value)}
-                                className="w-full h-10 px-3 border border-slate-300 rounded-xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-amber-500"
+                                className="w-full h-10 px-3 border border-slate-300 rounded-lg text-sm font-bold text-slate-800 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
                               />
                             </div>
+
+                            <div>
+                              <label className="text-xs font-bold text-slate-700 block mb-1">
+                                {lang === "mr" ? "इंधन व इतर खर्च (%) *" : "Fuel & Other (%) *"}
+                              </label>
+                              <input
+                                type="number"
+                                value={fuelPercent}
+                                onChange={(e) => setFuelPercent(e.target.value)}
+                                className="w-full h-10 px-3 border border-slate-300 rounded-lg text-sm font-bold text-slate-800 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="text-xs font-bold text-slate-700 block mb-1">
+                              {lang === "mr" ? "अंडी / केळी पूरक आहार दर (₹) *" : "Egg / Banana Rate (₹) *"}
+                            </label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={eggRate}
+                              onChange={(e) => setEggRate(e.target.value)}
+                              className="w-full h-10 px-3 border border-slate-300 rounded-lg text-sm font-bold text-slate-800 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+                            />
                           </div>
 
                           <button
                             onClick={handleSaveAnudanSettings}
                             disabled={saving}
-                            className="w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
+                            className="px-5 py-2.5 bg-[#047857] hover:bg-[#065f46] text-white font-bold text-sm rounded-lg shadow-sm transition-colors flex items-center justify-center gap-2"
                           >
                             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                             <span>Save Settings (अनुदान सेटिंग जतन करा)</span>
@@ -4450,32 +4505,56 @@ function TeacherMDMPage() {
                         </div>
                       </div>
 
-                      {/* Right Information Summary Card */}
-                      <div className="lg:col-span-6 bg-amber-50/70 p-6 rounded-2xl border border-amber-200 space-y-4">
-                        <h3 className="font-bold text-base text-amber-950 border-b border-amber-200 pb-2">
-                          {lang === "mr" ? "शासकीय दर स्पष्टीकरण (GR Summary)" : "Government Standard Rates Summary"}
+                      {/* Right Information & Government Classification Share Card */}
+                      <div className="lg:col-span-6 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <h3 className="font-bold text-base text-slate-800 border-b border-slate-100 pb-2">
+                          {lang === "mr" ? "अनुदान वर्गीकरण (केंद्र व राज्य हिस्सा)" : "Grant Classification (Central & State Share)"}
                         </h3>
 
-                        <div className="space-y-3 text-xs text-amber-900 leading-relaxed font-medium">
-                          <div className="bg-white p-3.5 rounded-xl border border-amber-200 flex items-center justify-between">
-                            <span>इयत्ता १ ली ते ५ वी (प्राथमिक)</span>
-                            <span className="font-bold text-sm text-amber-800">₹{primaryRate} / विद्यार्थी</span>
+                        <div className="space-y-3 text-xs text-slate-700 leading-relaxed font-medium">
+                          {/* Primary 1-5 Breakdown */}
+                          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-1.5">
+                            <div className="flex items-center justify-between font-bold text-slate-900 text-sm">
+                              <span>इयत्ता १ ली ते ५ वी (प्राथमिक)</span>
+                              <span className="text-emerald-700 font-extrabold">₹{primaryRate} / विद्यार्थी</span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs text-slate-600 pt-1 border-t border-slate-200/60">
+                              <span>• केंद्र हिस्सा (६०%):</span>
+                              <span className="font-bold text-slate-900">₹{(parseFloat(primaryRate || "0") * 0.6).toFixed(2)}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs text-slate-600">
+                              <span>• राज्य हिस्सा (४०%):</span>
+                              <span className="font-bold text-slate-900">₹{(parseFloat(primaryRate || "0") * 0.4).toFixed(2)}</span>
+                            </div>
                           </div>
 
-                          <div className="bg-white p-3.5 rounded-xl border border-amber-200 flex items-center justify-between">
-                            <span>इयत्ता ६ वी ते ८ वी (उच्च प्राथमिक)</span>
-                            <span className="font-bold text-sm text-amber-800">₹{upperRate} / विद्यार्थी</span>
+                          {/* Upper Primary 6-8 Breakdown */}
+                          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-1.5">
+                            <div className="flex items-center justify-between font-bold text-slate-900 text-sm">
+                              <span>इयत्ता ६ वी ते ८ वी (उच्च प्राथमिक)</span>
+                              <span className="text-emerald-700 font-extrabold">₹{upperRate} / विद्यार्थी</span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs text-slate-600 pt-1 border-t border-slate-200/60">
+                              <span>• केंद्र हिस्सा (६०%):</span>
+                              <span className="font-bold text-slate-900">₹{(parseFloat(upperRate || "0") * 0.6).toFixed(2)}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs text-slate-600">
+                              <span>• राज्य हिस्सा (४०%):</span>
+                              <span className="font-bold text-slate-900">₹{(parseFloat(upperRate || "0") * 0.4).toFixed(2)}</span>
+                            </div>
                           </div>
 
-                          <div className="bg-white p-3.5 rounded-xl border border-amber-200 flex items-center justify-between">
-                            <span>बुधवार पूरक आहार (अंडी / केळी)</span>
-                            <span className="font-bold text-sm text-amber-800">₹{eggRate} / विद्यार्थी</span>
+                          {/* Egg/Banana Rate */}
+                          <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 flex items-center justify-between">
+                            <span className="font-bold text-slate-800">बुधवार पूरक आहार (अंडी / केळी)</span>
+                            <span className="font-bold text-sm text-emerald-700">₹{eggRate} / विद्यार्थी</span>
                           </div>
 
-                          <div className="bg-amber-100/80 p-3.5 rounded-xl border border-amber-300">
-                            <span className="font-bold block mb-1">खर्च विभागणी (Cost Splitting Formula):</span>
-                            <span>• भाजीपाला व मसाले: <strong>{vegPercent}%</strong></span> <br />
-                            <span>• इंधन व इतर खर्च: <strong>{fuelPercent}%</strong></span>
+                          {/* Cost Division */}
+                          <div className="bg-emerald-50/60 p-3.5 rounded-xl border border-emerald-200 text-emerald-950">
+                            <span className="font-bold block mb-1">खर्च विभागणी सूत्री (Cost Splitting Formula):</span>
+                            <span>• भाजीपाला व मसाले: <strong>{vegPercent}%</strong> (₹{(parseFloat(primaryRate || "0") * (parseFloat(vegPercent || "70") / 100)).toFixed(2)})</span> <br />
+                            <span>• इंधन व इतर खर्च: <strong>{fuelPercent}%</strong> (₹{(parseFloat(primaryRate || "0") * (parseFloat(fuelPercent || "30") / 100)).toFixed(2)})</span>
                           </div>
                         </div>
                       </div>
@@ -5363,235 +5442,182 @@ function TeacherMDMPage() {
 
                 {/* 2. MENU TAB */}
                 {activeTab === "menu" && (
-                  <div className="bg-white p-12 border border-slate-300 w-full min-h-[800px] flex flex-col items-center">
-                    <div className="w-full max-w-[800px] space-y-10">
-                      {/* Title */}
-                      <div className="text-center py-4">
-                        <h2 className="text-2xl font-bold text-[#004C99]">
-                          {t("अन्न मेनू", "Food Menu", "खाद्य मेनू")}
-                        </h2>
+                  <div className="w-full space-y-4">
+                    {/* Page Title */}
+                    <h2 className="text-xl font-bold text-slate-800">
+                      Recipe Ingredients
+                    </h2>
+
+                    {/* Main Card */}
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+                      {/* Recipe Dropdown Field */}
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-semibold text-slate-700 block">
+                          Recipe
+                        </label>
+                        <select
+                          value={menuType}
+                          onChange={(e) => setMenuType(e.target.value)}
+                          className="w-full h-10 px-3.5 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-emerald-600 transition-colors"
+                        >
+                          <option value="Select Menu">Select Recipe</option>
+                          <option value="Vegetable Pulav">
+                            {getTranslatedMenu("Vegetable Pulav")}
+                          </option>
+                          <option value="Masala Rice">
+                            {getTranslatedMenu("Masala Rice")}
+                          </option>
+                          <option value="Matar Pulav">
+                            {getTranslatedMenu("Matar Pulav")}
+                          </option>
+                          <option value="Mungdal Khichadi">
+                            {getTranslatedMenu("Mungdal Khichadi")}
+                          </option>
+                          <option value="Cowpea Khichadi">
+                            {getTranslatedMenu("Cowpea Khichadi")}
+                          </option>
+                          <option value="Chana Pulav">
+                            {getTranslatedMenu("Chana Pulav")}
+                          </option>
+                          <option value="Soyabin Pulav">
+                            {getTranslatedMenu("Soyabin Pulav")}
+                          </option>
+                          <option value="Masuri Pulav">
+                            {getTranslatedMenu("Masuri Pulav")}
+                          </option>
+                          <option value="Egg Pulav">
+                            {getTranslatedMenu("Egg Pulav")}
+                          </option>
+                          <option value="Sprouted Matki Usal">
+                            {getTranslatedMenu("Sprouted Matki Usal")}
+                          </option>
+                          <option value="Sweet Khichadi">
+                            {getTranslatedMenu("Sweet Khichadi")}
+                          </option>
+                          <option value="Mug Shevaga Varan Bhat">
+                            {getTranslatedMenu("Mug Shevaga Varan Bhat")}
+                          </option>
+                          <option value="Rice pudding">
+                            {getTranslatedMenu("Rice pudding")}
+                          </option>
+                          <option value="ragi porridge">
+                            {getTranslatedMenu("ragi porridge")}
+                          </option>
+                          <option value="Sprouted pulses">
+                            {getTranslatedMenu("Sprouted pulses")}
+                          </option>
+                          <option value="Other">
+                            {getTranslatedMenu("Other")}
+                          </option>
+                        </select>
                       </div>
 
-                      {/* Dropdowns row */}
-                      <div className="flex flex-col md:flex-row justify-center items-center gap-8 py-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-slate-800">
-                            {t("दिवस:", "Day:")}
-                          </span>
-                          <select
-                            value={menuDay}
-                            onChange={(e) =>
-                              handleMenuDayChange(e.target.value)
-                            }
-                            className="h-8 px-2 bg-white border border-black rounded shadow-sm text-sm font-medium"
-                          >
-                            <option value="Select Day">
-                              {t("दिवस निवडा", "Select Day")}
-                            </option>
-                            <option disabled>
-                              {t(
-                                "—— पहिला आणि तिसरा आठवडा ——",
-                                "—— First And Third Week ——",
-                                "—— पहला और तीसरा सप्ताह ——",
-                              )}
-                            </option>
-                            <option value="1. Monday">
-                              {getTranslatedDay("1. Monday")}
-                            </option>
-                            <option value="2. Tuesday">
-                              {getTranslatedDay("2. Tuesday")}
-                            </option>
-                            <option value="3. Wednesday">
-                              {getTranslatedDay("3. Wednesday")}
-                            </option>
-                            <option value="4. Thursday">
-                              {getTranslatedDay("4. Thursday")}
-                            </option>
-                            <option value="5. Friday">
-                              {getTranslatedDay("5. Friday")}
-                            </option>
-                            <option value="6. Saturday">
-                              {getTranslatedDay("6. Saturday")}
-                            </option>
-                            <option disabled>
-                              {t(
-                                "—— दुसरा आणि चौथा आठवडा ——",
-                                "—— Second And Fourth Week ——",
-                                "—— दूसरा और चौथा सप्ताह ——",
-                              )}
-                            </option>
-                            <option value="7. Monday">
-                              {getTranslatedDay("7. Monday")}
-                            </option>
-                            <option value="8. Tuesday">
-                              {getTranslatedDay("8. Tuesday")}
-                            </option>
-                            <option value="9. Wednesday">
-                              {getTranslatedDay("9. Wednesday")}
-                            </option>
-                            <option value="10. Thursday">
-                              {getTranslatedDay("10. Thursday")}
-                            </option>
-                            <option value="11. Friday">
-                              {getTranslatedDay("11. Friday")}
-                            </option>
-                            <option value="12. Saturday">
-                              {getTranslatedDay("12. Saturday")}
-                            </option>
-                          </select>
-                        </div>
+                      {/* Instruction Subtext */}
+                      <p className="text-xs text-slate-500 leading-relaxed">
+                        Select ingredients used for <span className="font-bold text-slate-900">{menuType === "Select Menu" ? "निवडलेली पाककृती" : getTranslatedMenu(menuType)}</span>. Your selection is saved until you change it. Deselected ingredients keep formula rows at zero and are excluded from daily entry.
+                      </p>
 
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-slate-800">
-                            {t("मेनू:", "Menu:")}
-                          </span>
-                          <select
-                            value={menuType}
-                            onChange={(e) => setMenuType(e.target.value)}
-                            className="h-8 px-2 bg-white border border-black rounded shadow-sm text-sm font-medium min-w-[120px]"
-                          >
-                            <option value="Select Menu">
-                              {t("मेनू निवडा", "Select Menu")}
-                            </option>
-                            <option value="Vegetable Pulav">
-                              {getTranslatedMenu("Vegetable Pulav")}
-                            </option>
-                            <option value="Masala Rice">
-                              {getTranslatedMenu("Masala Rice")}
-                            </option>
-                            <option value="Matar Pulav">
-                              {getTranslatedMenu("Matar Pulav")}
-                            </option>
-                            <option value="Mungdal Khichadi">
-                              {getTranslatedMenu("Mungdal Khichadi")}
-                            </option>
-                            <option value="Cowpea Khichadi">
-                              {getTranslatedMenu("Cowpea Khichadi")}
-                            </option>
-                            <option value="Chana Pulav">
-                              {getTranslatedMenu("Chana Pulav")}
-                            </option>
-                            <option value="Soyabin Pulav">
-                              {getTranslatedMenu("Soyabin Pulav")}
-                            </option>
-                            <option value="Masuri Pulav">
-                              {getTranslatedMenu("Masuri Pulav")}
-                            </option>
-                            <option value="Egg Pulav">
-                              {getTranslatedMenu("Egg Pulav")}
-                            </option>
-                            <option value="Sprouted Matki Usal">
-                              {getTranslatedMenu("Sprouted Matki Usal")}
-                            </option>
-                            <option value="Sweet Khichadi">
-                              {getTranslatedMenu("Sweet Khichadi")}
-                            </option>
-                            <option value="Mug Shevaga Varan Bhat">
-                              {getTranslatedMenu("Mug Shevaga Varan Bhat")}
-                            </option>
-                            <option value="Rice pudding">
-                              {getTranslatedMenu("Rice pudding")}
-                            </option>
-                            <option value="ragi porridge">
-                              {getTranslatedMenu("ragi porridge")}
-                            </option>
-                            <option value="Sprouted pulses">
-                              {getTranslatedMenu("Sprouted pulses")}
-                            </option>
-                            <option value="Other">
-                              {getTranslatedMenu("Other")}
-                            </option>
-                          </select>
-                        </div>
-                      </div>
-
-                      {/* Double Divider */}
-                      <div className="space-y-1 w-full">
-                        <div className="h-px w-full bg-slate-300" />
-                        <div className="h-px w-full bg-slate-300" />
-                      </div>
-
-                      {/* Checkbox Checklist Panel */}
-                      <div className="w-full border border-black bg-[#F5F5F5] rounded p-8 md:p-12">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
-                          {/* Left Column Checkboxes */}
-                          <div className="space-y-4">
+                      {/* Checklist Box */}
+                      <div className="border border-slate-200 rounded-lg p-3 bg-white max-h-[380px] overflow-y-auto">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {/* Column 1 */}
+                          <div className="space-y-2">
                             {[
                               "Rice",
-                              "Mugdal",
                               "Turdal",
-                              "Masurdal",
-                            ].map((item) => (
-                              <label
-                                key={item}
-                                className="flex items-center gap-4 cursor-pointer select-none"
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={!!selectedMenuItems[item]}
-                                  onChange={(e) =>
-                                    setSelectedMenuItems({
-                                      ...selectedMenuItems,
-                                      [item]: e.target.checked,
-                                    })
-                                  }
-                                  className="size-5 border border-slate-400 bg-white checked:bg-blue-600 focus:ring-0 rounded outline-none"
-                                />
-                                <span className="text-sm font-bold text-slate-800">
-                                  {getTranslatedItem(item)}
-                                </span>
-                              </label>
-                            ))}
+                              "Matki",
+                              "Cowpea",
+                              "Pease",
+                              "Cumin",
+                              "Turmeric",
+                              "Salt",
+                              "Garam Masala",
+                              "Milk-Milk Powder",
+                              "Ragi Satva"
+                            ].map((item) => {
+                              const isChecked = !!selectedMenuItems[item];
+                              return (
+                                <label
+                                  key={item}
+                                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50 cursor-pointer select-none"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={(e) =>
+                                      setSelectedMenuItems({
+                                        ...selectedMenuItems,
+                                        [item]: e.target.checked,
+                                      })
+                                    }
+                                    className="size-4 rounded border-slate-300 text-emerald-600 focus:ring-0 cursor-pointer"
+                                  />
+                                  <span className="text-sm font-medium">
+                                    {getTranslatedItem(item)}
+                                  </span>
+                                </label>
+                              );
+                            })}
                           </div>
 
-                          {/* Right Column Checkboxes */}
-                          <div className="space-y-4">
+                          {/* Column 2 */}
+                          <div className="space-y-2">
                             {[
-                              "Turmeric",
-                              "Oil",
-                              "Salt",
+                              "Mugdal",
+                              "Masurdal",
+                              "Moong",
+                              "Gram",
+                              "Soyabean Wadi",
+                              "Mustard",
                               "Onion Garlic Masala",
-                              "Garam Masala",
-                            ].map((item) => (
-                              <label
-                                key={item}
-                                className="flex items-center gap-4 cursor-pointer select-none"
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={!!selectedMenuItems[item]}
-                                  onChange={(e) =>
-                                    setSelectedMenuItems({
-                                      ...selectedMenuItems,
-                                      [item]: e.target.checked,
-                                    })
-                                  }
-                                  className="size-5 border border-slate-400 bg-white checked:bg-blue-600 focus:ring-0 rounded outline-none"
-                                />
-                                <span className="text-sm font-bold text-slate-800">
-                                  {getTranslatedItem(item)}
-                                </span>
-                              </label>
-                            ))}
+                              "Chili",
+                              "Oil",
+                              "Sugar-Jaggery"
+                            ].map((item) => {
+                              const isChecked = !!selectedMenuItems[item];
+                              return (
+                                <label
+                                  key={item}
+                                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50 cursor-pointer select-none"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={(e) =>
+                                      setSelectedMenuItems({
+                                        ...selectedMenuItems,
+                                        [item]: e.target.checked,
+                                      })
+                                    }
+                                    className="size-4 rounded border-slate-300 text-emerald-600 focus:ring-0 cursor-pointer"
+                                  />
+                                  <span className="text-sm font-medium">
+                                    {getTranslatedItem(item)}
+                                  </span>
+                                </label>
+                              );
+                            })}
                           </div>
                         </div>
                       </div>
 
-                      {/* Buttons Row */}
-                      <div className="w-full flex justify-between items-center py-2">
+                      {/* Action Bar */}
+                      <div className="flex items-center gap-4 pt-1">
                         <button
                           onClick={handleSaveMenu}
-                          className="px-5 py-2 bg-[#4CAF50] hover:bg-[#43A047] text-white rounded text-xs font-bold shadow-md transition-colors"
+                          className="px-4 py-2 bg-[#047857] hover:bg-[#065f46] text-white rounded-lg text-sm font-bold shadow-sm flex items-center gap-2 transition-colors"
                         >
-                          {t("जतन करा", "Save", "सहेजें")}
+                          <Save className="w-4 h-4" />
+                          <span>Save ingredients</span>
                         </button>
                         <button
-                          onClick={handleReportMenu}
-                          className="px-5 py-2 bg-[#D4A017] hover:bg-[#B8860B] text-white rounded text-xs font-bold shadow-md transition-colors"
+                          onClick={() => setActiveTab("quantity")}
+                          className="text-sm font-semibold text-[#047857] hover:underline cursor-pointer"
                         >
-                          {t("अहवाल", "Report", "रिपोर्ट")}
+                          Go to Recipe Formulas →
                         </button>
                       </div>
+                    </div>
 
                       {/* Food Menu Report Modal */}
                       {showMenuReportModal && (
@@ -5749,178 +5775,410 @@ function TeacherMDMPage() {
                         </div>
                       )}
                     </div>
-                  </div>
                 )}
 
                 {/* 4. DAILY REGISTER TAB */}
                 {activeTab === "daily-reg" && (
-                  <div className="bg-white p-12 border border-slate-300 w-full min-h-[800px] flex flex-col items-center">
-                    <div className="w-full max-w-[800px] space-y-10">
-                      {/* Title */}
-                      <div className="text-center py-4">
-                        <h2 className="text-2xl font-bold text-[#004C99]">
-                          {t(
-                            "दैनिक नोंदवही",
-                            "Daily register",
-                            "दैनिक रजिस्टर",
-                          )}
-                        </h2>
+                  <div className="w-full space-y-4 font-sans">
+                    {/* Top Page Title */}
+                    <div className="flex flex-wrap items-center justify-between border-b border-slate-200 pb-3 gap-3">
+                      <h2 className="text-xl font-bold text-slate-800">
+                        Daily Attendance Entry
+                      </h2>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={handleRiceReport}
+                          className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition-colors"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          <span>{t("तांदूळ अहवाल", "Rice Report", "चावल रिपोर्ट")}</span>
+                        </button>
+                        <button
+                          onClick={handleGeneralReport}
+                          className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition-colors"
+                        >
+                          <FileSpreadsheet className="w-3.5 h-3.5" />
+                          <span>{t("दैनिक अहवाल", "General Report", "दैनिक रिपोर्ट")}</span>
+                        </button>
                       </div>
+                    </div>
 
-                      {/* Inputs Grid */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-2 text-slate-800">
-                        <div className="space-y-2">
-                          <span className="text-sm font-bold block">
-                            {t("दिनांक:", "Date:")}
-                          </span>
-                          <input
-                            type="date"
-                            value={registerDate}
-                            onChange={(e) => setRegisterDate(e.target.value)}
-                            className="w-full h-8 px-2 bg-white border border-black rounded shadow-sm text-sm font-medium outline-none"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <span className="text-sm font-bold block">
-                            {t("इयत्ता:", "Class:")}
-                          </span>
-                          <select
-                            value={registerClass}
-                            onChange={(e) => setRegisterClass(e.target.value)}
-                            className="w-full h-8 px-2 bg-white border border-black rounded shadow-sm text-sm font-medium outline-none"
-                          >
-                            <option value="Select Class">
-                              {t("इयत्ता निवडा", "Select Class")}
-                            </option>
-                            <option value="1 To 5">
-                              {t("१ ते ५", "1 To 5", "1 से 5")}
-                            </option>
-                            <option value="6 To 8">
-                              {t("६ ते ८", "6 To 8", "6 से 8")}
-                            </option>
-                          </select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <span className="text-sm font-bold block">
-                            {t("दिवस:", "Day:")}
-                          </span>
-                          <input
-                            type="text"
-                            value={registerDay}
-                            onChange={(e) => setRegisterDay(e.target.value)}
-                            className="w-full h-8 px-2 bg-white border border-black rounded shadow-sm text-sm font-medium outline-none"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <span className="text-sm font-bold block">
-                            {t("लाभार्थी संख्या:", "Beneficiary:", "लाभार्थी:")}
-                          </span>
-                          <input
-                            type="text"
-                            value={registerBeneficiary}
-                            onChange={(e) =>
-                              setRegisterBeneficiary(e.target.value)
-                            }
-                            className="w-full h-8 px-2 bg-white border border-black rounded shadow-sm text-sm font-medium outline-none"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <span className="text-sm font-bold block">
-                            {t("मेनू:", "Menu:")}
-                          </span>
-                          <div className="h-8 flex items-center text-sm font-medium text-slate-500">
-                            {getTranslatedMenu(
-                              getMenuForRegisterDate(registerDate),
-                            )}
+                    {/* 2-Column Grid Container */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                      {/* Left Column: Form Controls (5 cols) */}
+                      <div className="lg:col-span-5 space-y-4">
+                        {/* Entry Date Card */}
+                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-2">
+                          <label className="text-xs font-semibold text-slate-600 block">
+                            Entry date
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="date"
+                              value={registerDate}
+                              onChange={(e) => setRegisterDate(e.target.value)}
+                              className="flex-1 h-10 px-3 bg-white border border-slate-300 rounded-lg text-sm font-bold text-slate-800 focus:outline-none focus:border-indigo-600"
+                            />
+                            <button
+                              onClick={() => {}}
+                              className="h-10 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-lg shadow-sm transition-colors"
+                            >
+                              Go
+                            </button>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Divider */}
-                      <div className="h-px w-full bg-slate-300" />
+                        {/* Banner Info Card */}
+                        <div className="bg-emerald-50/70 rounded-xl border border-emerald-200 p-4 space-y-1">
+                          <div className="flex items-center justify-between text-emerald-900 font-extrabold text-sm">
+                            <span>{registerDate} · {getTranslatedDay(registerDay)}</span>
+                          </div>
+                          <p className="text-xs font-bold text-emerald-800">
+                            Recipe: {getTranslatedMenu(getMenuForRegisterDate(registerDate))}
+                          </p>
+                          <p className="text-[11px] font-medium text-emerald-700">
+                            Group: प्राथमिक (इयत्ता १ ते ५) · Calendar master · Formula: custom
+                          </p>
+                        </div>
 
-                      {/* Buttons Row */}
-                      <div className="w-full flex justify-between items-center py-2">
-                        <button
-                          onClick={handleSaveRegister}
-                          className="px-5 py-2 bg-[#4CAF50] hover:bg-[#43A047] text-white rounded text-xs font-bold shadow-md transition-colors"
-                        >
-                          {t("जतन करा", "Save", "सहेजें")}
-                        </button>
-                        <div className="flex gap-4">
+                        {/* Form Panel */}
+                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
+                          {/* Radio: Food cooked today */}
+                          <div className="space-y-1.5 p-3 rounded-lg bg-purple-50/50 border border-purple-100">
+                            <label className="text-xs font-bold text-purple-900 block">
+                              आहार शिजवला आहे की नाही
+                            </label>
+                            <div className="flex items-center gap-6 text-sm font-semibold text-slate-800">
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name="cookedToday"
+                                  value="yes"
+                                  checked={cookedToday === "yes"}
+                                  onChange={(e) => setCookedToday(e.target.value)}
+                                  className="text-purple-600 focus:ring-purple-500"
+                                />
+                                <span>होय</span>
+                              </label>
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name="cookedToday"
+                                  value="no"
+                                  checked={cookedToday === "no"}
+                                  onChange={(e) => setCookedToday(e.target.value)}
+                                  className="text-purple-600 focus:ring-purple-500"
+                                />
+                                <span>नाही</span>
+                              </label>
+                            </div>
+                          </div>
+
+                          {/* Student Attendance Inputs */}
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
+                            <div className="space-y-1">
+                              <label className="text-[11px] font-bold text-slate-700 block">
+                                पटसंख्या *
+                              </label>
+                              <input
+                                type="number"
+                                placeholder="२३"
+                                value={totalEnrolled}
+                                onChange={(e) => setTotalEnrolled(e.target.value)}
+                                className="w-full h-10 px-3 bg-white border border-slate-300 rounded-xl text-center text-base font-extrabold text-slate-900 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none"
+                              />
+                              <p className="text-[10px] font-bold text-emerald-700">
+                                Up to 500 students
+                              </p>
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="text-[11px] font-bold text-slate-700 block">
+                                हजर विद्यार्थ्यांची संख्या *
+                              </label>
+                              <input
+                                type="number"
+                                placeholder="३२"
+                                value={presentCount}
+                                onChange={(e) => setPresentCount(e.target.value)}
+                                className={`w-full h-10 px-3 bg-white border rounded-xl text-center text-base font-extrabold text-slate-900 focus:ring-2 outline-none ${
+                                  Number(presentCount) > Number(totalEnrolled) && totalEnrolled !== ""
+                                    ? "border-red-400 focus:ring-red-200 focus:border-red-500"
+                                    : "border-slate-300 focus:ring-indigo-200 focus:border-indigo-500"
+                                }`}
+                              />
+                              {Number(presentCount) > Number(totalEnrolled) && totalEnrolled !== "" && (
+                                <p className="text-[10px] font-bold text-red-600 leading-tight">
+                                  हजर विद्यार्थ्यांची संख्या पटसंख्येपेक्षा जास्त असू शकत नाही.
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="text-[11px] font-bold text-slate-700 block">
+                                वापरलेली ताटे *
+                              </label>
+                              <input
+                                type="number"
+                                placeholder="७७"
+                                value={registerBeneficiary}
+                                onChange={(e) => setRegisterBeneficiary(e.target.value)}
+                                className={`w-full h-10 px-3 bg-white border rounded-xl text-center text-base font-extrabold focus:ring-2 outline-none ${
+                                  Number(registerBeneficiary) > Number(presentCount) && presentCount !== ""
+                                    ? "border-red-400 text-red-600 focus:ring-red-200 focus:border-red-500"
+                                    : "border-slate-300 text-emerald-700 focus:ring-emerald-200 focus:border-emerald-500"
+                                }`}
+                              />
+                              {Number(registerBeneficiary) > Number(presentCount) && presentCount !== "" && (
+                                <p className="text-[10px] font-bold text-red-600 leading-tight">
+                                  वापरलेली ताटे हजर संख्येपेक्षा जास्त असू शकत नाही.
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          <p className="text-[10px] text-slate-500 font-medium leading-relaxed">
+                            प्रथम पटसंख्या, नंतर हजर संख्या, नंतर जेवण घेतलेली ताटे · १ विद्यार्थी = १ ताट · ताट हजर संख्येपेक्षा जास्त नसावीत
+                          </p>
+
+                          {/* Auto Ingredient Calculation Cards */}
+                          <div className="space-y-2 pt-1">
+                            <span className="text-xs font-bold text-slate-800 block">
+                              Automatic ingredient calculation <span className="text-slate-400 font-medium">(kg)</span>
+                            </span>
+
+                            {/* Red Warning Banner when Recipe fails or food not cooked */}
+                            {(cookedToday === "no" || getMenuForRegisterDate(registerDate) === "No Menu Available") && (
+                              <div className="p-4 bg-white border border-red-200 rounded-xl text-center shadow-xs">
+                                <p className="text-xs font-bold text-red-600">
+                                  Recipe does not match this entry. Refresh the page.
+                                </p>
+                              </div>
+                            )}
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              {/* Green Card: Veggies */}
+                              <div className="bg-emerald-50/60 border border-emerald-200 rounded-xl p-3.5 space-y-2">
+                                <span className="text-xs font-bold text-emerald-900 block">भाजीपाला</span>
+                                <span className="text-[10px] text-emerald-700 block">
+                                  नोंदवहीसाठी — स्टॉक किंवा Calculation वर परिणाम होत नाही
+                                </span>
+                                <div className="space-y-1 pt-1">
+                                  <label className="text-[11px] font-bold text-slate-700 block">भाजीपाला (kg)</label>
+                                  <input
+                                    type="text"
+                                    placeholder="867"
+                                    value={veggieKg}
+                                    onChange={(e) => setVeggieKg(e.target.value)}
+                                    className="w-full h-9 px-3 bg-white border border-slate-300 rounded-lg text-sm font-bold text-right text-slate-800 focus:outline-none focus:border-emerald-500"
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Blue Card: Fuel & Veg Allowance */}
+                              <div className="bg-blue-50/60 border border-blue-200 rounded-xl p-3.5 space-y-2 relative flex flex-col justify-between">
+                                <div>
+                                  <span className="text-xs font-bold text-blue-900 block">इंधन व भाजीपाला अनुदान</span>
+                                  <span className="text-[10px] text-blue-700 block">
+                                    {registerClass === "6 To 8" ? "उच्च प्राथमिक (६ ते ८)" : "प्राथमिक ( इयत्ता १ ते ५ )"} · ₹{registerClass === "6 To 8" ? (Number(upperRate || 5.45)).toFixed(2) : (Number(primaryRate || 2.59)).toFixed(2)} प्रति ताट
+                                  </span>
+                                  <button
+                                    onClick={() => setActiveTab("anudan")}
+                                    className="text-[11px] font-bold text-blue-600 underline hover:text-blue-800 block mt-0.5"
+                                  >
+                                    अनुदान सेटिंग
+                                  </button>
+                                </div>
+                                <div className="pt-2 border-t border-blue-100">
+                                  <span className="text-[11px] font-bold text-slate-700 block">एकूण अनुदान (₹)</span>
+                                  <div className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg flex items-center justify-end">
+                                    <span className="text-base font-black text-blue-950">
+                                      ₹{(Number(registerBeneficiary || 0) * (registerClass === "6 To 8" ? Number(upperRate || 5.45) : Number(primaryRate || 2.59))).toFixed(2)}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Yellow Card: Purak Ahar */}
+                            <div className="p-3.5 bg-amber-50/60 border border-amber-200 rounded-xl space-y-3">
+                              <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                                <input
+                                  type="checkbox"
+                                  checked={purakAhar}
+                                  onChange={(e) => setPurakAhar(e.target.checked)}
+                                  className="size-4 mt-0.5 rounded border-amber-400 text-amber-600 focus:ring-0"
+                                />
+                                <div>
+                                  <span className="text-xs font-bold text-amber-950 block">पूरक आहार (Purak Ahar)</span>
+                                  <span className="text-[10px] text-amber-800 block">
+                                    नोंदवहीसाठी — स्टॉक किंवा Calculation वर परिणाम होत नाही
+                                  </span>
+                                </div>
+                              </label>
+
+                              {purakAhar && (
+                                <div className="space-y-1 pt-1">
+                                  <label className="text-xs font-bold text-slate-800 block">
+                                    Purak Ahar details
+                                  </label>
+                                  <textarea
+                                    rows={2}
+                                    placeholder="e.g. fruit name, quantity, students served..."
+                                    value={purakAharDetails}
+                                    onChange={(e) => setPurakAharDetails(e.target.value)}
+                                    className="w-full p-2.5 bg-white border border-indigo-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none transition-all shadow-sm"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Remarks */}
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-700 block">Remarks</label>
+                            <textarea
+                              rows={2}
+                              placeholder="Optional"
+                              value={remarks}
+                              onChange={(e) => setRemarks(e.target.value)}
+                              className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-xs font-medium focus:outline-none focus:border-slate-400"
+                            />
+                          </div>
+
+                          {/* Save Button */}
                           <button
-                            onClick={handleRiceReport}
-                            className="px-5 py-2 bg-[#D4A017] hover:bg-[#B8860B] text-white rounded text-xs font-bold shadow-md transition-colors"
+                            onClick={handleSaveRegister}
+                            className="w-full py-2.5 bg-[#047857] hover:bg-[#065f46] text-white font-bold text-sm rounded-lg shadow-sm transition-colors flex items-center justify-center gap-2"
                           >
-                            {t("तांदूळ अहवाल", "Rice Report", "चावल रिपोर्ट")}
-                          </button>
-                          <button
-                            onClick={handleGeneralReport}
-                            className="px-5 py-2 bg-[#D4A017] hover:bg-[#B8860B] text-white rounded text-xs font-bold shadow-md transition-colors"
-                          >
-                            {t("अहवाल", "Report", "रिपोर्ट")}
+                            <Save className="w-4 h-4" />
+                            <span>Save entry</span>
                           </button>
                         </div>
                       </div>
 
-                      {/* Table Section */}
-                      <div className="w-full overflow-x-auto">
-                        <table className="w-full border-collapse border border-black text-slate-900 bg-white">
-                          <thead>
-                            <tr className="bg-white">
-                              <th className="border border-black p-2 text-sm font-bold text-center w-[25%]">
-                                {t(
-                                  "मेनू साहित्य",
-                                  "Menu Content",
-                                  "मेनू सामग्री",
-                                )}
-                              </th>
-                              <th className="border border-black p-2 text-sm font-bold text-center w-[25%]">
-                                {t(
-                                  "प्रमाण (ग्राम मध्ये)",
-                                  "Quantity (In Gram)",
-                                  "मात्रा (ग्राम में)",
-                                )}
-                              </th>
-                              <th className="border border-black p-2 text-sm font-bold text-center w-[25%]">
-                                {t("लाभार्थी", "Beneficiary", "लाभार्थी")}
-                              </th>
-                              <th className="border border-black p-2 text-sm font-bold text-center w-[25%]">
-                                {t(
-                                  "एकूण (ग्राम मध्ये)",
-                                  "Total (In Gram)",
-                                  "कुल (ग्राम में)",
-                                )}
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {(() => {
-                              const rows = getDailyRegisterRows();
-                              return rows.map((row, i) => (
-                                <tr key={i} className="bg-white h-8">
-                                  <td className="border border-black p-2 text-center text-xs font-medium text-slate-700">
-                                    {getTranslatedItem(row.item)}
-                                  </td>
-                                  <td className="border border-black p-2 text-center text-xs font-medium text-slate-700">
-                                    {row.qty}
-                                  </td>
-                                  <td className="border border-black p-2 text-center text-xs font-medium text-slate-700">
-                                    {row.beneficiary}
-                                  </td>
-                                  <td className="border border-black p-2 text-center text-xs font-medium text-slate-700">
-                                    {row.total}
-                                  </td>
-                                </tr>
-                              ));
-                            })()}
-                          </tbody>
-                        </table>
+                      {/* Right Column: Month Register Matrix Table (7 cols) */}
+                      <div className="lg:col-span-7 bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                          <div>
+                            <h3 className="font-bold text-sm text-slate-800">महिनावारी नोंदी</h3>
+                            <p className="text-[11px] text-slate-500 font-medium">
+                              {(() => {
+                                const d = new Date(registerDate || new Date());
+                                const monthNamesMr = ["जानेवारी", "फेब्रुवारी", "मार्च", "एप्रिल", "मे", "जून", "जुलै", "ऑगस्ट", "सप्टेंबर", "ऑक्टोबर", "नोव्हेंबर", "डिसेंबर"];
+                                return !isNaN(d.getTime()) ? `${monthNamesMr[d.getMonth()]} ${d.getFullYear()}` : "जुलै २०२६";
+                              })()}
+                            </p>
+                          </div>
+                          <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-bold border border-slate-200">
+                            ५०% दिवस
+                          </span>
+                        </div>
+
+                        {/* Scrollable Month Matrix Table */}
+                        <div className="w-full overflow-x-auto max-h-[620px] overflow-y-auto border border-slate-200 rounded-lg">
+                          <table className="w-full border-collapse text-left text-xs bg-white">
+                            <thead className="sticky top-0 bg-slate-100 border-b border-slate-200 text-[11px] font-bold text-slate-700 uppercase">
+                              <tr>
+                                <th className="p-2 border-r border-slate-200 min-w-[65px]">DATE</th>
+                                <th className="p-2 border-r border-slate-200 min-w-[65px]">DAY</th>
+                                <th className="p-2 border-r border-slate-200 min-w-[130px]">RECIPE</th>
+                                <th className="p-2 border-r border-slate-200 text-center min-w-[60px]">पटसंख्या</th>
+                                <th className="p-2 border-r border-slate-200 text-center min-w-[75px]">हजर पट</th>
+                                <th className="p-2 border-r border-slate-200 text-center min-w-[75px]">लाभार्थी</th>
+                                <th className="p-2 border-r border-slate-200 text-center min-w-[70px]">तांदूळ KG</th>
+                                <th className="p-2 border-r border-slate-200 text-center min-w-[70px]">मूगडाळ KG</th>
+                                <th className="p-2 border-r border-slate-200 text-center min-w-[70px]">तूरडाळ KG</th>
+                                <th className="p-2 text-center min-w-[70px]">मसूरडाळ KG</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {(() => {
+                                const dateObj = new Date(registerDate || new Date().toISOString().split("T")[0]);
+                                const validDate = isNaN(dateObj.getTime()) ? new Date() : dateObj;
+                                const year = validDate.getFullYear();
+                                const month = validDate.getMonth();
+                                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                                const monthPadded = (month + 1).toString().padStart(2, "0");
+
+                                const dayNamesMr = ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
+
+                                const rows = [];
+                                for (let d = 1; d <= daysInMonth; d++) {
+                                  const dayPadded = d.toString().padStart(2, "0");
+                                  const fullDateKey = `${year}-${monthPadded}-${dayPadded}`;
+                                  const currDateObj = new Date(year, month, d);
+                                  const dayOfWeek = currDateObj.getDay();
+                                  const dayNameStr = dayNamesMr[dayOfWeek];
+
+                                  const savedForDate = registerRecords ? registerRecords[fullDateKey] : null;
+                                  const classData = savedForDate ? (savedForDate[registerClass] || (registerClass === "1 To 5" ? savedForDate : null)) : null;
+
+                                  const isCurrentSelectedDate = fullDateKey === registerDate;
+
+                                  const recipeName = classData?.menu || getMenuForRegisterDate(fullDateKey);
+                                  const totalEnr = isCurrentSelectedDate ? (totalEnrolled || classData?.totalEnrolled || "—") : (classData?.totalEnrolled || "—");
+                                  const presentSt = isCurrentSelectedDate ? (presentCount || classData?.presentCount || "—") : (classData?.presentCount || "—");
+                                  const beneCount = isCurrentSelectedDate ? (registerBeneficiary || classData?.beneficiary || "—") : (classData?.beneficiary || "—");
+
+                                  const beneNum = Number(beneCount) || 0;
+                                  const riceKg = beneNum > 0 ? (beneNum * (registerClass === "6 To 8" ? 0.15 : 0.1)).toFixed(2) : "—";
+                                  const moongKg = beneNum > 0 ? (beneNum * 0.02).toFixed(2) : "—";
+                                  const turKg = beneNum > 0 ? (beneNum * 0.02).toFixed(2) : "—";
+
+                                  rows.push(
+                                    <tr
+                                      key={fullDateKey}
+                                      className={`transition-colors ${
+                                        isCurrentSelectedDate
+                                          ? "bg-emerald-50/90 border-l-4 border-l-emerald-600 font-bold"
+                                          : dayOfWeek === 0
+                                          ? "bg-red-50/30 text-red-700"
+                                          : d % 2 === 0
+                                          ? "bg-white"
+                                          : "bg-slate-50/40"
+                                      }`}
+                                    >
+                                      <td className="p-2 border-r border-slate-100 font-semibold text-slate-800 whitespace-nowrap">
+                                        {dayPadded}/{monthPadded}
+                                      </td>
+                                      <td className="p-2 border-r border-slate-100 text-slate-600 whitespace-nowrap">
+                                        {dayNameStr}
+                                      </td>
+                                      <td className="p-2 border-r border-slate-100 font-medium text-slate-800 truncate max-w-[130px]">
+                                        {getTranslatedMenu(recipeName)}
+                                      </td>
+                                      <td className="p-2 border-r border-slate-100 text-center text-slate-600">
+                                        {totalEnr}
+                                      </td>
+                                      <td className="p-2 border-r border-slate-100 text-center text-slate-600">
+                                        {presentSt}
+                                      </td>
+                                      <td className="p-2 border-r border-slate-100 text-center font-bold text-slate-800">
+                                        {beneCount}
+                                      </td>
+                                      <td className="p-2 border-r border-slate-100 text-center text-slate-700 font-semibold">
+                                        {riceKg}
+                                      </td>
+                                      <td className="p-2 border-r border-slate-100 text-center text-slate-700">
+                                        {moongKg}
+                                      </td>
+                                      <td className="p-2 border-r border-slate-100 text-center text-slate-700">
+                                        {turKg}
+                                      </td>
+                                      <td className="p-2 text-center text-slate-700">
+                                        —
+                                      </td>
+                                    </tr>
+                                  );
+                                }
+                                return rows;
+                              })()}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
+                    </div>
 
                       {/* 1. Daily Register General Report Modal (Part-II Accounting of Cereals - In Kilogram) */}
                       {showDailyRegisterReportModal && (
@@ -6681,7 +6939,6 @@ function TeacherMDMPage() {
                         </div>
                       )}
                     </div>
-                  </div>
                 )}
 
 
@@ -8117,35 +8374,58 @@ function TeacherMDMPage() {
                             </button>
                           </div>
 
-                          {/* Monthly Report Sub-tabs Selector */}
-                          <div className="flex justify-center border-b border-slate-200 print:hidden mt-2">
-                            <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+                          {/* Learnify Academy MDM Monthly Report Category Selector Bar */}
+                          <div className="flex flex-wrap items-center justify-center gap-2 print:hidden bg-slate-100 p-2 rounded-xl border border-slate-200">
+                            {[
+                              { id: "tandul_bhag1", label: "तांदूळ अहवाल (भाग १)" },
+                              { id: "dhanyadi_bhag2", label: "धान्यादी माल (भाग २)" },
+                              { id: "masik_goshwara", label: "मासिक 'ब' प्रपत्र" },
+                              { id: "anudan_report", label: "इंधन व भाजीपाला अनुदान" },
+                              { id: "purak_ahar_report", label: "पूरक आहार अहवाल" },
+                            ].map((cat) => (
+                              <button
+                                key={cat.id}
+                                onClick={() => setSelectedReportCategory(cat.id as any)}
+                                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all shadow-xs ${
+                                  selectedReportCategory === cat.id
+                                    ? "bg-[#047857] text-white shadow-sm"
+                                    : "bg-white text-slate-700 hover:bg-slate-50 border border-slate-200"
+                                }`}
+                              >
+                                {cat.label}
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* Monthly Report Sub-tabs Selector (1-5, 6-8, 1-8) */}
+                          <div className="flex justify-center border-b border-slate-200 print:hidden mt-1">
+                            <nav className="-mb-px flex space-x-6" aria-label="Tabs">
                               <button
                                 onClick={() => setMonthlySubTab("1-5")}
-                                className={`shrink-0 border-b-2 py-4 px-1 text-sm font-bold transition-all ${monthlySubTab === "1-5"
-                                  ? "border-indigo-500 text-indigo-600"
+                                className={`shrink-0 border-b-2 py-3 px-2 text-xs font-bold transition-all ${monthlySubTab === "1-5"
+                                  ? "border-[#047857] text-[#047857]"
                                   : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700"
                                   }`}
                               >
-                                {lang === "mr" ? "१ ते ५" : "1 to 5"}
+                                {lang === "mr" ? "इयत्ता १ ते ५" : "Class 1 to 5"}
                               </button>
                               <button
                                 onClick={() => setMonthlySubTab("6-8")}
-                                className={`shrink-0 border-b-2 py-4 px-1 text-sm font-bold transition-all ${monthlySubTab === "6-8"
-                                  ? "border-indigo-500 text-indigo-600"
+                                className={`shrink-0 border-b-2 py-3 px-2 text-xs font-bold transition-all ${monthlySubTab === "6-8"
+                                  ? "border-[#047857] text-[#047857]"
                                   : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700"
                                   }`}
                               >
-                                {lang === "mr" ? "६ ते ८" : "6 to 8"}
+                                {lang === "mr" ? "इयत्ता ६ ते ८" : "Class 6 to 8"}
                               </button>
                               <button
                                 onClick={() => setMonthlySubTab("1-8")}
-                                className={`shrink-0 border-b-2 py-4 px-1 text-sm font-bold transition-all ${monthlySubTab === "1-8"
-                                  ? "border-indigo-500 text-indigo-600"
+                                className={`shrink-0 border-b-2 py-3 px-2 text-xs font-bold transition-all ${monthlySubTab === "1-8"
+                                  ? "border-[#047857] text-[#047857]"
                                   : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700"
                                   }`}
                               >
-                                {lang === "mr" ? "१ ते ८" : "1 to 8"}
+                                {lang === "mr" ? "इयत्ता १ ते ८ (एकत्रित)" : "Class 1 to 8 (Combined)"}
                               </button>
                             </nav>
                           </div>
@@ -8835,60 +9115,107 @@ function TeacherMDMPage() {
                         </div>
                       ) : (
                         <div className="space-y-6">
-                          <div className="flex justify-between items-center bg-slate-50 p-4 border border-slate-200 rounded">
-                            <div>
-                              <p className="text-sm font-semibold text-slate-500">{t("निवडलेले वर्ष", "Selected Year", "चयनित वर्ष")}</p>
-                              <p className="text-lg font-bold text-slate-800">{annualReportYear}</p>
+                          {/* Top Action & Selector Bar */}
+                          <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-50 p-4 border border-slate-200 rounded-xl shadow-xs print:hidden">
+                            <div className="flex flex-wrap items-center gap-3">
+                              <div className="space-y-1">
+                                <label className="text-xs font-bold text-slate-700 block">Yearly report</label>
+                                <select
+                                  value={annualReportType}
+                                  onChange={(e) => setAnnualReportType(e.target.value)}
+                                  className="h-9 px-3 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                                >
+                                  <option value="तांदूळ उपयोगिता (किलोग्रॅम मध्ये)">तांदूळ उपयोगिता (किलोग्रॅम मध्ये)</option>
+                                  <option value="धान्यादी माल उपयोगिता">धान्यादी माल उपयोगिता</option>
+                                  <option value="इंधन व भाजीपाला अनुदान उपयोगिता">इंधन व भाजीपाला अनुदान उपयोगिता</option>
+                                </select>
+                              </div>
+
+                              <div className="flex items-center gap-2 pt-4">
+                                <button
+                                  onClick={handleAnnualReportDownload}
+                                  className="px-4 py-2 bg-[#047857] hover:bg-[#065f46] text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition-colors"
+                                >
+                                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                                  <span>Download Excel</span>
+                                </button>
+                                <button
+                                  onClick={handleAnnualReportDownload}
+                                  className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition-colors"
+                                >
+                                  <FileText className="w-3.5 h-3.5" />
+                                  <span>Download PDF</span>
+                                </button>
+                              </div>
                             </div>
+
+                            <p className="text-[11px] text-slate-500 font-medium max-w-md">
+                              Download Excel वर क्लिक करून Excel फाईल डाउनलोड करा, किंवा Download PDF वर क्लिक करून प्रिंट विंडोमध्ये Save as PDF निवडा.
+                            </p>
+                          </div>
+
+                          {/* Annual Report Sub-tabs Selector */}
+                          <div className="flex justify-between items-center border-b border-slate-200 print:hidden mt-2 pb-2">
+                            <nav className="-mb-px flex space-x-6" aria-label="Tabs">
+                              <button
+                                onClick={() => setAnnualSubTab("1-5")}
+                                className={`shrink-0 border-b-2 py-2 px-2 text-xs font-bold transition-all ${annualSubTab === "1-5"
+                                  ? "border-[#047857] text-[#047857]"
+                                  : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700"
+                                  }`}
+                              >
+                                {lang === "mr" ? "इयत्ता १ ते ५ (प्राथमिक)" : "Class 1 to 5"}
+                              </button>
+                              <button
+                                onClick={() => setAnnualSubTab("6-8")}
+                                className={`shrink-0 border-b-2 py-2 px-2 text-xs font-bold transition-all ${annualSubTab === "6-8"
+                                  ? "border-[#047857] text-[#047857]"
+                                  : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700"
+                                  }`}
+                              >
+                                {lang === "mr" ? "इयत्ता ६ ते ८ (उच्च प्राथमिक)" : "Class 6 to 8"}
+                              </button>
+                              <button
+                                onClick={() => setAnnualSubTab("1-8")}
+                                className={`shrink-0 border-b-2 py-2 px-2 text-xs font-bold transition-all ${annualSubTab === "1-8"
+                                  ? "border-[#047857] text-[#047857]"
+                                  : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700"
+                                  }`}
+                              >
+                                {lang === "mr" ? "इयत्ता १ ते ८ (एकत्रित)" : "Class 1 to 8 (Combined)"}
+                              </button>
+                            </nav>
+
                             <button
                               onClick={() => {
                                 setIsAnnualReportGenerated(false);
                                 setAnnualReportYear(null);
                               }}
-                              className="px-4 py-2 text-sm text-[#004C99] hover:bg-blue-50 font-bold rounded transition-colors"
+                              className="px-3 py-1 text-xs text-[#004C99] hover:bg-blue-50 font-bold rounded transition-colors"
                             >
                               {t("वर्ष बदला", "Change Year", "वर्ष बदलें")}
                             </button>
                           </div>
 
-                          {/* Annual Report Sub-tabs Selector */}
-                          <div className="flex justify-center border-b border-slate-200 print:hidden mt-2">
-                            <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-
-                              <button
-                                onClick={() => setAnnualSubTab("6-8")}
-                                className={`shrink-0 border-b-2 py-4 px-1 text-sm font-bold transition-all ${annualSubTab === "6-8"
-                                  ? "border-indigo-500 text-indigo-600"
-                                  : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700"
-                                  }`}
-                              >
-                                {lang === "mr" ? "६ ते ८" : "6 to 8"}
-                              </button>
-                              <button
-                                onClick={() => setAnnualSubTab("1-8")}
-                                className={`shrink-0 border-b-2 py-4 px-1 text-sm font-bold transition-all ${annualSubTab === "1-8"
-                                  ? "border-indigo-500 text-indigo-600"
-                                  : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700"
-                                  }`}
-                              >
-                                {lang === "mr" ? "१ ते ८" : "1 to 8"}
-                              </button>
-                            </nav>
-                          </div>
-
-                          <div id="annual-report-print" className="border border-slate-300 bg-white p-4 font-sans text-xs w-full overflow-x-auto">
+                          <div id="annual-report-print" className="border border-slate-300 bg-white p-6 font-sans text-xs w-full overflow-x-auto rounded-xl shadow-xs">
                             <div className="text-center pb-2 mb-4 space-y-1">
-                              <h3 className="font-bold text-sm">प्रधानमंत्री पोषण शक्ती निर्माण योजना सन {toMarathiNumbers(annualReportYear)}</h3>
-                              <h3 className="font-bold text-sm">वार्षिक उपयोगिता प्रमाणपत्र</h3>
-                              <h3 className="font-bold text-sm">
-                                {annualSubTab === "6-8" && "इयत्ता ६ वी ते ८ वी"}
-                                {annualSubTab === "1-8" && "इयत्ता १ ली ते ८ वी"}
-                              </h3>
-                            </div>
-                            <div className="flex justify-between mb-2">
-                              <div><strong>केंद्र -</strong> {localStorage.getItem("teacher_center") || "_________________"}</div>
-                              <div><strong>शाळेचे नांव -</strong> {localStorage.getItem("teacher_school_name") || profile?.schoolName || "_________________"}</div>
-                              <div><strong>मुख्याध्यापक नांव व मो.नं. -</strong> {localStorage.getItem("teacher_principal_name") || "_________________"}</div>
+                              <p className="text-xs font-bold text-slate-700">प्रधानमंत्री पोषण शक्ती निर्माण योजना सन {annualReportYear || "2026-27"}</p>
+                              <h2 className="text-base font-extrabold text-slate-900">वार्षिक उपयोगिता प्रमाणपत्र</h2>
+                              <p className="text-xs font-bold text-slate-800">
+                                {profile?.schoolName || "Z P SCHOOL DHONDEWADI PED"}
+                              </p>
+                              <p className="text-[11px] font-semibold text-slate-600">
+                                {annualReportType} — सन {annualReportYear || "2026-27"} · {annualSubTab === "1-5" ? "प्राथमिक ( इयत्ता १ ते ५ )" : annualSubTab === "6-8" ? "उच्च प्राथमिक ( इयत्ता ६ ते ८ )" : "इयत्ता १ ते ८ (एकत्रित)"}
+                              </p>
+
+                              {/* Metadata Grid Header */}
+                              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 border border-slate-300 rounded-lg p-2.5 bg-slate-50 text-[11px] font-medium text-slate-800 mt-3 text-left">
+                                <div><span className="font-bold text-slate-500 block text-[10px]">UDISE कोड</span> <span className="font-bold">{getUdise() || "27350300701"}</span></div>
+                                <div><span className="font-bold text-slate-500 block text-[10px]">केंद्र</span> <span className="font-bold">{profile?.center || "NARSINGPUR"}</span></div>
+                                <div><span className="font-bold text-slate-500 block text-[10px]">तालुका</span> <span className="font-bold">{profile?.taluka || "तासगाव"}</span></div>
+                                <div><span className="font-bold text-slate-500 block text-[10px]">जिल्हा</span> <span className="font-bold">{profile?.district || "सांगली"}</span></div>
+                                <div><span className="font-bold text-slate-500 block text-[10px]">पिन कोड</span> <span className="font-bold">{profile?.pincode || "416312"}</span></div>
+                              </div>
                             </div>
 
                             <div className="w-full">
