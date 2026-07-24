@@ -82,11 +82,11 @@ function Collectout({ initialClass, initialYear, onBack }) {
     }, [classValue, academicYear]);
 
     useEffect(() => {
+        fetchStudentData();
         if (udiseNumber) {
-            fetchStudentData();
             fetchSchoolData();
         }
-    }, [udiseNumber]);
+    }, [udiseNumber, classValue]);
 
     useEffect(() => {
         const targetClass = initialClass || localStorage.getItem("cce_selected_class");
@@ -216,6 +216,16 @@ function Collectout({ initialClass, initialYear, onBack }) {
                 }
             } catch (firebaseError) {
                 console.warn('Firebase student data fetch failed, checking IndexedDB:', firebaseError);
+            }
+
+            if (fetchedStudents.length === 0) {
+                try {
+                    const { fetchStudentsForClass } = await import("./firestoreMarksHelper");
+                    const fsStudents = await fetchStudentsForClass(classValue);
+                    if (fsStudents && fsStudents.length > 0) {
+                        fetchedStudents = fsStudents;
+                    }
+                } catch (e) {}
             }
 
             if (fetchedStudents.length === 0) {

@@ -118,6 +118,68 @@ const SUBJECTS = [
   { key: "math",    label: "गणित" },
 ];
 
+// Circular progress indicator component (replaces checkmark tick)
+function OutcomeProgressCircle({
+  filledCount,
+  totalStudents,
+  onClick,
+}: {
+  filledCount: number;
+  totalStudents: number;
+  onClick: () => void;
+}) {
+  const percentage = totalStudents > 0 ? Math.round((filledCount / totalStudents) * 100) : 0;
+  const radius = 14;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex-shrink-0 relative w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 group focus:outline-none"
+      title={`${filledCount}/${totalStudents} विद्यार्थ्यांची माहिती भरली आहे (${percentage}%)`}
+    >
+      <svg className="w-9 h-9 transform -rotate-90" viewBox="0 0 36 36">
+        {/* Track circle */}
+        <circle
+          cx="18"
+          cy="18"
+          r={radius}
+          fill="none"
+          stroke="#e2e8f0"
+          strokeWidth="3.5"
+        />
+        {/* Progress arc */}
+        {percentage > 0 && (
+          <circle
+            cx="18"
+            cy="18"
+            r={radius}
+            fill="none"
+            stroke={percentage === 100 ? "#10b981" : "#2563eb"}
+            strokeWidth="3.5"
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            strokeLinecap="round"
+            className="transition-all duration-500 ease-out"
+          />
+        )}
+      </svg>
+      {/* Center text showing percentage fill */}
+      <span className={`absolute text-[10px] font-extrabold ${
+        percentage === 100 
+          ? "text-emerald-600" 
+          : percentage > 0 
+            ? "text-blue-600" 
+            : "text-slate-400 group-hover:text-blue-500"
+      }`}>
+        {percentage > 0 ? `${percentage}%` : "0%"}
+      </span>
+    </button>
+  );
+}
+
 // ratings: { [subjectKey]: { [outcomeCode]: { [studentId]: 1|2|3|0 } } }
 type RatingData = Record<string, Record<string, Record<string, number>>>;
 
@@ -167,6 +229,9 @@ export function CCESubjectWise({ selectedClass, academicYear, onBack }: {
   const getRating = (subKey: string, code: string, studentId: string): number =>
     ratingData[subKey]?.[code]?.[studentId] || 0;
 
+  const getFilledCount = (subKey: string, code: string): number =>
+    students.filter(s => getRating(subKey, code, s.id) > 0).length;
+
   const setRating = (subKey: string, code: string, studentId: string, value: number) => {
     setRatingData(prev => ({
       ...prev,
@@ -195,9 +260,6 @@ export function CCESubjectWise({ selectedClass, academicYear, onBack }: {
     }
     setSaving(false);
   };
-
-  const hasAnyRating = (subKey: string, code: string) =>
-    students.some(s => getRating(subKey, code, s.id) > 0);
 
   const containerStyle = {
     fontFamily: "'Inter', 'Noto Sans Devanagari', sans-serif",
@@ -236,10 +298,10 @@ export function CCESubjectWise({ selectedClass, academicYear, onBack }: {
           </div>
         </div>
 
-        {/* Student list with 1 2 3 rating */}
+        {/* Student list with 1 2 3 4 level rating buttons */}
         <div className="flex-1 overflow-y-auto pb-24 px-4 py-3 space-y-3">
           {students.length === 0 ? (
-            <div className="flex justify-center py-20 text-slate-400 text-sm">विद्यार्थी सापडले नाहीत</div>
+            <div className="flex justify-center py-20 text-slate-400 text-sm font-bold">विद्यार्थी सापडले नाहीत</div>
           ) : students.map((student, idx) => {
             const rating = getRating(subjectKey, code, student.id);
             return (
@@ -256,7 +318,7 @@ export function CCESubjectWise({ selectedClass, academicYear, onBack }: {
                   </span>
                 </div>
 
-                {/* Rating pill: [ 1 | 2 | 3 | ● ] */}
+                {/* Rating level buttons: [ 1 | 2 | 3 | 4 ] */}
                 <div
                   className="flex items-center rounded-full overflow-hidden bg-slate-50 border border-slate-200"
                 >
@@ -267,7 +329,7 @@ export function CCESubjectWise({ selectedClass, academicYear, onBack }: {
                       className={`w-9 h-9 flex items-center justify-center text-sm font-bold transition-all cursor-pointer ${
                         level === 4 ? "" : "border-r border-slate-200"
                       } ${
-                        rating === level ? "bg-blue-600 text-white" : "bg-transparent text-slate-500 hover:bg-slate-100"
+                        rating === level ? "bg-blue-600 text-white shadow-sm" : "bg-transparent text-slate-500 hover:bg-slate-100"
                       }`}
                     >
                       {level}
@@ -279,12 +341,15 @@ export function CCESubjectWise({ selectedClass, academicYear, onBack }: {
           })}
         </div>
 
-        {/* Fixed save button */}
-        <div className="absolute bottom-0 left-0 right-0 px-5 pb-5 pt-3 bg-gradient-to-t from-white via-white to-transparent">
+        {/* Save bar */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-slate-100 flex items-center justify-between">
+          <span className="text-xs text-slate-500 font-bold">
+            {students.filter(s => getRating(subjectKey, code, s.id) > 0).length} / {students.length} विद्यार्थ्यांची माहिती भरली
+          </span>
           <button
             onClick={save}
             disabled={saving}
-            className="w-full py-4 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-extrabold text-sm rounded-2xl transition-all cursor-pointer shadow-lg disabled:opacity-50"
+            className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-extrabold text-xs rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-50"
           >
             {saving ? "जतन होत आहे..." : "जतन करा"}
           </button>
@@ -356,7 +421,7 @@ export function CCESubjectWise({ selectedClass, academicYear, onBack }: {
             }
             return true;
           });
-          const ratedCount = outcomes.filter(o => hasAnyRating(subject.key, o.code)).length;
+          const ratedCount = outcomes.filter(o => getFilledCount(subject.key, o.code) > 0).length;
 
           return (
             <div key={subject.key}>
@@ -377,49 +442,40 @@ export function CCESubjectWise({ selectedClass, academicYear, onBack }: {
                 </div>
               </button>
 
-              {/* Expanded: outcome rows */}
+              {/* Expanded: outcome rows with circular progress indicators */}
               {isOpen && outcomes.map(outcome => {
-                const rated = hasAnyRating(subject.key, outcome.code);
+                const filledCount = getFilledCount(subject.key, outcome.code);
                 return (
                   <div
                     key={outcome.code}
-                    className="flex items-start gap-3 px-4 py-3.5 border-b border-slate-50"
+                    className="flex items-center justify-between gap-3 px-4 py-3.5 border-b border-slate-50 hover:bg-slate-50/60 transition-colors"
                   >
-                    {/* Code badge */}
-                    <div
-                      className="flex-shrink-0 px-2 py-0.5 rounded-md text-[11px] font-bold mt-0.5 bg-blue-50 text-blue-600 border border-blue-100"
-                      style={{
-                        minWidth: "42px", textAlign: "center",
-                      }}
-                    >
-                      {outcome.code}
+                    <div className="flex items-start gap-3 flex-1">
+                      {/* Code badge */}
+                      <div
+                        className="flex-shrink-0 px-2 py-0.5 rounded-md text-[11px] font-bold mt-0.5 bg-blue-50 text-blue-600 border border-blue-100"
+                        style={{ minWidth: "42px", textAlign: "center" }}
+                      >
+                        {outcome.code}
+                      </div>
+
+                      {/* Description */}
+                      <p className="flex-1 text-[13px] leading-snug text-slate-700 font-medium">
+                        {outcome.text}
+                      </p>
                     </div>
 
-                    {/* Description */}
-                    <p className="flex-1 text-[13px] leading-snug text-slate-700 font-medium">
-                      {outcome.text}
-                    </p>
-
-                    {/* Circle → click opens student detail */}
-                    <button
+                    {/* Progress Circle Indicator (Shows percentage/progress fill instead of simple checkmark tick) */}
+                    <OutcomeProgressCircle
+                      filledCount={filledCount}
+                      totalStudents={students.length}
                       onClick={() => setEditingOutcome({
                         subjectKey: subject.key,
                         subjectLabel: subject.label,
                         code: outcome.code,
                         text: outcome.text,
                       })}
-                      className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-90 mt-0.5 ${
-                        rated 
-                          ? "bg-emerald-500 text-white" 
-                          : "border-2 border-slate-300 bg-transparent hover:border-blue-500"
-                      }`}
-                    >
-                      {rated && (
-                        <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
-                    </button>
+                    />
                   </div>
                 );
               })}

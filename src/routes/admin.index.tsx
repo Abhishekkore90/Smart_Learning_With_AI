@@ -115,6 +115,17 @@ const adminModules = [
     trend: "Live Sync",
   },
   {
+    title: "CCE Remarks Manager",
+    desc: "Upload PDFs, verify, edit & manage CCE descriptive remarks class-wise (१ ली ते १० वी).",
+    icon: Book,
+    to: "/admin/cce-remarks",
+    color: "from-blue-600 to-cyan-600",
+    glow: "bg-blue-400/20",
+    stats: "Custom CCE Remarks",
+    trend: "Live Sync",
+    status: "Active",
+  },
+  {
     title: "Daily Assembly Book",
     desc: "Upload and manage guidebooks and references for Daily Assembly (Paripath).",
     icon: Book,
@@ -259,7 +270,7 @@ function AdminDashboard() {
                       <div>
                         <div className="text-xs font-black text-stone-900">
                           {m.title === "Student Management" &&
-                          pendingCount !== null
+                            pendingCount !== null
                             ? `${pendingCount} Reviews Pending`
                             : m.stats}
                         </div>

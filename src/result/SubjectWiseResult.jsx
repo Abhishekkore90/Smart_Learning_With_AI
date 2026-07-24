@@ -1,760 +1,634 @@
-import React, { useState, useEffect } from "react";
-import { 
-  ChevronLeft, 
-  ArrowLeft,
-  Check, 
-  AlertTriangle,
-  Loader2
-} from "lucide-react";
-import AlertMessage from "../../AlertMessage";
-import { fetchFirestoreMarks, matchAndMergeMarks } from "./firestoreMarksHelper";
-import "../result/result.css";
+import React, { useState, useEffect, useRef } from "react";
+import { db } from "../lib/firebase";
+import { doc, getDoc, collection, getDocs, query, where } from "firebase/firestore";
+import { Download, Printer, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
+import "./result.css";
 
-const SubjectWiseResult = ({ initialClass, initialYear, onBack }) => {
-  const [academicYear, setAcademicYear] = useState(initialYear || localStorage.getItem("cce_academic_year") || "");
-  const [classValue, setClassValue] = useState(initialClass || localStorage.getItem("cce_selected_class") || "");
-  const [activeSemester, setActiveSemester] = useState("first"); // "first" or "second"
-  const [division, setDivision] = useState("");
-  const [divisions, setDivisions] = useState(["A", "B", "C", "D"]);
+// -------------------- CLASS-WISE LEARNING OUTCOMES BANKS --------------------
 
-  const [studentData, setStudentData] = useState([]);
-  const [selectedStudents, setSelectedStudents] = useState([]);
+// Class 1st Outcomes
+const MARATHI_OUTCOMES_1ST = [
+  { code: "9.1.1", text: "जास्त लांबीची अपरिचित गाणी, मोठ्या वाक्यांच्या गोष्टी (४ ते ८ वाक्ये) काळजीपूर्वक ऐकतो. त्याबद्दल संभाषण करतो आणि प्रश्न विचारतो." },
+  { code: "9.1.2", text: "मोठी (१० ओळी) गाणी/कविता गातो व मोठ्याने पुन्हा म्हणून दाखवतो." },
+  { code: "9.2", text: "शिक्षकांच्या मदतीने यमक जुळवतो लहानलहान कविता तयार करतो." },
+  { code: "9.3", text: "भाषणात सहभागी होतो. बोलण्यासाठी स्वतःची वेळ घेण्याची वाट पाहतो आणि इतरांना बोलू देतो." },
+  { code: "9.3.2", text: "वर्गात वाचून दाखवलेल्या किंवा चर्चा केलेल्या माहितीपर/कथेतर आशय स्वतःच्या अनुभवांशी सक्षमपणे जोडतो आणि त्याबद्दल बोलतो." },
+  { code: "9.4.1", text: "साध्या स्वरूपाच्या अनेक कृतींचा समावेश असलेल्या सूचनांचे पालन करतो. (काच वेळी ६ ते ९ सूचना एकत्र दिल्यास)" },
+  { code: "9.4.2", text: "साध्या स्वरूपाच्या अनेक कृतींचा समावेश असलेल्या सूचनांचे पालन करतो. (काच वेळी ८ ते ९ सूचना एकत्र दिल्यास)" },
+  { code: "9.5", text: "गोष्टींची मध्यवर्ती कल्पना व पात्रांच्या भावना लक्षात घेऊन संवादासह सांगतो." },
+  { code: "9.6", text: "साधे कथानक व पात्रासह स्वतःच्या छोट्या गोष्टी सांगतो." },
+  { code: "9.7", text: "चित्र आणि संदर्भ यानुसार अपरिचित शब्दांच्या अर्थाचा अंदाज बांधतो." },
+  { code: "10.1.1", text: "अक्षरांच्या ध्वनीमधून स्वर व व्यंजनांचे ध्वनी वेगळे करतो." },
+  { code: "10.1.2", text: "शब्दांतून अक्षरांचे ध्वनी वेगळे करतो." },
+  { code: "10.2.1", text: "साधी विरामचिन्हे ओळखतो (पूर्णविराम, प्रश्नचिन्ह)" },
+  { code: "10.3.1", text: "वर्णमालेतील सर्व अक्षरे (ज्ञा, क्ष या संयुक्त अक्षरांसह) व स्वरचिन्हे वाचतो." },
+  { code: "10.3.2", text: "सर्व अक्षरे व सर्व स्वरचिन्हे आणि नेहमी वापरत असलेली जोडाक्षरे यांसह बहुवर्णिय शब्द वाचतो." },
+  { code: "10.3.3", text: "वर्णमालेतील सर्व अक्षरे आणि स्वरचिन्हे वापरून स्वतः शब्द लिहितो आणि त्यावरून वाक्य सांगतो." },
+  { code: "10.3.4", text: "शिकलेली अक्षरे आणि स्वरचिन्हे वापरून स्वतः वाक्य लिहितो." },
+  { code: "10.4", text: "योग्य उच्चार आणि ध्वनी विरामसह लहान परिच्छेद अचूकपणे वाचतो." },
+  { code: "10.5", text: "दृक् आशय आणि समान मजकूर असणाऱ्या पुस्तकांचे स्वतंत्रपणे वाचन करण्यास सुरुवात करतो." },
+  { code: "10.5.2", text: "गोष्टींची अपरिचित पुस्तके वाचतो आणि शिक्षकांच्या मार्गदर्शनाखाली ती समजावून घेतो. गोष्टीतील कथानक व पात्र ओळखतो." },
+  { code: "10.6", text: "छोट्या कविता वाचतो आणि त्याचा शाब्दिक अर्थ सांगतो." },
+  { code: "10.7", text: "खेळ खेळण्याकरिता सोप्या सूचना वाचतो आणि त्याप्रमाणे गटात खेळतो." },
+  { code: "10.8.1", text: "चित्रांचा क्रम तयार करतो आणि त्यासोबत छोटी वाक्ये पारंपारिक लिपीत वर्णमालेतील अक्षरे व स्वरचिन्हे वापरून लिहितो. शब्द आणि छोटी वाक्ये लिहून चित्रपट्ट्यांचे वर्णन करतो." },
+  { code: "10.8.2", text: "तीन किंवा चार वर्णाक्षरांच्या शब्दांचे श्रुतलेखन करतो." },
+  { code: "10.8.3", text: "वर्णमालेतील अक्षरे व स्वरचिन्हे यांचा वापर करून दोन-तीन वाक्यांचे लेखन स्वतः करतो. उदा. स्वतःचा अनुभव, चित्र अथवा वस्तूंचे वर्णन, स्वतःच्या दोन-तीन वाक्यांत लिहितो." },
+  { code: "10.9", text: "पुस्तकांच्या आवडीबद्दल सांगतो. छोट्या पुस्तकांचे नियमित वाचन करतो." }
+];
+
+const ENGLISH_OUTCOMES_1ST = [
+  { code: "9.1.1.1", text: "Listens to longer (4-8 sentences) songs/poems (unfamiliar) with attention and have conversations about them and asks questions." },
+  { code: "9.1.2.1", text: "Sings/recites longer (10 sentences) songs/ poems." },
+  { code: "9.2.1.1", text: "Extends/Creates short poems/ rhymes with the help of the teacher." },
+  { code: "9.3.1.1", text: "Engages in conversations, wait for his/her turn to speak and allow other to speak." },
+  { code: "9.3.2.1", text: "Engages with non-fictional content read aloud or discussed in class, links knowledge from his/her own experiences and talks about it." },
+  { code: "9.4.1.1", text: "Follows instructions comprising of several steps. (8 to 9 instructions at a time)" },
+  { code: "9.4.2.1", text: "Gives clear instructions comprising of several steps. (8 to 9 instructions at a time)" },
+  { code: "9.5.1.1", text: "Interprets the intent of the plot and emotions of the characters in a story and tells the story with dialogue." },
+  { code: "9.6.1.1", text: "Narrates his/her own short stories with simple plots and characters." },
+  { code: "9.7.1.1", text: "Predicts meaning of unknown words in texts using pictures and context clues." },
+  { code: "11.1.1.1", text: "Identifies rhyming words and alliterations." },
+  { code: "11.1.2.1", text: "Identifies the beginning and end syllables in words." },
+  { code: "11.1.3.1", text: "Combines 2-3 syllables to form simple words." },
+  { code: "11.2.1.1", text: "Begins to visually recognise and connect letters to corresponding sounds." },
+  { code: "11.2.2.1", text: "Produces familiar words from familiar letters." },
+  { code: "11.2.3.1", text: "Recognises sight words, their names and labels of objects in his/her environment." },
+  { code: "11.2.4.1", text: "Writes down short words on dictation." }
+];
+
+const MATHS_OUTCOMES_1ST = [
+  { code: "1.LO.1.1", text: "गुणधर्मानुसार वस्तू वेगळ्या करतो आणि त्यामागील नियमांचे वर्णन करतो. (उदाहरणार्थ, समान बदलांनुसार रंगाच्या प्राण्यांचे गट करतात.)" },
+  { code: "1.LO.2.1", text: "मोजण्याच्या मदतीने सोप्या आकृतिबंधातील हरवलेला घटक ओळखतो/शोधतो. (उदाहरणार्थ, लाल-निळा, लाल-निळा, लाल-.....)" },
+  { code: "1.LO.3.1", text: "२०पेक्षा जास्त वस्तू ९९पर्यंतच्या संख्यानामांनी मोजतो आणि १०-१०च्या टप्प्याने ९९पर्यंत संख्या मोजतो." },
+  { code: "1.LO.3.2", text: "विशिष्ट अंकापासून पुढे व मागे अशी मोजणी करतो. (० ते ९९)" },
+  { code: "1.LO.3.3", text: "दोनच्या गटातील संख्या/राशी ओळखतो. (उदाहरणार्थ, १० चे दोन गट म्हणजे २० करतो.)" },
+  { code: "1.LO.4.1", text: "एकाच गटातील वस्तूंची त्यांच्या विविध गुणधर्मानुसार मांडणी करतो. (उदाहरणार्थ, आकार, माप, लांबी, वजन)" },
+  { code: "1.LO.4.2", text: "दिलेल्या संख्यांची चढत्या आणि उतरत्या क्रमाने मांडणी करतो. (१ ते ९)" },
+  { code: "1.LO.5.1", text: "वस्तू/बाबींची अनुपस्थिती दाखवण्यासाठी शून्याचे चिन्ह ओळखतो/वापरतो." },
+  { code: "1.LO.5.2", text: "२०पर्यंतच्या संख्या ओळखतो व लिहितो आणि ९९पर्यंत संख्यानामे लिहितो." },
+  { code: "1.LO.5.3", text: "२०पर्यंतच्या दोन संख्यांची तुलना करतो व पेक्षा मोठा, पेक्षा लहान असा शब्दसंग्रह वापरतो." },
+  { code: "1.LO.6.1", text: "दैनंदिन परिस्थितीत आणि मूर्त वस्तूंचा वापर करून ९पर्यंत उत्तर येईल, अशी उदाहरणे बेरजेची तथ्ये वापरून गणितीय मांडणी करून सोडवतो." },
+  { code: "1.LO.6.2", text: "वजाबाकीवर आधारित व ९पर्यंत उत्तरे येणारी उदाहरणे सोडवण्यासाठी आणि त्यांची गणितीय मांडणी करण्यासाठी दैनंदिन जीवनातील परिस्थितींचा आणि मूर्त वस्तूंचा उपयोग करतो." },
+  { code: "1.LO.6.3", text: "संख्यांची बेरीज आणि वजाबाकी यांच्यातील संबंध विकसित करतो." },
+  { code: "1.LO.6.4", text: "बेरीज/वजाबाकी या क्रियांसाठी +/- चिन्हे ओळखतो." },
+  { code: "1.LO.7.1", text: "गट करून लहान संख्येची गुणाकारची उदाहरणे सोडवतो." },
+  { code: "1.LO.7.2", text: "गुणाकाराचे चिन्ह ओळखतो." },
+  { code: "1.LO.7.3", text: "भागाकाराची उदाहरणे सोडवण्यासाठी गटात विभागणी करतो व प्रयत्न-प्रमाद (trial and error) पद्धतींचा वापर करतो." },
+  { code: "1.LO.7.4", text: "भागाकाराचे चिन्ह ओळखतो." },
+  { code: "1.LO.8.1", text: "अवकाशीय संबंध वापरतो व शब्दसंग्रह विकसित करतो. (उदाहरणार्थ, वर, खाली, आत, बाहेर, जवळ, दूर, आधी आणि नंतर)" },
+  { code: "1.LO.8.2", text: "आजूबाजूच्या परिसरातून विविध आकार आणि मापांच्या वस्तू गोळा करतो. (उदाहरणार्थ, खडू, ब्लॉक, चेंडू, शंकू, पाईप)" },
+  { code: "1.LO.8.3", text: "विविध आकार आणि इतर निरीक्षणीय गुणधर्मांच्या आधारे वस्तू वेगळ्या करतो आणि वर्गीकृत करतो." },
+  { code: "1.LO.8.4", text: "स्वतःच्या भाषेत विविध आकारांच्या भौतिक वैशिष्ट्यांचे निरीक्षण आणि वर्णन करतो. (उदाहरणार्थ, बॉल घरंगळतो, बॉक्स घसरतो आणि त्याला कोपरे असतात.)" },
+  { code: "1.LO.8.5", text: "विविध गुणधर्मांवर आधारित आकारांची तुलना करतो. (उदाहरणार्थ, लांबी, क्षेत्रफळ, आकारमान)" },
+  { code: "1.LO.9.1", text: "जवळ-दूर, बारीक/पातळ-जाड, आखूड-लांब, वर-खाली, यांतील फरक ओळखतो." },
+  { code: "1.LO.9.2", text: "अप्रमाणित एककांच्या साहाय्याने लांबी मोजतो. (उदाहरणार्थ, खेळाच्या संदर्भात विटी-दांडू, गोट्या)" },
+  { code: "1.LO.9.3", text: "हाताची वीत, हाताची बोट, हात, पाऊल यांसारख्या अप्रमाणित लांबीच्या एककाने कमी अंतराचा व लांबीचा अंदाज बांधतो व पडताळा घेतो." },
+  { code: "1.LO.9.4", text: "तुलना करून हलक्या ते जड वस्तू किंवा उलट क्रमाने क्रमवारी लावतो." },
+  { code: "1.LO.9.5", text: "कप, चमचा, मग यांसारख्या अप्रमाणित एककाच्या साहाय्याने आकारमानाचा अंदाज करतो व प्रत्यक्ष मोजतो." },
+  { code: "1.LO.10.1", text: "अगोदर, नंतर यांसारख्या संज्ञांचा वापर करून घडलेल्या घटनांमध्ये फरक करतो." },
+  { code: "1.LO.10.2", text: "सुट्टीचा आणि शाळेचा कालावधी यांतील कमी आणि अधिक कालावधीची गुणात्मक अनुभूती घेतो." },
+  { code: "1.LO.10.3", text: "दिवसातील घटना/प्रसंग यांचा क्रम लावतो." },
+  { code: "1.LO.11.1", text: "नाणी व नोटांची बेरीज करून/मिळवून २० रु.पर्यंतची रक्कम तयार करतो." },
+  { code: "1.LO.12.1", text: "राशी, आकार, अवकाश आणि मापन यांच्याशी संबंधित गणितीय प्रश्नांचे वर्णन करण्यासाठी विधाने तयार करतो." },
+  { code: "1.LO.13.1", text: "साध्या गणितीय समस्यांच्या स्वरूपात वास्तव जगातील प्रसंग ओळखतो." },
+  { code: "1.LO.13.2", text: "विविध कार्यनीतींचा/पद्धतींचा वापर करून साध्या अंकगणितीय समस्या सोडवतो." }
+];
+
+// Class 2nd Outcomes
+const MARATHI_OUTCOMES_2ND = [
+  { code: "2.1.1", text: "वाचलेल्या साहित्यातील नवीन शब्द ओळखतो व त्यांचा अर्थ विचारतो." },
+  { code: "2.1.2", text: "चित्रे व मजकूर पाहून स्वतःच्या कल्पनेने गोष्टी सांगतो." },
+  { code: "2.2.1", text: "विविध विषयांवर स्वतःच्या बोलीभाषेत मत व्यक्त करतो." },
+  { code: "2.3.1", text: "कविता व गाणी लयामध्ये व सुरात गायन करतो." },
+  { code: "2.4.1", text: "योग्य गतीने व विरामचिन्हांचा विचार करून वाचन करतो." },
+  { code: "2.5.1", text: "ऐकलेल्या गोष्टींवर आधारित सोपे प्रश्न विचारतो." }
+];
+
+const ENGLISH_OUTCOMES_2ND = [
+  { code: "2.1.1", text: "Recites poems and rhymes with proper rhythm and action." },
+  { code: "2.2.1", text: "Responds to simple English instructions in classroom." },
+  { code: "2.3.1", text: "Reads simple words and 3-4 letter sentences accurately." },
+  { code: "2.4.1", text: "Writes simple words correctly on dictation." }
+];
+
+const MATHS_OUTCOMES_2ND = [
+  { code: "2.LO.1", text: "दोन अंकी संख्यांची बेरीज व वजाबाकी दैनंदिन प्रसंगात करतो." },
+  { code: "2.LO.2", text: "९९ पर्यंतच्या संख्यांचा स्थानिक मान ओळखतो." },
+  { code: "2.LO.3", text: "आकृत्या व भौमितिक आकार (त्रिकोण, चौकोन, वर्तुळ) ओळखतो." },
+  { code: "2.LO.4", text: "नाणी व चलनी नोटांची मोजणी करून सोपे व्यवहार करतो." }
+];
+
+// Dynamic Class Outcomes Resolver
+const getClassOutcomes = (classValue, subjectKey) => {
+  const norm = String(classValue || "1st").toLowerCase().replace(/[^0-9]/g, "") || "1";
+  
+  if (subjectKey === "marathi") {
+    if (norm === "2") return MARATHI_OUTCOMES_2ND;
+    return MARATHI_OUTCOMES_1ST;
+  }
+  if (subjectKey === "english") {
+    if (norm === "2") return ENGLISH_OUTCOMES_2ND;
+    return ENGLISH_OUTCOMES_1ST;
+  }
+  if (subjectKey === "maths") {
+    if (norm === "2") return MATHS_OUTCOMES_2ND;
+    return MATHS_OUTCOMES_1ST;
+  }
+  return [];
+};
+
+const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) => {
+  const [selectedClass, setSelectedClass] = useState(initialClass || "1st");
+  const [academicYear, setAcademicYear] = useState(initialYear || "2025-26");
+  const [division, setDivision] = useState("1");
+  const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState(false);
+
+  const [schoolData, setSchoolData] = useState({
+    schoolName: "",
+    udise: "",
+    teacherName: "",
+    headmasterName: "",
+  });
+
+  const [students, setStudents] = useState([]);
   const [marksData, setMarksData] = useState({});
-  const [schoolData, setSchoolData] = useState(null);
-  const [schoolName, setSchoolName] = useState("");
-  const [schoolLogo, setSchoolLogo] = useState("");
-  const [subjectSequence, setSubjectSequence] = useState([]);
-  const [subjects, setSubjects] = useState({});
-  const [language, setLanguage] = useState(localStorage.getItem("language") || "English");
+  const [levelsData, setLevelsData] = useState({});
+  const [outcomesRatings, setOutcomesRatings] = useState({});
 
-  const [alertMessage, setAlertMessage] = useState("");
-  const [showAlert, setShowAlert] = useState(false);
-  const [isCompiling, setIsCompiling] = useState(false);
-
-  const udiseNumber = localStorage.getItem("udiseNumber");
-
-  const [cceSettings, setCceSettings] = useState(null);
+  const printRef = useRef(null);
 
   useEffect(() => {
-    const fetchCceSettings = async () => {
-      if (!classValue || !academicYear) return;
+    loadData();
+  }, [selectedClass, academicYear]);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const docId = `${selectedClass}_${academicYear}`;
+
+      // 1. Fetch Global / Class School Settings
       try {
-        const { db } = await import("@/lib/firebase");
-        const { doc, getDoc } = await import("firebase/firestore");
-        const docRef = doc(db, "cce_settings", `${classValue}_${academicYear}`);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setCceSettings(data);
-          if (data.schoolName) setSchoolName(data.schoolName);
-          if (data.schoolLogo) setSchoolLogo(data.schoolLogo);
-        }
-      } catch (error) {
-        console.error("Error fetching CCE settings from Firestore:", error);
-      }
-    };
-    fetchCceSettings();
-  }, [classValue, academicYear]);
-
-  useEffect(() => {
-    if (alertMessage) {
-      setShowAlert(true);
-      const timeoutId = setTimeout(() => {
-        setShowAlert(false);
-        setAlertMessage("");
-      }, 3000);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [alertMessage]);
-
-  useEffect(() => {
-    if (udiseNumber) {
-      fetchSchoolData();
-      fetchStudentData();
-    }
-  }, [udiseNumber]);
-
-  // Handle automatic division fetching and default selection
-  useEffect(() => {
-    if (classValue && studentData.length > 0) {
-      const divisionsForClass = new Set();
-      studentData.forEach((student) => {
-        if (student.currentClass === classValue && student.division) {
-          divisionsForClass.add(student.division);
-        }
-      });
-      const divs = Array.from(divisionsForClass).sort();
-      if (divs.length > 0) {
-        setDivisions(divs);
-        if (!division || !divs.includes(division)) {
-          setDivision(divs[0]);
-        }
-      } else {
-        setDivisions(["A", "B", "C", "D"]);
-        if (!division) {
-          setDivision("A");
-        }
-      }
-    }
-  }, [classValue, studentData]);
-
-  // Filter students based on class and division
-  useEffect(() => {
-    if (classValue && studentData.length > 0) {
-      const filtered = studentData.filter(
-        (student) => student.currentClass === classValue && student.division === division
-      );
-      setSelectedStudents(filtered);
-    }
-  }, [classValue, division, studentData]);
-
-  // Fetch subjects whenever class, division or year changes
-  useEffect(() => {
-    if (academicYear && classValue && division) {
-      fetchSubjectSequence();
-    }
-  }, [academicYear, classValue, division]);
-
-  // Fetch marks data whenever students or semester selection updates
-  useEffect(() => {
-    if (classValue && academicYear && selectedStudents.length > 0) {
-      fetchMarksForAllStudents();
-    }
-  }, [classValue, academicYear, selectedStudents, activeSemester]);
-
-  const fetchSchoolData = async () => {
-    try {
-      const response = await fetch(
-        `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/schoolData.json`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setSchoolData(data);
-        setSchoolName(data.schoolName || "N/A");
-        setSchoolLogo(data.schoolLogo || "");
-      }
-    } catch (error) {
-      console.error("Error fetching school name:", error);
-    }
-  };
-
-  const fetchStudentData = async () => {
-    try {
-      const response = await fetch(
-        `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData.json`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        const filteredData = Object.keys(data)
-          .filter((key) => data[key] !== null)
-          .map((key) => ({ srNo: key, ...data[key] }));
-
-        const activeStudents = filteredData.filter((student) => student.isActive !== false);
-        setStudentData(activeStudents);
-      }
-    } catch (error) {
-      console.error("Error fetching student data:", error);
-    }
-  };
-
-  const fetchSubjectSequence = async () => {
-    try {
-      if (!academicYear || !classValue || !division) return;
-      
-      const urlSsc = `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/subjectSequence/ssc/${academicYear}/${classValue}/${division}.json`;
-      const urlRegular = `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/subjectSequence/${academicYear}/${classValue}.json`;
-      const urlSscNoDiv = `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/subjectSequence/ssc/${academicYear}/${classValue}.json`;
-
-      let subjectsData = null;
-
-      try {
-        const response = await fetch(urlSsc);
-        if (response.ok) {
-          subjectsData = await response.json();
-        }
-      } catch (err) {
-        console.warn("Failed fetching from SSC sequence:", err);
-      }
-
-      if (!subjectsData) {
+        let globalSettings = null;
         try {
-          const response = await fetch(urlRegular);
-          if (response.ok) {
-            subjectsData = await response.json();
+          const cachedGen = localStorage.getItem("cce_general_school_settings");
+          if (cachedGen) globalSettings = JSON.parse(cachedGen);
+        } catch (e) {}
+
+        if (!globalSettings) {
+          try {
+            const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
+            globalSettings = await fetchJsonFromBunny("cce_results/general_school_settings.json");
+          } catch (e) {}
+        }
+
+        const settingsSnap = await getDoc(doc(db, "cce_settings", docId));
+        const classSettings = settingsSnap.exists() ? settingsSnap.data() : {};
+        const mergedSettings = { ...(globalSettings || {}), ...classSettings };
+
+        if (mergedSettings.schoolName || mergedSettings.udiseCode || mergedSettings.teacherName) {
+          setSchoolData({
+            schoolName: mergedSettings.schoolName ? `${mergedSettings.schoolName}${mergedSettings.address ? ` (${mergedSettings.address})` : ""}` : "",
+            udise: mergedSettings.udiseCode || mergedSettings.udise || "",
+            teacherName: mergedSettings.teacherName || "",
+            headmasterName: mergedSettings.principalName || mergedSettings.headmasterName || "",
+          });
+        }
+      } catch (e) {}
+
+      // 2. Fetch Students for Selected Class
+      let loadedStudents = [];
+      const normalizeClass = (cls) => (cls ? String(cls).trim().toLowerCase().replace(/[^0-9a-z]/g, "") : "");
+      const targetClassNorm = normalizeClass(selectedClass);
+
+      try {
+        const uQuery = query(collection(db, "users"), where("role", "==", "student"));
+        const uSnap = await getDocs(uQuery);
+        uSnap.forEach((docSnap) => {
+          const d = docSnap.data();
+          const stdClassNorm = normalizeClass(d.class || d.currentClass || d.className);
+          if (!stdClassNorm || stdClassNorm === targetClassNorm || d.class === selectedClass) {
+            loadedStudents.push({
+              id: docSnap.id,
+              name: d.fullName || d.name || d.studentName || "",
+              rollNo: String(d.rollNo || d.srNo || loadedStudents.length + 1),
+            });
           }
-        } catch (err) {
-          console.warn("Failed fetching from Regular sequence:", err);
-        }
-      }
+        });
+      } catch (e) {}
 
-      if (!subjectsData) {
+      if (loadedStudents.length === 0) {
         try {
-          const response = await fetch(urlSscNoDiv);
-          if (response.ok) {
-            subjectsData = await response.json();
-          }
-        } catch (err) {
-          console.warn("Failed fetching from SSC No Div sequence:", err);
-        }
+          const studentsSnap = await getDocs(collection(db, "students"));
+          studentsSnap.forEach((docSnap) => {
+            const d = docSnap.data();
+            const stdClassNorm = normalizeClass(d.class || d.currentClass || d.className);
+            if (!stdClassNorm || stdClassNorm === targetClassNorm || d.class === selectedClass) {
+              loadedStudents.push({
+                id: docSnap.id,
+                name: d.fullName || d.name || d.studentName || "",
+                rollNo: String(d.rollNo || d.srNo || loadedStudents.length + 1),
+              });
+            }
+          });
+        } catch (e) {}
       }
 
-      if (subjectsData) {
-        const orderedSubjects = Object.keys(subjectsData)
-          .sort((a, b) => parseInt(a) - parseInt(b))
-          .map((key) => subjectsData[key])
-          .filter(Boolean);
-        
-        setSubjectSequence(orderedSubjects);
-
-        const formattedSubjects = orderedSubjects.reduce((acc, sub) => {
-          acc[sub] = true;
-          return acc;
-        }, {});
-        setSubjects(formattedSubjects);
-      } else {
-        setSubjectSequence([]);
-        setSubjects({});
-      }
-    } catch (error) {
-      console.error("Error fetching subject sequence:", error);
-    }
-  };
-
-  const fetchMarksForAllStudents = async () => {
-    try {
-      const examName = activeSemester === "first" ? "First Semester" : "Second Semester";
-      
-      const marksDataPromises = selectedStudents.map(async (student) => {
-        try {
-          const response = await fetch(
-            `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/studentData/${student.srNo}/result/${academicYear}/${examName}.json`
-          );
-          const marks = response.ok ? await response.json() : {};
-          return {
-            srNo: student.srNo,
-            marks: marks || {},
-          };
-        } catch (err) {
-          console.warn(`Error fetching marks for ${student.srNo}:`, err);
-          return { srNo: student.srNo, marks: {} };
+      // Deduplicate students
+      const uniqueMap = new Map();
+      loadedStudents.forEach((s) => {
+        if (s.name) {
+          const key = s.rollNo ? `${s.rollNo}_${s.name}` : s.name;
+          if (!uniqueMap.has(key)) uniqueMap.set(key, s);
         }
       });
+      loadedStudents = Array.from(uniqueMap.values());
+      loadedStudents.sort((a, b) => (parseInt(a.rollNo) || 0) - (parseInt(b.rollNo) || 0));
+      setStudents(loadedStudents);
 
-      const results = await Promise.all(marksDataPromises);
-      const tempMarks = {};
-      results.forEach((item) => {
-        tempMarks[item.srNo] = item.marks;
-      });
-
-      // Also fetch from Firestore marks collection and merge
+      // 3. Fetch User Outcome Ratings (from cce_outcomes, cce_levels_v2 & Bunny CDN)
       try {
-        const term = activeSemester; // "first" or "second"
-        const firestoreMarks = await fetchFirestoreMarks(classValue, academicYear, term);
-        if (firestoreMarks.length > 0) {
-          const subjectList = subjectSequence.length > 0 ? subjectSequence : Object.keys(subjects);
-          const merged = matchAndMergeMarks(selectedStudents, tempMarks, firestoreMarks, subjectList);
-          setMarksData(merged);
-        } else {
-          setMarksData(tempMarks);
-        }
-      } catch (fsError) {
-        console.warn("Firestore marks fetch failed, using RTDB data:", fsError);
-        setMarksData(tempMarks);
+        const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
+        const bunnyOutcomes = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_outcomes.json`);
+        const bunnyLevels = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_levels.json`);
+
+        const outSnapSem2 = await getDoc(doc(db, "cce_outcomes", `${selectedClass}_${academicYear}_sem2`));
+        const outSnapSem1 = await getDoc(doc(db, "cce_outcomes", `${selectedClass}_${academicYear}_sem1`));
+        const outSnapGen = await getDoc(doc(db, "cce_outcomes", docId));
+
+        const rSem2 = outSnapSem2.exists() ? (outSnapSem2.data().ratings || outSnapSem2.data()) : {};
+        const rSem1 = outSnapSem1.exists() ? (outSnapSem1.data().ratings || outSnapSem1.data()) : {};
+        const rGen = outSnapGen.exists() ? (outSnapGen.data().ratings || outSnapGen.data()) : {};
+
+        const mergedRatings = {
+          ...rGen,
+          ...rSem1,
+          ...rSem2,
+          ...(bunnyOutcomes || {}),
+        };
+        setOutcomesRatings(mergedRatings);
+
+        const levSnap = await getDoc(doc(db, "cce_levels_v2", docId));
+        const lData = levSnap.exists() ? (levSnap.data().levelsData || levSnap.data()) : {};
+
+        const mergedLevels = {
+          ...lData,
+          ...(bunnyLevels || {}),
+        };
+        setLevelsData(mergedLevels);
+      } catch (e) {
+        console.error("Error fetching outcome levels:", e);
       }
-    } catch (error) {
-      console.error("Error loading marks:", error);
+
+      // 4. Fetch Marks Data
+      try {
+        const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
+        const bunnyMarksSec = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_marks_second.json`);
+        const bunnyMarksFirst = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_marks_first.json`);
+
+        const marksSnap = await getDoc(doc(db, "cce_marks_v2", docId));
+        const mData = marksSnap.exists() ? marksSnap.data() : {};
+
+        const mergedMarks = {
+          ...(mData.semester2 || mData.semester1 || mData.marksData || mData.data || mData || {}),
+          ...(bunnyMarksFirst || {}),
+          ...(bunnyMarksSec || {}),
+        };
+        setMarksData(mergedMarks);
+      } catch (e) {
+        console.error("Error fetching marks data:", e);
+      }
+
+    } catch (err) {
+      console.error("Error loading learning outcomes data:", err);
     }
+    setLoading(false);
   };
 
-  const calculateGrade = (total) => {
-    if (total >= 91) return "A1";
-    if (total >= 81) return "A2";
-    if (total >= 71) return "B1";
-    if (total >= 61) return "B2";
-    if (total >= 51) return "C1";
-    if (total >= 41) return "C2";
-    if (total >= 33) return "D1";
-    if (total >= 21) return "D2";
-    return "Fail";
+  const handleDownloadPdf = async () => {
+    if (!printRef.current) return;
+    setDownloading(true);
+    toast.info("PDF निर्मिती सुरू आहे, कृपया वाट पाहा...");
+    try {
+      const { default: html2pdf } = await import("html2pdf.js");
+      const element = printRef.current;
+      const opt = {
+        margin: [0, 0, 0, 0],
+        filename: `अध्ययन_निष्पत्ती_प्रगतीदर्शक_${selectedClass}_${academicYear}.pdf`,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+        pagebreak: { mode: ["css"] },
+      };
+      await html2pdf().set(opt).from(element).save();
+      toast.success("PDF यशस्वीरित्या डाऊनलोड झाली!");
+    } catch (err) {
+      console.error("PDF generation error:", err);
+      toast.error("PDF निर्मितीत अडचण आली: " + err.message);
+    }
+    setDownloading(false);
   };
 
-  const getSubjectLabel = (sub) => {
-    if (!sub) return "";
-    const translations = {
-      marathi: "प्रथम भाषा : मराठी",
-      english: "द्वितीय भाषा : इंग्रजी",
-      maths: "गणित",
-      science: "विज्ञान",
-      social_studies: "सामाजिक शास्त्रे",
-      art: "कला",
-      craft: "कार्यानुभव",
-      physical_education: "शारीरिक शिक्षण",
-      hindi: "तृतीय भाषा : हिंदी",
-      "first language: marathi": "प्रथम भाषा : मराठी",
-      "second language: english": "द्वितीय भाषा : इंग्रजी",
-      "mathematics": "गणित"
-    };
-    const key = sub.toLowerCase().trim();
-    return translations[key] || sub;
+  const handlePrint = () => {
+    window.print();
   };
 
-  const handlePrintCompiledRegister = () => {
-    if (selectedStudents.length === 0) {
-      setAlertMessage("विद्यार्थी यादी उपलब्ध नाही.");
-      return;
+  /**
+   * Resolves the EXACT level (1, 2, 3, or 4) entered by the user for a specific student and outcome code.
+   * Checks outcomesRatings, levelsData, and marksData across all ID and subject aliases.
+   */
+  const getUserSelectedLevel = (student, outcomeCode, subjectName) => {
+    if (!student) return null;
+
+    const possibleStudentKeys = [
+      student.id,
+      student.rollNo,
+      student.name,
+      student.fullName,
+      String(student.rollNo),
+    ].filter(Boolean);
+
+    const possibleSubKeys = [
+      subjectName,
+      subjectName ? subjectName.toLowerCase() : "",
+      subjectName && subjectName.includes("मराठी") ? "marathi" : "",
+      subjectName && subjectName.includes("इंग्रजी") ? "english" : "",
+      subjectName && subjectName.includes("गणित") ? "maths" : (subjectName && subjectName.includes("गणित") ? "math" : ""),
+      subjectName && subjectName.includes("परिसर") ? "parisar" : "",
+      subjectName && subjectName.includes("कला") ? "kala" : "",
+      subjectName && subjectName.includes("कार्यानुभव") ? "karyanubhav" : "",
+      subjectName && subjectName.includes("शारीरिक") ? "sharirik" : "",
+    ].filter(Boolean);
+
+    // 1. Check outcomesRatings: ratings[subjectKey][outcomeCode][studentId]
+    for (const subKey of possibleSubKeys) {
+      if (outcomesRatings[subKey] && outcomesRatings[subKey][outcomeCode]) {
+        const studentMap = outcomesRatings[subKey][outcomeCode];
+        for (const stdKey of possibleStudentKeys) {
+          const val = studentMap[stdKey];
+          if (val !== undefined && val !== null && val !== 0 && val !== "") {
+            const parsed = parseInt(val);
+            if (parsed >= 1 && parsed <= 4) return parsed;
+          }
+        }
+      }
     }
 
-    setIsCompiling(true);
-
-    const examName = activeSemester === "first" ? "First Semester" : "Second Semester";
-    const termLabel = activeSemester === "first" ? "प्रथम सत्र" : "द्वितीय सत्र";
-    const subjectList = subjectSequence.length > 0 ? subjectSequence : Object.keys(subjects);
-
-    if (subjectList.length === 0) {
-      setAlertMessage("विषय यादी उपलब्ध नाही.");
-      setIsCompiling(false);
-      return;
+    // 2. Check direct levelsData: levelsData[studentId][outcomeCode]
+    for (const stdKey of possibleStudentKeys) {
+      const stdLevels = levelsData[stdKey];
+      if (stdLevels && typeof stdLevels === "object") {
+        if (stdLevels[outcomeCode]) {
+          const parsed = parseInt(stdLevels[outcomeCode]);
+          if (parsed >= 1 && parsed <= 4) return parsed;
+        }
+        for (const subKey of possibleSubKeys) {
+          if (stdLevels[subKey] && stdLevels[subKey][outcomeCode]) {
+            const parsed = parseInt(stdLevels[subKey][outcomeCode]);
+            if (parsed >= 1 && parsed <= 4) return parsed;
+          }
+        }
+      }
     }
 
-    const printWindow = window.open("", "", "height=700,width=1000");
-    if (!printWindow) {
-      setAlertMessage("पॉपअप ब्लॉकर सक्रिय आहे, कृपया परवानगी द्या.");
-      setIsCompiling(false);
-      return;
+    // 3. Derive level from student's entered subject marks if user filled marks
+    for (const stdKey of possibleStudentKeys) {
+      const stdMarks = marksData[stdKey];
+      if (stdMarks && typeof stdMarks === "object") {
+        let subMarks = null;
+        for (const subKey of possibleSubKeys) {
+          if (stdMarks[subKey]) {
+            subMarks = stdMarks[subKey];
+            break;
+          }
+        }
+        if (subMarks) {
+          const oral = Number(subMarks.oral || subMarks.tondiKaam || 0);
+          const act = Number(subMarks.activity || subMarks.upakramKriti || subMarks.pratyakshikPrayog || 0);
+          const test = Number(subMarks.test || subMarks.chaachaniLekhi || 0);
+          const semW = Number(subMarks.semesterWritten || subMarks.sankalitLekhi || 0);
+          const obtTotal = oral + act + test + semW;
+          if (obtTotal > 0) {
+            const pct = (obtTotal / 100) * 100;
+            if (pct >= 81) return 4;
+            if (pct >= 61) return 3;
+            if (pct >= 41) return 2;
+            return 1;
+          }
+        }
+      }
     }
 
-    let htmlContent = `
-      <html>
-        <head>
-          <title>Learning Outcomes Achievement Register - ${classValue}</title>
-          <style>
-            @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;700&family=Poppins:wght@400;700&display=swap');
-            
-            @page {
-              size: A4 landscape;
-              margin: 6mm;
-            }
-            body {
-              font-family: 'Poppins', 'Noto Sans Devanagari', sans-serif;
-              margin: 0;
-              padding: 0;
-              color: #121212;
-              background-color: #fff;
-              font-size: 9px;
-            }
-            .page {
-              page-break-after: always;
-              position: relative;
-              width: 100%;
-              box-sizing: border-box;
-            }
-            .page:last-child {
-              page-break-after: avoid;
-            }
-            
-            .doc-header {
-              display: flex;
-              align-items: center;
-              justify-content: space-between;
-              border-bottom: 2px solid #1e3a2f;
-              padding-bottom: 6px;
-              margin-bottom: 12px;
-            }
-            .doc-header img {
-              height: 40px;
-            }
-            .doc-header h2 {
-              font-size: 15px;
-              margin: 0;
-              color: #1b4d3e;
-              font-weight: bold;
-            }
-            .doc-header p {
-              margin: 2px 0 0 0;
-              font-size: 9px;
-              color: #666;
-            }
-            
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              margin-bottom: 15px;
-              font-size: 8.5px;
-            }
-            th, td {
-              border: 1px solid #1e3a2f !important;
-              padding: 3px;
-              text-align: center;
-              vertical-align: middle;
-            }
-            thead th {
-              background-color: #e8f5e9;
-              font-weight: bold;
-              color: #1b4d3e;
-            }
-            .left-align {
-              text-align: left;
-              padding-left: 6px;
-            }
-            
-            .rotate-header {
-              writing-mode: vertical-rl;
-              transform: rotate(180deg);
-              white-space: nowrap;
-              padding: 6px 2px !important;
-              height: 70px;
-            }
-            
-            .sig-row {
-              margin-top: 30px;
-              display: flex;
-              justify-content: space-between;
-              font-weight: bold;
-              font-size: 10px;
-              padding: 0 15px;
-            }
-          </style>
-        </head>
-        <body>
-    `;
-
-    // Generate sheet for each subject
-    subjectList.forEach((sub) => {
-      htmlContent += `
-        <div class="page">
-          <div class="doc-header">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              ${schoolLogo ? `<img src="${schoolLogo}" alt="Logo">` : ""}
-              <div>
-                <h2>${schoolName}</h2>
-                <p>अध्ययन निष्पत्तीनिहाय संपादणूक प्रगतीदर्शक नोंदतक्ता (विद्यार्थीनिहाय) &bull; सत्र: ${termLabel} &bull; शैक्षणिक वर्ष: ${academicYear}</p>
-              </div>
-            </div>
-            <div style="text-align: right;">
-              <span style="font-weight: bold; color: #1b4d3e; font-size: 11px;">
-                इयत्ता: ${classValue} &bull; तुकडी: ${division || "-"} &bull; विषय: ${getSubjectLabel(sub)}
-              </span>
-            </div>
-          </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th rowspan="2" style="width: 5%;">${language === "English" ? "Roll No" : "हजेरी नं"}</th>
-                <th rowspan="2" style="width: 25%;">${language === "English" ? "Student Name" : "विद्यार्थ्याचे नाव"}</th>
-                <th colspan="9">${language === "English" ? "Formative Assessment (Akarik)" : "आकारिक मूल्यमापन"}</th>
-                <th colspan="4">${language === "English" ? "Summative Assessment (Sanklit)" : "संकलित मूल्यमापन"}</th>
-                <th rowspan="2" style="width: 6%;">${language === "English" ? "Grand Total" : "एकूण"}</th>
-                <th rowspan="2" style="width: 6%;">${language === "English" ? "Grade" : "श्रेणी"}</th>
-              </tr>
-              <tr>
-                <th class="rotate-header">${language === "English" ? "Activity" : "उपक्रम/कृती"}</th>
-                <th class="rotate-header">${language === "English" ? "Daily Mon." : "दैनंदिन निरीक्षण"}</th>
-                <th class="rotate-header">${language === "English" ? "Demonstration" : "प्रात्यक्षिके"}</th>
-                <th class="rotate-header">${language === "English" ? "Homework" : "गृहपाठ"}</th>
-                <th class="rotate-header">${language === "English" ? "Oral Work" : "तोंडी काम"}</th>
-                <th class="rotate-header">${language === "English" ? "Others" : "इतर"}</th>
-                <th class="rotate-header">${language === "English" ? "Project" : "प्रकल्प"}</th>
-                <th class="rotate-header">${language === "English" ? "Test" : "चाचणी"}</th>
-                <th style="font-weight: bold; background-color: #d0edd2;">${language === "English" ? "Total" : "एकूण"}</th>
-                <th class="rotate-header">${language === "English" ? "Orally" : "तोंडी"}</th>
-                <th class="rotate-header">${language === "English" ? "Demonstration" : "प्रात्यक्षिके"}</th>
-                <th class="rotate-header">${language === "English" ? "Writing" : "लेखन"}</th>
-                <th style="font-weight: bold; background-color: #d0edd2;">${language === "English" ? "Total" : "एकूण"}</th>
-              </tr>
-            </thead>
-            <tbody>
-      `;
-
-      const sortedStudents = [...selectedStudents].sort((a, b) => {
-        const rA = parseInt(a.rollNo) || 999;
-        const rB = parseInt(b.rollNo) || 999;
-        return rA - rB;
-      });
-
-      sortedStudents.forEach((student) => {
-        const studentMarks = marksData[student.srNo]?.[sub] || {};
-        const akarik = studentMarks.Akarik || {};
-        const sanklik = studentMarks.Sanklik || {};
-
-        const akarikTotal = Number(akarik.Total) || 0;
-        const sanklikTotal = Number(sanklik.Total) || 0;
-        const hasMarks = Object.keys(akarik).length > 0 || Object.keys(sanklik).length > 0;
-        const grandTotal = hasMarks ? (akarikTotal + sanklikTotal) : 0;
-        const grade = hasMarks ? calculateGrade(grandTotal) : "-";
-
-        htmlContent += `
-          <tr>
-            <td>${student.rollNo || "-"}</td>
-            <td class="left-align" style="font-weight: bold;">${student.stdName || ""} ${student.stdFather || ""} ${student.stdSurname || ""}</td>
-            <td>${akarik["Activity"] ?? "-"}</td>
-            <td>${akarik["Daily Monitoring"] ?? "-"}</td>
-            <td>${akarik["Demonstration"] ?? "-"}</td>
-            <td>${akarik["Homework"] ?? "-"}</td>
-            <td>${akarik["Oral Work"] ?? "-"}</td>
-            <td>${akarik["Others"] ?? "-"}</td>
-            <td>${akarik["Project"] ?? "-"}</td>
-            <td>${akarik["Test"] ?? "-"}</td>
-            <td style="font-weight: bold; background-color: #f5fbf6;">${akarik.Total ?? "-"}</td>
-            <td>${sanklik["Orally"] ?? "-"}</td>
-            <td>${sanklik["Demonstration"] ?? "-"}</td>
-            <td>${sanklik["Writing"] ?? "-"}</td>
-            <td style="font-weight: bold; background-color: #f5fbf6;">${sanklik.Total ?? "-"}</td>
-            <td style="font-weight: bold; background-color: #e8f5e9;">${hasMarks ? grandTotal : "-"}</td>
-            <td style="font-weight: bold; background-color: #e8f5e9;">${grade}</td>
-          </tr>
-        `;
-      });
-
-      htmlContent += `
-            </tbody>
-          </table>
-          
-          <div class="sig-row" style="align-items: flex-end;">
-            <div style="text-align: center;">
-              ${cceSettings?.signatureUrl ? `<img src="${cceSettings.signatureUrl}" style="max-height: 40px; display: block; margin: 0 auto 2px;" />` : ""}
-              ${cceSettings?.teacherName || "वर्गशिक्षक"}
-            </div>
-            <div style="text-align: center;">
-              ${cceSettings?.principalSignature ? `<img src="${cceSettings.principalSignature}" style="max-height: 40px; display: block; margin: 0 auto 2px;" />` : ""}
-              ${cceSettings?.principalName || "मुख्याध्यापक"}
-            </div>
-          </div>
-        </div>
-      `;
-    });
-
-    htmlContent += `
-        </body>
-      </html>
-    `;
-
-    printWindow.document.write(htmlContent);
-    printWindow.document.close();
-
-    // Trigger printing once content is fully written
-    setTimeout(() => {
-      printWindow.print();
-      setIsCompiling(false);
-    }, 500);
+    return null;
   };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-slate-500 font-sans">
+        <Loader2 className="size-10 text-blue-600 animate-spin mb-3" />
+        <p className="text-sm font-bold text-slate-700">माहिती लोड होत आहे, कृपया वाट पाहा...</p>
+      </div>
+    );
+  }
+
+  // Fetch Class-Specific Outcomes
+  const marathiOutcomes = getClassOutcomes(selectedClass, "marathi");
+  const englishOutcomes = getClassOutcomes(selectedClass, "english");
+  const mathsOutcomes = getClassOutcomes(selectedClass, "maths");
 
   return (
-    <div className="w-full bg-[#0d1310] text-[#e1f5fe] p-6 font-sans relative">
-      <AlertMessage message={alertMessage} show={showAlert} />
-
-      {/* Header Bar */}
-      <div className="flex items-center justify-between mb-8 pb-4 border-b border-emerald-950/40">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={onBack}
-            className="text-[#a2d8b4] hover:text-white transition-colors p-2.5 bg-[#121c16] border border-emerald-950/60 rounded-2xl cursor-pointer shadow-sm hover:scale-105 active:scale-95 duration-200"
-          >
-            <ChevronLeft size={20} />
-          </button>
+    <div className="font-sans text-slate-800">
+      {/* Top Action Bar */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm mb-6 flex flex-wrap items-center justify-between gap-4 no-print">
+        <div className="flex items-center gap-3">
+          {onBack && (
+            <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-full transition-colors cursor-pointer text-slate-600">
+              <ArrowLeft className="size-5" />
+            </button>
+          )}
           <div>
-            <h2 className="text-xl md:text-2xl font-black text-white tracking-tight">
-              {language === "English" ? "Learning Outcomes Register" : "अध्ययन निष्पत्तीनिहाय संपादणूक प्रगती..."}
-            </h2>
-            <p className="text-[10px] text-emerald-500 font-bold uppercase tracking-wider mt-0.5">
-              Learning Outcomes Achievement Register (Student-wise)
-            </p>
+            <h2 className="text-base font-black text-slate-800">अध्ययन निष्पत्तीनिहाय संपादणूक प्रगतीदर्शक नोंदतक्ता</h2>
+            <p className="text-xs text-blue-600 font-bold uppercase tracking-wider">{selectedClass} • {academicYear}</p>
           </div>
         </div>
-        <span className="text-xs font-bold text-emerald-600/80">
-          {language === "English" ? "Class" : "वर्ग"}: {classValue}
-        </span>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleDownloadPdf}
+            disabled={downloading || students.length === 0}
+            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-extrabold rounded-xl transition-all cursor-pointer shadow-md shadow-blue-200 flex items-center gap-2 disabled:opacity-50"
+          >
+            {downloading ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+            <span>{downloading ? "डाउनलोड होत आहे..." : "PDF डाऊनलोड करा"}</span>
+          </button>
+          <button
+            onClick={handlePrint}
+            disabled={students.length === 0}
+            className="px-4 py-2.5 bg-slate-800 hover:bg-slate-900 active:scale-95 text-white text-xs font-extrabold rounded-xl transition-all cursor-pointer shadow-md shadow-slate-300 flex items-center gap-2 disabled:opacity-50"
+          >
+            <Printer className="size-4" />
+            <span>प्रिंट करा</span>
+          </button>
+        </div>
       </div>
 
-      {/* Settings Options Card */}
-      <div className="flex-1 max-w-2xl mx-auto w-full space-y-6">
-        
-        {/* Semester Tab Selection */}
-        <div className="flex bg-[#121c16] rounded-full p-1 border border-emerald-950/60 max-w-sm mx-auto shadow-inner">
-          <button
-            onClick={() => setActiveSemester("first")}
-            className={`flex-1 py-2.5 rounded-full font-bold text-xs transition-all cursor-pointer ${
-              activeSemester === "first" 
-                ? "bg-[#223d2e] text-[#a2d8b4] shadow-md border border-emerald-900/30" 
-                : "text-emerald-600/70 hover:text-emerald-500"
-            }`}
-          >
-            {language === "English" ? "First Semester" : "प्रथम सत्र"}
-          </button>
-          <button
-            onClick={() => setActiveSemester("second")}
-            className={`flex-1 py-2.5 rounded-full font-bold text-xs transition-all cursor-pointer ${
-              activeSemester === "second" 
-                ? "bg-[#223d2e] text-[#a2d8b4] shadow-md border border-emerald-900/30" 
-                : "text-emerald-600/70 hover:text-emerald-500"
-            }`}
-          >
-            {language === "English" ? "Second Semester" : "द्वितीय सत्र"}
-          </button>
+      {students.length === 0 && (
+        <div className="p-6 bg-amber-50 rounded-2xl border border-amber-200 mb-6 text-center max-w-xl mx-auto no-print">
+          <AlertCircle className="size-8 text-amber-600 mx-auto mb-2" />
+          <h3 className="text-sm font-bold text-amber-800 mb-1">या वर्गामध्ये अद्याप कोणतेही विद्यार्थी जोडलेले नाहीत</h3>
+          <p className="text-xs text-amber-700">कृपया डॅशबोर्डवरील <b>'विद्यार्थी'</b> विभागात जाऊन या वर्गासाठी विद्यार्थी जोडा.</p>
         </div>
+      )}
 
-        {/* Division Selection */}
-        {divisions.length > 1 && (
-          <div className="space-y-3">
-            <h3 className="text-sm font-bold text-[#a2d8b4]/90 text-center">
-              {language === "English" ? "Select Division" : "तुकडी निवडा (Select Division)"}
-            </h3>
-            <div className="flex flex-wrap justify-center gap-3">
-              {divisions.map((div) => (
-                <button
-                  key={div}
-                  onClick={() => setDivision(div)}
-                  className={`px-5 py-2 rounded-2xl font-bold text-xs transition-all cursor-pointer border ${
-                    division === div
-                      ? "bg-[#223d2e] border-emerald-500 text-[#a2d8b4] shadow-md"
-                      : "bg-[#121c16] border-emerald-950/60 text-emerald-600/70 hover:text-[#a2d8b4]"
-                  }`}
-                >
-                  {language === "English" ? `Division ${div}` : `तुकडी ${div}`}
-                </button>
-              ))}
+      {/* -------------------- PRINT CONTAINER (CLASS-SPECIFIC OUTCOMES & USER SELECTED LEVELS) -------------------- */}
+      <div ref={printRef} className="cce-pdf-container max-w-4xl mx-auto">
+        
+        {students.map((student) => (
+          <div key={student.id} className="pdf-page bg-white p-6 border border-slate-200 rounded-3xl shadow-sm flex flex-col justify-between mb-4" style={{ pageBreakAfter: "always", breakAfter: "page" }}>
+            <div>
+              {/* Header Title */}
+              <h1 className="text-xl font-black text-blue-900 text-center mb-4 border-b-2 border-blue-900 pb-2 tracking-tight">
+                अध्ययन निष्पत्तीनिहाय संपादणूक प्रगतीदर्शक नोंदतक्ता
+              </h1>
+
+              {/* Student Metadata Bar */}
+              <div className="flex items-center justify-between text-xs font-extrabold text-slate-800 bg-blue-50/70 p-3 rounded-xl border border-blue-100 mb-6">
+                <span>विद्यार्थ्याचे नाव - <b className="text-blue-700">{student.name}</b></span>
+                <span>इयत्ता - <b>{selectedClass}</b></span>
+                <span>तुकडी - <b>{division}</b></span>
+                <span>हजेरी क्र. <b>{student.rollNo}</b></span>
+                <span>द्वितीय सत्र</span>
+              </div>
+
+              {/* 1. प्रथम भाषा: मराठी Section */}
+              {marathiOutcomes.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-base font-black text-blue-800 mb-3 text-center">प्रथम भाषा: मराठी</h3>
+                  <table className="w-full border-collapse border border-blue-400 text-xs font-medium">
+                    <thead>
+                      <tr className="bg-blue-100 text-blue-950 font-bold text-center">
+                        <th className="border border-blue-400 p-2 w-28">अध्ययन निष्पत्ती क्र.</th>
+                        <th className="border border-blue-400 p-2 text-left">अध्ययन निष्पत्ती</th>
+                        <th colSpan={4} className="border border-blue-400 p-1 w-32">स्तर</th>
+                      </tr>
+                      <tr className="bg-blue-50 text-blue-950 font-bold text-center text-[11px]">
+                        <th colSpan={2} className="border border-blue-400 p-1"></th>
+                        <th className="border border-blue-400 p-1 w-8">1</th>
+                        <th className="border border-blue-400 p-1 w-8">2</th>
+                        <th className="border border-blue-400 p-1 w-8">3</th>
+                        <th className="border border-blue-400 p-1 w-8">4</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {marathiOutcomes.map((item) => {
+                        const level = getUserSelectedLevel(student, item.code, "मराठी");
+                        return (
+                          <tr key={item.code} className="border-b border-blue-300 hover:bg-slate-50">
+                            <td className="border border-blue-400 p-2 text-center font-bold text-slate-900">{item.code}</td>
+                            <td className="border border-blue-400 p-2 text-slate-800 leading-snug">{item.text}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 1 ? "✓" : ""}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 2 ? "✓" : ""}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 3 ? "✓" : ""}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 4 ? "✓" : ""}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* 2. तृतीय भाषा: इंग्रजी Section */}
+              {englishOutcomes.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-base font-black text-blue-800 mb-3 text-center">तृतीय भाषा: इंग्रजी</h3>
+                  <table className="w-full border-collapse border border-blue-400 text-xs font-medium">
+                    <thead>
+                      <tr className="bg-blue-100 text-blue-950 font-bold text-center">
+                        <th className="border border-blue-400 p-2 w-28">अध्ययन निष्पत्ती क्र.</th>
+                        <th className="border border-blue-400 p-2 text-left">अध्ययन निष्पत्ती</th>
+                        <th colSpan={4} className="border border-blue-400 p-1 w-32">स्तर</th>
+                      </tr>
+                      <tr className="bg-blue-50 text-blue-950 font-bold text-center text-[11px]">
+                        <th colSpan={2} className="border border-blue-400 p-1"></th>
+                        <th className="border border-blue-400 p-1 w-8">1</th>
+                        <th className="border border-blue-400 p-1 w-8">2</th>
+                        <th className="border border-blue-400 p-1 w-8">3</th>
+                        <th className="border border-blue-400 p-1 w-8">4</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {englishOutcomes.map((item) => {
+                        const level = getUserSelectedLevel(student, item.code, "इंग्रजी");
+                        return (
+                          <tr key={item.code} className="border-b border-blue-300 hover:bg-slate-50">
+                            <td className="border border-blue-400 p-2 text-center font-bold text-slate-900">{item.code}</td>
+                            <td className="border border-blue-400 p-2 text-slate-800 leading-snug">{item.text}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 1 ? "✓" : ""}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 2 ? "✓" : ""}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 3 ? "✓" : ""}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 4 ? "✓" : ""}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* 3. गणित Section */}
+              {mathsOutcomes.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-base font-black text-blue-800 mb-3 text-center">गणित</h3>
+                  <table className="w-full border-collapse border border-blue-400 text-xs font-medium">
+                    <thead>
+                      <tr className="bg-blue-100 text-blue-950 font-bold text-center">
+                        <th className="border border-blue-400 p-2 w-28">अध्ययन निष्पत्ती क्र.</th>
+                        <th className="border border-blue-400 p-2 text-left">अध्ययन निष्पत्ती</th>
+                        <th colSpan={4} className="border border-blue-400 p-1 w-32">स्तर</th>
+                      </tr>
+                      <tr className="bg-blue-50 text-blue-950 font-bold text-center text-[11px]">
+                        <th colSpan={2} className="border border-blue-400 p-1"></th>
+                        <th className="border border-blue-400 p-1 w-8">1</th>
+                        <th className="border border-blue-400 p-1 w-8">2</th>
+                        <th className="border border-blue-400 p-1 w-8">3</th>
+                        <th className="border border-blue-400 p-1 w-8">4</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {mathsOutcomes.map((item) => {
+                        const level = getUserSelectedLevel(student, item.code, "गणित");
+                        return (
+                          <tr key={item.code} className="border-b border-blue-300 hover:bg-slate-50">
+                            <td className="border border-blue-400 p-2 text-center font-bold text-slate-900">{item.code}</td>
+                            <td className="border border-blue-400 p-2 text-slate-800 leading-snug">{item.text}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 1 ? "✓" : ""}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 2 ? "✓" : ""}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 3 ? "✓" : ""}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 4 ? "✓" : ""}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Signatures */}
+            <div className="flex items-center justify-between pt-6 border-t border-slate-200 mt-6 text-xs font-bold text-slate-800">
+              <div className="text-center">
+                <p className="font-extrabold">{schoolData.teacherName || "वर्गशिक्षक"}</p>
+                <p className="text-[11px] text-slate-500 font-medium">वर्गशिक्षक</p>
+              </div>
+              <div className="text-center">
+                <p className="font-extrabold">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
+                <p className="text-[11px] text-slate-500 font-medium">मुख्याध्यापक</p>
+              </div>
             </div>
           </div>
-        )}
-
-        {/* Info Text */}
-        <div className="space-y-4 pt-4 text-center">
-          <p className="text-sm text-emerald-100/90 leading-relaxed max-w-md mx-auto">
-            {language === "English" 
-              ? "Hello, the learning outcomes achievement register is attached student-wise." 
-              : "नमस्कार, अध्ययन निष्पत्तीनिहाय संपादणूक प्रगतीदर्शक नोंदतक्ता विद्यार्थीनिहाय जोडला आहे."}
-          </p>
-        </div>
-
-        {/* Warning Block */}
-        <div className="bg-[#121c16]/50 border border-emerald-950/40 rounded-2xl p-5 text-xs text-emerald-400/80 leading-relaxed space-y-3 max-w-md mx-auto">
-          {/* School Name Check */}
-          <div className="flex items-start gap-2.5">
-            {schoolName && schoolName !== "N/A" ? (
-              <>
-                <Check size={15} className="shrink-0 mt-0.5 text-emerald-400" />
-                <span>
-                  {language === "English"
-                    ? `School Name: ${schoolName}`
-                    : `शाळेचे नाव: ${schoolName}`}
-                </span>
-              </>
-            ) : (
-              <>
-                <AlertTriangle size={15} className="shrink-0 mt-0.5 text-[#ff9800]" />
-                <span className="text-[#ff9800]/90">
-                  {language === "English"
-                    ? "School Name is missing in School Info."
-                    : "शाळेचे नाव शाळेच्या माहितीमध्ये भरलेले नाही."}
-                </span>
-              </>
-            )}
-          </div>
-
-          {/* Headmaster Name Check */}
-          <div className="flex items-start gap-2.5">
-            {(() => {
-              const hmName = schoolData?.headmasterName || schoolData?.hmName || schoolData?.headmaster || cceSettings?.headmasterName || cceSettings?.principalName || "";
-              if (hmName.trim()) {
-                return (
-                  <>
-                    <Check size={15} className="shrink-0 mt-0.5 text-emerald-400" />
-                    <span>
-                      {language === "English"
-                        ? `Headmaster: ${hmName}`
-                        : `मुख्याध्यापक: ${hmName}`}
-                    </span>
-                  </>
-                );
-              } else {
-                return (
-                  <>
-                    <AlertTriangle size={15} className="shrink-0 mt-0.5 text-[#ff9800]" />
-                    <span className="text-[#ff9800]/90">
-                      {language === "English"
-                        ? "Headmaster name is missing in School Info."
-                        : "शाळेच्या माहितीमध्ये मुख्याध्यापकांचे नाव भरलेले नाही."}
-                    </span>
-                  </>
-                );
-              }
-            })()}
-          </div>
-
-          {/* Caste Configured Check */}
-          <div className="flex items-start gap-2.5">
-            {(() => {
-              const missing = selectedStudents.filter(s => !s.caste || !s.caste.trim());
-              if (selectedStudents.length === 0) {
-                return (
-                  <>
-                    <AlertTriangle size={15} className="shrink-0 mt-0.5 text-[#ff9800]" />
-                    <span className="text-[#ff9800]/90">
-                      {language === "English"
-                        ? "No student data available to check castes."
-                        : "जात तपासण्यासाठी विद्यार्थी माहिती उपलब्ध नाही."}
-                    </span>
-                  </>
-                );
-              } else if (missing.length > 0) {
-                const sampleNames = missing.slice(0, 2).map(s => s.fullName || s.studentName || s.name || `Roll ${s.rollNo || s.srNo}`).join(", ");
-                const remaining = missing.length - 2;
-                const sampleText = remaining > 0 
-                  ? `${sampleNames} + ${remaining} ${language === "English" ? "more" : "इतर"}`
-                  : sampleNames;
-                return (
-                  <>
-                    <AlertTriangle size={15} className="shrink-0 mt-0.5 text-[#ff9800]" />
-                    <span className="text-[#ff9800]/90">
-                      {language === "English"
-                        ? `Caste missing for ${missing.length} student(s) (${sampleText}). Select it in Student Info.`
-                        : `${missing.length} विद्यार्थ्यांची जात निवडलेली नाही (${sampleText}). विद्यार्थी माहितीमध्ये ती निवडा.`}
-                    </span>
-                  </>
-                );
-              } else {
-                return (
-                  <>
-                    <Check size={15} className="shrink-0 mt-0.5 text-emerald-400" />
-                    <span>
-                      {language === "English"
-                        ? "Castes configured for all students."
-                        : "सर्व विद्यार्थ्यांची जात निवडलेली आहे."}
-                    </span>
-                  </>
-                );
-              }
-            })()}
-          </div>
-
-          {/* Paper orientation disclaimer */}
-          <div className="flex items-start gap-2.5">
-            <AlertTriangle size={15} className="shrink-0 mt-0.5 text-emerald-500" />
-            <span>
-              {language === "English" 
-                ? "This table will be printed on landscape A4 sheets, containing formative and summative scores for all subjects." 
-                : "हा तक्ता सर्व विषयांच्या आकारिक व संकलित मूल्यमापन गुणांसह landscape A4 पानांवर प्रिंट केला जाईल."}
-            </span>
-          </div>
-        </div>
-
-        {/* Bottom Button */}
-        <button
-          onClick={handlePrintCompiledRegister}
-          disabled={isCompiling}
-          className="w-full py-4 bg-[#98d9a4] hover:bg-[#8ad499] active:scale-[0.99] text-[#0d1310] font-black text-sm rounded-2xl tracking-wide transition-all shadow-lg shadow-emerald-950/40 flex items-center justify-center gap-2 cursor-pointer duration-200 disabled:opacity-50"
-        >
-          {isCompiling ? (
-            <>
-              <Loader2 className="size-4 animate-spin" />
-              <span>
-                {language === "English" ? "Compiling results..." : "गुण तक्ते संकलित करत आहे..."}
-              </span>
-            </>
-          ) : (
-            <span>{language === "English" ? "Generate / Print" : "तयार करा"}</span>
-          )}
-        </button>
+        ))}
 
       </div>
     </div>

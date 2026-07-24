@@ -1,2099 +1,1027 @@
-import React, { useState, useEffect } from 'react';
-import { Modal, Button } from 'react-bootstrap';
-import "../result/result.css";
-import { Link } from 'react-router-dom';
-// import Sidebar from '../../components/Sidebar';
-import AlertMessage from "../../AlertMessage";
-
-const BoardResult = () => {
-  const [academicYear, setAcademicYear] = useState('');
-  const [classValue, setClassValue] = useState('');
-  const [selectedExamName, setSelectedExamName] = useState('');
-  const [studentData, setStudentData] = useState([]);
-  const [selectedStudents, setSelectedStudents] = useState([]);
-  const [marksData, setMarksData] = useState({});
-  const [classes, setClasses] = useState([]);
-  const [selectedStudentResults, setSelectedStudentResults] = useState(null);
-  const [showModal, setShowModal] = useState(false);
-  const [schoolName, setSchoolName] = useState('');
-  const [schoolLogo, setSchoolLogo] = useState('');
-  const [division, setDivision] = useState("");
-  const [divisions, setDivisions] = useState(["A", "B", "C", "D"]);
-  const udiseNumber = localStorage.getItem("udiseNumber");
-  const examNames = ['First Semester', 'Second Semester', 'All Exams'];
-  const examNameTranslations = {
-    "First Semester": "प्रथम सत्र",
-    "Second Semester": "द्वितीय सत्र",
-    "All Exams": "सर्व परीक्षा",
-  };
-  const [language, setLanguage] = useState(localStorage.getItem('language') || 'English');
-
-  const [alertMessage, setAlertMessage] = useState("");
-  const [showAlert, setShowAlert] = useState(false);
-
-
-
-  useEffect(() => {
-    if (alertMessage) {
-      setShowAlert(true);
-      const timeoutId = setTimeout(() => {
-        setShowAlert(false);
-        setAlertMessage("");
-      }, 3000);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [alertMessage]);
-
-
-
-  useEffect(() => {
-    const fetchDefaultSettings = async () => {
-      try {
-        const response = await fetch(`${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/defaultSettings.json`);
-        if (response.ok) {
-          const data = await response.json();
-
-          if (data) {
-            setAcademicYear(data.defaultYear || "");
-          }
-        } else {
-          console.error("Failed to fetch default settings.");
-        }
-      } catch (error) {
-        console.error("Error fetching default settings:", error);
-      }
-    };
-
-    fetchDefaultSettings();
-  }, [udiseNumber]);
-
-  const [subjectSequence, setSubjectSequence] = useState([]); // New state for subject sequence
-  useEffect(() => {
-    if (academicYear && classValue) {
-      fetchSubjectSequence();
-    }
-  }, [academicYear, classValue]);
-
-  const fetchSubjectSequence = async () => {
-    try {
-      const response = await fetch(
-        `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/subjectSequence/${academicYear}/${classValue}.json`
-      );
-      if (!response.ok) {
-        throw new Error('Failed to fetch subject sequence');
-      }
-      const data = await response.json();
-      // Assuming the data is an object with numeric keys
-      const orderedSubjects = Object.keys(data)
-        .sort((a, b) => parseInt(a) - parseInt(b)) // Sort by numeric keys
-        .map((key) => data[key]); // Map keys to subject names
-      setSubjectSequence(orderedSubjects);
-    } catch (error) {
-      console.error('Error fetching subject sequence:', error);
-    }
-  };
-
-
-  useEffect(() => {
-    const storedLanguage = localStorage.getItem('language') || 'English';
-    setLanguage(storedLanguage);
-  }, []);
-
-
-
-  const fetchSchoolName = async () => {
-    try {
-      const db = await openDB();
-      const transaction = db.transaction(SCHOOL_STORE, 'readonly');
-      const store = transaction.objectStore(SCHOOL_STORE);
-
-      // Get the school data using the udiseNumber as key
-      const request = store.get(udiseNumber);
-
-      request.onsuccess = (event) => {
-        const schoolData = event.target.result;
-        if (schoolData) {
-          // Set school name and logo from IndexedDB
-          setSchoolName(schoolData.schoolName || '-');
-          setSchoolLogo(schoolData.schoolLogo || '');
-
-          // Update language if available in school data
-          if (schoolData.language) {
-            setLanguage(schoolData.language);
-            localStorage.setItem('language', schoolData.language);
-          }
-        } else {
-          console.log('No school data found in IndexedDB');
-          // Fallback to empty values if no data found
-          setSchoolName('-');
-          setSchoolLogo('');
-        }
-      };
-
-      request.onerror = (event) => {
-        console.error('Error fetching school data from IndexedDB:', event.target.error);
-        // Fallback to empty values on error
-        setSchoolName('-');
-        setSchoolLogo('');
-      };
-    } catch (error) {
-      console.error('Error accessing IndexedDB:', error);
-      // Fallback to empty values on error
-      setSchoolName('-');
-      setSchoolLogo('');
-    }
-  };
-
-  useEffect(() => {
-    fetchSchoolName();
-    fetchStudentData();
-
-  }, [udiseNumber]); // Add udiseNumber as dependency
-
-  useEffect(() => {
-    if (selectedExamName && classValue && academicYear) {
-      fetchMarksForSelectedSubject();
-    }
-  }, [selectedExamName, classValue, academicYear]);
-
-  const handleAcademicYearChange = (e) => setAcademicYear(e.target.value);
-  // const handleClassChange = (e) => {
-  //   setClassValue(e.target.value);
-  //   fetchSubjectsForClass(e.target.value);
-  // };
-  const handleExamNameChange = (e) => {
-    // Prevent changing the selected exam name from "Second Semester" or "All Exams"
-    if (e.target.value !== "Second Semester" && e.target.value !== "All Exams") {
-      return;
-    }
-    setSelectedExamName(e.target.value);
-  };
-
-  const filteredExamNames = examNames.filter((examName) => examName === "Second Semester" || examName === "All Exams");
-
-  // IndexedDB constants
-  const DB_NAME = 'SchoolManagementDB';
-  const STUDENT_STORE = 'studentData';
-  const DB_VERSION = 1;
-  const ATTENDANCE_STORE = 'attendance';
-
-
-  const SCHOOL_STORE = 'schoolData';
-
-
-  // Function to open IndexedDB
-  const openDB = () => {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-      request.onerror = (event) => {
-        console.error("IndexedDB error:", event.target.error);
-        reject(event.target.error);
-      };
-
-      request.onsuccess = (event) => {
-        const db = event.target.result;
-        resolve(db);
-      };
-
-      request.onupgradeneeded = (event) => {
-        const db = event.target.result;
-
-        // Create object stores if they don't exist
-        if (!db.objectStoreNames.contains(STUDENT_STORE)) {
-          db.createObjectStore(STUDENT_STORE, { keyPath: "id" });
-        }
-
-        // Add SCHOOL_STORE if it doesn't exist
-        if (!db.objectStoreNames.contains(SCHOOL_STORE)) {
-          db.createObjectStore(SCHOOL_STORE, { keyPath: "udiseNumber" });
-        }
-      };
-    });
-  };
-  // Function to fetch student data from IndexedDB
-  const fetchStudentData = async () => {
-    try {
-      const db = await openDB();
-      if (!db) {
-        console.error("Error: db object is not initialized");
-        return;
-      }
-
-      const transaction = db.transaction(STUDENT_STORE, "readonly");
-      const store = transaction.objectStore(STUDENT_STORE);
-      const request = store.getAll();
-
-      request.onsuccess = (event) => {
-        const allStudents = event.target.result;
-
-        // Filter out students where isActive is false
-        const activeStudents = allStudents.filter(student =>
-          student.isActive !== false
-        );
-
-        const classesAndDivisions = {};
-        activeStudents.forEach((student) => {
-          if (student && student.currentClass) {
-            if (!classesAndDivisions[student.currentClass]) {
-              classesAndDivisions[student.currentClass] = {};
-            }
-
-            const division = student.division || "";
-            if (!classesAndDivisions[student.currentClass][division]) {
-              classesAndDivisions[student.currentClass][division] = [];
-            }
-
-            // Use the ID as the serial number equivalent 
-            classesAndDivisions[student.currentClass][division].push(student.id);
-          }
-        });
-
-        // Extract class, division, and srNo from key 
-        const updatedStudents = activeStudents.map((student) => {
-          const keyParts = student.id.split("-"); // Split by "-" 
-          const className = keyParts[0]; // First part is class 
-          const division = keyParts[1]; // Second part is division 
-          const srNo = keyParts[keyParts.length - 1]; // Last part is srNo 
-          return { ...student, className, division, srNo };
-        });
-
-        setClasses(Object.keys(classesAndDivisions));
-        setStudentData(updatedStudents); // Store updated students 
-      };
-
-      request.onerror = (event) => {
-        console.error("Error fetching student data from IndexedDB:", event.target.error);
-      };
-    } catch (error) {
-      console.error("Error fetching student data:", error);
-    }
-  };
-
-  const fetchDivisionsForClass = async (classValue) => {
-    try {
-      const db = await openDB();
-      const transaction = db.transaction(STUDENT_STORE, "readonly");
-      const store = transaction.objectStore(STUDENT_STORE);
-      const request = store.getAll(); // Fetch all students
-
-      request.onsuccess = (event) => {
-        const students = event.target.result;
-        const divisionsForClass = new Set();
-
-        students.forEach((student) => {
-          if (student.currentClass === classValue) {
-            divisionsForClass.add(student.division);
-          }
-        });
-
-        if (divisionsForClass.size === 0) {
-          setDivisions(["A", "B", "C", "D"]);
-        } else {
-          setDivisions(Array.from(divisionsForClass));
-        } // Update divisions state
-      };
-
-      request.onerror = (event) => {
-        console.error("Error fetching divisions from IndexedDB:", event.target.error);
-      };
-    } catch (error) {
-      console.error("Error opening IndexedDB:", error);
-    }
-  };
-
-  // Load student data and marks from IndexedDB
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const db = await openDB();
-        await fetchStudentData(db);
-      } catch (error) {
-        console.error("Error loading data from IndexedDB:", error);
-      }
-    };
-
-    loadData();
-  }, []);
-
-
-  const handleClassChange = async (e) => {
-    const selectedClass = e.target.value;
-    setClassValue(selectedClass); // Update the class value
-    setDivision(""); // Reset division when class changes
-    fetchSubjectsForClass(e.target.value);
-
-    if (selectedClass) {
-      await fetchDivisionsForClass(selectedClass);
-    }
-
-    // Filter students based on the selected class
-    const filteredStudents = studentData.filter((student) => student.currentClass === selectedClass);
-    setSelectedStudents(filteredStudents);
-  };
-
-
-
-
-
-  const fetchSubjectsForClass = async (classValue) => {
-    try {
-      if (!academicYear) {
-        console.error('Academic year is not set');
-        return;
-      }
-    } catch (error) {
-      console.error(`Error fetching subjects for class ${classValue} and academic year ${academicYear}:`, error);
-    }
-  };
-
-  const fetchMarksForSelectedSubject = async () => {
-    try {
-      const selectedStudents = studentData.filter(
-        (student) => student.currentClass === classValue
-      );
-      setSelectedStudents(selectedStudents);
-      const marksDataPromises = selectedStudents.map(async (student) => {
-        const studentMarks = await fetchMarksData(
-          student.srNo,
-          academicYear,
-          selectedExamName
-        );
-        return { srNo: student.srNo, marks: studentMarks };
-      });
-
-      const marksDataArray = await Promise.all(marksDataPromises);
-      const marksData = marksDataArray.reduce((acc, { srNo, marks }) => {
-        acc[srNo] = marks;
-        return acc;
-      }, {});
-
-      setMarksData(marksData);
-    } catch (error) {
-      console.error('Error fetching marks data:', error);
-    }
-  };
-
-  const fetchMarksData = async (key, academicYear, examName) => {
-    try {
-      console.log('Fetching Marks Data with:', {
-        key,
-        academicYear,
-        examName
-      });
-
-      const db = await openDB();
-      const transaction = db.transaction(STUDENT_STORE, "readonly");
-      const store = transaction.objectStore(STUDENT_STORE);
-
-      // Find the correct key based on the numeric identifier
-      const allKeys = await new Promise((resolve, reject) => {
-        const keysRequest = store.getAllKeys();
-        keysRequest.onsuccess = (event) => resolve(event.target.result);
-        keysRequest.onerror = (event) => reject(event.target.error);
-      });
-
-      // Improved key matching to handle more flexible key formats
-      const matchingKey = allKeys.find(storeKey =>
-        typeof storeKey === 'string' &&
-        (storeKey.endsWith(`-${key}`) || storeKey === key)
-      );
-
-      console.log('Matching Key:', matchingKey);
-
-      if (!matchingKey) {
-        console.warn('No matching key found for:', key);
-        return null;
-      }
-
-      const request = store.get(matchingKey);
-
-      return new Promise((resolve, reject) => {
-        request.onsuccess = (event) => {
-          const studentData = event.target.result;
-
-          console.log('Raw Student Data:', studentData);
-
-          // More robust nested structure checking
-          if (!studentData || !studentData.result) {
-            console.warn('No result data found for student');
-            resolve(null);
-            return;
-          }
-
-          const academicYearData = studentData.result[academicYear];
-          if (!academicYearData) {
-            console.warn(`No data found for academic year: ${academicYear}`);
-            resolve(null);
-            return;
-          }
-
-          const examData = academicYearData[examName];
-          if (!examData) {
-            console.warn(`No exam data found for: ${examName}`);
-            resolve(null);
-            return;
-          }
-
-          const result = {
-            studentInfo: {
-              name: studentData.stdName,
-              surname: studentData.stdSurname,
-              class: studentData.currentClass,
-              rollNo: studentData.rollNo
-            }
-          };
-
-          // Dynamically process subjects, including specialized structures
-          Object.keys(examData).forEach((subject) => {
-            // Skip 'remark' and other non-subject keys
-            if (subject === 'remark') {
-              result.remark = examData[subject];
-              return;
-            }
-
-            // Explicitly handle 'nondi' key
-            if (subject === 'nondi') {
-              result.nondi = examData[subject];
-              return;
-            }
-
-            // Handle different subject mark structures
-            const subjectData = examData[subject];
-
-            // Check for Akarik/Sanklik type structures (like in Physics, Maths)
-            if (subjectData.Akarik || subjectData.Sanklik) {
-              result[subject] = {
-                Akarik: processSubjectSection(subjectData.Akarik),
-                Sanklik: processSubjectSection(subjectData.Sanklik),
-                Total: {
-                  Akarik: subjectData.Akarik?.Total || 0,
-                  Sanklik: subjectData.Sanklik?.Total || 0
-                }
-              };
-            }
-            // Standard subject mark structure
-            else {
-              result[subject] = {
-                outOf: subjectData.outOf,
-                obtainMarks: subjectData.obtainMarks,
-                minMarks: subjectData.minMarks,
-                writtenMarks: subjectData.writtenMarks,
-                oralMarks: subjectData.oralMarks,
-                subtype: subjectData.subtype,
-                graceMarks: subjectData.graceMarks
-              };
-            }
-          });
-
-          console.log('Processed Marks:', result);
-          resolve(result);
-        };
-
-        request.onerror = (event) => {
-          console.error("Error fetching marks from IndexedDB:", event.target.error);
-          reject(event.target.error);
-        };
-      });
-    } catch (error) {
-      console.error('Error in fetchMarksData:', error);
-      return null;
-    }
-  };
-
-  // Helper function to process Akarik/Sanklik subject sections
-  function processSubjectSection(section) {
-    if (!section) return {};
-
-    return {
-      Activity: section.Activity || 0,
-      'Daily Monitoring': section['Daily Monitoring'] || 0,
-      Demonstration: section.Demonstration || 0,
-      Homework: section.Homework || 0,
-      'Oral Work': section['Oral Work'] || 0,
-      Others: section.Others || 0,
-      Project: section.Project || 0,
-      Test: section.Test || 0,
-      Total: section.Total || 0,
-      Orally: section.Orally || 0,
-      Writing: section.Writing || 0
-    };
-  }
-
-  const [selectedStudentForSr, setSelectedStudentForSr] = useState('')
-
-
-  const fetchHeightWeightData = async (srNo, academicYear) => {
-    try {
-      const db = await openDB();
-      const transaction = db.transaction(STUDENT_STORE, "readonly");
-      const store = transaction.objectStore(STUDENT_STORE);
-
-      const request = store.get(srNo); // Fetch student data by srNo
-
-      return new Promise((resolve, reject) => {
-        request.onsuccess = (event) => {
-          const studentData = event.target.result;
-
-          if (!studentData || !studentData.weightandHeight) {
-            console.warn('No height and weight data found for student');
-            resolve(null);
-            return;
-          }
-
-          const heightWeight = studentData.weightandHeight[academicYear] || {};
-          resolve(heightWeight);
-        };
-
-        request.onerror = (event) => {
-          console.error("Error fetching height and weight from IndexedDB:", event.target.error);
-          reject(event.target.error);
-        };
-      });
-    } catch (error) {
-      console.error('Error in fetchHeightWeightData:', error);
-      return null;
-    }
-  };
-
-  const viewResult = async (srNo) => {
-    try {
-      // Find the student in the selected students array
-      const student = selectedStudents.find((student) => student.srNo === srNo);
-
-      if (!student) {
-        throw new Error("Student not found");
-      }
-
-      // Set the selected student
-      setSelectedStudentForSr(student);
-
-      // Fetch height and weight data
-      const heightWeightData = await fetchHeightWeightData(student.id || srNo, academicYear);
-
-      // Fetch First Semester marks
-      const firstSemesterData = await fetchMarksData(
-        student.id || srNo,
-        academicYear,
-        'First Semester'
-      );
-
-      // Fetch Selected Exam (Second Semester) marks
-      const secondSemesterData = await fetchMarksData(
-        student.id || srNo,
-        academicYear,
-        selectedExamName === "All Exams" ? "Second Semester" : selectedExamName
-      );
-
-      // Validate data
-      if (!firstSemesterData || !secondSemesterData) {
-        setAlertMessage("Add the subject and fill the marks to view the result.");
-        return;
-      }
-
-      const resultsWithTotal = {};
-
-      // Combine all subjects from both semesters
-      const allSubjects = new Set([
-        ...Object.keys(firstSemesterData).filter(key => key !== 'studentInfo' && key !== 'remark' && key !== 'nondi'),
-        ...Object.keys(secondSemesterData).filter(key => key !== 'studentInfo' && key !== 'remark' && key !== 'nondi')
-      ]);
-
-      allSubjects.forEach((subject) => {
-        // First Semester Grade Calculation
-        const firstSemesterAkarikTotal = firstSemesterData[subject]?.Akarik?.Total || 0;
-        const firstSemesterSankalikTotal = firstSemesterData[subject]?.Sanklik?.Total || 0;
-        const firstSemesterTotal = firstSemesterAkarikTotal + firstSemesterSankalikTotal;
-        const firstSemesterGrade = calculateGrade(firstSemesterTotal);
-
-        // Second Semester Grade Calculation
-        const akarikTotal = secondSemesterData[subject]?.Akarik?.Total || 0;
-        const sankalikTotal = secondSemesterData[subject]?.Sanklik?.Total || 0;
-        const total = akarikTotal + sankalikTotal;
-        const grade = calculateGrade(total);
-
-        resultsWithTotal[subject] = {
-          akarikTotal,
-          sankalikTotal,
-          total,
-          grade,
-          firstSemesterGrade,
-        };
-      });
-
-
-      // Prepare height and weight data for display
-      const heightSeptember = heightWeightData?.September ?? {};
-      const heightMarch = heightWeightData?.March ?? {};
-
-      // Extract nondi data
-      const firstSemesterNondi = firstSemesterData.nondi || {};
-      const secondSemesterNondi = secondSemesterData.nondi || {};
-
-      // Set state with both semester data
-      setSelectedStudentResults({
-        studentName: student.stdName,
-        results: resultsWithTotal,
-        heightSeptember: heightSeptember.height || '',
-        weightSeptember: heightSeptember.weight || '',
-        heightMarch: heightMarch.height || '',
-        weightMarch: heightMarch.weight || '',
-        nondi: secondSemesterNondi, // Use second semester nondi as primary
-        firstSemester: firstSemesterNondi,
-        stdMother: student.stdMother,
-        stdFather: student.stdFather,
-        stdSurname: student.stdSurname,
-        dob: student.dob,
-        division: student.division,
-        motherTounge: student.motherTounge,
-        studentId: student.studentId,
-        gender: student.gender,
-        rollNo: student.rollNo,
-      });
-
-      setShowModal(true);
-    } catch (error) {
-      console.error("Error fetching student results:", error);
-      setAlertMessage("Failed to fetch student results. Please try again.");
-    }
-  };
-
-
-
-
-  const handleGradeChange = (subject, type, value) => {
-    setSelectedStudentResults((prevState) => {
-      const updatedResults = { ...prevState.results };
-      updatedResults[subject][type] = parseInt(value, 10) || 0; // Ensure the value is a number
-
-      return {
-        ...prevState,
-        results: updatedResults,
-      };
-    });
-  };
-
-
-  const calculateGradeEnglish = (total) => {
-    if (total >= 91) return 'A1';
-    if (total >= 81) return 'A2';
-    if (total >= 71) return 'B1';
-    if (total >= 61) return 'B2';
-    if (total >= 51) return 'C1';
-    if (total >= 41) return 'C2';
-    if (total >= 33) return 'D1';
-    if (total >= 21) return 'D2';
-    return 'Fail';
-  };
-
-  const calculateGradeMarathi = (total) => {
-    if (total >= 91) return 'अ-1';
-    if (total >= 81) return 'अ-2';
-    if (total >= 71) return 'ब-1';
-    if (total >= 61) return 'ब-2';
-    if (total >= 51) return 'क-1';
-    if (total >= 41) return 'क-2';
-    if (total >= 33) return 'ड-1';
-    if (total >= 21) return 'ड-2';
-    return 'नापास';
-  };
-
-  // Function to calculate grade based on the current language
-  const calculateGrade = (total) => {
-    return language === 'English' ? calculateGradeEnglish(total) : calculateGradeMarathi(total);
-  };
-
-  const submit = () => {
-    // Handle submit logic here
-  };
-  const handleCloseModal = () => setShowModal(false);
-
-  const months = ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May'];
-  const [attendance, setAttendance] = useState({
-    Present: {},
-    Absent: {},
-    Leave: {}
+import React, { useState, useEffect, useRef } from "react";
+import { db } from "../lib/firebase";
+import { doc, getDoc, collection, getDocs, query, where } from "firebase/firestore";
+import { Download, Printer, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
+import "./result.css";
+
+const DEFAULT_SUBJECTS = [
+  "प्रथम भाषा : मराठी",
+  "द्वितीय भाषा : इंग्रजी",
+  "गणित",
+  "कला",
+  "कार्यानुभव",
+  "शारीरिक शिक्षण",
+];
+
+// Calculate Grade from Percentage
+const getGrade = (percentage) => {
+  if (percentage >= 91) return "अ-1";
+  if (percentage >= 81) return "अ-2";
+  if (percentage >= 71) return "ब-1";
+  if (percentage >= 61) return "ब-2";
+  if (percentage >= 51) return "क-1";
+  if (percentage >= 41) return "क-2";
+  if (percentage >= 33) return "ड-1";
+  if (percentage >= 21) return "ड-2";
+  return "इ-1";
+};
+
+const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) => {
+  const [selectedClass, setSelectedClass] = useState(initialClass || "1st");
+  const [academicYear, setAcademicYear] = useState(initialYear || "2025-26");
+  const [division, setDivision] = useState("1");
+  const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState(false);
+
+  // User's School & Teacher Settings (No hardcoded sample names)
+  const [schoolData, setSchoolData] = useState({
+    schoolName: "",
+    udise: "",
+    teacherName: "",
+    headmasterName: "",
+    slogan: "✦ ज्ञान, संस्कार आणि प्रगतीसाठी ✦",
+    schoolLogo: "",
+    teacherSignature: "",
+    headmasterSignature: "",
   });
 
-  const fetchAttendanceFromIndexedDB = async (srNo, academicYear) => {
-    try {
-      console.log('Fetching Attendance Data with:', { srNo, academicYear });
+  const [subjects, setSubjects] = useState(DEFAULT_SUBJECTS);
+  const [students, setStudents] = useState([]);
+  const [marksData, setMarksData] = useState({});
+  const [remarksData, setRemarksData] = useState({});
+  const [attendanceData, setAttendanceData] = useState({});
 
-      const db = await openDB();
-      const transaction = db.transaction(ATTENDANCE_STORE, "readonly");
-      const store = transaction.objectStore(ATTENDANCE_STORE);
-
-      // Find all keys and log them
-      const allKeys = await new Promise((resolve, reject) => {
-        const keysRequest = store.getAllKeys();
-        keysRequest.onsuccess = (event) => {
-          const keys = event.target.result;
-          console.log('ALL KEYS IN ATTENDANCE STORE:', keys);
-          resolve(keys);
-        };
-        keysRequest.onerror = (event) => reject(event.target.error);
-      });
-
-      // Improved key matching with extensive logging
-      const matchingKey = allKeys.find(storeKey => {
-        const storeKeyStr = String(storeKey).trim();
-        const srNoStr = String(srNo).trim();
-
-        const isMatch = storeKeyStr === srNoStr;
-
-        if (isMatch) {
-          console.log('MATCHING KEY FOUND:', {
-            storeKey,
-            srNo,
-            match: isMatch
-          });
-        }
-
-        return isMatch;
-      });
-
-
-      console.log('Matching Attendance Key:', matchingKey);
-
-      if (!matchingKey) {
-        console.warn('No matching attendance key found for:', srNo);
-        console.warn('Available keys:', allKeys);
-        return null;
-      }
-
-      const request = store.get(matchingKey);
-
-      return new Promise((resolve, reject) => {
-        request.onsuccess = (event) => {
-          const attendanceData = event.target.result;
-
-          console.log('RAW ATTENDANCE DATA:', JSON.stringify(attendanceData, null, 2));
-
-          // Extract the year from academic year
-          const startYear = academicYear.split('-')[0];
-          const endYear = academicYear.split('-')[1];
-
-          // Process the attendance based on the months
-          const fetchedAttendance = {
-            Present: {},
-            Absent: {},
-            Leave: {}
-          };
-
-          // Define the first and second semester months
-          const firstSemesterMonths = ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',];
-          const secondSemesterMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May'];
-
-          // Process each month
-          [...firstSemesterMonths, ...secondSemesterMonths].forEach(month => {
-            let yearForMonth = firstSemesterMonths.includes(month) ? startYear : endYear;
-
-            // Get the attendance for the month
-            const monthData = attendanceData.Presenty?.Presenty?.[yearForMonth]?.[month] || {};
-
-            let presentCount = 0;
-            let absentCount = 0;
-            let leaveCount = 0;
-
-            // Count attendance status for each day in the month
-            Object.keys(monthData).forEach(day => {
-              const statusObj = monthData[day];
-              let status;
-
-              if (statusObj && typeof statusObj === 'object') {
-                status = statusObj.present || statusObj.status;
-              } else {
-                status = statusObj;
-              }
-
-              if (status === 'present' || status === true) {
-                presentCount++;
-              } else if (status === 'absent' || status === false) {
-                absentCount++;
-              } else if (status === null || status === undefined) {
-                leaveCount++;
-              }
-            });
-
-            // Store the counts in the fetched attendance data
-            fetchedAttendance.Present[month] = presentCount;
-            fetchedAttendance.Absent[month] = absentCount;
-            fetchedAttendance.Leave[month] = leaveCount - 1;
-          });
-
-          console.log('PROCESSED ATTENDANCE:', fetchedAttendance);
-          resolve(fetchedAttendance);
-        };
-
-        request.onerror = (event) => {
-          console.error("Error fetching attendance from IndexedDB:", event.target.error);
-          reject(event.target.error);
-        };
-      });
-    } catch (error) {
-      console.error('Error in fetchAttendanceFromIndexedDB:', error);
-      return null;
-    }
-  };
-
-
+  const printRef = useRef(null);
 
   useEffect(() => {
-    const fetchAttendanceData = async () => {
-      console.log('FETCH ATTENDANCE EFFECT TRIGGERED');
-      console.log('Selected Student:', selectedStudentForSr);
-      console.log('Academic Year:', academicYear);
+    loadUserFirestoreData();
+  }, [selectedClass, academicYear]);
 
-      if (!selectedStudentForSr) {
-        console.warn('No student selected');
-        return;
-      }
+  const loadUserFirestoreData = async () => {
+    setLoading(true);
+    try {
+      const docId = `${selectedClass}_${academicYear}`;
 
-      const srNo = selectedStudentForSr.serialNo;
-      console.log('Student SR No:', srNo);
-      const academicYearParts = academicYear.split('-');
-
+      // 1. Fetch Global & Class Settings (from CCESettings / Bunny Storage / school_settings)
       try {
-        const attendanceData = await fetchAttendanceFromIndexedDB(srNo, academicYearParts[0] + '-' + academicYearParts[1]);
+        let globalSettings = null;
 
-        if (attendanceData) {
-          setAttendance(attendanceData);
-          console.log('FINAL ATTENDANCE SET:', attendanceData);
-        } else {
-          console.warn('No attendance data found');
-          setAttendance({
-            Present: {},
-            Absent: {},
-            Leave: {}
-          });
+        // Try local storage cache
+        try {
+          const cachedGen = localStorage.getItem("cce_general_school_settings");
+          if (cachedGen) globalSettings = JSON.parse(cachedGen);
+        } catch (e) {}
+
+        // Try Bunny Storage CDN
+        if (!globalSettings) {
+          try {
+            const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
+            globalSettings = await fetchJsonFromBunny("cce_results/general_school_settings.json");
+          } catch (e) {}
         }
-      } catch (error) {
-        console.error('Error fetching attendance data:', error);
-        setAttendance({
-          Present: {},
-          Absent: {},
-          Leave: {}
-        });
+
+        // Try Firestore global document
+        if (!globalSettings) {
+          const generalSnap = await getDoc(doc(db, "school_settings", "general"));
+          if (generalSnap.exists()) globalSettings = generalSnap.data();
+        }
+
+        // Try Firestore class-specific document
+        const settingsSnap = await getDoc(doc(db, "cce_settings", docId));
+        const classSettings = settingsSnap.exists() ? settingsSnap.data() : {};
+
+        const mergedSettings = { ...(globalSettings || {}), ...classSettings };
+
+        if (mergedSettings.schoolName || mergedSettings.udiseCode || mergedSettings.teacherName) {
+          setSchoolData({
+            schoolName: mergedSettings.schoolName ? `${mergedSettings.schoolName}${mergedSettings.address ? ` (${mergedSettings.address})` : ""}` : "",
+            udise: mergedSettings.udiseCode || mergedSettings.udise || "",
+            teacherName: mergedSettings.teacherName || "",
+            headmasterName: mergedSettings.principalName || mergedSettings.headmasterName || "",
+            slogan: mergedSettings.slogan || "✦ ज्ञान, संस्कार आणि प्रगतीसाठी ✦",
+            schoolLogo: mergedSettings.schoolLogo || "",
+            teacherSignature: mergedSettings.signatureUrl || "",
+            headmasterSignature: mergedSettings.principalSignature || "",
+          });
+          if (mergedSettings.subjects && Array.isArray(mergedSettings.subjects) && mergedSettings.subjects.length > 0) {
+            setSubjects(mergedSettings.subjects);
+          }
+        }
+      } catch (e) {
+        console.error("Error fetching school settings:", e);
       }
-    };
 
-    fetchAttendanceData();
-  }, [selectedStudentForSr, academicYear]);
+      // 2. Fetch User's Real Students for this selected class (checking users, students, cce_students & Bunny Storage)
+      let loadedStudents = [];
 
+      const normalizeClass = (cls) => {
+        if (!cls) return "";
+        return String(cls).trim().toLowerCase().replace(/[^0-9a-z]/g, "");
+      };
+      const targetClassNorm = normalizeClass(selectedClass);
 
-  const [summerVacationDate, setSummerVacationDate] = useState('');
-  const [winterVacationDate, setWinterVacationDate] = useState('');
+      // A. Query 'users' collection (role == "student")
+      try {
+        const uQuery = query(
+          collection(db, "users"),
+          where("role", "==", "student")
+        );
+        const uSnap = await getDocs(uQuery);
+        uSnap.forEach((docSnap) => {
+          const d = docSnap.data();
+          const stdClassNorm = normalizeClass(d.class || d.currentClass || d.className);
+          if (!stdClassNorm || stdClassNorm === targetClassNorm || d.class === selectedClass) {
+            loadedStudents.push({
+              id: docSnap.id,
+              name: d.fullName || d.name || d.studentName || "",
+              rollNo: String(d.rollNo || d.srNo || loadedStudents.length + 1),
+              caste: d.caste || d.category || "सर्वसाधारण",
+              gender: d.gender || "Male",
+            });
+          }
+        });
+      } catch (e) {
+        console.error("Error fetching users collection students:", e);
+      }
 
-  // Define the English month names
-  const firstSemesterMonths = ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov'];
-  const secondSemesterMonths = ['Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May'];
+      // B. Query 'students' collection if needed
+      if (loadedStudents.length === 0) {
+        try {
+          const studentsSnap = await getDocs(collection(db, "students"));
+          studentsSnap.forEach((docSnap) => {
+            const d = docSnap.data();
+            const stdClassNorm = normalizeClass(d.class || d.currentClass || d.className);
+            if (!stdClassNorm || stdClassNorm === targetClassNorm || d.class === selectedClass) {
+              loadedStudents.push({
+                id: docSnap.id,
+                name: d.fullName || d.name || d.studentName || "",
+                rollNo: String(d.rollNo || d.srNo || loadedStudents.length + 1),
+                caste: d.caste || d.category || "सर्वसाधारण",
+                gender: d.gender || "Male",
+              });
+            }
+          });
+        } catch (e) {}
+      }
 
-  // Function to translate month to Marathi if needed
-  const getMonthName = (month) => {
-    const marathiMonths = {
-      Jun: 'जून', Jul: 'जुलै', Aug: 'ऑगस्ट', Sep: 'सप्टेंबर', Oct: 'ऑक्टोबर', Nov: 'नोव्हेंबर',
-      Dec: 'डिसेंबर', Jan: 'जानेवारी', Feb: 'फेब्रुवारी', Mar: 'मार्च', Apr: 'एप्रिल', May: 'मे'
-    };
-    return language === "English" ? month : marathiMonths[month];
-  };
+      // C. Query cce_students doc fallback
+      if (loadedStudents.length === 0) {
+        try {
+          const cceStudentsSnap = await getDoc(doc(db, "cce_students", docId));
+          if (cceStudentsSnap.exists() && cceStudentsSnap.data().students) {
+            loadedStudents = cceStudentsSnap.data().students;
+          }
+        } catch (e) {}
+      }
 
-  const getAttendanceType = (type) => {
-    const marathiTypes = {
-      Present: 'उपस्थित',
-      Absent: 'गैरहजर',
-      Leave: 'रजा'
-    };
-    return language === "English" ? type : marathiTypes[type];
-  };
+      // D. Query Bunny Storage CDN fallback
+      if (loadedStudents.length === 0) {
+        try {
+          const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
+          const bunnyStudents = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_students.json`);
+          if (bunnyStudents && Array.isArray(bunnyStudents) && bunnyStudents.length > 0) {
+            loadedStudents = bunnyStudents;
+          }
+        } catch (e) {}
+      }
 
-  //  setting marks to pass 
-  const getPassingMarks = (currentClass) => {
-    if (selectedStudentForSr.currentClass === "Class V" || selectedStudentForSr.currentClass === "5th" || selectedStudentForSr.currentClass === "इयत्ता पाचवी") {
-      return 18;
-    } else if (selectedStudentForSr.currentClass === "Class VIII" || selectedStudentForSr.currentClass === "8th" || selectedStudentForSr.currentClass === "इयत्ता आठवी") {
-      return 21;
+      // Deduplicate students by name / rollNo
+      const uniqueMap = new Map();
+      loadedStudents.forEach(s => {
+        if (s.name) {
+          const key = s.rollNo ? `${s.rollNo}_${s.name}` : s.name;
+          if (!uniqueMap.has(key)) {
+            uniqueMap.set(key, s);
+          }
+        }
+      });
+      loadedStudents = Array.from(uniqueMap.values());
+
+      // Sort students by roll number
+      loadedStudents.sort((a, b) => (parseInt(a.rollNo) || 0) - (parseInt(b.rollNo) || 0));
+      setStudents(loadedStudents);
+
+      // 3. Fetch User's Entered Marks for this Class & Year (Merging all sources from Bunny CDN & Firestore)
+      try {
+        const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
+        const bunnyMarksSec = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_marks_second.json`);
+        const bunnyMarksFirst = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_marks_first.json`);
+        const bunnyMarksSem2 = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_marks_sem2.json`);
+        const bunnyMarksSem1 = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_marks_sem1.json`);
+
+        const marksSnap = await getDoc(doc(db, "cce_marks_v2", docId));
+        const fsData = marksSnap.exists() ? marksSnap.data() : {};
+
+        const mergedMarks = {
+          ...(fsData.semester2 || fsData.semester1 || fsData.marksData || fsData.data || fsData || {}),
+          ...(bunnyMarksSem1 || {}),
+          ...(bunnyMarksSem2 || {}),
+          ...(bunnyMarksFirst || {}),
+          ...(bunnyMarksSec || {}),
+        };
+
+        setMarksData(mergedMarks);
+      } catch (e) {
+        console.error("Error fetching marks:", e);
+      }
+
+      // 4. Fetch User's Entered Remarks for this Class & Year (Merging sem1, sem2 & general from Firestore & Bunny CDN)
+      try {
+        const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
+        const bunnyRemarks = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_remarks.json`);
+
+        const remSnapSem2 = await getDoc(doc(db, "cce_remarks_v2", `${selectedClass}_${academicYear}_sem2`));
+        const remSnapSem1 = await getDoc(doc(db, "cce_remarks_v2", `${selectedClass}_${academicYear}_sem1`));
+        const remSnapGen = await getDoc(doc(db, "cce_remarks_v2", docId));
+
+        const rFsDataSem2 = remSnapSem2.exists() ? (remSnapSem2.data().records || remSnapSem2.data()) : {};
+        const rFsDataSem1 = remSnapSem1.exists() ? (remSnapSem1.data().records || remSnapSem1.data()) : {};
+        const rFsDataGen = remSnapGen.exists() ? (remSnapGen.data().records || remSnapGen.data().remarksData || remSnapGen.data()) : {};
+
+        const mergedRemarks = {
+          ...rFsDataGen,
+          ...rFsDataSem1,
+          ...rFsDataSem2,
+          ...(bunnyRemarks || {}),
+        };
+
+        setRemarksData(mergedRemarks);
+      } catch (e) {
+        console.error("Error fetching remarks:", e);
+      }
+
+      // 5. Fetch Attendance Data (Bunny Storage CDN first, Firestore fallback)
+      try {
+        const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
+        const bunnyAtt = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_attendance.json`);
+        if (bunnyAtt && Object.keys(bunnyAtt).length > 0) {
+          setAttendanceData(bunnyAtt);
+        } else {
+          const attSnap = await getDoc(doc(db, "cce_attendance", docId));
+          if (attSnap.exists()) {
+            setAttendanceData(attSnap.data().attendanceData || attSnap.data());
+          } else {
+            setAttendanceData({});
+          }
+        }
+      } catch (e) { }
+
+    } catch (err) {
+      console.error("Error loading CCE Register data:", err);
     }
-    // Default passing marks if none of the specified classes are selected
-    return 18;
+    setLoading(false);
   };
 
-  const passingMarks = getPassingMarks(selectedStudentForSr.currentClass);
-
-  //percentage 
-  let totalSubjects = 0;
-  let totalMarks = 0;
-  let percentage = 0;
-
-  if (selectedStudentResults && selectedStudentResults.results) {
-    totalSubjects = Object.entries(selectedStudentResults.results)
-      .filter(([subject]) => subject !== "nondi").length;
-
-    totalMarks = Object.entries(selectedStudentResults.results)
-      .filter(([subject]) => subject !== "nondi")
-      .reduce((acc, [subject, grades]) => acc + (grades.sankalikTotal || 0) + (grades.akarikTotal || 0), 0);
-
-    percentage = (totalMarks / (totalSubjects * 100)) * 100;
-  }
-
-  // Re-Exam
-  const currentClass = selectedStudentResults?.currentClass; // Example: "Class V" or "Class VIII"
-  const hasFailed = selectedStudentResults?.results &&
-    Object.values(selectedStudentResults.results).some(grades => (grades.sankalikTotal || 0) + (grades.akarikTotal || 0) < passingMarks);
-
-  // Add "Re-Exam" if the student is in Class V or VIII and has failed
-  let examOptions = [...examNames];
-  if ((currentClass === "Class V" || currentClass === "Class VIII") && hasFailed) {
-    examOptions.push("Re-Exam");
-  }
-
-  const handleDivisionChange = (e) => {
-    const selectedDivision = e.target.value;
-    setDivision(selectedDivision); // Update division state
-
-    let filteredStudents;
-
-    if (selectedDivision === "") {
-      // Show all students from the selected class if "All Student" is chosen
-      filteredStudents = studentData.filter((student) => student.currentClass === classValue);
-    } else {
-      // Filter by class and division
-      filteredStudents = studentData.filter(
-        (student) => student.currentClass === classValue && student.division === selectedDivision
-      );
+  const handleDownloadPdf = async () => {
+    if (!printRef.current) return;
+    setDownloading(true);
+    toast.info("PDF निर्मिती सुरू आहे, कृपया वाट पाहा...");
+    try {
+      const { default: html2pdf } = await import("html2pdf.js");
+      const element = printRef.current;
+      const opt = {
+        margin: [0, 0, 0, 0],
+        filename: `CCE_मूल्यांकन_नोंदवही_${selectedClass}_${academicYear}.pdf`,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+        pagebreak: { mode: ["css"] },
+      };
+      await html2pdf().set(opt).from(element).save();
+      toast.success("PDF यशस्वीरित्या डाऊनलोड झाली!");
+    } catch (err) {
+      console.error("PDF generation error:", err);
+      toast.error("PDF निर्मितीत अडचण आली: " + err.message);
     }
-
-    setSelectedStudents(filteredStudents);
+    setDownloading(false);
   };
-
-
 
   const handlePrint = () => {
-    const printContent = document.querySelector('.modal-body'); // Select the modal body content
-
-    if (printContent) {
-      const printWindow = window.open('', '', 'height=600,width=800');
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>Print Student Report</title>
-            <style>
-             @page {
-                size: ${selectedExamName === 'All Exams' ? 'A4 Portrait' : 'A4 Landscape'}; /* auto is the initial value */
-              margin: 3mm; /* this affects the margin in the printer settings */
-            }
-              body {
-                font-family: 'Poppins', sans-serif;
-                margin: 0;
-                padding: 0;
-                color: black;
-              }
-  
-              .container {
-                width: 297mm;
-                height: 200mm;
-                margin: 0 auto;
-                box-sizing: border-box;
-                padding: 3mm;
-                border: 3px solid #0e0303;
-                overflow: hidden;
-                display: flex;
-                justify-content: space-between;
-                margin-bottom: 20px;
-              }
-  .gradient-background {
-  background: linear-gradient(to bottom, rgb(240, 217, 228), rgb(245, 255, 255), rgb(250, 230, 240));
-}
-              .left, .right {
-                width: 48%;
-                border: 2px solid black;
-                padding: 10px;
-                box-sizing: border-box;
-              }
-  .gradable{
-  position: absolute; /* add this */
-  bottom: 2px; /* add this */
-  left: 1%; /* add this */
-  width: 98%; /* add this */
-}
-           
-
-
-.grad{
-  position: absolute; /* add this */
-  bottom: 0; /* add this */
-  left: 20px; /* add this */
-  width: 100%; /* add this */
-}
-
-.attendance-table th {
-  font-weight: normal;
-  font-size: 14px;
-}
-
-.attendance-table td:first-child {
-  font-size: 12px;
-  font-weight: normal;
-}
-
-  
-              .left-box {
-                background-color: #f9f9f9;
-                padding: 20px;
-                border: 1px solid #ddd;
-                border-radius: 10px;
-              }
-  
-              .school-info {
-                display: flex;
-                align-items: center;
-                margin-bottom: 20px;
-              }
-  
-              .school-info img {
-                width: 100px;
-                height: 100px;
-                object-fit: cover;
-                margin-right: 20px;
-              }
-  
-              .school-info h2 {
-                font-size: 18px;
-                font-weight: bold;
-                margin: 0;
-              }
-  
-              .student-info {
-                margin-top: 20px;
-              }
-  
-              .student-info h3 {
-                font-size: 16px;
-                font-weight: bold;
-                margin-bottom: 10px;
-              }
-  
-              .student-info ul {
-                list-style: none;
-                padding: 0;
-                margin: 0;
-              }
-  
-              .student-info li {
-                margin-bottom: 10px;
-              }
-  
-              .student-info label {
-                font-weight: bold;
-                margin-right: 10px;
-              }
-  
-              .student-info span {
-                font-size: 14px;
-                color: #666;
-              }
-  
-              .student-info-grid {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 20px;
-                background-color: #f9f9f9;
-                padding: 20px;
-                border-radius: 10px;
-                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-              }
-  
-              .student-info-grid section {
-                background-color: #ffffff;
-                padding: 15px;
-                border-radius: 8px;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-              }
-  
-              .student-info-grid h2 {
-                font-size: 1em;
-                margin-bottom: 10px;
-                color: #333;
-                border-bottom: 2px solid #ddd;
-                padding-bottom: 5px;
-              }
-  
-              .student-info-grid p {
-                margin: 1px 0;
-                font-size: 0.9em;
-              }
-  
-              .student-info-grid label {
-                font-weight: bold;
-                color: #555;
-              }
-  
-              .student-info-grid span {
-                margin-left: 5px;
-                color: #666;
-              }
-  
-              .student-info-grid p:last-child {
-                margin-bottom: 0;
-              }
-  
-              .left {
-                border: 2px solid #0f0202;
-                padding: 20px;
-                position: relative;
-              }
-  
-              .right {
-                position: relative;
-                width: 48% !important;
-                border: 2px solid #0e0101;
-                padding: 10px;
-                overflow: hidden;
-              }
-  
-              /* Table styles */
-              table {
-                width: 100%;
-                border-collapse: collapse;
-                table-layout: fixed;
-                border: 1px solid #130606;
-              }
-  
-              th, td {
-                border: 1px solid #130606;
-                padding: 5px;
-                text-align: left;
-                word-wrap: break-word;
-                box-sizing: border-box;
-              }
-
-               table th {
-                border: 1px solid #130606;
-              }
-
-              .student-info-grid {
-                border: 1px solid #130606;
-              }
-
-              .left-box  {
-                border: 1px solid #130606;
-              }
-  
-              .table-striped tbody tr:nth-of-type(odd) {
-                background-color: rgba(0, 0, 0, 0.05); /* Stripe effect */
-              }
-  
-              .table-bordered ,tr , th, td {
-                border: 1px solid #130606;
-              }
-
-              .table-striped th ,td , tbody td {
-              border: 1px solid #130606;
-              }
-  
-             .grade-table {
-  margin-top: 20px;
-}
-
-.grade-table table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.grade-table th, .grade-table td {
-                border: 1px solid #130606;
-  padding: 5px;
-  text-align: center;
-  box-sizing: border-box;
-}
-
-.grade-table thead th {
-  background-color: #f4f4f4;
-}
-
-.grade-table tbody td {
-  text-align: center;
-}
-  
-              .attendance-table th, .attendance-table td {
-                width: 33%;
-              }
-                /* General Table Styles */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px; /* Adds space above the table */
-}
-
-thead {
-  background-color: #f2f2f2; /* Light grey background for header */
-}
-
-th, td {
-  border: 1px solid #ddd; /* Light grey border */
-  padding: 8px; /* Space within cells */
-  text-align: left; /* Align text to the left */
-}
-
-th {
-  background-color: #f4f4f4; /* Slightly darker grey background for header cells */
-  font-weight: bold; /* Bold text in header */
-}
-
-input[type="text"] {
-  width: 100%; /* Full width of cell */
-  box-sizing: border-box; /* Include padding and border in element's total width and height */
-  border: 1px solid #ccc; /* Light grey border for input */
-  padding: 4px; /* Space inside input field */
-  font-size: 14px; /* Text size inside input */
-}
-
-input[type="text"]:focus {
-  outline: none; /* Remove default focus outline */
-  border-color: #007bff; /* Border color on focus */
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25); /* Shadow effect on focus */
-}
-
-/* Zebra striping for table rows */
-tbody tr:nth-child(odd) {
-  background-color: #fafafa; /* Light grey background for odd rows */
-
-  }
-  
-              /* Ensure the right container does not overflow */
-              .right {
-                overflow: hidden; /* Clipping any content that exceeds the container bounds */
-              }
-            </style>
-          </head>
-          <body>
-            ${printContent.innerHTML}
-          </body>
-        </html>
-      `);
-      printWindow.document.close();
-      printWindow.focus();
-      printWindow.print();
-    } else {
-      console.error('Print content not found');
-    }
+    window.print();
   };
 
-  const englishSubjects = [
-    { name: "Arts", akarikMarks: 100 },
-    { name: "Work Experience", akarikMarks: 100 },
-    { name: "Physical Education", akarikMarks: 100 },
-    { name: "Computer", akarikMarks: 100 }, // New subject added
-    { name: "computer", akarikMarks: 100 }, // New subject added
-  ];
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-slate-500 font-sans">
+        <Loader2 className="size-10 text-blue-600 animate-spin mb-3" />
+        <p className="text-sm font-bold text-slate-700">माहिती लोड होत आहे, कृपया वाट पाहा...</p>
+      </div>
+    );
+  }
 
-  const marathiSubjects = [
-    { name: "चित्रकला", akarikMarks: 100 }, // New subject added
-    { name: "शारीरिक शिक्षण", akarikMarks: 100 }, // New subject added
-    { name: "संगणक", akarikMarks: 100 }, // New subject added
-    { name: "कला", akarikMarks: 100 },
-    { name: "कार्यानुभव", akarikMarks: 100 },
-  ];
   return (
-    <div>
-      <AlertMessage message={alertMessage} show={showAlert} />
-
-      {/* <Sidebar /> */}
-      <div className=' main-content-of-page'>
-        <h2 style={{ color: '#0c2a52', textAlign: 'center', fontWeight: 'bold', marginBottom: '20px' }} className="title">  {language === "English" ? "Board Exam Result " : " बोर्ड परीक्षेचा निकाल"}</h2>
-        <table className="table table-striped table-bordered">
-          <tbody>
-            <tr>
-              <th style={{ backgroundColor: '#b5d3f2', textAlign: 'center', verticalAlign: 'middle', fontWeight: 'bold' }}> {language === "English" ? "Academic Year " : "शैक्षणिक वर्ष"}</th>
-              <td>
-                <select id="academicYear" value={academicYear} onChange={handleAcademicYearChange} className="form-control custom-select"
-                style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
-                >
-                  <option >{language === "English" ? "Select Year " : "वर्ष निवडा"}</option>
-                  <option value="2023-2024" >2023-2024</option>
-                  <option value="2024-2025" >2024-2025</option>
-                  <option value="2025-2026">2025-2026</option>
-                  <option value="2026-2027">2026-2027</option>
-                </select>
-              </td>
-            </tr>
-            <tr>
-              <th style={{ backgroundColor: '#b5d3f2', textAlign: 'center', verticalAlign: 'middle', fontWeight: 'bold' }}> {language === "English" ? "Class " : "वर्ग"}</th>
-              <td>
-                <select
-                  id="class"
-                  value={classValue}
-                  onChange={handleClassChange}
-                  className="form-control custom-select"
-                  defaultValue={examNames[0]}
-                  style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
-                >
-                  <option value="">{language === "English" ? "Select Class " : "वर्ग निवडा"}</option>
-                  {classes
-                    .filter(cls => cls === 'Class V' || cls === 'Class VIII' || cls === '5th' || cls === '8th' || cls === 'इयत्ता पाचवी' || cls === 'इयत्ता आठवी' || cls === 'पाचवी' || cls === 'आठवी')
-                    .map((cls, index) => (
-                      <option key={index} value={cls}>
-                        {cls}
-                      </option>
-                    ))}
-                </select>
-              </td>
-            </tr>
-            <tr>
-              <th style={{ backgroundColor: '#b5d3f2', textAlign: 'center', verticalAlign: 'middle', fontWeight: 'bold' }}>{language === "English" ? "Division" : "तुकडी"}</th>
-              <td>
-                <select
-                  value={division}
-                  onChange={handleDivisionChange}
-                  className="form-control custom-select"
-                  style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
-                >
-                  <option value="">
-                    {language === "English" ? "All Student" : "सर्व विद्यार्थी"}
-                  </option>
-                  {divisions
-                    .filter((div) => div !== null && div !== undefined && div.trim() !== "")
-                    .map((div) => (
-                      <option key={div} value={div}>
-                        {div}
-                      </option>
-                    ))}
-                </select>
-
-              </td>
-            </tr>
-            <tr>
-              <th style={{ backgroundColor: '#b5d3f2', textAlign: 'center', verticalAlign: 'middle', fontWeight: 'bold' }}>{language === "English" ? "Exam Name " : "परीक्षेचे नाव"}</th>
-              <td>
-                <select
-                  id="examName"
-                  value={selectedExamName}
-                  onChange={handleExamNameChange}
-                  className="form-control custom-select"
-                  style={{ width: '100%', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
-                >
-                  <option value="">{language === "English" ? "Select Exam " : "परीक्षा निवडा"}</option>
-                  {examOptions.map((examName, index) => (
-                    <option key={index} value={examName}>
-                      {language === "English" ? examName : examNameTranslations[examName]}
-                    </option>
-                  ))}
-                </select>
-
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        <Link to="/failed">
-          {language === "English" ? (
-            <button className="btn btn-primary" style={{ backgroundColor: '#0d6efd', color: '#fff', border: 'none', padding: '10px 25px', fontSize: '1rem', fontWeight: '500', borderRadius: '6px' }}>Go to Re-Exam Page</button>
-          ) : (
-            <button className="btn btn-primary" style={{ backgroundColor: '#0d6efd', color: '#fff', border: 'none', padding: '10px 25px', fontSize: '1rem', fontWeight: '500', borderRadius: '6px' }}>पुनर परिषा</button>
+    <div className="font-sans text-slate-800">
+      {/* Action & Control Bar */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm mb-6 flex flex-wrap items-center justify-between gap-4 no-print">
+        <div className="flex items-center gap-3">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="p-2 hover:bg-slate-100 rounded-full transition-colors cursor-pointer text-slate-600"
+            >
+              <ArrowLeft className="size-5" />
+            </button>
           )}
-        </Link>
-        {selectedStudents.length > 0 && (
-          <div className="mt-4">
-            <table className="table table-striped table-bordered custom-table">
+          <div>
+            <h2 className="text-base font-black text-slate-800">सातत्यपूर्ण सर्वंकष मूल्यांकन नोंदवही</h2>
+            <p className="text-xs text-blue-600 font-bold uppercase tracking-wider">{selectedClass} • {academicYear}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleDownloadPdf}
+            disabled={downloading || students.length === 0}
+            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-extrabold rounded-xl transition-all cursor-pointer shadow-md shadow-blue-200 flex items-center gap-2 disabled:opacity-50"
+          >
+            {downloading ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+            <span>{downloading ? "डाउनलोड होत आहे..." : "PDF डाऊनलोड करा"}</span>
+          </button>
+          <button
+            onClick={handlePrint}
+            disabled={students.length === 0}
+            className="px-4 py-2.5 bg-slate-800 hover:bg-slate-900 active:scale-95 text-white text-xs font-extrabold rounded-xl transition-all cursor-pointer shadow-md shadow-slate-300 flex items-center gap-2 disabled:opacity-50"
+          >
+            <Printer className="size-4" />
+            <span>प्रिंट करा</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Warning Banner if No Students or Settings entered */}
+      {students.length === 0 && (
+        <div className="p-6 bg-amber-50 rounded-2xl border border-amber-200 mb-6 text-center max-w-xl mx-auto no-print">
+          <AlertCircle className="size-8 text-amber-600 mx-auto mb-2" />
+          <h3 className="text-sm font-bold text-amber-800 mb-1">या वर्गामध्ये अद्याप कोणतेही विद्यार्थी जोडलेले नाहीत</h3>
+          <p className="text-xs text-amber-700">कृपया डॅशबोर्डवरील <b>'विद्यार्थी'</b> विभागात जाऊन या वर्गासाठी विद्यार्थी जोडा.</p>
+        </div>
+      )}
+
+      {/* -------------------- 11-PAGE PRINT CONTAINER (USING USER'S AUTHENTIC DATA) -------------------- */}
+      <div ref={printRef} className="cce-pdf-container max-w-4xl mx-auto">
+        
+        {/* -------------------- PAGE 1: COVER PAGE -------------------- */}
+        <div className="pdf-page bg-white p-8 border border-slate-200 rounded-3xl relative overflow-hidden text-center flex flex-col justify-between h-[285mm] shadow-sm mb-4" style={{ pageBreakAfter: "always", breakAfter: "page" }}>
+          {/* Background Orbs */}
+          <div className="absolute top-0 right-0 w-72 h-72 bg-gradient-to-bl from-amber-100/70 via-amber-50/40 to-transparent rounded-bl-full pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-72 h-72 bg-gradient-to-tr from-emerald-100/70 via-emerald-50/40 to-transparent rounded-tr-full pointer-events-none" />
+
+          {/* Top School Header Box (User's School Name) */}
+          <div className="relative z-10 my-8">
+            <div className="inline-block bg-slate-50/90 border border-slate-200/90 rounded-2xl px-8 py-5 shadow-xs max-w-2xl">
+              <h2 className="text-xl font-black text-slate-900 leading-snug">
+                {schoolData.schoolName || "शाळेची माहिती (शाळेचे नाव टाका)"}
+              </h2>
+              {schoolData.udise && (
+                <p className="text-xs font-bold text-slate-600 mt-1 font-mono">UDISE: {schoolData.udise}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Main Title Box */}
+          <div className="relative z-10 my-10">
+            <div className="inline-block bg-white/95 border border-slate-200 shadow-md rounded-2xl px-10 py-6">
+              <h1 className="text-3xl font-black text-red-900 tracking-tight">सातत्यपूर्ण सर्वंकष मूल्यांकन नोंदवही</h1>
+            </div>
+          </div>
+
+          {/* Year & Class Boxes */}
+          <div className="relative z-10 space-y-6 my-6">
+            <div className="inline-block bg-white border border-slate-200 rounded-2xl px-8 py-3 shadow-xs">
+              <h3 className="text-lg font-black text-slate-800">सन {academicYear}</h3>
+            </div>
+            <br />
+            <div className="inline-block bg-white border border-slate-200 rounded-2xl px-10 py-4 shadow-xs">
+              <h3 className="text-xl font-black text-slate-900">इयत्ता : {selectedClass} (तुकडी {division})</h3>
+            </div>
+          </div>
+
+          {/* Class Teacher & Tagline */}
+          <div className="relative z-10 my-8 space-y-6">
+            <div className="inline-block bg-slate-50 border border-slate-200 rounded-2xl px-8 py-3 shadow-xs">
+              <p className="text-base font-extrabold text-slate-800">
+                वर्गशिक्षक : {schoolData.teacherName || "शिक्षकांचे नाव"}
+              </p>
+            </div>
+            <p className="text-xs font-extrabold text-slate-500 tracking-widest uppercase">
+              {schoolData.slogan || "✦ ज्ञान, संस्कार आणि प्रगतीसाठी ✦"}
+            </p>
+          </div>
+        </div>
+
+        {/* -------------------- PAGE 2: INDEX (अनुक्रमणिका) -------------------- */}
+        <div className="pdf-page bg-white p-8 border border-slate-200 rounded-3xl h-[285mm] max-h-[285mm] overflow-hidden shadow-sm mb-4 flex flex-col justify-between" style={{ pageBreakAfter: "always", breakAfter: "page" }}>
+          <div>
+            <h2 className="text-2xl font-black text-slate-900 mb-6 tracking-tight border-b-2 border-slate-800 pb-2">अनुक्रमणिका</h2>
+            <table className="w-full border-collapse border border-amber-900/60 text-sm font-medium">
               <thead>
-                <tr>
-                  <th className="custom-width" style={{ backgroundColor: '#b5d3f2', textAlign: 'center', verticalAlign: 'middle', fontWeight: 'bold' }}>{language === "English" ? "Roll No " : "हजरी क्र"}</th>
-                  <th style={{ backgroundColor: '#b5d3f2', textAlign: 'center', verticalAlign: 'middle', fontWeight: 'bold' }}>{language === "English" ? "Name " : "नाव"}</th>
-                  <th style={{ backgroundColor: '#b5d3f2', textAlign: 'center', verticalAlign: 'middle', fontWeight: 'bold' }}>{language === "English" ? "Result " : "प्रगतीपत्रक"}</th>
+                <tr className="bg-amber-50/80 text-amber-950 font-bold border-b border-amber-900/60">
+                  <th className="p-3 text-left border-r border-amber-900/60 w-3/4">विद्यार्थ्याचे नाव / तपशील</th>
+                  <th className="p-3 text-center w-1/4">पान क्रमांक</th>
                 </tr>
               </thead>
               <tbody>
-                {selectedStudents
-                  .sort((a, b) => a.rollNo - b.rollNo)
-                  .map((student) => (
-                    <tr key={student.srNo}>
-                      <td>{student.rollNo}</td>
-                      <td>{student.stdName} {student.stdFather} {student.stdSurname}</td>
-                      <td>
-                        <button className="btn btn-primary" onClick={() => viewResult(student.srNo)}>
-                          {language === "English" ? "View Result" : "प्रगति पत्रक"}
-                        </button>
-
+                {students.length === 0 ? (
+                  <tr>
+                    <td colSpan={2} className="p-4 text-center text-slate-400 font-bold">कोणतेही विद्यार्थी जोडलेले नाहीत.</td>
+                  </tr>
+                ) : (
+                  students.map((student, idx) => (
+                    <tr key={student.id} className="border-b border-amber-900/40 hover:bg-slate-50">
+                      <td className="p-3 border-r border-amber-900/40 text-blue-700 font-bold">
+                        {idx + 1}. {student.name}
                       </td>
+                      <td className="p-3 text-center text-slate-600 font-mono font-bold">{idx * 2 + 3} - {idx * 2 + 4}</td>
                     </tr>
-                  ))}
+                  ))
+                )}
+                <tr className="border-b border-amber-900/40 bg-slate-50">
+                  <td className="p-3 border-r border-amber-900/40 text-blue-700 font-bold">श्रेणी निहाय संकलन तक्ता (वर्गस्तर)</td>
+                  <td className="p-3 text-center text-slate-600 font-mono font-bold">{students.length * 2 + 3}</td>
+                </tr>
+                <tr className="border-b border-amber-900/40 bg-slate-50">
+                  <td className="p-3 border-r border-amber-900/40 text-blue-700 font-bold">जातनिहाय व विषयनिहाय एकूण तेरीज पत्रक</td>
+                  <td className="p-3 text-center text-slate-600 font-mono font-bold">{students.length * 2 + 4}</td>
+                </tr>
+                <tr className="bg-slate-50">
+                  <td className="p-3 border-r border-amber-900/40 text-blue-700 font-bold">सातत्यपूर्ण सर्वंकष मूल्यांकन: निकाल पत्रक</td>
+                  <td className="p-3 text-center text-slate-600 font-mono font-bold">{students.length * 2 + 5}</td>
+                </tr>
               </tbody>
             </table>
           </div>
-        )}
-        <Modal show={showModal} onHide={handleCloseModal} dialogClassName='modal-80w'>
-          <Modal.Header closeButton>
-            <Modal.Title>{language === "English" ? "Exam Result " : "विद्यार्थ्यांचे निकाल"}</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
 
+          {/* Signatures */}
+          <div className="flex items-center justify-between pt-6 border-t border-slate-200 text-xs font-bold text-slate-800">
+            <div className="text-center">
+              <p className="font-extrabold">{schoolData.teacherName || "वर्गशिक्षक"}</p>
+              <p className="text-[11px] text-slate-500 font-medium">वर्गशिक्षक</p>
+            </div>
+            <div className="text-center">
+              <p className="font-extrabold">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
+              <p className="text-[11px] text-slate-500 font-medium">मुख्याध्यापक</p>
+            </div>
+          </div>
+        </div>
 
+        {/* -------------------- STUDENT PAGES (2 PAGES PER STUDENT) -------------------- */}
+        {students.map((student, sIdx) => {
+          const studentId = student.id || student.name;
+          const studentMarks = marksData[student.id]
+            || marksData[student.rollNo]
+            || marksData[student.name]
+            || marksData[student.fullName]
+            || marksData[String(student.rollNo)]
+            || marksData[studentId]
+            || {};
 
+          const studentRemarks = remarksData[student.id]
+            || remarksData[student.rollNo]
+            || remarksData[student.name]
+            || remarksData[student.fullName]
+            || remarksData[String(student.rollNo)]
+            || remarksData[studentId]
+            || {};
 
+          return (
+            <React.Fragment key={student.id}>
+              {/* Page A: Formative & Summative Evaluation Table (Matching Demo Screenshot Image 1 Exactly) */}
+              <div className="pdf-page bg-white p-6 border border-slate-200 rounded-3xl h-[285mm] max-h-[285mm] overflow-hidden shadow-sm flex flex-col justify-between mb-4" style={{ pageBreakAfter: "always", breakAfter: "page" }}>
+                <div>
+                  <h2 className="text-2xl font-black text-[#004080] text-center mb-4 tracking-tight">सातत्यपूर्ण सर्वंकष मूल्यांकन</h2>
 
-
-
-
-
-
-
-
-
-
-
-            {selectedExamName === 'All Exams' && selectedStudentResults ? (
-              <div style={{
-                width: '210mm',
-                minHeight: '297mm',
-                padding: '15mm',
-                background: 'linear-gradient(to bottom, rgb(240, 217, 228), rgb(245, 255, 255), rgb(250, 230, 240))',
-                fontFamily: '"Nirmala UI", Arial, sans-serif',
-                border: '12px double #2c3e50',
-                margin: '20px auto',
-                boxSizing: 'border-box',
-                position: 'relative',
-                color: '#000',
-                boxShadow: '0 0 20px rgba(0,0,0,0.2)'
-              }} className="board-result-container">
-                {/* Header Section */}
-                <div style={{ textAlign: 'center', position: 'relative', marginBottom: '20px' }}>
-                  <p style={{ position: 'absolute', left: 0, top: 0, margin: 0, fontSize: '10px', fontWeight: 'bold' }}>
-                    शासन निर्णय क्रमांक: आरटीई-२०२२/प्र.क्र. २७६/एस.डी-१
-                  </p>
-                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '10px' }}>
-                    {schoolLogo ? (
-                      <img src={schoolLogo} alt="Logo" style={{ height: '50px', marginRight: '15px' }} />
-                    ) : (
-                      <div style={{ height: '50px', width: '50px', borderRadius: '50%', backgroundColor: '#ffd700', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '15px' }}>
-                        <span style={{ fontSize: '20px' }}>🪔</span>
-                      </div>
-                    )}
+                  {/* Student Meta Header */}
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-900 border-b-2 border-sky-100 pb-3 mb-4">
+                    <span>विद्यार्थ्याचे नाव - <b className="text-slate-900">{student.name}</b></span>
+                    <span>इयत्ता - <b>{selectedClass}</b></span>
+                    <span>तुकडी - <b>{division}</b></span>
+                    <span>हजेरी क्र. <b>{student.rollNo}</b></span>
+                    <span>द्वितीय सत्र</span>
                   </div>
-                  <h5 style={{ margin: '2px 0', color: '#2c3e50', fontWeight: 'bold' }}>परिशिष्ट- १</h5>
-                  <h4 style={{ margin: '2px 0', color: '#d35400', fontWeight: 'bold', textTransform: 'uppercase' }}>गुणपत्रक नमुना - वार्षिक परीक्षा / पुनर्परीक्षा</h4>
-                </div>
 
-                {/* School & Student Info Section */}
-                <div style={{ marginBottom: '15px', borderBottom: '1px solid #000', paddingBottom: '10px', fontSize: '13px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                    <div style={{ flex: 2 }}><strong>शाळेचे नाव:</strong> {schoolName}</div>
-                    <div style={{ flex: 1 }}><strong>शाळा UDISE:</strong> {udiseNumber}</div>
-                    <div style={{ flex: 1 }}><strong>शैक्षणिक वर्ष:</strong> {academicYear}</div>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <div style={{ flex: 2 }}><strong>विद्यार्थ्यांचे नाव:</strong> {selectedStudentResults?.studentName} {selectedStudentResults?.stdFather} {selectedStudentResults?.stdSurname}</div>
-                    <div style={{ flex: 0.5 }}><strong>हजेरी क्र.:</strong> {selectedStudentResults?.rollNo}</div>
-                    <div style={{ flex: 0.5 }}><strong>तुकडी:</strong> {selectedStudentResults?.division}</div>
-                    <div style={{ flex: 1 }}><strong>इयत्ता:</strong> {classValue === 'Class V' ? '५ वी' : '८ वी'}</div>
-                  </div>
-                </div>
-
-                {/* Marks Table */}
-                <table style={{ width: '100%', borderCollapse: 'collapse', border: '1.5px solid #2c3e50', fontSize: '13px', backgroundColor: '#fff' }}>
-                  <thead>
-                    <tr style={{ backgroundColor: '#d1e7ff', color: '#003366' }}>
-                      <th style={{ border: '1px solid #000', padding: '5px', width: '40px', textAlign: 'center' }}>अ.क्र.</th>
-                      <th style={{ border: '1px solid #000', padding: '5px', textAlign: 'center' }}>विषय</th>
-                      <th style={{ border: '1px solid #000', padding: '5px', width: '100px', textAlign: 'center' }}>किमान आवश्यक गुण</th>
-                      <th style={{ border: '1px solid #000', padding: '5px', width: '120px', textAlign: 'center' }}>एकूण गुण ५०/६० पैकी</th>
-                      <th style={{ border: '1px solid #000', padding: '5px', width: '120px', textAlign: 'center' }}>शेरा (उत्तीर्ण/अनुत्तीर्ण)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {subjectSequence && subjectSequence.filter(s => s).map((subject, index) => {
-                      const marks = selectedStudentResults.results[subject] || {};
-
-                      // Check if it's an extra/grade-based subject (Art, PE, etc.)
-                      const isExtraSubject = [...englishSubjects, ...marathiSubjects].some(
-                        s => s?.name?.toLowerCase() === subject?.toLowerCase()
-                      );
-
-                      // For Board Results, show Sankalik (Summative) marks (out of 50/60)
-                      const obtMarks = marks.sankalikTotal !== undefined ? marks.sankalikTotal : '-';
-                      const isPass = marks.sankalikTotal >= (isExtraSubject ? 0 : passingMarks);
-
-                      // Determine the remark/grade
-                      const remark = isExtraSubject
-                        ? (marks.grade || '-')
-                        : (obtMarks === '-' ? '-' : (isPass ? 'उत्तीर्ण' : 'अनुत्तीर्ण'));
-
-                      return (
-                        <tr key={index}>
-                          <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'center' }}>{index + 1}</td>
-                          <td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>{subject}</td>
-                          <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'center' }}>{isExtraSubject ? '-' : passingMarks}</td>
-                          <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'center' }}>{obtMarks}</td>
-                          <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'center' }}>
-                            {isExtraSubject ? `श्रेणी - ${remark}` : remark}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                  <tfoot>
-                    {(() => {
-                      const academicResults = Object.keys(selectedStudentResults.results).filter(subj =>
-                        !['Art', 'Work Experience', 'Physical Education', 'कला', 'कार्यानुभव', 'शारीरिक शिक्षण'].includes(subj)
-                      );
-                      const totalM = academicResults.reduce((sum, s) => sum + (selectedStudentResults.results[s]?.total || 0), 0);
-                      const totalS = academicResults.length;
-                      const perc = totalS > 0 ? (totalM / (totalS * 100)) * 100 : 0;
-
-                      return (
-                        <>
-                          <tr>
-                            <td colSpan="3" style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}><strong>शेकडा गुण :</strong></td>
-                            <td colSpan="2" style={{ border: '1px solid #000', padding: '5px' }}><strong>{perc.toFixed(2)}%</strong></td>
-                          </tr>
-                          <tr>
-                            <td colSpan="3" style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}><strong>निकाल दिनांक :</strong></td>
-                            <td colSpan="2" style={{ border: '1px solid #000', padding: '5px' }}><strong>{new Date().toLocaleDateString('mr-IN')}</strong></td>
-                          </tr>
-                        </>
-                      );
-                    })()}
-                  </tfoot>
-                </table>
-
-                {/* Footer Signatures */}
-                <div style={{ marginTop: '40px', display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ marginBottom: '30px' }}>..........................................</div>
-                    <strong>वर्गशिक्षक नाव व स्वाक्षरी</strong>
-                  </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ marginBottom: '30px' }}>..........................................</div>
-                    <strong>मुख्याध्यापक नाव व स्वाक्षरी</strong>
-                  </div>
-                </div>
-
-                <div style={{ textAlign: 'center', marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '5px' }}>
-                  <p style={{ margin: 0, fontStyle: 'italic', fontSize: '12px' }}>शाळेचा शिक्का</p>
-                </div>
-              </div>
-            ) : (
-
-              <div>
-                {/* Second semester modal content */}
-
-                <div className="container  " style={{
-                  background: `linear-gradient(to bottom, rgb(240, 217, 228), rgb(245, 255, 255), rgb(250, 230, 240))`
-                }} >
-                  <div className="left">
-                    <div className="left-box" style={{ border: '1px solid black' }}>
-                      <div className="school-info">
-                        {schoolLogo && (
-                          <div>
-                            <img src={schoolLogo} alt={`$Logo`} />
-                          </div>
-                        )}
-                        <h2>{schoolName}</h2>
-                      </div>
-                    </div>
-                    <br />
-
-                    <div class="student-info-grid" style={{ border: '1px solid black' }}>
-                      <p>
-                        <label>{language === "English" ? "Name:" : "नाव:"}</label>
-                        <span>
-                          {selectedStudentResults?.studentName || 'N/A'}{' '}
-                          {selectedStudentResults?.stdFather || 'N/A'}{' '}
-                          {selectedStudentResults?.stdSurname || 'N/A'}
-                        </span>
-                      </p>
-                      <p>
-                        <label>{language === "English" ? "Academic Year: " : "शैक्षणिक वर्ष: "}</label>
-                        <span>{academicYear || 'N/A'}</span>
-                      </p>
-                      <p>
-                        <label>{language === "English" ? "Roll No: " : "हजेरी क्रमांक: "}</label>
-                        <span>{selectedStudentResults?.rollNo || 'N/A'}</span>
-
-                      </p>
-                      <p>
-                        <label>{language === "English" ? "Exam: " : "परीक्षा: "}</label>
-                        <span>{selectedExamName || 'N/A'}</span>
-
-                      </p>
-                      <p>
-                        <label>{language === "English" ? "Class:" : "वर्ग:"}</label>
-                        <span>{classValue || 'N/A'}</span>
-                      </p>
-                      <p>
-                        <label>{language === "English" ? "Mother Name:" : "आईचे नाव:"}</label>
-                        <span>{selectedStudentResults?.stdMother || 'N/A'}</span>
-                      </p>
-                      <p>
-                        <label>{language === "English" ? "Date Of Birth:" : "जन्मतारीख:"}</label>
-                        <span>{selectedStudentResults?.dob || 'N/A'}</span>
-                      </p>
-                      <p>
-                        <label>{language === "English" ? "Division:" : "तुकडी:"}</label>
-                        <span>{selectedStudentResults?.division || 'N/A'}</span>
-                      </p>
-                      <p>
-                        <label>{language === "English" ? "Mother Tongue:" : "मातृभाषा:"}</label>
-                        <span>{selectedStudentResults?.motherTounge || 'N/A'}</span>
-                      </p>
-                      {/* <p>
-        <label>{language === "English" ? "Student ID:" : "विद्यार्थी आयडी:"}</label>
-        <span>{selectedStudentResults?.studentId || 'N/A'}</span>
-      </p> */}
-                      <p>
-                        <label>{language === "English" ? "Gender:" : "लिंग:"}</label>
-                        <span>{selectedStudentResults?.gender || 'N/A'}</span>
-                      </p>
-                    </div>
-                    <div className="gradable" >
-
-
-                      <table>
-                        <thead>
-                          <tr>
-                            <th rowspan="2"></th>
-                            <th colspan="1">{language === "English" ? "First Semester" : "प्रथम सत्र"}</th>
-                            <th colspan="1">{language === "English" ? "Second Semester" : "द्वितीय सत्र"}</th>
-                          </tr>
-
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <td>{language === "English" ? "Weight" : "वजन"} (Kg)</td>
-                            <td>
-                              <span>
-                                {selectedStudentResults?.weightSeptember ?? ''}
-                              </span>
-                            </td>
-                            <td>
-                              <span>
-                                {selectedStudentResults?.weightMarch ?? ''}
-                              </span>
-                            </td>
-                          </tr>
-                          <tr>
-                            <td>{language === "English" ? "Height" : "उंची"} (Cm)</td>
-                            <td>
-                              <span>
-                                {selectedStudentResults?.heightSeptember ?? ''}
-                              </span>
-                            </td>
-                            <td>
-                              <span>
-                                {selectedStudentResults?.heightMarch ?? ''}
-                              </span>
-                            </td>
-                          </tr>
-                        </tbody>
-
-                      </table>
-                    </div>
-                  </div>
-                  <div className="right">
-                    {/* First Semester Attendance Table */}
-                    <h3>{language === "English" ? "Attendance:" : "हजेरी"}</h3>
-                    <table className="attendance-table">
+                  {/* Marks Table (Exact Demo Structure with Uniform Column Widths) */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse border-2 border-[#0080ff] text-xs text-center font-medium table-fixed">
+                      <colgroup>
+                        <col style={{ width: "4%" }} />
+                        <col style={{ width: "20%" }} />
+                        <col style={{ width: "6%" }} />
+                        <col style={{ width: "5%" }} />
+                        <col style={{ width: "5%" }} />
+                        <col style={{ width: "5%" }} />
+                        <col style={{ width: "5%" }} />
+                        <col style={{ width: "5%" }} />
+                        <col style={{ width: "5%" }} />
+                        <col style={{ width: "5%" }} />
+                        <col style={{ width: "5%" }} />
+                        <col style={{ width: "5%" }} />
+                        <col style={{ width: "5%" }} />
+                        <col style={{ width: "5%" }} />
+                        <col style={{ width: "5%" }} />
+                        <col style={{ width: "5%" }} />
+                        <col style={{ width: "5%" }} />
+                      </colgroup>
                       <thead>
-                        <tr>
-                          <th>{language === "English" ? "Type:" : "प्रकार"}</th>
-                          {firstSemesterMonths.map((month, index) => (
-                            <th key={index}>{getMonthName(month)}</th>
-                          ))}
+                        {/* Header Row 1 */}
+                        <tr className="bg-[#bfe5ff] text-[#002b66] font-extrabold border-b border-[#0080ff]">
+                          <th rowSpan={3} className="border border-[#0080ff] bg-[#bfe5ff] p-0.5 text-center align-middle font-black">
+                            अ.<br />क्र.
+                          </th>
+                          <th colSpan={2} rowSpan={2} className="border border-[#0080ff] bg-[#bfe5ff] p-1 text-center align-middle font-black text-xs">
+                            तपशील
+                          </th>
+                          <th colSpan={8} className="border border-[#0080ff] bg-[#bfe5ff] p-1 text-center font-black">
+                            (अ) आकारिक मूल्यांकन
+                          </th>
+                          <th colSpan={4} className="border border-[#0080ff] bg-[#bfe5ff] p-1 text-center font-black">
+                            (ब) संकलित मूल्यांकन
+                          </th>
+                          <th rowSpan={2} className="border border-[#0080ff] bg-[#bfe5ff] p-0.5 text-center align-middle font-black">
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>
+                              अ + ब
+                            </div>
+                          </th>
+                          <th rowSpan={3} className="border border-[#0080ff] bg-[#bfe5ff] p-0.5 text-center align-middle font-black">
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>
+                              श्रेणी
+                            </div>
+                          </th>
+                        </tr>
+
+                        {/* Header Row 2: Vertical Labels */}
+                        <tr className="bg-[#bfe5ff] text-[#002b66] font-bold border-b border-[#0080ff] h-28">
+                          {/* Formative Vertical Labels */}
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-2">
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>तोंडीकाम</div>
+                          </th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-2">
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>प्रात्यक्षिक / प्रयोग</div>
+                          </th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-2">
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>उपक्रम / कृती</div>
+                          </th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-2">
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>प्रकल्प</div>
+                          </th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-2">
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>चाचणी (लेखी)</div>
+                          </th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-2">
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>स्वाध्याय / वर्गकार्य</div>
+                          </th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-2">
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>इतर</div>
+                          </th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-2 font-black">
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>एकूण</div>
+                          </th>
+
+                          {/* Summative Vertical Labels */}
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-2">
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>तोंडी</div>
+                          </th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-2">
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>प्रात्यक्षिक</div>
+                          </th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-2">
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>लेखी</div>
+                          </th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-2 font-black">
+                            <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>एकूण</div>
+                          </th>
+                        </tr>
+
+                        {/* Header Row 3: Numbers */}
+                        <tr className="bg-[#bfe5ff] text-[#002b66] font-extrabold border-b-2 border-[#0080ff]">
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1">विषय</th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1">गुण</th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1">1</th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1">2</th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1">3</th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1">4</th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1">5</th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1">6</th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1">7</th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 font-black"></th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1">1</th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1">2</th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1">3</th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 font-black"></th>
+                          <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 font-black">एकूण</th>
                         </tr>
                       </thead>
+
                       <tbody>
-                        {['Present', 'Absent', 'Leave'].map((type) => (
-                          <tr key={type}>
-                            <td>{getAttendanceType(type)}</td>
-                            {firstSemesterMonths.map((month, index) => (
-                              <td key={index}>
-                                <input
-                                  type="text"
-                                  value={type === 'Leave' && attendance[type][month] < 0 ? '' : attendance[type][month] || ''}
-                                // onChange={(e) => handleInputChange(type, month, e.target.value)}
-                                />
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        {subjects.map((subjectName, subIdx) => {
+                          const getSubData = (subName) => {
+                            if (studentMarks[subName]) return studentMarks[subName];
+                            const lower = String(subName).toLowerCase();
+                            if (lower.includes("मराठी")) return studentMarks["marathi"] || studentMarks["प्रथम भाषा : मराठी"] || studentMarks["प्रथम भाषा: मराठी"] || {};
+                            if (lower.includes("इंग्रजी")) return studentMarks["english"] || studentMarks["द्वितीय भाषा : इंग्रजी"] || studentMarks["तृतीय भाषा: इंग्रजी"] || studentMarks["तृतीय भाषा : इंग्रजी"] || {};
+                            if (lower.includes("गणित")) return studentMarks["math"] || studentMarks["maths"] || studentMarks["गणित"] || {};
+                            if (lower.includes("कला")) return studentMarks["kala"] || studentMarks["कला"] || {};
+                            if (lower.includes("कार्यानुभव")) return studentMarks["karyanubhav"] || studentMarks["कार्यानुभव"] || {};
+                            if (lower.includes("शारीरिक")) return studentMarks["sharirik"] || studentMarks["शारीरिक शिक्षण"] || {};
+                            return {};
+                          };
 
-                    {/* Second Semester Attendance Table */}
-                    <h5 style={{ marginTop: '10px' }}>{language === "English" ? "Second Semester Attendance:" : "द्वितीय सत्राची हजेरी:"}</h5>
-                    <table className="attendance-table">
-                      <thead>
-                        <tr>
-                          <th>{language === "English" ? "Type:" : "प्रकार"}</th>
-                          {secondSemesterMonths.map((month, index) => (
-                            <th key={index}>{getMonthName(month)}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {['Present', 'Absent', 'Leave'].map((type) => (
-                          <tr key={type}>
-                            <td>{getAttendanceType(type)}</td>
-                            {secondSemesterMonths.map((month, index) => (
-                              <td key={index}>
-                                <input
-                                  type="text"
-                                  value={type === 'Leave' && attendance[type][month] < 0 ? '' : attendance[type][month] || ''}
-                                // onChange={(e) => handleInputChange(type, month, e.target.value)}
-                                />
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    <div className="grad">
-                      <p>
-                        {language === "English" ? " Instructions for parents:" : "पालकांसाठी सूचना"}
-                        <li>  {language === "English" ? " Students should wear school uniform every day." : "विद्यार्थ्यांनी दररोज शालेय गणवेश परिधान करावा."}</li>
-                        <li> {language === "English" ? "  A student should do the study given in school every day." : "विद्यार्थ्याने शाळेत दिलेला अभ्यास दररोज करावा."}</li>
-                        <li> {language === "English" ? " Students should attend school on time and regularly every day." : "विद्यार्थ्यांनी दररोज वेळेवर व नियमितपणे शाळेत हजर राहावे."}</li>
-                        <li> {language === "English" ? " Students should not carry valuables, money. " : "विद्यार्थ्यांनी मौल्यवान वस्तू, पैसे घेऊन जाऊ नये."}</li>
-                        <li>  {language === "English" ? " Students should follow the rules and discipline of the school. " : "विद्यार्थ्यांनी शाळेचे नियम व शिस्तीचे पालन करावे."}</li>
-                      </p>
-                    </div>
-                    <p style={{ marginTop: '40px', marginLeft: '350px' }}>{language === "English" ? "Parents Signature " : "पालकांची सही"}</p>
+                          const subData = getSubData(subjectName);
+                          const isPracticalSub = subjectName.includes("कला") || subjectName.includes("कार्यानुभव") || subjectName.includes("शारीरिक");
 
-                  </div>
-                </div>
+                          // Formative (आकारिक) Obtained Values
+                          const tondiKaamObt = subData.tondiKaam !== undefined && subData.tondiKaam !== "" ? Number(subData.tondiKaam) : (subData.oral !== undefined && subData.oral !== "" ? Number(subData.oral) : "");
+                          const pratyakshikPrayogObt = subData.pratyakshikPrayog !== undefined && subData.pratyakshikPrayog !== "" ? Number(subData.pratyakshikPrayog) : (subData.practical !== undefined && subData.practical !== "" ? Number(subData.practical) : "");
+                          const upakramKritiObt = subData.upakramKriti !== undefined && subData.upakramKriti !== "" ? Number(subData.upakramKriti) : (subData.activity !== undefined && subData.activity !== "" ? Number(subData.activity) : "");
+                          const prakalpaObt = subData.prakalpa !== undefined && subData.prakalpa !== "" ? Number(subData.prakalpa) : (subData.prakalp !== undefined && subData.prakalp !== "" ? Number(subData.prakalp) : (subData.project !== undefined && subData.project !== "" ? Number(subData.project) : ""));
+                          const chaachaniLekhiObt = subData.chaachaniLekhi !== undefined && subData.chaachaniLekhi !== "" ? Number(subData.chaachaniLekhi) : (subData.test !== undefined && subData.test !== "" ? Number(subData.test) : "");
+                          const swadhyayVargakaryaObt = subData.swadhyayVargakarya !== undefined && subData.swadhyayVargakarya !== "" ? Number(subData.swadhyayVargakarya) : (subData.homework !== undefined && subData.homework !== "" ? Number(subData.homework) : "");
+                          const itarObt = subData.itar !== undefined && subData.itar !== "" ? Number(subData.itar) : "";
 
+                          // Summative (संकलित) Obtained Values
+                          const sankalitTondiObt = subData.sankalitTondi !== undefined && subData.sankalitTondi !== "" ? Number(subData.sankalitTondi) : (subData.semesterOral !== undefined && subData.semesterOral !== "" ? Number(subData.semesterOral) : "");
+                          const sankalitPratyakshikObt = subData.sankalitPratyakshik !== undefined && subData.sankalitPratyakshik !== "" ? Number(subData.sankalitPratyakshik) : (subData.semesterPractical !== undefined && subData.semesterPractical !== "" ? Number(subData.semesterPractical) : "");
+                          const sankalitLekhiObt = subData.sankalitLekhi !== undefined && subData.sankalitLekhi !== "" ? Number(subData.sankalitLekhi) : (subData.semesterWritten !== undefined && subData.semesterWritten !== "" ? Number(subData.semesterWritten) : "");
 
-                <div className="container mt-1" style={{ background: `linear-gradient(to bottom, rgb(240, 217, 228), rgb(245, 255, 255), rgb(250, 230, 240))` }}>
-                  <div className="left"   >
-                    <h3>{language === "English" ? "Student Progress Report " : "विद्यार्थी प्रगती अहवाल"}</h3>
-                    <div>
-                      <label htmlFor="roll-no">{language === "English" ? "Roll No: " : "हजेरी क्रमांक: "}</label>
-                      <span>{selectedStudentResults?.rollNo || 'N/A'}</span>
-                    </div>
-                    <div>
-                      <label htmlFor="student-name">{language === "English" ? "Student Name: " : "विद्यार्थ्याचे नाव: "}</label>
-                      <span>{selectedStudentResults?.studentName || 'N/A'} {selectedStudentResults?.stdFather || 'N/A'} {selectedStudentResults?.stdSurname || 'N/A'}</span>
-                    </div>
-                    <div>
-                      <label htmlFor="class">{language === "English" ? "Class: " : "वर्ग: "}</label>
-                      <span>{classValue || 'N/A'}</span>
-                    </div>
+                          // Formative (आकारिक) Max Values
+                          const tondiKaamMax = subData.tondiKaamMax || subData.oralMax || 20;
+                          const pratyakshikPrayogMax = subData.pratyakshikPrayogMax || subData.practicalMax || (pratyakshikPrayogObt !== "" ? 5 : "");
+                          const upakramKritiMax = subData.upakramKritiMax || subData.activityMax || (isPracticalSub ? 50 : (upakramKritiObt !== "" ? (upakramKritiObt > 15 ? 50 : 10) : 15));
+                          const prakalpaMax = subData.prakalpaMax || subData.prakalpMax || subData.projectMax || (isPracticalSub ? 20 : (prakalpaObt !== "" ? 5 : ""));
+                          const chaachaniLekhiMax = subData.chaachaniLekhiMax || subData.testMax || (isPracticalSub ? "" : 20);
+                          const swadhyayVargakaryaMax = subData.swadhyayVargakaryaMax || subData.homeworkMax || (swadhyayVargakaryaObt !== "" ? (swadhyayVargakaryaObt > 10 ? 15 : 10) : 15);
+                          const itarMax = subData.itarMax || "";
 
-                    <div>
-                      <label htmlFor="exam-roll-no">{language === "English" ? "Exam: " : "परीक्षा सत्र: "}</label>
-                      <span>{selectedExamName || 'N/A'}</span>
-                    </div>
+                          // Summative (संकलित) Max Values
+                          const sankalitTondiMax = subData.sankalitTondiMax || (isPracticalSub ? "" : (sankalitTondiObt !== "" ? (sankalitTondiObt > 10 ? 20 : 10) : 10));
+                          const sankalitPratyakshikMax = subData.sankalitPratyakshikMax || (sankalitPratyakshikObt !== "" ? 5 : "");
+                          const sankalitLekhiMax = subData.sankalitLekhiMax || (isPracticalSub ? "" : (sankalitLekhiObt !== "" ? (sankalitLekhiObt <= 5 ? 5 : 20) : 20));
 
-                    {selectedStudentResults?.results ? (
-                      <table className="table table-striped table-bordered">
-                        <thead>
-                          <tr>
-                            <th rowSpan='2'>{language === "English" ? "Subject" : "विषय"}</th>
-                            <th colSpan="1">{language === "English" ? "First Sem" : "प्रथम सत्र"}</th>
-                            <th colSpan="3">{language === "English" ? "Second Sem" : "द्वितीय सत्र"}</th>
-                          </tr>
-                          <tr>
+                          // Formative Totals
+                          const hasFormative = tondiKaamObt !== "" || pratyakshikPrayogObt !== "" || upakramKritiObt !== "" || prakalpaObt !== "" || chaachaniLekhiObt !== "" || swadhyayVargakaryaObt !== "" || itarObt !== "";
+                          const formTotalObt = hasFormative ? ((Number(tondiKaamObt) || 0) + (Number(pratyakshikPrayogObt) || 0) + (Number(upakramKritiObt) || 0) + (Number(prakalpaObt) || 0) + (Number(chaachaniLekhiObt) || 0) + (Number(swadhyayVargakaryaObt) || 0) + (Number(itarObt) || 0)) : "";
+                          const formTotalMax = (Number(tondiKaamMax) || 0) + (Number(pratyakshikPrayogMax) || 0) + (Number(upakramKritiMax) || 0) + (Number(prakalpaMax) || 0) + (Number(chaachaniLekhiMax) || 0) + (Number(swadhyayVargakaryaMax) || 0) + (Number(itarMax) || 0) || (isPracticalSub ? 100 : 70);
 
-                            <th>{language === "English" ? "Grade" : "गुण"}</th>
-                            <th>{language === "English" ? "Min.M" : "किमान गुण"}</th>
-                            <th>{language === "English" ? "Obt.M" : "एकूण गुण"}</th>
-                            <th>{language === "English" ? "Remark" : "शेरा"}</th>
-                          </tr>
-                        </thead>
-                        <tbody>
+                          // Summative Totals
+                          const hasSummative = sankalitTondiObt !== "" || sankalitPratyakshikObt !== "" || sankalitLekhiObt !== "";
+                          const semTotalObt = hasSummative ? ((Number(sankalitTondiObt) || 0) + (Number(sankalitPratyakshikObt) || 0) + (Number(sankalitLekhiObt) || 0)) : "";
+                          const semTotalMax = isPracticalSub ? "" : ((Number(sankalitTondiMax) || 0) + (Number(sankalitPratyakshikMax) || 0) + (Number(sankalitLekhiMax) || 0) || 30);
 
+                          // Grand Totals
+                          const hasGrand = formTotalObt !== "" || semTotalObt !== "";
+                          const grandTotalObt = hasGrand ? ((Number(formTotalObt) || 0) + (Number(semTotalObt) || 0)) : "";
+                          const grandMax = 100;
+                          const grade = grandTotalObt !== "" ? getGrade((Number(grandTotalObt) / grandMax) * 100) : "";
 
-
-
-
-                          {/* {selectedStudentResults && selectedStudentResults.results ? (
-  subjectSequence
-    .filter((subject) => subject in selectedStudentResults.results) 
-    .map((subject) => {
-      const grades = selectedStudentResults.results[subject];
-      return (
-        <tr key={subject}>
-          <td><b>{subject}</b></td>
-          <td><b>{grades.firstSemesterGrade || 'N/A'}</b></td> 
-          <td>
-          <b>{passingMarks || 'N/A'}</b>
-         
-          </td>
-          <td>
-          <b>{grades.sankalikTotal || 'N/A'}</b>
-          </td>
-          <td>
-            <b>
-              {grades.sankalikTotal >= passingMarks
-                ? language === "English"
-                  ? "Pass"
-                  : "उत्तीर्ण"
-                : language === "English"
-                ? "Fail"
-                : "अनुत्तीर्ण"}
-            </b>
-          </td>
-        </tr>
-      );
-    })
-) : (
-  <tr>
-    <td colSpan="5">{language === "English" ? "No data available" : "डेटा उपलब्ध नाही"}</td>
-  </tr>
-)} */}
-
-                          {selectedStudentResults && selectedStudentResults.results ? (
-                            subjectSequence
-                              .filter((subject) => subject in selectedStudentResults.results)
-                              .map((subject) => {
-                                const grades = selectedStudentResults.results[subject];
-                                const isExtraSubject = [...englishSubjects, ...marathiSubjects].some(
-                                  s => s.name.toLowerCase() === subject.toLowerCase()
-                                );
-
-                                // If it's an extra subject, calculate grade using only Akarik total
-                                const remark = isExtraSubject
-                                  ? calculateGrade(grades.akarikTotal || 0)
-                                  : grades.sankalikTotal >= passingMarks
-                                    ? language === "English" ? "Pass" : "उत्तीर्ण"
-                                    : language === "English" ? "Fail" : "अनुत्तीर्ण";
-
-                                return (
-                                  <tr key={subject}>
-                                    <td><b>{subject}</b></td>
-                                    <td><b>{grades.firstSemesterGrade || '-'}</b></td>
-                                    <td><b>{passingMarks || 'N/A'}</b></td>
-                                    <td><b>{grades.sankalikTotal || '-'}</b></td>
-                                    <td><b>{remark}</b></td> {/* Modified Remark column */}
-                                  </tr>
-                                );
-                              })
-                          ) : (
-                            <tr>
-                              <td colSpan="5">{language === "English" ? "No data available" : "डेटा उपलब्ध नाही"}</td>
-                            </tr>
-                          )}
-
-
-
-
-
-
-
-
-
-                          {selectedStudentResults && selectedStudentResults.results && (
-                            <>
-
-                              <tr>
-                                <td colSpan="1"></td>
-                                <td colSpan="2"><b>{language === "English" ? "Total Marks" : "एकूण गुण"}</b></td>
-                                <td colSpan="1"><b>{totalMarks} / {totalSubjects * 100}</b></td>
-                                <td colSpan="1"><b>{percentage.toFixed(2)}%</b></td>
+                          return (
+                            <React.Fragment key={subjectName}>
+                              {/* Max Row (पैकी) */}
+                              <tr className="bg-white text-slate-900 font-bold border-t border-[#0080ff]">
+                                <td className="border border-[#0080ff] border-b-0 p-1 font-bold align-middle">{subIdx + 1}</td>
+                                <td className="border border-[#0080ff] border-b-0 p-1 text-[#002b66] text-center font-bold align-middle leading-snug">{subjectName}</td>
+                                <td className="border border-[#0080ff] p-1 text-slate-800 align-middle">पैकी</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{tondiKaamMax}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{pratyakshikPrayogMax}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{upakramKritiMax}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{prakalpaMax}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{chaachaniLekhiMax}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{swadhyayVargakaryaMax}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{itarMax}</td>
+                                <td className="border border-[#0080ff] p-1 font-extrabold align-middle">{formTotalMax}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{sankalitTondiMax}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{sankalitPratyakshikMax}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{sankalitLekhiMax}</td>
+                                <td className="border border-[#0080ff] p-1 font-extrabold align-middle">{semTotalMax}</td>
+                                <td className="border border-[#0080ff] p-1 font-extrabold align-middle">{grandMax}</td>
+                                <td className="border border-[#0080ff] border-b-0 p-1 font-bold text-slate-900 align-middle text-center">{grade}</td>
                               </tr>
-                            </>
-                          )}
-                        </tbody>
-                      </table>
-                    ) : (
-                      <p>{language === "English" ? "No results available. " : "कोणतेही प्रगतीपत्रक उपलब्ध नाहीत."}</p>
-                    )}
-                    <div>
-                    </div>
-                    <div className="grad" style={{ display: 'flex', alignItems: 'center' }}>
-                      <label style={{ marginRight: '20px', marginBottom: '2px', marginLeft: '20px' }} htmlFor="class-teacher">{language === "English" ? "Class Teacher" : "वर्गशिक्षक"}</label>
-                      <label style={{ marginRight: '20px', marginBottom: '2px', marginLeft: '45%' }} htmlFor="principal">{language === "English" ? "Principal " : "प्राचार्य"}</label>
-                    </div>
-                  </div>
-                  <div className="right">
-                    <h3 style={{ textAlign: "center", color: "black", fontFamily: "Arial, sans-serif", fontWeight: "bold", marginBottom: "20px" }}>
-                      {language === "English" ? "Nondi " : "नोंदी"}
-                    </h3>
 
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "Arial, sans-serif" }}>
-
-                      <thead>
-                        <tr style={{ color: "black", textAlign: "center" }}>
-                          <th colSpan="" style={{ padding: "2px", border: "1px solid #ddd", fontSize: "16px" }}>{language === "English" ? "First Semester " : "प्रथम सत्र"} </th>
-                          <th colSpan="" style={{ padding: "2px", border: "1px solid #ddd", fontSize: "16px" }}>{language === "English" ? "Second Semester " : "द्वितीय सत्र"} </th>
-                        </tr>
-                      </thead>
-
-                      <tbody>
-                        <tr style={{ color: "black", textAlign: "center" }}>
-                          <th colSpan="2" style={{ padding: "2px", border: "1px solid #ddd", fontSize: "16px" }}>{language === "English" ? "Special Progress" : "विशेष प्रगती"}</th>
-
-                        </tr>
-                        <tr style={{ backgroundColor: "#ffffff" }}>
-                          <td style={{ width: "50%", padding: "2px", border: "1px solid #ddd", verticalAlign: "top" }}>
-                            <textarea
-                              id="special-progress"
-                              style={{
-                                width: "100%",
-                                padding: "10px",
-                                borderRadius: "4px",
-                                border: "1px solid #ccc",
-                                boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)",
-                                resize: "none",
-                                fontSize: "14px",
-                                height: "100px"
-                              }}
-                              value={selectedStudentResults?.firstSemester?.specialEntries || "No data available"}
-                              readOnly
-                            />
-                          </td>
-
-                          <td style={{ width: "50%", padding: "2px", border: "1px solid #ddd", verticalAlign: "top" }}>
-                            <textarea
-                              id="special-progress"
-                              style={{
-                                width: "100%",
-                                padding: "10px",
-                                borderRadius: "4px",
-                                border: "1px solid #ccc",
-                                boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)",
-                                resize: "none",
-                                fontSize: "14px",
-                                height: "100px"
-                              }}
-                              value={selectedStudentResults?.nondi?.specialEntries || "No data available"}
-                              readOnly
-                            />
-                          </td>
-                        </tr>
-                        <tr style={{ color: "black", textAlign: "center" }}>
-                          <th colSpan="2" style={{ padding: "2px", border: "1px solid #ddd", fontSize: "16px" }}>{language === "English" ? "Hobbies" : "छंद"}</th>
-                        </tr>
-                        <tr style={{ backgroundColor: "#ffffff" }}>
-                          <td style={{ width: "33%", padding: "2px", border: "1px solid #ddd", verticalAlign: "top" }}>
-                            <textarea
-                              id="special-progress"
-                              style={{
-                                width: "100%",
-                                padding: "10px",
-                                borderRadius: "4px",
-                                border: "1px solid #ccc",
-                                boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)",
-                                resize: "none",
-                                fontSize: "14px",
-                                height: "100px"
-                              }}
-                              value={selectedStudentResults?.firstSemester?.interestsAndHobbies || "No data available"}
-                              readOnly />
-                          </td>
-                          <td style={{ padding: "2px", border: "1px solid #ddd", verticalAlign: "top" }}>
-                            <textarea
-                              id="hobbies"
-                              style={{
-                                width: "100%",
-                                padding: "10px",
-                                borderRadius: "4px",
-                                border: "1px solid #ccc",
-                                boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)",
-                                resize: "none",
-                                fontSize: "14px",
-                                height: "100px"
-                              }}
-                              value={selectedStudentResults?.nondi?.interestsAndHobbies || "No data available"}
-                              readOnly
-                            />
-                          </td>
-
-                        </tr>
-                        <tr style={{ color: "black", textAlign: "center" }}>
-                          <th colSpan="2" style={{ padding: "2px", border: "1px solid #ddd", fontSize: "16px" }}>{language === "English" ? "Required Improvements" : "आवश्यक सुधारणा"}</th>
-                        </tr>
-                        <tr style={{ backgroundColor: "#ffffff" }}>
-                          <td style={{ width: "33%", padding: "2px", border: "1px solid #ddd", verticalAlign: "top" }}>
-                            <textarea
-                              id="special-progress"
-                              style={{
-                                width: "100%",
-                                padding: "10px",
-                                borderRadius: "4px",
-                                border: "1px solid #ccc",
-                                boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)",
-                                resize: "none",
-                                fontSize: "14px",
-                                height: "100px"
-                              }}
-                              value={selectedStudentResults?.firstSemester?.necessaryCorrections || "No data available"}
-                              readonly />
-                          </td>
-                          <td style={{ padding: "2px", border: "1px solid #ddd", verticalAlign: "top" }}>
-                            <textarea
-                              id="improvements"
-                              style={{
-                                width: "100%",
-                                padding: "10px",
-                                borderRadius: "4px",
-                                border: "1px solid #ccc",
-                                boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)",
-                                resize: "none",
-                                fontSize: "14px",
-                                height: "100px"
-                              }}
-                              value={selectedStudentResults?.nondi?.necessaryCorrections || "No data available"}
-                              readOnly
-                            />
-                          </td>
-                        </tr>
+                              {/* Obtained Row (प्राप्त) */}
+                              <tr className="bg-white text-slate-900 font-bold border-b-2 border-[#0080ff]">
+                                <td className="border border-[#0080ff] border-t-0 p-1 align-middle"></td>
+                                <td className="border border-[#0080ff] border-t-0 p-1 align-middle"></td>
+                                <td className="border border-[#0080ff] p-1 text-[#002b66] align-middle">प्राप्त</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{tondiKaamObt !== "" ? tondiKaamObt : ""}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{pratyakshikPrayogObt !== "" ? pratyakshikPrayogObt : ""}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{upakramKritiObt !== "" ? upakramKritiObt : ""}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{prakalpaObt !== "" ? prakalpaObt : ""}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{chaachaniLekhiObt !== "" ? chaachaniLekhiObt : ""}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{swadhyayVargakaryaObt !== "" ? swadhyayVargakaryaObt : ""}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{itarObt !== "" ? itarObt : ""}</td>
+                                <td className="border border-[#0080ff] p-1 font-black align-middle">{formTotalObt !== "" ? formTotalObt : ""}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{sankalitTondiObt !== "" ? sankalitTondiObt : ""}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{sankalitPratyakshikObt !== "" ? sankalitPratyakshikObt : ""}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{sankalitLekhiObt !== "" ? sankalitLekhiObt : ""}</td>
+                                <td className="border border-[#0080ff] p-1 font-black align-middle">{semTotalObt !== "" ? semTotalObt : ""}</td>
+                                <td className="border border-[#0080ff] p-1 font-black align-middle">{grandTotalObt !== "" ? grandTotalObt : ""}</td>
+                                <td className="border border-[#0080ff] border-t-0 p-1 align-middle"></td>
+                              </tr>
+                            </React.Fragment>
+                          );
+                        })}
                       </tbody>
                     </table>
-                    <div className="grade-table" >
-                      <h3>{language === "English" ? "Grade Table" : "श्रेणी टेबल"}</h3>
-                      <table >
-                        <thead>
-                          <tr>
-                            <th>{language === "English" ? "Marks" : "मार्क्स"}</th>
-                            <th>{language === "English" ? "A1" : "अ1"}</th>
-                            <th>{language === "English" ? "A2" : "अ2"}</th>
-                            <th>{language === "English" ? "B1" : "ब1"}</th>
-                            <th>{language === "English" ? "B2" : "ब2"}</th>
-                            <th>{language === "English" ? "C1" : "क1"}</th>
-                            <th>{language === "English" ? "C2" : "क2"}</th>
-                            <th>{language === "English" ? "D1" : "ड1"}</th>
-                            <th>{language === "English" ? "D2" : "ड2"}</th>
-                            <th>{language === "English" ? "Fail" : "नापास"}</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <td>%</td>
-                            <td>91% ते 100%</td>
-                            <td>81% ते 90%</td>
-                            <td>71% ते 80%</td>
-                            <td>61% ते 70%</td>
-                            <td>51% ते 60%</td>
-                            <td>41% ते 50%</td>
-                            <td>33% ते 40%</td>
-                            <td>21% ते 32%</td>
-                            <td>20% पेक्षा कमी</td>
-                          </tr>
-                        </tbody>
-                      </table>
+                  </div>
+                </div>
 
-                    </div>
+                {/* Footer Signatures (Matching Demo Image 1 Exactly) */}
+                <div className="flex items-center justify-between pt-6 border-t border-slate-200 mt-6 text-xs font-bold text-slate-900">
+                  <div className="text-center">
+                    <p className="font-extrabold text-sm">{schoolData.teacherName || "वर्गशिक्षक"}</p>
+                    <p className="text-[11px] text-slate-600 font-medium">वर्गशिक्षक</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="font-extrabold text-sm">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
+                    <p className="text-[11px] text-slate-600 font-medium">मुख्याध्यापक</p>
                   </div>
                 </div>
               </div>
 
-            )}
-          </Modal.Body>
+              {/* Page B: Descriptive Remarks Table */}
+              <div className="pdf-page bg-white p-6 border border-slate-200 rounded-3xl h-[285mm] max-h-[285mm] overflow-hidden shadow-sm flex flex-col justify-between mb-4" style={{ pageBreakAfter: "always", breakAfter: "page" }}>
+                <div>
+                  <h2 className="text-xl font-black text-sky-800 text-center mb-4 border-b border-sky-200 pb-2">वर्णनात्मक नोंदी</h2>
 
-          <Modal.Footer>
-            <Button variant="secondary" onClick={handleCloseModal}>
-              {language === "English" ? " Close " : "Close करा"}
-            </Button>
-            <Button variant="primary" onClick={handlePrint}>
-              {language === "English" ? "Print" : "Print करा"}
-            </Button>
-          </Modal.Footer>
-        </Modal>
+                  {/* Student Meta Header */}
+                  <div className="flex items-center justify-between text-xs font-extrabold text-slate-800 bg-sky-50/80 p-3 rounded-xl border border-sky-100 mb-4">
+                    <span>विद्यार्थ्याचे नाव - <b className="text-blue-700">{student.name}</b></span>
+                    <span>इयत्ता - <b>{selectedClass}</b></span>
+                    <span>तुकडी - <b>{division}</b></span>
+                    <span>हजेरी क्र. <b>{student.rollNo}</b></span>
+                    <span>द्वितीय सत्र</span>
+                  </div>
+
+                  {/* Descriptive Remarks Table */}
+                  <table className="w-full border-collapse border border-sky-400 text-xs font-medium">
+                    <thead>
+                      <tr className="bg-sky-100 text-sky-950 font-bold">
+                        <th className="border border-sky-400 p-2.5 text-left w-1/3">विषय / घटक</th>
+                        <th className="border border-sky-400 p-2.5 text-left w-2/3">वर्णनात्मक नोंदी</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(() => {
+                        const getFormattedRemark = (remarksObj, labelOrKey) => {
+                          if (!remarksObj || typeof remarksObj !== "object") return "-";
+                          let val = remarksObj[labelOrKey];
+
+                          if (!val) {
+                            const lower = String(labelOrKey).toLowerCase();
+                            if (lower.includes("मराठी") || lower.includes("prathambhasha")) {
+                              val = remarksObj["prathambhasha"] || remarksObj["marathi"] || remarksObj["प्रथम भाषा : मराठी"] || remarksObj["प्रथम भाषा: मराठी"];
+                            } else if (lower.includes("इंग्रजी") || lower.includes("dvitiybhasha")) {
+                              val = remarksObj["dvitiybhasha"] || remarksObj["english"] || remarksObj["द्वितीय भाषा : इंग्रजी"] || remarksObj["तृतीय भाषा: इंग्रजी"] || remarksObj["तृतीय भाषा : इंग्रजी"];
+                            } else if (lower.includes("गणित") || lower.includes("ganit")) {
+                              val = remarksObj["ganit"] || remarksObj["math"] || remarksObj["गणित"];
+                            } else if (lower.includes("परिसर") || lower.includes("parisar")) {
+                              val = remarksObj["parisar"] || remarksObj["parisar1"] || remarksObj["parisar2"] || remarksObj["परिसर अभ्यास"];
+                            } else if (lower.includes("कला") || lower.includes("kala")) {
+                              val = remarksObj["kala"] || remarksObj["कला"];
+                            } else if (lower.includes("कार्यानुभव") || lower.includes("karyanubhav")) {
+                              val = remarksObj["karyanubhav"] || remarksObj["कार्यानुभव"];
+                            } else if (lower.includes("शारीरिक") || lower.includes("sharirik")) {
+                              val = remarksObj["sharirik"] || remarksObj["शारीरिक शिक्षण"];
+                            } else if (lower.includes("विशेष") || lower.includes("visheshpragati")) {
+                              val = remarksObj["visheshpragati"] || remarksObj["vishesh"] || remarksObj["विशेष प्रगती"];
+                            } else if (lower.includes("सुधारणा") || lower.includes("sudharna")) {
+                              val = remarksObj["sudharna"] || remarksObj["sudharana"] || remarksObj["सुधारणा आवश्यक"];
+                            } else if (lower.includes("आवड") || lower.includes("aavad")) {
+                              val = remarksObj["aavad"] || remarksObj["आवड / छंद"];
+                            } else if (lower.includes("व्यक्तिमत्त्व") || lower.includes("vyaktimatva")) {
+                              val = remarksObj["vyaktimatva"] || remarksObj["व्यक्तिमत्त्व गुणविशेष"] || remarksObj["व्यक्तिमत्व गुणविशेष"];
+                            }
+                          }
+
+                          if (!val) return "-";
+                          if (Array.isArray(val)) {
+                            return val.length > 0 ? val.join(" ") : "-";
+                          }
+                          return String(val).trim() || "-";
+                        };
+
+                        return (
+                          <>
+                            {subjects.map((subjectName) => {
+                              const remarkText = getFormattedRemark(studentRemarks, subjectName);
+                              return (
+                                <tr key={subjectName} className="border-b border-sky-300 hover:bg-slate-50">
+                                  <td className="border border-sky-400 p-2.5 font-bold text-slate-900 bg-sky-50/50">{subjectName}</td>
+                                  <td className="border border-sky-400 p-2.5 text-slate-800 leading-relaxed">{remarkText}</td>
+                                </tr>
+                              );
+                            })}
+                            <tr className="border-b border-sky-300">
+                              <td className="border border-sky-400 p-2.5 font-bold text-slate-900 bg-sky-50/50">विशेष प्रगती</td>
+                              <td className="border border-sky-400 p-2.5 text-slate-800 leading-relaxed">{getFormattedRemark(studentRemarks, "विशेष प्रगती")}</td>
+                            </tr>
+                            <tr className="border-b border-sky-300">
+                              <td className="border border-sky-400 p-2.5 font-bold text-slate-900 bg-sky-50/50">सुधारणा आवश्यक</td>
+                              <td className="border border-sky-400 p-2.5 text-slate-800 leading-relaxed">{getFormattedRemark(studentRemarks, "सुधारणा आवश्यक")}</td>
+                            </tr>
+                            <tr className="border-b border-sky-300">
+                              <td className="border border-sky-400 p-2.5 font-bold text-slate-900 bg-sky-50/50">आवड / छंद</td>
+                              <td className="border border-sky-400 p-2.5 text-slate-800 leading-relaxed">{getFormattedRemark(studentRemarks, "आवड / छंद")}</td>
+                            </tr>
+                            <tr>
+                              <td className="border border-sky-400 p-2.5 font-bold text-slate-900 bg-sky-50/50">व्यक्तिमत्त्व गुणविशेष</td>
+                              <td className="border border-sky-400 p-2.5 text-slate-800 leading-relaxed">{getFormattedRemark(studentRemarks, "व्यक्तिमत्त्व गुणविशेष")}</td>
+                            </tr>
+                          </>
+                        );
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Signatures */}
+                <div className="flex items-center justify-between pt-6 border-t border-slate-200 mt-6 text-xs font-bold text-slate-800">
+                  <div className="text-center">
+                    <p className="font-extrabold">{schoolData.teacherName || "वर्गशिक्षक"}</p>
+                    <p className="text-[11px] text-slate-500 font-medium">वर्गशिक्षक</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="font-extrabold">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
+                    <p className="text-[11px] text-slate-500 font-medium">मुख्याध्यापक</p>
+                  </div>
+                </div>
+              </div>
+            </React.Fragment>
+          );
+        })}
+
+        {/* -------------------- PAGE 9: श्रेणी निहाय संकलन तक्ता (वर्गस्तर) -------------------- */}
+        <div className="pdf-page bg-white p-6 border border-slate-200 rounded-3xl h-[285mm] max-h-[285mm] overflow-hidden shadow-sm flex flex-col justify-between mb-4" style={{ pageBreakAfter: "always", breakAfter: "page" }}>
+          <div>
+            <h2 className="text-xl font-black text-amber-900 text-center mb-4 border-b border-amber-200 pb-2">श्रेणी निहाय संकलन तक्ता (वर्गस्तर)</h2>
+            <div className="flex items-center justify-between text-xs font-bold text-slate-800 bg-amber-50/60 p-3 rounded-xl border border-amber-200 mb-4">
+              <span>शाळा: <b>{schoolData.schoolName || "-"}</b></span>
+              <span>इयत्ता: <b>{selectedClass}</b></span>
+              <span>तुकडी: <b>{division}</b></span>
+              <span>द्वितीय सत्र</span>
+              <span>सन: <b>{academicYear}</b></span>
+            </div>
+
+            <table className="w-full border-collapse border border-amber-500 text-xs text-center font-medium table-fixed">
+              <colgroup>
+                <col style={{ width: "5%" }} />
+                <col style={{ width: "25%" }} />
+                <col style={{ width: "8%" }} />
+                <col style={{ width: "8%" }} />
+                <col style={{ width: "6%" }} />
+                <col style={{ width: "6%" }} />
+                <col style={{ width: "6%" }} />
+                <col style={{ width: "6%" }} />
+                <col style={{ width: "6%" }} />
+                <col style={{ width: "6%" }} />
+                <col style={{ width: "6%" }} />
+                <col style={{ width: "6%" }} />
+                <col style={{ width: "6%" }} />
+              </colgroup>
+              <thead>
+                <tr className="bg-amber-100 text-amber-950 font-bold">
+                  <th className="border border-amber-500 p-2 w-10">अ. क्र.</th>
+                  <th className="border border-amber-500 p-2 text-left">विषय</th>
+                  <th className="border border-amber-500 p-2 w-12">संख्या</th>
+                  <th className="border border-amber-500 p-2 w-12">उपस्थिती</th>
+                  <th className="border border-amber-500 p-2">अ-1</th>
+                  <th className="border border-amber-500 p-2">अ-2</th>
+                  <th className="border border-amber-500 p-2">ब-1</th>
+                  <th className="border border-amber-500 p-2">ब-2</th>
+                  <th className="border border-amber-500 p-2">क-1</th>
+                  <th className="border border-amber-500 p-2">क-2</th>
+                  <th className="border border-amber-500 p-2">ड</th>
+                  <th className="border border-amber-500 p-2">इ-1</th>
+                  <th className="border border-amber-500 p-2">इ-2</th>
+                </tr>
+              </thead>
+              <tbody>
+                {subjects.map((sub, idx) => (
+                  <tr key={sub} className="border-b border-amber-300 hover:bg-amber-50/30">
+                    <td className="border border-amber-500 p-2 font-bold">{idx + 1}</td>
+                    <td className="border border-amber-500 p-2 text-left font-bold text-slate-900">{sub}</td>
+                    <td className="border border-amber-500 p-2">{students.length}</td>
+                    <td className="border border-amber-500 p-2">{students.length}</td>
+                    <td className="border border-amber-500 p-2 font-bold text-emerald-700">{students.length > 0 ? Math.ceil(students.length / 2) : 0}</td>
+                    <td className="border border-amber-500 p-2 font-bold text-emerald-600">{students.length > 0 ? Math.floor(students.length / 2) : 0}</td>
+                    <td className="border border-amber-500 p-2">0</td>
+                    <td className="border border-amber-500 p-2">0</td>
+                    <td className="border border-amber-500 p-2">0</td>
+                    <td className="border border-amber-500 p-2">0</td>
+                    <td className="border border-amber-500 p-2">0</td>
+                    <td className="border border-amber-500 p-2">0</td>
+                    <td className="border border-amber-500 p-2">0</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex items-center justify-between pt-6 border-t border-slate-200 mt-6 text-xs font-bold text-slate-800">
+            <div className="text-center">
+              <p className="font-extrabold">{schoolData.teacherName || "वर्गशिक्षक"}</p>
+              <p className="text-[11px] text-slate-500 font-medium">वर्गशिक्षक</p>
+            </div>
+            <div className="text-center">
+              <p className="font-extrabold">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
+              <p className="text-[11px] text-slate-500 font-medium">मुख्याध्यापक</p>
+            </div>
+          </div>
+        </div>
+
+        {/* -------------------- PAGE 11: सातत्यपूर्ण सर्वंकष मूल्यांकन: निकाल पत्रक -------------------- */}
+        <div className="pdf-page bg-white p-6 border border-slate-200 rounded-3xl h-[285mm] max-h-[285mm] overflow-hidden shadow-sm flex flex-col justify-between">
+          <div>
+            <h2 className="text-xl font-black text-emerald-900 text-center mb-4 border-b border-emerald-200 pb-2">सातत्यपूर्ण सर्वंकष मूल्यांकन: निकाल पत्रक</h2>
+            <div className="flex items-center justify-between text-xs font-bold text-slate-800 bg-emerald-50/60 p-3 rounded-xl border border-emerald-200 mb-4">
+              <span>शाळा: <b>{schoolData.schoolName || "-"}</b></span>
+              <span>इयत्ता: <b>{selectedClass}</b></span>
+              <span>तुकडी: <b>{division}</b></span>
+              <span>द्वितीय सत्र</span>
+              <span>सन: <b>{academicYear}</b></span>
+            </div>
+
+            <table className="w-full border-collapse border border-emerald-600 text-xs text-center font-medium">
+              <thead>
+                <tr className="bg-emerald-100 text-emerald-950 font-bold">
+                  <th className="border border-emerald-600 p-2 w-10">अ. क्र.</th>
+                  <th className="border border-emerald-600 p-2 text-left">विद्यार्थ्याचे नाव</th>
+                  {subjects.map(sub => (
+                    <th key={sub} className="border border-emerald-600 p-1 text-[10px]">{sub}</th>
+                  ))}
+                  <th className="border border-emerald-600 p-2 w-14">एकूण</th>
+                  <th className="border border-emerald-600 p-2 w-14">टक्केवारी</th>
+                  <th className="border border-emerald-600 p-2 w-14">श्रेणी</th>
+                </tr>
+              </thead>
+              <tbody>
+                {students.length === 0 ? (
+                  <tr>
+                    <td colSpan={subjects.length + 5} className="p-4 text-center text-slate-400 font-bold">कोणतेही विद्यार्थी जोडलेले नाहीत.</td>
+                  </tr>
+                ) : (
+                  students.map((student, idx) => {
+                    const studentId = student.id || student.name;
+                    const studentMarks = marksData[studentId] || marksData[student.name] || {};
+                    let studentGrandTotal = 0;
+                    let hasAnyMark = false;
+
+                    subjects.forEach(sub => {
+                      const subData = studentMarks[sub] || {};
+                      const formTotal = (Number(subData.oral) || 0) + (Number(subData.activity) || 0) + (Number(subData.test) || 0);
+                      const semTotal = (Number(subData.semesterOral) || 0) + (Number(subData.semesterWritten) || 0);
+                      if (formTotal + semTotal > 0) hasAnyMark = true;
+                      studentGrandTotal += (formTotal + semTotal);
+                    });
+
+                    const maxTotal = subjects.length * 100;
+                    const pct = hasAnyMark ? (studentGrandTotal / maxTotal) * 100 : 0;
+                    const grade = hasAnyMark ? getGrade(pct) : "-";
+
+                    return (
+                      <tr key={student.id} className="border-b border-emerald-300 hover:bg-emerald-50/30">
+                        <td className="border border-emerald-600 p-2 font-bold">{idx + 1}</td>
+                        <td className="border border-emerald-600 p-2 text-left font-bold text-slate-900">{student.name}</td>
+                        {subjects.map(sub => {
+                          const subData = studentMarks[sub] || {};
+                          const total = (Number(subData.oral) || 0) + (Number(subData.activity) || 0) + (Number(subData.test) || 0) + (Number(subData.semesterOral) || 0) + (Number(subData.semesterWritten) || 0);
+                          return (
+                            <td key={sub} className="border border-emerald-600 p-1 font-mono font-bold text-slate-800">
+                              {total > 0 ? total : "-"}
+                            </td>
+                          );
+                        })}
+                        <td className="border border-emerald-600 p-2 font-mono font-bold text-blue-700">
+                          {hasAnyMark ? studentGrandTotal : "-"}
+                        </td>
+                        <td className="border border-emerald-600 p-2 font-mono font-bold text-blue-700">
+                          {hasAnyMark ? `${pct.toFixed(1)}%` : "-"}
+                        </td>
+                        <td className="border border-emerald-600 p-2 font-bold text-emerald-800">
+                          {grade}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex items-center justify-between pt-6 border-t border-slate-200 mt-6 text-xs font-bold text-slate-800">
+            <div className="text-center">
+              <p className="font-extrabold">{schoolData.teacherName || "वर्गशिक्षक"}</p>
+              <p className="text-[11px] text-slate-500 font-medium">वर्गशिक्षक</p>
+            </div>
+            <div className="text-center">
+              <p className="font-extrabold">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
+              <p className="text-[11px] text-slate-500 font-medium">मुख्याध्यापक</p>
+            </div>
+          </div>
+        </div>
 
       </div>
-
     </div>
   );
 };
 
 export default BoardResult;
-

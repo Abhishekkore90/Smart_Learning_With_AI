@@ -389,9 +389,9 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
           <button
             onClick={saveWorkingDays}
             disabled={savingWorkingDays}
-            className="text-blue-600 hover:text-blue-700 text-sm font-bold transition-colors cursor-pointer disabled:opacity-50"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-extrabold rounded-xl transition-all cursor-pointer shadow-md shadow-blue-200/60 disabled:opacity-50 flex items-center justify-center"
           >
-            {savingWorkingDays ? "जतन..." : "जतन करा"}
+            {savingWorkingDays ? "जतन होत आहे..." : "जतन करा"}
           </button>
         </div>
 
@@ -572,19 +572,20 @@ export function CCEAttendance({ selectedClass, academicYear, onBack }: { selecte
           </button>
           <h2 className="text-slate-850 text-lg font-bold">उपस्थिती</h2>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={saveAttendance}
             disabled={saving}
-            className="text-blue-600 hover:text-blue-700 text-sm font-bold transition-colors cursor-pointer disabled:opacity-50"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-extrabold rounded-xl transition-all cursor-pointer shadow-md shadow-blue-200/60 disabled:opacity-50 flex items-center justify-center"
           >
-            {saving ? "जतन..." : "जतन करा"}
+            {saving ? "जतन होत आहे..." : "जतन करा"}
           </button>
           <button
             onClick={() => setMainView("working-days")}
-            className="text-blue-600 hover:text-blue-700 text-sm font-bold flex items-center gap-0.5 transition-colors cursor-pointer"
+            className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200/80 active:scale-95 text-slate-700 hover:text-blue-600 text-xs font-bold rounded-xl transition-all cursor-pointer border border-slate-200/80 flex items-center gap-1"
           >
-            कामाचे दिवस <ChevronRight className="size-4" />
+            <span>कामाचे दिवस</span>
+            <ChevronRight className="size-3.5 text-slate-500" />
           </button>
         </div>
       </div>

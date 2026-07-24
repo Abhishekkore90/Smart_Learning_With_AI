@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, collection, query, where, onSnapshot } from "firebase/firestore";
-import { ArrowLeft, Plus, Pencil, Copy, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Copy, Trash2, ChevronLeft, ChevronRight, Save } from "lucide-react";
 import { toast } from "sonner";
 
 interface SubjectWeightage {
@@ -20,7 +20,7 @@ interface SubjectWeightage {
 interface WeightageItem {
   id: string;
   name: string;
-  studentIds: number[]; // roll numbers assigned
+  studentIds: number[];
   subjects: Record<string, SubjectWeightage>;
   description?: string;
 }
@@ -96,6 +96,7 @@ const getExpectedMarks = (selectedClass: string) => {
   return { akarik: 0, sankalit: 0 };
 };
 
+// Weightage numeric input without spinner buttons/scroll bars
 function WeightageInput({
   label,
   value,
@@ -107,12 +108,18 @@ function WeightageInput({
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-[12px] text-slate-500 font-semibold ml-1">{label}</span>
+      <span className="text-[12px] text-slate-600 font-bold ml-1">{label}</span>
       <input
-        type="number"
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
         value={value || ""}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full px-4 py-3 bg-white border border-slate-200 focus:border-blue-500 rounded-xl text-sm text-slate-800 outline-none transition-all font-medium"
+        onChange={(e) => {
+          const val = e.target.value.replace(/[^0-9]/g, "");
+          onChange(val);
+        }}
+        placeholder="0"
+        className="w-full px-4 py-3 bg-white border border-slate-200 focus:border-blue-500 rounded-xl text-sm text-slate-800 outline-none transition-all font-semibold"
       />
     </div>
   );
@@ -126,31 +133,53 @@ export function CCEWeightage({ selectedClass, academicYear, onBack }: { selected
   const [editingItem, setEditingItem] = useState<WeightageItem | null>(null);
   const [subjectIndex, setSubjectIndex] = useState(0);
   const [students, setStudents] = useState<{ id: string; name: string; rollNo: string }[]>([]);
-  const [assigningItemId, setAssigningItemId] = useState<string | null>(null);
   const [dynamicSubjects, setDynamicSubjects] = useState<string[]>(DEFAULT_SUBJECTS);
+
+  // Instant cache & real-time sync for subjects from CCESubjectConfig
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem(`cce_subjects_${selectedClass}_${academicYear}`);
+      if (cached) {
+        setDynamicSubjects(JSON.parse(cached));
+      }
+    } catch (e) {}
+
+    const unsubSettings = onSnapshot(doc(db, "cce_settings", `${selectedClass}_${academicYear}`), (snap) => {
+      if (snap.exists() && snap.data().subjects) {
+        const subs = snap.data().subjects;
+        setDynamicSubjects(subs);
+        localStorage.setItem(`cce_subjects_${selectedClass}_${academicYear}`, JSON.stringify(subs));
+      }
+    });
+    return () => unsubSettings();
+  }, [selectedClass, academicYear]);
 
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       try {
-        let loadedSubjects = DEFAULT_SUBJECTS;
+        let loadedSubjects = dynamicSubjects;
         const settingsRef = doc(db, "cce_settings", `${selectedClass}_${academicYear}`);
         const settingsSnap = await getDoc(settingsRef);
         if (settingsSnap.exists() && settingsSnap.data().subjects) {
           loadedSubjects = settingsSnap.data().subjects;
+          setDynamicSubjects(loadedSubjects);
         }
-        setDynamicSubjects(loadedSubjects);
 
         const ref = doc(db, "cce_weightage_v2", `${selectedClass}_${academicYear}`);
         const snap = await getDoc(ref);
-        if (snap.exists() && snap.data().data) {
-          const loadedData = snap.data().data as WeightageData;
-          setData({
-            semester1: (loadedData.semester1 || []).map(i => ensureSubjectWeightages(i, loadedSubjects)),
-            semester2: (loadedData.semester2 || []).map(i => ensureSubjectWeightages(i, loadedSubjects)),
-          });
+        if (snap.exists()) {
+          const docData = snap.data();
+          const loadedData = (docData.data || docData) as WeightageData;
+          const sem1 = (loadedData.semester1 || docData.semester1 || []).map((i: WeightageItem) =>
+            ensureSubjectWeightages(i, loadedSubjects)
+          );
+          const sem2 = (loadedData.semester2 || docData.semester2 || []).map((i: WeightageItem) =>
+            ensureSubjectWeightages(i, loadedSubjects)
+          );
+          setData({ semester1: sem1, semester2: sem2 });
         } else {
-          // Migrate from old format or create default
+          // Check old ref
           const oldRef = doc(db, "cce_weightage", `${selectedClass}_${academicYear}`);
           const oldSnap = await getDoc(oldRef);
           if (oldSnap.exists() && oldSnap.data().rows) {
@@ -181,14 +210,11 @@ export function CCEWeightage({ selectedClass, academicYear, onBack }: { selected
             });
             setData({ semester1: defaultItems.map(i => ensureSubjectWeightages(i, loadedSubjects)), semester2: [] });
           } else {
-            setData({
-              semester1: [],
-              semester2: [],
-            });
+            setData({ semester1: [], semester2: [] });
           }
         }
       } catch (err) {
-        console.error(err);
+        console.error("Error loading weightage:", err);
       }
       setLoading(false);
     };
@@ -223,6 +249,8 @@ export function CCEWeightage({ selectedClass, academicYear, onBack }: { selected
         class: selectedClass,
         academicYear,
         data,
+        semester1: data.semester1,
+        semester2: data.semester2,
         updatedAt: new Date().toISOString(),
       }, { merge: true });
       toast.success("भारांश जतन झाला!");
@@ -243,14 +271,10 @@ export function CCEWeightage({ selectedClass, academicYear, onBack }: { selected
     });
     const newItem: WeightageItem = {
       id: `item_${Date.now()}`,
-      name: "",
+      name: `भारांश निश्चिती ${data[activeSemester].length + 1}`,
       studentIds: [],
       subjects: defaultSubjects,
     };
-    setData(prev => ({
-      ...prev,
-      [activeSemester]: [...prev[activeSemester], newItem],
-    }));
     setEditingItem(newItem);
     setSubjectIndex(0);
   };
@@ -275,6 +299,8 @@ export function CCEWeightage({ selectedClass, academicYear, onBack }: { selected
         class: selectedClass,
         academicYear,
         data: updatedData,
+        semester1: updatedData.semester1,
+        semester2: updatedData.semester2,
         updatedAt: new Date().toISOString(),
       }, { merge: true });
       toast.success("प्रत तयार झाली आणि जतन केली!");
@@ -298,6 +324,8 @@ export function CCEWeightage({ selectedClass, academicYear, onBack }: { selected
         class: selectedClass,
         academicYear,
         data: updatedData,
+        semester1: updatedData.semester1,
+        semester2: updatedData.semester2,
         updatedAt: new Date().toISOString(),
       }, { merge: true });
       toast.success("भारांश यशस्वीरित्या हटवला!");
@@ -309,6 +337,7 @@ export function CCEWeightage({ selectedClass, academicYear, onBack }: { selected
 
   const currentItems = data[activeSemester];
 
+  // ── EDITING WEIGHTAGE FORM (Matches Image 2) ──
   if (editingItem) {
     const currentSubject = dynamicSubjects[subjectIndex];
     const sw = editingItem.subjects[currentSubject] || {
@@ -335,30 +364,47 @@ export function CCEWeightage({ selectedClass, academicYear, onBack }: { selected
     const akarikSum = getAkarikTotal(sw);
     const sankalitSum = getSankalitTotal(sw);
 
-    const handleNextOrSave = async () => {
-      const updatedList = data[activeSemester].map((item) =>
-        item.id === editingItem.id ? editingItem : item
-      );
+    const handleSaveItem = async (saveAndClose: boolean = false) => {
+      const nameToSave = editingItem.name.trim() || `भारांश निश्चिती ${data[activeSemester].length + 1}`;
+      const itemToSave = { ...editingItem, name: nameToSave };
+      
+      const existingIdx = data[activeSemester].findIndex(i => i.id === editingItem.id);
+      let updatedList: WeightageItem[];
+      if (existingIdx >= 0) {
+        updatedList = data[activeSemester].map(i => i.id === editingItem.id ? itemToSave : i);
+      } else {
+        updatedList = [...data[activeSemester], itemToSave];
+      }
+
       const updatedData = { ...data, [activeSemester]: updatedList };
       setData(updatedData);
 
+      setSaving(true);
+      try {
+        await setDoc(doc(db, "cce_weightage_v2", `${selectedClass}_${academicYear}`), {
+          class: selectedClass,
+          academicYear,
+          data: updatedData,
+          semester1: updatedData.semester1,
+          semester2: updatedData.semester2,
+          updatedAt: new Date().toISOString(),
+        }, { merge: true });
+        toast.success("भारांश यशस्वीरित्या जतन करण्यात आला!");
+      } catch (err: any) {
+        toast.error("जतन अयशस्वी: " + err.message);
+      }
+      setSaving(false);
+
+      if (saveAndClose) {
+        setEditingItem(null);
+      }
+    };
+
+    const handleNextOrSave = () => {
       if (subjectIndex < dynamicSubjects.length - 1) {
         setSubjectIndex(subjectIndex + 1);
       } else {
-        setSaving(true);
-        try {
-          await setDoc(doc(db, "cce_weightage_v2", `${selectedClass}_${academicYear}`), {
-            class: selectedClass,
-            academicYear,
-            data: updatedData,
-            updatedAt: new Date().toISOString(),
-          }, { merge: true });
-          toast.success("भारांश यशस्वीरित्या जतन करण्यात आला!");
-        } catch (err: any) {
-          toast.error("जतन अयशस्वी: " + err.message);
-        }
-        setSaving(false);
-        setEditingItem(null);
+        handleSaveItem(true);
       }
     };
 
@@ -372,16 +418,24 @@ export function CCEWeightage({ selectedClass, academicYear, onBack }: { selected
           >
             <ArrowLeft className="size-5" />
           </button>
-          <h2 className="text-lg font-bold tracking-tight text-slate-800">
+          <h2 className="text-lg font-bold tracking-tight text-slate-800 flex-1">
             भारांश निश्चिती संपादन करा
           </h2>
+          <button
+            onClick={() => handleSaveItem(true)}
+            disabled={saving}
+            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-md disabled:opacity-50"
+          >
+            <Save className="size-4" />
+            <span>जतन करा</span>
+          </button>
         </div>
 
         {/* Form Body */}
         <div className="flex-1 overflow-y-auto px-5 py-5 pb-28 space-y-5">
           {/* Weightage Name */}
           <div className="flex flex-col gap-1.5 mb-2">
-            <span className="text-[12px] text-slate-500 font-bold uppercase tracking-wider ml-1">
+            <span className="text-[12px] text-slate-600 font-bold uppercase tracking-wider ml-1">
               भारांश निश्चितीचे नाव*
             </span>
             <input
@@ -526,6 +580,7 @@ export function CCEWeightage({ selectedClass, academicYear, onBack }: { selected
     );
   }
 
+  // ── WEIGHTAGE MAIN VIEW (Matches Image 1) ──
   return (
     <div className="bg-white text-slate-800 rounded-[2.5rem] border border-slate-200 shadow-xl min-h-[600px] flex flex-col font-sans relative select-none" style={{ fontFamily: "'Inter', 'Noto Sans Devanagari', sans-serif" }}>
       {/* Header */}
@@ -574,53 +629,56 @@ export function CCEWeightage({ selectedClass, academicYear, onBack }: { selected
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             <span className="text-xs text-slate-400 font-bold">लोड होत आहे...</span>
           </div>
+        ) : currentItems.length === 0 ? (
+          /* Empty state (Matches Image 1) */
+          <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-400">
+            <p className="text-sm font-bold text-slate-500">कोणतीही भारांश निश्चिती जोडलेली नाही</p>
+            <p className="text-xs text-slate-400">खालील '+' बटणावर क्लिक करून नवीन भारांश निश्चिती जोडा</p>
+            <button
+              onClick={handleAddNew}
+              className="mt-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition-all"
+            >
+              + भारांश जोडा
+            </button>
+          </div>
         ) : (
-          <div className="space-y-3">
-            {/* Item list */}
+          <div className="space-y-4 pb-16">
+            {/* Student assignment cards & weightage info */}
             {currentItems.map((item) => (
-              <div key={item.id} className="space-y-0">
-                {/* Item row */}
-                <div className="flex items-center justify-between py-3">
-                  <span className="text-[15px] font-medium text-slate-800">
-                    {item.name}
-                  </span>
-                  <div className="flex items-center gap-2">
+              <div key={item.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-[14px] font-extrabold text-slate-800">{item.name}</p>
+                  <div className="flex items-center gap-1">
                     <button
                       onClick={() => {
                         const upgraded = ensureSubjectWeightages(item, dynamicSubjects);
                         setEditingItem(upgraded);
                         setSubjectIndex(0);
                       }}
-                      className="p-2 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer text-slate-400 hover:text-blue-600"
+                      className="p-1.5 hover:bg-white rounded-lg transition-colors cursor-pointer text-slate-400 hover:text-blue-600 border border-transparent hover:border-slate-200"
+                      title="संपादन"
                     >
                       <Pencil className="size-4" />
                     </button>
                     <button
                       onClick={() => duplicateItem(item)}
-                      className="p-2 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer text-slate-400 hover:text-blue-600"
+                      className="p-1.5 hover:bg-white rounded-lg transition-colors cursor-pointer text-slate-400 hover:text-blue-600 border border-transparent hover:border-slate-200"
+                      title="प्रत तयार करा"
                     >
                       <Copy className="size-4" />
                     </button>
                     <button
                       onClick={() => deleteItem(item.id)}
-                      className="p-2 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer text-slate-400 hover:text-red-500"
+                      className="p-1.5 hover:bg-white rounded-lg transition-colors cursor-pointer text-slate-400 hover:text-red-500 border border-transparent hover:border-slate-200"
+                      title="हटवा"
                     >
                       <Trash2 className="size-4" />
                     </button>
                   </div>
                 </div>
-              </div>
-            ))}
-
-            {/* Student assignment cards */}
-            {currentItems.map((item) => (
-              <div key={`card_${item.id}`} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-[13px] font-extrabold text-slate-800">{item.name}</p>
-                </div>
 
                 {/* Subject Weightages Summary */}
-                <div className="pt-2 border-t border-slate-200/60 mt-2 space-y-2">
+                <div className="pt-2 border-t border-slate-200/60 space-y-2">
                   <p className="text-xs font-bold text-slate-500">निश्चित केलेला भारांश:</p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {dynamicSubjects.map((sub) => {
