@@ -5442,15 +5442,22 @@ function TeachingDiaryManager({
             "firebase/firestore"
           );
           const q = query(
-            collection(db, "admin_teaching_diaries"),
-            where("className", "==", selectedClass),
+            collection(db, "teacher_diaries"),
+            where("class", "==", selectedClass),
             where("month", "==", selectedMonth)
           );
           const snapshot = await getDocs(q);
-          const list = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
+          const list = snapshot.docs.map((doc) => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              name: data.fileName || data.name || "",
+              url: data.downloadURL || data.url || "",
+              size: data.size || "",
+              date: data.date || "",
+              ...data,
+            };
+          });
           setDiaries(list);
         } catch (err) {
           console.error("Error fetching teaching diaries:", err);
