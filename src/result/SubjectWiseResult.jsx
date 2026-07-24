@@ -155,6 +155,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", onBa
   const [students, setStudents] = useState([]);
   const [marksData, setMarksData] = useState({});
   const [levelsData, setLevelsData] = useState({});
+  const [outcomesRatings, setOutcomesRatings] = useState({});
 
   const printRef = useRef(null);
 
@@ -246,38 +247,58 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", onBa
       loadedStudents.sort((a, b) => (parseInt(a.rollNo) || 0) - (parseInt(b.rollNo) || 0));
       setStudents(loadedStudents);
 
-      // 3. Fetch User-Selected Student Levels (from Bunny Storage CDN or Firestore)
+      // 3. Fetch User Outcome Ratings (from cce_outcomes, cce_levels_v2 & Bunny CDN)
       try {
         const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
+        const bunnyOutcomes = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_outcomes.json`);
         const bunnyLevels = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_levels.json`);
-        if (bunnyLevels && Object.keys(bunnyLevels).length > 0) {
-          setLevelsData(bunnyLevels);
-        } else {
-          const levelsSnap = await getDoc(doc(db, "cce_levels_v2", docId));
-          if (levelsSnap.exists()) {
-            setLevelsData(levelsSnap.data().levelsData || levelsSnap.data());
-          } else {
-            setLevelsData({});
-          }
-        }
-      } catch (e) {}
+
+        const outSnapSem2 = await getDoc(doc(db, "cce_outcomes", `${selectedClass}_${academicYear}_sem2`));
+        const outSnapSem1 = await getDoc(doc(db, "cce_outcomes", `${selectedClass}_${academicYear}_sem1`));
+        const outSnapGen = await getDoc(doc(db, "cce_outcomes", docId));
+
+        const rSem2 = outSnapSem2.exists() ? (outSnapSem2.data().ratings || outSnapSem2.data()) : {};
+        const rSem1 = outSnapSem1.exists() ? (outSnapSem1.data().ratings || outSnapSem1.data()) : {};
+        const rGen = outSnapGen.exists() ? (outSnapGen.data().ratings || outSnapGen.data()) : {};
+
+        const mergedRatings = {
+          ...rGen,
+          ...rSem1,
+          ...rSem2,
+          ...(bunnyOutcomes || {}),
+        };
+        setOutcomesRatings(mergedRatings);
+
+        const levSnap = await getDoc(doc(db, "cce_levels_v2", docId));
+        const lData = levSnap.exists() ? (levSnap.data().levelsData || levSnap.data()) : {};
+
+        const mergedLevels = {
+          ...lData,
+          ...(bunnyLevels || {}),
+        };
+        setLevelsData(mergedLevels);
+      } catch (e) {
+        console.error("Error fetching outcome levels:", e);
+      }
 
       // 4. Fetch Marks Data
       try {
         const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
-        const bunnyMarks = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_marks_second.json`)
-          || await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_marks_first.json`);
-        
-        if (bunnyMarks && Object.keys(bunnyMarks).length > 0) {
-          setMarksData(bunnyMarks);
-        } else {
-          const marksSnap = await getDoc(doc(db, "cce_marks_v2", docId));
-          if (marksSnap.exists()) {
-            const mData = marksSnap.data();
-            setMarksData(mData.semester2 || mData.semester1 || mData.marksData || mData.data || mData);
-          }
-        }
-      } catch (e) {}
+        const bunnyMarksSec = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_marks_second.json`);
+        const bunnyMarksFirst = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_marks_first.json`);
+
+        const marksSnap = await getDoc(doc(db, "cce_marks_v2", docId));
+        const mData = marksSnap.exists() ? marksSnap.data() : {};
+
+        const mergedMarks = {
+          ...(mData.semester2 || mData.semester1 || mData.marksData || mData.data || mData || {}),
+          ...(bunnyMarksFirst || {}),
+          ...(bunnyMarksSec || {}),
+        };
+        setMarksData(mergedMarks);
+      } catch (e) {
+        console.error("Error fetching marks data:", e);
+      }
 
     } catch (err) {
       console.error("Error loading learning outcomes data:", err);
@@ -315,34 +336,90 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", onBa
 
   /**
    * Resolves the EXACT level (1, 2, 3, or 4) entered by the user for a specific student and outcome code.
-   * Returns null if no level has been explicitly selected by the user (NO automatic fill!).
+   * Checks outcomesRatings, levelsData, and marksData across all ID and subject aliases.
    */
   const getUserSelectedLevel = (student, outcomeCode, subjectName) => {
-    const stdId = student.id || student.rollNo || student.name;
-    const stdLevels = levelsData[stdId] || levelsData[student.name] || {};
-    const stdMarks = marksData[stdId] || marksData[student.name] || {};
+    if (!student) return null;
 
-    // 1. Direct user-selected level for this outcome code
-    const explicitLevel = stdLevels[outcomeCode] || stdLevels[subjectName]?.[outcomeCode];
-    if (explicitLevel) {
-      const parsed = parseInt(explicitLevel);
-      if (parsed >= 1 && parsed <= 4) return parsed;
+    const possibleStudentKeys = [
+      student.id,
+      student.rollNo,
+      student.name,
+      student.fullName,
+      String(student.rollNo),
+    ].filter(Boolean);
+
+    const possibleSubKeys = [
+      subjectName,
+      subjectName ? subjectName.toLowerCase() : "",
+      subjectName && subjectName.includes("मराठी") ? "marathi" : "",
+      subjectName && subjectName.includes("इंग्रजी") ? "english" : "",
+      subjectName && subjectName.includes("गणित") ? "maths" : (subjectName && subjectName.includes("गणित") ? "math" : ""),
+      subjectName && subjectName.includes("परिसर") ? "parisar" : "",
+      subjectName && subjectName.includes("कला") ? "kala" : "",
+      subjectName && subjectName.includes("कार्यानुभव") ? "karyanubhav" : "",
+      subjectName && subjectName.includes("शारीरिक") ? "sharirik" : "",
+    ].filter(Boolean);
+
+    // 1. Check outcomesRatings: ratings[subjectKey][outcomeCode][studentId]
+    for (const subKey of possibleSubKeys) {
+      if (outcomesRatings[subKey] && outcomesRatings[subKey][outcomeCode]) {
+        const studentMap = outcomesRatings[subKey][outcomeCode];
+        for (const stdKey of possibleStudentKeys) {
+          const val = studentMap[stdKey];
+          if (val !== undefined && val !== null && val !== 0 && val !== "") {
+            const parsed = parseInt(val);
+            if (parsed >= 1 && parsed <= 4) return parsed;
+          }
+        }
+      }
     }
 
-    // 2. Derive level from student's entered subject marks if user filled marks
-    const subMarks = stdMarks[subjectName] || {};
-    const obtTotal = (Number(subMarks.oral) || 0) + (Number(subMarks.activity) || 0) + (Number(subMarks.test) || 0) + (Number(subMarks.semesterWritten) || 0);
-    const maxTotal = 100;
-
-    if (obtTotal > 0) {
-      const pct = (obtTotal / maxTotal) * 100;
-      if (pct >= 81) return 4;
-      if (pct >= 61) return 3;
-      if (pct >= 41) return 2;
-      return 1;
+    // 2. Check direct levelsData: levelsData[studentId][outcomeCode]
+    for (const stdKey of possibleStudentKeys) {
+      const stdLevels = levelsData[stdKey];
+      if (stdLevels && typeof stdLevels === "object") {
+        if (stdLevels[outcomeCode]) {
+          const parsed = parseInt(stdLevels[outcomeCode]);
+          if (parsed >= 1 && parsed <= 4) return parsed;
+        }
+        for (const subKey of possibleSubKeys) {
+          if (stdLevels[subKey] && stdLevels[subKey][outcomeCode]) {
+            const parsed = parseInt(stdLevels[subKey][outcomeCode]);
+            if (parsed >= 1 && parsed <= 4) return parsed;
+          }
+        }
+      }
     }
 
-    // 3. No level selected yet by user -> Return null (Keep columns BLANK!)
+    // 3. Derive level from student's entered subject marks if user filled marks
+    for (const stdKey of possibleStudentKeys) {
+      const stdMarks = marksData[stdKey];
+      if (stdMarks && typeof stdMarks === "object") {
+        let subMarks = null;
+        for (const subKey of possibleSubKeys) {
+          if (stdMarks[subKey]) {
+            subMarks = stdMarks[subKey];
+            break;
+          }
+        }
+        if (subMarks) {
+          const oral = Number(subMarks.oral || subMarks.tondiKaam || 0);
+          const act = Number(subMarks.activity || subMarks.upakramKriti || subMarks.pratyakshikPrayog || 0);
+          const test = Number(subMarks.test || subMarks.chaachaniLekhi || 0);
+          const semW = Number(subMarks.semesterWritten || subMarks.sankalitLekhi || 0);
+          const obtTotal = oral + act + test + semW;
+          if (obtTotal > 0) {
+            const pct = (obtTotal / 100) * 100;
+            if (pct >= 81) return 4;
+            if (pct >= 61) return 3;
+            if (pct >= 41) return 2;
+            return 1;
+          }
+        }
+      }
+    }
+
     return null;
   };
 

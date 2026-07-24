@@ -226,15 +226,23 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
         console.error("Error fetching marks:", e);
       }
 
-      // 4. Fetch User's Entered Remarks for this Class & Year (Merging all sources from Bunny CDN & Firestore)
+      // 4. Fetch User's Entered Remarks for this Class & Year (Merging sem1, sem2 & general from Firestore & Bunny CDN)
       try {
         const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
         const bunnyRemarks = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_remarks.json`);
-        const remarksSnap = await getDoc(doc(db, "cce_remarks_v2", docId));
-        const rFsData = remarksSnap.exists() ? remarksSnap.data() : {};
+
+        const remSnapSem2 = await getDoc(doc(db, "cce_remarks_v2", `${selectedClass}_${academicYear}_sem2`));
+        const remSnapSem1 = await getDoc(doc(db, "cce_remarks_v2", `${selectedClass}_${academicYear}_sem1`));
+        const remSnapGen = await getDoc(doc(db, "cce_remarks_v2", docId));
+
+        const rFsDataSem2 = remSnapSem2.exists() ? (remSnapSem2.data().records || remSnapSem2.data()) : {};
+        const rFsDataSem1 = remSnapSem1.exists() ? (remSnapSem1.data().records || remSnapSem1.data()) : {};
+        const rFsDataGen = remSnapGen.exists() ? (remSnapGen.data().records || remSnapGen.data().remarksData || remSnapGen.data()) : {};
 
         const mergedRemarks = {
-          ...(rFsData.remarksData || rFsData.data || rFsData || {}),
+          ...rFsDataGen,
+          ...rFsDataSem1,
+          ...rFsDataSem2,
           ...(bunnyRemarks || {}),
         };
 
@@ -492,30 +500,49 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
                     <span>द्वितीय सत्र</span>
                   </div>
 
-                  {/* Marks Table (Exact Demo Structure from Image 1) */}
+                  {/* Marks Table (Exact Demo Structure with Uniform Column Widths) */}
                   <div className="overflow-x-auto">
-                    <table className="w-full border-collapse border-2 border-[#0080ff] text-xs text-center font-medium">
+                    <table className="w-full border-collapse border-2 border-[#0080ff] text-xs text-center font-medium table-fixed">
+                      <colgroup>
+                        <col style={{ width: "4%" }} />
+                        <col style={{ width: "20%" }} />
+                        <col style={{ width: "6%" }} />
+                        <col style={{ width: "5%" }} />
+                        <col style={{ width: "5%" }} />
+                        <col style={{ width: "5%" }} />
+                        <col style={{ width: "5%" }} />
+                        <col style={{ width: "5%" }} />
+                        <col style={{ width: "5%" }} />
+                        <col style={{ width: "5%" }} />
+                        <col style={{ width: "5%" }} />
+                        <col style={{ width: "5%" }} />
+                        <col style={{ width: "5%" }} />
+                        <col style={{ width: "5%" }} />
+                        <col style={{ width: "5%" }} />
+                        <col style={{ width: "5%" }} />
+                        <col style={{ width: "5%" }} />
+                      </colgroup>
                       <thead>
                         {/* Header Row 1 */}
                         <tr className="bg-[#bfe5ff] text-[#002b66] font-extrabold border-b border-[#0080ff]">
-                          <th rowSpan={3} className="border border-[#0080ff] bg-[#bfe5ff] p-1 w-7 text-center align-middle font-black">
+                          <th rowSpan={3} className="border border-[#0080ff] bg-[#bfe5ff] p-0.5 text-center align-middle font-black">
                             अ.<br />क्र.
                           </th>
-                          <th colSpan={2} rowSpan={2} className="border border-[#0080ff] bg-[#bfe5ff] p-2 text-center align-middle font-black text-sm">
+                          <th colSpan={2} rowSpan={2} className="border border-[#0080ff] bg-[#bfe5ff] p-1 text-center align-middle font-black text-xs">
                             तपशील
                           </th>
-                          <th colSpan={8} className="border border-[#0080ff] bg-[#bfe5ff] p-1.5 text-center font-black">
+                          <th colSpan={8} className="border border-[#0080ff] bg-[#bfe5ff] p-1 text-center font-black">
                             (अ) आकारिक मूल्यांकन
                           </th>
-                          <th colSpan={4} className="border border-[#0080ff] bg-[#bfe5ff] p-1.5 text-center font-black">
+                          <th colSpan={4} className="border border-[#0080ff] bg-[#bfe5ff] p-1 text-center font-black">
                             (ब) संकलित मूल्यांकन
                           </th>
-                          <th rowSpan={2} className="border border-[#0080ff] bg-[#bfe5ff] p-1 w-10 text-center align-middle font-black">
+                          <th rowSpan={2} className="border border-[#0080ff] bg-[#bfe5ff] p-0.5 text-center align-middle font-black">
                             <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>
                               अ + ब
                             </div>
                           </th>
-                          <th rowSpan={3} className="border border-[#0080ff] bg-[#bfe5ff] p-1 w-10 text-center align-middle font-black">
+                          <th rowSpan={3} className="border border-[#0080ff] bg-[#bfe5ff] p-0.5 text-center align-middle font-black">
                             <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>
                               श्रेणी
                             </div>
@@ -602,38 +629,48 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
                           const subData = getSubData(subjectName);
                           const isPracticalSub = subjectName.includes("कला") || subjectName.includes("कार्यानुभव") || subjectName.includes("शारीरिक");
 
-                          // Formative Max
-                          const oralMax = 20;
-                          const actMax = isPracticalSub ? 50 : 15;
-                          const prjMax = isPracticalSub ? 20 : "";
-                          const testMax = isPracticalSub ? "" : 20;
-                          const hwMax = 15;
-                          const formTotalMax = isPracticalSub ? 100 : 70;
+                          // Formative (आकारिक) Obtained Values
+                          const tondiKaamObt = subData.tondiKaam !== undefined && subData.tondiKaam !== "" ? Number(subData.tondiKaam) : (subData.oral !== undefined && subData.oral !== "" ? Number(subData.oral) : "");
+                          const pratyakshikPrayogObt = subData.pratyakshikPrayog !== undefined && subData.pratyakshikPrayog !== "" ? Number(subData.pratyakshikPrayog) : (subData.practical !== undefined && subData.practical !== "" ? Number(subData.practical) : "");
+                          const upakramKritiObt = subData.upakramKriti !== undefined && subData.upakramKriti !== "" ? Number(subData.upakramKriti) : (subData.activity !== undefined && subData.activity !== "" ? Number(subData.activity) : "");
+                          const prakalpaObt = subData.prakalpa !== undefined && subData.prakalpa !== "" ? Number(subData.prakalpa) : (subData.prakalp !== undefined && subData.prakalp !== "" ? Number(subData.prakalp) : (subData.project !== undefined && subData.project !== "" ? Number(subData.project) : ""));
+                          const chaachaniLekhiObt = subData.chaachaniLekhi !== undefined && subData.chaachaniLekhi !== "" ? Number(subData.chaachaniLekhi) : (subData.test !== undefined && subData.test !== "" ? Number(subData.test) : "");
+                          const swadhyayVargakaryaObt = subData.swadhyayVargakarya !== undefined && subData.swadhyayVargakarya !== "" ? Number(subData.swadhyayVargakarya) : (subData.homework !== undefined && subData.homework !== "" ? Number(subData.homework) : "");
+                          const itarObt = subData.itar !== undefined && subData.itar !== "" ? Number(subData.itar) : "";
 
-                          // Summative Max
-                          const semOralMax = isPracticalSub ? "" : 10;
-                          const semWrittenMax = isPracticalSub ? "" : 20;
-                          const semTotalMax = isPracticalSub ? "" : 30;
-                          const grandMax = 100;
+                          // Summative (संकलित) Obtained Values
+                          const sankalitTondiObt = subData.sankalitTondi !== undefined && subData.sankalitTondi !== "" ? Number(subData.sankalitTondi) : (subData.semesterOral !== undefined && subData.semesterOral !== "" ? Number(subData.semesterOral) : "");
+                          const sankalitPratyakshikObt = subData.sankalitPratyakshik !== undefined && subData.sankalitPratyakshik !== "" ? Number(subData.sankalitPratyakshik) : (subData.semesterPractical !== undefined && subData.semesterPractical !== "" ? Number(subData.semesterPractical) : "");
+                          const sankalitLekhiObt = subData.sankalitLekhi !== undefined && subData.sankalitLekhi !== "" ? Number(subData.sankalitLekhi) : (subData.semesterWritten !== undefined && subData.semesterWritten !== "" ? Number(subData.semesterWritten) : "");
 
-                          // Obtained Marks
-                          const oralObt = subData.oral !== undefined ? Number(subData.oral) : (subData.tondiKaam !== undefined ? Number(subData.tondiKaam) : "");
-                          const actObt = subData.activity !== undefined ? Number(subData.activity) : (subData.upakramKriti !== undefined ? Number(subData.upakramKriti) : "");
-                          const prjObt = subData.project !== undefined ? Number(subData.project) : (subData.prakalp !== undefined ? Number(subData.prakalp) : "");
-                          const testObt = subData.test !== undefined ? Number(subData.test) : (subData.chaachaniLekhi !== undefined ? Number(subData.chaachaniLekhi) : "");
-                          const hwObt = subData.swadhyayVargakarya !== undefined ? Number(subData.swadhyayVargakarya) : "";
+                          // Formative (आकारिक) Max Values
+                          const tondiKaamMax = subData.tondiKaamMax || subData.oralMax || 20;
+                          const pratyakshikPrayogMax = subData.pratyakshikPrayogMax || subData.practicalMax || (pratyakshikPrayogObt !== "" ? 5 : "");
+                          const upakramKritiMax = subData.upakramKritiMax || subData.activityMax || (isPracticalSub ? 50 : (upakramKritiObt !== "" ? (upakramKritiObt > 15 ? 50 : 10) : 15));
+                          const prakalpaMax = subData.prakalpaMax || subData.prakalpMax || subData.projectMax || (isPracticalSub ? 20 : (prakalpaObt !== "" ? 5 : ""));
+                          const chaachaniLekhiMax = subData.chaachaniLekhiMax || subData.testMax || (isPracticalSub ? "" : 20);
+                          const swadhyayVargakaryaMax = subData.swadhyayVargakaryaMax || subData.homeworkMax || (swadhyayVargakaryaObt !== "" ? (swadhyayVargakaryaObt > 10 ? 15 : 10) : 15);
+                          const itarMax = subData.itarMax || "";
 
-                          const hasFormative = oralObt !== "" || actObt !== "" || prjObt !== "" || testObt !== "" || hwObt !== "";
-                          const formTotalObt = hasFormative ? ((Number(oralObt) || 0) + (Number(actObt) || 0) + (Number(prjObt) || 0) + (Number(testObt) || 0) + (Number(hwObt) || 0)) : "";
+                          // Summative (संकलित) Max Values
+                          const sankalitTondiMax = subData.sankalitTondiMax || (isPracticalSub ? "" : (sankalitTondiObt !== "" ? (sankalitTondiObt > 10 ? 20 : 10) : 10));
+                          const sankalitPratyakshikMax = subData.sankalitPratyakshikMax || (sankalitPratyakshikObt !== "" ? 5 : "");
+                          const sankalitLekhiMax = subData.sankalitLekhiMax || (isPracticalSub ? "" : (sankalitLekhiObt !== "" ? (sankalitLekhiObt <= 5 ? 5 : 20) : 20));
 
-                          const semOralObt = subData.semesterOral !== undefined ? Number(subData.semesterOral) : (subData.sankalitTondi !== undefined ? Number(subData.sankalitTondi) : "");
-                          const semWrittenObt = subData.semesterWritten !== undefined ? Number(subData.semesterWritten) : (subData.sankalitLekhi !== undefined ? Number(subData.sankalitLekhi) : "");
+                          // Formative Totals
+                          const hasFormative = tondiKaamObt !== "" || pratyakshikPrayogObt !== "" || upakramKritiObt !== "" || prakalpaObt !== "" || chaachaniLekhiObt !== "" || swadhyayVargakaryaObt !== "" || itarObt !== "";
+                          const formTotalObt = hasFormative ? ((Number(tondiKaamObt) || 0) + (Number(pratyakshikPrayogObt) || 0) + (Number(upakramKritiObt) || 0) + (Number(prakalpaObt) || 0) + (Number(chaachaniLekhiObt) || 0) + (Number(swadhyayVargakaryaObt) || 0) + (Number(itarObt) || 0)) : "";
+                          const formTotalMax = (Number(tondiKaamMax) || 0) + (Number(pratyakshikPrayogMax) || 0) + (Number(upakramKritiMax) || 0) + (Number(prakalpaMax) || 0) + (Number(chaachaniLekhiMax) || 0) + (Number(swadhyayVargakaryaMax) || 0) + (Number(itarMax) || 0) || (isPracticalSub ? 100 : 70);
 
-                          const hasSummative = semOralObt !== "" || semWrittenObt !== "";
-                          const semTotalObt = hasSummative ? ((Number(semOralObt) || 0) + (Number(semWrittenObt) || 0)) : "";
+                          // Summative Totals
+                          const hasSummative = sankalitTondiObt !== "" || sankalitPratyakshikObt !== "" || sankalitLekhiObt !== "";
+                          const semTotalObt = hasSummative ? ((Number(sankalitTondiObt) || 0) + (Number(sankalitPratyakshikObt) || 0) + (Number(sankalitLekhiObt) || 0)) : "";
+                          const semTotalMax = isPracticalSub ? "" : ((Number(sankalitTondiMax) || 0) + (Number(sankalitPratyakshikMax) || 0) + (Number(sankalitLekhiMax) || 0) || 30);
 
+                          // Grand Totals
                           const hasGrand = formTotalObt !== "" || semTotalObt !== "";
                           const grandTotalObt = hasGrand ? ((Number(formTotalObt) || 0) + (Number(semTotalObt) || 0)) : "";
+                          const grandMax = 100;
                           const grade = grandTotalObt !== "" ? getGrade((Number(grandTotalObt) / grandMax) * 100) : "";
 
                           return (
@@ -643,17 +680,17 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
                                 <td className="border border-[#0080ff] border-b-0 p-1 font-bold align-middle">{subIdx + 1}</td>
                                 <td className="border border-[#0080ff] border-b-0 p-1 text-[#002b66] text-center font-bold align-middle leading-snug">{subjectName}</td>
                                 <td className="border border-[#0080ff] p-1 text-slate-800 align-middle">पैकी</td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{oralMax}</td>
-                                <td className="border border-[#0080ff] p-1 align-middle"></td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{actMax}</td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{prjMax}</td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{testMax}</td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{hwMax}</td>
-                                <td className="border border-[#0080ff] p-1 align-middle"></td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{tondiKaamMax}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{pratyakshikPrayogMax}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{upakramKritiMax}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{prakalpaMax}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{chaachaniLekhiMax}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{swadhyayVargakaryaMax}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{itarMax}</td>
                                 <td className="border border-[#0080ff] p-1 font-extrabold align-middle">{formTotalMax}</td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{isPracticalSub ? "" : semOralMax}</td>
-                                <td className="border border-[#0080ff] p-1 align-middle"></td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{isPracticalSub ? "" : semWrittenMax}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{sankalitTondiMax}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{sankalitPratyakshikMax}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{sankalitLekhiMax}</td>
                                 <td className="border border-[#0080ff] p-1 font-extrabold align-middle">{semTotalMax}</td>
                                 <td className="border border-[#0080ff] p-1 font-extrabold align-middle">{grandMax}</td>
                                 <td className="border border-[#0080ff] border-b-0 p-1 font-bold text-slate-900 align-middle text-center">{grade}</td>
@@ -664,18 +701,18 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
                                 <td className="border border-[#0080ff] border-t-0 p-1 align-middle"></td>
                                 <td className="border border-[#0080ff] border-t-0 p-1 align-middle"></td>
                                 <td className="border border-[#0080ff] p-1 text-[#002b66] align-middle">प्राप्त</td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{oralObt !== "" ? oralObt : ""}</td>
-                                <td className="border border-[#0080ff] p-1 align-middle"></td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{actObt !== "" ? actObt : ""}</td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{prjObt !== "" ? prjObt : ""}</td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{testObt !== "" ? testObt : ""}</td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{hwObt !== "" ? hwObt : ""}</td>
-                                <td className="border border-[#0080ff] p-1 align-middle"></td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{tondiKaamObt !== "" ? tondiKaamObt : ""}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{pratyakshikPrayogObt !== "" ? pratyakshikPrayogObt : ""}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{upakramKritiObt !== "" ? upakramKritiObt : ""}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{prakalpaObt !== "" ? prakalpaObt : ""}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{chaachaniLekhiObt !== "" ? chaachaniLekhiObt : ""}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{swadhyayVargakaryaObt !== "" ? swadhyayVargakaryaObt : ""}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{itarObt !== "" ? itarObt : ""}</td>
                                 <td className="border border-[#0080ff] p-1 font-black align-middle">{formTotalObt !== "" ? formTotalObt : ""}</td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{isPracticalSub ? "" : (semOralObt !== "" ? semOralObt : "")}</td>
-                                <td className="border border-[#0080ff] p-1 align-middle"></td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{isPracticalSub ? "" : (semWrittenObt !== "" ? semWrittenObt : "")}</td>
-                                <td className="border border-[#0080ff] p-1 font-black align-middle">{isPracticalSub ? "" : (semTotalObt !== "" ? semTotalObt : "")}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{sankalitTondiObt !== "" ? sankalitTondiObt : ""}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{sankalitPratyakshikObt !== "" ? sankalitPratyakshikObt : ""}</td>
+                                <td className="border border-[#0080ff] p-1 align-middle">{sankalitLekhiObt !== "" ? sankalitLekhiObt : ""}</td>
+                                <td className="border border-[#0080ff] p-1 font-black align-middle">{semTotalObt !== "" ? semTotalObt : ""}</td>
                                 <td className="border border-[#0080ff] p-1 font-black align-middle">{grandTotalObt !== "" ? grandTotalObt : ""}</td>
                                 <td className="border border-[#0080ff] border-t-0 p-1 align-middle"></td>
                               </tr>
@@ -723,31 +760,75 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
                       </tr>
                     </thead>
                     <tbody>
-                      {subjects.map((subjectName) => {
-                        const remarkText = studentRemarks[subjectName] || "-";
+                      {(() => {
+                        const getFormattedRemark = (remarksObj, labelOrKey) => {
+                          if (!remarksObj || typeof remarksObj !== "object") return "-";
+                          let val = remarksObj[labelOrKey];
+
+                          if (!val) {
+                            const lower = String(labelOrKey).toLowerCase();
+                            if (lower.includes("मराठी") || lower.includes("prathambhasha")) {
+                              val = remarksObj["prathambhasha"] || remarksObj["marathi"] || remarksObj["प्रथम भाषा : मराठी"] || remarksObj["प्रथम भाषा: मराठी"];
+                            } else if (lower.includes("इंग्रजी") || lower.includes("dvitiybhasha")) {
+                              val = remarksObj["dvitiybhasha"] || remarksObj["english"] || remarksObj["द्वितीय भाषा : इंग्रजी"] || remarksObj["तृतीय भाषा: इंग्रजी"] || remarksObj["तृतीय भाषा : इंग्रजी"];
+                            } else if (lower.includes("गणित") || lower.includes("ganit")) {
+                              val = remarksObj["ganit"] || remarksObj["math"] || remarksObj["गणित"];
+                            } else if (lower.includes("परिसर") || lower.includes("parisar")) {
+                              val = remarksObj["parisar"] || remarksObj["parisar1"] || remarksObj["parisar2"] || remarksObj["परिसर अभ्यास"];
+                            } else if (lower.includes("कला") || lower.includes("kala")) {
+                              val = remarksObj["kala"] || remarksObj["कला"];
+                            } else if (lower.includes("कार्यानुभव") || lower.includes("karyanubhav")) {
+                              val = remarksObj["karyanubhav"] || remarksObj["कार्यानुभव"];
+                            } else if (lower.includes("शारीरिक") || lower.includes("sharirik")) {
+                              val = remarksObj["sharirik"] || remarksObj["शारीरिक शिक्षण"];
+                            } else if (lower.includes("विशेष") || lower.includes("visheshpragati")) {
+                              val = remarksObj["visheshpragati"] || remarksObj["vishesh"] || remarksObj["विशेष प्रगती"];
+                            } else if (lower.includes("सुधारणा") || lower.includes("sudharna")) {
+                              val = remarksObj["sudharna"] || remarksObj["sudharana"] || remarksObj["सुधारणा आवश्यक"];
+                            } else if (lower.includes("आवड") || lower.includes("aavad")) {
+                              val = remarksObj["aavad"] || remarksObj["आवड / छंद"];
+                            } else if (lower.includes("व्यक्तिमत्त्व") || lower.includes("vyaktimatva")) {
+                              val = remarksObj["vyaktimatva"] || remarksObj["व्यक्तिमत्त्व गुणविशेष"] || remarksObj["व्यक्तिमत्व गुणविशेष"];
+                            }
+                          }
+
+                          if (!val) return "-";
+                          if (Array.isArray(val)) {
+                            return val.length > 0 ? val.join(" ") : "-";
+                          }
+                          return String(val).trim() || "-";
+                        };
+
                         return (
-                          <tr key={subjectName} className="border-b border-sky-300 hover:bg-slate-50">
-                            <td className="border border-sky-400 p-2.5 font-bold text-slate-900 bg-sky-50/50">{subjectName}</td>
-                            <td className="border border-sky-400 p-2.5 text-slate-800 leading-relaxed">{remarkText}</td>
-                          </tr>
+                          <>
+                            {subjects.map((subjectName) => {
+                              const remarkText = getFormattedRemark(studentRemarks, subjectName);
+                              return (
+                                <tr key={subjectName} className="border-b border-sky-300 hover:bg-slate-50">
+                                  <td className="border border-sky-400 p-2.5 font-bold text-slate-900 bg-sky-50/50">{subjectName}</td>
+                                  <td className="border border-sky-400 p-2.5 text-slate-800 leading-relaxed">{remarkText}</td>
+                                </tr>
+                              );
+                            })}
+                            <tr className="border-b border-sky-300">
+                              <td className="border border-sky-400 p-2.5 font-bold text-slate-900 bg-sky-50/50">विशेष प्रगती</td>
+                              <td className="border border-sky-400 p-2.5 text-slate-800 leading-relaxed">{getFormattedRemark(studentRemarks, "विशेष प्रगती")}</td>
+                            </tr>
+                            <tr className="border-b border-sky-300">
+                              <td className="border border-sky-400 p-2.5 font-bold text-slate-900 bg-sky-50/50">सुधारणा आवश्यक</td>
+                              <td className="border border-sky-400 p-2.5 text-slate-800 leading-relaxed">{getFormattedRemark(studentRemarks, "सुधारणा आवश्यक")}</td>
+                            </tr>
+                            <tr className="border-b border-sky-300">
+                              <td className="border border-sky-400 p-2.5 font-bold text-slate-900 bg-sky-50/50">आवड / छंद</td>
+                              <td className="border border-sky-400 p-2.5 text-slate-800 leading-relaxed">{getFormattedRemark(studentRemarks, "आवड / छंद")}</td>
+                            </tr>
+                            <tr>
+                              <td className="border border-sky-400 p-2.5 font-bold text-slate-900 bg-sky-50/50">व्यक्तिमत्त्व गुणविशेष</td>
+                              <td className="border border-sky-400 p-2.5 text-slate-800 leading-relaxed">{getFormattedRemark(studentRemarks, "व्यक्तिमत्त्व गुणविशेष")}</td>
+                            </tr>
+                          </>
                         );
-                      })}
-                      <tr className="border-b border-sky-300">
-                        <td className="border border-sky-400 p-2.5 font-bold text-slate-900 bg-sky-50/50">विशेष प्रगती</td>
-                        <td className="border border-sky-400 p-2.5 text-slate-800 leading-relaxed">{studentRemarks["विशेष प्रगती"] || "-"}</td>
-                      </tr>
-                      <tr className="border-b border-sky-300">
-                        <td className="border border-sky-400 p-2.5 font-bold text-slate-900 bg-sky-50/50">सुधारणा आवश्यक</td>
-                        <td className="border border-sky-400 p-2.5 text-slate-800 leading-relaxed">{studentRemarks["सुधारणा आवश्यक"] || "-"}</td>
-                      </tr>
-                      <tr className="border-b border-sky-300">
-                        <td className="border border-sky-400 p-2.5 font-bold text-slate-900 bg-sky-50/50">आवड / छंद</td>
-                        <td className="border border-sky-400 p-2.5 text-slate-800 leading-relaxed">{studentRemarks["आवड / छंद"] || "-"}</td>
-                      </tr>
-                      <tr>
-                        <td className="border border-sky-400 p-2.5 font-bold text-slate-900 bg-sky-50/50">व्यक्तिमत्त्व गुणविशेष</td>
-                        <td className="border border-sky-400 p-2.5 text-slate-800 leading-relaxed">{studentRemarks["व्यक्तिमत्त्व गुणविशेष"] || "-"}</td>
-                      </tr>
+                      })()}
                     </tbody>
                   </table>
                 </div>
@@ -780,7 +861,22 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
               <span>सन: <b>{academicYear}</b></span>
             </div>
 
-            <table className="w-full border-collapse border border-amber-500 text-xs text-center font-medium">
+            <table className="w-full border-collapse border border-amber-500 text-xs text-center font-medium table-fixed">
+              <colgroup>
+                <col style={{ width: "5%" }} />
+                <col style={{ width: "25%" }} />
+                <col style={{ width: "8%" }} />
+                <col style={{ width: "8%" }} />
+                <col style={{ width: "6%" }} />
+                <col style={{ width: "6%" }} />
+                <col style={{ width: "6%" }} />
+                <col style={{ width: "6%" }} />
+                <col style={{ width: "6%" }} />
+                <col style={{ width: "6%" }} />
+                <col style={{ width: "6%" }} />
+                <col style={{ width: "6%" }} />
+                <col style={{ width: "6%" }} />
+              </colgroup>
               <thead>
                 <tr className="bg-amber-100 text-amber-950 font-bold">
                   <th className="border border-amber-500 p-2 w-10">अ. क्र.</th>

@@ -620,31 +620,35 @@ export function CCEStudentInfo({
             onChange={(v) => set("aadhar", v)}
           />
 
-          {/* स्टुडन्ट आयडी */}
-          <PlainInput
+          {/* विद्यार्थी आयडी / Student ID */}
+          <FloatInput
+            label="विद्यार्थी आयडी (Student ID)"
             value={details.studentId}
             onChange={(v) => set("studentId", v)}
-            placeholder="स्टुडन्ट आयडी"
+            clearable
           />
 
-          {/* अपार आयडी */}
-          <PlainInput
+          {/* अपार आयडी / APAAR ID */}
+          <FloatInput
+            label="अपार आयडी (APAAR ID)"
             value={details.aparId}
             onChange={(v) => set("aparId", v)}
-            placeholder="अपार आयडी"
+            clearable
           />
 
           {/* उंची + वजन */}
           <div className="grid grid-cols-2 gap-3">
-            <PlainInput
+            <FloatInput
+              label="उंची (Height सेमी)"
               value={details.height}
               onChange={(v) => set("height", v)}
-              placeholder="उंची"
+              clearable
             />
-            <PlainInput
+            <FloatInput
+              label="वजन (Weight किलो)"
               value={details.weight}
               onChange={(v) => set("weight", v)}
-              placeholder="वजन"
+              clearable
             />
           </div>
 
@@ -687,10 +691,11 @@ export function CCEStudentInfo({
                 onChange={(v) => set("motherName", v)}
                 required
               />
-              <PlainInput
+              <FloatInput
+                label="शिक्षण"
                 value={details.motherEducation}
                 onChange={(v) => set("motherEducation", v)}
-                placeholder="शिक्षण"
+                clearable
               />
               <FloatInput
                 label="व्यवसाय"
@@ -710,10 +715,11 @@ export function CCEStudentInfo({
                 onChange={(v) => set("fatherName", v)}
                 required
               />
-              <PlainInput
+              <FloatInput
+                label="शिक्षण"
                 value={details.fatherEducation}
                 onChange={(v) => set("fatherEducation", v)}
-                placeholder="शिक्षण"
+                clearable
               />
               <FloatInput
                 label="व्यवसाय"
@@ -732,10 +738,11 @@ export function CCEStudentInfo({
           />
 
           {/* भावंडांचे वय */}
-          <PlainInput
+          <FloatInput
+            label="भावंडांचे वय"
             value={details.siblingsAge}
             onChange={(v) => set("siblingsAge", v)}
-            placeholder="भावंडांचे वय"
+            clearable
           />
 
           {/* मातृभाषा */}

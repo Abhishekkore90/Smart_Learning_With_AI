@@ -182,12 +182,10 @@ export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
             <Suspense fallback={renderLoading()}>
               {["5th", "8th"].includes(selectedClass) ? (
                 <Result5th8th initialClass={selectedClass} initialYear={academicYear} />
-              ) : selectedClass === "10th" ? (
-                <ResultSSC initialClass={selectedClass} initialYear={academicYear} />
               ) : selectedClass === "12th" ? (
                 <ResultHSC initialClass={selectedClass} initialYear={academicYear} />
               ) : (
-                <Collectout initialClass={selectedClass} initialYear={academicYear} />
+                <GradeWise initialClass={selectedClass} initialYear={academicYear} onBack={() => setSelectedOption(null)} />
               )}
             </Suspense>
           </PdfErrorBoundary>

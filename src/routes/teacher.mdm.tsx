@@ -1355,6 +1355,71 @@ function TeacherMDMPage() {
     }
   };
 
+  // Stock Received (साहित्य आवक) States & Logic
+  const [incItem, setIncItem] = useState("");
+  const [incQty, setIncQty] = useState("");
+  const [incDate, setIncDate] = useState(
+    new Date().toISOString().split("T")[0],
+  );
+  const [incRemark, setIncRemark] = useState("");
+  const [incRecords, setIncRecords] = useState<
+    { id: string; item: string; qty: string; date: string; remark: string }[]
+  >([]);
+
+  const handleSaveIncomingStock = async () => {
+    if (!user) return;
+    if (!incItem || !incQty) {
+      toast.warning(t("कृपया साहित्य आणि प्रमाण प्रविष्ट करा.", "Please select item and quantity."));
+      return;
+    }
+    setSaving(true);
+    try {
+      const udise = getUdise();
+      const newRecord = {
+        id: Date.now().toString(),
+        item: incItem,
+        qty: incQty,
+        date: incDate,
+        remark: incRemark,
+      };
+      const updated = [newRecord, ...incRecords];
+      setIncRecords(updated);
+      setIncItem("");
+      setIncQty("");
+      setIncRemark("");
+
+      await setDoc(
+        doc(db, "school_data", `${udise}_mdm`),
+        { incomingRecords: updated, updatedAt: new Date().toISOString() },
+        { merge: true },
+      );
+      toast.success(t("प्राप्त साठा नोंद यशस्वीरित्या जतन केली!", "Stock received record saved successfully!"));
+    } catch (e) {
+      console.error(e);
+      toast.error(t("नोंद जतन करण्यात अडचण आली.", "Failed to save record"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteIncomingStock = async (id: string) => {
+    if (!user) return;
+    try {
+      const udise = getUdise();
+      const updated = incRecords.filter((r) => r.id !== id);
+      setIncRecords(updated);
+      await setDoc(
+        doc(db, "school_data", `${udise}_mdm`),
+        { incomingRecords: updated, updatedAt: new Date().toISOString() },
+        { merge: true },
+      );
+      toast.success(t("नोंद यशस्वीरित्या हटवली!", "Record deleted successfully!"));
+    } catch (e) {
+      console.error(e);
+      toast.error(t("नोंद हटवण्यात अडचण आली.", "Failed to delete record"));
+    }
+  };
+
   // Loksahabhag (Public Contribution) States & Logic
   const [lokItem, setLokItem] = useState("");
   const [lokQty, setLokQty] = useState("");
@@ -4573,6 +4638,156 @@ function TeacherMDMPage() {
                   </div>
                 )}
 
+                {/* 2. STOCK RECEIVED (साहित्य आवक) TAB - Learnify Exact UI */}
+                {activeTab === "incoming" && (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between border-b pb-3">
+                      <h2 className="text-xl font-bold text-slate-800">
+                        {lang === "mr" ? "साहित्य आवक (Stock Received)" : "Stock Received"}
+                      </h2>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                      {/* Left Column: Form Card (प्राप्त साठा नोंदवा) */}
+                      <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+                        <h3 className="font-bold text-base text-slate-800 border-b pb-2">
+                          {lang === "mr" ? "प्राप्त साठा नोंदवा" : "Record Stock Received"}
+                        </h3>
+                        <div className="space-y-4">
+                          {/* 1. साहित्य */}
+                          <div>
+                            <label className="text-xs font-bold text-slate-600 block mb-1.5">
+                              {lang === "mr" ? "साहित्य" : "Material / Item"}
+                            </label>
+                            <select
+                              value={incItem}
+                              onChange={(e) => setIncItem(e.target.value)}
+                              className="w-full h-11 px-3.5 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 bg-white"
+                            >
+                              <option value="">{lang === "mr" ? "साहित्य निवडा" : "Select Material"}</option>
+                              <option value="तांदूळ">तांदूळ (Rice)</option>
+                              <option value="मूगडाळ">मूगडाळ (Moong Dal)</option>
+                              <option value="तूरडाळ">तूरडाळ (Tur Dal)</option>
+                              <option value="मसूरडाळ">मसूरडाळ (Masoor Dal)</option>
+                              <option value="मटकी">मटकी (Moth Beans)</option>
+                              <option value="मूग">मूग (Whole Moong)</option>
+                              <option value="चवळी">चवळी (Cowpea)</option>
+                              <option value="हरभरा">हरभरा (Chana)</option>
+                              <option value="वाटाणा">वाटाणा (Peas)</option>
+                              <option value="सोयाबीन वडी">सोयाबीन वडी (Soyabean Chunks)</option>
+                              <option value="जिरे">जिरे (Cumin)</option>
+                              <option value="मोहरी">मोहरी (Mustard)</option>
+                              <option value="हळद">हळद (Turmeric)</option>
+                              <option value="तिखट मसाला">तिखट मसाला (Chili Masala)</option>
+                              <option value="कांदा लसूण मसाला">कांदा लसूण मसाला (Onion Garlic Masala)</option>
+                              <option value="गरम मसाला">गरम मसाला (Garam Masala)</option>
+                              <option value="तेल">तेल (Cooking Oil)</option>
+                              <option value="मीठ">मीठ (Salt)</option>
+                            </select>
+                          </div>
+
+                          {/* 2. प्रमाण */}
+                          <div>
+                            <label className="text-xs font-bold text-slate-600 block mb-1.5">
+                              {lang === "mr" ? "प्रमाण" : "Quantity"}
+                            </label>
+                            <input
+                              type="number"
+                              step="0.0001"
+                              placeholder={lang === "mr" ? "प्रमाण (kg)" : "Quantity (kg)"}
+                              value={incQty}
+                              onChange={(e) => setIncQty(e.target.value)}
+                              className="w-full h-11 px-3.5 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 bg-white"
+                            />
+                          </div>
+
+                          {/* 3. दिनांक */}
+                          <div>
+                            <label className="text-xs font-bold text-slate-600 block mb-1.5">
+                              {lang === "mr" ? "दिनांक" : "Date"}
+                            </label>
+                            <input
+                              type="date"
+                              value={incDate}
+                              onChange={(e) => setIncDate(e.target.value)}
+                              className="w-full h-11 px-3.5 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 bg-white"
+                            />
+                          </div>
+
+                          {/* 4. शेरा */}
+                          <div>
+                            <label className="text-xs font-bold text-slate-600 block mb-1.5">
+                              {lang === "mr" ? "शेरा" : "Remarks"}
+                            </label>
+                            <textarea
+                              rows={3}
+                              placeholder={lang === "mr" ? "शेरा" : "Enter remarks..."}
+                              value={incRemark}
+                              onChange={(e) => setIncRemark(e.target.value)}
+                              className="w-full p-3.5 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 bg-white resize-none"
+                            />
+                          </div>
+
+                          {/* 5. Save Button */}
+                          <button
+                            onClick={handleSaveIncomingStock}
+                            disabled={saving}
+                            className="px-6 py-2.5 bg-[#008955] hover:bg-[#007044] text-white rounded-lg font-bold text-sm shadow transition-all flex items-center gap-2"
+                          >
+                            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                            <span>Save</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Right Column: Recent Entries Table (अलीकडील नोंदी) */}
+                      <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <h3 className="font-bold text-base text-slate-800 border-b pb-2">
+                          {lang === "mr" ? "अलीकडील नोंदी" : "Recent Entries"}
+                        </h3>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left text-xs border-collapse">
+                            <thead>
+                              <tr className="border-b border-slate-200 bg-slate-50 text-slate-700 font-bold">
+                                <th className="p-3 font-bold">{lang === "mr" ? "दिनांक" : "Date"}</th>
+                                <th className="p-3 font-bold">{lang === "mr" ? "साहित्य" : "Material"}</th>
+                                <th className="p-3 font-bold">{lang === "mr" ? "प्रमाण" : "Quantity"}</th>
+                                <th className="p-3 font-bold text-right"></th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {incRecords.length === 0 ? (
+                                <tr>
+                                  <td colSpan={4} className="p-8 text-center text-slate-400 font-medium">
+                                    {lang === "mr" ? "कोणतीही प्राप्त साठा नोंद उपलब्ध नाही." : "No stock received records found."}
+                                  </td>
+                                </tr>
+                              ) : (
+                                incRecords.map((r) => (
+                                  <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50/80">
+                                    <td className="p-3 font-medium text-slate-800">{r.date}</td>
+                                    <td className="p-3 font-bold text-slate-900">{r.item}</td>
+                                    <td className="p-3 font-bold text-slate-800">{parseFloat(r.qty).toFixed(4)} kg</td>
+                                    <td className="p-3 text-right">
+                                      <button
+                                        onClick={() => handleDeleteIncomingStock(r.id)}
+                                        className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors"
+                                        title="Delete"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* LOKSAHABHAG (PUBLIC CONTRIBUTION) TAB */}
                 {activeTab === "loksahabhag" && (
                   <div className="space-y-6">
@@ -5306,13 +5521,6 @@ function TeacherMDMPage() {
                               "Mugdal",
                               "Turdal",
                               "Masurdal",
-                              "Matki",
-                              "Moong",
-                              "Cowpea",
-                              "Gram",
-                              "Pease",
-                              "Mustard",
-                              "Cumin",
                             ].map((item) => (
                               <label
                                 key={item}
@@ -5344,12 +5552,6 @@ function TeacherMDMPage() {
                               "Salt",
                               "Onion Garlic Masala",
                               "Garam Masala",
-                              "Chili",
-                              "Vegetables",
-                              "Milk-Milk Powder",
-                              "Sugar-Jaggery",
-                              "Soyabean Wadi",
-                              "Ragi Satva",
                             ].map((item) => (
                               <label
                                 key={item}
@@ -5538,426 +5740,6 @@ function TeacherMDMPage() {
                               </button>
                               <button
                                 onClick={() => setShowMenuReportModal(false)}
-                                className="px-5 py-1.5 bg-[#f44336] hover:bg-red-700 text-white rounded text-[13px] font-semibold shadow-md transition-colors"
-                              >
-                                {t("बंद करा", "Close", "बंद करें")}
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* 3. INCOMING ENTRY TAB */}
-                {activeTab === "incoming" && (
-                  <div className="bg-white p-12 border border-slate-300 w-full min-h-[800px] flex flex-col items-center">
-                    <div className="w-full max-w-[800px] space-y-10">
-                      {/* Title */}
-                      <div className="text-center py-4">
-                        <h2 className="text-2xl font-bold text-[#004C99]">
-                          {t("येणारी नोंद", "Incoming entry", "आगम प्रविष्टि")}
-                        </h2>
-                      </div>
-
-                      {/* Dropdowns row */}
-                      <div className="flex flex-col md:flex-row justify-center items-center gap-8 py-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-slate-800">
-                            {t("वर्ष:", "Year:")}
-                          </span>
-                          <select
-                            value={incomingYear}
-                            onChange={(e) => setIncomingYear(e.target.value)}
-                            className="h-8 px-2 bg-white border border-black rounded shadow-sm text-sm font-medium"
-                          >
-                            <option value="Select Year">
-                              {t("वर्ष निवडा", "Select Year")}
-                            </option>
-                            <option value="2020">2020</option>
-                            <option value="2021">2021</option>
-                            <option value="2022">2022</option>
-                            <option value="2023">2023</option>
-                            <option value="2024">2024</option>
-                            <option value="2025">2025</option>
-                            <option value="2026">2026</option>
-                            <option value="2027">2027</option>
-                            <option value="2028">2028</option>
-                            <option value="2029">2029</option>
-                            <option value="2030">2030</option>
-                          </select>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-slate-800">
-                            {t("महिना:", "Month:")}
-                          </span>
-                          <select
-                            value={incomingMonth}
-                            onChange={(e) => setIncomingMonth(e.target.value)}
-                            className="h-8 px-2 bg-white border border-black rounded shadow-sm text-sm font-medium min-w-[120px]"
-                          >
-                            <option value="Select Month">
-                              {t("महिना निवडा", "Select Month")}
-                            </option>
-                            {[
-                              "January",
-                              "February",
-                              "March",
-                              "April",
-                              "May",
-                              "June",
-                              "July",
-                              "August",
-                              "September",
-                              "October",
-                              "November",
-                              "December",
-                            ].map((m) => (
-                              <option key={m} value={m}>
-                                {t(
-                                  m === "January"
-                                    ? "जानेवारी"
-                                    : m === "February"
-                                      ? "फेब्रुवारी"
-                                      : m === "March"
-                                        ? "मार्च"
-                                        : m === "April"
-                                          ? "एप्रिल"
-                                          : m === "May"
-                                            ? "मे"
-                                            : m === "June"
-                                              ? "जून"
-                                              : m === "July"
-                                                ? "जुलै"
-                                                : m === "August"
-                                                  ? "ऑगस्ट"
-                                                  : m === "September"
-                                                    ? "सप्टेंबर"
-                                                    : m === "October"
-                                                      ? "ऑक्टोबर"
-                                                      : m === "November"
-                                                        ? "नोव्हेंबर"
-                                                        : "डिसेंबर",
-                                  m,
-                                  m === "January"
-                                    ? "जनवरी"
-                                    : m === "February"
-                                      ? "फरवरी"
-                                      : m === "March"
-                                        ? "मार्च"
-                                        : m === "April"
-                                          ? "अप्रैल"
-                                          : m === "May"
-                                            ? "मई"
-                                            : m === "June"
-                                              ? "जून"
-                                              : m === "July"
-                                                ? "जुलाई"
-                                                : m === "August"
-                                                  ? "अगस्त"
-                                                  : m === "September"
-                                                    ? "सितंबर"
-                                                    : m === "October"
-                                                      ? "अक्टूबर"
-                                                      : m === "November"
-                                                        ? "नवंबर"
-                                                        : "दिसंबर",
-                                )}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-slate-800">
-                            {t("इयत्ता:", "Class:")}
-                          </span>
-                          <select
-                            value={incomingClass}
-                            onChange={(e) => setIncomingClass(e.target.value)}
-                            className="h-8 px-2 bg-white border border-black rounded shadow-sm text-sm font-medium"
-                          >
-                            <option value="Select Class">
-                              {t("इयत्ता निवडा", "Select Class")}
-                            </option>
-                            <option value="1 To 5">
-                              {t("१ ते ५", "1 To 5", "1 से 5")}
-                            </option>
-                            <option value="6 To 8">
-                              {t("६ ते ८", "6 To 8", "6 से 8")}
-                            </option>
-                          </select>
-                        </div>
-                      </div>
-
-                      {/* Divider */}
-                      <div className="h-px w-full bg-slate-300" />
-
-                      {/* Table Section */}
-                      <div className="w-full overflow-x-auto">
-                        <table className="w-full border-collapse border border-black text-slate-900 bg-white">
-                          <thead>
-                            <tr className="bg-white">
-                              <th className="border border-black p-2 text-sm font-bold text-center w-[25%]">
-                                {t("साहित्य", "Items", "सामग्री")}
-                              </th>
-                              <th className="border border-black p-2 text-sm font-bold text-center w-[25%]">
-                                {t(
-                                  "प्रमाण (१ ग्राम = ०.००१ किलो)",
-                                  "Quantity(1gram = 0.001 kilo)",
-                                  "मात्रा (1 ग्राम = 0.001 किलोग्राम)",
-                                )}
-                              </th>
-                              <th className="border border-black p-2 text-sm font-bold text-center w-[25%]">
-                                {t("साहित्य", "Items", "सामग्री")}
-                              </th>
-                              <th className="border border-black p-2 text-sm font-bold text-center w-[25%]">
-                                {t(
-                                  "प्रमाण (१ ग्राम = ०.००१ किलो)",
-                                  "Quantity(1gram = 0.001 kilo)",
-                                  "मात्रा (1 ग्राम = 0.001 किलोग्राम)",
-                                )}
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {[
-                              { left: "Rice", right: "Turmeric" },
-                              { left: "Mugdal", right: "Chili" },
-                              { left: "Turdal", right: "Oil" },
-                              { left: "Masurdal", right: "Salt" },
-                              { left: "Matki", right: "Onion Garlic Masala" },
-                              { left: "Moong", right: "Garam Masala" },
-                              { left: "Cowpea", right: "Vegetables" },
-                              { left: "Gram", right: "Milk-Milk Powder" },
-                              { left: "Pease", right: "Sugar-Jaggery" },
-                              { left: "Cumin", right: "Soyabean Wadi" },
-                              { left: "Mustard", right: "Ragi Satva" },
-                            ].map((row, i) => (
-                              <tr key={i} className="bg-white">
-                                <td className="border border-black p-2 text-center text-xs font-medium text-slate-700">
-                                  {getTranslatedItem(row.left)}
-                                </td>
-                                <td className="border border-black p-2 text-center text-xs font-medium">
-                                  <input
-                                    type="text"
-                                    value={incomingQuantities[row.left] || ""}
-                                    onChange={(e) =>
-                                      setIncomingQuantities({
-                                        ...incomingQuantities,
-                                        [row.left]: e.target.value,
-                                      })
-                                    }
-                                    className="w-[80%] mx-auto text-center border-t-0 border-l-0 border-r-0 border-b border-slate-400 focus:border-black outline-none bg-transparent text-slate-850 font-bold"
-                                  />
-                                </td>
-                                <td className="border border-black p-2 text-center text-xs font-medium text-slate-700">
-                                  {getTranslatedItem(row.right)}
-                                </td>
-                                <td className="border border-black p-2 text-center text-xs font-medium">
-                                  <input
-                                    type="text"
-                                    value={incomingQuantities[row.right] || ""}
-                                    onChange={(e) =>
-                                      setIncomingQuantities({
-                                        ...incomingQuantities,
-                                        [row.right]: e.target.value,
-                                      })
-                                    }
-                                    className="w-[80%] mx-auto text-center border-t-0 border-l-0 border-r-0 border-b border-slate-400 focus:border-black outline-none bg-transparent text-slate-850 font-bold"
-                                  />
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-
-                      {/* Save & Report Buttons Row */}
-                      <div className="py-2 w-full flex justify-start gap-4">
-                        <button
-                          onClick={handleSaveIncoming}
-                          className="px-5 py-2 bg-[#4CAF50] hover:bg-[#43A047] text-white rounded text-xs font-bold shadow-md transition-colors"
-                        >
-                          {t("जतन करा", "Save", "सहेजें")}
-                        </button>
-                        <button
-                          onClick={handleIncomingReport}
-                          className="px-5 py-2 bg-[#007bff] hover:bg-blue-700 text-white rounded text-xs font-bold shadow-md transition-colors"
-                        >
-                          {t("अहवाल", "Report", "रिपोर्ट")}
-                        </button>
-                      </div>
-
-                      {/* Incoming Report Modal */}
-                      {showIncomingReportModal && (
-                        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-transparent backdrop-blur-sm font-sans p-4">
-                          <div className="bg-white p-6 rounded-md shadow-2xl border border-slate-200 w-full max-w-[650px] max-h-[95vh] flex flex-col relative print:shadow-none print:border-none print:w-full print:max-w-full print:p-0 print:h-auto">
-                            {/* Printable Area */}
-                            <div
-                              className="border border-black flex-1 overflow-y-auto print:overflow-visible bg-white print:border-none"
-                              id="incoming-report-print"
-                            >
-                              {/* Header */}
-                              <div className="text-center text-black border-b border-black py-4 print:border-b-2">
-                                <h3 className="font-bold text-sm tracking-[0.2em] uppercase">
-                                  {profile?.schoolName || "A B C"}
-                                </h3>
-                                <p className="text-[10px] mt-1">
-                                  {t("तालुका:", "Taluka:")}{" "}
-                                  {profile?.taluka || ""}, UDISE: {getUdise()}
-                                </p>
-                                <p className="text-[10px] mb-2">
-                                  {t(
-                                    "येणारा साठा अहवाल",
-                                    "Incoming Stock Report",
-                                    "आगम स्टॉक रिपोर्ट",
-                                  )}{" "}
-                                  (
-                                  {t(
-                                    incomingMonth === "January"
-                                      ? "जानेवारी"
-                                      : incomingMonth === "February"
-                                        ? "फेब्रुवारी"
-                                        : incomingMonth === "March"
-                                          ? "मार्च"
-                                          : incomingMonth === "April"
-                                            ? "एप्रिल"
-                                            : incomingMonth === "May"
-                                              ? "मे"
-                                              : incomingMonth === "June"
-                                                ? "जून"
-                                                : incomingMonth === "July"
-                                                  ? "जुलै"
-                                                  : incomingMonth === "August"
-                                                    ? "ऑगस्ट"
-                                                    : incomingMonth ===
-                                                      "September"
-                                                      ? "सप्टेंबर"
-                                                      : incomingMonth ===
-                                                        "October"
-                                                        ? "ऑक्टोबर"
-                                                        : incomingMonth ===
-                                                          "November"
-                                                          ? "नोव्हेंबर"
-                                                          : incomingMonth ===
-                                                            "December"
-                                                            ? "डिसेंबर"
-                                                            : incomingMonth,
-                                    incomingMonth,
-                                    incomingMonth === "January"
-                                      ? "जनवरी"
-                                      : incomingMonth === "February"
-                                        ? "फरवरी"
-                                        : incomingMonth === "March"
-                                          ? "मार्च"
-                                          : incomingMonth === "April"
-                                            ? "अप्रैल"
-                                            : incomingMonth === "May"
-                                              ? "मई"
-                                              : incomingMonth === "June"
-                                                ? "जून"
-                                                : incomingMonth === "July"
-                                                  ? "जुलाई"
-                                                  : incomingMonth === "August"
-                                                    ? "अगस्त"
-                                                    : incomingMonth ===
-                                                      "September"
-                                                      ? "सितंबर"
-                                                      : incomingMonth ===
-                                                        "October"
-                                                        ? "अक्टूबर"
-                                                        : incomingMonth ===
-                                                          "November"
-                                                          ? "नवंबर"
-                                                          : incomingMonth ===
-                                                            "December"
-                                                            ? "दिसंबर"
-                                                            : incomingMonth,
-                                  )}{" "}
-                                  {incomingYear})
-                                </p>
-
-                                <div className="flex justify-center mt-1">
-                                  <div className="bg-black text-white px-5 py-1 text-xs font-bold rounded shadow-sm print:border print:border-black print:text-black print:bg-white">
-                                    {t(
-                                      "येणारा साठा",
-                                      "Incoming Stock",
-                                      "आगम स्टॉक",
-                                    )}{" "}
-                                    ( {t("इयत्ता", "Class", "कक्षा")}{" "}
-                                    {incomingClass === "1 To 5"
-                                      ? t("१ ते ५", "1 To 5", "1 से 5")
-                                      : t("६ ते ८", "6 To 8", "6 से 8")}{" "}
-                                    )
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Table */}
-                              <table className="w-full border-collapse text-black text-[11px] text-center">
-                                <thead>
-                                  <tr>
-                                    <th className="border-b border-r border-black py-2 font-bold w-[20%]">
-                                      {t("अ.क्र.", "Sr.No", "क्र.")}
-                                    </th>
-                                    <th className="border-b border-r border-black py-2 font-bold w-[45%]">
-                                      {t(
-                                        "साहित्याचे नाव",
-                                        "Item name",
-                                        "सामग्री का नाम",
-                                      )}
-                                    </th>
-                                    <th className="border-b border-black py-2 font-bold w-[35%]">
-                                      {t(
-                                        "प्राप्त प्रमाण (ग्राम / युनिट्स)",
-                                        "Quantity Received (grams / units)",
-                                        "मात्रा प्राप्त (ग्राम / इकाइयां)",
-                                      )}
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {Object.keys(incomingQuantities).map(
-                                    (item, idx) => {
-                                      const qty = incomingQuantities[item];
-                                      return (
-                                        <tr key={item}>
-                                          <td className="border-b border-r border-black py-1.5">
-                                            {idx + 1}
-                                          </td>
-                                          <td className="border-b border-r border-black py-1.5">
-                                            {getTranslatedItem(item)}
-                                          </td>
-                                          <td className="border-b border-black py-1.5">
-                                            {qty || "0"}
-                                          </td>
-                                        </tr>
-                                      );
-                                    },
-                                  )}
-                                </tbody>
-                              </table>
-                            </div>
-
-                            {/* Actions */}
-                            <div className="flex justify-end gap-3 mt-4 print:hidden">
-                              <button
-                                onClick={handleIncomingReportDownload}
-                                className="px-5 py-1.5 bg-[#007bff] hover:bg-blue-700 text-white rounded text-[13px] font-semibold shadow-md transition-colors"
-                              >
-                                {t(
-                                  "डाउनलोड पीडीएफ",
-                                  "Download PDF",
-                                  "डाउनलोड पीडीएफ",
-                                )}
-                              </button>
-                              <button
-                                onClick={() =>
-                                  setShowIncomingReportModal(false)
-                                }
                                 className="px-5 py-1.5 bg-[#f44336] hover:bg-red-700 text-white rounded text-[13px] font-semibold shadow-md transition-colors"
                               >
                                 {t("बंद करा", "Close", "बंद करें")}

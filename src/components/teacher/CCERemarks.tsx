@@ -1197,14 +1197,36 @@ export function CCERemarks({ selectedClass, academicYear, selectedMedium: propMe
           </button>
           <h2 className="text-base font-bold text-slate-800">वर्णनात्मक नोंदी</h2>
         </div>
-        {/* Student Information Banner */}
-        <div className="flex items-center gap-3 px-5 py-3 flex-shrink-0 border-b border-slate-100 bg-slate-50/50">
-          <div className="w-8 h-8 rounded-full font-bold text-sm flex items-center justify-center border border-blue-100 bg-blue-50 text-blue-600 flex-shrink-0">
-            {editingStudent.rollNo || students.indexOf(editingStudent) + 1}
+        {/* Student Information & Semester Switcher Banner */}
+        <div className="flex items-center justify-between gap-3 px-5 py-3 flex-shrink-0 border-b border-slate-100 bg-slate-50/50">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="w-8 h-8 rounded-full font-bold text-sm flex items-center justify-center border border-blue-100 bg-blue-50 text-blue-600 flex-shrink-0">
+              {editingStudent.rollNo || students.indexOf(editingStudent) + 1}
+            </div>
+            <span className="text-[14px] font-bold text-slate-800 truncate">
+              {editingStudent.fullName || editingStudent.name || "विद्यार्थी"}
+            </span>
           </div>
-          <span className="text-[14px] font-semibold text-slate-800 flex-1">
-            {editingStudent.fullName || editingStudent.name || "विद्यार्थी."}
-          </span>
+
+          <div className="flex bg-slate-200/80 p-0.5 rounded-lg border border-slate-300/50">
+            {(["sem1", "sem2"] as Semester[]).map((sem) => (
+              <button
+                key={sem}
+                type="button"
+                onClick={() => {
+                  setActiveSemester(sem);
+                  setStudentRemarks(allRemarks[editingStudent.id] || {});
+                }}
+                className={`px-3 py-1.5 text-xs font-extrabold rounded-md transition-all cursor-pointer ${
+                  activeSemester === sem
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                {sem === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}
+              </button>
+            ))}
+          </div>
         </div>
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto pb-24 px-4 py-3 space-y-1">
