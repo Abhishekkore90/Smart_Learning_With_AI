@@ -6,7 +6,6 @@ const startDir = path.join(__dirname, 'node_modules');
 function findFiles(dir, fileNames, results = []) {
   if (!fs.existsSync(dir)) return results;
   
-  // Quick check to avoid traversing too deep into unrelated directories
   const base = path.basename(dir);
   if (base === '.bin' || base === 'src' || base === 'docs' || base === 'test' || base === 'tests') {
     return results;
@@ -26,7 +25,6 @@ function findFiles(dir, fileNames, results = []) {
       if (stat.isDirectory()) {
         findFiles(filePath, fileNames, results);
       } else if (fileNames.includes(file)) {
-        // Double check it's part of the code-splitter package
         if (filePath.includes('@tanstack') && filePath.includes('code-splitter')) {
           results.push(filePath);
         }
@@ -38,26 +36,40 @@ function findFiles(dir, fileNames, results = []) {
   return results;
 }
 
-console.log(`Scanning for compilers.js and compilers.cjs in ${startDir}...`);
+console.log(`[patch-router] Checking TanStack Router compiler files...`);
 const targetFiles = findFiles(startDir, ['compilers.js', 'compilers.cjs']);
 
-console.log(`Found ${targetFiles.length} file(s) to patch.`);
-
+let patchedCount = 0;
 targetFiles.forEach(filePath => {
   try {
     let content = fs.readFileSync(filePath, 'utf8');
     
-    const target = "import('${splitUrl}')";
+    const targets = [
+      "import('${splitUrl}')",
+      "import(`${splitUrl}`)"
+    ];
     const replacement = "import(${JSON.stringify(splitUrl)})";
     
-    if (content.includes(target)) {
-      content = content.split(target).join(replacement);
+    let isModified = false;
+    for (const target of targets) {
+      if (content.includes(target)) {
+        content = content.split(target).join(replacement);
+        isModified = true;
+      }
+    }
+    
+    if (isModified) {
       fs.writeFileSync(filePath, content, 'utf8');
-      console.log(`Successfully patched: ${filePath}`);
-    } else {
-      console.log(`Already patched or target pattern not found in: ${filePath}`);
+      console.log(`[patch-router] Successfully patched: ${path.relative(__dirname, filePath)}`);
+      patchedCount++;
     }
   } catch (err) {
-    console.error(`Failed to patch ${filePath}:`, err);
+    console.error(`[patch-router] Failed to check/patch ${filePath}:`, err.message);
   }
 });
+
+if (patchedCount === 0) {
+  console.log(`[patch-router] All router files are up-to-date (no patch needed).`);
+} else {
+  console.log(`[patch-router] Patched ${patchedCount} router file(s).`);
+}

@@ -27,7 +27,6 @@ import {
   ArrowUpRight,
   FileText,
   Award,
-<<<<<<< HEAD
   ShieldCheck,
   Settings,
   Zap,
@@ -36,8 +35,6 @@ import {
   Info,
   Sliders,
   X,
-=======
->>>>>>> 6901c0919e7321f3df371c920bce7c5be8c8d6c7
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
@@ -1531,7 +1528,6 @@ function TeacherMDMPage() {
     }
   };
 
-<<<<<<< HEAD
   // Monthly Calendar States & Logic (Admin Master Calendar & Custom Calendar)
   const [calMonth, setCalMonth] = useState<number>(new Date().getMonth() + 1);
   const [calYear, setCalYear] = useState<number>(new Date().getFullYear());
@@ -1680,24 +1676,6 @@ function TeacherMDMPage() {
 
     setShowAutoFillModal(false);
     toast.success(t(`सर्व कामकाजाच्या दिवसांसाठी ${countNum} उपस्थिती भरली!`, `Auto-filled ${countNum} attendance for all working days!`));
-=======
-  // Monthly Calendar States & Logic
-  const [calMonth, setCalMonth] = useState<number>(new Date().getMonth() + 1);
-  const [calYear, setCalYear] = useState<number>(new Date().getFullYear());
-  const [calSection, setCalSection] = useState<"1-5" | "6-8">("1-5");
-  const [calEntries, setCalEntries] = useState<
-    Record<string, { beneficiary: string; isHoliday: boolean; holidayReason: string; menu: string }>
-  >({});
-
-  const handleCalEntryChange = (dateStr: string, field: "beneficiary" | "isHoliday" | "holidayReason" | "menu", val: any) => {
-    setCalEntries((prev) => ({
-      ...prev,
-      [dateStr]: {
-        ...(prev[dateStr] || { beneficiary: "0", isHoliday: false, holidayReason: "", menu: "वरण भात" }),
-        [field]: val,
-      },
-    }));
->>>>>>> 6901c0919e7321f3df371c920bce7c5be8c8d6c7
   };
 
   const handleSaveMonthlyCalendar = async () => {
@@ -1705,7 +1683,6 @@ function TeacherMDMPage() {
     setSaving(true);
     try {
       const udise = getUdise();
-<<<<<<< HEAD
       const updatedCalendarRecords = {
         ...monthlyCalendarRecords,
         [`${calYear}_${calMonth}_${calSection}`]: calEntries,
@@ -1716,24 +1693,12 @@ function TeacherMDMPage() {
         doc(db, "school_data", `${udise}_mdm`),
         {
           monthlyCalendar: updatedCalendarRecords,
-=======
-      await setDoc(
-        doc(db, "school_data", `${udise}_mdm`),
-        {
-          monthlyCalendar: {
-            [`${calYear}_${calMonth}_${calSection}`]: calEntries,
-          },
->>>>>>> 6901c0919e7321f3df371c920bce7c5be8c8d6c7
           updatedAt: new Date().toISOString(),
         },
         { merge: true },
       );
-<<<<<<< HEAD
       setMonthlyCalendarRecords(updatedCalendarRecords);
       toast.success(t("मासिक कॅलेंडर हजेरी व मेनू जतन केला!", "Monthly Calendar attendance and menu saved successfully!"));
-=======
-      toast.success(t("मासिक कॅलेंडर हजेरी जतन केली!", "Monthly Calendar attendance saved successfully!"));
->>>>>>> 6901c0919e7321f3df371c920bce7c5be8c8d6c7
     } catch (e) {
       console.error(e);
       toast.error(t("नोंद जतन करण्यात अडचण आली.", "Failed to save calendar data"));
@@ -2834,12 +2799,9 @@ function TeacherMDMPage() {
             if (firestoreData.eggBananaRecord.records)
               setEggBananaRecords(firestoreData.eggBananaRecord.records);
           }
-<<<<<<< HEAD
           if (firestoreData.monthlyCalendar) {
             setMonthlyCalendarRecords(firestoreData.monthlyCalendar);
           }
-=======
->>>>>>> 6901c0919e7321f3df371c920bce7c5be8c8d6c7
         }
         setLoading(false);
       },
@@ -4332,7 +4294,6 @@ function TeacherMDMPage() {
                 transition={{ duration: 0.4 }}
                 className="bg-white/60 backdrop-blur-3xl rounded-[3rem] border border-slate-200 shadow-[0_32px_64px_-20px_rgba(0,0,0,0.5)] overflow-hidden p-6 md:p-10"
               >
-<<<<<<< HEAD
                 {/* MONTHLY CALENDAR ATTENDANCE & MDM ENTRY TAB (Learnify Academy Format) */}
                 {activeTab === "monthly-calendar" && (
                   <div className="space-y-5 font-sans text-slate-800">
@@ -4381,80 +4342,10 @@ function TeacherMDMPage() {
                           className="h-10 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-lg shadow-sm transition-colors"
                         >
                           View
-=======
-                {/* MONTHLY CALENDAR ATTENDANCE & MDM ENTRY TAB */}
-                {activeTab === "monthly-calendar" && (
-                  <div className="space-y-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
-                      <div>
-                        <h2 className="text-xl font-bold text-slate-800">
-                          {lang === "mr" ? "मासिक हजेरी व मेनू कॅलेंडर (Monthly MDM Calendar)" : "Monthly MDM Calendar"}
-                        </h2>
-                        <p className="text-xs text-slate-500">
-                          महिन्यातील प्रत्येक दिवसाची लाभार्थी उपस्थिती व मेनू नोंद
-                        </p>
-                      </div>
-
-                      {/* Header Controls */}
-                      <div className="flex flex-wrap items-center gap-3">
-                        {/* Section Selector */}
-                        <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
-                          <button
-                            onClick={() => setCalSection("1-5")}
-                            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                              calSection === "1-5" ? "bg-blue-600 text-white shadow-sm" : "text-slate-600 hover:text-slate-900"
-                            }`}
-                          >
-                            इयत्ता १ ते ५
-                          </button>
-                          <button
-                            onClick={() => setCalSection("6-8")}
-                            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                              calSection === "6-8" ? "bg-blue-600 text-white shadow-sm" : "text-slate-600 hover:text-slate-900"
-                            }`}
-                          >
-                            इयत्ता ६ ते ८
-                          </button>
-                        </div>
-
-                        {/* Month Selector */}
-                        <select
-                          value={calMonth}
-                          onChange={(e) => setCalMonth(Number(e.target.value))}
-                          className="h-9 px-3 border border-slate-300 rounded-xl text-xs font-bold bg-white text-slate-800"
-                        >
-                          {[
-                            "जानेवारी", "फेब्रुवारी", "मार्च", "एप्रिल", "मे", "जून",
-                            "जुलै", "ऑगस्ट", "सप्टेंबर", "ऑक्टोबर", "नोव्हेंबर", "डिसेंबर"
-                          ].map((m, i) => (
-                            <option key={i} value={i + 1}>{m}</option>
-                          ))}
-                        </select>
-
-                        {/* Year Selector */}
-                        <select
-                          value={calYear}
-                          onChange={(e) => setCalYear(Number(e.target.value))}
-                          className="h-9 px-3 border border-slate-300 rounded-xl text-xs font-bold bg-white text-slate-800"
-                        >
-                          {[2025, 2026, 2027].map((y) => (
-                            <option key={y} value={y}>{y}</option>
-                          ))}
-                        </select>
-
-                        <button
-                          onClick={handleSaveMonthlyCalendar}
-                          disabled={saving}
-                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-1.5 transition-all"
-                        >
-                          {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                          <span>Save Calendar</span>
->>>>>>> 6901c0919e7321f3df371c920bce7c5be8c8d6c7
                         </button>
                       </div>
                     </div>
 
-<<<<<<< HEAD
                     {/* Main Content Box */}
                     <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-5">
                       {/* Section Heading & Helper Tools */}
@@ -4754,156 +4645,6 @@ function TeacherMDMPage() {
                         </div>
                       </div>
                     )}
-=======
-                    {/* Render Calendar Grid */}
-                    {(() => {
-                      const daysInMonth = new Date(calYear, calMonth, 0).getDate();
-                      const firstDayWeekday = new Date(calYear, calMonth - 1, 1).getDay(); // 0=Sunday
-                      const weekdays = ["रवि", "सोम", "मंगळ", "बुध", "गुरु", "शुक्र", "शनि"];
-                      const rate = calSection === "1-5" ? Number(primaryRate || 5.45) : Number(upperRate || 8.17);
-
-                      // Calculate Totals
-                      let totalWorking = 0;
-                      let totalBeneficiaries = 0;
-
-                      for (let d = 1; d <= daysInMonth; d++) {
-                        const dateStr = `${calYear}-${String(calMonth).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-                        const entry = calEntries[dateStr];
-                        const dayOfWeek = new Date(calYear, calMonth - 1, d).getDay();
-                        const isSunday = dayOfWeek === 0;
-                        const isHol = entry?.isHoliday ?? isSunday;
-
-                        if (!isHol) {
-                          totalWorking++;
-                          totalBeneficiaries += Number(entry?.beneficiary || 0);
-                        }
-                      }
-
-                      const totalCost = totalBeneficiaries * rate;
-
-                      return (
-                        <div className="space-y-6">
-                          {/* Calendar Grid */}
-                          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm overflow-x-auto">
-                            <div className="grid grid-cols-7 gap-2 min-w-[700px]">
-                              {weekdays.map((w, idx) => (
-                                <div key={idx} className="text-center font-bold text-xs text-slate-600 bg-slate-100 py-2 rounded-lg">
-                                  {w}
-                                </div>
-                              ))}
-
-                              {/* Blank padding cells before 1st of month */}
-                              {Array.from({ length: firstDayWeekday }, (_, i) => (
-                                <div key={`pad-${i}`} className="bg-slate-50/50 rounded-xl min-h-[95px]" />
-                              ))}
-
-                              {/* Days of the month */}
-                              {Array.from({ length: daysInMonth }, (_, i) => {
-                                const dayNum = i + 1;
-                                const dateStr = `${calYear}-${String(calMonth).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
-                                const dayOfWeek = new Date(calYear, calMonth - 1, dayNum).getDay();
-                                const isSunday = dayOfWeek === 0;
-                                const entry = calEntries[dateStr] || {
-                                  beneficiary: isSunday ? "0" : "0",
-                                  isHoliday: isSunday,
-                                  holidayReason: isSunday ? "रविवार सुट्टी" : "",
-                                  menu: "वरण भात",
-                                };
-
-                                return (
-                                  <div
-                                    key={dayNum}
-                                    className={`p-2.5 rounded-xl border flex flex-col justify-between min-h-[110px] text-xs transition-all ${
-                                      entry.isHoliday
-                                        ? "bg-rose-50/60 border-rose-200"
-                                        : "bg-white border-slate-200 hover:border-blue-300 shadow-sm"
-                                    }`}
-                                  >
-                                    <div className="flex items-center justify-between">
-                                      <span className={`font-black text-sm ${entry.isHoliday ? "text-rose-600" : "text-slate-800"}`}>
-                                        {dayNum}
-                                      </span>
-                                      <label className="flex items-center gap-1 cursor-pointer">
-                                        <input
-                                          type="checkbox"
-                                          checked={entry.isHoliday}
-                                          onChange={(e) => handleCalEntryChange(dateStr, "isHoliday", e.target.checked)}
-                                          className="rounded text-rose-600 focus:ring-rose-500 h-3.5 w-3.5"
-                                        />
-                                        <span className="text-[10px] font-bold text-slate-500">सुट्टी</span>
-                                      </label>
-                                    </div>
-
-                                    {entry.isHoliday ? (
-                                      <input
-                                        type="text"
-                                        placeholder="सुट्टीचे कारण..."
-                                        value={entry.holidayReason || ""}
-                                        onChange={(e) => handleCalEntryChange(dateStr, "holidayReason", e.target.value)}
-                                        className="w-full text-[10px] p-1 border border-rose-200 rounded bg-white text-rose-700 font-medium mt-1"
-                                      />
-                                    ) : (
-                                      <div className="space-y-1.5 mt-1">
-                                        <select
-                                          value={entry.menu || "वरण भात"}
-                                          onChange={(e) => handleCalEntryChange(dateStr, "menu", e.target.value)}
-                                          className="w-full text-[10px] font-bold border border-slate-200 rounded p-1 bg-slate-50 text-slate-800"
-                                        >
-                                          <option value="वरण भात">वरण भात</option>
-                                          <option value="मसाला भात">मसाला भात</option>
-                                          <option value="मूग उसळ व भात">मूग उसळ व भात</option>
-                                          <option value="सोयाबीन भात">सोयाबीन भात</option>
-                                          <option value="डाळ खिचडी">डाळ खिचडी</option>
-                                          <option value="गोड लापशी">गोड लापशी</option>
-                                        </select>
-
-                                        <div className="flex items-center gap-1">
-                                          <span className="text-[10px] font-bold text-slate-500">उपस्थित:</span>
-                                          <input
-                                            type="number"
-                                            value={entry.beneficiary || "0"}
-                                            onChange={(e) => handleCalEntryChange(dateStr, "beneficiary", e.target.value)}
-                                            className="w-full text-[11px] font-bold p-1 border border-slate-300 rounded text-center text-blue-900 bg-white"
-                                          />
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-
-                          {/* Monthly Summary Cards */}
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <div className="bg-blue-50/80 p-4 rounded-2xl border border-blue-200 flex items-center justify-between">
-                              <div>
-                                <span className="text-xs font-bold text-blue-700 uppercase tracking-wider block">कामाचे एकूण दिवस</span>
-                                <span className="text-xl font-black text-blue-900">{totalWorking} दिवस</span>
-                              </div>
-                              <Calendar className="w-8 h-8 text-blue-500 opacity-60" />
-                            </div>
-
-                            <div className="bg-emerald-50/80 p-4 rounded-2xl border border-emerald-200 flex items-center justify-between">
-                              <div>
-                                <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider block">मासिक एकूण लाभार्थी</span>
-                                <span className="text-xl font-black text-emerald-900">{totalBeneficiaries} विद्यार्थी</span>
-                              </div>
-                              <Users className="w-8 h-8 text-emerald-500 opacity-60" />
-                            </div>
-
-                            <div className="bg-amber-50/80 p-4 rounded-2xl border border-amber-200 flex items-center justify-between">
-                              <div>
-                                <span className="text-xs font-bold text-amber-700 uppercase tracking-wider block">अनुमानित खर्च अनुदान</span>
-                                <span className="text-xl font-black text-amber-900">₹{totalCost.toFixed(2)}</span>
-                              </div>
-                              <Sparkles className="w-8 h-8 text-amber-500 opacity-60" />
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })()}
->>>>>>> 6901c0919e7321f3df371c920bce7c5be8c8d6c7
                   </div>
                 )}
 
