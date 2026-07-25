@@ -1,0 +1,548 @@
+.parent-container {
+    display: flex;         /* Or grid */
+    flex-direction: column;
+  }
+  
+  .form-container {
+    flex: 1;               /* Allows container to grow within the flex parent */
+  }
+
+
+  .modal-90w {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+  }
+  
+.custom-modal .modal-dialog {
+  width: 90%;
+  max-width: 90%;
+  height: 90%;
+  max-height: 90%;
+}
+
+.custom-modal .modal-content {
+  height: 100%;
+}
+
+.custom-modal .modal-body {
+  overflow-y: auto;
+}
+
+.rotate-90 {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  text-align: center;
+  white-space: nowrap;
+  height: 140px; /* Adjust the height as needed */
+}
+
+  
+
+/* -------------------------------------------------------------------------------------------------------------------------------- */
+  /* Add this to your CSS file (e.g., ProgressSheet.css) */
+.custom-table {
+  max-width: 600px; /* Adjust the width as needed */
+  margin: left  ; /* Center the table */
+  width: 150px; /* Adjust the width as needed */
+}
+.modal-80w {
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  max-height: 100%;
+}
+
+
+body {
+  font-family: sans-serif;
+}
+.container {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.left {
+  width: 48%;
+  border: 2px solid #0e0101;
+  padding: 10px;
+}
+
+.right {
+  width: 48%;
+  border: 2px solid #0e0101;
+  padding: 10px;
+  box-sizing: border-box;
+  position: relative;
+}
+
+table {
+  width: 100%; /* Ensure the table takes the full width of its container */
+  border-collapse: collapse;
+}
+
+th, td {
+  border: 1px solid #130606;
+  padding: 5px;
+  text-align: left;
+  box-sizing: border-box; /* Make sure padding and border are included in the width */
+}
+
+.grade-table {
+  margin-top: 20px;
+}
+
+.grade-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.grade-table th, .grade-table td {
+  border: 1px solid #ccc;
+  padding: 5px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.grade-table thead th {
+  background-color: #f4f4f4;
+}
+
+.grade-table tbody td {
+  text-align: center;
+}
+
+
+/* -----------------------------------------------------------Result--------------------------------------- */
+
+.container {
+  width: 297mm; /* A4 width */
+  height: 210mm; /* A4 height */
+  margin: 0 auto; /* center the container */
+  box-sizing: border-box; /* include padding and border in the width and height */
+  padding: 3mm; /* add some padding to make it look better */
+  border: 3px solid #0e0303; /* add a border to make it look like a page */
+  overflow: hidden; /* hide any content that exceeds the container size */
+}
+li {
+  font-size: 0.8em; /* adjust the font size to 0.8 times the parent element's font size */
+}
+
+.right {
+  position: relative; /* add this */
+}
+
+.grad{
+  position: absolute; /* add this */
+  bottom: 0; /* add this */
+  left: 20px; /* add this */
+  width: 100%; /* add this */
+}
+
+.semtgrad{
+  position: absolute; /* add this */
+  bottom: 5px; /* add this */
+  left: 5px; /* add this */
+  width: 100%; /* add this */
+}
+
+
+/* -----------------------------------student-info */
+
+
+.student-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  background-color: #f9f9f9;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.student-info-grid section {
+  background-color: #ffffff;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.student-info-grid h2 {
+  font-size: 1em;
+  margin-bottom: 10px;
+  color: #333;
+  border-bottom: 2px solid #ddd;
+  padding-bottom: 5px;
+}
+
+.student-info-grid p {
+  margin: 1px 0;
+  font-size: 0.9em;
+}
+
+.student-info-grid label {
+  font-weight: bold;
+  color: #555;
+}
+
+.student-info-grid span {
+  margin-left: 5px;
+  color: #666;
+}
+
+.student-info-grid p:last-child {
+  margin-bottom: 0;
+}
+
+
+
+
+
+
+.left {
+  border: 2px solid #0f0202; /* add a border to the .left div */
+  padding: 20px; /* add some padding to make the content more readable */
+  position: relative; /* add this */
+}
+.gradable{
+  position: absolute; /* add this */
+  bottom: 2px; /* add this */
+  left: 1%; /* add this */
+  width: 98%; /* add this */
+}
+
+.left-box {
+  background-color: #f9f9f9; /* add a light gray background */
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 10px; /* add a subtle border radius */
+}
+
+.school-info {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.school-info img {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  margin-right: 20px;
+}
+
+.school-info h2 {
+  font-size: 18px;
+  font-weight: bold;
+  margin: 0;
+}
+
+.student-info {
+  margin-top: 20px;
+}
+
+.student-info h3 {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.student-info ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.student-info li {
+  margin-bottom: 10px;
+}
+
+.student-info label {
+  font-weight: bold;
+  margin-right: 10px;
+}
+
+.student-info span {
+  font-size: 14px;
+  color: #666;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  border: 1px solid #ccc;
+  padding: 5px;
+  text-align: left;
+  width: calc(100% / 7); /* Adjust width to fit the number of columns */
+}
+
+thead th {
+  background-color: #f4f4f4;
+  font-weight: normal; /* Removes bold styling */
+
+}
+
+tbody td {
+  text-align: center;
+  font-weight: normal; /* Removes bold styling */
+
+}
+
+input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+
+.grade-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.grade-table th, .grade-table td {
+  border: 1px solid #ccc;
+  padding: 5px;
+  text-align: center;
+  width: calc(100% / 10); /* Adjust based on the number of columns */
+}
+
+.grade-table thead th {
+  background-color: #f4f4f4;
+}
+
+.grade-table tbody td {
+  text-align: center;
+}
+
+
+
+.footer-notes {
+  left: 12%;
+  width: 100%;
+  padding: 5px; /* Reduced padding */
+  background-color: #f7f7f7;
+  border: 1px solid #ddd;
+  font-size: 14px;
+  font-weight: 400;
+  text-align: left;
+  border-radius: 10px;
+  display: flex;
+  margin-bottom: 35px;
+  margin-top: 195px;
+  justify-content: flex-start; /* changed from space-between to flex-start */
+  z-index: 9999; /* Ensure it's on top of other elements */
+}
+.column {
+  flex-basis: 40%; /* increased flex-basis */
+  margin: 5px;
+  background-color: #fff;
+  padding: 5px; /* Reduced padding */
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  flex-grow: 1; /* added flex-grow property */
+}
+
+.column h2 {
+  margin-top: 0;
+  font-weight: 600;
+  color: #333;
+}
+
+.column ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.column li {
+  margin-bottom: 3px; /* Reduced margin between list items */
+}
+
+.column li:last-child {
+  margin-bottom: 0;
+}
+
+.separate-note {
+  margin-top: 5px;
+  padding-top: 3px; /* Reduced padding */
+  border-top: 1px solid #ddd;
+}
+
+
+
+/* ------------------------------------------------Gradewise-------------------------------------------------------------- */
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th, .table td {
+  border: 1px solid #000;
+  padding: 8px;
+  text-align: center;
+}
+
+.table th {
+  background-color: #f2f2f2;
+  font-weight: bold;
+}
+
+.table thead th {
+  vertical-align: middle;
+}
+
+.table tbody td {
+  vertical-align: middle;
+}
+
+.text-center {
+  text-align: center;
+}
+         
+
+
+
+
+
+
+
+
+
+/* ----------------------------------------------------------------------------------------------- nondi---------------------- */
+
+
+
+
+
+
+.blink {
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0% {
+    background-color: #007bff; /* initial color */
+  }
+  50% {
+    background-color: #f15c5c; /* blink color */
+  }
+  100% {
+    background-color: #007bff; /* initial color */
+  }
+}
+
+/* Scoped Modal CSS for React Bootstrap Modals */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1055;
+  display: none;
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  outline: 0;
+}
+.modal.show {
+  display: block;
+}
+.modal-dialog {
+  position: relative;
+  width: auto;
+  margin: 1.75rem auto;
+  pointer-events: none;
+  max-width: 800px;
+}
+.modal.fade .modal-dialog {
+  transition: transform 0.3s ease-out;
+  transform: translate(0, -50px);
+}
+.modal.show .modal-dialog {
+  transform: none;
+}
+.modal-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  pointer-events: auto;
+  background-color: #fff;
+  background-clip: padding-box;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 1rem;
+  outline: 0;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1050;
+  width: 100vw;
+  height: 100vh;
+  background-color: #000;
+}
+.modal-backdrop.fade {
+  opacity: 0;
+}
+.modal-backdrop.show {
+  opacity: 0.5;
+}
+.modal-header {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid #dee2e6;
+  border-top-left-radius: 1rem;
+  border-top-right-radius: 1rem;
+}
+.modal-body {
+  position: relative;
+  flex: 1 1 auto;
+  padding: 1.5rem;
+}
+.modal-footer {
+  display: flex;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 1.5rem;
+  border-top: 1px solid #dee2e6;
+  border-bottom-right-radius: 1rem;
+  border-bottom-left-radius: 1rem;
+}
+.close, .btn-close {
+  background: transparent;
+  border: 0;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
