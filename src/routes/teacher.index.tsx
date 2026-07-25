@@ -96,10 +96,17 @@ const MODULE_CARDS = [
 
   {
     labelKey: "results",
-    fallbackLabel: "माझे निकाल",
+    fallbackLabel: "CCE निकाल",
     to: "/teacher/result",
     icon: FileSpreadsheet,
     description: "विद्यार्थ्यांचे गुण नोंदणी, प्रगती पत्रके आणि निकाल विश्लेषण.",
+  },
+  {
+    labelKey: "hpcCard",
+    fallbackLabel: "Holistic Progress Card (HPC)",
+    to: "/teacher/hpc-card",
+    icon: Sparkles,
+    description: "विद्यार्थ्यांचे समग्र व सर्वंकष प्रगती पत्रक (HPC Card) मूल्यमापन.",
   },
   {
     labelKey: "monthlyMeeting",

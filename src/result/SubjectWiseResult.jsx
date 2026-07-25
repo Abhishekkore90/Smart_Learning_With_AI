@@ -4,6 +4,12 @@ import { doc, getDoc, collection, getDocs, query, where } from "firebase/firesto
 import { Download, Printer, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import "./result.css";
+import { CLASS_3_OUTCOMES } from "@/data/class3_outcomes";
+import { CLASS_4_OUTCOMES } from "@/data/class4_outcomes";
+import { CLASS_5_OUTCOMES } from "@/data/class5_outcomes";
+import { CLASS_6_OUTCOMES } from "@/data/class6_outcomes";
+import { CLASS_7_OUTCOMES } from "@/data/class7_outcomes";
+import { CLASS_8_OUTCOMES } from "@/data/class8_outcomes";
 
 // -------------------- CLASS-WISE LEARNING OUTCOMES BANKS --------------------
 
@@ -123,6 +129,61 @@ const MATHS_OUTCOMES_2ND = [
 const getClassOutcomes = (classValue, subjectKey) => {
   const norm = String(classValue || "1st").toLowerCase().replace(/[^0-9]/g, "") || "1";
   
+  if (norm === "3") {
+    if (subjectKey === "marathi") return CLASS_3_OUTCOMES.marathi || [];
+    if (subjectKey === "maths" || subjectKey === "math") return CLASS_3_OUTCOMES.math || [];
+    if (subjectKey === "english") return CLASS_3_OUTCOMES.english || [];
+    if (subjectKey === "evs1") return CLASS_3_OUTCOMES.evs1 || [];
+    if (subjectKey === "evs2") return CLASS_3_OUTCOMES.evs2 || [];
+  }
+
+  if (norm === "4") {
+    if (subjectKey === "marathi") return CLASS_4_OUTCOMES.marathi || [];
+    if (subjectKey === "maths" || subjectKey === "math") return CLASS_4_OUTCOMES.math || [];
+    if (subjectKey === "english") return CLASS_4_OUTCOMES.english || [];
+    if (subjectKey === "evs1") return CLASS_4_OUTCOMES.evs1 || [];
+    if (subjectKey === "evs2") return CLASS_4_OUTCOMES.evs2 || [];
+  }
+
+  if (norm === "5") {
+    if (subjectKey === "marathi") return CLASS_5_OUTCOMES.marathi || [];
+    if (subjectKey === "hindi") return CLASS_5_OUTCOMES.hindi || [];
+    if (subjectKey === "maths" || subjectKey === "math") return CLASS_5_OUTCOMES.math || [];
+    if (subjectKey === "english") return CLASS_5_OUTCOMES.english || [];
+    if (subjectKey === "evs1") return CLASS_5_OUTCOMES.evs1 || [];
+    if (subjectKey === "evs2") return CLASS_5_OUTCOMES.evs2 || [];
+  }
+
+  if (norm === "6") {
+    if (subjectKey === "marathi") return CLASS_6_OUTCOMES.marathi || [];
+    if (subjectKey === "hindi") return CLASS_6_OUTCOMES.hindi || [];
+    if (subjectKey === "maths" || subjectKey === "math") return CLASS_6_OUTCOMES.math || [];
+    if (subjectKey === "english") return CLASS_6_OUTCOMES.english || [];
+    if (subjectKey === "science") return CLASS_6_OUTCOMES.science || [];
+    if (subjectKey === "history") return CLASS_6_OUTCOMES.history || [];
+    if (subjectKey === "geography") return CLASS_6_OUTCOMES.geography || [];
+  }
+
+  if (norm === "7") {
+    if (subjectKey === "marathi") return CLASS_7_OUTCOMES.marathi || [];
+    if (subjectKey === "hindi") return CLASS_7_OUTCOMES.hindi || [];
+    if (subjectKey === "maths" || subjectKey === "math") return CLASS_7_OUTCOMES.math || [];
+    if (subjectKey === "english") return CLASS_7_OUTCOMES.english || [];
+    if (subjectKey === "science") return CLASS_7_OUTCOMES.science || [];
+    if (subjectKey === "history") return CLASS_7_OUTCOMES.history || [];
+    if (subjectKey === "geography") return CLASS_7_OUTCOMES.geography || [];
+  }
+
+  if (norm === "8") {
+    if (subjectKey === "marathi") return CLASS_8_OUTCOMES.marathi || [];
+    if (subjectKey === "hindi") return CLASS_8_OUTCOMES.hindi || [];
+    if (subjectKey === "maths" || subjectKey === "math") return CLASS_8_OUTCOMES.math || [];
+    if (subjectKey === "english") return CLASS_8_OUTCOMES.english || [];
+    if (subjectKey === "science") return CLASS_8_OUTCOMES.science || [];
+    if (subjectKey === "history") return CLASS_8_OUTCOMES.history || [];
+    if (subjectKey === "geography") return CLASS_8_OUTCOMES.geography || [];
+  }
+
   if (subjectKey === "marathi") {
     if (norm === "2") return MARATHI_OUTCOMES_2ND;
     return MARATHI_OUTCOMES_1ST;
@@ -131,7 +192,7 @@ const getClassOutcomes = (classValue, subjectKey) => {
     if (norm === "2") return ENGLISH_OUTCOMES_2ND;
     return ENGLISH_OUTCOMES_1ST;
   }
-  if (subjectKey === "maths") {
+  if (subjectKey === "maths" || subjectKey === "math") {
     if (norm === "2") return MATHS_OUTCOMES_2ND;
     return MATHS_OUTCOMES_1ST;
   }
@@ -434,8 +495,14 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", onBa
 
   // Fetch Class-Specific Outcomes
   const marathiOutcomes = getClassOutcomes(selectedClass, "marathi");
+  const hindiOutcomes = getClassOutcomes(selectedClass, "hindi");
   const englishOutcomes = getClassOutcomes(selectedClass, "english");
   const mathsOutcomes = getClassOutcomes(selectedClass, "maths");
+  const evs1Outcomes = getClassOutcomes(selectedClass, "evs1");
+  const evs2Outcomes = getClassOutcomes(selectedClass, "evs2");
+  const scienceOutcomes = getClassOutcomes(selectedClass, "science");
+  const historyOutcomes = getClassOutcomes(selectedClass, "history");
+  const geographyOutcomes = getClassOutcomes(selectedClass, "geography");
 
   return (
     <div className="font-sans text-slate-800">
@@ -539,10 +606,10 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", onBa
                 </div>
               )}
 
-              {/* 2. तृतीय भाषा: इंग्रजी Section */}
-              {englishOutcomes.length > 0 && (
+              {/* 2. द्वितीय भाषा: हिंदी Section */}
+              {hindiOutcomes.length > 0 && (
                 <div className="mb-6">
-                  <h3 className="text-base font-black text-blue-800 mb-3 text-center">तृतीय भाषा: इंग्रजी</h3>
+                  <h3 className="text-base font-black text-blue-800 mb-3 text-center">द्वितीय भाषा: हिंदी</h3>
                   <table className="w-full border-collapse border border-blue-400 text-xs font-medium">
                     <thead>
                       <tr className="bg-blue-100 text-blue-950 font-bold text-center">
@@ -559,8 +626,8 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", onBa
                       </tr>
                     </thead>
                     <tbody>
-                      {englishOutcomes.map((item) => {
-                        const level = getUserSelectedLevel(student, item.code, "इंग्रजी");
+                      {hindiOutcomes.map((item) => {
+                        const level = getUserSelectedLevel(student, item.code, "हिंदी");
                         return (
                           <tr key={item.code} className="border-b border-blue-300 hover:bg-slate-50">
                             <td className="border border-blue-400 p-2 text-center font-bold text-slate-900">{item.code}</td>
@@ -599,6 +666,234 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", onBa
                     <tbody>
                       {mathsOutcomes.map((item) => {
                         const level = getUserSelectedLevel(student, item.code, "गणित");
+                        return (
+                          <tr key={item.code} className="border-b border-blue-300 hover:bg-slate-50">
+                            <td className="border border-blue-400 p-2 text-center font-bold text-slate-900">{item.code}</td>
+                            <td className="border border-blue-400 p-2 text-slate-800 leading-snug">{item.text}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 1 ? "✓" : ""}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 2 ? "✓" : ""}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 3 ? "✓" : ""}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 4 ? "✓" : ""}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* 4. तृतीय भाषा: इंग्रजी Section */}
+              {englishOutcomes.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-base font-black text-blue-800 mb-3 text-center">तृतीय भाषा: इंग्रजी</h3>
+                  <table className="w-full border-collapse border border-blue-400 text-xs font-medium">
+                    <thead>
+                      <tr className="bg-blue-100 text-blue-950 font-bold text-center">
+                        <th className="border border-blue-400 p-2 w-28">अध्ययन निष्पत्ती क्र.</th>
+                        <th className="border border-blue-400 p-2 text-left">अध्ययन निष्पत्ती</th>
+                        <th colSpan={4} className="border border-blue-400 p-1 w-32">स्तर</th>
+                      </tr>
+                      <tr className="bg-blue-50 text-blue-950 font-bold text-center text-[11px]">
+                        <th colSpan={2} className="border border-blue-400 p-1"></th>
+                        <th className="border border-blue-400 p-1 w-8">1</th>
+                        <th className="border border-blue-400 p-1 w-8">2</th>
+                        <th className="border border-blue-400 p-1 w-8">3</th>
+                        <th className="border border-blue-400 p-1 w-8">4</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {englishOutcomes.map((item) => {
+                        const level = getUserSelectedLevel(student, item.code, "इंग्रजी");
+                        return (
+                          <tr key={item.code} className="border-b border-blue-300 hover:bg-slate-50">
+                            <td className="border border-blue-400 p-2 text-center font-bold text-slate-900">{item.code}</td>
+                            <td className="border border-blue-400 p-2 text-slate-800 leading-snug">{item.text}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 1 ? "✓" : ""}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 2 ? "✓" : ""}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 3 ? "✓" : ""}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 4 ? "✓" : ""}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* 5. परिसर अभ्यास १ Section */}
+              {evs1Outcomes.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-base font-black text-blue-800 mb-3 text-center">परिसर अभ्यास १</h3>
+                  <table className="w-full border-collapse border border-blue-400 text-xs font-medium">
+                    <thead>
+                      <tr className="bg-blue-100 text-blue-950 font-bold text-center">
+                        <th className="border border-blue-400 p-2 w-28">अध्ययन निष्पत्ती क्र.</th>
+                        <th className="border border-blue-400 p-2 text-left">अध्ययन निष्पत्ती</th>
+                        <th colSpan={4} className="border border-blue-400 p-1 w-32">स्तर</th>
+                      </tr>
+                      <tr className="bg-blue-50 text-blue-950 font-bold text-center text-[11px]">
+                        <th colSpan={2} className="border border-blue-400 p-1"></th>
+                        <th className="border border-blue-400 p-1 w-8">1</th>
+                        <th className="border border-blue-400 p-1 w-8">2</th>
+                        <th className="border border-blue-400 p-1 w-8">3</th>
+                        <th className="border border-blue-400 p-1 w-8">4</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {evs1Outcomes.map((item) => {
+                        const level = getUserSelectedLevel(student, item.code, "परिसर अभ्यास १");
+                        return (
+                          <tr key={item.code} className="border-b border-blue-300 hover:bg-slate-50">
+                            <td className="border border-blue-400 p-2 text-center font-bold text-slate-900">{item.code}</td>
+                            <td className="border border-blue-400 p-2 text-slate-800 leading-snug">{item.text}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 1 ? "✓" : ""}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 2 ? "✓" : ""}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 3 ? "✓" : ""}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 4 ? "✓" : ""}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* 6. परिसर अभ्यास २ Section */}
+              {evs2Outcomes.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-base font-black text-blue-800 mb-3 text-center">परिसर अभ्यास २</h3>
+                  <table className="w-full border-collapse border border-blue-400 text-xs font-medium">
+                    <thead>
+                      <tr className="bg-blue-100 text-blue-950 font-bold text-center">
+                        <th className="border border-blue-400 p-2 w-28">अध्ययन निष्पत्ती क्र.</th>
+                        <th className="border border-blue-400 p-2 text-left">अध्ययन निष्पत्ती</th>
+                        <th colSpan={4} className="border border-blue-400 p-1 w-32">स्तर</th>
+                      </tr>
+                      <tr className="bg-blue-50 text-blue-950 font-bold text-center text-[11px]">
+                        <th colSpan={2} className="border border-blue-400 p-1"></th>
+                        <th className="border border-blue-400 p-1 w-8">1</th>
+                        <th className="border border-blue-400 p-1 w-8">2</th>
+                        <th className="border border-blue-400 p-1 w-8">3</th>
+                        <th className="border border-blue-400 p-1 w-8">4</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {evs2Outcomes.map((item) => {
+                        const level = getUserSelectedLevel(student, item.code, "परिसर अभ्यास २");
+                        return (
+                          <tr key={item.code} className="border-b border-blue-300 hover:bg-slate-50">
+                            <td className="border border-blue-400 p-2 text-center font-bold text-slate-900">{item.code}</td>
+                            <td className="border border-blue-400 p-2 text-slate-800 leading-snug">{item.text}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 1 ? "✓" : ""}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 2 ? "✓" : ""}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 3 ? "✓" : ""}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 4 ? "✓" : ""}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* 7. सामान्य विज्ञान Section */}
+              {scienceOutcomes.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-base font-black text-blue-800 mb-3 text-center">सामान्य विज्ञान</h3>
+                  <table className="w-full border-collapse border border-blue-400 text-xs font-medium">
+                    <thead>
+                      <tr className="bg-blue-100 text-blue-950 font-bold text-center">
+                        <th className="border border-blue-400 p-2 w-28">अध्ययन निष्पत्ती क्र.</th>
+                        <th className="border border-blue-400 p-2 text-left">अध्ययन निष्पत्ती</th>
+                        <th colSpan={4} className="border border-blue-400 p-1 w-32">स्तर</th>
+                      </tr>
+                      <tr className="bg-blue-50 text-blue-950 font-bold text-center text-[11px]">
+                        <th colSpan={2} className="border border-blue-400 p-1"></th>
+                        <th className="border border-blue-400 p-1 w-8">1</th>
+                        <th className="border border-blue-400 p-1 w-8">2</th>
+                        <th className="border border-blue-400 p-1 w-8">3</th>
+                        <th className="border border-blue-400 p-1 w-8">4</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {scienceOutcomes.map((item) => {
+                        const level = getUserSelectedLevel(student, item.code, "सामान्य विज्ञान");
+                        return (
+                          <tr key={item.code} className="border-b border-blue-300 hover:bg-slate-50">
+                            <td className="border border-blue-400 p-2 text-center font-bold text-slate-900">{item.code}</td>
+                            <td className="border border-blue-400 p-2 text-slate-800 leading-snug">{item.text}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 1 ? "✓" : ""}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 2 ? "✓" : ""}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 3 ? "✓" : ""}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 4 ? "✓" : ""}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* 8. इतिहास व नागरिकशास्त्र Section */}
+              {historyOutcomes.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-base font-black text-blue-800 mb-3 text-center">इतिहास व नागरिकशास्त्र</h3>
+                  <table className="w-full border-collapse border border-blue-400 text-xs font-medium">
+                    <thead>
+                      <tr className="bg-blue-100 text-blue-950 font-bold text-center">
+                        <th className="border border-blue-400 p-2 w-28">अध्ययन निष्पत्ती क्र.</th>
+                        <th className="border border-blue-400 p-2 text-left">अध्ययन निष्पत्ती</th>
+                        <th colSpan={4} className="border border-blue-400 p-1 w-32">स्तर</th>
+                      </tr>
+                      <tr className="bg-blue-50 text-blue-950 font-bold text-center text-[11px]">
+                        <th colSpan={2} className="border border-blue-400 p-1"></th>
+                        <th className="border border-blue-400 p-1 w-8">1</th>
+                        <th className="border border-blue-400 p-1 w-8">2</th>
+                        <th className="border border-blue-400 p-1 w-8">3</th>
+                        <th className="border border-blue-400 p-1 w-8">4</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {historyOutcomes.map((item) => {
+                        const level = getUserSelectedLevel(student, item.code, "इतिहास व नागरिकशास्त्र");
+                        return (
+                          <tr key={item.code} className="border-b border-blue-300 hover:bg-slate-50">
+                            <td className="border border-blue-400 p-2 text-center font-bold text-slate-900">{item.code}</td>
+                            <td className="border border-blue-400 p-2 text-slate-800 leading-snug">{item.text}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 1 ? "✓" : ""}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 2 ? "✓" : ""}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 3 ? "✓" : ""}</td>
+                            <td className="border border-blue-400 p-1 text-center font-black text-blue-700">{level === 4 ? "✓" : ""}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* 9. भूगोल Section */}
+              {geographyOutcomes.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-base font-black text-blue-800 mb-3 text-center">भूगोल</h3>
+                  <table className="w-full border-collapse border border-blue-400 text-xs font-medium">
+                    <thead>
+                      <tr className="bg-blue-100 text-blue-950 font-bold text-center">
+                        <th className="border border-blue-400 p-2 w-28">अध्ययन निष्पत्ती क्र.</th>
+                        <th className="border border-blue-400 p-2 text-left">अध्ययन निष्पत्ती</th>
+                        <th colSpan={4} className="border border-blue-400 p-1 w-32">स्तर</th>
+                      </tr>
+                      <tr className="bg-blue-50 text-blue-950 font-bold text-center text-[11px]">
+                        <th colSpan={2} className="border border-blue-400 p-1"></th>
+                        <th className="border border-blue-400 p-1 w-8">1</th>
+                        <th className="border border-blue-400 p-1 w-8">2</th>
+                        <th className="border border-blue-400 p-1 w-8">3</th>
+                        <th className="border border-blue-400 p-1 w-8">4</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {geographyOutcomes.map((item) => {
+                        const level = getUserSelectedLevel(student, item.code, "भूगोल");
                         return (
                           <tr key={item.code} className="border-b border-blue-300 hover:bg-slate-50">
                             <td className="border border-blue-400 p-2 text-center font-bold text-slate-900">{item.code}</td>

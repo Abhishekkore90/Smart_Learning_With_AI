@@ -107,13 +107,15 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", onBack }
         uSnap.forEach((docSnap) => {
           const d = docSnap.data();
           const stdClassNorm = normalizeClass(d.class || d.currentClass || d.className);
-          if (!stdClassNorm || stdClassNorm === targetClassNorm || d.class === selectedClass) {
+          if (stdClassNorm === targetClassNorm || d.class === selectedClass) {
             loadedStudents.push({
               id: docSnap.id,
               name: d.fullName || d.name || d.studentName || "",
               rollNo: String(d.rollNo || d.srNo || loadedStudents.length + 1),
               fatherName: d.fatherName || d.stdFather || "",
               motherName: d.motherName || d.stdMother || "",
+              medium: d.medium,
+              isSemiEnglish: d.isSemiEnglish,
               dob: d.dob || d.birthDate || "",
               aadhar: d.aadhar || d.aadharNo || "",
               generalRegNo: d.generalRegNo || d.grNo || d.srNo || "",
@@ -133,13 +135,15 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", onBack }
           studentsSnap.forEach((docSnap) => {
             const d = docSnap.data();
             const stdClassNorm = normalizeClass(d.class || d.currentClass || d.className);
-            if (!stdClassNorm || stdClassNorm === targetClassNorm || d.class === selectedClass) {
+            if (stdClassNorm === targetClassNorm || d.class === selectedClass) {
               loadedStudents.push({
                 id: docSnap.id,
                 name: d.fullName || d.name || d.studentName || "",
                 rollNo: String(d.rollNo || d.srNo || loadedStudents.length + 1),
                 fatherName: d.fatherName || d.stdFather || "",
                 motherName: d.motherName || d.stdMother || "",
+                medium: d.medium,
+                isSemiEnglish: d.isSemiEnglish,
                 dob: d.dob || d.birthDate || "",
                 aadhar: d.aadhar || d.aadharNo || "",
                 generalRegNo: d.generalRegNo || d.grNo || d.srNo || "",
@@ -153,6 +157,20 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", onBack }
           });
         } catch (e) {}
       }
+
+      // Filter by Medium
+      const currentMedium = localStorage.getItem("cce_selected_medium") || "marathi";
+      const isStudentSemi = (s) => {
+        if (s.isSemiEnglish === true) return true;
+        if (s.isSemiEnglish === false) return false;
+        if (!s.medium) return false;
+        const m = String(s.medium).toLowerCase();
+        return m.includes("semi") || m.includes("सेमी");
+      };
+      loadedStudents = loadedStudents.filter((s) => {
+        const isSemi = isStudentSemi(s);
+        return currentMedium === "semi" ? isSemi : !isSemi;
+      });
 
       // Deduplicate students
       const uniqueMap = new Map();

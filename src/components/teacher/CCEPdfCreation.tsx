@@ -206,7 +206,7 @@ export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
         <div className="flex-1 overflow-x-auto">
           <PdfErrorBoundary title="श्रेणीनिहाय निकाल संकलन प्रपत्र">
             <Suspense fallback={renderLoading()}>
-              <GradeWise initialClass={selectedClass} initialYear={academicYear} />
+              <GradeWise initialClass={selectedClass} initialYear={academicYear} onBack={() => setSelectedOption(null)} />
             </Suspense>
           </PdfErrorBoundary>
         </div>
