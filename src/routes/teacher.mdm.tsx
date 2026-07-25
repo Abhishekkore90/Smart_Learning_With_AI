@@ -27,6 +27,17 @@ import {
   ArrowUpRight,
   FileText,
   Award,
+<<<<<<< HEAD
+  ShieldCheck,
+  Settings,
+  Zap,
+  RotateCcw,
+  Printer,
+  Info,
+  Sliders,
+  X,
+=======
+>>>>>>> 6901c0919e7321f3df371c920bce7c5be8c8d6c7
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
@@ -1520,6 +1531,156 @@ function TeacherMDMPage() {
     }
   };
 
+<<<<<<< HEAD
+  // Monthly Calendar States & Logic (Admin Master Calendar & Custom Calendar)
+  const [calMonth, setCalMonth] = useState<number>(new Date().getMonth() + 1);
+  const [calYear, setCalYear] = useState<number>(new Date().getFullYear());
+  const [calSection, setCalSection] = useState<"1-5" | "6-8">("1-5");
+  const [calMode, setCalMode] = useState<"admin" | "custom">("admin");
+  const [monthlyCalendarRecords, setMonthlyCalendarRecords] = useState<Record<string, any>>({});
+  const [calEntries, setCalEntries] = useState<
+    Record<string, { beneficiary: string; isHoliday: boolean; holidayReason: string; menu: string }>
+  >({});
+  const [showAutoFillModal, setShowAutoFillModal] = useState(false);
+  const [autoFillVal, setAutoFillVal] = useState("50");
+
+  // Admin Master Calendar standard menu schedule & government holiday rules (Learnify Academy Format)
+  const getAdminMasterMenuForDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const dayOfWeek = d.getDay(); // 0 = Sunday, 1 = Monday...
+    const month = d.getMonth() + 1;
+    const dayOfMonth = d.getDate();
+
+    if (dayOfWeek === 0) {
+      return { isHoliday: true, holidayReason: "रविवार सुट्टी", menu: "— Select recipe —", beneficiary: "0" };
+    }
+    if (month === 1 && dayOfMonth === 26) {
+      return { isHoliday: true, holidayReason: "प्रजासत्ताक दिन", menu: "— Select recipe —", beneficiary: "0" };
+    }
+    if (month === 5 && dayOfMonth === 1) {
+      return { isHoliday: true, holidayReason: "महाराष्ट्र दिन", menu: "— Select recipe —", beneficiary: "0" };
+    }
+    if (month === 8 && dayOfMonth === 15) {
+      return { isHoliday: true, holidayReason: "स्वातंत्र्य दिन", menu: "— Select recipe —", beneficiary: "0" };
+    }
+    if (month === 10 && dayOfMonth === 2) {
+      return { isHoliday: true, holidayReason: "महात्मा गांधी जयंती", menu: "— Select recipe —", beneficiary: "0" };
+    }
+    if (month === 12 && dayOfMonth === 25) {
+      return { isHoliday: true, holidayReason: "नाताळ सुट्टी", menu: "— Select recipe —", beneficiary: "0" };
+    }
+
+    // Check if configured in Weekly Master Menu
+    const configuredWeeklyMenu = getMenuForRegisterDate(dateStr);
+    if (configuredWeeklyMenu && configuredWeeklyMenu !== "No Menu Available" && configuredWeeklyMenu !== "Select Menu") {
+      return {
+        isHoliday: false,
+        holidayReason: "",
+        menu: configuredWeeklyMenu,
+        beneficiary: "0",
+      };
+    }
+
+    return {
+      isHoliday: false,
+      holidayReason: "",
+      menu: "— Select recipe —",
+      beneficiary: "0",
+    };
+  };
+
+  const generateAdminMasterMonthEntries = (year: number, month: number) => {
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const entries: Record<string, { beneficiary: string; isHoliday: boolean; holidayReason: string; menu: string }> = {};
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      entries[dateStr] = getAdminMasterMenuForDate(dateStr);
+    }
+    return entries;
+  };
+
+  useEffect(() => {
+    const key = `${calYear}_${calMonth}_${calSection}`;
+    const modeKey = `${calYear}_${calMonth}_${calSection}_mode`;
+
+    const savedEntries = monthlyCalendarRecords[key];
+    const savedMode = monthlyCalendarRecords[modeKey];
+
+    if (savedMode) {
+      setCalMode(savedMode as "admin" | "custom");
+    } else {
+      setCalMode("admin");
+    }
+
+    if (savedEntries && Object.keys(savedEntries).length > 0) {
+      setCalEntries(savedEntries);
+    } else {
+      setCalEntries(generateAdminMasterMonthEntries(calYear, calMonth));
+    }
+  }, [calYear, calMonth, calSection, monthlyCalendarRecords]);
+
+  const handleCalEntryChange = (dateStr: string, field: "beneficiary" | "isHoliday" | "holidayReason" | "menu", val: any) => {
+    if (calMode === "admin") return;
+
+    setCalEntries((prev) => {
+      const existing = prev[dateStr] || getAdminMasterMenuForDate(dateStr);
+      const updated = {
+        ...existing,
+        [field]: val,
+      };
+      if (field === "isHoliday" && val === true) {
+        updated.menu = "— Select recipe —";
+      }
+      return {
+        ...prev,
+        [dateStr]: updated,
+      };
+    });
+  };
+
+  const handleSwitchCalMode = (newMode: "admin" | "custom") => {
+    setCalMode(newMode);
+    if (newMode === "admin") {
+      toast.info(t("Admin Master Calendar: सेव्ह केलेल्या सर्व नोंदी केवळ पाहण्यासाठी (Read-Only) लॉक केल्या आहेत.", "Admin Master Calendar Mode: Saved entries displayed in Read-Only mode."));
+    } else {
+      toast.info(t("Custom Calendar: सेव्ह केलेल्या नोंदी एडिट करण्यासाठी अनलॉक्ड आहेत.", "Custom Calendar Mode: Entries unlocked for editing."));
+    }
+  };
+
+  const handleResetToAdminMaster = () => {
+    const defaults = generateAdminMasterMonthEntries(calYear, calMonth);
+    setCalEntries(defaults);
+    setCalMode("admin");
+    toast.success(t("ऍडमिन मास्टर कॅलेंडर यशस्वीरित्या रीसेट केले!", "Reset to Admin Master Calendar successfully!"));
+  };
+
+  const handleApplyAutoFillAttendance = () => {
+    const countNum = parseInt(autoFillVal, 10);
+    if (isNaN(countNum) || countNum < 0) {
+      toast.warning(t("कृपया वैध उपस्थिती संख्या प्रविष्ट करा.", "Please enter a valid attendance count."));
+      return;
+    }
+
+    const daysInMonth = new Date(calYear, calMonth, 0).getDate();
+    setCalEntries((prev) => {
+      const next = { ...prev };
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${calYear}-${String(calMonth).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+        const existing = next[dateStr] || getAdminMasterMenuForDate(dateStr);
+        if (!existing.isHoliday) {
+          next[dateStr] = {
+            ...existing,
+            beneficiary: String(countNum),
+          };
+        }
+      }
+      return next;
+    });
+
+    setShowAutoFillModal(false);
+    toast.success(t(`सर्व कामकाजाच्या दिवसांसाठी ${countNum} उपस्थिती भरली!`, `Auto-filled ${countNum} attendance for all working days!`));
+=======
   // Monthly Calendar States & Logic
   const [calMonth, setCalMonth] = useState<number>(new Date().getMonth() + 1);
   const [calYear, setCalYear] = useState<number>(new Date().getFullYear());
@@ -1536,6 +1697,7 @@ function TeacherMDMPage() {
         [field]: val,
       },
     }));
+>>>>>>> 6901c0919e7321f3df371c920bce7c5be8c8d6c7
   };
 
   const handleSaveMonthlyCalendar = async () => {
@@ -1543,17 +1705,35 @@ function TeacherMDMPage() {
     setSaving(true);
     try {
       const udise = getUdise();
+<<<<<<< HEAD
+      const updatedCalendarRecords = {
+        ...monthlyCalendarRecords,
+        [`${calYear}_${calMonth}_${calSection}`]: calEntries,
+        [`${calYear}_${calMonth}_${calSection}_mode`]: calMode,
+      };
+
+      await setDoc(
+        doc(db, "school_data", `${udise}_mdm`),
+        {
+          monthlyCalendar: updatedCalendarRecords,
+=======
       await setDoc(
         doc(db, "school_data", `${udise}_mdm`),
         {
           monthlyCalendar: {
             [`${calYear}_${calMonth}_${calSection}`]: calEntries,
           },
+>>>>>>> 6901c0919e7321f3df371c920bce7c5be8c8d6c7
           updatedAt: new Date().toISOString(),
         },
         { merge: true },
       );
+<<<<<<< HEAD
+      setMonthlyCalendarRecords(updatedCalendarRecords);
+      toast.success(t("मासिक कॅलेंडर हजेरी व मेनू जतन केला!", "Monthly Calendar attendance and menu saved successfully!"));
+=======
       toast.success(t("मासिक कॅलेंडर हजेरी जतन केली!", "Monthly Calendar attendance saved successfully!"));
+>>>>>>> 6901c0919e7321f3df371c920bce7c5be8c8d6c7
     } catch (e) {
       console.error(e);
       toast.error(t("नोंद जतन करण्यात अडचण आली.", "Failed to save calendar data"));
@@ -2654,6 +2834,12 @@ function TeacherMDMPage() {
             if (firestoreData.eggBananaRecord.records)
               setEggBananaRecords(firestoreData.eggBananaRecord.records);
           }
+<<<<<<< HEAD
+          if (firestoreData.monthlyCalendar) {
+            setMonthlyCalendarRecords(firestoreData.monthlyCalendar);
+          }
+=======
+>>>>>>> 6901c0919e7321f3df371c920bce7c5be8c8d6c7
         }
         setLoading(false);
       },
@@ -4146,6 +4332,56 @@ function TeacherMDMPage() {
                 transition={{ duration: 0.4 }}
                 className="bg-white/60 backdrop-blur-3xl rounded-[3rem] border border-slate-200 shadow-[0_32px_64px_-20px_rgba(0,0,0,0.5)] overflow-hidden p-6 md:p-10"
               >
+<<<<<<< HEAD
+                {/* MONTHLY CALENDAR ATTENDANCE & MDM ENTRY TAB (Learnify Academy Format) */}
+                {activeTab === "monthly-calendar" && (
+                  <div className="space-y-5 font-sans text-slate-800">
+                    {/* Top Heading */}
+                    <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                      Monthly Calendar
+                    </h2>
+
+                    {/* Filter Card Container */}
+                    <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+                      <div className="flex flex-wrap items-end gap-4">
+                        <div>
+                          <label className="text-xs font-semibold text-slate-600 block mb-1.5">महिना</label>
+                          <select
+                            value={calMonth}
+                            onChange={(e) => setCalMonth(Number(e.target.value))}
+                            className="h-10 px-4 border border-indigo-400 rounded-lg text-sm font-bold bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-w-[140px]"
+                          >
+                            {[
+                              "जानेवारी", "फेब्रुवारी", "मार्च", "एप्रिल", "मे", "जून",
+                              "जुलै", "ऑगस्ट", "सप्टेंबर", "ऑक्टोबर", "नोव्हेंबर", "डिसेंबर"
+                            ].map((m, i) => (
+                              <option key={i} value={i + 1}>{m}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-semibold text-slate-600 block mb-1.5">Year</label>
+                          <input
+                            type="number"
+                            value={calYear}
+                            onChange={(e) => setCalYear(Number(e.target.value))}
+                            className="h-10 px-4 border border-slate-300 rounded-lg text-sm font-bold bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-28"
+                          />
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            const monthNames = [
+                              "जानेवारी", "फेब्रुवारी", "मार्च", "एप्रिल", "मे", "जून",
+                              "जुलै", "ऑगस्ट", "सप्टेंबर", "ऑक्टोबर", "नोव्हेंबर", "डिसेंबर"
+                            ];
+                            toast.info(t(`कॅलेंडर दाखवले जात आहे: ${monthNames[calMonth - 1]} ${calYear}`, `Showing calendar for ${monthNames[calMonth - 1]} ${calYear}`));
+                          }}
+                          className="h-10 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-lg shadow-sm transition-colors"
+                        >
+                          View
+=======
                 {/* MONTHLY CALENDAR ATTENDANCE & MDM ENTRY TAB */}
                 {activeTab === "monthly-calendar" && (
                   <div className="space-y-6">
@@ -4213,10 +4449,312 @@ function TeacherMDMPage() {
                         >
                           {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                           <span>Save Calendar</span>
+>>>>>>> 6901c0919e7321f3df371c920bce7c5be8c8d6c7
                         </button>
                       </div>
                     </div>
 
+<<<<<<< HEAD
+                    {/* Main Content Box */}
+                    <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-5">
+                      {/* Section Heading & Helper Tools */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100">
+                        <h3 className="text-xl font-extrabold text-slate-900">
+                          {[
+                            "जानेवारी", "फेब्रुवारी", "मार्च", "एप्रिल", "मे", "जून",
+                            "जुलै", "ऑगस्ट", "सप्टेंबर", "ऑक्टोबर", "नोव्हेंबर", "डिसेंबर"
+                          ][calMonth - 1]} {calYear}
+                        </h3>
+
+                        {/* Helper Tools: Save */}
+                        <div className="flex flex-wrap items-center gap-2">
+
+                          <button
+                            onClick={handleSaveMonthlyCalendar}
+                            disabled={saving}
+                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-1.5 transition-all"
+                          >
+                            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                            <span>कॅलेंडर जतन करा (Save)</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Radio Selection Cards for Calendar Mode */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Option 1: Admin Master Calendar */}
+                        <label
+                          onClick={() => handleSwitchCalMode("admin")}
+                          className={`p-4 rounded-xl border cursor-pointer transition-all duration-200 flex items-start gap-3.5 ${
+                            calMode === "admin"
+                              ? "bg-teal-50/70 border-teal-500 shadow-sm"
+                              : "bg-white border-slate-200 hover:border-slate-300"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="calModeRadioChoice"
+                            checked={calMode === "admin"}
+                            onChange={() => handleSwitchCalMode("admin")}
+                            className="mt-1 text-teal-600 focus:ring-teal-500 h-4 w-4 cursor-pointer"
+                          />
+                          <div>
+                            <span className="font-extrabold text-sm text-slate-900 block">Admin Master Calendar</span>
+                            <span className="text-xs text-slate-500 mt-1 block">आठवड्याच्या नियोजनानुसार बनवलेले मासिक कॅलेंडर</span>
+                          </div>
+                        </label>
+
+                        {/* Option 2: Custom Calendar */}
+                        <label
+                          onClick={() => handleSwitchCalMode("custom")}
+                          className={`p-4 rounded-xl border cursor-pointer transition-all duration-200 flex items-start gap-3.5 ${
+                            calMode === "custom"
+                              ? "bg-teal-50/70 border-teal-500 shadow-sm"
+                              : "bg-white border-slate-200 hover:border-slate-300"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="calModeRadioChoice"
+                            checked={calMode === "custom"}
+                            onChange={() => handleSwitchCalMode("custom")}
+                            className="mt-1 text-teal-600 focus:ring-teal-500 h-4 w-4 cursor-pointer"
+                          />
+                          <div>
+                            <span className="font-extrabold text-sm text-slate-900 block">Custom Calendar</span>
+                            <span className="text-xs text-slate-500 mt-1 block">तुमच्या शाळेच्या आठवड्याच्या नियोजनानुसार मासिक कॅलेंडर बनवा</span>
+                          </div>
+                        </label>
+                      </div>
+
+                      {/* Informational Blue Banner */}
+                      <div className="bg-blue-50/90 border border-blue-200 text-blue-700 rounded-xl p-3.5 text-xs font-semibold leading-relaxed">
+                        {calMode === "admin"
+                          ? "आठवड्याच्या नियोजनानुसार बनवलेले मासिक कॅलेंडर दाखविते. कॅलेंडर मधे बदल करण्यासाठी Custom Calendar वर क्लिक करा."
+                          : "कस्टम कॅलेंडर मोड: तुम्ही प्रत्येक दिवसाची रेसिपी/मेनू, सुट्टी व उपस्थिती बदलू शकता."}
+                      </div>
+
+                      {/* Main Calendar Table View (Learnify Format) */}
+                      {(() => {
+                        const daysInMonth = new Date(calYear, calMonth, 0).getDate();
+                        const rate = calSection === "1-5" ? Number(primaryRate || 5.45) : Number(upperRate || 8.17);
+                        const ricePerStudent = calSection === "1-5" ? 0.100 : 0.150;
+
+                        let totalWorking = 0;
+                        let totalHolidays = 0;
+                        let totalBeneficiaries = 0;
+
+                        for (let d = 1; d <= daysInMonth; d++) {
+                          const dateStr = `${calYear}-${String(calMonth).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+                          const entry = calEntries[dateStr] || getAdminMasterMenuForDate(dateStr);
+                          if (entry.isHoliday) {
+                            totalHolidays++;
+                          } else {
+                            totalWorking++;
+                            totalBeneficiaries += Number(entry.beneficiary || 0);
+                          }
+                        }
+
+                        const totalRiceKg = totalBeneficiaries * ricePerStudent;
+                        const totalCost = totalBeneficiaries * rate;
+
+                        const learnifyRecipeOptions = [
+                          "— Select recipe —",
+                          "चणा/हरभरा पुलाव",
+                          "चवळी खिचडी",
+                          "मोड आलेल्या मटकीची उसळ व साधा शिजवलेला भात",
+                          "मसाले भात",
+                          "व्हेजिटेबल पुलाव",
+                          "मूग-डाळ खिचडी",
+                          "मूग/तूर शेवग्याचे वरण आणि भात",
+                          "मटार/वाटाणा पुलाव",
+                          "वरण भात",
+                          "सोयाबीन भात",
+                          "गोड लापशी",
+                          "तांदळाची खीर",
+                          "इतर",
+                        ];
+
+                        const marathiDaysMap = ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
+
+                        return (
+                          <div className="space-y-4">
+                            <div className="overflow-x-auto border border-slate-200 rounded-xl shadow-sm bg-white">
+                              <table className="w-full text-left border-collapse min-w-[720px]">
+                                <thead>
+                                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold text-xs">
+                                    <th className="py-3 px-4 w-[130px]">Date</th>
+                                    <th className="py-3 px-4 w-[110px]">दिवस</th>
+                                    <th className="py-3 px-4">Recipe</th>
+                                    <th className="py-3 px-4 w-[160px]">Holiday</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-200 text-xs font-sans">
+                                  {Array.from({ length: daysInMonth }, (_, i) => {
+                                    const dayNum = i + 1;
+                                    const dateFormatted = `${String(dayNum).padStart(2, "0")}-${String(calMonth).padStart(2, "0")}-${calYear}`;
+                                    const dateStrKey = `${calYear}-${String(calMonth).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
+                                    const dayOfWeek = new Date(calYear, calMonth - 1, dayNum).getDay();
+                                    const dayNameMarathi = marathiDaysMap[dayOfWeek];
+
+                                    const defaultEntry = getAdminMasterMenuForDate(dateStrKey);
+                                    const entry = calEntries[dateStrKey] || defaultEntry;
+
+                                    return (
+                                      <tr
+                                        key={dayNum}
+                                        className={`transition-colors ${
+                                          entry.isHoliday
+                                            ? "bg-rose-50/60"
+                                            : "hover:bg-slate-50/80"
+                                        }`}
+                                      >
+                                        {/* Date Column */}
+                                        <td className={`py-3.5 px-4 font-bold ${entry.isHoliday ? "text-rose-500" : "text-slate-800"}`}>
+                                          {dateFormatted}
+                                        </td>
+
+                                        {/* Day Column */}
+                                        <td className={`py-3.5 px-4 font-bold ${entry.isHoliday ? "text-rose-500" : "text-slate-800"}`}>
+                                          {dayNameMarathi}
+                                        </td>
+
+                                        {/* Recipe Column */}
+                                        <td className="py-2.5 px-4">
+                                          {calMode === "admin" ? (
+                                            <span className="text-xs font-semibold text-slate-800 block truncate py-1">
+                                              {entry.menu || "— Select recipe —"}
+                                            </span>
+                                          ) : (
+                                            <select
+                                              value={entry.menu || "— Select recipe —"}
+                                              onChange={(e) => handleCalEntryChange(dateStrKey, "menu", e.target.value)}
+                                              disabled={entry.isHoliday}
+                                              className="w-full max-w-md h-9 px-3 border border-slate-300 rounded-lg text-xs font-semibold bg-white text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500 truncate disabled:bg-slate-50 disabled:text-slate-400"
+                                            >
+                                              {learnifyRecipeOptions.map((r) => (
+                                                <option key={r} value={r}>{r}</option>
+                                              ))}
+                                            </select>
+                                          )}
+                                        </td>
+
+                                        {/* Holiday Checkbox Column */}
+                                        <td className="py-3.5 px-4">
+                                          {calMode === "admin" ? (
+                                            <label className="flex items-center gap-2 cursor-not-allowed opacity-80 select-none">
+                                              <input
+                                                type="checkbox"
+                                                checked={entry.isHoliday}
+                                                disabled
+                                                className="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4 pointer-events-none"
+                                              />
+                                              <span className={`text-xs font-semibold ${entry.isHoliday ? "text-rose-600 font-bold" : "text-slate-600"}`}>
+                                                Mark as Holiday
+                                              </span>
+                                            </label>
+                                          ) : (
+                                            <label className="flex items-center gap-2 cursor-pointer select-none">
+                                              <input
+                                                type="checkbox"
+                                                checked={entry.isHoliday}
+                                                onChange={(e) => handleCalEntryChange(dateStrKey, "isHoliday", e.target.checked)}
+                                                className="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4 cursor-pointer"
+                                              />
+                                              <span className={`text-xs font-semibold ${entry.isHoliday ? "text-rose-600 font-bold" : "text-slate-600"}`}>
+                                                Mark as Holiday
+                                              </span>
+                                            </label>
+                                          )}
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+
+                            {/* Summary Totals Cards */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-200">
+                              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-0.5">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">कामाचे दिवस</span>
+                                <span className="text-base font-extrabold text-slate-900">{totalWorking} दिवस</span>
+                              </div>
+                              <div className="bg-rose-50 p-3.5 rounded-xl border border-rose-200 space-y-0.5">
+                                <span className="text-[10px] font-bold text-rose-700 uppercase tracking-wider block">सुट्टीचे दिवस</span>
+                                <span className="text-base font-extrabold text-rose-900">{totalHolidays} दिवस</span>
+                              </div>
+                              <div className="bg-emerald-50 p-3.5 rounded-xl border border-emerald-200 space-y-0.5">
+                                <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block">एकूण लाभार्थी</span>
+                                <span className="text-base font-extrabold text-emerald-900">{totalBeneficiaries} विद्यार्थी</span>
+                              </div>
+                              <div className="bg-indigo-50 p-3.5 rounded-xl border border-indigo-200 space-y-0.5">
+                                <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider block">अनुमानित खर्च</span>
+                                <span className="text-base font-extrabold text-indigo-900">₹{totalCost.toFixed(2)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+
+                    {/* Auto-Fill Attendance Modal */}
+                    {showAutoFillModal && (
+                      <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+                        <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+                          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                            <div className="flex items-center gap-2">
+                              <div className="p-2 rounded-xl bg-amber-100 text-amber-700">
+                                <Zap className="w-5 h-5 fill-amber-500" />
+                              </div>
+                              <div>
+                                <h3 className="font-extrabold text-base text-slate-800">पटसंख्येनुसार उपस्थिती ऑटो-फिल</h3>
+                                <p className="text-xs text-slate-500">सर्व कामकाजाच्या दिवसांना एकसारखी उपस्थिती द्या</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => setShowAutoFillModal(false)}
+                              className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700"
+                            >
+                              <X className="w-5 h-5" />
+                            </button>
+                          </div>
+
+                          <div className="space-y-3">
+                            <label className="text-xs font-bold text-slate-700 block">
+                              दैनिक लाभार्थी विद्यार्थी संख्या (Daily Beneficiary Student Count):
+                            </label>
+                            <input
+                              type="number"
+                              value={autoFillVal}
+                              onChange={(e) => setAutoFillVal(e.target.value)}
+                              placeholder="उदा. 45"
+                              className="w-full h-12 px-4 border border-slate-300 rounded-xl text-lg font-black text-blue-900 bg-blue-50/30 focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                            />
+                            <p className="text-[11px] font-medium text-slate-500">
+                              टीप: हे प्रमाण केवळ चालू महिन्यातील नॉन-सुट्टी (कामकाजाच्या) दिवसांना लागू होईल.
+                            </p>
+                          </div>
+
+                          <div className="flex items-center justify-end gap-2.5 pt-2">
+                            <button
+                              onClick={() => setShowAutoFillModal(false)}
+                              className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl"
+                            >
+                              रद्द करा
+                            </button>
+                            <button
+                              onClick={handleApplyAutoFillAttendance}
+                              className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-extrabold rounded-xl shadow-md flex items-center gap-1.5"
+                            >
+                              <Zap className="w-4 h-4 fill-white" />
+                              <span>उपस्थिती भरून पूर्ण करा</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+=======
                     {/* Render Calendar Grid */}
                     {(() => {
                       const daysInMonth = new Date(calYear, calMonth, 0).getDate();
@@ -4365,6 +4903,7 @@ function TeacherMDMPage() {
                         </div>
                       );
                     })()}
+>>>>>>> 6901c0919e7321f3df371c920bce7c5be8c8d6c7
                   </div>
                 )}
 
