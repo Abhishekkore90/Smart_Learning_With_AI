@@ -41,7 +41,8 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getClassRemarks, SUBJECT_NAMES_MAP } from "@/data/classRemarksData";
+import { getClassRemarks, SUBJECT_NAMES_MAP, normalizeClassKey } from "@/data/classRemarksData";
+import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
 
 type Semester = "sem1" | "sem2";
 type Medium = "marathi" | "semi";
@@ -239,55 +240,69 @@ const SUBJECT_META: Record<
 function convertGenderEnding(text: string, gender: GenderMode): string {
   if (!text || gender === "none") return text;
   if (gender === "female") {
-    return text
-      .replace(/करतो/g, "करते")
-      .replace(/सांगतो/g, "सांगते")
-      .replace(/ओळखतो/g, "ओळखते")
-      .replace(/लिहितो/g, "लिहिते")
-      .replace(/गातो/g, "गाते")
-      .replace(/सोडवतो/g, "सोडवते")
-      .replace(/पाहतो/g, "पाहते")
-      .replace(/बाळगतो/g, "बाळगते")
-      .replace(/दाखवतो/g, "दाखवते")
-      .replace(/घेतो/g, "घेते")
-      .replace(/पडतो/g, "पडते")
-      .replace(/बनवतो/g, "बनवते")
-      .replace(/मोजतो/g, "मोजते")
-      .replace(/वाचतो/g, "वाचते")
-      .replace(/रंगवतो/g, "रंगवते")
-      .replace(/काढतो/g, "काढते")
-      .replace(/आणतो/g, "आणते")
-      .replace(/शिवतो/g, "शिवते")
-      .replace(/बसवातो/g, "बसवते")
-      .replace(/शोधतो/g, "शोधते")
-      .replace(/मदत करतो/g, "मदत करते")
-      .replace(/सहभागी होतो/g, "सहभागी होते")
-      .replace(/तयार करतो/g, "तयार करते");
+    let res = text;
+    // Explicit pronoun & possessive replacements
+    res = res
+      .replace(/\bत्याचा\b/g, "तिचा")
+      .replace(/\bत्याची\b/g, "तिची")
+      .replace(/\bत्याचे\b/g, "तिचे")
+      .replace(/\bत्याला\b/g, "तिला")
+      .replace(/\bस्वतःचा\b/g, "स्वतःची")
+      .replace(/\bस्वतःचे\b/g, "स्वतःची")
+      .replace(/\bतो\b/g, "ती");
+
+    // Dynamic verb endings (तो/तोय -> ते/तेय)
+    res = res
+      .replace(/(\S+?)तोय(?=[\s\.,!?;]|$)/g, "$1तेय")
+      .replace(/(\S+?)तो(?=[\s\.,!?;]|$)/g, "$1ते");
+
+    return res;
   } else {
-    return text
-      .replace(/करते/g, "करतो")
-      .replace(/सांगते/g, "सांगतो")
-      .replace(/ओळखते/g, "ओळखतो")
-      .replace(/लिहिते/g, "लिहितो")
-      .replace(/गाते/g, "गातो")
-      .replace(/सोडवते/g, "सोडवतो")
-      .replace(/पाहते/g, "पाहतो")
-      .replace(/बाळगते/g, "बाळगतो")
-      .replace(/दाखवते/g, "दाखवतो")
-      .replace(/घेते/g, "घेतो")
-      .replace(/पडते/g, "पडतो")
-      .replace(/बनवते/g, "बनवतो")
-      .replace(/मोजते/g, "मोजतो")
-      .replace(/वाचते/g, "वाचतो")
-      .replace(/रंगवते/g, "रंगवतो")
-      .replace(/काढते/g, "काढतो")
-      .replace(/आणते/g, "आणतो")
-      .replace(/शिवते/g, "शिवतो")
-      .replace(/शोधते/g, "शोधतो")
-      .replace(/मदत करते/g, "मदत करतो")
-      .replace(/सहभागी होते/g, "सहभागी होतो")
-      .replace(/तयार करते/g, "तयार करतो");
+    let res = text;
+    // Explicit pronoun & possessive replacements
+    res = res
+      .replace(/\bतिचा\b/g, "त्याचा")
+      .replace(/\bतिची\b/g, "त्याची")
+      .replace(/\bतिचे\b/g, "त्याचे")
+      .replace(/\bतिला\b/g, "त्याला")
+      .replace(/\bस्वतःची\b/g, "स्वतःचा")
+      .replace(/\bती\b/g, "तो");
+
+    // Dynamic verb endings (ते/तेय -> तो/तोय)
+    res = res
+      .replace(/(\S+?)तेय(?=[\s\.,!?;]|$)/g, "$1तोय")
+      .replace(/(\S+?)ते(?=[\s\.,!?;]|$)/g, "$1तो");
+
+    return res;
   }
+}
+
+function mapSubjectNameToKey(subName: string, customKeys: string[] = []): string | null {
+  const s = subName.toLowerCase().trim();
+  if (s.includes("प्रथम") || s.includes("मराठी")) return "prathambhasha";
+  if (s.includes("द्वितीय") || s.includes("इंग्रजी") || s.includes("english")) return "dvitiybhasha";
+  if (s.includes("तृतीय") || s.includes("हिंदी") || s.includes("hindi")) {
+    if (customKeys.includes("hindi") && !customKeys.includes("tritiyabhasha")) return "hindi";
+    return "tritiyabhasha";
+  }
+  if (s.includes("गणित") || s.includes("math") || s.includes("mathematics")) return "ganit";
+  if (s.includes("सामान्य विज्ञान") || s.includes("विज्ञान") || s.includes("general science") || s.includes("science")) {
+    if (customKeys.includes("vidnyan") && !customKeys.includes("vijnan")) return "vidnyan";
+    return "vijnan";
+  }
+  if (s.includes("परिसर अभ्यास १") || s.includes("परिसर १")) return "parisar1";
+  if (s.includes("परिसर अभ्यास २") || s.includes("परिसर २")) return "parisar2";
+  if (s.includes("परिसर")) return "parisar";
+  if (s.includes("सामाजिक") || s.includes("इतिहास") || s.includes("भूगोल") || s.includes("social")) {
+    if (customKeys.includes("samajshastra") && !customKeys.includes("samajik_shastra")) return "samajshastra";
+    return "samajik_shastra";
+  }
+  if (s.includes("कला") || s.includes("art")) return "kala";
+  if (s.includes("कार्यानुभव") || s.includes("work")) return "karyanubhav";
+  if (s.includes("शारीरिक") || s.includes("आरोग्य") || s.includes("पी.ई") || s.includes("physical")) return "sharirik";
+
+  if (SUBJECT_META[s] || SUBJECT_NAMES_MAP[s] || customKeys.includes(s)) return s;
+  return null;
 }
 
 export function CCERemarks({
@@ -315,6 +330,7 @@ export function CCERemarks({
   const [allRemarks, setAllRemarks] = useState<Record<string, StudentRemarks>>({});
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [customClassRemarks, setCustomClassRemarks] = useState<Record<string, string[]>>({});
+  const [configuredSubjects, setConfiguredSubjects] = useState<string[]>([]);
   const [studentRemarks, setStudentRemarks] = useState<StudentRemarks>({});
   const [expandedSubject, setExpandedSubject] = useState<string | null>("prathambhasha");
   const [writeText, setWriteText] = useState("");
@@ -389,6 +405,49 @@ export function CCERemarks({
     };
   }, [selectedClass, selectedMedium]);
 
+  // Load configured subjects ("विषय निश्चिती") for this class
+  useEffect(() => {
+    let isMounted = true;
+    async function loadConfiguredSubjects() {
+      try {
+        const stored = localStorage.getItem(`cce_subjects_${selectedClass}_${academicYear}`);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            if (isMounted) {
+              setConfiguredSubjects(parsed);
+              return;
+            }
+          }
+        }
+      } catch (e) {}
+
+      try {
+        const ref = doc(db, "cce_settings", `${selectedClass}_${academicYear}`);
+        const snap = await getDoc(ref);
+        if (isMounted && snap.exists() && snap.data().subjects) {
+          const subs = snap.data().subjects;
+          if (Array.isArray(subs) && subs.length > 0) {
+            setConfiguredSubjects(subs);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn("Could not fetch cce_settings:", err);
+      }
+
+      if (isMounted) {
+        setConfiguredSubjects(getDefaultSubjectsForClass(selectedClass, selectedMedium));
+      }
+    }
+
+    loadConfiguredSubjects();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedClass, academicYear, selectedMedium]);
+
   // Load student roster for selectedClass
   useEffect(() => {
     let isMounted = true;
@@ -415,7 +474,7 @@ export function CCERemarks({
 
     try {
       const cached = localStorage.getItem(
-        `cce_remarks_cache_${selectedClass}_${academicYear}_${activeSemester}`
+        `cce_remarks_cache_${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`
       );
       if (cached) {
         const parsed = JSON.parse(cached);
@@ -429,6 +488,7 @@ export function CCERemarks({
       let merged: Record<string, StudentRemarks> = {};
 
       const docIdsToTry = [
+        `${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`,
         `${selectedClass}_${academicYear}_${activeSemester}`,
         `${selectedClass}_${activeSemester}`,
         `${selectedClass}_${academicYear}`,
@@ -459,7 +519,7 @@ export function CCERemarks({
     const primaryRef = doc(
       db,
       "cce_remarks_v2",
-      `${selectedClass}_${academicYear}_${activeSemester}`
+      `${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`
     );
     const unsub = onSnapshot(
       primaryRef,
@@ -470,7 +530,7 @@ export function CCERemarks({
             const updated = { ...prev, ...(snap.data().records || {}) };
             try {
               localStorage.setItem(
-                `cce_remarks_cache_${selectedClass}_${academicYear}_${activeSemester}`,
+                `cce_remarks_cache_${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`,
                 JSON.stringify(updated)
               );
             } catch (e) {}
@@ -491,7 +551,7 @@ export function CCERemarks({
       isMounted = false;
       unsub();
     };
-  }, [selectedClass, academicYear, activeSemester]);
+  }, [selectedClass, academicYear, activeSemester, selectedMedium]);
 
   // Helper to retrieve student's remarks record
   const getStudentRemarksRecord = (st: Student): StudentRemarks => {
@@ -518,22 +578,88 @@ export function CCERemarks({
     return {};
   };
 
+  const changeGenderMode = (newGender: GenderMode) => {
+    setGenderMode(newGender);
+    setStudentRemarks((prev) => {
+      const updated: StudentRemarks = {};
+      Object.keys(prev).forEach((subKey) => {
+        const val = prev[subKey];
+        if (Array.isArray(val)) {
+          updated[subKey] = val.map((item) =>
+            typeof item === "string" ? convertGenderEnding(item, newGender) : item
+          );
+        } else if (typeof val === "string") {
+          updated[subKey] = convertGenderEnding(val, newGender);
+        } else {
+          updated[subKey] = val;
+        }
+      });
+      return updated;
+    });
+  };
+
   const openStudent = (student: Student) => {
     setEditingStudent(student);
-    setStudentRemarks(getStudentRemarksRecord(student));
+    const rawRemarks = getStudentRemarksRecord(student);
+
+    // Merge science (vijnan/vidnyan) remarks into parisar if science has remarks
+    if (rawRemarks.vijnan || rawRemarks.vidnyan) {
+      const sciList = [
+        ...(Array.isArray(rawRemarks.vijnan) ? rawRemarks.vijnan : []),
+        ...(Array.isArray(rawRemarks.vidnyan) ? rawRemarks.vidnyan : []),
+      ];
+      const existingParisar = Array.isArray(rawRemarks.parisar) ? rawRemarks.parisar : [];
+      rawRemarks.parisar = [...new Set([...existingParisar, ...sciList])];
+    }
+
     setExpandedSubject("prathambhasha");
     setWriteText("");
     setRemarkSearchQuery("");
     
-    // Auto-detect gender if available
-    const g = (student.gender || "").toLowerCase();
-    if (g.includes("female") || g.includes("girl") || g.includes("स्त्री")) {
-      setGenderMode("female");
-    } else if (g.includes("male") || g.includes("boy") || g.includes("पुरुष")) {
-      setGenderMode("male");
-    } else {
-      setGenderMode("male");
+    // Auto-detect gender if available (Female/मुलगी/Girl/F vs Male/मुलगा/Boy/M)
+    const g = (
+      student.gender ||
+      (student as any).sex ||
+      (student as any).genderMode ||
+      ""
+    ).toLowerCase();
+    let detectedGender: GenderMode = "male";
+    if (
+      g.includes("female") ||
+      g.includes("girl") ||
+      g.includes("स्त्री") ||
+      g.includes("मुलगी") ||
+      g === "f"
+    ) {
+      detectedGender = "female";
+    } else if (
+      g.includes("male") ||
+      g.includes("boy") ||
+      g.includes("पुरुष") ||
+      g.includes("मुलगा") ||
+      g === "m"
+    ) {
+      detectedGender = "male";
     }
+
+    setGenderMode(detectedGender);
+
+    // Auto-format student remarks to match student's detected gender
+    const formattedRemarks: StudentRemarks = {};
+    Object.keys(rawRemarks || {}).forEach((subKey) => {
+      const val = rawRemarks[subKey];
+      if (Array.isArray(val)) {
+        formattedRemarks[subKey] = val.map((item) =>
+          typeof item === "string" ? convertGenderEnding(item, detectedGender) : item
+        );
+      } else if (typeof val === "string") {
+        formattedRemarks[subKey] = convertGenderEnding(val, detectedGender);
+      } else {
+        formattedRemarks[subKey] = val;
+      }
+    });
+
+    setStudentRemarks(formattedRemarks);
   };
 
   const removeRemark = (subKey: string, text: string) => {
@@ -575,7 +701,7 @@ export function CCERemarks({
 
       try {
         localStorage.setItem(
-          `cce_remarks_cache_${selectedClass}_${academicYear}_${activeSemester}`,
+          `cce_remarks_cache_${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`,
           JSON.stringify(updated)
         );
       } catch (e) {}
@@ -583,7 +709,7 @@ export function CCERemarks({
       const ref = doc(
         db,
         "cce_remarks_v2",
-        `${selectedClass}_${academicYear}_${activeSemester}`
+        `${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`
       );
       await setDoc(
         ref,
@@ -591,6 +717,7 @@ export function CCERemarks({
           class: selectedClass,
           academicYear,
           semester: activeSemester,
+          medium: selectedMedium,
           records: updated,
           updatedAt: new Date().toISOString(),
         },
@@ -680,16 +807,48 @@ export function CCERemarks({
     return list;
   }, [rosterStats, filterStatus, searchRosterQuery]);
 
-  // Available subjects for this class
+  // Always included co-curricular subject categories
+  const ALWAYS_INCLUDED_KEYS = ["visheshpragati", "aavad", "sudharna", "vyaktimatva"];
+
+  // Available subjects for this class based on Subject Config ("विषय निश्चिती") + 4 image categories
   const availableSubjectKeys = useMemo(() => {
-    const defaultKeys = Object.keys(SUBJECT_NAMES_MAP);
+    const rawSubjects =
+      configuredSubjects.length > 0
+        ? configuredSubjects
+        : getDefaultSubjectsForClass(selectedClass, selectedMedium);
+
     const customKeys = Object.keys(customClassRemarks);
-    const combined = [...new Set([...defaultKeys, ...customKeys])];
-    // Filter to only keys that exist in customClassRemarks and have at least 1 item or default
-    return combined.filter(
-      (k) => (customClassRemarks[k] && customClassRemarks[k].length > 0) || SUBJECT_NAMES_MAP[k]
-    );
-  }, [customClassRemarks]);
+    const mappedKeys: string[] = [];
+
+    rawSubjects.forEach((subName) => {
+      const key = mapSubjectNameToKey(subName, customKeys);
+      if (key && !mappedKeys.includes(key)) {
+        mappedKeys.push(key);
+      }
+    });
+
+    // Always append the 4 co-curricular subject categories
+    ALWAYS_INCLUDED_KEYS.forEach((k) => {
+      if (!mappedKeys.includes(k)) {
+        mappedKeys.push(k);
+      }
+    });
+
+    // For classes 1st to 5th, Science (vijnan/vidnyan) is included inside परिसर अभ्यास (parisar), so remove separate Science subject tab
+    const normClass = normalizeClassKey(selectedClass);
+    const isPrimaryOr5th = ["1st", "2nd", "3rd", "4th", "5th"].includes(normClass);
+
+    return mappedKeys.filter((k) => {
+      if (isPrimaryOr5th && (k === "vijnan" || k === "vidnyan")) return false;
+
+      return (
+        ALWAYS_INCLUDED_KEYS.includes(k) ||
+        (customClassRemarks[k] && customClassRemarks[k].length > 0) ||
+        SUBJECT_META[k] ||
+        SUBJECT_NAMES_MAP[k]
+      );
+    });
+  }, [configuredSubjects, selectedClass, selectedMedium, customClassRemarks]);
 
   // ── STUDENT REMARK EDITOR VIEW ──
   if (editingStudent) {
@@ -766,32 +925,6 @@ export function CCERemarks({
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Gender Toggle Pill */}
-            <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200/80 text-xs font-bold">
-              <button
-                onClick={() => setGenderMode("male")}
-                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
-                  genderMode === "male"
-                    ? "bg-blue-600 text-white shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-                title="मुलासाठी verb endings (करतो, सांगतो)"
-              >
-                <span>👦 मुलगा (करतो)</span>
-              </button>
-              <button
-                onClick={() => setGenderMode("female")}
-                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
-                  genderMode === "female"
-                    ? "bg-pink-600 text-white shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-                title="मुलीसाठी verb endings (करते, सांगते)"
-              >
-                <span>👧 मुलगी (करते)</span>
-              </button>
-            </div>
-
             {/* Semester Switcher */}
             <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200/80 text-xs font-bold">
               <button
@@ -1120,21 +1253,56 @@ export function CCERemarks({
 
       {/* Roster Controls Bar */}
       <div className="p-4 bg-slate-50/80 border-b border-slate-200/80 flex flex-wrap items-center justify-between gap-3">
-        {/* Semester Tabs */}
-        <div className="flex bg-slate-200/80 p-1 rounded-xl border border-slate-300/60 text-xs font-bold">
-          {(["sem1", "sem2"] as Semester[]).map((sem) => (
+        {/* Medium Switcher & Semester Tabs */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Medium Switcher */}
+          <div className="flex bg-slate-200/80 p-1 rounded-xl border border-slate-300/60 text-xs font-bold">
             <button
-              key={sem}
-              onClick={() => setActiveSemester(sem)}
-              className={`px-4 py-2 rounded-lg transition-all cursor-pointer ${
-                activeSemester === sem
-                  ? "bg-white text-blue-700 shadow-sm border border-slate-200"
+              onClick={() => {
+                setSelectedMedium("marathi");
+                localStorage.setItem("cce_selected_medium", "marathi");
+                toast.info("मराठी माध्यम निवडले!");
+              }}
+              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                selectedMedium === "marathi"
+                  ? "bg-blue-600 text-white shadow-xs"
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              {sem === "sem1" ? "प्रथम सत्र (Sem 1)" : "द्वितीय सत्र (Sem 2)"}
+              मराठी माध्यम
             </button>
-          ))}
+            <button
+              onClick={() => {
+                setSelectedMedium("semi");
+                localStorage.setItem("cce_selected_medium", "semi");
+                toast.info("सेमी-इंग्रजी माध्यम निवडले!");
+              }}
+              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                selectedMedium === "semi"
+                  ? "bg-purple-600 text-white shadow-xs"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              सेमी-इंग्रजी (Semi)
+            </button>
+          </div>
+
+          {/* Semester Tabs */}
+          <div className="flex bg-slate-200/80 p-1 rounded-xl border border-slate-300/60 text-xs font-bold">
+            {(["sem1", "sem2"] as Semester[]).map((sem) => (
+              <button
+                key={sem}
+                onClick={() => setActiveSemester(sem)}
+                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  activeSemester === sem
+                    ? "bg-white text-blue-700 shadow-sm border border-slate-200"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                {sem === "sem1" ? "प्रथम सत्र (Sem 1)" : "द्वितीय सत्र (Sem 2)"}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Status Filter Pills */}

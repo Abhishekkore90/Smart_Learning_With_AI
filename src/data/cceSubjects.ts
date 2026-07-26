@@ -118,7 +118,7 @@ export const DEFAULT_SEMI_SUBJECTS_MAP: Record<string, string[]> = {
     "English",
     "हिंदी",
     "Mathematics",
-    "General Science (विज्ञान)",
+    "परिसर अभ्यास",
     "कला",
     "कार्यानुभव",
     "शारीरिक शिक्षण",

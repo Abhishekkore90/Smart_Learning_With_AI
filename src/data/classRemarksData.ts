@@ -26595,6 +26595,57 @@ export function normalizeClassKey(classKey: string): string {
   return s;
 }
 
+export const SEMI_ENGLISH_REMARKS: SubjectRemarks = {
+  dvitiybhasha: [
+    "Reads words and simple sentences accurately.",
+    "Listens attentively to stories and rhymes.",
+    "Expresses thoughts and answers in simple English.",
+    "Identifies pictures, objects, and vocabulary words.",
+    "Writes neatly with correct spellings and punctuation.",
+    "Participates enthusiastically in conversation and games.",
+    "Recites poems and rhymes with proper rhythm.",
+    "Understands instructions and acts accordingly.",
+    "Uses dictionary and builds new word vocabulary.",
+    "Completes workbook exercises and self-study independently.",
+  ],
+  ganit: [
+    "Solves addition, subtraction, and word problems accurately.",
+    "Understands place value and face value of numbers.",
+    "Identifies and draws geometric shapes accurately.",
+    "Performs multiplication and division calculations quickly.",
+    "Understands fraction concepts and decimal representation.",
+    "Reads clock time, calendar dates, and handles currency.",
+    "Applies mathematical formulas and steps correctly.",
+    "Measures length, mass, volume, and perimeter.",
+    "Interprets charts, tables, and bar graphs.",
+    "Completes math assignments and homework regularly.",
+  ],
+  vijnan: [
+    "Performs science experiments enthusiastically with observations.",
+    "Understands concepts of human body, health, and hygiene.",
+    "Observes environmental changes and nature around.",
+    "Distinguishes between living and non-living organisms.",
+    "Draws neat labeled diagrams of scientific apparatus/organs.",
+    "Explains scientific causes and logical reasons clearly.",
+    "Participates in science exhibitions and projects.",
+    "Uses digital technology and computer tools effectively.",
+    "Demonstrates awareness of environmental conservation.",
+    "Maintains practical work file and experiment records.",
+  ],
+  parisar: [
+    "Observes nature and environmental surroundings carefully.",
+    "Understands natural resources, water, air, and plant life.",
+    "Participates actively in eco-friendly activities.",
+    "Reads maps, directions, and geographic features.",
+    "Understands history, civics, and community responsibilities.",
+    "Performs simple science experiments and records findings.",
+    "Shows curiosity and asks relevant questions about nature.",
+    "Understands health, personal hygiene, and safety rules.",
+    "Identifies historical monuments, symbols, and heritage.",
+    "Completes environmental projects and assignments on time.",
+  ],
+};
+
 export function getClassRemarks(classKey: string, medium: string = "marathi"): SubjectRemarks {
   const normKey = normalizeClassKey(classKey);
   
@@ -26621,31 +26672,11 @@ export function getClassRemarks(classKey: string, medium: string = "marathi"): S
     }
   }
 
-  // 2. If medium is semi, override "ganit" (Maths) and any specific semi subjects from SEMI_CLASS_X_REMARKS
+  // 2. If medium is semi, override Mathematics, Science, Environmental Studies, and English with Semi-English remarks
   if (medium === "semi") {
-    let semiRaw: SubjectRemarks;
-    switch (normKey) {
-      case "1st": semiRaw = SEMI_CLASS_1_REMARKS; break;
-      case "2nd": semiRaw = SEMI_CLASS_2_REMARKS; break;
-      case "3rd": semiRaw = SEMI_CLASS_3_REMARKS; break;
-      case "4th": semiRaw = SEMI_CLASS_4_REMARKS; break;
-      case "5th": semiRaw = SEMI_CLASS_5_REMARKS; break;
-      case "6th": semiRaw = SEMI_CLASS_6_REMARKS; break;
-      case "7th": semiRaw = SEMI_CLASS_7_REMARKS; break;
-      case "8th": semiRaw = SEMI_CLASS_8_REMARKS; break;
-      default: semiRaw = SEMI_CLASS_1_REMARKS; break;
-    }
-
-    if (semiRaw) {
-      // Specifically override ganit (Maths) with semi English maths remarks
-      if (semiRaw.ganit && Array.isArray(semiRaw.ganit) && semiRaw.ganit.length > 0) {
-        cleaned.ganit = semiRaw.ganit.map((r) => cleanDevanagari(r));
-      }
-      // If semiRaw has vijnan/vidnyan specific semi science remarks, override science as well
-      if (semiRaw.vijnan && Array.isArray(semiRaw.vijnan) && semiRaw.vijnan.length > 0) {
-        cleaned.vijnan = semiRaw.vijnan.map((r) => cleanDevanagari(r));
-      }
-    }
+    Object.entries(SEMI_ENGLISH_REMARKS).forEach(([subKey, remarksList]) => {
+      cleaned[subKey] = remarksList.map((r) => cleanDevanagari(r));
+    });
   }
 
   // Aliases for subject key variations
@@ -26658,6 +26689,16 @@ export function getClassRemarks(classKey: string, medium: string = "marathi"): S
   if (!cleaned.parisar1 && cleaned.parisar) cleaned.parisar1 = cleaned.parisar;
   if (!cleaned.parisar2 && cleaned.parisar) cleaned.parisar2 = cleaned.parisar;
   if (!cleaned.parisar && (cleaned.parisar1 || cleaned.parisar2)) cleaned.parisar = [...(cleaned.parisar1 || []), ...(cleaned.parisar2 || [])];
+  
+  // Merge science (vijnan/vidnyan) remarks into parisar
+  if (cleaned.vijnan || cleaned.vidnyan) {
+    const sciRemarks = [...(cleaned.vijnan || []), ...(cleaned.vidnyan || [])];
+    if (!cleaned.parisar || cleaned.parisar.length === 0) {
+      cleaned.parisar = sciRemarks;
+    } else {
+      cleaned.parisar = [...new Set([...cleaned.parisar, ...sciRemarks])];
+    }
+  }
 
   // Fallback to CLASS_1_REMARKS for any empty or missing subject arrays
   const fallback = CLASS_1_REMARKS;

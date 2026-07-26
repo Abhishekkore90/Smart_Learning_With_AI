@@ -28,14 +28,20 @@ export function CCESubjectConfig({
     const load = async () => {
       setLoading(true);
       try {
-        const ref = doc(db, "cce_settings", `${selectedClass}_${academicYear}`);
+        const stored = localStorage.getItem(`cce_subjects_${selectedClass}_${academicYear}_${medium}`);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setSubjects(parsed);
+            setLoading(false);
+            return;
+          }
+        }
+
+        const ref = doc(db, "cce_settings", `${selectedClass}_${academicYear}_${medium}`);
         const snap = await getDoc(ref);
         if (snap.exists()) {
           const data = snap.data();
-          if (data.medium) {
-            const isSemi = data.medium.toLowerCase().includes("semi");
-            setMedium(isSemi ? "semi" : "marathi");
-          }
           if (data.subjects && data.subjects.length > 0) {
             setSubjects(data.subjects);
           } else {
@@ -55,6 +61,17 @@ export function CCESubjectConfig({
   const handleMediumChange = (newMed: "marathi" | "semi") => {
     setMedium(newMed);
     localStorage.setItem("cce_selected_medium", newMed);
+    const stored = localStorage.getItem(`cce_subjects_${selectedClass}_${academicYear}_${newMed}`);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setSubjects(parsed);
+          toast.info(`माध्यम ${newMed === "semi" ? "सेमी-इंग्रजी" : "मराठी"} मध्ये बदलले व विषय लोड केले!`);
+          return;
+        }
+      } catch (e) {}
+    }
     setSubjects(getDefaultSubjectsForClass(selectedClass, newMed));
     toast.info(`माध्यम ${newMed === "semi" ? "सेमी-इंग्रजी" : "मराठी"} मध्ये बदलले व विषय अपडेट झाले!`);
   };
@@ -70,7 +87,7 @@ export function CCESubjectConfig({
     try {
       const isSemi = medium === "semi";
       await setDoc(
-        doc(db, "cce_settings", `${selectedClass}_${academicYear}`),
+        doc(db, "cce_settings", `${selectedClass}_${academicYear}_${medium}`),
         {
           subjects,
           class: selectedClass,
@@ -81,7 +98,7 @@ export function CCESubjectConfig({
         },
         { merge: true }
       );
-      localStorage.setItem(`cce_subjects_${selectedClass}_${academicYear}`, JSON.stringify(subjects));
+      localStorage.setItem(`cce_subjects_${selectedClass}_${academicYear}_${medium}`, JSON.stringify(subjects));
       localStorage.setItem("cce_selected_medium", medium);
       toast.success("विषय यशस्वीरित्या जतन केले!");
     } catch (err: any) {
