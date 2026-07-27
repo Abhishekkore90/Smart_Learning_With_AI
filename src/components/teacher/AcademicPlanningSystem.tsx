@@ -32,6 +32,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
 import { uploadFileWithProgress } from "@/lib/upload";
+import { saveFileToIndexedDB, getFileFromIndexedDB } from "@/lib/indexedDbStorage";
 
 export interface PlanningFileRecord {
   id: string;
@@ -351,6 +352,9 @@ export function AcademicPlanningSystem({
 
       const compressedSizeMb = (finalFileBlob.size / (1024 * 1024)).toFixed(2);
 
+      // 1. Save binary Blob persistently to IndexedDB for 100% cross-refresh availability
+      await saveFileToIndexedDB(recordKey, finalFileBlob);
+
       // Create instant local Blob URL (0ms)
       const blobUrl = URL.createObjectURL(finalFileBlob);
       let fileUrl = blobUrl;
@@ -373,7 +377,7 @@ export function AcademicPlanningSystem({
           fileUrl = await Promise.race([storageUploadPromise, timeoutPromise]);
           setUploadProgress(95);
         } catch (fbErr) {
-          console.warn("Firebase Storage timeout/notice, using instant blob URL:", fbErr);
+          console.warn("Firebase Storage timeout/notice, using persistent IndexedDB blob:", fbErr);
           fileUrl = blobUrl;
         }
       }
@@ -429,23 +433,46 @@ export function AcademicPlanningSystem({
     }
   };
 
-  // Helper to trigger download / open
-  const handleDownloadFile = (rec: PlanningFileRecord) => {
-    if (!rec || !rec.fileUrl) {
+  // Helper to trigger VIEW preview (checks IndexedDB for persistent blob across page refreshes)
+  const handleViewFile = async (rec: PlanningFileRecord) => {
+    if (!rec) return;
+    let targetUrl = rec.fileUrl;
+
+    const blobFromDb = await getFileFromIndexedDB(rec.id);
+    if (blobFromDb) {
+      targetUrl = URL.createObjectURL(blobFromDb);
+    }
+
+    if (!targetUrl) {
+      toast.error("अद्याप फाईल उपलब्ध नाही, कृपया फाईल निवडून पुन्हा अपलोड करा.");
+      return;
+    }
+
+    setViewModalFile({ ...rec, fileUrl: targetUrl });
+  };
+
+  // Helper to trigger download / open (checks IndexedDB for persistent blob across page refreshes)
+  const handleDownloadFile = async (rec: PlanningFileRecord) => {
+    if (!rec) return;
+    let targetUrl = rec.fileUrl;
+
+    const blobFromDb = await getFileFromIndexedDB(rec.id);
+    if (blobFromDb) {
+      targetUrl = URL.createObjectURL(blobFromDb);
+    }
+
+    if (!targetUrl) {
       toast.error("डाउनलोड करण्यासाठी फाईल उपलब्ध नाही.");
       return;
     }
-    if (rec.fileUrl.startsWith("data:")) {
-      const a = document.createElement("a");
-      a.href = rec.fileUrl;
-      a.download = rec.fileName || `${rec.planningType}_planning.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      toast.success("फाईल डाऊनलोड होत आहे...");
-    } else {
-      window.open(rec.fileUrl, "_blank");
-    }
+
+    const a = document.createElement("a");
+    a.href = targetUrl;
+    a.download = rec.fileName || `${rec.planningType}_planning.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    toast.success("फाईल डाऊनलोड होत आहे...");
   };
 
   const stepsList = [
@@ -866,7 +893,7 @@ export function AcademicPlanningSystem({
                         <div className="grid grid-cols-2 gap-2">
                           <button
                             onClick={() => {
-                              if (fileRec) setViewModalFile(fileRec);
+                              if (fileRec) handleViewFile(fileRec);
                               else toast.error("अद्याप वार्षिक नियोजनाची फाईल अपलोड केलेली नाही.");
                             }}
                             className="py-2.5 px-3 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer backdrop-blur-xs"
@@ -939,7 +966,7 @@ export function AcademicPlanningSystem({
                         <div className="grid grid-cols-2 gap-2">
                           <button
                             onClick={() => {
-                              if (fileRec) setViewModalFile(fileRec);
+                              if (fileRec) handleViewFile(fileRec);
                               else {
                                 window.location.href = `/teacher/modules/question-bank?class=${selectedClass}&medium=${selectedMedium}`;
                               }
