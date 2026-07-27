@@ -65,6 +65,7 @@ import { Route as AdminStudentManagementRouteImport } from './routes/admin.stude
 import { Route as AdminSqafConfigRouteImport } from './routes/admin.sqaf-config'
 import { Route as AdminSqaafConfigRouteImport } from './routes/admin.sqaaf-config'
 import { Route as AdminReviewsRouteImport } from './routes/admin.reviews'
+import { Route as AdminPlanningRouteImport } from './routes/admin.planning'
 import { Route as AdminMeetingTemplatesRouteImport } from './routes/admin.meeting-templates'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as AdminEnrollmentsRouteImport } from './routes/admin.enrollments'
@@ -375,6 +376,11 @@ const AdminReviewsRoute = AdminReviewsRouteImport.update({
   path: '/admin/reviews',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminPlanningRoute = AdminPlanningRouteImport.update({
+  id: '/admin/planning',
+  path: '/admin/planning',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminMeetingTemplatesRoute = AdminMeetingTemplatesRouteImport.update({
   id: '/admin/meeting-templates',
   path: '/admin/meeting-templates',
@@ -554,6 +560,7 @@ export interface FileRoutesByFullPath {
   '/admin/enrollments': typeof AdminEnrollmentsRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/meeting-templates': typeof AdminMeetingTemplatesRoute
+  '/admin/planning': typeof AdminPlanningRoute
   '/admin/reviews': typeof AdminReviewsRoute
   '/admin/sqaaf-config': typeof AdminSqaafConfigRoute
   '/admin/sqaf-config': typeof AdminSqafConfigRoute
@@ -640,6 +647,7 @@ export interface FileRoutesByTo {
   '/admin/enrollments': typeof AdminEnrollmentsRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/meeting-templates': typeof AdminMeetingTemplatesRoute
+  '/admin/planning': typeof AdminPlanningRoute
   '/admin/reviews': typeof AdminReviewsRoute
   '/admin/sqaaf-config': typeof AdminSqaafConfigRoute
   '/admin/sqaf-config': typeof AdminSqafConfigRoute
@@ -728,6 +736,7 @@ export interface FileRoutesById {
   '/admin/enrollments': typeof AdminEnrollmentsRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/meeting-templates': typeof AdminMeetingTemplatesRoute
+  '/admin/planning': typeof AdminPlanningRoute
   '/admin/reviews': typeof AdminReviewsRoute
   '/admin/sqaaf-config': typeof AdminSqaafConfigRoute
   '/admin/sqaf-config': typeof AdminSqafConfigRoute
@@ -817,6 +826,7 @@ export interface FileRouteTypes {
     | '/admin/enrollments'
     | '/admin/login'
     | '/admin/meeting-templates'
+    | '/admin/planning'
     | '/admin/reviews'
     | '/admin/sqaaf-config'
     | '/admin/sqaf-config'
@@ -903,6 +913,7 @@ export interface FileRouteTypes {
     | '/admin/enrollments'
     | '/admin/login'
     | '/admin/meeting-templates'
+    | '/admin/planning'
     | '/admin/reviews'
     | '/admin/sqaaf-config'
     | '/admin/sqaf-config'
@@ -990,6 +1001,7 @@ export interface FileRouteTypes {
     | '/admin/enrollments'
     | '/admin/login'
     | '/admin/meeting-templates'
+    | '/admin/planning'
     | '/admin/reviews'
     | '/admin/sqaaf-config'
     | '/admin/sqaf-config'
@@ -1078,6 +1090,7 @@ export interface RootRouteChildren {
   AdminEnrollmentsRoute: typeof AdminEnrollmentsRoute
   AdminLoginRoute: typeof AdminLoginRoute
   AdminMeetingTemplatesRoute: typeof AdminMeetingTemplatesRoute
+  AdminPlanningRoute: typeof AdminPlanningRoute
   AdminReviewsRoute: typeof AdminReviewsRoute
   AdminSqaafConfigRoute: typeof AdminSqaafConfigRoute
   AdminSqafConfigRoute: typeof AdminSqafConfigRoute
@@ -1523,6 +1536,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminReviewsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/planning': {
+      id: '/admin/planning'
+      path: '/admin/planning'
+      fullPath: '/admin/planning'
+      preLoaderRoute: typeof AdminPlanningRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/meeting-templates': {
       id: '/admin/meeting-templates'
       path: '/admin/meeting-templates'
@@ -1812,6 +1832,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminEnrollmentsRoute: AdminEnrollmentsRoute,
   AdminLoginRoute: AdminLoginRoute,
   AdminMeetingTemplatesRoute: AdminMeetingTemplatesRoute,
+  AdminPlanningRoute: AdminPlanningRoute,
   AdminReviewsRoute: AdminReviewsRoute,
   AdminSqaafConfigRoute: AdminSqaafConfigRoute,
   AdminSqafConfigRoute: AdminSqafConfigRoute,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { db } from "../lib/firebase";
 import { doc, getDoc, collection, getDocs, query, where } from "firebase/firestore";
-import { Download, Printer, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
+import { Download, Printer, ArrowLeft, Loader2, AlertCircle, FileText, Copy } from "lucide-react";
 import { toast } from "sonner";
 import "./result.css";
 
@@ -31,6 +31,9 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
   const [selectedClass, setSelectedClass] = useState(initialClass || "1st");
   const [academicYear, setAcademicYear] = useState(initialYear || "2025-26");
   const [division, setDivision] = useState("1");
+  const [pageMode, setPageMode] = useState("2pages");
+  const [showLayoutModal, setShowLayoutModal] = useState(true);
+  const [selectedMedium, setSelectedMedium] = useState("marathi");
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
 
@@ -56,7 +59,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
 
   useEffect(() => {
     loadUserFirestoreData();
-  }, [selectedClass, academicYear]);
+  }, [selectedClass, academicYear, selectedMedium]);
 
   const loadUserFirestoreData = async () => {
     setLoading(true);
@@ -186,6 +189,19 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
         } catch (e) {}
       }
 
+      // Filter by Medium
+      const isStudentSemi = (s) => {
+        if (s.isSemiEnglish === true) return true;
+        if (s.isSemiEnglish === false) return false;
+        if (!s.medium) return false;
+        const m = String(s.medium).toLowerCase();
+        return m.includes("semi") || m.includes("सेमी");
+      };
+      loadedStudents = loadedStudents.filter((s) => {
+        const isSemi = isStudentSemi(s);
+        return selectedMedium === "semi" ? isSemi : !isSemi;
+      });
+
       // Deduplicate students by name / rollNo
       const uniqueMap = new Map();
       loadedStudents.forEach(s => {
@@ -226,25 +242,62 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
         console.error("Error fetching marks:", e);
       }
 
-      // 4. Fetch User's Entered Remarks for this Class & Year (Merging sem1, sem2 & general from Firestore & Bunny CDN)
+      // 4. Fetch User's Entered Remarks for this Class & Year (Merging sem1, sem2 & medium variants)
       try {
-        const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
-        const bunnyRemarks = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_remarks.json`);
+        let mergedRemarks = {};
 
-        const remSnapSem2 = await getDoc(doc(db, "cce_remarks_v2", `${selectedClass}_${academicYear}_sem2`));
-        const remSnapSem1 = await getDoc(doc(db, "cce_remarks_v2", `${selectedClass}_${academicYear}_sem1`));
-        const remSnapGen = await getDoc(doc(db, "cce_remarks_v2", docId));
+        const loadSemesterRemarks = async (sem) => {
+          let recs = null;
+          const mediumsToTry = [selectedMedium];
+          for (const med of mediumsToTry) {
+            const cacheKey = `cce_remarks_cache_${selectedClass}_${academicYear}_${sem}_${med}`;
+            try {
+              const cached = localStorage.getItem(cacheKey);
+              if (cached) {
+                const parsed = JSON.parse(cached);
+                if (parsed && typeof parsed === "object" && Object.keys(parsed).length > 0) {
+                  recs = parsed;
+                  break;
+                }
+              }
+            } catch (e) {}
+          }
 
-        const rFsDataSem2 = remSnapSem2.exists() ? (remSnapSem2.data().records || remSnapSem2.data()) : {};
-        const rFsDataSem1 = remSnapSem1.exists() ? (remSnapSem1.data().records || remSnapSem1.data()) : {};
-        const rFsDataGen = remSnapGen.exists() ? (remSnapGen.data().records || remSnapGen.data().remarksData || remSnapGen.data()) : {};
-
-        const mergedRemarks = {
-          ...rFsDataGen,
-          ...rFsDataSem1,
-          ...rFsDataSem2,
-          ...(bunnyRemarks || {}),
+          if (!recs) {
+            const docIds = [
+              `${selectedClass}_${academicYear}_${sem}_${selectedMedium}`,
+              `${selectedClass}_${academicYear}_${sem}`,
+            ];
+            for (const dId of docIds) {
+              try {
+                const snap = await getDoc(doc(db, "cce_remarks_v2", dId));
+                if (snap.exists()) {
+                  const data = snap.data();
+                  const parsedRecs = data.records || data.remarks || data.data || null;
+                  if (parsedRecs && typeof parsedRecs === "object" && Object.keys(parsedRecs).length > 0) {
+                    recs = parsedRecs;
+                    break;
+                  }
+                }
+              } catch (e) {}
+            }
+          }
+          return recs;
         };
+
+        const sem1Recs = await loadSemesterRemarks("sem1");
+        const sem2Recs = await loadSemesterRemarks("sem2");
+
+        if (sem1Recs && typeof sem1Recs === "object") Object.assign(mergedRemarks, sem1Recs);
+        if (sem2Recs && typeof sem2Recs === "object") Object.assign(mergedRemarks, sem2Recs);
+
+        try {
+          const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
+          const bunnyRemarks = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_remarks.json`);
+          if (bunnyRemarks && typeof bunnyRemarks === "object") {
+            Object.assign(mergedRemarks, bunnyRemarks);
+          }
+        } catch (e) {}
 
         setRemarksData(mergedRemarks);
       } catch (e) {
@@ -312,6 +365,63 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
 
   return (
     <div className="font-sans text-slate-800">
+      {/* Layout Selection Dialog Modal */}
+      {showLayoutModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-100 text-center animate-in fade-in zoom-in duration-200">
+            <div className="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <FileText className="size-8" />
+            </div>
+            <h3 className="text-lg font-black text-slate-900 mb-1.5">नोंदवही PDF स्वरूप निवडा</h3>
+            <p className="text-xs text-slate-500 font-medium mb-6">
+              तुम्हाला एका विद्यार्थ्याची नोंदवही १ पानामध्ये हवी आहे की २ पानांमध्ये?
+            </p>
+
+            <div className="grid grid-cols-1 gap-3.5 mb-2">
+              <button
+                onClick={() => {
+                  setPageMode("1page");
+                  setShowLayoutModal(false);
+                }}
+                className="p-4 rounded-2xl border-2 border-blue-500 bg-blue-50/50 hover:bg-blue-100/80 transition-all text-left flex items-center gap-3.5 cursor-pointer group active:scale-[0.98]"
+              >
+                <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-base shadow-sm">
+                  1
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-blue-950 group-hover:text-blue-600">
+                    १ पानाची नोंदवही (Single Page)
+                  </h4>
+                  <p className="text-[11px] text-slate-600 font-medium leading-tight">
+                    एकाच पानावर गुण तक्ता + वर्णनात्मक नोंदी कॉम्पॅक्ट.
+                  </p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => {
+                  setPageMode("2pages");
+                  setShowLayoutModal(false);
+                }}
+                className="p-4 rounded-2xl border-2 border-slate-200 bg-slate-50/50 hover:bg-slate-100 transition-all text-left flex items-center gap-3.5 cursor-pointer group active:scale-[0.98]"
+              >
+                <div className="w-10 h-10 rounded-xl bg-slate-700 text-white flex items-center justify-center font-bold text-base shadow-sm">
+                  2
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-slate-900 group-hover:text-slate-700">
+                    २ पानांची नोंदवही (Two Pages)
+                  </h4>
+                  <p className="text-[11px] text-slate-600 font-medium leading-tight">
+                    दोन पानांमध्ये सविस्तर गुण तक्ता व वर्णनात्मक नोंदी.
+                  </p>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Action & Control Bar */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm mb-6 flex flex-wrap items-center justify-between gap-4 no-print">
         <div className="flex items-center gap-3">
@@ -327,6 +437,33 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
             <h2 className="text-base font-black text-slate-800">सातत्यपूर्ण सर्वंकष मूल्यांकन नोंदवही</h2>
             <p className="text-xs text-blue-600 font-bold uppercase tracking-wider">{selectedClass} • {academicYear}</p>
           </div>
+        </div>
+
+
+        {/* Page Mode Switcher */}
+        <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
+          <button
+            onClick={() => setPageMode("1page")}
+            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+              pageMode === "1page"
+                ? "bg-blue-600 text-white shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <FileText className="size-3.5" />
+            <span>१ पान</span>
+          </button>
+          <button
+            onClick={() => setPageMode("2pages")}
+            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+              pageMode === "2pages"
+                ? "bg-blue-600 text-white shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <Copy className="size-3.5" />
+            <span>२ पाने</span>
+          </button>
         </div>
 
         <div className="flex items-center gap-3">
@@ -432,21 +569,29 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
                       <td className="p-3 border-r border-amber-900/40 text-blue-700 font-bold">
                         {idx + 1}. {student.name}
                       </td>
-                      <td className="p-3 text-center text-slate-600 font-mono font-bold">{idx * 2 + 3} - {idx * 2 + 4}</td>
+                      <td className="p-3 text-center text-slate-600 font-mono font-bold">
+                        {pageMode === "1page" ? (idx + 3) : `${idx * 2 + 3} - ${idx * 2 + 4}`}
+                      </td>
                     </tr>
                   ))
                 )}
                 <tr className="border-b border-amber-900/40 bg-slate-50">
                   <td className="p-3 border-r border-amber-900/40 text-blue-700 font-bold">श्रेणी निहाय संकलन तक्ता (वर्गस्तर)</td>
-                  <td className="p-3 text-center text-slate-600 font-mono font-bold">{students.length * 2 + 3}</td>
+                  <td className="p-3 text-center text-slate-600 font-mono font-bold">
+                    {pageMode === "1page" ? (students.length + 3) : (students.length * 2 + 3)}
+                  </td>
                 </tr>
                 <tr className="border-b border-amber-900/40 bg-slate-50">
                   <td className="p-3 border-r border-amber-900/40 text-blue-700 font-bold">जातनिहाय व विषयनिहाय एकूण तेरीज पत्रक</td>
-                  <td className="p-3 text-center text-slate-600 font-mono font-bold">{students.length * 2 + 4}</td>
+                  <td className="p-3 text-center text-slate-600 font-mono font-bold">
+                    {pageMode === "1page" ? (students.length + 4) : (students.length * 2 + 4)}
+                  </td>
                 </tr>
                 <tr className="bg-slate-50">
                   <td className="p-3 border-r border-amber-900/40 text-blue-700 font-bold">सातत्यपूर्ण सर्वंकष मूल्यांकन: निकाल पत्रक</td>
-                  <td className="p-3 text-center text-slate-600 font-mono font-bold">{students.length * 2 + 5}</td>
+                  <td className="p-3 text-center text-slate-600 font-mono font-bold">
+                    {pageMode === "1page" ? (students.length + 5) : (students.length * 2 + 5)}
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -465,7 +610,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
           </div>
         </div>
 
-        {/* -------------------- STUDENT PAGES (2 PAGES PER STUDENT) -------------------- */}
+        {/* -------------------- STUDENT PAGES -------------------- */}
         {students.map((student, sIdx) => {
           const studentId = student.id || student.name;
           const studentMarks = marksData[student.id]
@@ -486,13 +631,16 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
 
           return (
             <React.Fragment key={student.id}>
-              {/* Page A: Formative & Summative Evaluation Table (Matching Demo Screenshot Image 1 Exactly) */}
-              <div className="pdf-page bg-white p-6 border border-slate-200 rounded-3xl h-[285mm] max-h-[285mm] overflow-hidden shadow-sm flex flex-col justify-between mb-4" style={{ pageBreakAfter: "always", breakAfter: "page" }}>
+              {/* Page A: Formative & Summative Evaluation Table */}
+              <div
+                className={`pdf-page bg-white border border-slate-200 rounded-3xl h-[285mm] max-h-[285mm] overflow-hidden shadow-sm flex flex-col justify-between mb-4 ${pageMode === "1page" ? "p-3" : "p-6"}`}
+                style={{ pageBreakAfter: "always", breakAfter: "page" }}
+              >
                 <div>
-                  <h2 className="text-2xl font-black text-[#004080] text-center mb-4 tracking-tight">सातत्यपूर्ण सर्वंकष मूल्यांकन</h2>
+                  <h2 className={`font-black text-[#004080] text-center tracking-tight ${pageMode === "1page" ? "text-base mb-1" : "text-2xl mb-4"}`}>सातत्यपूर्ण सर्वंकष मूल्यांकन</h2>
 
                   {/* Student Meta Header */}
-                  <div className="flex items-center justify-between text-xs font-bold text-slate-900 border-b-2 border-sky-100 pb-3 mb-4">
+                  <div className={`flex items-center justify-between font-bold text-slate-900 border-b-2 border-sky-100 ${pageMode === "1page" ? "text-[9px] pb-1 mb-1" : "text-xs pb-3 mb-4"}`}>
                     <span>विद्यार्थ्याचे नाव - <b className="text-slate-900">{student.name}</b></span>
                     <span>इयत्ता - <b>{selectedClass}</b></span>
                     <span>तुकडी - <b>{division}</b></span>
@@ -500,9 +648,9 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
                     <span>द्वितीय सत्र</span>
                   </div>
 
-                  {/* Marks Table (Exact Demo Structure with Uniform Column Widths) */}
+                  {/* Marks Table */}
                   <div className="overflow-x-auto">
-                    <table className="w-full border-collapse border-2 border-[#0080ff] text-xs text-center font-medium table-fixed">
+                    <table className={`w-full border-collapse border-2 border-[#0080ff] text-center font-medium table-fixed ${pageMode === "1page" ? "text-[7px]" : "text-xs"}`}>
                       <colgroup>
                         <col style={{ width: "4%" }} />
                         <col style={{ width: "20%" }} />
@@ -550,7 +698,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
                         </tr>
 
                         {/* Header Row 2: Vertical Labels */}
-                        <tr className="bg-[#bfe5ff] text-[#002b66] font-bold border-b border-[#0080ff] h-28">
+                        <tr className={`bg-[#bfe5ff] text-[#002b66] font-bold border-b border-[#0080ff] ${pageMode === "1page" ? "h-16" : "h-28"}`}>
                           {/* Formative Vertical Labels */}
                           <th className="border border-[#0080ff] bg-[#bfe5ff] p-1 align-bottom py-2">
                             <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", margin: "0 auto", whiteSpace: "nowrap" }}>तोंडीकाम</div>
@@ -629,85 +777,67 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
                           const subData = getSubData(subjectName);
                           const isPracticalSub = subjectName.includes("कला") || subjectName.includes("कार्यानुभव") || subjectName.includes("शारीरिक");
 
-                          // Formative (आकारिक) Obtained Values
-                          const tondiKaamObt = subData.tondiKaam !== undefined && subData.tondiKaam !== "" ? Number(subData.tondiKaam) : (subData.oral !== undefined && subData.oral !== "" ? Number(subData.oral) : "");
-                          const pratyakshikPrayogObt = subData.pratyakshikPrayog !== undefined && subData.pratyakshikPrayog !== "" ? Number(subData.pratyakshikPrayog) : (subData.practical !== undefined && subData.practical !== "" ? Number(subData.practical) : "");
-                          const upakramKritiObt = subData.upakramKriti !== undefined && subData.upakramKriti !== "" ? Number(subData.upakramKriti) : (subData.activity !== undefined && subData.activity !== "" ? Number(subData.activity) : "");
-                          const prakalpaObt = subData.prakalpa !== undefined && subData.prakalpa !== "" ? Number(subData.prakalpa) : (subData.prakalp !== undefined && subData.prakalp !== "" ? Number(subData.prakalp) : (subData.project !== undefined && subData.project !== "" ? Number(subData.project) : ""));
-                          const chaachaniLekhiObt = subData.chaachaniLekhi !== undefined && subData.chaachaniLekhi !== "" ? Number(subData.chaachaniLekhi) : (subData.test !== undefined && subData.test !== "" ? Number(subData.test) : "");
-                          const swadhyayVargakaryaObt = subData.swadhyayVargakarya !== undefined && subData.swadhyayVargakarya !== "" ? Number(subData.swadhyayVargakarya) : (subData.homework !== undefined && subData.homework !== "" ? Number(subData.homework) : "");
-                          const itarObt = subData.itar !== undefined && subData.itar !== "" ? Number(subData.itar) : "";
+                          const tondiKaamObt = subData.tondiKaam ?? subData.oral ?? "";
+                          const pratyakshikPrayogObt = subData.pratyakshikPrayog ?? subData.practical ?? subData.activity ?? "";
+                          const upakramKritiObt = subData.upakramKriti ?? subData.project ?? "";
+                          const prakalpaObt = subData.prakalp ?? subData.prakalpa ?? "";
+                          const chaachaniLekhiObt = subData.chaachaniLekhi ?? subData.test ?? "";
+                          const swadhyayVargakaryaObt = subData.swadhyayVargakarya ?? subData.homework ?? "";
+                          const itarObt = subData.itar ?? subData.other ?? "";
 
-                          // Summative (संकलित) Obtained Values
-                          const sankalitTondiObt = subData.sankalitTondi !== undefined && subData.sankalitTondi !== "" ? Number(subData.sankalitTondi) : (subData.semesterOral !== undefined && subData.semesterOral !== "" ? Number(subData.semesterOral) : "");
-                          const sankalitPratyakshikObt = subData.sankalitPratyakshik !== undefined && subData.sankalitPratyakshik !== "" ? Number(subData.sankalitPratyakshik) : (subData.semesterPractical !== undefined && subData.semesterPractical !== "" ? Number(subData.semesterPractical) : "");
-                          const sankalitLekhiObt = subData.sankalitLekhi !== undefined && subData.sankalitLekhi !== "" ? Number(subData.sankalitLekhi) : (subData.semesterWritten !== undefined && subData.semesterWritten !== "" ? Number(subData.semesterWritten) : "");
+                          const sankalitTondiObt = subData.sankalitTondi ?? subData.semesterOral ?? "";
+                          const sankalitPratyakshikObt = subData.sankalitPratyakshik ?? subData.semesterPractical ?? "";
+                          const sankalitLekhiObt = subData.sankalitLekhi ?? subData.semesterWritten ?? "";
 
-                          // Formative (आकारिक) Max Values
-                          const tondiKaamMax = subData.tondiKaamMax || subData.oralMax || 20;
-                          const pratyakshikPrayogMax = subData.pratyakshikPrayogMax || subData.practicalMax || (pratyakshikPrayogObt !== "" ? 5 : "");
-                          const upakramKritiMax = subData.upakramKritiMax || subData.activityMax || (isPracticalSub ? 50 : (upakramKritiObt !== "" ? (upakramKritiObt > 15 ? 50 : 10) : 15));
-                          const prakalpaMax = subData.prakalpaMax || subData.prakalpMax || subData.projectMax || (isPracticalSub ? 20 : (prakalpaObt !== "" ? 5 : ""));
-                          const chaachaniLekhiMax = subData.chaachaniLekhiMax || subData.testMax || (isPracticalSub ? "" : 20);
-                          const swadhyayVargakaryaMax = subData.swadhyayVargakaryaMax || subData.homeworkMax || (swadhyayVargakaryaObt !== "" ? (swadhyayVargakaryaObt > 10 ? 15 : 10) : 15);
-                          const itarMax = subData.itarMax || "";
+                          const tondiKaamMax = subData.tondiKaamMax || (isPracticalSub ? (tondiKaamObt !== "" ? 20 : 20) : (tondiKaamObt !== "" ? (tondiKaamObt > 10 ? 20 : 10) : 10));
+                          const pratyakshikPrayogMax = subData.pratyakshikPrayogMax || (isPracticalSub ? (pratyakshikPrayogObt !== "" ? 20 : 20) : (pratyakshikPrayogObt !== "" ? 10 : 10));
+                          const upakramKritiMax = subData.upakramKritiMax || (isPracticalSub ? (upakramKritiObt !== "" ? 20 : 20) : (upakramKritiObt !== "" ? 10 : 10));
+                          const prakalpaMax = subData.prakalpaMax || (isPracticalSub ? (prakalpaObt !== "" ? 20 : 20) : (prakalpaObt !== "" ? 10 : 10));
+                          const chaachaniLekhiMax = subData.chaachaniLekhiMax || (isPracticalSub ? "" : (chaachaniLekhiObt !== "" ? (chaachaniLekhiObt <= 10 ? 10 : 20) : 20));
+                          const swadhyayVargakaryaMax = subData.swadhyayVargakaryaMax || (isPracticalSub ? (swadhyayVargakaryaObt !== "" ? 20 : 20) : (swadhyayVargakaryaObt !== "" ? 10 : 10));
+                          const itarMax = subData.itarMax || (isPracticalSub ? "" : (itarObt !== "" ? 10 : ""));
 
-                          // Summative (संकलित) Max Values
                           const sankalitTondiMax = subData.sankalitTondiMax || (isPracticalSub ? "" : (sankalitTondiObt !== "" ? (sankalitTondiObt > 10 ? 20 : 10) : 10));
                           const sankalitPratyakshikMax = subData.sankalitPratyakshikMax || (sankalitPratyakshikObt !== "" ? 5 : "");
                           const sankalitLekhiMax = subData.sankalitLekhiMax || (isPracticalSub ? "" : (sankalitLekhiObt !== "" ? (sankalitLekhiObt <= 5 ? 5 : 20) : 20));
 
-                          // Formative Totals
                           const hasFormative = tondiKaamObt !== "" || pratyakshikPrayogObt !== "" || upakramKritiObt !== "" || prakalpaObt !== "" || chaachaniLekhiObt !== "" || swadhyayVargakaryaObt !== "" || itarObt !== "";
                           const formTotalObt = hasFormative ? ((Number(tondiKaamObt) || 0) + (Number(pratyakshikPrayogObt) || 0) + (Number(upakramKritiObt) || 0) + (Number(prakalpaObt) || 0) + (Number(chaachaniLekhiObt) || 0) + (Number(swadhyayVargakaryaObt) || 0) + (Number(itarObt) || 0)) : "";
                           const formTotalMax = (Number(tondiKaamMax) || 0) + (Number(pratyakshikPrayogMax) || 0) + (Number(upakramKritiMax) || 0) + (Number(prakalpaMax) || 0) + (Number(chaachaniLekhiMax) || 0) + (Number(swadhyayVargakaryaMax) || 0) + (Number(itarMax) || 0) || (isPracticalSub ? 100 : 70);
 
-                          // Summative Totals
                           const hasSummative = sankalitTondiObt !== "" || sankalitPratyakshikObt !== "" || sankalitLekhiObt !== "";
                           const semTotalObt = hasSummative ? ((Number(sankalitTondiObt) || 0) + (Number(sankalitPratyakshikObt) || 0) + (Number(sankalitLekhiObt) || 0)) : "";
                           const semTotalMax = isPracticalSub ? "" : ((Number(sankalitTondiMax) || 0) + (Number(sankalitPratyakshikMax) || 0) + (Number(sankalitLekhiMax) || 0) || 30);
 
-                          // Grand Totals
                           const hasGrand = formTotalObt !== "" || semTotalObt !== "";
                           const grandTotalObt = hasGrand ? ((Number(formTotalObt) || 0) + (Number(semTotalObt) || 0)) : "";
                           const grandMax = 100;
                           const grade = grandTotalObt !== "" ? getGrade((Number(grandTotalObt) / grandMax) * 100) : "";
 
+                          const cellPad = pageMode === "1page" ? "p-0.5" : "p-1";
+
                           return (
                             <React.Fragment key={subjectName}>
-                              {/* Max Row (पैकी) */}
                               <tr className="bg-white text-slate-900 font-bold border-t border-[#0080ff]">
-                                <td className="border border-[#0080ff] border-b-0 p-1 font-bold align-middle">{subIdx + 1}</td>
-                                <td className="border border-[#0080ff] border-b-0 p-1 text-[#002b66] text-center font-bold align-middle leading-snug">{subjectName}</td>
-                                <td className="border border-[#0080ff] p-1 text-slate-800 align-middle">पैकी</td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{tondiKaamMax}</td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{pratyakshikPrayogMax}</td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{upakramKritiMax}</td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{prakalpaMax}</td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{chaachaniLekhiMax}</td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{swadhyayVargakaryaMax}</td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{itarMax}</td>
-                                <td className="border border-[#0080ff] p-1 font-extrabold align-middle">{formTotalMax}</td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{sankalitTondiMax}</td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{sankalitPratyakshikMax}</td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{sankalitLekhiMax}</td>
-                                <td className="border border-[#0080ff] p-1 font-extrabold align-middle">{semTotalMax}</td>
-                                <td className="border border-[#0080ff] p-1 font-extrabold align-middle">{grandMax}</td>
-                                <td className="border border-[#0080ff] border-b-0 p-1 font-bold text-slate-900 align-middle text-center">{grade}</td>
+                                <td className={`border border-[#0080ff] border-b-0 ${cellPad} font-bold align-middle`}>{subIdx + 1}</td>
+                                <td className={`border border-[#0080ff] border-b-0 ${cellPad} text-[#002b66] text-center font-bold align-middle leading-snug`}>{subjectName}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} text-slate-800 align-middle`}>पैकी</td>
+                                <td className={`border border-[#0080ff] ${cellPad} align-middle`}>{tondiKaamMax}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} align-middle`}>{pratyakshikPrayogMax}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} align-middle`}>{upakramKritiMax}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} align-middle`}>{prakalpaMax}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} align-middle`}>{chaachaniLekhiMax}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} align-middle`}>{swadhyayVargakaryaMax}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} align-middle`}>{itarMax}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} font-extrabold align-middle`}>{formTotalMax}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} align-middle`}>{sankalitTondiMax}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} align-middle`}>{sankalitPratyakshikMax}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} align-middle`}>{sankalitLekhiMax}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} font-extrabold align-middle`}>{semTotalMax}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} font-extrabold align-middle`}>{grandMax}</td>
+                                <td className={`border border-[#0080ff] border-b-0 ${cellPad} font-bold text-slate-900 align-middle text-center`}>{grade}</td>
                               </tr>
-
-                              {/* Obtained Row (प्राप्त) */}
                               <tr className="bg-white text-slate-900 font-bold border-b-2 border-[#0080ff]">
-                                <td className="border border-[#0080ff] border-t-0 p-1 align-middle"></td>
-                                <td className="border border-[#0080ff] border-t-0 p-1 align-middle"></td>
-                                <td className="border border-[#0080ff] p-1 text-[#002b66] align-middle">प्राप्त</td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{tondiKaamObt !== "" ? tondiKaamObt : ""}</td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{pratyakshikPrayogObt !== "" ? pratyakshikPrayogObt : ""}</td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{upakramKritiObt !== "" ? upakramKritiObt : ""}</td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{prakalpaObt !== "" ? prakalpaObt : ""}</td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{chaachaniLekhiObt !== "" ? chaachaniLekhiObt : ""}</td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{swadhyayVargakaryaObt !== "" ? swadhyayVargakaryaObt : ""}</td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{itarObt !== "" ? itarObt : ""}</td>
                                 <td className="border border-[#0080ff] p-1 font-black align-middle">{formTotalObt !== "" ? formTotalObt : ""}</td>
                                 <td className="border border-[#0080ff] p-1 align-middle">{sankalitTondiObt !== "" ? sankalitTondiObt : ""}</td>
                                 <td className="border border-[#0080ff] p-1 align-middle">{sankalitPratyakshikObt !== "" ? sankalitPratyakshikObt : ""}</td>
@@ -724,20 +854,75 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
                   </div>
                 </div>
 
-                {/* Footer Signatures (Matching Demo Image 1 Exactly) */}
-                <div className="flex items-center justify-between pt-6 border-t border-slate-200 mt-6 text-xs font-bold text-slate-900">
+                  {/* Inline Compact Remarks — ONLY in 1-page mode */}
+                  {pageMode === "1page" && (
+                    <div className="mt-1.5">
+                      <h3 className="text-[9px] font-black text-sky-800 text-center mb-0.5 border-b border-sky-200 pb-0.5">वर्णनात्मक नोंदी</h3>
+                      <table className="w-full border-collapse border border-sky-400 text-[7.5px] font-medium">
+                        <thead>
+                          <tr className="bg-sky-100 text-sky-950 font-bold">
+                            <th className="border border-sky-400 p-0.5 text-left w-1/4">विषय / घटक</th>
+                            <th className="border border-sky-400 p-0.5 text-left w-3/4">वर्णनात्मक नोंदी</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(() => {
+                            const getR = (obj, key) => {
+                              if (!obj || typeof obj !== "object") return "-";
+                              let v = obj[key];
+                              if (!v) {
+                                const l = String(key).toLowerCase();
+                                if (l.includes("मराठी")) v = obj["prathambhasha"] || obj["marathi"] || obj["प्रथम भाषा : मराठी"];
+                                else if (l.includes("इंग्रजी")) v = obj["dvitiybhasha"] || obj["english"] || obj["द्वितीय भाषा : इंग्रजी"];
+                                else if (l.includes("गणित")) v = obj["ganit"] || obj["math"] || obj["गणित"];
+                                else if (l.includes("कला")) v = obj["kala"] || obj["कला"];
+                                else if (l.includes("कार्यानुभव")) v = obj["karyanubhav"] || obj["कार्यानुभव"];
+                                else if (l.includes("शारीरिक")) v = obj["sharirik"] || obj["शारीरिक शिक्षण"];
+                                else if (l.includes("विशेष")) v = obj["visheshpragati"] || obj["vishesh"] || obj["विशेष प्रगती"];
+                                else if (l.includes("सुधारणा")) v = obj["sudharna"] || obj["sudharana"] || obj["सुधारणा आवश्यक"];
+                                else if (l.includes("आवड")) v = obj["aavad"] || obj["आवड / छंद"];
+                                else if (l.includes("व्यक्तिमत्त्व")) v = obj["vyaktimatva"] || obj["व्यक्तिमत्त्व गुणविशेष"];
+                              }
+                              if (!v) return "-";
+                              return Array.isArray(v) ? (v.length > 0 ? v.join(" ") : "-") : (String(v).trim() || "-");
+                            };
+                            return (
+                              <>
+                                {subjects.map((s) => (
+                                  <tr key={s} className="border-b border-sky-300">
+                                    <td className="border border-sky-400 p-0.5 font-bold text-slate-900 bg-sky-50/50 leading-tight">{s}</td>
+                                    <td className="border border-sky-400 p-0.5 text-slate-800 leading-tight">{getR(studentRemarks, s)}</td>
+                                  </tr>
+                                ))}
+                                {["विशेष प्रगती", "सुधारणा आवश्यक", "आवड / छंद", "व्यक्तिमत्त्व गुणविशेष"].map((label) => (
+                                  <tr key={label} className="border-b border-sky-300">
+                                    <td className="border border-sky-400 p-0.5 font-bold text-slate-900 bg-sky-50/50 leading-tight">{label}</td>
+                                    <td className="border border-sky-400 p-0.5 text-slate-800 leading-tight">{getR(studentRemarks, label)}</td>
+                                  </tr>
+                                ))}
+                              </>
+                            );
+                          })()}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                {/* Footer Signatures */}
+                <div className={`flex items-center justify-between border-t border-slate-200 font-bold text-slate-900 ${pageMode === "1page" ? "pt-1 mt-1 text-[8px]" : "pt-4 mt-3 text-xs"}`}>
                   <div className="text-center">
-                    <p className="font-extrabold text-sm">{schoolData.teacherName || "वर्गशिक्षक"}</p>
-                    <p className="text-[11px] text-slate-600 font-medium">वर्गशिक्षक</p>
+                    <p className={pageMode === "1page" ? "font-extrabold text-[9px]" : "font-extrabold text-sm"}>{schoolData.teacherName || "वर्गशिक्षक"}</p>
+                    <p className={pageMode === "1page" ? "text-[7px] text-slate-500 font-medium" : "text-[11px] text-slate-600 font-medium"}>वर्गशिक्षक</p>
                   </div>
                   <div className="text-center">
-                    <p className="font-extrabold text-sm">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
-                    <p className="text-[11px] text-slate-600 font-medium">मुख्याध्यापक</p>
+                    <p className={pageMode === "1page" ? "font-extrabold text-[9px]" : "font-extrabold text-sm"}>{schoolData.headmasterName || "मुख्याध्यापक"}</p>
+                    <p className={pageMode === "1page" ? "text-[7px] text-slate-500 font-medium" : "text-[11px] text-slate-600 font-medium"}>मुख्याध्यापक</p>
                   </div>
                 </div>
               </div>
 
-              {/* Page B: Descriptive Remarks Table */}
+              {/* Page B: Descriptive Remarks Table — ONLY in 2-pages mode */}
+              {pageMode === "2pages" && (
               <div className="pdf-page bg-white p-6 border border-slate-200 rounded-3xl h-[285mm] max-h-[285mm] overflow-hidden shadow-sm flex flex-col justify-between mb-4" style={{ pageBreakAfter: "always", breakAfter: "page" }}>
                 <div>
                   <h2 className="text-xl font-black text-sky-800 text-center mb-4 border-b border-sky-200 pb-2">वर्णनात्मक नोंदी</h2>
@@ -845,6 +1030,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
                   </div>
                 </div>
               </div>
+              )}
             </React.Fragment>
           );
         })}

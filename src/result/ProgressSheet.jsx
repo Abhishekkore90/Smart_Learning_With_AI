@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { db } from "../lib/firebase";
 import { doc, getDoc, collection, getDocs, query, where } from "firebase/firestore";
-import { Download, Printer, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
+import { Download, Printer, ArrowLeft, Loader2, AlertCircle, Copy, FileText } from "lucide-react";
 import { toast } from "sonner";
 import "./result.css";
 
@@ -32,6 +32,9 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", onBack }
   const [selectedClass, setSelectedClass] = useState(initialClass || "1st");
   const [academicYear, setAcademicYear] = useState(initialYear || "2025-26");
   const [division, setDivision] = useState("1");
+  const [pageMode, setPageMode] = useState("1page");
+  const [showLayoutModal, setShowLayoutModal] = useState(true);
+  const [selectedMedium, setSelectedMedium] = useState("marathi");
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
 
@@ -54,7 +57,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", onBack }
 
   useEffect(() => {
     loadUserFirestoreData();
-  }, [selectedClass, academicYear]);
+  }, [selectedClass, academicYear, selectedMedium]);
 
   const loadUserFirestoreData = async () => {
     setLoading(true);
@@ -159,7 +162,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", onBack }
       }
 
       // Filter by Medium
-      const currentMedium = localStorage.getItem("cce_selected_medium") || "marathi";
+      const currentMedium = selectedMedium || localStorage.getItem("cce_selected_medium") || "marathi";
       const isStudentSemi = (s) => {
         if (s.isSemiEnglish === true) return true;
         if (s.isSemiEnglish === false) return false;
@@ -278,44 +281,81 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", onBack }
         console.error("Error fetching marks:", e);
       }
 
-      // 4. Fetch Remarks Data (Merging sem1, sem2, Bunny Storage CDN & Firestore)
+      // 4. Fetch Remarks Data (Merging sem1, sem2, LocalStorage, Firestore & Bunny CDN)
       try {
-        const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
-        const bunnyRemarks = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_remarks.json`);
+        let mergedRemarks = {};
 
-        const remSnapSem2 = await getDoc(doc(db, "cce_remarks_v2", `${selectedClass}_${academicYear}_sem2`));
-        const remSnapSem1 = await getDoc(doc(db, "cce_remarks_v2", `${selectedClass}_${academicYear}_sem1`));
-        const remSnapGen = await getDoc(doc(db, "cce_remarks_v2", docId));
+        const loadSemesterRemarks = async (sem) => {
+          let recs = null;
 
-        const mergedRemarks = {};
-        
-        const mergeStudentRecords = (sourceData, isSem1 = false, isSem2 = false) => {
-          if (!sourceData || typeof sourceData !== "object") return;
-          const recs = sourceData.records || sourceData.remarksData || sourceData.data || sourceData;
+          // 1. Try local storage cache for instant fresh load for selectedMedium only
+          const cacheKey = `cce_remarks_cache_${selectedClass}_${academicYear}_${sem}_${selectedMedium}`;
+          try {
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              if (parsed && typeof parsed === "object" && Object.keys(parsed).length > 0) {
+                recs = parsed;
+              }
+            }
+          } catch (e) {}
+
+          // 2. Try Firestore docs for selectedMedium strictly
+          if (!recs) {
+            const docIds = [
+              `${selectedClass}_${academicYear}_${sem}_${selectedMedium}`,
+              `${selectedClass}_${academicYear}_${sem}`,
+            ];
+            for (const dId of docIds) {
+              try {
+                const snap = await getDoc(doc(db, "cce_remarks_v2", dId));
+                if (snap.exists()) {
+                  const data = snap.data();
+                  const parsedRecs = data.records || data.remarks || data.data || null;
+                  if (parsedRecs && typeof parsedRecs === "object" && Object.keys(parsedRecs).length > 0) {
+                    recs = parsedRecs;
+                    break;
+                  }
+                }
+              } catch (e) {}
+            }
+          }
+          return recs;
+        };
+
+        const sem1Recs = await loadSemesterRemarks("sem1");
+        const sem2Recs = await loadSemesterRemarks("sem2");
+
+        const mergeStudentRecords = (recs, semKey) => {
           if (!recs || typeof recs !== "object") return;
-
-          Object.keys(recs).forEach((sId) => {
-            if (sId === "class" || sId === "academicYear" || sId === "semester" || sId === "updatedAt") return;
+          Object.entries(recs).forEach(([sId, val]) => {
+            if (["class", "academicYear", "semester", "medium", "updatedAt"].includes(sId)) return;
             if (!mergedRemarks[sId]) {
               mergedRemarks[sId] = { sem1: {}, sem2: {} };
             }
-            const data = recs[sId] || {};
-            if (isSem1) {
-              Object.assign(mergedRemarks[sId].sem1, data);
-            } else if (isSem2) {
-              Object.assign(mergedRemarks[sId].sem2, data);
-            } else {
-              if (data.sem1) Object.assign(mergedRemarks[sId].sem1, data.sem1);
-              if (data.sem2) Object.assign(mergedRemarks[sId].sem2, data.sem2);
-              Object.assign(mergedRemarks[sId], data);
+            if (val && typeof val === "object") {
+              if (semKey) {
+                mergedRemarks[sId][semKey] = { ...(mergedRemarks[sId][semKey] || {}), ...val };
+              } else {
+                if (val.sem1) Object.assign(mergedRemarks[sId].sem1, val.sem1);
+                if (val.sem2) Object.assign(mergedRemarks[sId].sem2, val.sem2);
+                Object.assign(mergedRemarks[sId], val);
+              }
             }
           });
         };
 
-        if (remSnapSem1.exists()) mergeStudentRecords(remSnapSem1.data(), true, false);
-        if (remSnapSem2.exists()) mergeStudentRecords(remSnapSem2.data(), false, true);
-        if (remSnapGen.exists()) mergeStudentRecords(remSnapGen.data(), false, false);
-        if (bunnyRemarks) mergeStudentRecords(bunnyRemarks, false, false);
+        if (sem1Recs) mergeStudentRecords(sem1Recs, "sem1");
+        if (sem2Recs) mergeStudentRecords(sem2Recs, "sem2");
+
+        // Bunny CDN fallback
+        try {
+          const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
+          const bunnyRemarks = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_remarks.json`);
+          if (bunnyRemarks && typeof bunnyRemarks === "object") {
+            mergeStudentRecords(bunnyRemarks, null);
+          }
+        } catch (e) {}
 
         setRemarksData(mergedRemarks);
       } catch (e) {
@@ -666,8 +706,65 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", onBack }
 
   return (
     <div className="w-full bg-slate-100 min-h-screen p-4 md:p-6 text-slate-800">
+      {/* Layout Selection Dialog Modal */}
+      {showLayoutModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-100 text-center animate-in fade-in zoom-in duration-200">
+            <div className="w-14 h-14 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <FileText className="size-8" />
+            </div>
+            <h3 className="text-lg font-black text-slate-900 mb-1.5">प्रगती पत्रक PDF स्वरूप निवडा</h3>
+            <p className="text-xs text-slate-500 font-medium mb-6">
+              तुम्हाला एका विद्यार्थ्याचे प्रगती पत्रक १ पानामध्ये हवे आहे की २ पानांमध्ये?
+            </p>
+
+            <div className="grid grid-cols-1 gap-3.5 mb-2">
+              <button
+                onClick={() => {
+                  setPageMode("1page");
+                  setShowLayoutModal(false);
+                }}
+                className="p-4 rounded-2xl border-2 border-orange-500 bg-orange-50/50 hover:bg-orange-100/80 transition-all text-left flex items-center gap-3.5 cursor-pointer group active:scale-[0.98]"
+              >
+                <div className="w-10 h-10 rounded-xl bg-orange-600 text-white flex items-center justify-center font-bold text-base shadow-sm">
+                  1
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-orange-950 group-hover:text-orange-600">
+                    १ पानाचे प्रगती पत्रक (Single Page PDF)
+                  </h4>
+                  <p className="text-[11px] text-slate-600 font-medium leading-tight">
+                    एकाच पानावर विद्यार्थ्याची सर्व माहिती, गुण व नोंदी कॉम्पॅक्ट बसवा.
+                  </p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => {
+                  setPageMode("2pages");
+                  setShowLayoutModal(false);
+                }}
+                className="p-4 rounded-2xl border-2 border-slate-200 bg-slate-50/50 hover:bg-slate-100 transition-all text-left flex items-center gap-3.5 cursor-pointer group active:scale-[0.98]"
+              >
+                <div className="w-10 h-10 rounded-xl bg-slate-700 text-white flex items-center justify-center font-bold text-base shadow-sm">
+                  2
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-slate-900 group-hover:text-slate-700">
+                    २ पानांचे प्रगती पत्रक (Two Pages PDF)
+                  </h4>
+                  <p className="text-[11px] text-slate-600 font-medium leading-tight">
+                    दोन पानांमध्ये सविस्तर माहिती, तक्ते व सर्व वर्णनात्मक नोंदी.
+                  </p>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Top Header Actions */}
-      <div className="max-w-5xl mx-auto flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm mb-6 no-print">
+      <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm mb-6 no-print gap-3">
         <button
           onClick={onBack}
           className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-extrabold rounded-xl transition-all cursor-pointer"
@@ -677,14 +774,41 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", onBack }
         </button>
 
         <div className="text-center">
-          <h1 className="text-lg font-black text-orange-800">विद्यार्थी प्रगती पत्रक (Progress Sheet)</h1>
+          <h1 className="text-base sm:text-lg font-black text-orange-800">विद्यार्थी प्रगती पत्रक (Progress Sheet)</h1>
           <p className="text-xs text-slate-500 font-medium">इयत्ता {selectedClass} | शैक्षणिक वर्ष {academicYear}</p>
         </div>
 
-        <div className="flex items-center gap-3">
+
+        {/* Page Mode Switcher */}
+        <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
+          <button
+            onClick={() => setPageMode("1page")}
+            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+              pageMode === "1page"
+                ? "bg-orange-600 text-white shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <FileText className="size-3.5" />
+            <span>१ पान (1 Page)</span>
+          </button>
+          <button
+            onClick={() => setPageMode("2pages")}
+            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+              pageMode === "2pages"
+                ? "bg-orange-600 text-white shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <Copy className="size-3.5" />
+            <span>२ पाने (2 Pages)</span>
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2">
           <button
             onClick={handlePrint}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-sm"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-sm"
           >
             <Printer className="size-4" />
             प्रिंट करा
@@ -692,7 +816,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", onBack }
           <button
             onClick={handleDownloadPdf}
             disabled={downloading}
-            className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-sm disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-sm disabled:opacity-50"
           >
             {downloading ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
             PDF डाउनलोड
@@ -703,6 +827,179 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", onBack }
       {/* -------------------- PRINTABLE PROGRESS SHEET CONTAINER -------------------- */}
       <div ref={printRef} className="max-w-4xl mx-auto space-y-6">
         {students.map((student, idx) => {
+          if (pageMode === "1page") {
+            return (
+              <div
+                key={student.id}
+                className="pdf-page bg-white p-4 border-2 border-amber-400 rounded-3xl h-[285mm] max-h-[285mm] overflow-hidden shadow-sm flex flex-col justify-between mb-6"
+                style={{ pageBreakAfter: "always", breakAfter: "page" }}
+              >
+                <div>
+                  {/* Top Header Banner */}
+                  <div className="flex items-center justify-between border-b-2 border-amber-400 pb-2 mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-orange-600 text-white rounded-lg flex items-center justify-center font-black text-xs shadow-sm">
+                        SS
+                      </div>
+                      <div>
+                        <h3 className="text-[11px] font-black text-orange-700 tracking-wider uppercase">समग्र शिक्षा</h3>
+                        <p className="text-[9px] text-slate-500 font-bold">Samagra Shiksha</p>
+                      </div>
+                    </div>
+
+                    <div className="text-center bg-amber-50 px-4 py-1 rounded-xl border border-amber-300">
+                      <h2 className="text-sm font-black text-amber-900 tracking-tight">विद्यार्थी प्रगतीपत्रक सन {academicYear}</h2>
+                    </div>
+
+                    <div className="text-right text-[10px] font-bold text-slate-700">
+                      <p>हजेरी क्र.: <b className="text-orange-700">{student.rollNo || idx + 1}</b></p>
+                      <p>यु-डायस: <b>{schoolData.udise || "-"}</b></p>
+                    </div>
+                  </div>
+
+                  {/* Main 2-Column Split Grid */}
+                  <div className="grid grid-cols-12 gap-3 mb-2">
+                    {/* Left Column: Student Details & Subject Grades */}
+                    <div className="col-span-6 space-y-2">
+                      {/* Student Profile Info */}
+                      <div className="border border-amber-400 rounded-xl p-2 bg-amber-50/30 text-[10px] space-y-1">
+                        <div className="font-bold text-slate-900 truncate">
+                          शाळा: <span className="font-extrabold text-amber-900">{schoolData.schoolName || "-"}</span>
+                        </div>
+                        <div className="font-bold text-slate-900">
+                          नाव: <span className="font-black text-blue-800 text-xs">{student.name}</span>
+                        </div>
+                        <div className="flex items-center justify-between font-bold text-slate-800 text-[9.5px]">
+                          <span>जन्म: <b>{student.dob || "-"}</b></span>
+                          <span>इयत्ता: <b>{selectedClass}</b></span>
+                          <span>रजि.: <b>{student.generalRegNo || "-"}</b></span>
+                        </div>
+                      </div>
+
+                      {/* Subject Grades Table */}
+                      <div className="border border-amber-400 rounded-xl p-2 bg-white">
+                        <h4 className="text-[11px] font-black text-amber-900 text-center mb-1 pb-0.5 border-b border-amber-200">विषयनिहाय श्रेणी</h4>
+                        <table className="w-full border-collapse border border-amber-300 text-[10px] text-center font-medium">
+                          <thead>
+                            <tr className="bg-amber-100 font-extrabold text-amber-950">
+                              <th className="border border-amber-300 p-1 text-left">विषय</th>
+                              <th className="border border-amber-300 p-1 w-14">प्रथम सत्र</th>
+                              <th className="border border-amber-300 p-1 w-14">द्वितीय सत्र</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {subjects.map((subName) => {
+                              const sem1G = getSubjectGradeForTerm(student, subName, "sem1");
+                              const sem2G = getSubjectGradeForTerm(student, subName, "sem2");
+                              return (
+                                <tr key={subName} className="border-b border-amber-200">
+                                  <td className="border border-amber-300 p-0.5 text-left font-bold text-slate-900 bg-amber-50/20">{subName}</td>
+                                  <td className="border border-amber-300 p-0.5 font-black text-blue-700">{sem1G}</td>
+                                  <td className="border border-amber-300 p-0.5 font-black text-blue-700">{sem2G}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Grade Classification Reference */}
+                      <div className="border border-amber-400 rounded-xl p-1.5 bg-white text-[9px]">
+                        <h4 className="font-bold text-amber-900 border-b border-amber-200 pb-0.5 mb-1 text-center">श्रेणी गुण</h4>
+                        <div className="grid grid-cols-3 gap-0.5 text-center font-semibold text-slate-700">
+                          <span className="bg-amber-50 p-0.5 rounded">91-100%: <b>अ-1</b></span>
+                          <span className="bg-amber-50 p-0.5 rounded">81-90%: <b>अ-2</b></span>
+                          <span className="bg-amber-50 p-0.5 rounded">71-80%: <b>ब-1</b></span>
+                          <span className="bg-amber-50 p-0.5 rounded">61-70%: <b>ब-2</b></span>
+                          <span className="bg-amber-50 p-0.5 rounded">51-60%: <b>क-1</b></span>
+                          <span className="bg-amber-50 p-0.5 rounded">41-50%: <b>क-2</b></span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right Column: Descriptive Remarks & Attendance */}
+                    <div className="col-span-6 space-y-2">
+                      {/* Descriptive Remarks Section */}
+                      <div className="border border-amber-400 rounded-xl p-2 bg-amber-50/20 text-[10px] space-y-1.5">
+                        <h4 className="font-black text-amber-900 border-b border-amber-200 pb-0.5 text-center">वर्णनात्मक नोंदी</h4>
+
+                        <div>
+                          <span className="font-extrabold text-amber-900 block mb-0.5">विशेष प्रगती:</span>
+                          <p className="text-slate-800 leading-tight font-medium bg-white p-1 rounded border border-amber-200 text-[9.5px]">
+                            {getFormattedRemark(student, "विशेष प्रगती", "sem2") !== "-"
+                              ? getFormattedRemark(student, "विशेष प्रगती", "sem2")
+                              : getFormattedRemark(student, "विशेष प्रगती", "sem1")}
+                          </p>
+                        </div>
+
+                        <div>
+                          <span className="font-extrabold text-amber-900 block mb-0.5">आवड / छंद:</span>
+                          <p className="text-slate-800 leading-tight font-medium bg-white p-1 rounded border border-amber-200 text-[9.5px]">
+                            {getFormattedRemark(student, "आवड / छंद", "sem2") !== "-"
+                              ? getFormattedRemark(student, "आवड / छंद", "sem2")
+                              : getFormattedRemark(student, "आवड / छंद", "sem1")}
+                          </p>
+                        </div>
+
+                        <div>
+                          <span className="font-extrabold text-amber-900 block mb-0.5">सुधारणा आवश्यक:</span>
+                          <p className="text-slate-800 leading-tight font-medium bg-white p-1 rounded border border-amber-200 text-[9.5px]">
+                            {getFormattedRemark(student, "सुधारणा आवश्यक", "sem2") !== "-"
+                              ? getFormattedRemark(student, "सुधारणा आवश्यक", "sem2")
+                              : getFormattedRemark(student, "सुधारणा आवश्यक", "sem1")}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Monthly Attendance Table */}
+                      <div className="border border-amber-400 rounded-xl p-1.5 bg-white text-[9px]">
+                        <h4 className="font-black text-amber-900 text-center mb-1 pb-0.5 border-b border-amber-200">उपस्थिती</h4>
+                        <table className="w-full border-collapse border border-amber-300 text-center">
+                          <thead>
+                            <tr className="bg-amber-100 font-extrabold text-amber-950">
+                              <th className="border border-amber-300 p-0.5">महिना</th>
+                              <th className="border border-amber-300 p-0.5">कामाचे दिवस</th>
+                              <th className="border border-amber-300 p-0.5">हजर दिवस</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {monthsList.slice(0, 10).map((m) => {
+                              const workingDays = getWorkingDaysForMonth(m);
+                              const pres = getStudentPresentDays(student, m);
+                              return (
+                                <tr key={m.key} className="border-b border-amber-200">
+                                  <td className="border border-amber-300 p-0.5 font-bold text-slate-800 bg-amber-50/40">{m.label}</td>
+                                  <td className="border border-amber-300 p-0.5">{workingDays}</td>
+                                  <td className="border border-amber-300 p-0.5 font-bold text-blue-800">{pres}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Signatures Footer */}
+                <div className="flex items-center justify-between pt-2 border-t-2 border-amber-400 mt-1 text-[10px] font-bold text-slate-900">
+                  <div className="text-center">
+                    <p className="font-extrabold">{schoolData.teacherName || "वर्गशिक्षक"}</p>
+                    <p className="text-[9px] text-slate-500 font-medium">वर्गशिक्षक</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="font-extrabold">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
+                    <p className="text-[9px] text-slate-500 font-medium">मुख्याध्यापक</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="font-extrabold">पालक स्वाक्षरी</p>
+                    <p className="text-[9px] text-slate-500 font-medium">पालक सही</p>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
           return (
             <React.Fragment key={student.id}>
               {/* ==================== PAGE 1: FRONT PAGE (PROFILE, ATTENDANCE & GRADE SCALE) ==================== */}

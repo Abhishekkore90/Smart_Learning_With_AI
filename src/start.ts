@@ -6,11 +6,9 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
   try {
     return await next();
   } catch (error: any) {
-    if (error != null && typeof error === "object" && "statusCode" in error) {
-      throw error;
-    }
     console.error("[ERROR IN START MIDDLEWARE]:", error);
-    const details = error?.stack || error?.message || String(error);
+    (globalThis as any).__lastSsrError = error;
+    const details = error?.stack || error?.message || (typeof error === 'object' ? JSON.stringify(error, Object.getOwnPropertyNames(error)) : String(error));
     return new Response(`<!doctype html><html><body><h1>500 Internal Server Error</h1><pre>${details}</pre></body></html>`, {
       status: 500,
       headers: { "content-type": "text/html; charset=utf-8" },

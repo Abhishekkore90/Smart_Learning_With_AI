@@ -26675,7 +26675,7 @@ export function getClassRemarks(classKey: string, medium: string = "marathi"): S
   // 2. If medium is semi, override Mathematics, Science, Environmental Studies, and English with Semi-English remarks
   if (medium === "semi") {
     Object.entries(SEMI_ENGLISH_REMARKS).forEach(([subKey, remarksList]) => {
-      cleaned[subKey] = remarksList.map((r) => cleanDevanagari(r));
+      cleaned[subKey] = remarksList;
     });
   }
 

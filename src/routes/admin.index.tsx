@@ -126,6 +126,17 @@ const adminModules = [
     status: "Active",
   },
   {
+    title: "Academic Planning Management",
+    desc: "Upload & manage Annual Planning, Monthly Planning & Question Bank files for all classes & mediums.",
+    icon: ClipboardList,
+    to: "/admin/planning",
+    color: "from-purple-600 to-indigo-700",
+    glow: "bg-purple-400/20",
+    stats: "Class & Medium Files",
+    trend: "Real-time Sync",
+    status: "Active",
+  },
+  {
     title: "Daily Assembly Book",
     desc: "Upload and manage guidebooks and references for Daily Assembly (Paripath).",
     icon: Book,

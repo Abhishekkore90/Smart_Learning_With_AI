@@ -15,7 +15,7 @@ export interface CCEDataBundle {
   studentDetails: Record<string, any>;
 }
 
-export function useCCEPdfData(currentClass: string, academicYear: string) {
+export function useCCEPdfData(currentClass: string, academicYear: string, medium: string = "marathi") {
   const [students, setStudents] = useState<any[]>([]);
   const [cceSettings, setCceSettings] = useState<any>(null);
   const [weightages, setWeightages] = useState<any>(null);
@@ -75,12 +75,44 @@ export function useCCEPdfData(currentClass: string, academicYear: string) {
         }
         setAllMarks(marksData);
 
-        // 5. Fetch CCE Remarks
-        const rem1Snap = await getDoc(doc(db, "cce_remarks_v2", `${currentClass}_${academicYear}_sem1`));
-        if (rem1Snap.exists()) setRemarksSem1(rem1Snap.data().records || {});
+        // 5. Fetch CCE Remarks (Medium-isolated & local cache aware)
+        const fetchSemRemarks = async (sem: string) => {
+          let recs: any = null;
+          const cacheKey = `cce_remarks_cache_${currentClass}_${academicYear}_${sem}_${medium}`;
+          try {
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              if (parsed && typeof parsed === "object" && Object.keys(parsed).length > 0) {
+                recs = parsed;
+              }
+            }
+          } catch (e) {}
 
-        const rem2Snap = await getDoc(doc(db, "cce_remarks_v2", `${currentClass}_${academicYear}_sem2`));
-        if (rem2Snap.exists()) setRemarksSem2(rem2Snap.data().records || {});
+          if (!recs) {
+            const docIds = [
+              `${currentClass}_${academicYear}_${sem}_${medium}`,
+              `${currentClass}_${academicYear}_${sem}`,
+            ];
+            for (const dId of docIds) {
+              try {
+                const rSnap = await getDoc(doc(db, "cce_remarks_v2", dId));
+                if (rSnap.exists()) {
+                  const d = rSnap.data();
+                  recs = d.records || d.remarks || d.data || null;
+                  if (recs && typeof recs === "object" && Object.keys(recs).length > 0) break;
+                }
+              } catch (e) {}
+            }
+          }
+          return recs || {};
+        };
+
+        const rem1Data = await fetchSemRemarks("sem1");
+        const rem2Data = await fetchSemRemarks("sem2");
+
+        setRemarksSem1(rem1Data);
+        setRemarksSem2(rem2Data);
 
         // 6. Fetch Attendance
         const attSnap = await getDoc(doc(db, "cce_attendance", `${currentClass}_${academicYear}_monthly`));

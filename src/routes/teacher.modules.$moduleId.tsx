@@ -42,7 +42,6 @@ import {
   ClipboardList,
   Medal,
   School,
-  Gift,
   GraduationCap,
   Download,
   Eye,
@@ -61,11 +60,11 @@ import {
   ChevronUp,
 } from "lucide-react";
 import React, { useState, useEffect } from "react";
+import { AcademicPlanningSystem } from "@/components/teacher/AcademicPlanningSystem";
 import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, updateDoc, onSnapshot, collection } from "firebase/firestore";
 import { showToast as toast } from "@/lib/custom-toast";
-import html2pdf from "html2pdf.js";
 import { uploadBlobToBunny } from "@/lib/bunnyStorage";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
@@ -381,10 +380,7 @@ function ModulePage() {
                   </Link>
                 </div>
               ) : moduleId === "annual-monthly-planning" ? (
-                <AnnualMonthlyPlanningEditor
-                  data={data}
-                  onChange={(val: any) => setData(val)}
-                />
+                <AcademicPlanningSystem mode="teacher" />
               ) : moduleId === "teaching-record-notebook" ? (
                 <TeachingDiaryManager
                   data={data}

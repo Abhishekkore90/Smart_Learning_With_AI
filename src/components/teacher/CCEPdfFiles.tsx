@@ -2,17 +2,26 @@ import React, { useState, lazy, Suspense } from "react";
 import { ArrowLeft, Download, Eye, FileText, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
-// Lazy load result components
+// Safe lazy loader to auto-recover from Vite module fetch errors
+const safeLazy = (factory: () => Promise<any>) =>
+  lazy(() =>
+    factory().catch((err) => {
+      console.warn("Failed to fetch dynamically imported module. Reloading page...", err);
+      window.location.reload();
+      return new Promise(() => {});
+    })
+  );
+
 // @ts-ignore
-const BoardResult = lazy(() => import("@/result/BoardResult"));
+const BoardResult = safeLazy(() => import("@/result/BoardResult"));
 // @ts-ignore
-const SubjectWiseResult = lazy(() => import("@/result/SubjectWiseResult"));
+const SubjectWiseResult = safeLazy(() => import("@/result/SubjectWiseResult"));
 // @ts-ignore
-const ProgressSheet = lazy(() => import("@/result/ProgressSheet"));
+const ProgressSheet = safeLazy(() => import("@/result/ProgressSheet"));
 // @ts-ignore
-const GradeWise = lazy(() => import("@/result/GradeWise"));
+const GradeWise = safeLazy(() => import("@/result/GradeWise"));
 // @ts-ignore
-const Result5th8th = lazy(() => import("@/result/Result5th8th"));
+const Result5th8th = safeLazy(() => import("@/result/Result5th8th"));
 
 // Custom Red/Green PDF File Icon SVG
 function PdfIcon({ className = "w-9 h-11" }: { className?: string }) {
@@ -109,7 +118,7 @@ export function CCEPdfFiles({
           <h2 className="text-base font-bold text-slate-800">प्रगती पत्रक - इयत्ता {activeClass}</h2>
         </div>
         <Suspense fallback={renderLoading()}>
-          <ProgressSheet initialClass={activeClass} initialYear={academicYear} />
+          <ProgressSheet initialClass={activeClass} initialYear={academicYear} onBack={() => setViewingReportId(null)} />
         </Suspense>
       </div>
     );

@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/hooks/use-language";
 import { showToast as toast } from "@/lib/custom-toast";
-import html2pdf from "html2pdf.js";
 
 export const Route = createFileRoute("/student/timetable")({
   component: StudentTimetablePage,
@@ -210,6 +209,7 @@ function StudentTimetablePage() {
       element.style.transform = 'scale(0.90)';
       element.style.transformOrigin = 'top center';
 
+      const html2pdf = (await import("html2pdf.js")).default;
       await html2pdf().set(opt).from(element).save();
     } catch (err) {
       console.error("PDF generation error:", err);

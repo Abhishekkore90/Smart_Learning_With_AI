@@ -6,7 +6,6 @@ import {
   Loader2,
 } from "lucide-react";
 import { showToast as toast } from "@/lib/custom-toast";
-import html2pdf from "html2pdf.js";
 
 interface TeacherStatisticsEditorProps {
   data: any;
@@ -170,8 +169,7 @@ export function TeacherStatisticsEditor({
     if (!element) return;
     setIsExporting(true);
     try {
-      let html2pdfFn = html2pdf;
-      // @ts-ignore
+      let html2pdfFn: any = (await import("html2pdf.js")).default;
       if (html2pdfFn && html2pdfFn.default) { html2pdfFn = html2pdfFn.default; }
       if (typeof html2pdfFn !== "function") {
         if (typeof window !== "undefined" && typeof (window as any).html2pdf === "function") {

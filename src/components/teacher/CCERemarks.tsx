@@ -448,9 +448,17 @@ export function CCERemarks({
     };
   }, [selectedClass, academicYear, selectedMedium]);
 
-  // Load student roster for selectedClass
+  // Load student roster for selectedClass and selectedMedium
   useEffect(() => {
     let isMounted = true;
+    const isStudentSemi = (s: any) => {
+      if (s.isSemiEnglish === true) return true;
+      if (s.isSemiEnglish === false) return false;
+      if (!s.medium) return false;
+      const m = String(s.medium).toLowerCase();
+      return m.includes("semi") || m.includes("सेमी");
+    };
+
     const q = query(
       collection(db, "users"),
       where("role", "==", "student"),
@@ -458,19 +466,24 @@ export function CCERemarks({
     );
     const unsub = onSnapshot(q, (snap) => {
       if (!isMounted) return;
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Student[];
-      setStudents(data.sort((a, b) => parseInt(a.rollNo || "999") - parseInt(b.rollNo || "999")));
+      const raw = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Student[];
+      const filtered = raw.filter((s: any) => {
+        const isSemi = isStudentSemi(s);
+        return selectedMedium === "semi" ? isSemi : !isSemi;
+      });
+      setStudents(filtered.sort((a, b) => parseInt(a.rollNo || "999") - parseInt(b.rollNo || "999")));
     });
     return () => {
       isMounted = false;
       unsub();
     };
-  }, [selectedClass]);
+  }, [selectedClass, selectedMedium]);
 
-  // Load remarks for all students
+  // Load remarks for all students (strict medium isolation)
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
+    setAllRemarks({});
 
     try {
       const cached = localStorage.getItem(
@@ -487,31 +500,22 @@ export function CCERemarks({
     const loadAllRemarks = async () => {
       let merged: Record<string, StudentRemarks> = {};
 
-      const docIdsToTry = [
-        `${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`,
-        `${selectedClass}_${academicYear}_${activeSemester}`,
-        `${selectedClass}_${activeSemester}`,
-        `${selectedClass}_${academicYear}`,
-        selectedClass,
-      ];
-
-      for (const dId of docIdsToTry) {
-        try {
-          const sSnap = await getDoc(doc(db, "cce_remarks_v2", dId));
-          if (sSnap.exists()) {
-            const data = sSnap.data();
-            const recs = data.records || data.remarks || data.data || {};
-            Object.entries(recs).forEach(([k, v]) => {
-              if (v && typeof v === "object") {
-                merged[k] = { ...(merged[k] || {}), ...(v as StudentRemarks) };
-              }
-            });
-          }
-        } catch (e) {}
-      }
+      const primaryDocId = `${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`;
+      try {
+        const sSnap = await getDoc(doc(db, "cce_remarks_v2", primaryDocId));
+        if (sSnap.exists()) {
+          const data = sSnap.data();
+          const recs = data.records || data.remarks || data.data || {};
+          Object.entries(recs).forEach(([k, v]) => {
+            if (v && typeof v === "object") {
+              merged[k] = v as StudentRemarks;
+            }
+          });
+        }
+      } catch (e) {}
 
       if (isMounted && Object.keys(merged).length > 0) {
-        setAllRemarks((prev) => ({ ...prev, ...merged }));
+        setAllRemarks(merged);
         setLoading(false);
       }
     };
@@ -526,16 +530,14 @@ export function CCERemarks({
       (snap) => {
         if (!isMounted) return;
         if (snap.exists() && snap.data().records) {
-          setAllRemarks((prev) => {
-            const updated = { ...prev, ...(snap.data().records || {}) };
-            try {
-              localStorage.setItem(
-                `cce_remarks_cache_${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`,
-                JSON.stringify(updated)
-              );
-            } catch (e) {}
-            return updated;
-          });
+          const recs = snap.data().records || {};
+          setAllRemarks(recs);
+          try {
+            localStorage.setItem(
+              `cce_remarks_cache_${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`,
+              JSON.stringify(recs)
+            );
+          } catch (e) {}
         }
         setLoading(false);
       },
@@ -689,29 +691,51 @@ export function CCERemarks({
 
   const saveStudentRemarks = async (andNext: boolean = false) => {
     if (!editingStudent) return;
+
+    const sKey = editingStudent.id || editingStudent.rollNo || editingStudent.fullName || editingStudent.name;
+    if (!sKey) return;
+
     setSaving(true);
+
+    const updated = {
+      ...allRemarks,
+      [sKey]: studentRemarks,
+      ...(editingStudent.id ? { [editingStudent.id]: studentRemarks } : {}),
+      ...(editingStudent.rollNo ? { [editingStudent.rollNo]: studentRemarks } : {}),
+    };
+
+    // 1. Instant Local Cache Update (0ms)
     try {
-      const updated = {
-        ...allRemarks,
-        [editingStudent.id]: studentRemarks,
-        ...(editingStudent.rollNo ? { [editingStudent.rollNo]: studentRemarks } : {}),
-        ...(editingStudent.fullName ? { [editingStudent.fullName]: studentRemarks } : {}),
-        ...(editingStudent.name ? { [editingStudent.name]: studentRemarks } : {}),
-      };
+      localStorage.setItem(
+        `cce_remarks_cache_${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`,
+        JSON.stringify(updated)
+      );
+    } catch (e) {}
 
-      try {
-        localStorage.setItem(
-          `cce_remarks_cache_${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`,
-          JSON.stringify(updated)
-        );
-      } catch (e) {}
+    // 2. Instant Local State Update (0ms)
+    setAllRemarks(updated);
+    toast.success(`${editingStudent.fullName || editingStudent.name} च्या नोंदी जतन झाल्या!`);
 
+    // 3. Instant Navigation to Next Student (0ms)
+    if (andNext) {
+      const currIdx = students.findIndex((s) => s.id === editingStudent.id);
+      if (currIdx >= 0 && currIdx < students.length - 1) {
+        openStudent(students[currIdx + 1]);
+      } else {
+        setEditingStudent(null);
+      }
+    }
+
+    setSaving(false);
+
+    // 4. Background Async Firestore Sync (non-blocking)
+    try {
       const ref = doc(
         db,
         "cce_remarks_v2",
         `${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`
       );
-      await setDoc(
+      setDoc(
         ref,
         {
           class: selectedClass,
@@ -722,23 +746,12 @@ export function CCERemarks({
           updatedAt: new Date().toISOString(),
         },
         { merge: true }
-      );
-
-      setAllRemarks(updated);
-      toast.success(`${editingStudent.fullName || editingStudent.name} च्या नोंदी जतन झाल्या!`);
-
-      if (andNext) {
-        const currIdx = students.findIndex((s) => s.id === editingStudent.id);
-        if (currIdx >= 0 && currIdx < students.length - 1) {
-          openStudent(students[currIdx + 1]);
-        } else {
-          setEditingStudent(null);
-        }
-      }
+      ).catch((err) => {
+        console.warn("Background Firestore save warning:", err);
+      });
     } catch (err: any) {
-      toast.error("जतन अयशस्वी: " + err.message);
+      console.warn("Background save failed:", err);
     }
-    setSaving(false);
   };
 
   // Switch to next or previous student
@@ -1253,39 +1266,8 @@ export function CCERemarks({
 
       {/* Roster Controls Bar */}
       <div className="p-4 bg-slate-50/80 border-b border-slate-200/80 flex flex-wrap items-center justify-between gap-3">
-        {/* Medium Switcher & Semester Tabs */}
+        {/* Semester Tabs */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Medium Switcher */}
-          <div className="flex bg-slate-200/80 p-1 rounded-xl border border-slate-300/60 text-xs font-bold">
-            <button
-              onClick={() => {
-                setSelectedMedium("marathi");
-                localStorage.setItem("cce_selected_medium", "marathi");
-                toast.info("मराठी माध्यम निवडले!");
-              }}
-              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                selectedMedium === "marathi"
-                  ? "bg-blue-600 text-white shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              मराठी माध्यम
-            </button>
-            <button
-              onClick={() => {
-                setSelectedMedium("semi");
-                localStorage.setItem("cce_selected_medium", "semi");
-                toast.info("सेमी-इंग्रजी माध्यम निवडले!");
-              }}
-              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                selectedMedium === "semi"
-                  ? "bg-purple-600 text-white shadow-xs"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              सेमी-इंग्रजी (Semi)
-            </button>
-          </div>
 
           {/* Semester Tabs */}
           <div className="flex bg-slate-200/80 p-1 rounded-xl border border-slate-300/60 text-xs font-bold">

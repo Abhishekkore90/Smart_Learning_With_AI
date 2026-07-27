@@ -72,7 +72,7 @@ async function normalizeCatastrophicSsrResponse(
 ): Promise<Response> {
   if (response.status < 500) return response;
 
-  const capturedErr = consumeLastCapturedError();
+  const capturedErr = (globalThis as any).__lastSsrError || consumeLastCapturedError();
   if (capturedErr) {
     console.error("[SSR Error Captured]:", capturedErr);
   }

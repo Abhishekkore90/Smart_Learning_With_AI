@@ -19,7 +19,6 @@ import { showToast as toast } from "@/lib/custom-toast";
 import { useLanguage } from "@/hooks/use-language";
 import { useAuth } from "@/hooks/use-auth";
 import { motion, AnimatePresence } from "framer-motion";
-import html2pdf from "html2pdf.js";
 import { uploadBlobToBunny } from "@/lib/bunnyStorage";
 import logoImg from "@/assets/logo.jpeg";
 
@@ -770,6 +769,7 @@ function ClassTimetablePage() {
       element.style.transform = 'scale(0.90)';
       element.style.transformOrigin = 'top center';
 
+      const html2pdf = (await import("html2pdf.js")).default;
       const worker = html2pdf().set(opt).from(element);
       await worker.save();
 
