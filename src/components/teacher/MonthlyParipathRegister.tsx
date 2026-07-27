@@ -420,12 +420,139 @@ export function MonthlyParipathRegister() {
       if (html2pdfFn && html2pdfFn.default) html2pdfFn = html2pdfFn.default;
 
       const opt = {
-        margin: [3, 3, 3, 3],
+        margin: [5, 5, 5, 5],
         filename: `Masik_Paripath_${MARATHI_MONTHS[selectedMonthIndex]}_${selectedYear}.pdf`,
         image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          letterRendering: true,
+          windowWidth: 1400,
+          onclone: (clonedDoc: Document) => {
+            // 1. Hide all non-printable elements (buttons, control panel, visual page-break divider)
+            const nonPrintables = clonedDoc.querySelectorAll(".non-printable");
+            nonPrintables.forEach((el: any) => {
+              el.style.display = "none";
+            });
+
+            // 2. Replace all textareas with plain-text divs so content shows in PDF
+            const textareas = clonedDoc.querySelectorAll("textarea");
+            textareas.forEach((ta: HTMLTextAreaElement) => {
+              const div = clonedDoc.createElement("div");
+              div.textContent = ta.value || "";
+              div.style.cssText = `
+                font-family: 'Noto Sans Devanagari', sans-serif;
+                font-size: 8px;
+                font-weight: 600;
+                line-height: 1.2;
+                text-align: ${ta.classList.contains("text-center") ? "center" : "left"};
+                padding: 1px 2px;
+                word-break: break-word;
+                overflow: hidden;
+                white-space: pre-wrap;
+              `;
+              ta.parentNode?.replaceChild(div, ta);
+            });
+
+            // 3. Inject PDF-specific styles
+            const style = clonedDoc.createElement("style");
+            style.textContent = `
+              * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+              
+              #printable-paripath-register {
+                width: 100% !important;
+                max-width: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                background: #ffffff !important;
+                font-family: 'Noto Sans Devanagari', sans-serif !important;
+              }
+
+              .page-break {
+                page-break-before: always !important;
+                break-before: page !important;
+              }
+
+              table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                table-layout: fixed !important;
+                font-size: 8px !important;
+              }
+
+              th {
+                padding: 3px 2px !important;
+                border: 1.5px solid #1e293b !important;
+                background-color: #f1f5f9 !important;
+                font-weight: 900 !important;
+                font-size: 8px !important;
+                text-align: center !important;
+                font-family: 'Noto Sans Devanagari', sans-serif !important;
+                color: #0f172a !important;
+              }
+
+              td {
+                padding: 2px 2px !important;
+                border: 1px solid #334155 !important;
+                font-size: 8px !important;
+                font-family: 'Noto Sans Devanagari', sans-serif !important;
+                vertical-align: top !important;
+                word-break: break-word !important;
+                color: #1e293b !important;
+              }
+
+              tr {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+              }
+
+              /* Sunday rows */
+              tr.bg-rose-50\\/70 td,
+              tr[class*="bg-rose"] td {
+                background-color: #fff1f2 !important;
+                color: #be123c !important;
+                font-weight: 800 !important;
+                text-align: center !important;
+              }
+
+              /* Headers */
+              .border-b-2 {
+                border-bottom: 2px solid #0f172a !important;
+              }
+
+              /* Space between pages */
+              .space-y-8 > * + * {
+                margin-top: 0 !important;
+              }
+              .space-y-3 > * + * {
+                margin-top: 6px !important;
+              }
+
+              /* Table container */
+              .overflow-x-auto {
+                overflow: visible !important;
+                border: 2px solid #0f172a !important;
+                border-radius: 0 !important;
+              }
+
+              /* Ensure rounded corners don't interfere */
+              .rounded-\\[2rem\\] {
+                border-radius: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
+                padding: 8px !important;
+              }
+            `;
+            clonedDoc.head.appendChild(style);
+          },
+        },
         jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
+        pagebreak: { mode: ["css", "legacy"], before: ".page-break" },
       };
+
       const pdfBlob = await html2pdfFn().set(opt).from(element).output("blob");
       const blobUrl = URL.createObjectURL(pdfBlob);
       const downloadLink = document.createElement("a");

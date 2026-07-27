@@ -1974,45 +1974,14 @@ function DailyAssemblyContent() {
               4: ["valueNews", "events", "song"],
               5: ["story", "gk", "personality"]
             };
-
-            let lastSeenPage = 0;
             
             cards.forEach((card: any, index: number) => {
-              // Determine which page this card belongs to based on its ID
-              let pageNum = 1;
-              for (const [pNum, ids] of Object.entries(pageGroups)) {
-                if (ids.includes(card.id)) {
-                  pageNum = parseInt(pNum);
-                  break;
-                }
-              }
+              // No forced page breaks - let content flow naturally
+              // Only ensure each card doesn't split across pages
+              card.style.setProperty("page-break-inside", "avoid", "important");
+              card.style.setProperty("break-inside", "avoid", "important");
 
-              // If this is the first card we've seen for this page number
-              const isFirstOfPage = pageNum > lastSeenPage;
-
-              if (isFirstOfPage) {
-                // If not page 1, insert page break before the card
-                if (lastSeenPage > 0) {
-                  const pageBreak = clonedDoc.createElement("div");
-                  pageBreak.className = "html2pdf__page-break";
-                  pageBreak.style.cssText = "page-break-before: always !important; break-before: page !important; height: 0px !important; margin: 0 !important; padding: 0 !important;";
-                  card.parentNode.insertBefore(pageBreak, card);
-                }
-                
-                lastSeenPage = pageNum;
-
-                // Insert Page Header before the first card of each page
-                const pageHeader = clonedDoc.createElement("div");
-                pageHeader.className = "pdf-page-header";
-                pageHeader.style.cssText = "display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #2e7d32; padding-bottom: 4px; margin-bottom: 8px; margin-top: 4px; width: 100%; box-sizing: border-box;";
-                pageHeader.innerHTML = `
-                  <div style="font-size: 11px; font-weight: 800; color: #2e7d32; font-family: 'Noto Sans Devanagari', sans-serif;">दैनिक परिपाठ</div>
-                  <div style="font-size: 11px; font-weight: 800; color: #2e7d32; font-family: 'Noto Sans Devanagari', sans-serif;">${formData.dateMonth} | ${formData.day} | पान ${pageNum}/५</div>
-                `;
-                card.parentNode.insertBefore(pageHeader, card);
-              }
-
-              // Dynamic content font scaling to ensure 3 cards fit perfectly on 1 A4 page
+              // Dynamic content font scaling
               const contentEl = card.children[1];
               if (contentEl) {
                 const text = contentEl.textContent || "";
@@ -2021,7 +1990,6 @@ function DailyAssemblyContent() {
                 let fontSize = "10px";
                 let lineHeight = "1.2";
                 
-                // Prioritize character count for massive text
                 if (charCount > 2500) {
                   fontSize = "7px";
                   lineHeight = "1.05";
@@ -2038,7 +2006,6 @@ function DailyAssemblyContent() {
                   fontSize = "9px";
                   lineHeight = "1.18";
                 } else {
-                  // If text is short, but belongs to specific cards, enforce a slightly smaller default
                   if (card.id === "events" || card.id === "song" || card.id === "valueNews" || card.id === "story" || card.id === "preamble" || card.id === "thought" || card.id === "shlok" || card.id === "proverb") {
                     fontSize = "9px";
                     lineHeight = "1.15";
@@ -2091,36 +2058,34 @@ function DailyAssemblyContent() {
                 box-shadow: none !important;
               }
               .assembly-section-card label {
-                padding: 1.5mm 4mm !important;
-                font-size: 12px !important;
-                margin-top: 0 !important;
-                margin-bottom: 2mm !important;
+                padding: 2px 8px !important;
+                font-size: 11px !important;
+                margin: 0 !important;
                 background-color: #2e7d32 !important;
                 color: #ffffff !important;
-                border-radius: 6px !important;
+                border-radius: 4px !important;
                 font-weight: 800 !important;
                 display: inline-flex !important;
               }
               .assembly-section-card h3 {
-                padding: 1.5mm 4mm !important;
-                font-size: 13px !important;
-                margin-top: 0 !important;
-                margin-bottom: 3mm !important;
+                padding: 2px 8px !important;
+                font-size: 12px !important;
+                margin: 0 !important;
                 font-weight: 800 !important;
                 border-bottom: 1px solid #e2e8f0 !important;
                 width: 100% !important;
                 text-align: center !important;
               }
               
-              /* Each section card represents exactly one A4 page */
+              /* Each section card - ZERO spacing */
               .assembly-section-card {
                 width: 100% !important;
                 max-width: 100% !important;
-                margin: 0 0 8px 0 !important;
-                padding: 10px 16px !important;
+                margin: 0 0 4px 0 !important;
+                padding: 4px 10px !important;
                 background: #ffffff !important;
                 border: 1px solid #e2e8f0 !important;
-                border-radius: 12px !important;
+                border-radius: 8px !important;
                 box-shadow: none !important;
                 display: flex !important;
                 flex-direction: column !important;
@@ -2136,35 +2101,51 @@ function DailyAssemblyContent() {
                 page-break-after: always !important;
                 break-after: page !important;
               }
+              /* Kill ALL Tailwind spacing utilities */
               .assembly-section-card .space-y-5 > :not([hidden]) ~ :not([hidden]),
-              .assembly-section-card .space-y-6 > :not([hidden]) ~ :not([hidden]) {
-                margin-top: 4px !important;
+              .assembly-section-card .space-y-6 > :not([hidden]) ~ :not([hidden]),
+              .assembly-section-card .space-y-4 > :not([hidden]) ~ :not([hidden]),
+              .assembly-section-card .space-y-3 > :not([hidden]) ~ :not([hidden]) {
+                margin-top: 0px !important;
               }
-              .assembly-section-card .mb-4, .assembly-section-card .mb-6 {
-                margin-bottom: 2px !important;
+              .assembly-section-card .mb-4, .assembly-section-card .mb-6,
+              .assembly-section-card .mb-3, .assembly-section-card .mb-2 {
+                margin-bottom: 0px !important;
+              }
+              .assembly-section-card .mt-4, .assembly-section-card .mt-6,
+              .assembly-section-card .mt-3, .assembly-section-card .mt-2 {
+                margin-top: 0px !important;
+              }
+              .assembly-section-card .p-4, .assembly-section-card .p-8,
+              .assembly-section-card .p-6, .assembly-section-card .p-5 {
+                padding: 4px !important;
+              }
+              .assembly-section-card .gap-4, .assembly-section-card .gap-6,
+              .assembly-section-card .gap-3 {
+                gap: 2px !important;
               }
 
-              /* Professional Green Title Bar for Headings */
+              /* Professional Green Title Bar - TIGHT */
               .assembly-section-card h3,
               .assembly-section-card label {
                 display: block !important;
                 width: 100% !important;
                 background-color: #2e7d32 !important;
                 color: #ffffff !important;
-                font-size: 15px !important;
+                font-size: 12px !important;
                 font-weight: 800 !important;
                 text-align: center !important;
-                padding: 4px 12px !important;
-                border-radius: 6px !important;
+                padding: 2px 8px !important;
+                border-radius: 4px !important;
                 border: none !important;
                 box-shadow: none !important;
-                margin: 0 auto 6px auto !important;
+                margin: 0 auto 2px auto !important;
                 font-family: 'Noto Sans Devanagari', sans-serif !important;
                 letter-spacing: 0.5px !important;
                 text-transform: uppercase !important;
               }
               
-              /* Hide icons/emojis in headings for professional look */
+              /* Hide icons/emojis in headings */
               .assembly-section-card h3 span,
               .assembly-section-card h3 svg,
               .assembly-section-card label span,
@@ -2172,14 +2153,18 @@ function DailyAssemblyContent() {
                 display: none !important;
               }
               
-              /* Style clean content text */
+              /* Font family */
               .assembly-section-card p,
               .assembly-section-card span,
               .assembly-section-card div {
                 font-family: 'Noto Sans Devanagari', sans-serif !important;
               }
               
-              /* Reset outer wrappers of elements inside the cards */
+              /* Content wrapper - ZERO gap after heading */
+              .assembly-section-card > div:first-child {
+                margin-bottom: 1px !important;
+                padding: 0 !important;
+              }
               .assembly-section-card > div:last-child {
                 width: 100% !important;
                 display: flex !important;
@@ -2187,24 +2172,29 @@ function DailyAssemblyContent() {
                 justify-content: flex-start !important;
                 align-items: stretch !important;
                 text-align: center !important;
-                margin-top: 2px !important;
+                margin-top: 0px !important;
+                padding: 0 !important;
+              }
+              /* Kill flex-justify-center wrappers that add vertical space */
+              .assembly-section-card .flex.justify-center {
+                margin: 0 !important;
                 padding: 0 !important;
               }
  
-              /* Specific section resets */
+              /* Specific section resets - all TIGHT */
               #panchang .grid {
                 display: grid !important;
                 grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-                gap: 6px !important;
+                gap: 3px !important;
                 width: 100% !important;
-                margin: 8px 0 0 0 !important;
+                margin: 2px 0 0 0 !important;
                 box-sizing: border-box !important;
               }
               #panchang .grid > div {
-                padding: 6px 4px !important;
+                padding: 3px 2px !important;
                 background: #f8fafc !important;
                 border: 1px solid #e2e8f0 !important;
-                border-radius: 6px !important;
+                border-radius: 4px !important;
                 box-shadow: none !important;
                 transform: none !important;
                 box-sizing: border-box !important;
@@ -2214,49 +2204,49 @@ function DailyAssemblyContent() {
               }
  
               #thought > div:last-child > div {
-                padding: 12px !important;
+                padding: 6px !important;
                 background: #f8fafc !important;
                 border: 1px solid #e2e8f0 !important;
-                border-radius: 8px !important;
+                border-radius: 6px !important;
                 box-shadow: none !important;
                 width: 100% !important;
                 box-sizing: border-box !important;
-                margin: 8px 0 0 0 !important;
+                margin: 2px 0 0 0 !important;
               }
  
               #shlok > div:last-child > div {
-                padding: 12px !important;
+                padding: 6px !important;
                 background: #f8fafc !important;
                 border: 1px solid #e2e8f0 !important;
-                border-radius: 8px !important;
+                border-radius: 6px !important;
                 box-shadow: none !important;
                 width: 100% !important;
                 box-sizing: border-box !important;
-                margin: 8px 0 0 0 !important;
+                margin: 2px 0 0 0 !important;
               }
  
               #proverb > div:last-child > div {
                 width: 100% !important;
-                margin: 8px 0 0 0 !important;
+                margin: 2px 0 0 0 !important;
                 box-sizing: border-box !important;
               }
               #proverb > div:last-child > div > div {
-                padding: 12px !important;
+                padding: 6px !important;
                 background: #f8fafc !important;
                 border: 1px solid #e2e8f0 !important;
-                border-radius: 8px !important;
+                border-radius: 6px !important;
                 box-shadow: none !important;
                 width: 100% !important;
                 box-sizing: border-box !important;
               }
               #proverb > div:last-child > div > div:last-child {
-                margin-top: 6px !important;
+                margin-top: 2px !important;
                 background: #ffffff !important;
               }
  
               #events > div:last-child > div {
                 width: 100% !important;
-                margin: 8px 0 0 0 !important;
+                margin: 2px 0 0 0 !important;
                 box-sizing: border-box !important;
               }
               #events > div:last-child > div > div.divide-y {
@@ -2264,14 +2254,14 @@ function DailyAssemblyContent() {
                 box-sizing: border-box !important;
               }
               #events > div:last-child > div > div.divide-y > div {
-                padding: 4px 0 !important;
+                padding: 2px 0 !important;
                 border-bottom: 1px solid #f1f5f9 !important;
               }
               #events > div:last-child > div > div:last-child {
-                padding: 12px !important;
+                padding: 6px !important;
                 background: #f8fafc !important;
                 border: 1px solid #e2e8f0 !important;
-                border-radius: 8px !important;
+                border-radius: 6px !important;
                 box-shadow: none !important;
                 width: 100% !important;
                 box-sizing: border-box !important;
@@ -2279,36 +2269,36 @@ function DailyAssemblyContent() {
  
               #song > div:last-child > div {
                 width: 100% !important;
-                margin: 8px 0 0 0 !important;
+                margin: 2px 0 0 0 !important;
                 box-sizing: border-box !important;
               }
               #song > div:last-child > div > div:last-child {
-                padding: 12px !important;
+                padding: 6px !important;
                 background: #f8fafc !important;
                 border: 1px solid #e2e8f0 !important;
-                border-radius: 8px !important;
+                border-radius: 6px !important;
                 box-shadow: none !important;
-                margin-top: 6px !important;
+                margin-top: 2px !important;
                 width: 100% !important;
                 box-sizing: border-box !important;
               }
  
               #story > div:last-child > div {
                 width: 100% !important;
-                margin: 8px 0 0 0 !important;
+                margin: 2px 0 0 0 !important;
                 box-sizing: border-box !important;
               }
               #story > div:last-child > div > div {
-                padding: 12px !important;
+                padding: 6px !important;
                 background: #f8fafc !important;
                 border: 1px solid #e2e8f0 !important;
-                border-radius: 8px !important;
+                border-radius: 6px !important;
                 box-shadow: none !important;
                 width: 100% !important;
                 box-sizing: border-box !important;
               }
               #story > div:last-child > div > div:last-child {
-                margin-top: 6px !important;
+                margin-top: 2px !important;
                 background: #f0fdf4 !important;
                 border: 1px solid #bbf7d0 !important;
               }
@@ -2316,16 +2306,16 @@ function DailyAssemblyContent() {
               #gk .grid {
                 display: grid !important;
                 grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-                gap: 6px !important;
+                gap: 3px !important;
                 width: 100% !important;
-                margin: 8px 0 0 0 !important;
+                margin: 2px 0 0 0 !important;
                 box-sizing: border-box !important;
               }
               #gk .grid > div {
-                padding: 6px !important;
+                padding: 4px !important;
                 background: #f8fafc !important;
                 border: 1px solid #e2e8f0 !important;
-                border-radius: 8px !important;
+                border-radius: 6px !important;
                 box-shadow: none !important;
                 box-sizing: border-box !important;
               }
@@ -2335,24 +2325,24 @@ function DailyAssemblyContent() {
  
               #personality > div:last-child > div {
                 width: 100% !important;
-                margin: 8px 0 0 0 !important;
+                margin: 2px 0 0 0 !important;
                 box-sizing: border-box !important;
               }
               #personality > div:last-child > div > div:last-child {
-                padding: 12px !important;
+                padding: 6px !important;
                 background: #f8fafc !important;
                 border: 1px solid #e2e8f0 !important;
-                border-radius: 8px !important;
+                border-radius: 6px !important;
                 box-shadow: none !important;
                 width: 100% !important;
                 box-sizing: border-box !important;
-                margin-top: 8px !important;
+                margin-top: 2px !important;
               }
             `;
             clonedDoc.head.appendChild(style);
           }
         },
-        pagebreak: { mode: ["css", "legacy"], before: ".html2pdf__page-break" },
+        pagebreak: { mode: ["avoid-all"] },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
       };
 
