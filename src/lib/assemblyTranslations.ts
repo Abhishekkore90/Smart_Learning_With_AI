@@ -12,7 +12,7 @@ export const DEFAULT_FORM_DATA = {
     sunrise: "",
     sunset: "",
     thought: "",
-    shlok: "",
+    shlok: "गुरुर ब्रह्मा गुरुर विष्णुः,\nगुरुर देवो महेश्वरः।\nगुरुर साक्षात् परं ब्रह्म,\nतस्मै श्री गुरवे नमः॥",
     proverb: "",
     proverbMeaning: "",
     dateMonth: "",
@@ -31,6 +31,8 @@ export const DEFAULT_FORM_DATA = {
     gkQ4: "", gkA4: "",
     personalityTitle: "",
     personality: "",
+    silentPasayadan: "",
+    valueNews: "• अपार आयडी निर्णय: विद्यार्थ्यांच्या शैक्षणिक नोंदी एकाच मंचावर आणणाऱ्या 'अपार' योजनेत सहभागी होणे किंवा नाही, याचा अधिकार पालकांना देण्यात आला आहे.\n• कौशल्यांवर भर: गोव्याचे मुख्यमंत्री प्रमोद सावंत यांनी विद्यार्थ्यांना सोशल मीडियावरील वेळेचा अपव्यय टाळून 'रिअल स्किल्स' शिकण्याचा सल्ला दिला.\n• कॉमनवेल्थमध्ये यश: गरिबीवर मात करत भाजी विकून आणि रिक्षा चालवून सराव करणाऱ्या झुंडू कुमारने कॉमनवेल्थ गेम्समध्ये देशासाठी कांस्यपदक जिंकले.\n• निसर्ग आणि संस्कृती: आषाढी एकादशीनिमित्त पंढरपूरमध्ये लाडक्या विठुरायाच्या दर्शनासाठी राज्यभरातून आलेल्या वारकऱ्यांचा व विद्यार्थ्यांचा उत्साह पाहायला मिळाला.\n• वाचन व मूल्य: विद्यार्थ्यांमध्ये वाचनाची आवड निर्माण करण्यासाठी आणि नैतिक मूल्ये रुजवण्यासाठी शाळांमध्ये विशेष उपक्रम राबवण्याचे निर्देश देण्यात आले आहेत.",
   },
   en: {
     creator: "balasaheb kendhare",
@@ -62,6 +64,8 @@ export const DEFAULT_FORM_DATA = {
     gkQ4: "", gkA4: "",
     personalityTitle: "",
     personality: "",
+    silentPasayadan: "",
+    valueNews: "",
   },
   hi: {
     creator: "बालासाहेब केंद्रे",
@@ -93,6 +97,8 @@ export const DEFAULT_FORM_DATA = {
     gkQ4: "", gkA4: "",
     personalityTitle: "",
     personality: "",
+    silentPasayadan: "",
+    valueNews: "",
   }
 };
 
@@ -146,6 +152,8 @@ export const ASSEMBLY_TRANSLATIONS = {
     saveChanges: "Save Changes",
     daySpecialStr: "दिनविशेष",
     yearDayStr: "हा वर्षातील ${yearDay} वा दिवस आहे.",
+    silentPasayadan: "मौन पसायदान",
+    valueNews: "सुसंस्कारक्षम बातम्या",
   },
   en: {
     langName: "English",
@@ -195,6 +203,8 @@ export const ASSEMBLY_TRANSLATIONS = {
     saveChanges: "Save Changes",
     daySpecialStr: "Special Events",
     yearDayStr: "This is day ${yearDay} of the year.",
+    silentPasayadan: "Silent Pasayadan",
+    valueNews: "Value-based News",
   },
   hi: {
     langName: "Hindi",
@@ -244,6 +254,8 @@ export const ASSEMBLY_TRANSLATIONS = {
     saveChanges: "परिवर्तन सहेजें",
     daySpecialStr: "विशेष घटनाएँ",
     yearDayStr: "यह वर्ष का ${yearDay} वां दिन है।",
+    silentPasayadan: "मौन पसायदान",
+    valueNews: "सुसंस्कारक्षम समाचार",
   },
 };
 

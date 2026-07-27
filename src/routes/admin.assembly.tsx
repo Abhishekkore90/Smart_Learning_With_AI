@@ -118,6 +118,8 @@ function AssemblyBookAdmin() {
       patrioticSong: "",
       personalityTitle: "",
       personality: "",
+      silentPasayadan: "",
+      valueNews: "",
     };
   };
 
@@ -153,94 +155,206 @@ function AssemblyBookAdmin() {
     let html2pdfFn: any = html2pdfModule.default || html2pdfModule;
     if (html2pdfFn && html2pdfFn.default) html2pdfFn = html2pdfFn.default;
   
+    // Helper for safe text with newlines
+    const nl2br = (text: string) => (text || "").replace(/\n/g, "<br/>");
+
+    // Get assembly items for default content
+    const assemblyItems = DEFAULT_ASSEMBLY_ITEMS[adminLang] || DEFAULT_ASSEMBLY_ITEMS.mr;
+
     const tempDiv = document.createElement("div");
     tempDiv.id = "temp-pdf-render";
     tempDiv.style.width = "750px";
-    tempDiv.style.padding = "40px";
+    tempDiv.style.padding = "24px 32px";
     tempDiv.style.background = "#FFFFFF";
     tempDiv.style.color = "#1F2937";
-    tempDiv.style.fontFamily = "system-ui, -apple-system, sans-serif";
+    tempDiv.style.fontFamily = "'Noto Sans Devanagari', 'Mukta', system-ui, sans-serif";
   
-    // Build professional design
-    tempDiv.innerHTML = `
-      <div style="border: 2px solid #E5E7EB; border-radius: 1.5rem; padding: 30px; background: #FFFFFF;">
-        <!-- Header -->
-        <div style="text-align: center; border-bottom: 2px solid #E5E7EB; padding-bottom: 20px; margin-bottom: 30px;">
-          <h1 style="font-size: 28px; font-weight: 800; color: #1F2937; margin: 0;">दैनिक परिपाठ नोंद</h1>
-          <p style="font-size: 16px; font-weight: 600; color: #4B5563; margin: 5px 0 0 0;">दिनांक: ${dateStr}</p>
-        </div>
-  
-        <!-- Grid for core sections -->
-        <div style="display: flex; flex-direction: column; gap: 24px;">
+    // Shared styles
+    const sectionBox = (bg: string, border: string) => `background: ${bg}; border: 1.5px solid ${border}; border-radius: 14px; padding: 16px 18px; margin-bottom: 14px;`;
+    const sectionTitle = (color: string) => `font-size: 15px; font-weight: 800; color: ${color}; margin: 0 0 8px 0; letter-spacing: 0.3px;`;
+    const bodyText = `font-size: 12.5px; font-weight: 600; line-height: 1.65; color: #1F2937; margin: 0; white-space: pre-line;`;
+    const divider = `<div style="width: 100%; height: 1.5px; background: linear-gradient(90deg, transparent, #CBD5E1, transparent); margin: 10px 0;"></div>`;
 
-  
-          <!-- Suvichar, Shlok & Proverb -->
-          <div style="display: grid; grid-template-columns: ${data.shlok ? '1fr 1fr 1fr' : '1fr 1fr'}; gap: 20px;">
-            <div style="background: #F5F3FF; border: 1px solid #EDE9FE; border-radius: 1rem; padding: 20px;">
-              <h2 style="font-size: 18px; font-weight: 700; color: #5B21B6; margin-top: 0; margin-bottom: 8px;">💭 आजचा सुविचार</h2>
-              <p style="font-size: 14px; font-weight: 600; line-height: 1.6; color: #1F2937; margin: 0;">"${data.thought || "-"}"</p>
-            </div>
-            ${data.shlok ? `
-            <div style="background: #FFF5F5; border: 1px solid #FED7D7; border-radius: 1rem; padding: 20px;">
-              <h2 style="font-size: 18px; font-weight: 700; color: #C53030; margin-top: 0; margin-bottom: 8px;">🕉️ आजचा श्लोक</h2>
-              <p style="font-size: 14px; font-weight: 600; line-height: 1.6; color: #1F2937; margin: 0; white-space: pre-line;">"${data.shlok}"</p>
-            </div>
-            ` : ''}
-            <div style="background: #FDF2F8; border: 1px solid #FCE7F3; border-radius: 1rem; padding: 20px;">
-              <h2 style="font-size: 18px; font-weight: 700; color: #9D174D; margin-top: 0; margin-bottom: 8px;">📖 आजची म्हण</h2>
-              <p style="font-size: 14px; font-weight: 700; color: #1F2937; margin: 0 0 6px 0;">"${data.proverb || "-"}"</p>
-              <p style="font-size: 12px; color: #4B5563; margin: 0;">अर्थ: ${data.proverbMeaning || "-"}</p>
-            </div>
-          </div>
-  
-          <!-- Dinvishesh -->
-          <div style="background: #EFF6FF; border: 1px solid #DBEAFE; border-radius: 1rem; padding: 20px;">
-            <h2 style="font-size: 18px; font-weight: 700; color: #1E40AF; margin-top: 0; margin-bottom: 12px; border-bottom: 1px solid #DBEAFE; padding-bottom: 6px;">📅 दिनविशेष</h2>
-            <div style="font-size: 13px; line-height: 1.6; color: #1F2937; white-space: pre-line;">${data.events || data.dinvishesh || "-"}</div>
-          </div>
-  
-          <!-- Batmya -->
-          ${(data.batmya || data.news) ? `
-          <div style="background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 1rem; padding: 20px;">
-            <h2 style="font-size: 18px; font-weight: 700; color: #065F46; margin-top: 0; margin-bottom: 12px; border-bottom: 1px solid #A7F3D0; padding-bottom: 6px;">📰 आजच्या बातम्या</h2>
-            <div style="font-size: 13px; line-height: 1.6; color: #1F2937; white-space: pre-line;">${data.batmya || data.news || "-"}</div>
-          </div>
-          ` : ''}
-  
-          <!-- Story -->
-          <div style="background: #FFF7ED; border: 1px solid #FFEDD5; border-radius: 1rem; padding: 20px;">
-            <h2 style="font-size: 18px; font-weight: 700; color: #C2410C; margin-top: 0; margin-bottom: 8px;">📖 बोधकथा: ${data.storyTitle || "-"}</h2>
-            <p style="font-size: 13px; line-height: 1.6; color: #1F2937; white-space: pre-line; margin-bottom: 12px;">${data.story || "-"}</p>
-            <div style="background: #FFF; border-left: 4px solid #F97316; padding: 8px 12px; font-size: 12px; font-weight: 700; color: #EA580C;">तात्पर्य: ${data.moral || "-"}</div>
-          </div>
-  
-          <!-- General Knowledge & Patriotic Song -->
-          <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px;">
-            <div style="background: #FAF5FF; border: 1px solid #F3E8FF; border-radius: 1rem; padding: 20px;">
-              <h2 style="font-size: 18px; font-weight: 700; color: #6B21A8; margin-top: 0; margin-bottom: 12px; border-bottom: 1px solid #F3E8FF; padding-bottom: 6px;">🧠 सामान्य ज्ञान (GK)</h2>
-              <div style="display: flex; flex-direction: column; gap: 12px;">
-                ${[1, 2, 3, 4].map(num => data[`gkQ${num}`] ? `
-                  <div style="font-size: 12px; line-height: 1.5;">
-                    <div style="font-weight: 700; color: #1F2937;">Q${num}. ${data[`gkQ${num}`]}</div>
-                    <div style="font-weight: 800; color: #6B21A8; margin-top: 2px;">Ans. ${data[`gkA${num}`] || "-"}</div>
-                  </div>
-                ` : '').join('')}
-              </div>
-            </div>
-            <div style="background: #EEF2F6; border: 1px solid #E2E8F0; border-radius: 1rem; padding: 20px;">
-              <h2 style="font-size: 18px; font-weight: 700; color: #334155; margin-top: 0; margin-bottom: 8px;">🎵 देशभक्ती गीत</h2>
-              <p style="font-size: 14px; font-weight: 700; color: #1F2937; margin: 0; text-align: center;">${data.songTitle || "-"}</p>
-            </div>
-          </div>
-  
+    // Page header helper
+    const pageHeader = `
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2.5px solid #166534; padding-bottom: 6px; margin-bottom: 14px;">
+        <div style="font-size: 12px; font-weight: 800; color: #166534;">📖 दैनिक परिपाठ</div>
+        <div style="font-size: 12px; font-weight: 800; color: #166534;">दिनांक: ${dateStr}</div>
+      </div>
+    `;
+
+    // --- PAGE 1: राष्ट्रगीत, राज्यगीत, प्रतिज्ञा ---
+    const nationalAnthem = data.nationalAnthem || data[`nationalAnthem_${adminLang}`] || assemblyItems[0]?.content || "";
+    const stateAnthem = data.stateAnthem || data[`stateAnthem_${adminLang}`] || assemblyItems[1]?.content || "";
+    const pledge = data.pledge || data[`pledge_${adminLang}`] || assemblyItems[2]?.content || "";
+
+    const page1 = `
+      <div style="page-break-after: always;">
+        ${pageHeader}
+        <div style="${sectionBox('#FFFBEB', '#FDE68A')}">
+          <h2 style="${sectionTitle('#92400E')}">🇮🇳 ${assemblyItems[0]?.label || 'राष्ट्रगीत'}</h2>
+          <div style="${bodyText} text-align: center;">${nl2br(nationalAnthem)}</div>
+        </div>
+        <div style="${sectionBox('#F0FDF4', '#BBF7D0')}">
+          <h2 style="${sectionTitle('#166534')}">🚩 ${assemblyItems[1]?.label || 'राज्यगीत'}</h2>
+          <div style="${bodyText} text-align: center;">${nl2br(stateAnthem)}</div>
+        </div>
+        <div style="${sectionBox('#EFF6FF', '#BFDBFE')}">
+          <h2 style="${sectionTitle('#1E40AF')}">🇮🇳 ${assemblyItems[2]?.label || 'प्रतिज्ञा'}</h2>
+          <div style="${bodyText} text-align: center;">${nl2br(pledge)}</div>
         </div>
       </div>
     `;
+
+    // --- PAGE 2: संविधान उद्देशिका, प्रार्थना, मौन पसायदान ---
+    const preamble = data.preamble || data[`preamble_${adminLang}`] || assemblyItems[3]?.content || "";
+    const prayer = data.prayer || data[`prayer_${adminLang}`] || assemblyItems[4]?.content || "";
+    const silentPasayadan = data.silentPasayadan || assemblyItems[5]?.content || "";
+
+    const page2 = `
+      <div style="page-break-after: always;">
+        ${pageHeader}
+        <div style="${sectionBox('#FFF7ED', '#FED7AA')}">
+          <h2 style="${sectionTitle('#C2410C')}">📜 ${assemblyItems[3]?.label || 'संविधान उद्देशिका'}</h2>
+          <div style="${bodyText} text-align: center;">${nl2br(preamble)}</div>
+        </div>
+        <div style="${sectionBox('#F0FDF4', '#BBF7D0')}">
+          <h2 style="${sectionTitle('#166534')}">🙏🏻 ${assemblyItems[4]?.label || 'प्रार्थना'}</h2>
+          <div style="${bodyText} text-align: center;">${nl2br(prayer)}</div>
+        </div>
+        ${silentPasayadan ? `
+        <div style="${sectionBox('#FFFBEB', '#FDE68A')}">
+          <h2 style="${sectionTitle('#92400E')}">✨ ${assemblyItems[5]?.label || 'पसायदान'}</h2>
+          <div style="${bodyText} text-align: center;">${nl2br(silentPasayadan)}</div>
+        </div>
+        ` : ''}
+      </div>
+    `;
+
+    // --- PAGE 3: पंचांग, सुविचार, श्लोक, म्हण ---
+    const panchang = (data.month || data.tithi || data.nakshatra) ? `
+      <div style="${sectionBox('#FFF7ED', '#FFEDD5')}">
+        <h2 style="${sectionTitle('#C2410C')}">🗓️ आजचे पंचांग</h2>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px;">
+          ${data.day ? `<div style="background: #FEF3C7; border-radius: 8px; padding: 8px; text-align: center;"><div style="font-size: 9px; font-weight: 700; color: #92400E; text-transform: uppercase;">वार</div><div style="font-size: 12px; font-weight: 800; color: #1F2937;">${data.day}</div></div>` : ''}
+          ${data.month ? `<div style="background: #FEF3C7; border-radius: 8px; padding: 8px; text-align: center;"><div style="font-size: 9px; font-weight: 700; color: #92400E; text-transform: uppercase;">मास</div><div style="font-size: 12px; font-weight: 800; color: #1F2937;">${data.month}</div></div>` : ''}
+          ${data.paksha ? `<div style="background: #FEF3C7; border-radius: 8px; padding: 8px; text-align: center;"><div style="font-size: 9px; font-weight: 700; color: #92400E; text-transform: uppercase;">पक्ष</div><div style="font-size: 12px; font-weight: 800; color: #1F2937;">${data.paksha}</div></div>` : ''}
+          ${data.tithi ? `<div style="background: #FEF3C7; border-radius: 8px; padding: 8px; text-align: center;"><div style="font-size: 9px; font-weight: 700; color: #92400E; text-transform: uppercase;">तिथी</div><div style="font-size: 12px; font-weight: 800; color: #1F2937;">${data.tithi}</div></div>` : ''}
+          ${data.nakshatra ? `<div style="background: #FEF3C7; border-radius: 8px; padding: 8px; text-align: center;"><div style="font-size: 9px; font-weight: 700; color: #92400E; text-transform: uppercase;">नक्षत्र</div><div style="font-size: 12px; font-weight: 800; color: #1F2937;">${data.nakshatra}</div></div>` : ''}
+          ${data.yog ? `<div style="background: #FEF3C7; border-radius: 8px; padding: 8px; text-align: center;"><div style="font-size: 9px; font-weight: 700; color: #92400E; text-transform: uppercase;">योग</div><div style="font-size: 12px; font-weight: 800; color: #1F2937;">${data.yog}</div></div>` : ''}
+          ${data.sunrise ? `<div style="background: #FEF3C7; border-radius: 8px; padding: 8px; text-align: center;"><div style="font-size: 9px; font-weight: 700; color: #92400E; text-transform: uppercase;">सूर्योदय</div><div style="font-size: 12px; font-weight: 800; color: #1F2937;">${data.sunrise}</div></div>` : ''}
+          ${data.sunset ? `<div style="background: #FEF3C7; border-radius: 8px; padding: 8px; text-align: center;"><div style="font-size: 9px; font-weight: 700; color: #92400E; text-transform: uppercase;">सूर्यास्त</div><div style="font-size: 12px; font-weight: 800; color: #1F2937;">${data.sunset}</div></div>` : ''}
+        </div>
+      </div>
+    ` : '';
+
+    const page3 = `
+      <div style="page-break-after: always;">
+        ${pageHeader}
+        ${panchang}
+        <div style="${sectionBox('#F5F3FF', '#EDE9FE')}">
+          <h2 style="${sectionTitle('#5B21B6')}">💭 आजचा सुविचार</h2>
+          <div style="${bodyText} text-align: center; font-size: 14px; font-style: italic;">"${data.thought || "-"}"</div>
+        </div>
+        ${data.shlok ? `
+        <div style="${sectionBox('#FFF5F5', '#FECACA')}">
+          <h2 style="${sectionTitle('#991B1B')}">🕉️ आजचा श्लोक</h2>
+          <div style="${bodyText} text-align: center;">${nl2br(data.shlok)}</div>
+        </div>
+        ` : ''}
+        <div style="${sectionBox('#FDF2F8', '#FCE7F3')}">
+          <h2 style="${sectionTitle('#9D174D')}">📖 आजची म्हण</h2>
+          <div style="${bodyText} text-align: center; font-size: 14px; font-weight: 700;">"${data.proverb || "-"}"</div>
+          ${data.proverbMeaning ? `<div style="font-size: 11.5px; color: #6B7280; margin-top: 6px; text-align: center; font-weight: 600;">अर्थ: ${data.proverbMeaning}</div>` : ''}
+        </div>
+      </div>
+    `;
+
+    // --- PAGE 4: दिनविशेष, सुसंस्कारक्षम बातम्या ---
+    const eventsContent = data.events || data.dinvishesh || "";
+    const newsContent = data.valueNews || data.batmya || data.news || "";
+
+    const page4 = `
+      <div style="page-break-after: always;">
+        ${pageHeader}
+        ${eventsContent ? `
+        <div style="${sectionBox('#EFF6FF', '#BFDBFE')}">
+          <h2 style="${sectionTitle('#1E40AF')}">📅 ${data.dateMonth ? data.dateMonth + ' ' : ''}दिनविशेष</h2>
+          ${data.yearDay ? `<div style="font-size: 11px; font-weight: 700; color: #3B82F6; margin-bottom: 8px; text-align: center; background: #DBEAFE; border-radius: 20px; padding: 4px 12px; display: inline-block;">हा वर्षातील ${data.yearDay} वा दिवस आहे.</div>` : ''}
+          <div style="${bodyText}">${nl2br(eventsContent)}</div>
+        </div>
+        ` : ''}
+        ${newsContent ? `
+        <div style="${sectionBox('#ECFDF5', '#A7F3D0')}">
+          <h2 style="${sectionTitle('#065F46')}">📰 सुसंस्कारक्षम बातम्या</h2>
+          <div style="${bodyText}">${nl2br(newsContent)}</div>
+        </div>
+        ` : ''}
+      </div>
+    `;
+
+    // --- PAGE 5: देशभक्ती गीत, बोधकथा ---
+    const page5 = `
+      <div style="page-break-after: always;">
+        ${pageHeader}
+        ${data.patrioticSong ? `
+        <div style="${sectionBox('#EEF2FF', '#C7D2FE')}">
+          <h2 style="${sectionTitle('#3730A3')}">🎵 देशभक्ती गीत${data.songTitle ? ': ' + data.songTitle : ''}</h2>
+          <div style="${bodyText} text-align: center;">${nl2br(data.patrioticSong)}</div>
+        </div>
+        ` : ''}
+        ${data.story ? `
+        <div style="${sectionBox('#FFF7ED', '#FFEDD5')}">
+          <h2 style="${sectionTitle('#C2410C')}">📖 बोधकथा${data.storyTitle ? ': ' + data.storyTitle : ''}</h2>
+          <div style="${bodyText}">${nl2br(data.story)}</div>
+          ${data.moral ? `
+          ${divider}
+          <div style="background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 10px 14px; border-radius: 0 8px 8px 0; margin-top: 8px;">
+            <span style="font-size: 11px; font-weight: 800; color: #92400E;">⭐ तात्पर्य: </span>
+            <span style="font-size: 12px; font-weight: 700; color: #1F2937;">${data.moral}</span>
+          </div>
+          ` : ''}
+        </div>
+        ` : ''}
+      </div>
+    `;
+
+    // --- PAGE 6: सामान्य ज्ञान, थोरव्यक्ती ---
+    const gkHtml = [1, 2, 3, 4].map(num => data[`gkQ${num}`] ? `
+      <div style="background: #F5F3FF; border: 1px solid #EDE9FE; border-radius: 10px; padding: 10px 14px; margin-bottom: 8px;">
+        <div style="font-size: 12px; font-weight: 800; color: #5B21B6;">प्रश्न ${num}: ${data[`gkQ${num}`]}</div>
+        <div style="font-size: 12px; font-weight: 700; color: #166534; margin-top: 4px;">उत्तर: ${data[`gkA${num}`] || "-"}</div>
+      </div>
+    ` : '').join('');
+
+    const page6 = `
+      <div>
+        ${pageHeader}
+        ${gkHtml ? `
+        <div style="${sectionBox('#FAF5FF', '#F3E8FF')}">
+          <h2 style="${sectionTitle('#6B21A8')}">🧠 सामान्य ज्ञान (G.K.)</h2>
+          ${gkHtml}
+        </div>
+        ` : ''}
+        ${data.personalityTitle || data.personality ? `
+        <div style="${sectionBox('#F0FDFA', '#CCFBF1')}">
+          <h2 style="${sectionTitle('#115E59')}">👤 थोरव्यक्ती परिचय${data.personalityTitle ? ': ' + data.personalityTitle : ''}</h2>
+          <div style="${bodyText}">${nl2br(data.personality || "-")}</div>
+        </div>
+        ` : ''}
+        ${divider}
+        <div style="text-align: center; padding: 12px 0 4px; font-size: 10px; font-weight: 700; color: #9CA3AF;">
+          निर्मिती: ${data.creator || "Smart Learning With AI"} | © दैनिक परिपाठ ${new Date().getFullYear()}
+        </div>
+      </div>
+    `;
+
+    tempDiv.innerHTML = page1 + page2 + page3 + page4 + page5 + page6;
   
     document.body.appendChild(tempDiv);
   
     const opt = {
-      margin: [10, 10, 10, 10],
+      margin: [8, 10, 8, 10],
       filename: `Paripath_${dateStr}.pdf`,
       image: { type: "jpeg", quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true, letterRendering: true },
@@ -878,8 +992,8 @@ function AssemblyBookAdmin() {
                   </div>
                   <textarea
                     rows={6}
-                    value={paripathData.batmya || ''}
-                    onChange={(e) => setParipathData({ ...paripathData, batmya: e.target.value, news: e.target.value })}
+                    value={paripathData.valueNews || paripathData.batmya || ''}
+                    onChange={(e) => setParipathData({ ...paripathData, valueNews: e.target.value, batmya: e.target.value, news: e.target.value })}
                     className="w-full px-6 py-5 bg-emerald-50/30 border border-emerald-100 hover:border-emerald-300 focus:bg-white rounded-2xl focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all resize-none text-center font-bold text-slate-800 leading-relaxed text-base"
                     placeholder="येथे आजच्या मुख्य बातम्या (अंतरराष्ट्रीय, राष्ट्रीय, राज्यस्तरीय, क्रीडा इ.) टाका..."
                   />
@@ -1027,42 +1141,25 @@ function AssemblyBookAdmin() {
                 </div>
               </div>
 
-              {/* Pasaydan - Standard Fixed Card */}
+              {/* Pasaydan - Editable Card */}
               <div className="space-y-8 p-8 md:p-12 bg-gradient-to-br from-amber-50/80 to-yellow-100/50 border border-amber-200/60 rounded-[3rem] shadow-[0_8px_30px_rgb(245,158,11,0.12)] relative overflow-hidden">
                 <div className="bg-white/90 backdrop-blur-sm p-8 rounded-[2.5rem] border border-amber-100 shadow-xl shadow-amber-900/5 hover:shadow-2xl hover:shadow-amber-900/10 transition-all duration-300 text-center relative">
                   <div className="flex justify-center mb-6">
                     <span className="inline-flex items-center justify-center gap-2 px-6 py-2 bg-amber-50 text-amber-700 rounded-full text-xs font-black uppercase tracking-widest border border-amber-100">
-                      ✨ मौन पसायदान (Pasaydan - Standard Fixed)
+                      ✨ मौन पसायदान (Silent Pasayadan)
                     </span>
                   </div>
-                  <div className="text-sm md:text-base font-bold text-slate-800 leading-relaxed font-sans whitespace-pre-line bg-amber-50/30 p-6 rounded-2xl border border-amber-100/50 max-w-2xl mx-auto">
-{`आता विश्वात्मकें देवें । येणे वाग्यज्ञें तोषावें ।
-तोषोनि मज द्यावे । पसायदान हे ॥ १ ॥
-
-जे खळांची व्यंकटी सांडो । तया सत्कर्मीं रती वाढो ।
-भूतां परस्परे पडो । मैत्र जीवांचे ॥ २ ॥
-
-दुरितांचे तिमिर जावो । विश्व स्वधर्मसूर्ये पाहो ।
-जो जे वांछील तो ते लावो । प्राणिजात ॥ ३ ॥
-
-वर्षत सकळमंङ्गळी । ईश्वरनिष्ठांची मांदियाळी ।
-अनवरत भूमंडळी । भेटतु भूतां ॥ ४ ॥
-
-द्रुम वेली कल्पतरूंचे आरव । चेतना चिंतामणींचे गाव ।
-बोलते जे अर्णव । पीयूषांचे ॥ ५ ॥
-
-चंद्रमे जे अलांछन । मार्तंड जे तापहीन ।
-ते सर्वांही सदा सज्जन । सोयरे होतो ॥ ६ ॥
-
-किंबहुना सर्वसुखी । पूर्ण होवोनि तिही लोकी ।
-भाजिजो आदिपुरुखी । अखंडित ॥ ७ ॥
-
-आणि ग्रंथोपजीविये । विशेषीं लोकीं इये ।
-दृष्टादृष्टविजये । होआवे जी ॥ ८ ॥
-
-येथ म्हणे श्रीविश्वेशराओ । हा होईल दानपसावो ।
-येणे वरे ज्ञानदेवो । सुखी झाला ॥ ९ ॥`}
-                  </div>
+                  <textarea
+                    rows={12}
+                    value={
+                      paripathData.silentPasayadan !== undefined
+                        ? paripathData.silentPasayadan
+                        : (paripathData.silentPasayadan || DEFAULT_ASSEMBLY_ITEMS[adminLang]?.[5]?.content || "")
+                    }
+                    onChange={(e) => setParipathData({ ...paripathData, silentPasayadan: e.target.value })}
+                    className="w-full px-6 py-5 bg-amber-50/30 border border-amber-100 hover:border-amber-300 focus:bg-white rounded-2xl focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all resize-none text-center font-bold text-slate-800 leading-relaxed max-w-2xl mx-auto block"
+                    placeholder="उदा. आता विश्वात्मकें देवें..."
+                  />
                 </div>
               </div>
 

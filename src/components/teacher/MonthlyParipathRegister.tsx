@@ -426,7 +426,16 @@ export function MonthlyParipathRegister() {
         html2canvas: { scale: 2, useCORS: true, letterRendering: true },
         jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
       };
-      await html2pdfFn().set(opt).from(element).save();
+      const pdfBlob = await html2pdfFn().set(opt).from(element).output("blob");
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      const downloadLink = document.createElement("a");
+      downloadLink.href = blobUrl;
+      downloadLink.download = opt.filename;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+
       toast.success("PDF यशस्वीरीत्या डाउनलोड झाली!");
     } catch (err: any) {
       console.error(err);
