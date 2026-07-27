@@ -1,23 +1,32 @@
 import React, { Component, ReactNode, useState, lazy, Suspense } from "react";
 import { ArrowLeft, ChevronRight, FileText, Loader2, AlertCircle } from "lucide-react";
 
-// Lazy load large result components for optimal bundle performance & instant load
+// Safe lazy loader to auto-recover from Vite module fetch errors
+const safeLazy = (factory: () => Promise<any>) =>
+  lazy(() =>
+    factory().catch((err) => {
+      console.warn("Failed to fetch dynamically imported module. Reloading page...", err);
+      window.location.reload();
+      return new Promise(() => {});
+    })
+  );
+
 // @ts-ignore
-const BoardResult = lazy(() => import("@/result/BoardResult"));
+const BoardResult = safeLazy(() => import("@/result/BoardResult"));
 // @ts-ignore
-const SubjectWiseResult = lazy(() => import("@/result/SubjectWiseResult"));
+const SubjectWiseResult = safeLazy(() => import("@/result/SubjectWiseResult"));
 // @ts-ignore
-const ProgressSheet = lazy(() => import("@/result/ProgressSheet"));
+const ProgressSheet = safeLazy(() => import("@/result/ProgressSheet"));
 // @ts-ignore
-const Collectout = lazy(() => import("@/result/Collectout"));
+const Collectout = safeLazy(() => import("@/result/Collectout"));
 // @ts-ignore
-const GradeWise = lazy(() => import("@/result/GradeWise"));
+const GradeWise = safeLazy(() => import("@/result/GradeWise"));
 // @ts-ignore
-const Result5th8th = lazy(() => import("@/result/Result5th8th"));
+const Result5th8th = safeLazy(() => import("@/result/Result5th8th"));
 // @ts-ignore
-const ResultSSC = lazy(() => import("@/result/ResultSSC"));
+const ResultSSC = safeLazy(() => import("@/result/ResultSSC"));
 // @ts-ignore
-const ResultHSC = lazy(() => import("@/result/ResultHSC"));
+const ResultHSC = safeLazy(() => import("@/result/ResultHSC"));
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -160,7 +169,7 @@ export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
         <div className="flex-1 overflow-x-auto">
           <PdfErrorBoundary title="प्रगती पत्रक">
             <Suspense fallback={renderLoading()}>
-              <ProgressSheet initialClass={selectedClass} initialYear={academicYear} />
+              <ProgressSheet initialClass={selectedClass} initialYear={academicYear} onBack={() => setSelectedOption(null)} />
             </Suspense>
           </PdfErrorBoundary>
         </div>
@@ -206,7 +215,7 @@ export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
         <div className="flex-1 overflow-x-auto">
           <PdfErrorBoundary title="श्रेणीनिहाय निकाल संकलन प्रपत्र">
             <Suspense fallback={renderLoading()}>
-              <GradeWise initialClass={selectedClass} initialYear={academicYear} />
+              <GradeWise initialClass={selectedClass} initialYear={academicYear} onBack={() => setSelectedOption(null)} />
             </Suspense>
           </PdfErrorBoundary>
         </div>

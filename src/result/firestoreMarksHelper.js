@@ -2,13 +2,22 @@ import { db } from "../lib/firebase";
 import { doc, getDoc, collection, getDocs, query, where } from "firebase/firestore";
 import { fetchJsonFromBunny, saveJsonToBunny } from "../lib/bunnyStorage";
 
+export const isStudentSemiEnglish = (s) => {
+  if (s.isSemiEnglish === true) return true;
+  if (s.isSemiEnglish === false) return false;
+  if (!s.medium) return false;
+  const m = String(s.medium).toLowerCase();
+  return m.includes("semi") || m.includes("सेमी");
+};
+
 /**
  * Fetch students for a class from Firestore (users & students collections) and Bunny Storage CDN
  */
-export const fetchStudentsForClass = async (selectedClass) => {
+export const fetchStudentsForClass = async (selectedClass, medium) => {
   let loadedStudents = [];
   const normalizeClass = (cls) => (cls ? String(cls).trim().toLowerCase().replace(/[^0-9a-z]/g, "") : "");
   const targetClassNorm = normalizeClass(selectedClass);
+  const selectedMedium = medium || (typeof localStorage !== "undefined" ? localStorage.getItem("cce_selected_medium") : null) || "marathi";
 
   try {
     const uQuery = query(collection(db, "users"), where("role", "==", "student"));
@@ -16,7 +25,7 @@ export const fetchStudentsForClass = async (selectedClass) => {
     uSnap.forEach((docSnap) => {
       const d = docSnap.data();
       const stdClassNorm = normalizeClass(d.class || d.currentClass || d.className);
-      if (!stdClassNorm || stdClassNorm === targetClassNorm || d.class === selectedClass) {
+      if (stdClassNorm === targetClassNorm || d.class === selectedClass) {
         loadedStudents.push({
           id: docSnap.id,
           srNo: String(d.rollNo || d.srNo || loadedStudents.length + 1),
@@ -28,6 +37,8 @@ export const fetchStudentsForClass = async (selectedClass) => {
           stdSurname: d.surname || d.stdSurname || "",
           stdMother: d.motherName || d.stdMother || "",
           currentClass: d.class || d.currentClass || selectedClass,
+          medium: d.medium,
+          isSemiEnglish: d.isSemiEnglish,
           division: d.division || "1",
           dob: d.dob || d.birthDate || "",
           caste: d.caste || d.category || "",
@@ -43,7 +54,7 @@ export const fetchStudentsForClass = async (selectedClass) => {
       studentsSnap.forEach((docSnap) => {
         const d = docSnap.data();
         const stdClassNorm = normalizeClass(d.class || d.currentClass || d.className);
-        if (!stdClassNorm || stdClassNorm === targetClassNorm || d.class === selectedClass) {
+        if (stdClassNorm === targetClassNorm || d.class === selectedClass) {
           loadedStudents.push({
             id: docSnap.id,
             srNo: String(d.rollNo || d.srNo || loadedStudents.length + 1),
@@ -55,6 +66,8 @@ export const fetchStudentsForClass = async (selectedClass) => {
             stdSurname: d.surname || d.stdSurname || "",
             stdMother: d.motherName || d.stdMother || "",
             currentClass: d.class || d.currentClass || selectedClass,
+            medium: d.medium,
+            isSemiEnglish: d.isSemiEnglish,
             division: d.division || "1",
             dob: d.dob || d.birthDate || "",
             caste: d.caste || d.category || "",
@@ -64,6 +77,12 @@ export const fetchStudentsForClass = async (selectedClass) => {
       });
     } catch (e) {}
   }
+
+  // Filter students by selected Medium
+  loadedStudents = loadedStudents.filter((s) => {
+    const isSemi = isStudentSemiEnglish(s);
+    return selectedMedium === "semi" ? isSemi : !isSemi;
+  });
 
   // Fetch detailed student profiles from student_details collection
   const detailsMap = new Map();
@@ -178,12 +197,15 @@ export const matchAndMergeMarks = (students = [], currentMarks = {}, firestoreMa
       let subData = stdFsMarks[sub];
       if (!subData) {
         const lower = String(sub).toLowerCase();
-        if (lower.includes("मराठी")) subData = stdFsMarks["marathi"] || stdFsMarks["प्रथम भाषा : मराठी"];
-        else if (lower.includes("इंग्रजी")) subData = stdFsMarks["english"] || stdFsMarks["द्वितीय भाषा : इंग्रजी"];
-        else if (lower.includes("गणित")) subData = stdFsMarks["math"] || stdFsMarks["maths"] || stdFsMarks["गणित"];
-        else if (lower.includes("कला")) subData = stdFsMarks["kala"] || stdFsMarks["कला"];
-        else if (lower.includes("कार्यानुभव")) subData = stdFsMarks["karyanubhav"] || stdFsMarks["कार्यानुभव"];
-        else if (lower.includes("शारीरिक")) subData = stdFsMarks["sharirik"] || stdFsMarks["शारीरिक शिक्षण"];
+        if (lower.includes("मराठी")) subData = stdFsMarks["marathi"] || stdFsMarks["प्रथम भाषा : मराठी"] || stdFsMarks["Marathi"];
+        else if (lower.includes("इंग्रजी") || lower === "english") subData = stdFsMarks["english"] || stdFsMarks["English"] || stdFsMarks["द्वितीय भाषा : इंग्रजी"];
+        else if (lower.includes("गणित") || lower.includes("math")) subData = stdFsMarks["Mathematics"] || stdFsMarks["math"] || stdFsMarks["maths"] || stdFsMarks["गणित"];
+        else if (lower.includes("विज्ञान") || lower.includes("science")) subData = stdFsMarks["General Science"] || stdFsMarks["science"] || stdFsMarks["सामान्य विज्ञान"];
+        else if (lower.includes("सामाजिक") || lower.includes("social")) subData = stdFsMarks["Social Sciences"] || stdFsMarks["social"] || stdFsMarks["सामाजिक शास्त्रे"];
+        else if (lower.includes("परिसर") || lower.includes("environment")) subData = stdFsMarks["Environmental Studies"] || stdFsMarks["परिसर अभ्यास"];
+        else if (lower.includes("कला")) subData = stdFsMarks["kala"] || stdFsMarks["कला"] || stdFsMarks["Art"];
+        else if (lower.includes("कार्यानुभव")) subData = stdFsMarks["karyanubhav"] || stdFsMarks["कार्यानुभव"] || stdFsMarks["Work Experience"];
+        else if (lower.includes("शारीरिक")) subData = stdFsMarks["sharirik"] || stdFsMarks["शारीरिक शिक्षण"] || stdFsMarks["Physical Education"];
       }
 
       if (subData) {

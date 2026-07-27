@@ -103,6 +103,9 @@ export async function convertElementToPdfBlob(
   element: HTMLElement,
   filename: string = "document.pdf"
 ): Promise<Blob> {
+  if (typeof window === "undefined") {
+    throw new Error("PDF generation is only supported in the browser environment.");
+  }
   // Dynamically import html2pdf.js to preserve bundle splitting
   const html2pdf = (await import("html2pdf.js")).default;
 

@@ -188,18 +188,31 @@ function TeacherResultsPage() {
     localStorage.setItem("cce_selected_medium", selectedMedium);
   }, [selectedMedium]);
 
-  // Real-time student count sync
+  // Real-time student count sync for selected class AND medium
   useEffect(() => {
+    const isStudentSemi = (s: any) => {
+      if (s.isSemiEnglish === true) return true;
+      if (s.isSemiEnglish === false) return false;
+      if (!s.medium) return false;
+      const m = String(s.medium).toLowerCase();
+      return m.includes("semi") || m.includes("सेमी");
+    };
+
     const q = query(
       collection(db, "users"),
       where("role", "==", "student"),
       where("class", "==", selectedClass)
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      setStudentsCount(snapshot.size);
+      const raw = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      const filtered = raw.filter((s: any) => {
+        const isSemi = isStudentSemi(s);
+        return selectedMedium === "semi" ? isSemi : !isSemi;
+      });
+      setStudentsCount(filtered.length);
     });
     return () => unsubscribe();
-  }, [selectedClass]);
+  }, [selectedClass, selectedMedium]);
 
   // Custom File Uploader List States
   const [searchTerm, setSearchTerm] = useState("");
@@ -217,6 +230,32 @@ function TeacherResultsPage() {
       localStorage.setItem("cce_selected_medium", m);
     }
   }, [cceInfo]);
+
+  // Real-time listener for school_settings/general & local storage updates
+  useEffect(() => {
+    const unsubSettings = onSnapshot(doc(db, "school_settings", "general"), (snap) => {
+      if (snap.exists() && snap.data().medium) {
+        const isSemi = snap.data().medium.toLowerCase().includes("semi");
+        const m = isSemi ? "semi" : "marathi";
+        setSelectedMedium(m);
+        localStorage.setItem("cce_selected_medium", m);
+      }
+    });
+
+    const handleCustomEvent = () => {
+      const stored = localStorage.getItem("cce_selected_medium");
+      if (stored) setSelectedMedium(stored);
+    };
+
+    window.addEventListener("cce_settings_updated", handleCustomEvent);
+    window.addEventListener("storage", handleCustomEvent);
+
+    return () => {
+      unsubSettings();
+      window.removeEventListener("cce_settings_updated", handleCustomEvent);
+      window.removeEventListener("storage", handleCustomEvent);
+    };
+  }, []);
 
   // Load cce_settings for the current class+year with instant cache and parallel fallback
   useEffect(() => {
@@ -501,12 +540,22 @@ function TeacherResultsPage() {
                     </select>
                   </div>
 
-                  {/* Medium Display Badge (Read-only from Settings) */}
+                  {/* Medium Selector (Interactive Dropdown on Dashboard) */}
                   <div className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-500/20 rounded-2xl px-4 py-2 ring-2 ring-purple-100">
                     <span className="text-xs font-medium text-purple-100 uppercase tracking-wider">माध्यम:</span>
-                    <span className="text-xs font-extrabold">
-                      {selectedMedium === "semi" ? "सेमी इंग्रजी माध्यम (Semi-English)" : "मराठी माध्यम (Marathi)"}
-                    </span>
+                    <select
+                      className="bg-transparent text-white text-xs font-extrabold outline-none cursor-pointer border-none"
+                      value={selectedMedium}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSelectedMedium(val);
+                        localStorage.setItem("cce_selected_medium", val);
+                        window.dispatchEvent(new Event("cce_settings_updated"));
+                      }}
+                    >
+                      <option value="marathi" className="text-slate-800 font-bold">मराठी माध्यम (Marathi)</option>
+                      <option value="semi" className="text-slate-800 font-bold">सेमी इंग्रजी (Semi-English)</option>
+                    </select>
                   </div>
                 </div>
               </div>
@@ -714,25 +763,7 @@ function TeacherResultsPage() {
                   </div>
                 </button>
 
-                {/* 11. PDF Files */}
-                <button
-                  onClick={() => navigate({ to: "/teacher/result", search: { tab: "uploads" } as any })}
-                  className="bg-white/95 hover:bg-white border-2 border-slate-100 hover:border-cyan-400/90 rounded-[2.2rem] p-4.5 flex items-center justify-between transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-cyan-500/10 hover:-translate-y-1.5 active:scale-[0.98] group text-left relative overflow-hidden cursor-pointer"
-                >
-                  <div className="absolute -top-10 -right-10 size-28 rounded-full bg-gradient-to-br from-cyan-500/10 to-blue-500/5 opacity-0 group-hover:opacity-100 group-hover:scale-125 transition-all duration-500 pointer-events-none" />
-                  <div className="flex items-center gap-3.5 relative z-10">
-                    <div className="size-12 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 text-white flex items-center justify-center shadow-md shadow-cyan-500/35 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 flex-shrink-0">
-                      <svg className="size-5.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 01-2 2v5a2 2 0 01-2 2z" /></svg>
-                    </div>
-                    <div>
-                      <h3 className="text-[14.5px] font-black text-slate-800 group-hover:text-cyan-600 transition-colors tracking-tight">PDF Files</h3>
-                      <p className="text-[11.5px] text-slate-500 font-medium leading-snug mt-0.5">साठवलेले निकाल व स्टोरेझ</p>
-                    </div>
-                  </div>
-                  <div className="size-8 rounded-xl bg-slate-100/90 group-hover:bg-cyan-600 text-slate-400 group-hover:text-white flex items-center justify-center transition-all duration-300 flex-shrink-0 shadow-sm group-hover:shadow-md group-hover:translate-x-0.5 relative z-10">
-                    <span className="font-extrabold text-xs">➔</span>
-                  </div>
-                </button>
+
 
               </div>
 

@@ -1,18 +1,29 @@
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
-import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
+import { doc, getDoc, setDoc, collection, query, where, onSnapshot } from "firebase/firestore";
+import {
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle2,
+  BookOpen,
+  User,
+  Layers,
+  Save,
+  Check,
+  Award,
+} from "lucide-react";
 import { toast } from "sonner";
+import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
 
 const EXAMS_SEM1 = [
-  { key: "test1",    label: "चाचणी १" },
-  { key: "test2",    label: "चाचणी २" },
+  { key: "test1", label: "चाचणी १" },
+  { key: "test2", label: "चाचणी २" },
   { key: "semester1", label: "सत्र परीक्षा १" },
 ];
 const EXAMS_SEM2 = [
-  { key: "test3",    label: "चाचणी ३" },
-  { key: "test4",    label: "चाचणी ४" },
+  { key: "test3", label: "चाचणी ३" },
+  { key: "test4", label: "चाचणी ४" },
   { key: "semester2", label: "सत्र परीक्षा २" },
 ];
 
@@ -59,46 +70,60 @@ const getSubjectKey = (subjectName: string): string => {
   if (subjectName.includes("कला")) return "art";
   if (subjectName.includes("कार्यानुभव")) return "work";
   if (subjectName.includes("शारीरिक")) return "pe";
-  return "marathi"; // fallback
+  return "marathi";
 };
 
-interface Student { id: string; fullName?: string; name?: string; rollNo?: string; [key: string]: any; }
+interface Student {
+  id: string;
+  fullName?: string;
+  name?: string;
+  rollNo?: string;
+  [key: string]: any;
+}
 type Semester = "sem1" | "sem2";
 type ViewTab = "student" | "subject";
 
-// ── Shared theme tokens ──
-const T = {
-  bg:       "#ffffff",
-  card:     "#f8fafc",
-  border:   "#e2e8f0",
-  accent:   "#2563eb",
-  accentDim:"#eff6ff",
-  textHi:   "#1e293b",
-  textLo:   "#64748b",
-  input:    "#f1f5f9",
-};
-
-function MarksInput({ value, max, onChange }: { value: number; max: number; onChange: (v: number) => void }) {
+function MarksInput({
+  value,
+  max,
+  onChange,
+}: {
+  value: number;
+  max: number;
+  onChange: (v: number) => void;
+}) {
   return (
-    <div className="flex items-center rounded-xl overflow-hidden" style={{ background: T.input, border: `1px solid ${T.border}` }}>
+    <div className="flex items-center rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
       <input
-        type="number" min="0"
+        type="number"
+        min="0"
         value={value === 0 ? "" : value}
-        onChange={(e) => onChange(e.target.value === "" ? 0 : Math.max(0, parseInt(e.target.value) || 0))}
+        onChange={(e) =>
+          onChange(e.target.value === "" ? 0 : Math.max(0, parseInt(e.target.value) || 0))
+        }
         placeholder="0"
-        className="flex-1 px-3 py-3.5 bg-transparent text-base font-bold outline-none w-0"
-        style={{ color: T.textHi }}
+        className="flex-1 px-4 py-3 bg-transparent text-base font-extrabold outline-none w-0 text-slate-900"
       />
-      <span className="pr-3 text-sm whitespace-nowrap" style={{ color: T.textLo }}>/ {max}</span>
+      <span className="pr-4 text-xs font-bold text-slate-500 whitespace-nowrap">/ {max}</span>
     </div>
   );
 }
 
-export function CCEMarksEntry({ selectedClass, academicYear, onBack }: {
-  selectedClass: string; academicYear: string; onBack: () => void;
+export function CCEMarksEntry({
+  selectedClass,
+  academicYear,
+  onBack,
+}: {
+  selectedClass: string;
+  academicYear: string;
+  onBack: () => void;
 }) {
+  const [selectedMedium, setSelectedMedium] = useState<"marathi" | "semi">(() => {
+    const stored = localStorage.getItem("cce_selected_medium");
+    return stored === "semi" ? "semi" : "marathi";
+  });
   const [students, setStudents] = useState<Student[]>([]);
-  const [subjects, setSubjects] = useState<string[]>(DEFAULT_SUBJECTS);
+  const [subjects, setSubjects] = useState<string[]>(() => getDefaultSubjectsForClass(selectedClass, selectedMedium));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeSemester, setActiveSemester] = useState<Semester>("sem1");
@@ -119,25 +144,37 @@ export function CCEMarksEntry({ selectedClass, academicYear, onBack }: {
 
   // Instant real-time listener for students
   useEffect(() => {
+    const isStudentSemi = (s: any) => {
+      if (s.isSemiEnglish === true) return true;
+      if (s.isSemiEnglish === false) return false;
+      if (!s.medium) return false;
+      const m = String(s.medium).toLowerCase();
+      return m.includes("semi") || m.includes("सेमी");
+    };
+
     const q = query(collection(db, "users"), where("role", "==", "student"), where("class", "==", selectedClass));
     const unsub = onSnapshot(q, (snap) => {
-      const data = snap.docs.map(d => ({ id: d.id, ...d.data() })) as Student[];
-      setStudents(data.sort((a, b) => parseInt(a.rollNo || "999") - parseInt(b.rollNo || "999")));
+      const raw = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as (Student & { medium?: string; isSemiEnglish?: boolean })[];
+      const filtered = raw.filter((s) => {
+        const isSemi = isStudentSemi(s);
+        return selectedMedium === "semi" ? isSemi : !isSemi;
+      });
+      setStudents(filtered.sort((a, b) => parseInt(a.rollNo || "999") - parseInt(b.rollNo || "999")));
     });
     return () => unsub();
-  }, [selectedClass]);
+  }, [selectedClass, selectedMedium]);
 
   // Instant real-time listener for subjects and marks
   useEffect(() => {
     setLoading(true);
-    // Subjects
     const unsubSettings = onSnapshot(doc(db, "cce_settings", `${selectedClass}_${academicYear}`), (snap) => {
       if (snap.exists() && snap.data().subjects) {
         setSubjects(snap.data().subjects);
+      } else {
+        setSubjects(getDefaultSubjectsForClass(selectedClass));
       }
     });
 
-    // Marks
     const unsubMarks = onSnapshot(doc(db, "cce_marks_v2", `${selectedClass}_${academicYear}_${selectedExamKey}`), (snap) => {
       setAllMarks(snap.exists() ? snap.data().records || {} : {});
       setLoading(false);
@@ -149,7 +186,6 @@ export function CCEMarksEntry({ selectedClass, academicYear, onBack }: {
     };
   }, [selectedClass, academicYear, selectedExamKey]);
 
-  // Instant real-time listener for weightages
   useEffect(() => {
     const unsubWeightage = onSnapshot(doc(db, "cce_weightage_v2", `${selectedClass}_${academicYear}`), (snap) => {
       if (snap.exists() && (snap.data().data || snap.data().semester1)) {
@@ -159,8 +195,19 @@ export function CCEMarksEntry({ selectedClass, academicYear, onBack }: {
     return () => unsubWeightage();
   }, [selectedClass, academicYear]);
 
-  const getSubjectMarks = (studentId: string, subjectName: string): SubjectMarks => {
-    const record = allMarks[studentId]?.[subjectName] || {};
+  const getSubjectMarks = (student: Student | string, subjectName: string): SubjectMarks => {
+    let stdId = typeof student === "string" ? student : student.id;
+    let stdRoll = typeof student === "object" ? student.rollNo : "";
+    let stdName = typeof student === "object" ? student.fullName || student.name : "";
+
+    const stdRecord =
+      allMarks[stdId] ||
+      (stdRoll ? allMarks[stdRoll] : null) ||
+      (stdRoll ? allMarks[String(stdRoll)] : null) ||
+      (stdName ? allMarks[stdName] : null) ||
+      {};
+
+    const record = stdRecord[subjectName] || {};
     return {
       tondiKaam: parseInt(record.tondiKaam as any) || 0,
       pratyakshikPrayog: parseInt(record.pratyakshikPrayog as any) || 0,
@@ -176,9 +223,12 @@ export function CCEMarksEntry({ selectedClass, academicYear, onBack }: {
   };
 
   const setSubjectMark = (
-    studentId: string, subjectName: string, field: string, value: number
+    studentId: string,
+    subjectName: string,
+    field: string,
+    value: number
   ) => {
-    setAllMarks(prev => ({
+    setAllMarks((prev) => ({
       ...prev,
       [studentId]: {
         ...(prev[studentId] || {}),
@@ -189,8 +239,6 @@ export function CCEMarksEntry({ selectedClass, academicYear, onBack }: {
 
   const getActiveColsForStudent = (rollNoStr: string, subjectName: string) => {
     const rollNo = parseInt(rollNoStr);
-    
-    // Default fallback columns if no weightage settings exist or are assigned
     const defaultCols = [
       { key: "tondiKaam", label: "तोंडीकाम", max: 20, type: "akarik" },
       { key: "upakramKriti", label: "उपक्रम / कृती", max: 15, type: "akarik" },
@@ -205,9 +253,9 @@ export function CCEMarksEntry({ selectedClass, academicYear, onBack }: {
     const semesterKey = activeSemester === "sem1" ? "semester1" : "semester2";
     const items = weightages[semesterKey] || [];
     let assignedItem = items.find((item: any) => item.studentIds?.includes(rollNo));
-    
+
     if (!assignedItem && items.length > 0) {
-      assignedItem = items[0]; // fallback
+      assignedItem = items[0];
     }
 
     if (!assignedItem || !assignedItem.subjects) {
@@ -231,15 +279,15 @@ export function CCEMarksEntry({ selectedClass, academicYear, onBack }: {
       { key: "sankalitLekhi", label: "लेखी", max: parseInt(sw.sankalitLekhi) || 0, type: "sankalit" },
     ];
 
-    const activeCols = allPossibleCols.filter(col => col.max > 0);
+    const activeCols = allPossibleCols.filter((col) => col.max > 0);
     return activeCols.length > 0 ? activeCols : defaultCols;
   };
 
-  const isSubjectFilledForStudent = (studentId: string, rollNoStr: string, subjectName: string): boolean => {
-    const sm = getSubjectMarks(studentId, subjectName);
+  const isSubjectFilledForStudent = (student: Student | string, rollNoStr: string, subjectName: string): boolean => {
+    const sm = getSubjectMarks(student, subjectName);
     const activeCols = getActiveColsForStudent(rollNoStr, subjectName);
     if (activeCols.length === 0) return false;
-    return activeCols.some(col => {
+    return activeCols.some((col) => {
       const val = sm[col.key];
       return val !== undefined && val > 0;
     });
@@ -247,8 +295,8 @@ export function CCEMarksEntry({ selectedClass, academicYear, onBack }: {
 
   const getStudentProgress = (student: Student) => {
     let filled = 0;
-    subjects.forEach(sub => {
-      if (isSubjectFilledForStudent(student.id, student.rollNo || "", sub)) {
+    subjects.forEach((sub) => {
+      if (isSubjectFilledForStudent(student, student.rollNo || "", sub)) {
         filled++;
       }
     });
@@ -257,8 +305,8 @@ export function CCEMarksEntry({ selectedClass, academicYear, onBack }: {
 
   const getSubjectProgress = (subjectName: string) => {
     let filled = 0;
-    students.forEach(student => {
-      if (isSubjectFilledForStudent(student.id, student.rollNo || "", subjectName)) {
+    students.forEach((student) => {
+      if (isSubjectFilledForStudent(student, student.rollNo || "", subjectName)) {
         filled++;
       }
     });
@@ -268,7 +316,6 @@ export function CCEMarksEntry({ selectedClass, academicYear, onBack }: {
   const saveMarks = async () => {
     setSaving(true);
     try {
-      // Save directly to Bunny Storage CDN to stay 100% within free Firebase limits
       try {
         const { saveJsonToBunny } = await import("@/lib/bunnyStorage");
         await saveJsonToBunny(
@@ -282,15 +329,11 @@ export function CCEMarksEntry({ selectedClass, academicYear, onBack }: {
         { class: selectedClass, academicYear, exam: selectedExamKey, records: allMarks, updatedAt: new Date().toISOString() },
         { merge: true }
       );
-      toast.success("गुण जतन झाले!");
-    } catch (err: any) { toast.error("जतन अयशस्वी: " + err.message); }
+      toast.success("गुण यशस्वीरीत्या जतन झाले!");
+    } catch (err: any) {
+      toast.error("जतन अयशस्वी: " + err.message);
+    }
     setSaving(false);
-  };
-
-  const containerStyle = {
-    fontFamily: "'Inter', 'Noto Sans Devanagari', sans-serif",
-    background: T.bg,
-    color: T.textHi,
   };
 
   // ── STUDENT MARKS EDITOR ──
@@ -301,8 +344,8 @@ export function CCEMarksEntry({ selectedClass, academicYear, onBack }: {
     const sm = getSubjectMarks(student.id, subject);
 
     const activeCols = getActiveColsForStudent(student.rollNo || "", subject);
-    const akarikCols = activeCols.filter(c => c.type === "akarik");
-    const sankalitCols = activeCols.filter(c => c.type === "sankalit");
+    const akarikCols = activeCols.filter((c) => c.type === "akarik");
+    const sankalitCols = activeCols.filter((c) => c.type === "sankalit");
 
     const akarikMax = akarikCols.reduce((sum, c) => sum + c.max, 0);
     const sankalitMax = sankalitCols.reduce((sum, c) => sum + c.max, 0);
@@ -310,308 +353,335 @@ export function CCEMarksEntry({ selectedClass, academicYear, onBack }: {
     const akarikTotal = akarikCols.reduce((sum, c) => sum + (sm[c.key] || 0), 0);
     const sankalitTotal = sankalitCols.reduce((sum, c) => sum + (sm[c.key] || 0), 0);
 
+    const handleNextStudent = () => {
+      if (studentIdx < students.length - 1) {
+        setEditingStudent(students[studentIdx + 1]);
+      } else {
+        toast.info("हा शेवटचा विद्यार्थी आहे!");
+      }
+    };
+
+    const handlePrevStudent = () => {
+      if (studentIdx > 0) {
+        setEditingStudent(students[studentIdx - 1]);
+      }
+    };
+
     return (
-      <div className="rounded-[2.5rem] border shadow-2xl min-h-[600px] flex flex-col relative select-none overflow-hidden" style={{ ...containerStyle, borderColor: T.border }}>
-        <div className="flex items-center gap-3 px-5 py-4 flex-shrink-0" style={{ borderBottom: `1px solid ${T.border}` }}>
-          <button onClick={() => setEditingStudent(null)} className="cursor-pointer transition-colors" style={{ color: T.textHi }}>
-            <ArrowLeft className="size-5" />
-          </button>
-          <h2 className="text-base font-bold" style={{ color: T.textHi }}>
-            गुण नोंदणी - {activeSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}
-          </h2>
-        </div>
-        <div className="flex items-center gap-3 px-5 py-3 flex-shrink-0" style={{ borderBottom: `1px solid ${T.border}` }}>
-          <div className="w-8 h-8 rounded-full font-bold text-sm flex items-center justify-center border flex-shrink-0"
-            style={{ background: T.accentDim, color: T.accent, borderColor: T.border }}>
-            {student.rollNo || studentIdx + 1}
-          </div>
-          <span className="text-[14px] font-medium flex-1" style={{ color: T.textHi }}>{student.fullName || student.name || "-"}</span>
-        </div>
-        <div className="flex-1 overflow-y-auto pb-28 px-5 py-4">
-          {/* Subject nav */}
-          <div className="flex items-center justify-between mb-5">
-            <span className="text-base font-bold text-blue-600" style={{ color: T.accent }}>{subject}</span>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setSubjectIndex(Math.max(0, subjectIndex - 1))} disabled={subjectIndex === 0}
-                className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer disabled:opacity-40"
-                style={{ background: T.card, color: T.textLo }}>
-                <ChevronLeft className="size-4" />
-              </button>
-              <span className="text-sm" style={{ color: T.textLo }}>{subjectIndex + 1}/{subjects.length}</span>
-              <button onClick={() => setSubjectIndex(Math.min(subjects.length - 1, subjectIndex + 1))} disabled={subjectIndex === subjects.length - 1}
-                className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer disabled:opacity-40"
-                style={{ background: T.card, color: T.textLo }}>
-                <ChevronRight className="size-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* आकारिक मूल्यमापन */}
-          {akarikCols.length > 0 && (
-            <div className="mb-5">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-bold text-slate-800">आकारिक मूल्यमापन</h3>
-                <span className="text-xs text-slate-500 font-semibold bg-slate-100 px-2 py-0.5 rounded">एकूण गुण: {akarikMax}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                {akarikCols.map(col => (
-                  <div key={col.key}>
-                    <p className="text-xs mb-1 text-slate-650 font-bold">{col.label} ({col.max})</p>
-                    <MarksInput value={sm[col.key] || 0} max={col.max} onChange={v => setSubjectMark(student.id, subject, col.key, v)} />
-                  </div>
-                ))}
-              </div>
-              <div className="flex items-center justify-between mt-3 px-1">
-                <span className="text-xs text-slate-500">एकूण प्राप्त गुण: <span className="font-bold text-slate-850">{akarikTotal}</span></span>
-                <span className="text-xs text-slate-500">पैकी गुण: {akarikMax}</span>
-              </div>
-            </div>
-          )}
-
-          {akarikCols.length > 0 && sankalitCols.length > 0 && (
-            <div className="my-4" style={{ borderTop: `1px solid ${T.border}` }} />
-          )}
-
-          {/* संकलित मूल्यमापन */}
-          {sankalitCols.length > 0 && (
+      <div
+        className="bg-white text-slate-800 rounded-[2.5rem] border border-slate-200/90 shadow-2xl min-h-[600px] flex flex-col relative select-none overflow-hidden"
+        style={{ fontFamily: "'Inter', 'Noto Sans Devanagari', sans-serif" }}
+      >
+        {/* Top Header Banner */}
+        <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-800 text-white px-6 py-4 shadow-lg flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setEditingStudent(null)}
+              className="p-2.5 bg-white/10 hover:bg-white/20 active:scale-95 rounded-2xl transition-all cursor-pointer text-white flex items-center justify-center backdrop-blur-md"
+            >
+              <ArrowLeft className="size-5" />
+            </button>
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-bold text-slate-800">संकलित मूल्यमापन</h3>
-                <span className="text-xs text-slate-500 font-semibold bg-slate-100 px-2 py-0.5 rounded">एकूण गुण: {sankalitMax}</span>
+              <h2 className="text-lg font-black tracking-tight text-white">
+                गुण नोंदणी - {activeSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}
+              </h2>
+              <p className="text-xs text-blue-200 font-medium">इयत्ता {selectedClass} गुण भरणे</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Student Banner Bar */}
+        <div className="bg-blue-50/80 px-6 py-3.5 border-b border-blue-100 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white font-black text-sm flex items-center justify-center shadow-md">
+              {student.rollNo || studentIdx + 1}
+            </div>
+            <div>
+              <h3 className="text-base font-extrabold text-blue-950">{student.fullName || student.name || "-"}</h3>
+              <p className="text-xs font-bold text-blue-600">हजेरी क्र. {student.rollNo || studentIdx + 1}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePrevStudent}
+              disabled={studentIdx === 0}
+              className="px-3 py-1.5 bg-white border border-blue-200 hover:bg-blue-50 text-blue-900 font-extrabold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-40"
+            >
+              ← मागील
+            </button>
+            <button
+              onClick={handleNextStudent}
+              disabled={studentIdx === students.length - 1}
+              className="px-3 py-1.5 bg-blue-600 text-white hover:bg-blue-700 font-extrabold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-40"
+            >
+              पुढील →
+            </button>
+          </div>
+        </div>
+
+        {/* Subject Nav Tabs */}
+        <div className="bg-slate-100 p-2 border-b border-slate-200 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          {subjects.map((sub, idx) => (
+            <button
+              key={sub}
+              onClick={() => setSubjectIndex(idx)}
+              className={`px-4 py-2.5 rounded-xl font-extrabold text-xs whitespace-nowrap transition-all cursor-pointer ${
+                subjectIndex === idx
+                  ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+                  : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+              }`}
+            >
+              {sub}
+            </button>
+          ))}
+        </div>
+
+        {/* Marks Entry Form */}
+        <div className="flex-1 overflow-y-auto px-6 py-6 pb-28 space-y-6">
+          {/* Akarik Section */}
+          {akarikCols.length > 0 && (
+            <div className="bg-slate-50 p-5 rounded-3xl border border-slate-200 space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider">आकारिक मूल्यमापन</h4>
+                <span className="text-xs font-black text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200">
+                  एकूण: {akarikTotal} / {akarikMax}
+                </span>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                {sankalitCols.map(col => (
-                  <div key={col.key}>
-                    <p className="text-xs mb-1 text-slate-650 font-bold">{col.label} ({col.max})</p>
-                    <MarksInput value={sm[col.key] || 0} max={col.max} onChange={v => setSubjectMark(student.id, subject, col.key, v)} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {akarikCols.map((col) => (
+                  <div key={col.key} className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 ml-1">{col.label}</label>
+                    <MarksInput
+                      value={sm[col.key] || 0}
+                      max={col.max}
+                      onChange={(val) => setSubjectMark(student.id, subject, col.key, val)}
+                    />
                   </div>
                 ))}
               </div>
-              <div className="flex items-center justify-between mt-3 px-1">
-                <span className="text-xs text-slate-500">एकूण प्राप्त गुण: <span className="font-bold text-slate-850">{sankalitTotal}</span></span>
-                <span className="text-xs text-slate-500">पैकी गुण: {sankalitMax}</span>
+            </div>
+          )}
+
+          {/* Sankalit Section */}
+          {sankalitCols.length > 0 && (
+            <div className="bg-slate-50 p-5 rounded-3xl border border-slate-200 space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider">संकलित मूल्यमापन</h4>
+                <span className="text-xs font-black text-purple-700 bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-200">
+                  एकूण: {sankalitTotal} / {sankalitMax}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {sankalitCols.map((col) => (
+                  <div key={col.key} className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 ml-1">{col.label}</label>
+                    <MarksInput
+                      value={sm[col.key] || 0}
+                      max={col.max}
+                      onChange={(val) => setSubjectMark(student.id, subject, col.key, val)}
+                    />
+                  </div>
+                ))}
               </div>
             </div>
           )}
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 px-5 pb-5 pt-3 flex gap-3" style={{ background: `linear-gradient(to top, ${T.bg}, transparent)` }}>
-          <button onClick={saveMarks} disabled={saving}
-            className="flex-1 py-4 font-bold text-sm rounded-2xl cursor-pointer disabled:opacity-50 transition-all border border-slate-200"
-            style={{ background: T.card, color: T.textHi }}>
-            {saving ? "जतन..." : "जतन करा"}
-          </button>
-          <button onClick={async () => { await saveMarks(); if (subjectIndex < subjects.length - 1) setSubjectIndex(subjectIndex + 1); }}
+        {/* Sticky glassmorphic bottom bar */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-slate-200 z-30 flex items-center gap-3">
+          <button
+            onClick={saveMarks}
             disabled={saving}
-            className="flex-[2] py-4 font-extrabold text-sm rounded-2xl cursor-pointer disabled:opacity-50 transition-all active:scale-[0.99] shadow-md shadow-blue-200"
-            style={{ background: T.accent, color: "#ffffff" }}>
-            {saving ? "जतन होत आहे..." : "जतन करा & पुढे जा"}
+            className="flex-1 py-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white font-extrabold text-sm rounded-2xl shadow-xl flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <Save className="size-4" />
+            <span>{saving ? "जतन होत आहे..." : "जतन करा व पुढील विद्यार्थी →"}</span>
           </button>
         </div>
       </div>
     );
   }
 
-  // ── SUBJECT MARKS EDITOR ──
-  if (editingSubject) {
-    const subject = editingSubject;
-
-    return (
-      <div className="rounded-[2.5rem] border shadow-2xl min-h-[600px] flex flex-col relative select-none overflow-hidden" style={{ ...containerStyle, borderColor: T.border }}>
-        <div className="flex items-center gap-3 px-5 py-4 flex-shrink-0" style={{ borderBottom: `1px solid ${T.border}` }}>
-          <button onClick={() => setEditingSubject(null)} className="cursor-pointer" style={{ color: T.textHi }}>
-            <ArrowLeft className="size-5" />
-          </button>
-          <h2 className="text-base font-bold" style={{ color: T.textHi }}>गुण नोंदणी</h2>
-        </div>
-        <div className="flex items-center justify-between px-5 py-2.5 flex-shrink-0 bg-slate-50/50" style={{ borderBottom: `1px solid ${T.border}` }}>
-          <span className="text-xs font-bold text-slate-500">{selectedClass}</span>
-          <span className="text-xs font-black text-blue-600">{subject}</span>
-          <span className="text-xs font-bold text-slate-500">{activeSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
-        </div>
-
-        <div className="flex-1 overflow-y-auto pb-24 px-4 py-3 space-y-4">
-          {students.length === 0 ? (
-            <div className="flex justify-center py-20 text-sm" style={{ color: T.textLo }}>विद्यार्थी सापडले नाहीत</div>
-          ) : students.map((student, idx) => {
-            const sm = getSubjectMarks(student.id, subject);
-            const activeCols = getActiveColsForStudent(student.rollNo || "", subject);
-            const total = activeCols.reduce((sum, col) => sum + (sm[col.key] || 0), 0);
-            const totalMax = activeCols.reduce((sum, col) => sum + col.max, 0);
-
-            return (
-              <div key={student.id} className="pb-3 border-b border-slate-100 last:border-0">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full font-bold text-xs flex items-center justify-center border flex-shrink-0"
-                      style={{ background: T.accentDim, color: T.accent, borderColor: T.border }}>
-                      {student.rollNo || idx + 1}
-                    </div>
-                    <span className="text-xs font-bold text-slate-800">{student.fullName || student.name || "-"}</span>
-                  </div>
-                  <span className="text-xs font-bold text-slate-500">{total}/{totalMax}</span>
-                </div>
-                <div className="overflow-x-auto pb-1">
-                  <div className="flex gap-2" style={{ minWidth: "max-content" }}>
-                    {activeCols.map((col) => (
-                      <div key={col.key} className="flex-shrink-0" style={{ width: "95px" }}>
-                        <p className="text-[10px] mb-1 truncate text-slate-500 font-bold" title={`${col.label} (${col.max})`}>{col.label} ({col.max})</p>
-                        <div className="flex items-center rounded-xl overflow-hidden h-11" style={{ background: T.input, border: `1px solid ${T.border}` }}>
-                          <input
-                            type="number" min="0"
-                            value={(sm[col.key] as number) === 0 ? "" : sm[col.key]}
-                            onChange={(e) => setSubjectMark(student.id, subject, col.key, e.target.value === "" ? 0 : Math.max(0, parseInt(e.target.value) || 0))}
-                            placeholder="0"
-                            className="flex-1 px-2 py-1 bg-transparent text-xs font-bold outline-none w-0 min-w-0"
-                            style={{ color: T.textHi }}
-                          />
-                          <span className="pr-1.5 text-[10px] text-slate-400 font-bold">/{col.max}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="absolute bottom-0 left-0 right-0 px-5 pb-5 pt-3" style={{ background: `linear-gradient(to top, ${T.bg}, transparent)` }}>
-          <button onClick={saveMarks} disabled={saving}
-            className="w-full py-4 font-extrabold text-sm rounded-2xl transition-all cursor-pointer shadow-lg disabled:opacity-50 active:scale-[0.99]"
-            style={{ background: T.accent, color: "#ffffff" }}>
-            {saving ? "जतन होत आहे..." : "जतन करा"}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // ── MAIN LIST VIEW ──
+  // ── MAIN MARKS ENTRY ROSTER LIST ──
   return (
-    <div className="rounded-[2.5rem] border shadow-2xl min-h-[600px] flex flex-col relative select-none overflow-hidden"
-      style={{ ...containerStyle, borderColor: T.border }}>
+    <div
+      className="bg-white text-slate-800 rounded-[2.5rem] border border-slate-200/90 shadow-2xl min-h-[600px] flex flex-col relative select-none overflow-hidden"
+      style={{ fontFamily: "'Inter', 'Noto Sans Devanagari', sans-serif" }}
+    >
+      {/* Header Banner */}
+      <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-800 text-white px-6 py-5 shadow-lg relative overflow-hidden">
+        <div className="relative z-10 flex items-center justify-between">
+          <div className="flex items-center gap-3.5">
+            <button
+              onClick={onBack}
+              className="p-2.5 bg-white/10 hover:bg-white/20 active:scale-95 rounded-2xl transition-all cursor-pointer text-white flex items-center justify-center backdrop-blur-md"
+            >
+              <ArrowLeft className="size-5" />
+            </button>
+            <div>
+              <h2 className="text-xl font-black tracking-tight text-white flex items-center gap-2">
+                <Award className="size-5 text-blue-200" /> गुण नोंदणी
+              </h2>
+              <p className="text-xs text-blue-200 font-medium">इयत्ता {selectedClass} ({selectedMedium === "semi" ? "सेमी-इंग्रजी" : "मराठी"}) सर्व विद्यार्थ्यांची गुण नोंदणी</p>
+            </div>
+          </div>
 
-      {/* Header */}
-      <div className="flex items-center gap-4 px-5 py-4 flex-shrink-0" style={{ borderBottom: `1px solid ${T.border}` }}>
-        <button onClick={onBack} className="p-1.5 rounded-full transition-colors cursor-pointer" style={{ color: T.textHi }}>
-          <ArrowLeft className="size-5" />
-        </button>
-        <h2 className="text-base font-bold tracking-tight" style={{ color: T.textHi }}>गुण नोंदणी</h2>
+          {/* Medium Switcher Pill */}
+          <div className="flex items-center bg-white/15 backdrop-blur-md p-1 rounded-2xl border border-white/20">
+            <button
+              onClick={() => {
+                setSelectedMedium("marathi");
+                localStorage.setItem("cce_selected_medium", "marathi");
+                setSubjects(getDefaultSubjectsForClass(selectedClass, "marathi"));
+              }}
+              className={`px-3.5 py-1.5 rounded-xl font-extrabold text-xs transition-all cursor-pointer ${
+                selectedMedium === "marathi" ? "bg-white text-blue-900 shadow-md" : "text-blue-100 hover:text-white"
+              }`}
+            >
+              मराठी
+            </button>
+            <button
+              onClick={() => {
+                setSelectedMedium("semi");
+                localStorage.setItem("cce_selected_medium", "semi");
+                setSubjects(getDefaultSubjectsForClass(selectedClass, "semi"));
+              }}
+              className={`px-3.5 py-1.5 rounded-xl font-extrabold text-xs transition-all cursor-pointer ${
+                selectedMedium === "semi" ? "bg-white text-blue-900 shadow-md" : "text-blue-100 hover:text-white"
+              }`}
+            >
+              सेमी-इंग्रजी
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Semester Tabs */}
-      <div className="px-5 py-3 flex-shrink-0" style={{ borderBottom: `1px solid ${T.border}` }}>
-        <div className="flex p-1 rounded-xl" style={{ background: T.card }}>
-          {(["sem1", "sem2"] as Semester[]).map((sem) => (
-            <button key={sem} onClick={() => setActiveSemester(sem)}
-              className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all cursor-pointer`}
-              style={{
-                background: activeSemester === sem ? T.accentDim : "transparent",
-                color: activeSemester === sem ? T.accent : T.textLo,
-              }}>
+      {/* Semester Switcher & View Switcher */}
+      <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {(["sem1", "sem2"] as const).map((sem) => (
+            <button
+              key={sem}
+              onClick={() => setActiveSemester(sem)}
+              className={`flex-1 sm:flex-initial py-2.5 px-5 rounded-2xl font-black text-xs transition-all cursor-pointer ${
+                activeSemester === sem
+                  ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+                  : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+              }`}
+            >
               {sem === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2 bg-slate-200/70 p-1 rounded-2xl w-full sm:w-auto">
+          {(["student", "subject"] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => setActiveView(v)}
+              className={`flex-1 sm:flex-initial py-2 px-4 rounded-xl font-extrabold text-xs transition-all cursor-pointer ${
+                activeView === v ? "bg-white text-blue-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              {v === "student" ? "विद्यार्थी निहाय" : "विषय निहाय"}
             </button>
           ))}
         </div>
       </div>
 
-      {/* View sub-tabs (विद्यार्थी निहाय | विषय निहाय) */}
-      <div className="flex flex-shrink-0" style={{ borderBottom: `1px solid ${T.border}` }}>
-        {(["student", "subject"] as ViewTab[]).map((tab) => (
-          <button key={tab} onClick={() => setActiveView(tab)}
-            className="flex-1 py-3 text-sm font-bold text-center transition-colors cursor-pointer"
-            style={{
-              color: activeView === tab ? T.accent : T.textLo,
-              borderBottom: activeView === tab ? `2px solid ${T.accent}` : "2px solid transparent",
-            }}>
-            {tab === "student" ? "विद्यार्थी निहाय" : "विषय निहाय"}
-          </button>
-        ))}
-      </div>
-
-
-
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto px-4 py-3">
+      {/* Roster View */}
+      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-3">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: T.accent }} />
-            <span className="text-xs font-bold" style={{ color: T.textLo }}>लोड होत आहे...</span>
+          <div className="flex flex-col items-center justify-center py-24 gap-3">
+            <div className="w-10 h-10 rounded-full border-4 border-blue-200 border-t-blue-600 animate-spin" />
+            <span className="text-xs text-slate-400 font-bold">विद्यार्थी गुण लोड होत आहेत...</span>
+          </div>
+        ) : students.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+            <p className="text-slate-400 font-bold text-sm">कोणताही विद्यार्थी सापडला नाही</p>
           </div>
         ) : activeView === "student" ? (
-          <div className="space-y-0.5">
-            {students.length === 0 ? (
-              <div className="flex justify-center py-20 text-sm" style={{ color: T.textLo }}>विद्यार्थी सापडले नाहीत</div>
-            ) : students.map((student, idx) => {
-              const { filled, total } = getStudentProgress(student);
-              return (
-                <div key={student.id} className="flex items-center justify-between px-2 py-3.5 rounded-xl transition-colors cursor-pointer"
-                  style={{ background: "transparent" }}
-                  onClick={() => { setEditingStudent(student); setSubjectIndex(0); }}
-                  onMouseEnter={e => (e.currentTarget.style.background = T.card)}
-                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full font-bold text-sm flex items-center justify-center border"
-                      style={{ background: T.accentDim, color: T.accent, borderColor: T.border }}>
-                      {student.rollNo || idx + 1}
-                    </div>
-                    <span className="text-[15px] font-medium" style={{ color: T.textHi }}>{student.fullName || student.name || "-"}</span>
+          students.map((student, idx) => {
+            const prog = getStudentProgress(student);
+            const isComplete = prog.filled === prog.total;
+
+            return (
+              <div
+                key={student.id}
+                onClick={() => {
+                  setEditingStudent(student);
+                  setSubjectIndex(0);
+                }}
+                className="group flex items-center justify-between p-4 bg-white hover:bg-blue-50/40 rounded-2xl border border-slate-200 hover:border-blue-300 shadow-sm hover:shadow-md transition-all cursor-pointer"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white font-black text-sm flex items-center justify-center shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform">
+                    {student.rollNo || idx + 1}
                   </div>
-                  {filled === 0 ? (
-                    <div className="w-9 h-9 rounded-full border-2 flex items-center justify-center flex-shrink-0"
-                      style={{ borderColor: T.accent, background: "transparent" }} />
-                  ) : filled === total ? (
-                    <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
-                      style={{ background: T.accent }}>
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3} style={{ color: "#ffffff" }}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 group-hover:text-blue-700 transition-colors">
+                      {student.fullName || student.name}
+                    </h4>
+                    <p className="text-[11px] text-slate-500 font-medium">हजेरी क्र. {student.rollNo || idx + 1}</p>
+                  </div>
+                </div>
+
+                <div>
+                  {isComplete ? (
+                    <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-md shadow-emerald-500/30">
+                      <Check className="size-5 stroke-[3]" />
                     </div>
                   ) : (
-                    <div className="w-9 h-9 rounded-full border-2 flex items-center justify-center flex-shrink-0 font-bold text-[11px]"
-                      style={{ borderColor: T.accent, color: T.accent, background: "transparent" }}>
-                      {filled}/{total}
-                    </div>
+                    <span className="px-3 py-1.5 bg-blue-50 text-blue-700 font-black text-xs rounded-xl border border-blue-200">
+                      {prog.filled}/{prog.total}
+                    </span>
                   )}
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })
         ) : (
-          <div className="space-y-0.5">
-            {subjects.map((sub) => {
-              const { filled, total } = getSubjectProgress(sub);
-              return (
-                <div key={sub} className="flex items-center justify-between px-2 py-4 rounded-xl transition-colors cursor-pointer"
-                  style={{ background: "transparent" }}
-                  onClick={() => setEditingSubject(sub)}
-                  onMouseEnter={e => (e.currentTarget.style.background = T.card)}
-                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                  <span className="text-[15px] font-medium" style={{ color: T.textHi }}>{sub}</span>
-                  {filled === 0 ? (
-                    <div className="w-9 h-9 rounded-full border-2 flex items-center justify-center flex-shrink-0"
-                      style={{ borderColor: T.accent, background: "transparent" }} />
-                  ) : filled === total ? (
-                    <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
-                      style={{ background: T.accent }}>
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3} style={{ color: "#ffffff" }}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
+          subjects.map((sub, idx) => {
+            const prog = getSubjectProgress(sub);
+            const isComplete = prog.filled === prog.total;
+
+            return (
+              <div
+                key={sub}
+                onClick={() => {
+                  setEditingSubject(sub);
+                }}
+                className="group flex items-center justify-between p-4 bg-white hover:bg-blue-50/40 rounded-2xl border border-slate-200 hover:border-blue-300 shadow-sm hover:shadow-md transition-all cursor-pointer"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-600 text-white font-black text-sm flex items-center justify-center shadow-md">
+                    <BookOpen className="size-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 group-hover:text-blue-700 transition-colors">
+                      {sub}
+                    </h4>
+                    <p className="text-[11px] text-slate-500 font-medium">एकूण विद्यार्थी: {students.length}</p>
+                  </div>
+                </div>
+
+                <div>
+                  {isComplete ? (
+                    <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-md shadow-emerald-500/30">
+                      <Check className="size-5 stroke-[3]" />
                     </div>
                   ) : (
-                    <div className="w-9 h-9 rounded-full border-2 flex items-center justify-center flex-shrink-0 font-bold text-[11px]"
-                      style={{ borderColor: T.accent, color: T.accent, background: "transparent" }}>
-                      {filled}/{total}
-                    </div>
+                    <span className="px-3 py-1.5 bg-blue-50 text-blue-700 font-black text-xs rounded-xl border border-blue-200">
+                      {prog.filled}/{prog.total}
+                    </span>
                   )}
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })
         )}
       </div>
     </div>
   );
 }
-

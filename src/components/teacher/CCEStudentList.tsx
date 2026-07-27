@@ -129,8 +129,21 @@ export function CCEStudentList({
   const [photoUrl, setPhotoUrl] = useState("");
   const [currentId, setCurrentId] = useState<string | null>(null);
 
+  const [selectedMedium, setSelectedMedium] = useState<"marathi" | "semi">(() => {
+    const stored = localStorage.getItem("cce_selected_medium");
+    return stored === "semi" ? "semi" : "marathi";
+  });
+
   // Subscribe to students list
   useEffect(() => {
+    const isStudentSemi = (s: any) => {
+      if (s.isSemiEnglish === true) return true;
+      if (s.isSemiEnglish === false) return false;
+      if (!s.medium) return false;
+      const m = String(s.medium).toLowerCase();
+      return m.includes("semi") || m.includes("सेमी");
+    };
+
     setLoading(true);
     const q = query(
       collection(db, "users"),
@@ -138,13 +151,17 @@ export function CCEStudentList({
       where("class", "==", selectedClass)
     );
     const unsub = onSnapshot(q, (snap) => {
-      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Student[];
+      const raw = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as (Student & { medium?: string; isSemiEnglish?: boolean })[];
+      const list = raw.filter((s) => {
+        const isSemi = isStudentSemi(s);
+        return selectedMedium === "semi" ? isSemi : !isSemi;
+      });
       list.sort((a, b) => parseInt(a.rollNo || "999") - parseInt(b.rollNo || "999"));
       setStudents(list);
       setLoading(false);
     });
     return () => unsub();
-  }, [selectedClass]);
+  }, [selectedClass, selectedMedium]);
 
   const openAdd = () => {
     const nextRoll =
@@ -324,16 +341,28 @@ export function CCEStudentList({
       style={{ fontFamily: "'Inter', 'Noto Sans Devanagari', sans-serif" }}
     >
       {/* Header */}
-      <div className="flex items-center gap-4 px-5 py-4 border-b border-slate-100">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={onBack}
+            className="p-1.5 hover:bg-slate-100 rounded-full transition-colors cursor-pointer text-slate-600 flex items-center justify-center"
+          >
+            <ArrowLeft className="size-5" />
+          </button>
+          <h2 className="text-lg font-bold tracking-tight text-slate-800">
+            विद्यार्थ्यांची माहिती
+          </h2>
+        </div>
+
+        {/* Top Add Button */}
         <button
-          onClick={onBack}
-          className="p-1.5 hover:bg-slate-100 rounded-full transition-colors cursor-pointer text-slate-600 flex items-center justify-center"
+          onClick={openAdd}
+          className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer"
+          title="नवीन विद्यार्थी जोडा"
         >
-          <ArrowLeft className="size-5" />
+          <Plus className="size-4" />
+          <span>विद्यार्थी जोडा</span>
         </button>
-        <h2 className="text-lg font-bold tracking-tight text-slate-800">
-          विद्यार्थ्यांची माहिती
-        </h2>
       </div>
 
       {/* Student List Content */}
@@ -383,15 +412,6 @@ export function CCEStudentList({
           </div>
         )}
       </div>
-
-      {/* Floating Add (+) Button */}
-      <button
-        onClick={openAdd}
-        className="absolute bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl flex items-center justify-center transition-transform hover:scale-105 active:scale-95 cursor-pointer z-20"
-        title="नवीन विद्यार्थी जोडा"
-      >
-        <Plus className="size-7" />
-      </button>
     </div>
   );
 }

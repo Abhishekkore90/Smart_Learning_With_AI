@@ -1,8 +1,23 @@
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, collection, query, where, onSnapshot } from "firebase/firestore";
-import { ArrowLeft, Plus, Pencil, Copy, Trash2, ChevronLeft, ChevronRight, Save } from "lucide-react";
+import {
+  ArrowLeft,
+  Plus,
+  Pencil,
+  Copy,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  Save,
+  CheckCircle2,
+  Layers,
+  Scale,
+  Sparkles,
+  AlertCircle,
+} from "lucide-react";
 import { toast } from "sonner";
+import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
 
 interface SubjectWeightage {
   tondiKaam: string;
@@ -36,7 +51,7 @@ const DEFAULT_SUBJECTS = [
   "गणित",
   "कला",
   "कार्यानुभव",
-  "शारीरिक शिक्षण"
+  "शारीरिक शिक्षण",
 ];
 
 const getSubjectKeyFallback = (subjectName: string): string => {
@@ -58,9 +73,16 @@ const ensureSubjectWeightages = (item: WeightageItem, dynamicSubjects: string[])
         subjects[sub] = subjects[oldKey];
       } else {
         subjects[sub] = {
-          tondiKaam: "", pratyakshikPrayog: "", upakramKriti: "", prakalpa: "",
-          chaachaniLekhi: "", swadhyayVargakarya: "", itar: "",
-          sankalitTondi: "", sankalitPratyakshik: "", sankalitLekhi: "",
+          tondiKaam: "",
+          pratyakshikPrayog: "",
+          upakramKriti: "",
+          prakalpa: "",
+          chaachaniLekhi: "",
+          swadhyayVargakarya: "",
+          itar: "",
+          sankalitTondi: "",
+          sankalitPratyakshik: "",
+          sankalitLekhi: "",
         };
       }
     }
@@ -108,7 +130,7 @@ function WeightageInput({
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-[12px] text-slate-600 font-bold ml-1">{label}</span>
+      <span className="text-[12px] text-slate-600 font-extrabold ml-1">{label}</span>
       <input
         type="text"
         inputMode="numeric"
@@ -119,13 +141,21 @@ function WeightageInput({
           onChange(val);
         }}
         placeholder="0"
-        className="w-full px-4 py-3 bg-white border border-slate-200 focus:border-blue-500 rounded-xl text-sm text-slate-800 outline-none transition-all font-semibold"
+        className="w-full px-4 py-3 bg-white border border-slate-200 focus:border-blue-500 rounded-2xl text-sm text-slate-900 outline-none transition-all font-bold shadow-sm"
       />
     </div>
   );
 }
 
-export function CCEWeightage({ selectedClass, academicYear, onBack }: { selectedClass: string; academicYear: string; onBack: () => void }) {
+export function CCEWeightage({
+  selectedClass,
+  academicYear,
+  onBack,
+}: {
+  selectedClass: string;
+  academicYear: string;
+  onBack: () => void;
+}) {
   const [data, setData] = useState<WeightageData>({ semester1: [], semester2: [] });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -133,7 +163,7 @@ export function CCEWeightage({ selectedClass, academicYear, onBack }: { selected
   const [editingItem, setEditingItem] = useState<WeightageItem | null>(null);
   const [subjectIndex, setSubjectIndex] = useState(0);
   const [students, setStudents] = useState<{ id: string; name: string; rollNo: string }[]>([]);
-  const [dynamicSubjects, setDynamicSubjects] = useState<string[]>(DEFAULT_SUBJECTS);
+  const [dynamicSubjects, setDynamicSubjects] = useState<string[]>(() => getDefaultSubjectsForClass(selectedClass));
 
   // Instant cache & real-time sync for subjects from CCESubjectConfig
   useEffect(() => {
@@ -188,11 +218,11 @@ export function CCEWeightage({ selectedClass, academicYear, onBack }: { selected
               const defaultSubjects: Record<string, SubjectWeightage> = {};
               loadedSubjects.forEach((sub) => {
                 defaultSubjects[sub] = {
-                  tondiKaam: getSubjectKeyFallback(sub) === "marathi" ? (row.oral || "") : "",
+                  tondiKaam: getSubjectKeyFallback(sub) === "marathi" ? row.oral || "" : "",
                   pratyakshikPrayog: "",
-                  upakramKriti: getSubjectKeyFallback(sub) === "marathi" ? (row.activity || "") : "",
+                  upakramKriti: getSubjectKeyFallback(sub) === "marathi" ? row.activity || "" : "",
                   prakalpa: "",
-                  chaachaniLekhi: getSubjectKeyFallback(sub) === "marathi" ? (row.test || "") : "",
+                  chaachaniLekhi: getSubjectKeyFallback(sub) === "marathi" ? row.test || "" : "",
                   swadhyayVargakarya: "",
                   itar: "",
                   sankalitTondi: "",
@@ -208,7 +238,10 @@ export function CCEWeightage({ selectedClass, academicYear, onBack }: { selected
                 description: `${row.subject} - तोंडी: ${row.oral}, उपक्रम: ${row.activity}, चाचणी: ${row.test}`,
               };
             });
-            setData({ semester1: defaultItems.map(i => ensureSubjectWeightages(i, loadedSubjects)), semester2: [] });
+            setData({
+              semester1: defaultItems.map((i) => ensureSubjectWeightages(i, loadedSubjects)),
+              semester2: [],
+            });
           } else {
             setData({ semester1: [], semester2: [] });
           }
@@ -245,14 +278,18 @@ export function CCEWeightage({ selectedClass, academicYear, onBack }: { selected
   const save = async () => {
     setSaving(true);
     try {
-      await setDoc(doc(db, "cce_weightage_v2", `${selectedClass}_${academicYear}`), {
-        class: selectedClass,
-        academicYear,
-        data,
-        semester1: data.semester1,
-        semester2: data.semester2,
-        updatedAt: new Date().toISOString(),
-      }, { merge: true });
+      await setDoc(
+        doc(db, "cce_weightage_v2", `${selectedClass}_${academicYear}`),
+        {
+          class: selectedClass,
+          academicYear,
+          data,
+          semester1: data.semester1,
+          semester2: data.semester2,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
       toast.success("भारांश जतन झाला!");
     } catch (err: any) {
       toast.error("जतन अयशस्वी: " + err.message);
@@ -264,9 +301,16 @@ export function CCEWeightage({ selectedClass, academicYear, onBack }: { selected
     const defaultSubjects: Record<string, SubjectWeightage> = {};
     dynamicSubjects.forEach((sub) => {
       defaultSubjects[sub] = {
-        tondiKaam: "", pratyakshikPrayog: "", upakramKriti: "", prakalpa: "",
-        chaachaniLekhi: "", swadhyayVargakarya: "", itar: "",
-        sankalitTondi: "", sankalitPratyakshik: "", sankalitLekhi: "",
+        tondiKaam: "",
+        pratyakshikPrayog: "",
+        upakramKriti: "",
+        prakalpa: "",
+        chaachaniLekhi: "",
+        swadhyayVargakarya: "",
+        itar: "",
+        sankalitTondi: "",
+        sankalitPratyakshik: "",
+        sankalitLekhi: "",
       };
     });
     const newItem: WeightageItem = {
@@ -292,17 +336,21 @@ export function CCEWeightage({ selectedClass, academicYear, onBack }: { selected
       [activeSemester]: [...data[activeSemester], newItem],
     };
     setData(updatedData);
-    
+
     setSaving(true);
     try {
-      await setDoc(doc(db, "cce_weightage_v2", `${selectedClass}_${academicYear}`), {
-        class: selectedClass,
-        academicYear,
-        data: updatedData,
-        semester1: updatedData.semester1,
-        semester2: updatedData.semester2,
-        updatedAt: new Date().toISOString(),
-      }, { merge: true });
+      await setDoc(
+        doc(db, "cce_weightage_v2", `${selectedClass}_${academicYear}`),
+        {
+          class: selectedClass,
+          academicYear,
+          data: updatedData,
+          semester1: updatedData.semester1,
+          semester2: updatedData.semester2,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
       toast.success("प्रत तयार झाली आणि जतन केली!");
     } catch (err: any) {
       toast.error("प्रत तयार करणे अयशस्वी: " + err.message);
@@ -314,20 +362,24 @@ export function CCEWeightage({ selectedClass, academicYear, onBack }: { selected
     if (!confirm("हा भारांश हटवायचा आहे का?")) return;
     const updatedData = {
       ...data,
-      [activeSemester]: data[activeSemester].filter(i => i.id !== itemId),
+      [activeSemester]: data[activeSemester].filter((i) => i.id !== itemId),
     };
     setData(updatedData);
-    
+
     setSaving(true);
     try {
-      await setDoc(doc(db, "cce_weightage_v2", `${selectedClass}_${academicYear}`), {
-        class: selectedClass,
-        academicYear,
-        data: updatedData,
-        semester1: updatedData.semester1,
-        semester2: updatedData.semester2,
-        updatedAt: new Date().toISOString(),
-      }, { merge: true });
+      await setDoc(
+        doc(db, "cce_weightage_v2", `${selectedClass}_${academicYear}`),
+        {
+          class: selectedClass,
+          academicYear,
+          data: updatedData,
+          semester1: updatedData.semester1,
+          semester2: updatedData.semester2,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
       toast.success("भारांश यशस्वीरित्या हटवला!");
     } catch (err: any) {
       toast.error("हटवणे अयशस्वी: " + err.message);
@@ -337,13 +389,20 @@ export function CCEWeightage({ selectedClass, academicYear, onBack }: { selected
 
   const currentItems = data[activeSemester];
 
-  // ── EDITING WEIGHTAGE FORM (Matches Image 2) ──
+  // ── EDITING WEIGHTAGE FORM ──
   if (editingItem) {
     const currentSubject = dynamicSubjects[subjectIndex];
     const sw = editingItem.subjects[currentSubject] || {
-      tondiKaam: "", pratyakshikPrayog: "", upakramKriti: "", prakalpa: "",
-      chaachaniLekhi: "", swadhyayVargakarya: "", itar: "",
-      sankalitTondi: "", sankalitPratyakshik: "", sankalitLekhi: "",
+      tondiKaam: "",
+      pratyakshikPrayog: "",
+      upakramKriti: "",
+      prakalpa: "",
+      chaachaniLekhi: "",
+      swadhyayVargakarya: "",
+      itar: "",
+      sankalitTondi: "",
+      sankalitPratyakshik: "",
+      sankalitLekhi: "",
     };
 
     const updateField = (field: keyof SubjectWeightage, val: string) => {
@@ -367,11 +426,11 @@ export function CCEWeightage({ selectedClass, academicYear, onBack }: { selected
     const handleSaveItem = async (saveAndClose: boolean = false) => {
       const nameToSave = editingItem.name.trim() || `भारांश निश्चिती ${data[activeSemester].length + 1}`;
       const itemToSave = { ...editingItem, name: nameToSave };
-      
-      const existingIdx = data[activeSemester].findIndex(i => i.id === editingItem.id);
+
+      const existingIdx = data[activeSemester].findIndex((i) => i.id === editingItem.id);
       let updatedList: WeightageItem[];
       if (existingIdx >= 0) {
-        updatedList = data[activeSemester].map(i => i.id === editingItem.id ? itemToSave : i);
+        updatedList = data[activeSemester].map((i) => (i.id === editingItem.id ? itemToSave : i));
       } else {
         updatedList = [...data[activeSemester], itemToSave];
       }
@@ -381,14 +440,18 @@ export function CCEWeightage({ selectedClass, academicYear, onBack }: { selected
 
       setSaving(true);
       try {
-        await setDoc(doc(db, "cce_weightage_v2", `${selectedClass}_${academicYear}`), {
-          class: selectedClass,
-          academicYear,
-          data: updatedData,
-          semester1: updatedData.semester1,
-          semester2: updatedData.semester2,
-          updatedAt: new Date().toISOString(),
-        }, { merge: true });
+        await setDoc(
+          doc(db, "cce_weightage_v2", `${selectedClass}_${academicYear}`),
+          {
+            class: selectedClass,
+            academicYear,
+            data: updatedData,
+            semester1: updatedData.semester1,
+            semester2: updatedData.semester2,
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true }
+        );
         toast.success("भारांश यशस्वीरित्या जतन करण्यात आला!");
       } catch (err: any) {
         toast.error("जतन अयशस्वी: " + err.message);
@@ -400,354 +463,247 @@ export function CCEWeightage({ selectedClass, academicYear, onBack }: { selected
       }
     };
 
-    const handleNextOrSave = () => {
-      if (subjectIndex < dynamicSubjects.length - 1) {
-        setSubjectIndex(subjectIndex + 1);
-      } else {
-        handleSaveItem(true);
-      }
-    };
-
     return (
-      <div className="bg-white text-slate-800 rounded-[2.5rem] border border-slate-200 shadow-xl min-h-[600px] flex flex-col font-sans relative select-none overflow-hidden" style={{ fontFamily: "'Inter', 'Noto Sans Devanagari', sans-serif" }}>
+      <div
+        className="bg-white text-slate-800 rounded-[2.5rem] border border-slate-200/90 shadow-2xl min-h-[600px] flex flex-col font-sans overflow-hidden select-none"
+        style={{ fontFamily: "'Inter', 'Noto Sans Devanagari', sans-serif" }}
+      >
         {/* Header */}
-        <div className="flex items-center gap-4 px-5 py-4 border-b border-slate-100 flex-shrink-0">
+        <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-800 text-white px-6 py-5 shadow-lg flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setEditingItem(null)}
+              className="p-2.5 bg-white/10 hover:bg-white/20 active:scale-95 rounded-2xl transition-all cursor-pointer text-white flex items-center justify-center backdrop-blur-md"
+            >
+              <ArrowLeft className="size-5" />
+            </button>
+            <div>
+              <h2 className="text-xl font-black tracking-tight text-white flex items-center gap-2">
+                <Scale className="size-5 text-blue-200" /> भारांश निश्चिती संपादन
+              </h2>
+              <p className="text-xs text-blue-200 font-medium">इयत्ता {selectedClass} - {activeSemester === "semester1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Subject Nav Tabs */}
+        <div className="bg-slate-100 p-2 border-b border-slate-200 flex items-center justify-between gap-2 overflow-x-auto">
           <button
-            onClick={() => setEditingItem(null)}
-            className="p-1.5 hover:bg-slate-100 rounded-full transition-colors cursor-pointer text-slate-800 flex items-center justify-center"
+            onClick={() => setSubjectIndex((prev) => Math.max(0, prev - 1))}
+            disabled={subjectIndex === 0}
+            className="p-2 rounded-xl bg-white border border-slate-200 text-slate-600 disabled:opacity-30 cursor-pointer"
           >
-            <ArrowLeft className="size-5" />
+            <ChevronLeft className="size-4" />
           </button>
-          <h2 className="text-lg font-bold tracking-tight text-slate-800 flex-1">
-            भारांश निश्चिती संपादन करा
-          </h2>
+
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+            {dynamicSubjects.map((sub, idx) => (
+              <button
+                key={sub}
+                onClick={() => setSubjectIndex(idx)}
+                className={`px-3.5 py-2 rounded-xl font-extrabold text-xs whitespace-nowrap transition-all cursor-pointer ${
+                  subjectIndex === idx
+                    ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+                    : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+                }`}
+              >
+                {sub}
+              </button>
+            ))}
+          </div>
+
           <button
-            onClick={() => handleSaveItem(true)}
-            disabled={saving}
-            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-md disabled:opacity-50"
+            onClick={() => setSubjectIndex((prev) => Math.min(dynamicSubjects.length - 1, prev + 1))}
+            disabled={subjectIndex === dynamicSubjects.length - 1}
+            className="p-2 rounded-xl bg-white border border-slate-200 text-slate-600 disabled:opacity-30 cursor-pointer"
           >
-            <Save className="size-4" />
-            <span>जतन करा</span>
+            <ChevronRight className="size-4" />
           </button>
         </div>
 
-        {/* Form Body */}
-        <div className="flex-1 overflow-y-auto px-5 py-5 pb-28 space-y-5">
-          {/* Weightage Name */}
-          <div className="flex flex-col gap-1.5 mb-2">
-            <span className="text-[12px] text-slate-600 font-bold uppercase tracking-wider ml-1">
-              भारांश निश्चितीचे नाव*
-            </span>
-            <input
-              type="text"
-              value={editingItem.name}
-              onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
-              placeholder="भारांश निश्चिती नाव"
-              className="w-full px-4 py-3.5 bg-white border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl text-sm text-slate-800 outline-none transition-all font-semibold"
-            />
-          </div>
-
-          {/* Subject Navigation Header */}
-          <div className="flex items-center justify-between bg-slate-50 px-4 py-3 rounded-2xl border border-slate-100">
-            <span className="text-sm md:text-base font-extrabold text-blue-600">
-              {currentSubject}
-            </span>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <button
-                onClick={() => setSubjectIndex(Math.max(0, subjectIndex - 1))}
-                disabled={subjectIndex === 0}
-                className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center cursor-pointer disabled:opacity-40 hover:bg-slate-100 transition-colors"
-              >
-                <ChevronLeft className="size-4 text-slate-650" />
-              </button>
-              <span className="text-xs font-bold text-slate-500 whitespace-nowrap">
-                {subjectIndex + 1} / {dynamicSubjects.length}
+        {/* Weightage Input Form */}
+        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+          <div className="bg-blue-50/70 p-4 rounded-2xl border border-blue-200/80 flex items-center justify-between">
+            <span className="text-xs font-black text-blue-900 uppercase tracking-wider">{currentSubject}</span>
+            <div className="flex items-center gap-3 text-xs font-bold">
+              <span className={`px-2.5 py-1 rounded-xl border ${akarikSum === expectedMarks.akarik ? "bg-emerald-100 text-emerald-800 border-emerald-300" : "bg-amber-100 text-amber-800 border-amber-300"}`}>
+                आकारिक: {akarikSum} / {expectedMarks.akarik}
               </span>
-              <button
-                onClick={() => setSubjectIndex(Math.min(dynamicSubjects.length - 1, subjectIndex + 1))}
-                disabled={subjectIndex === dynamicSubjects.length - 1}
-                className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center cursor-pointer disabled:opacity-40 hover:bg-slate-100 transition-colors"
-              >
-                <ChevronRight className="size-4 text-slate-650" />
-              </button>
+              <span className={`px-2.5 py-1 rounded-xl border ${sankalitSum === expectedMarks.sankalit ? "bg-emerald-100 text-emerald-800 border-emerald-300" : "bg-amber-100 text-amber-800 border-amber-300"}`}>
+                संकलित: {sankalitSum} / {expectedMarks.sankalit}
+              </span>
             </div>
           </div>
 
-          {/* आकारिक मूल्यमापन Section */}
-          <div className="border border-slate-150 rounded-2xl p-4 bg-slate-50/30 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-              <h3 className="text-sm font-bold text-slate-800">आकारिक मूल्यमापन</h3>
-              {expectedMarks.akarik > 0 && (
-                <span className="text-xs font-bold text-blue-600 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-lg">
-                  अपेक्षित गुण: {expectedMarks.akarik}
-                </span>
-              )}
-            </div>
-            
-            <div className="grid grid-cols-2 gap-3">
-              <WeightageInput
-                label="तोंडीकाम"
-                value={sw.tondiKaam}
-                onChange={(v) => updateField("tondiKaam", v)}
-              />
-              <WeightageInput
-                label="प्रात्यक्षिक / प्रयोग"
-                value={sw.pratyakshikPrayog}
-                onChange={(v) => updateField("pratyakshikPrayog", v)}
-              />
-              <WeightageInput
-                label="उपक्रम / कृती"
-                value={sw.upakramKriti}
-                onChange={(v) => updateField("upakramKriti", v)}
-              />
-              <WeightageInput
-                label="प्रकल्प"
-                value={sw.prakalpa}
-                onChange={(v) => updateField("prakalpa", v)}
-              />
-              <WeightageInput
-                label="चाचणी (लेखी)"
-                value={sw.chaachaniLekhi}
-                onChange={(v) => updateField("chaachaniLekhi", v)}
-              />
-              <WeightageInput
-                label="स्वाध्याय / वर्गकार्य"
-                value={sw.swadhyayVargakarya}
-                onChange={(v) => updateField("swadhyayVargakarya", v)}
-              />
-            </div>
-            <div className="pt-1">
-              <WeightageInput
-                label="इतर"
-                value={sw.itar}
-                onChange={(v) => updateField("itar", v)}
-              />
-            </div>
-            
-            <div className={`flex items-center justify-end text-xs font-bold pt-2 border-t border-slate-100 ${expectedMarks.akarik > 0 && akarikSum !== expectedMarks.akarik ? 'text-red-500' : 'text-green-600'}`}>
-              भरलेले गुण: {akarikSum} {expectedMarks.akarik > 0 ? `/ ${expectedMarks.akarik}` : ''}
+          {/* Akarik Section */}
+          <div className="bg-slate-50 p-5 rounded-3xl border border-slate-200 space-y-4">
+            <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider">आकारिक मूल्यमापन घटक (Akarik)</h4>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <WeightageInput label="तोंडी काम" value={sw.tondiKaam} onChange={(v) => updateField("tondiKaam", v)} />
+              <WeightageInput label="प्रात्यक्षिक / प्रयोग" value={sw.pratyakshikPrayog} onChange={(v) => updateField("pratyakshikPrayog", v)} />
+              <WeightageInput label="उपक्रम / कृती" value={sw.upakramKriti} onChange={(v) => updateField("upakramKriti", v)} />
+              <WeightageInput label="प्रकल्प" value={sw.prakalpa} onChange={(v) => updateField("prakalpa", v)} />
+              <WeightageInput label="चाचणी (लेखी)" value={sw.chaachaniLekhi} onChange={(v) => updateField("chaachaniLekhi", v)} />
+              <WeightageInput label="स्वाध्याय / वर्गकार्य" value={sw.swadhyayVargakarya} onChange={(v) => updateField("swadhyayVargakarya", v)} />
             </div>
           </div>
 
-          {/* संकलित मूल्यमापन Section */}
-          <div className="border border-slate-150 rounded-2xl p-4 bg-slate-50/30 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-              <h3 className="text-sm font-bold text-slate-800">संकलित मूल्यमापन</h3>
-              {expectedMarks.sankalit > 0 && (
-                <span className="text-xs font-bold text-blue-600 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-lg">
-                  अपेक्षित गुण: {expectedMarks.sankalit}
-                </span>
-              )}
-            </div>
-            
-            <div className="grid grid-cols-2 gap-3">
-              <WeightageInput
-                label="तोंडी"
-                value={sw.sankalitTondi}
-                onChange={(v) => updateField("sankalitTondi", v)}
-              />
-              <WeightageInput
-                label="प्रात्यक्षिक"
-                value={sw.sankalitPratyakshik}
-                onChange={(v) => updateField("sankalitPratyakshik", v)}
-              />
-            </div>
-            <div className="pt-1">
-              <WeightageInput
-                label="लेखी"
-                value={sw.sankalitLekhi}
-                onChange={(v) => updateField("sankalitLekhi", v)}
-              />
-            </div>
-            
-            <div className={`flex items-center justify-end text-xs font-bold pt-2 border-t border-slate-100 ${expectedMarks.sankalit > 0 && sankalitSum !== expectedMarks.sankalit ? 'text-red-500' : 'text-green-600'}`}>
-              भरलेले गुण: {sankalitSum} {expectedMarks.sankalit > 0 ? `/ ${expectedMarks.sankalit}` : ''}
+          {/* Sankalit Section */}
+          <div className="bg-slate-50 p-5 rounded-3xl border border-slate-200 space-y-4">
+            <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider">संकलित मूल्यमापन घटक (Sankalit)</h4>
+            <div className="grid grid-cols-3 gap-3">
+              <WeightageInput label="तोंडी काम" value={sw.sankalitTondi} onChange={(v) => updateField("sankalitTondi", v)} />
+              <WeightageInput label="प्रात्यक्षिक" value={sw.sankalitPratyakshik} onChange={(v) => updateField("sankalitPratyakshik", v)} />
+              <WeightageInput label="लेखी परीक्षा" value={sw.sankalitLekhi} onChange={(v) => updateField("sankalitLekhi", v)} />
             </div>
           </div>
-        </div>
 
-        {/* Footer Next/Save button */}
-        <div className="absolute bottom-0 left-0 right-0 px-5 pb-5 pt-3 bg-gradient-to-t from-white to-transparent z-10">
-          <button
-            onClick={handleNextOrSave}
-            disabled={saving}
-            className="w-full py-4 bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-extrabold text-sm rounded-2xl transition-all cursor-pointer shadow-lg disabled:opacity-50"
-          >
-            {saving ? "जतन होत आहे..." : (subjectIndex === dynamicSubjects.length - 1 ? "जतन करा" : "पुढे")}
-          </button>
+          <div className="pt-4 pb-6">
+            <button
+              onClick={() => handleSaveItem(true)}
+              disabled={saving}
+              className="w-full py-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white font-extrabold text-base rounded-2xl shadow-xl flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Save className="size-5" />
+              <span>जतन करा</span>
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
-  // ── WEIGHTAGE MAIN VIEW (Matches Image 1) ──
+  // ── MAIN WEIGHTAGE LIST VIEW ──
   return (
-    <div className="bg-white text-slate-800 rounded-[2.5rem] border border-slate-200 shadow-xl min-h-[600px] flex flex-col font-sans relative select-none" style={{ fontFamily: "'Inter', 'Noto Sans Devanagari', sans-serif" }}>
-      {/* Header */}
-      <div className="flex items-center gap-4 px-5 py-4 border-b border-slate-100">
-        <button
-          onClick={onBack}
-          className="p-1.5 hover:bg-slate-100 rounded-full transition-colors cursor-pointer text-slate-800 flex items-center justify-center"
-        >
-          <ArrowLeft className="size-5" />
-        </button>
-        <h2 className="text-lg font-bold tracking-tight text-slate-800">
-          भारांश निश्चिती
-        </h2>
-      </div>
-
-      {/* Semester Tabs */}
-      <div className="px-5 py-3 border-b border-slate-100">
-        <div className="flex bg-slate-100 border border-slate-200 rounded-xl p-1">
-          <button
-            onClick={() => setActiveSemester("semester1")}
-            className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all cursor-pointer ${
-              activeSemester === "semester1"
-                ? "bg-white text-blue-600 shadow-sm border border-slate-200/50"
-                : "text-slate-500 hover:text-slate-800"
-            }`}
-          >
-            प्रथम सत्र
-          </button>
-          <button
-            onClick={() => setActiveSemester("semester2")}
-            className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all cursor-pointer ${
-              activeSemester === "semester2"
-                ? "bg-white text-blue-600 shadow-sm border border-slate-200/50"
-                : "text-slate-500 hover:text-slate-800"
-            }`}
-          >
-            द्वितीय सत्र
-          </button>
+    <div
+      className="bg-white text-slate-800 rounded-[2.5rem] border border-slate-200/90 shadow-2xl min-h-[600px] flex flex-col relative select-none overflow-hidden"
+      style={{ fontFamily: "'Inter', 'Noto Sans Devanagari', sans-serif" }}
+    >
+      {/* Header Banner */}
+      <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-800 text-white px-6 py-5 shadow-lg relative overflow-hidden">
+        <div className="relative z-10 flex items-center justify-between">
+          <div className="flex items-center gap-3.5">
+            <button
+              onClick={onBack}
+              className="p-2.5 bg-white/10 hover:bg-white/20 active:scale-95 rounded-2xl transition-all cursor-pointer text-white flex items-center justify-center backdrop-blur-md"
+            >
+              <ArrowLeft className="size-5" />
+            </button>
+            <div>
+              <h2 className="text-xl font-black tracking-tight text-white flex items-center gap-2">
+                <Scale className="size-5 text-blue-200" /> भारांश निश्चिती
+              </h2>
+              <p className="text-xs text-blue-200 font-medium">इयत्ता {selectedClass} गुण भारांश वाटप व्यवस्थापन</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto px-5 py-4">
+      {/* Semester Switcher Tabs */}
+      <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-center gap-3">
+        {(["semester1", "semester2"] as const).map((sem) => (
+          <button
+            key={sem}
+            onClick={() => setActiveSemester(sem)}
+            className={`flex-1 py-3 px-6 rounded-2xl font-black text-xs transition-all cursor-pointer ${
+              activeSemester === sem
+                ? "bg-white text-blue-700 shadow-md border border-blue-200"
+                : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
+            }`}
+          >
+            {sem === "semester1" ? "प्रथम सत्र" : "द्वितीय सत्र"}
+          </button>
+        ))}
+      </div>
+
+      {/* Weightage List */}
+      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <span className="text-xs text-slate-400 font-bold">लोड होत आहे...</span>
+          <div className="flex flex-col items-center justify-center py-24 gap-3">
+            <div className="w-10 h-10 rounded-full border-4 border-blue-200 border-t-blue-600 animate-spin" />
+            <span className="text-xs text-slate-400 font-bold">भारांश लोड होत आहे...</span>
           </div>
         ) : currentItems.length === 0 ? (
-          /* Empty state (Matches Image 1) */
-          <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-400">
-            <p className="text-sm font-bold text-slate-500">कोणतीही भारांश निश्चिती जोडलेली नाही</p>
-            <p className="text-xs text-slate-400">खालील '+' बटणावर क्लिक करून नवीन भारांश निश्चिती जोडा</p>
+          <div className="flex flex-col items-center justify-center py-20 text-center bg-slate-50/50 rounded-3xl border-2 border-dashed border-slate-200">
+            <Scale className="size-12 text-slate-300 mb-2" />
+            <p className="text-slate-600 font-bold text-sm">कोणताही निश्चित केलेला भारांश नाही</p>
+            <p className="text-xs text-slate-400 mt-1 mb-4">नवीन भारांश जोडण्यासाठी खालील '+' बटणावर क्लिक करा</p>
             <button
               onClick={handleAddNew}
-              className="mt-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition-all"
+              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-2xl transition-all cursor-pointer shadow-lg shadow-blue-500/20 flex items-center gap-2"
             >
-              + भारांश जोडा
+              <Plus className="size-4" />
+              <span>नवीन भारांश निश्चित करा</span>
             </button>
           </div>
         ) : (
-          <div className="space-y-4 pb-16">
-            {/* Student assignment cards & weightage info */}
-            {currentItems.map((item) => (
-              <div key={item.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-[14px] font-extrabold text-slate-800">{item.name}</p>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => {
-                        const upgraded = ensureSubjectWeightages(item, dynamicSubjects);
-                        setEditingItem(upgraded);
-                        setSubjectIndex(0);
-                      }}
-                      className="p-1.5 hover:bg-white rounded-lg transition-colors cursor-pointer text-slate-400 hover:text-blue-600 border border-transparent hover:border-slate-200"
-                      title="संपादन"
-                    >
-                      <Pencil className="size-4" />
-                    </button>
-                    <button
-                      onClick={() => duplicateItem(item)}
-                      className="p-1.5 hover:bg-white rounded-lg transition-colors cursor-pointer text-slate-400 hover:text-blue-600 border border-transparent hover:border-slate-200"
-                      title="प्रत तयार करा"
-                    >
-                      <Copy className="size-4" />
-                    </button>
-                    <button
-                      onClick={() => deleteItem(item.id)}
-                      className="p-1.5 hover:bg-white rounded-lg transition-colors cursor-pointer text-slate-400 hover:text-red-500 border border-transparent hover:border-slate-200"
-                      title="हटवा"
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Subject Weightages Summary */}
-                <div className="pt-2 border-t border-slate-200/60 space-y-2">
-                  <p className="text-xs font-bold text-slate-500">निश्चित केलेला भारांश:</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {dynamicSubjects.map((sub) => {
-                      const sw = item.subjects?.[sub];
-                      if (!sw) return null;
-                      const akarikSum = getAkarikTotal(sw);
-                      const sankalitSum = getSankalitTotal(sw);
-                      if (akarikSum === 0 && sankalitSum === 0) return null;
-
-                      const details = [];
-                      if (sw.tondiKaam) details.push(`तोंडीकाम: ${sw.tondiKaam}`);
-                      if (sw.pratyakshikPrayog) details.push(`प्रात्यक्षिक: ${sw.pratyakshikPrayog}`);
-                      if (sw.upakramKriti) details.push(`उपक्रम: ${sw.upakramKriti}`);
-                      if (sw.prakalpa) details.push(`प्रकल्प: ${sw.prakalpa}`);
-                      if (sw.chaachaniLekhi) details.push(`चाचणी: ${sw.chaachaniLekhi}`);
-                      if (sw.swadhyayVargakarya) details.push(`स्वाध्याय: ${sw.swadhyayVargakarya}`);
-                      if (sw.itar) details.push(`इतर: ${sw.itar}`);
-
-                      const sankalitDetails = [];
-                      if (sw.sankalitTondi) sankalitDetails.push(`तोंडी: ${sw.sankalitTondi}`);
-                      if (sw.sankalitPratyakshik) sankalitDetails.push(`प्रात्यक्षिक: ${sw.sankalitPratyakshik}`);
-                      if (sw.sankalitLekhi) sankalitDetails.push(`लेखी: ${sw.sankalitLekhi}`);
-
-                      return (
-                        <div key={sub} className="bg-white border border-slate-150 rounded-xl p-2.5 space-y-1">
-                          <p className="text-[13px] font-extrabold text-blue-600">{sub}</p>
-                          <div className="space-y-0.5 text-[11px] text-slate-650">
-                            {akarikSum > 0 && (
-                              <p>
-                                <span className="font-bold text-slate-700">आकारिक ({akarikSum}):</span> {details.join(", ")}
-                              </p>
-                            )}
-                            {sankalitSum > 0 && (
-                              <p>
-                                <span className="font-bold text-slate-700">संकलित ({sankalitSum}):</span> {sankalitDetails.join(", ")}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+          currentItems.map((item) => (
+            <div
+              key={item.id}
+              className="p-5 bg-white hover:bg-blue-50/20 rounded-3xl border border-slate-200 hover:border-blue-300 shadow-md transition-all space-y-4"
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <span className="text-xs font-black uppercase tracking-wider text-blue-900">{item.name}</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setEditingItem(item)}
+                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-colors cursor-pointer"
+                    title="संपादित करा"
+                  >
+                    <Pencil className="size-4" />
+                  </button>
+                  <button
+                    onClick={() => duplicateItem(item)}
+                    className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                    title="प्रत बनवा"
+                  >
+                    <Copy className="size-4" />
+                  </button>
+                  <button
+                    onClick={() => deleteItem(item.id)}
+                    className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                    title="हटवा"
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
                 </div>
               </div>
-            ))}
 
-            {/* Save button */}
-            <div className="pt-4 pb-16">
-              <button
-                onClick={save}
-                disabled={saving}
-                className="mx-auto block px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl transition-all cursor-pointer disabled:opacity-50 shadow-md shadow-blue-200"
-              >
-                {saving ? "जतन होत आहे..." : "जतन करा"}
-              </button>
+              {/* Formatted Subjects Summary */}
+              <div className="space-y-2">
+                {dynamicSubjects.map((sub) => {
+                  const sw = item.subjects?.[sub];
+                  if (!sw) return null;
+                  const aTot = getAkarikTotal(sw);
+                  const sTot = getSankalitTotal(sw);
+                  if (aTot === 0 && sTot === 0) return null;
+
+                  return (
+                    <div key={sub} className="p-3 bg-slate-50/80 rounded-2xl border border-slate-100 text-xs font-bold text-slate-700">
+                      <p className="text-blue-900 font-extrabold mb-1">{sub}</p>
+                      <p className="text-[11px] text-slate-600 font-medium leading-relaxed">
+                        <span className="font-bold text-slate-800">आकारिक ({aTot}):</span> नोंदी: {sw.tondiKaam || 0}, प्रात्याक्षिक: {sw.pratyakshikPrayog || 0}, उपक्रम: {sw.upakramKriti || 0}, प्रकल्प: {sw.prakalpa || 0}, चाचणी: {sw.chaachaniLekhi || 0}, स्वाध्याय: {sw.swadhyayVargakarya || 0}
+                      </p>
+                      <p className="text-[11px] text-slate-600 font-medium leading-relaxed mt-0.5">
+                        <span className="font-bold text-slate-800">संकलित ({sTot}):</span> तोंडी: {sw.sankalitTondi || 0}, प्रात्यक्षिक: {sw.sankalitPratyakshik || 0}, लेखी: {sw.sankalitLekhi || 0}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          ))
         )}
       </div>
 
-      {/* FAB - Add new item */}
+      {/* Floating Add Button */}
       <button
         onClick={handleAddNew}
-        className="absolute bottom-6 right-6 size-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg shadow-blue-200/50 flex items-center justify-center hover:scale-105 transition-all cursor-pointer border border-blue-500/30 z-30"
+        className="absolute bottom-6 right-6 size-14 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-full shadow-xl shadow-blue-500/30 flex items-center justify-center hover:scale-110 active:scale-95 transition-all cursor-pointer border border-white/20 z-30"
         title="भारांश जोडा"
       >
         <Plus className="size-7 stroke-[2.5]" />
       </button>
-
     </div>
   );
 }
