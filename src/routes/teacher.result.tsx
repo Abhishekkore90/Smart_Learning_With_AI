@@ -158,19 +158,23 @@ function TeacherResultsPage() {
   const activeTab = tab || "dashboard";
 
   // Form State for custom file uploads
-  const [selectedClass, setSelectedClass] = useState(() => {
-    return localStorage.getItem("cce_selected_class") || "1st";
-  });
-  const [academicYear, setAcademicYear] = useState(() => {
-    return localStorage.getItem("cce_academic_year") || getCurrentAcademicYear();
-  });
-  const [selectedMedium, setSelectedMedium] = useState(() => {
-    return localStorage.getItem("cce_selected_medium") || "marathi";
-  });
+  const [selectedClass, setSelectedClass] = useState("1st");
+  const [academicYear, setAcademicYear] = useState(getCurrentAcademicYear());
+  const [selectedMedium, setSelectedMedium] = useState("marathi");
   const [studentsCount, setStudentsCount] = useState(3);
   const [examTitle, setExamTitle] = useState("");
   const [fileData, setFileData] = useState<{ name: string; content: string; type: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Restore persisted values from localStorage after client mount
+  useEffect(() => {
+    const savedClass = localStorage.getItem("cce_selected_class");
+    const savedYear = localStorage.getItem("cce_academic_year");
+    const savedMedium = localStorage.getItem("cce_selected_medium");
+    if (savedClass) setSelectedClass(savedClass);
+    if (savedYear) setAcademicYear(savedYear);
+    if (savedMedium) setSelectedMedium(savedMedium);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem("cce_selected_class", selectedClass);

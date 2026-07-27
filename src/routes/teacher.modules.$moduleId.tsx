@@ -58,8 +58,11 @@ import {
   Flag,
   ChevronDown,
   ChevronUp,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
 } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { AcademicPlanningSystem } from "@/components/teacher/AcademicPlanningSystem";
 import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/lib/firebase";
@@ -73,6 +76,10 @@ import { MonthlyParipathRegister } from "@/components/teacher/MonthlyParipathReg
 import { PinGate } from "@/components/teacher/PinGate";
 import class1SyllabusData from "./class1_syllabus.json";
 import { DEFAULT_FORM_DATA, ASSEMBLY_TRANSLATIONS, DEFAULT_ASSEMBLY_ITEMS } from "@/lib/assemblyTranslations";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/teacher/modules/$moduleId")({
   component: ModulePage,
@@ -1750,11 +1757,42 @@ function DailyAssemblyContent() {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   };
 
-  const [selectedDate, setSelectedDate] = useState<string>(() => getLocalDateString());
+  const [selectedDate, setSelectedDate] = useState<string>("");
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const [dbFormData, setDbFormData] = useState<any>(null);
 
+  const [schoolInfo, setSchoolInfo] = useState({
+    schoolName: "",
+    udise: "",
+    kendra: "",
+    taluka: "",
+    jilha: "",
+  });
+  const [showSchoolInfoModal, setShowSchoolInfoModal] = useState(false);
+
+  // Set selectedDate on client only to avoid SSR hydration mismatch
   useEffect(() => {
+    setSelectedDate((prev) => prev || getLocalDateString());
+  }, []);
+
+  // Load school info from local storage
+  useEffect(() => {
+    const savedInfo = localStorage.getItem("paripathSchoolInfo");
+    if (savedInfo) {
+      try {
+        const parsed = JSON.parse(savedInfo);
+        setSchoolInfo(parsed);
+      } catch (e) {
+        console.error("Failed to parse school info", e);
+        setShowSchoolInfoModal(true);
+      }
+    } else {
+      setShowSchoolInfoModal(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!selectedDate) return; // Skip on SSR / before client mount
     const todayLocalStr = getLocalDateString();
 
     const archiveRef = doc(db, "daily_paripath_archive", selectedDate);
@@ -1827,18 +1865,14 @@ function DailyAssemblyContent() {
   };
 
   const handleDownloadPdf = async () => {
-    // If a pre-generated Bunny PDF exists for this assembly, use it!
-    if (formData.bunnyPdfUrl) {
-      toast.success("Downloading pre-generated PDF from Bunny Storage... ☁️");
-      window.open(formData.bunnyPdfUrl, "_blank");
+    // Always generate PDF from live page content so all content shows as-is
+    const element = document.getElementById("daily-assembly-content");
+    if (!element) {
+      toast.error("परिपाठ content सापडला नाही. कृपया पुन्हा प्रयत्न करा.");
       return;
     }
 
-    const element = document.getElementById("daily-assembly-content");
-    if (!element) {
-      toast.error("Could not find the assembly content to download.");
-      return;
-    }
+    toast.success("PDF निर्मिती सुरू आहे... कृपया प्रतीक्षा करा.");
 
     try {
       const html2pdfModule = await import("html2pdf.js");
@@ -1857,7 +1891,7 @@ function DailyAssemblyContent() {
 
       const opt = {
         margin: 0,
-        filename: `Paripath_${new Date().toISOString().split("T")[0]}.pdf`,
+        filename: `Paripath_${selectedDate || new Date().toISOString().split("T")[0]}.pdf`,
         image: { type: "jpeg", quality: 0.98 },
         html2canvas: {
           scale: 2,
@@ -1929,68 +1963,73 @@ function DailyAssemblyContent() {
             });
 
             // Dynamically scale font size based on text length of the entire card content
+            // Get all assembly section cards
             const cards = clonedDoc.querySelectorAll(".assembly-section-card");
+            
+            // Define which IDs belong to which page (Fixed 5-page layout)
+            const pageGroups: Record<number, string[]> = {
+              1: ["nationalAnthem", "stateAnthem", "pledge", "preamble"],
+              2: ["prayer", "silentPasayadan", "panchang"],
+              3: ["thought", "shlok", "proverb"],
+              4: ["valueNews", "events", "song"],
+              5: ["story", "gk", "personality"]
+            };
+            
             cards.forEach((card: any, index: number) => {
+              // No forced page breaks - let content flow naturally
+              // Only ensure each card doesn't split across pages
+              card.style.setProperty("page-break-inside", "avoid", "important");
+              card.style.setProperty("break-inside", "avoid", "important");
+
+              // Dynamic content font scaling
               const contentEl = card.children[1];
               if (contentEl) {
                 const text = contentEl.textContent || "";
                 const charCount = text.trim().length;
                 
-                let fontSize = "23px";
-                let lineHeight = "1.85";
+                let fontSize = "10px";
+                let lineHeight = "1.2";
                 
-                if (charCount > 1500) {
-                  fontSize = "12.5px";
-                  lineHeight = "1.35";
-                } else if (charCount > 1000) {
-                  fontSize = "14.5px";
-                  lineHeight = "1.45";
-                } else if (charCount > 700) {
-                  fontSize = "16.5px";
-                  lineHeight = "1.55";
+                if (charCount > 2500) {
+                  fontSize = "7px";
+                  lineHeight = "1.05";
+                } else if (charCount > 1800) {
+                  fontSize = "7.5px";
+                  lineHeight = "1.1";
+                } else if (charCount > 1200) {
+                  fontSize = "8px";
+                  lineHeight = "1.12";
+                } else if (charCount > 800) {
+                  fontSize = "8.5px";
+                  lineHeight = "1.15";
                 } else if (charCount > 400) {
-                  fontSize = "19px";
-                  lineHeight = "1.65";
-                } else if (charCount > 200) {
-                  fontSize = "21.5px";
-                  lineHeight = "1.75";
+                  fontSize = "9px";
+                  lineHeight = "1.18";
+                } else {
+                  if (card.id === "events" || card.id === "song" || card.id === "valueNews" || card.id === "story" || card.id === "preamble" || card.id === "thought" || card.id === "shlok" || card.id === "proverb") {
+                    fontSize = "9px";
+                    lineHeight = "1.15";
+                  }
                 }
                 
-                contentEl.style.fontSize = fontSize;
-                contentEl.style.lineHeight = lineHeight;
+                contentEl.style.setProperty("font-size", fontSize, "important");
+                contentEl.style.setProperty("line-height", lineHeight, "important");
                 
-                const allTexts = contentEl.querySelectorAll("p, span, td, div, label, li");
-                allTexts.forEach((tNode: any) => {
-                  tNode.style.fontSize = fontSize;
-                  tNode.style.lineHeight = lineHeight;
+                const allChildren = contentEl.querySelectorAll("*");
+                allChildren.forEach((child: any) => {
+                  child.style.setProperty("font-size", fontSize, "important");
+                  child.style.setProperty("line-height", lineHeight, "important");
                 });
               }
-
-              // Create Header
-              const header = clonedDoc.createElement("div");
-              header.className = "pdf-page-header";
-              header.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #2e7d32; padding-bottom: 4px; margin-bottom: 6px; width: 100%; box-sizing: border-box;">
-                  <div style="font-size: 12px; font-weight: 800; color: #2e7d32; font-family: 'Noto Sans Devanagari', sans-serif;">दैनिक परिपाठ</div>
-                  <div style="font-size: 12px; font-weight: 800; color: #2e7d32; font-family: 'Noto Sans Devanagari', sans-serif;">${formData.dateMonth}</div>
-                </div>
-              `;
-
-              // Wrap all existing content
-              const contentWrapper = clonedDoc.createElement("div");
-              contentWrapper.className = "pdf-page-content-wrapper";
-              while (card.firstChild) {
-                contentWrapper.appendChild(card.firstChild);
-              }
-
-              // Re-assemble card
-              card.appendChild(header);
-              card.appendChild(contentWrapper);
             });
 
             // Inject clean print styles
             const style = clonedDoc.createElement('style');
             style.innerHTML = `
+              @page {
+                size: A4 portrait !important;
+                margin: 0 !important;
+              }
               * {
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
@@ -2018,21 +2057,35 @@ function DailyAssemblyContent() {
                 overflow: visible !important;
                 box-shadow: none !important;
               }
+              .assembly-section-card label {
+                padding: 2px 8px !important;
+                font-size: 11px !important;
+                margin: 0 !important;
+                background-color: #2e7d32 !important;
+                color: #ffffff !important;
+                border-radius: 4px !important;
+                font-weight: 800 !important;
+                display: inline-flex !important;
+              }
+              .assembly-section-card h3 {
+                padding: 2px 8px !important;
+                font-size: 12px !important;
+                margin: 0 !important;
+                font-weight: 800 !important;
+                border-bottom: 1px solid #e2e8f0 !important;
+                width: 100% !important;
+                text-align: center !important;
+              }
               
-              /* Each section card represents exactly one A4 page */
+              /* Each section card - ZERO spacing */
               .assembly-section-card {
                 width: 100% !important;
                 max-width: 100% !important;
-                height: 297mm !important;
-                max-height: 297mm !important;
-                min-height: 297mm !important;
-                page-break-after: always !important;
-                break-after: page !important;
-                margin: 0 !important;
-                padding: 15mm 20mm !important; /* Proper standard margins */
+                margin: 0 0 4px 0 !important;
+                padding: 4px 10px !important;
                 background: #ffffff !important;
-                border: none !important;
-                border-radius: 0 !important;
+                border: 1px solid #e2e8f0 !important;
+                border-radius: 8px !important;
                 box-shadow: none !important;
                 display: flex !important;
                 flex-direction: column !important;
@@ -2041,91 +2094,107 @@ function DailyAssemblyContent() {
                 position: relative !important;
                 overflow: hidden !important;
                 box-sizing: border-box !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
               }
+              .html2pdf__page-break {
+                page-break-after: always !important;
+                break-after: page !important;
+              }
+              /* Kill ALL Tailwind spacing utilities */
               .assembly-section-card .space-y-5 > :not([hidden]) ~ :not([hidden]),
-              .assembly-section-card .space-y-6 > :not([hidden]) ~ :not([hidden]) {
-                margin-top: 4px !important;
+              .assembly-section-card .space-y-6 > :not([hidden]) ~ :not([hidden]),
+              .assembly-section-card .space-y-4 > :not([hidden]) ~ :not([hidden]),
+              .assembly-section-card .space-y-3 > :not([hidden]) ~ :not([hidden]) {
+                margin-top: 0px !important;
               }
-              .assembly-section-card .mb-4, .assembly-section-card .mb-6 {
-                margin-bottom: 2px !important;
+              .assembly-section-card .mb-4, .assembly-section-card .mb-6,
+              .assembly-section-card .mb-3, .assembly-section-card .mb-2 {
+                margin-bottom: 0px !important;
+              }
+              .assembly-section-card .mt-4, .assembly-section-card .mt-6,
+              .assembly-section-card .mt-3, .assembly-section-card .mt-2 {
+                margin-top: 0px !important;
+              }
+              .assembly-section-card .p-4, .assembly-section-card .p-8,
+              .assembly-section-card .p-6, .assembly-section-card .p-5 {
+                padding: 4px !important;
+              }
+              .assembly-section-card .gap-4, .assembly-section-card .gap-6,
+              .assembly-section-card .gap-3 {
+                gap: 2px !important;
               }
 
-              .pdf-page-content-wrapper {
-                flex-grow: 1 !important;
-                width: 100% !important;
-                display: flex !important;
-                flex-direction: column !important;
-                justify-content: flex-start !important;
-                align-items: stretch !important;
-                gap: 15px !important;
-                box-sizing: border-box !important;
-                margin-top: 15px !important;
-              }
-              
-              /* Reset margins of direct child divs inside card to control spacing via gap */
-              .pdf-page-content-wrapper > div {
-                margin-bottom: 0 !important;
-              }
-              
-              /* Professional Green Title Bar for Headings */
-              .pdf-page-content-wrapper h3,
-              .pdf-page-content-wrapper label {
+              /* Professional Green Title Bar - TIGHT */
+              .assembly-section-card h3,
+              .assembly-section-card label {
                 display: block !important;
                 width: 100% !important;
                 background-color: #2e7d32 !important;
                 color: #ffffff !important;
-                font-size: 22px !important;
+                font-size: 12px !important;
                 font-weight: 800 !important;
                 text-align: center !important;
-                padding: 10px 20px !important;
-                border-radius: 8px !important;
+                padding: 2px 8px !important;
+                border-radius: 4px !important;
                 border: none !important;
                 box-shadow: none !important;
-                margin: 0 auto !important;
+                margin: 0 auto 2px auto !important;
                 font-family: 'Noto Sans Devanagari', sans-serif !important;
-                letter-spacing: 1px !important;
+                letter-spacing: 0.5px !important;
                 text-transform: uppercase !important;
               }
               
-              /* Hide icons/emojis in headings for professional look */
-              .pdf-page-content-wrapper h3 span,
-              .pdf-page-content-wrapper h3 svg {
+              /* Hide icons/emojis in headings */
+              .assembly-section-card h3 span,
+              .assembly-section-card h3 svg,
+              .assembly-section-card label span,
+              .assembly-section-card label svg {
                 display: none !important;
               }
               
-              /* Style clean content text */
-              .pdf-page-content-wrapper p,
-              .pdf-page-content-wrapper span,
-              .pdf-page-content-wrapper div {
+              /* Font family */
+              .assembly-section-card p,
+              .assembly-section-card span,
+              .assembly-section-card div {
                 font-family: 'Noto Sans Devanagari', sans-serif !important;
               }
               
-              /* Reset outer wrappers of elements inside the cards */
-              .pdf-page-content-wrapper > div:last-child {
+              /* Content wrapper - ZERO gap after heading */
+              .assembly-section-card > div:first-child {
+                margin-bottom: 1px !important;
+                padding: 0 !important;
+              }
+              .assembly-section-card > div:last-child {
                 width: 100% !important;
                 display: flex !important;
                 flex-direction: column !important;
                 justify-content: flex-start !important;
                 align-items: stretch !important;
                 text-align: center !important;
-                margin-top: 40px !important;
+                margin-top: 0px !important;
+                padding: 0 !important;
+              }
+              /* Kill flex-justify-center wrappers that add vertical space */
+              .assembly-section-card .flex.justify-center {
+                margin: 0 !important;
                 padding: 0 !important;
               }
  
-              /* Specific section resets */
+              /* Specific section resets - all TIGHT */
               #panchang .grid {
                 display: grid !important;
                 grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-                gap: 8px !important;
+                gap: 3px !important;
                 width: 100% !important;
-                margin: 40px 0 0 0 !important;
+                margin: 2px 0 0 0 !important;
                 box-sizing: border-box !important;
               }
               #panchang .grid > div {
-                padding: 10px 8px !important;
+                padding: 3px 2px !important;
                 background: #f8fafc !important;
                 border: 1px solid #e2e8f0 !important;
-                border-radius: 8px !important;
+                border-radius: 4px !important;
                 box-shadow: none !important;
                 transform: none !important;
                 box-sizing: border-box !important;
@@ -2135,38 +2204,49 @@ function DailyAssemblyContent() {
               }
  
               #thought > div:last-child > div {
-                padding: 20px !important;
+                padding: 6px !important;
                 background: #f8fafc !important;
                 border: 1px solid #e2e8f0 !important;
-                border-radius: 12px !important;
+                border-radius: 6px !important;
                 box-shadow: none !important;
                 width: 100% !important;
                 box-sizing: border-box !important;
-                margin: 40px 0 0 0 !important;
+                margin: 2px 0 0 0 !important;
+              }
+ 
+              #shlok > div:last-child > div {
+                padding: 6px !important;
+                background: #f8fafc !important;
+                border: 1px solid #e2e8f0 !important;
+                border-radius: 6px !important;
+                box-shadow: none !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+                margin: 2px 0 0 0 !important;
               }
  
               #proverb > div:last-child > div {
                 width: 100% !important;
-                margin: 40px 0 0 0 !important;
+                margin: 2px 0 0 0 !important;
                 box-sizing: border-box !important;
               }
               #proverb > div:last-child > div > div {
-                padding: 16px !important;
+                padding: 6px !important;
                 background: #f8fafc !important;
                 border: 1px solid #e2e8f0 !important;
-                border-radius: 12px !important;
+                border-radius: 6px !important;
                 box-shadow: none !important;
                 width: 100% !important;
                 box-sizing: border-box !important;
               }
               #proverb > div:last-child > div > div:last-child {
-                margin-top: 10px !important;
+                margin-top: 2px !important;
                 background: #ffffff !important;
               }
  
               #events > div:last-child > div {
                 width: 100% !important;
-                margin: 40px 0 0 0 !important;
+                margin: 2px 0 0 0 !important;
                 box-sizing: border-box !important;
               }
               #events > div:last-child > div > div.divide-y {
@@ -2174,14 +2254,14 @@ function DailyAssemblyContent() {
                 box-sizing: border-box !important;
               }
               #events > div:last-child > div > div.divide-y > div {
-                padding: 6px 0 !important;
+                padding: 2px 0 !important;
                 border-bottom: 1px solid #f1f5f9 !important;
               }
               #events > div:last-child > div > div:last-child {
-                padding: 16px !important;
+                padding: 6px !important;
                 background: #f8fafc !important;
                 border: 1px solid #e2e8f0 !important;
-                border-radius: 12px !important;
+                border-radius: 6px !important;
                 box-shadow: none !important;
                 width: 100% !important;
                 box-sizing: border-box !important;
@@ -2189,36 +2269,36 @@ function DailyAssemblyContent() {
  
               #song > div:last-child > div {
                 width: 100% !important;
-                margin: 40px 0 0 0 !important;
+                margin: 2px 0 0 0 !important;
                 box-sizing: border-box !important;
               }
               #song > div:last-child > div > div:last-child {
-                padding: 16px !important;
+                padding: 6px !important;
                 background: #f8fafc !important;
                 border: 1px solid #e2e8f0 !important;
-                border-radius: 12px !important;
+                border-radius: 6px !important;
                 box-shadow: none !important;
-                margin-top: 10px !important;
+                margin-top: 2px !important;
                 width: 100% !important;
                 box-sizing: border-box !important;
               }
  
               #story > div:last-child > div {
                 width: 100% !important;
-                margin: 40px 0 0 0 !important;
+                margin: 2px 0 0 0 !important;
                 box-sizing: border-box !important;
               }
               #story > div:last-child > div > div {
-                padding: 16px !important;
+                padding: 6px !important;
                 background: #f8fafc !important;
                 border: 1px solid #e2e8f0 !important;
-                border-radius: 12px !important;
+                border-radius: 6px !important;
                 box-shadow: none !important;
                 width: 100% !important;
                 box-sizing: border-box !important;
               }
               #story > div:last-child > div > div:last-child {
-                margin-top: 10px !important;
+                margin-top: 2px !important;
                 background: #f0fdf4 !important;
                 border: 1px solid #bbf7d0 !important;
               }
@@ -2226,16 +2306,16 @@ function DailyAssemblyContent() {
               #gk .grid {
                 display: grid !important;
                 grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-                gap: 8px !important;
+                gap: 3px !important;
                 width: 100% !important;
-                margin: 40px 0 0 0 !important;
+                margin: 2px 0 0 0 !important;
                 box-sizing: border-box !important;
               }
               #gk .grid > div {
-                padding: 12px !important;
+                padding: 4px !important;
                 background: #f8fafc !important;
                 border: 1px solid #e2e8f0 !important;
-                border-radius: 12px !important;
+                border-radius: 6px !important;
                 box-shadow: none !important;
                 box-sizing: border-box !important;
               }
@@ -2245,50 +2325,48 @@ function DailyAssemblyContent() {
  
               #personality > div:last-child > div {
                 width: 100% !important;
-                margin: 40px 0 0 0 !important;
+                margin: 2px 0 0 0 !important;
                 box-sizing: border-box !important;
               }
               #personality > div:last-child > div > div:last-child {
-                padding: 24px !important;
+                padding: 6px !important;
                 background: #f8fafc !important;
                 border: 1px solid #e2e8f0 !important;
-                border-radius: 16px !important;
+                border-radius: 6px !important;
                 box-shadow: none !important;
                 width: 100% !important;
                 box-sizing: border-box !important;
-                margin-top: 15px !important;
+                margin-top: 2px !important;
               }
             `;
             clonedDoc.head.appendChild(style);
           }
         },
-        pagebreak: { mode: ["css", "legacy"] },
+        pagebreak: { mode: ["avoid-all"] },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
       };
-
-      toast.success("Generating PDF, please wait...");
 
       const originalOverflow = element.style.overflow;
       element.style.overflow = "visible";
       element.classList.remove("overflow-hidden");
 
-      const worker = html2pdfFn().set(opt).from(element);
-      await worker.save();
+      const pdfBlob = await html2pdfFn().set(opt).from(element).output("blob");
+      const blobUrl = URL.createObjectURL(pdfBlob);
+      const downloadLink = document.createElement("a");
+      downloadLink.href = blobUrl;
+      downloadLink.download = opt.filename;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
 
-      try {
-        const pdfBlob = (await worker.output("blob")) as Blob;
-        const fileName = `Assembly_${Date.now()}.pdf`;
-        const cdnUrl = await uploadBlobToBunny(`modules/${fileName}`, pdfBlob);
-        console.log("Uploaded Module PDF to Bunny Storage:", cdnUrl);
-      } catch (uploadErr: any) {
-        console.warn("Could not upload Module PDF to Bunny Storage:", uploadErr);
-      }
+      toast.success("PDF यशस्वीरीत्या डाउनलोड झाली! 🎉");
 
       element.style.overflow = originalOverflow;
       element.classList.add("overflow-hidden");
     } catch (err: any) {
       console.error("PDF generation error", err);
-      toast.error(`Error: ${err.message || "Failed to generate PDF"}`);
+      toast.error(`PDF तयार करताना त्रुटी आली: ${err.message || "PDF generate failed"}. कृपया पुन्हा प्रयत्न करा.`);
     }
   };
 
@@ -2312,18 +2390,19 @@ function DailyAssemblyContent() {
     }
   };
 
-  const SectionCard = ({ id, emoji, title, gradient, children }: {
+  const SectionCard = ({ id, emoji, title, gradient, children, pageBreak = false }: {
     id: string;
     emoji?: string;
     title: string;
     icon?: any;
     gradient?: string;
     children: React.ReactNode;
+    pageBreak?: boolean;
   }) => {
     return (
       <div
         id={id}
-        className={`assembly-section-card space-y-5 p-5 md:p-8 bg-gradient-to-br ${gradient || 'from-slate-50/80 to-slate-100/50 border-slate-200/60'} border rounded-[2rem] shadow-sm pdf-page-break mb-6 relative overflow-visible`}
+        className={`assembly-section-card space-y-5 p-5 md:p-8 bg-gradient-to-br ${gradient || 'from-slate-50/80 to-slate-100/50 border-slate-200/60'} border rounded-[2rem] shadow-sm mb-6 relative overflow-visible ${pageBreak ? 'html2pdf__page-break' : ''}`}
       >
         <div className="flex justify-center relative z-10">
           <h3 className="text-lg md:text-xl font-black text-slate-800 inline-flex items-center justify-center gap-2 px-5 py-3 bg-white/90 backdrop-blur-md rounded-full shadow-sm border border-slate-200/60 uppercase tracking-wider">
@@ -2388,6 +2467,86 @@ function DailyAssemblyContent() {
         <MonthlyParipathRegister />
       ) : (
         <>
+          {/* School Info Modal */}
+          <Dialog open={showSchoolInfoModal} onOpenChange={setShowSchoolInfoModal}>
+            <DialogContent className="sm:max-w-md bg-white rounded-3xl p-6 border-0 shadow-2xl">
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-black text-slate-800 flex items-center gap-2 mb-2">
+                  <School className="size-6 text-indigo-600" /> शाळेची माहिती
+                </DialogTitle>
+                <p className="text-slate-500 text-sm font-medium">
+                  कृपया PDF वर दाखवण्यासाठी खालील माहिती भरा. ही माहिती तुमच्या ब्राउझरमध्ये सेव्ह राहील.
+                </p>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">शाळेचे नाव</label>
+                  <input 
+                    type="text" 
+                    value={schoolInfo.schoolName || ""}
+                    onChange={(e) => setSchoolInfo({...schoolInfo, schoolName: e.target.value})}
+                    placeholder="उदा. जि. प. प्रा. शाळा..."
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-bold text-slate-700 outline-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">युडायस (UDISE) कोड</label>
+                  <input 
+                    type="text" 
+                    value={schoolInfo.udise}
+                    onChange={(e) => setSchoolInfo({...schoolInfo, udise: e.target.value})}
+                    placeholder="उदा. 27251..."
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-bold text-slate-700 outline-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">केंद्र (Kendra)</label>
+                  <input 
+                    type="text" 
+                    value={schoolInfo.kendra}
+                    onChange={(e) => setSchoolInfo({...schoolInfo, kendra: e.target.value})}
+                    placeholder="केंद्राचे नाव"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-bold text-slate-700 outline-none"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">तालुका</label>
+                    <input 
+                      type="text" 
+                      value={schoolInfo.taluka}
+                      onChange={(e) => setSchoolInfo({...schoolInfo, taluka: e.target.value})}
+                      placeholder="तालुका"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-bold text-slate-700 outline-none"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">जिल्हा</label>
+                    <input 
+                      type="text" 
+                      value={schoolInfo.jilha}
+                      onChange={(e) => setSchoolInfo({...schoolInfo, jilha: e.target.value})}
+                      placeholder="जिल्हा"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-bold text-slate-700 outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <button 
+                  onClick={() => {
+                    localStorage.setItem("paripathSchoolInfo", JSON.stringify(schoolInfo));
+                    setShowSchoolInfoModal(false);
+                    toast.success("माहिती यशस्वीरित्या सेव्ह झाली!");
+                  }}
+                  className="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-sm uppercase tracking-wider transition-colors shadow-lg shadow-indigo-600/20"
+                >
+                  सेव्ह करा (Save)
+                </button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
           {/* Header with Language Toggle */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-8 bg-slate-900 rounded-[3rem] shadow-xl border border-slate-800 relative overflow-hidden pdf-hide">
             <div className="flex items-center gap-5 relative z-10">
@@ -2410,6 +2569,14 @@ function DailyAssemblyContent() {
                   className="bg-transparent border-none text-xs font-black outline-none cursor-pointer text-indigo-200"
                 />
               </div>
+              <button
+                onClick={() => setShowSchoolInfoModal(true)}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-black text-xs md:text-sm uppercase tracking-wider transition-all border border-white/20"
+                title="शाळेची माहिती भरा / बदला"
+              >
+                <School className="size-4" />
+                <span className="hidden sm:inline">शाळेची माहिती</span>
+              </button>
               <button
                 onClick={handleDownloadPdf}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-black text-xs md:text-sm uppercase tracking-wider transition-all shadow-lg shadow-indigo-500/25 active:scale-95 border border-indigo-400/30"
@@ -2434,6 +2601,27 @@ function DailyAssemblyContent() {
             </div>
           ) : (
             <>
+              {/* School Info Display for PDF and UI */}
+              {(schoolInfo.schoolName || schoolInfo.udise || schoolInfo.kendra || schoolInfo.taluka || schoolInfo.jilha) && (
+                <div className="bg-[#f0fdf4] border-[2px] border-[#2e7d32] rounded-xl p-4 md:p-6 mb-6 w-full text-center shadow-sm">
+                  {schoolInfo.schoolName && (
+                    <h3 className="text-lg md:text-xl font-black text-[#166534] mb-3 drop-shadow-sm">
+                      शाळेचे नाव: {schoolInfo.schoolName}
+                    </h3>
+                  )}
+                  <div className="flex flex-col md:flex-row justify-between items-center gap-3 pt-3 border-t border-dashed border-[#86efac]">
+                    <div className="text-sm md:text-base font-bold text-[#166534]">
+                      केंद्र: <span className="font-black text-[#15803d]">{schoolInfo.kendra || '-'}</span> &nbsp;|&nbsp; 
+                      युडायस (UDISE): <span className="font-black text-[#15803d]">{schoolInfo.udise || '-'}</span>
+                    </div>
+                    <div className="text-sm md:text-base font-bold text-[#166534]">
+                      तालुका: <span className="font-black text-[#15803d]">{schoolInfo.taluka || '-'}</span> &nbsp;|&nbsp; 
+                      जिल्हा: <span className="font-black text-[#15803d]">{schoolInfo.jilha || '-'}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Assembly Start Items (Anthem, State Song, Pledge, Preamble, Prayer) */}
               <div className="flex justify-center mb-4 pdf-hide">
                 <h4 className="text-xl md:text-2xl font-black text-green-800 inline-flex items-center justify-center gap-3 px-8 py-4 bg-green-50 rounded-full shadow-sm border border-green-100 uppercase tracking-widest">
@@ -2447,6 +2635,7 @@ function DailyAssemblyContent() {
             { key: 'pledge', fallbackIdx: 2 },
             { key: 'preamble', fallbackIdx: 3 },
             { key: 'prayer', fallbackIdx: 4 },
+            { key: 'silentPasayadan', fallbackIdx: 5 },
           ].map((itemDef, idx) => {
             const fallbackItem = assemblyItems[itemDef.fallbackIdx];
             const content =
@@ -2457,7 +2646,7 @@ function DailyAssemblyContent() {
               fallbackItem.content;
 
             return (
-              <div key={idx} className={`assembly-section-card bg-white p-4 md:p-8 rounded-[2rem] border border-green-100 shadow-md text-center mb-4 ${idx > 0 ? 'pdf-page-break' : ''}`}>
+              <div key={idx} id={itemDef.key} className="assembly-section-card bg-white p-4 md:p-8 rounded-[2rem] border border-green-100 shadow-md text-center mb-4">
                 <div className="flex justify-center mb-4">
                   <label className="inline-flex items-center justify-center gap-2 px-5 py-2 bg-green-50 text-green-700 rounded-full text-sm font-black uppercase tracking-wider border border-green-100">
                     {fallbackItem.label}
@@ -2483,6 +2672,7 @@ function DailyAssemblyContent() {
               title={t.panchang}
               icon={Calendar}
               gradient="from-amber-100/80 via-orange-50/60 to-yellow-100/80"
+              pageBreak={false}
             >
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
                 {[
@@ -2521,6 +2711,7 @@ function DailyAssemblyContent() {
               title={t.thought}
               icon={Quote}
               gradient="from-violet-100/80 via-fuchsia-50/60 to-purple-100/80"
+              pageBreak={false}
             >
               <div className="p-6 md:p-10 bg-white/60 backdrop-blur-xl border border-white rounded-[2rem] flex flex-col items-center justify-center text-center shadow-xl shadow-violet-900/5 hover:shadow-2xl hover:shadow-violet-900/10 transition-all duration-500 relative overflow-hidden group">
                 <div className="absolute top-0 right-0 w-48 h-48 bg-violet-200/40 rounded-full blur-[60px] -translate-y-1/2 translate-x-1/2 group-hover:bg-violet-300/40 transition-colors" />
@@ -2544,6 +2735,7 @@ function DailyAssemblyContent() {
               title={(t as any).shlok || "श्लोक"}
               icon={Quote}
               gradient="from-amber-100/80 via-rose-50/60 to-orange-100/80"
+              pageBreak={false}
             >
               <div className="p-6 md:p-10 bg-white/60 backdrop-blur-xl border border-white rounded-[2rem] flex flex-col items-center justify-center text-center shadow-xl shadow-amber-900/5 hover:shadow-2xl hover:shadow-amber-900/10 transition-all duration-500 relative overflow-hidden group">
                 <div className="absolute top-0 right-0 w-48 h-48 bg-amber-200/40 rounded-full blur-[60px] -translate-y-1/2 translate-x-1/2 group-hover:bg-amber-300/40 transition-colors" />
@@ -2567,6 +2759,7 @@ function DailyAssemblyContent() {
               title={t.proverbTitle}
               icon={BookOpen}
               gradient="from-teal-100/80 via-emerald-50/60 to-cyan-100/80"
+              pageBreak={true}
             >
               <div className="space-y-4">
                 <div className="p-5 md:p-8 bg-white/60 backdrop-blur-xl border border-white rounded-[2rem] text-center shadow-xl shadow-teal-900/5 hover:shadow-teal-900/10 transition-all relative overflow-hidden group">
@@ -2596,6 +2789,7 @@ function DailyAssemblyContent() {
               title={`${formData.dateMonth ? formData.dateMonth + ' ' : ''}${t.eventsTitle || 'दिनविशेष'}`}
               icon={Calendar}
               gradient="from-blue-100/80 via-indigo-50/60 to-sky-100/80"
+              pageBreak={false}
             >
               <div className="space-y-6">
                 {formData.yearDay && (
@@ -2628,6 +2822,7 @@ function DailyAssemblyContent() {
               title={t.patrioticSongTitle}
               icon={Music}
               gradient="from-orange-100/80 via-red-50/60 to-amber-100/80"
+              pageBreak={true}
             >
               <div className="space-y-6">
                 {formData.songTitle && (
@@ -2663,6 +2858,7 @@ function DailyAssemblyContent() {
               title={t.storyTitle}
               icon={BookOpen}
               gradient="from-pink-100/80 via-rose-50/60 to-red-100/80"
+              pageBreak={false}
             >
               <div className="space-y-6">
                 {formData.storyTitle && (
@@ -2697,6 +2893,29 @@ function DailyAssemblyContent() {
                     </div>
                   </div>
                 )}
+              </div>
+            </SectionCard>
+          )}
+
+          {/* Value News */}
+          {formData.valueNews && (
+            <SectionCard
+              id="valueNews"
+              emoji="📰"
+              title={(t as any).valueNews || "सुसंस्कारक्षम बातम्या"}
+              icon={BookOpen}
+              gradient="from-emerald-100/80 via-teal-50/60 to-emerald-50/80"
+              pageBreak={false}
+            >
+              <div className="p-5 md:p-8 bg-white/60 backdrop-blur-xl border border-white rounded-[2rem] text-center shadow-xl shadow-emerald-900/5">
+                <div className="text-base md:text-xl font-bold text-slate-800 leading-relaxed font-sans">
+                  {formData.valueNews.split('\n').map((line: string, i: number) => (
+                    <React.Fragment key={i}>
+                      {line}
+                      <br />
+                    </React.Fragment>
+                  ))}
+                </div>
               </div>
             </SectionCard>
           )}
@@ -5397,333 +5616,380 @@ function TeachingDiaryManager({
   data: any;
   onChange: (val: any) => void;
 }) {
-  const [step, setStep] = useState<"hub" | "classes" | "months" | "files">("hub");
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
-  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
-  const [diaries, setDiaries] = useState<any[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [selectedMedium, setSelectedMedium] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  
+  const [pageData, setPageData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const classes = [
-    "Class 1",
-    "Class 2",
-    "Class 3",
-    "Class 4",
-    "Class 5",
-    "Class 6",
-    "Class 7",
-    "Class 8",
-  ];
+  // Viewer utilities
+  const [zoomLevel, setZoomLevel] = useState<number>(1.0);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const viewerRef = useRef<HTMLDivElement>(null);
 
-  const months = [
-    { en: "June", mr: "जून" },
-    { en: "July", mr: "जुलै" },
-    { en: "August", mr: "ऑगस्ट" },
-    { en: "September", mr: "सप्टेंबर" },
-    { en: "October", mr: "ऑक्टोबर" },
-    { en: "November", mr: "नोव्हेंबर" },
-    { en: "December", mr: "डिसेंबर" },
-    { en: "January", mr: "जानेवारी" },
-    { en: "February", mr: "फेब्रुवारी" },
-    { en: "March", mr: "मार्च" },
-    { en: "April", mr: "एप्रिल" },
-    { en: "May", mr: "मे" },
-  ];
-
+  // Listen to fullscreen changes
   useEffect(() => {
-    if (step === "files" && selectedClass && selectedMonth) {
-      const fetchDiaries = async () => {
-        setLoading(true);
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
+  // Sync date selection
+  useEffect(() => {
+    if (selectedClass && selectedMedium && selectedDate) {
+      fetchDiaryPage(selectedClass, selectedMedium, selectedDate);
+    }
+  }, [selectedClass, selectedMedium, selectedDate]);
+
+  // Automatically select standard start date of standard uploaded diary when standard standard class and medium are selected
+  useEffect(() => {
+    if (selectedClass && selectedMedium) {
+      const fetchEarliestDate = async () => {
         try {
-          const { collection, getDocs, query, where } = await import(
-            "firebase/firestore"
-          );
-          const q = query(
-            collection(db, "teacher_diaries"),
-            where("class", "==", selectedClass),
-            where("month", "==", selectedMonth)
-          );
-          const snapshot = await getDocs(q);
-          const list = snapshot.docs.map((doc) => {
-            const data = doc.data();
-            return {
-              id: doc.id,
-              name: data.fileName || data.name || "",
-              url: data.downloadURL || data.url || "",
-              size: data.size || "",
-              date: data.date || "",
-              ...data,
-            };
-          });
-          setDiaries(list);
+          const { collection, getDocs } = await import("firebase/firestore");
+          const collectionRef = collection(db, "teacher_diaries", selectedClass, selectedMedium);
+          const snapshot = await getDocs(collectionRef);
+          if (!snapshot.empty) {
+            const docIds = snapshot.docs.map((doc) => doc.id);
+            docIds.sort(); // ascending, earliest date first
+            const earliestDateStr = docIds[0];
+            const parts = earliestDateStr.split("-");
+            if (parts.length === 3) {
+              const year = parseInt(parts[0], 10);
+              const month = parseInt(parts[1], 10) - 1;
+              const day = parseInt(parts[2], 10);
+              setSelectedDate(new Date(year, month, day));
+            }
+          }
         } catch (err) {
-          console.error("Error fetching teaching diaries:", err);
-          toast.error("Failed to load teaching diaries.");
-        } finally {
-          setLoading(false);
+          console.error("Error fetching earliest diary date:", err);
         }
       };
-      fetchDiaries();
+      fetchEarliestDate();
     }
-  }, [step, selectedClass, selectedMonth]);
+  }, [selectedClass, selectedMedium]);
 
-  const selectedMonthData = months.find((m) => m.en === selectedMonth);
-  const selectedMonthMarathi = selectedMonthData ? selectedMonthData.mr : "";
+  const fetchDiaryPage = async (cls: string, med: string, date: Date) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const dateStr = format(date, "yyyy-MM-dd");
+      // Since doc/getDoc are imported at the top, we can use them directly
+      const docRef = doc(db, "teacher_diaries", cls, med, dateStr);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setPageData(docSnap.data());
+      } else {
+        setPageData(null);
+      }
+    } catch (err: any) {
+      console.error("Error loading diary page:", err);
+      setError("Failed to load page details.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const classColors = [
-    "from-amber-500 to-orange-600",
-    "from-indigo-500 to-blue-600",
-    "from-emerald-500 to-teal-600",
-    "from-rose-500 to-pink-600",
-    "from-purple-500 to-violet-600",
-    "from-cyan-500 to-sky-600",
-    "from-slate-600 to-slate-800",
-    "from-fuchsia-500 to-pink-700",
+  const handlePrevDay = () => {
+    const prev = new Date(selectedDate);
+    prev.setDate(prev.getDate() - 1);
+    setSelectedDate(prev);
+  };
+
+  const handleNextDay = () => {
+    const next = new Date(selectedDate);
+    next.setDate(next.getDate() + 1);
+    setSelectedDate(next);
+  };
+
+  const handleZoomIn = () => {
+    setZoomLevel((prev) => Math.min(prev + 0.2, 2.5));
+  };
+
+  const handleZoomOut = () => {
+    setZoomLevel((prev) => Math.max(prev - 0.2, 0.6));
+  };
+
+  const handleToggleFullscreen = () => {
+    if (!viewerRef.current) return;
+    if (!isFullscreen) {
+      viewerRef.current.requestFullscreen().catch((err: any) => {
+        toast.error("Could not activate full screen mode.");
+        console.error(err);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  };
+
+  const handleDownload = () => {
+    if (pageData?.pageUrl) {
+      const link = document.createElement("a");
+      link.href = pageData.pageUrl;
+      link.download = `Diary_${selectedClass}_${selectedMedium}_${format(selectedDate, "yyyy-MM-dd")}.pdf`;
+      link.target = "_blank";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      toast.error("No file available for download.");
+    }
+  };
+
+  const classes = [
+    { id: "Class 1", badge: "1ST", mr: "इयत्ता पहिली", color: "from-blue-500 to-indigo-600" },
+    { id: "Class 2", badge: "2ND", mr: "इयत्ता दुसरी", color: "from-purple-500 to-indigo-600" },
+    { id: "Class 3", badge: "3RD", mr: "इयत्ता तिसरी", color: "from-pink-500 to-rose-600" },
+    { id: "Class 4", badge: "4TH", mr: "इयत्ता चौथी", color: "from-amber-500 to-orange-600" },
+    { id: "Class 5", badge: "5TH", mr: "इयत्ता पाचवी", color: "from-emerald-500 to-teal-600" },
+    { id: "Class 6", badge: "6TH", mr: "इयत्ता सहावी", color: "from-cyan-500 to-blue-600" },
+    { id: "Class 7", badge: "7TH", mr: "इयत्ता सातवी", color: "from-indigo-500 to-violet-600" },
+    { id: "Class 8", badge: "8TH", mr: "इयत्ता आठवी", color: "from-slate-600 to-slate-800" },
   ];
 
-  const monthColors = [
-    "from-rose-500/10 to-pink-500/5 hover:from-rose-500/20 hover:to-pink-500/10 text-rose-700 border-rose-200/40",
-    "from-orange-500/10 to-amber-500/5 hover:from-orange-500/20 hover:to-amber-500/10 text-orange-700 border-orange-200/40",
-    "from-amber-500/10 to-yellow-500/5 hover:from-amber-500/20 hover:to-yellow-500/10 text-amber-700 border-amber-200/40",
-    "from-emerald-500/10 to-teal-500/5 hover:from-emerald-500/20 hover:to-teal-500/10 text-emerald-700 border-emerald-200/40",
-    "from-teal-500/10 to-cyan-500/5 hover:from-teal-500/20 hover:to-cyan-500/10 text-teal-700 border-teal-200/40",
-    "from-sky-500/10 to-blue-500/5 hover:from-sky-500/20 hover:to-blue-500/10 text-sky-700 border-sky-200/40",
-    "from-indigo-500/10 to-violet-500/5 hover:from-indigo-500/20 hover:to-violet-500/10 text-indigo-700 border-indigo-200/40",
-    "from-violet-500/10 to-purple-500/5 hover:from-violet-500/20 hover:to-purple-500/10 text-violet-700 border-violet-200/40",
-    "from-fuchsia-500/10 to-pink-500/5 hover:from-fuchsia-500/20 hover:to-pink-500/10 text-fuchsia-700 border-fuchsia-200/40",
-    "from-rose-500/10 to-orange-500/5 hover:from-rose-500/20 hover:to-orange-500/10 text-rose-700 border-rose-200/40",
-    "from-cyan-500/10 to-emerald-500/5 hover:from-cyan-500/20 hover:to-emerald-500/10 text-cyan-700 border-cyan-200/40",
-    "from-slate-500/10 to-slate-600/5 hover:from-slate-500/20 hover:to-slate-600/10 text-slate-700 border-slate-200/40",
+  const mediums = [
+    { id: "Marathi", badge: "M", title: "MARATHI", mr: "मराठी माध्यम" },
+    { id: "Semi English", badge: "S", title: "SEMI ENGLISH", mr: "सेमी इंग्रजी" },
   ];
 
   return (
-    <div className="space-y-8 font-sans">
+    <div className="space-y-6 font-sans">
       <AnimatePresence mode="wait">
-        {step === "hub" && (
+        {/* Step 1: Select Class */}
+        {!selectedClass && (
           <motion.div
-            key="hub"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="flex flex-col items-center justify-center p-8 md:p-16 text-center space-y-6 bg-slate-50 border border-slate-100 rounded-3xl"
-          >
-            <div className="size-20 rounded-full bg-[#D6B97A]/10 text-[#D6B97A] flex items-center justify-center shadow-inner">
-              <Edit3 className="size-10" />
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-2xl font-black text-[#1A1A1A]">
-                Teaching Diary Workspace
-              </h3>
-              <p className="text-slate-500 font-medium max-w-md mx-auto">
-                शिक्षकांची दैनिक अध्यापन टाचनवही (Teaching Diary) वर्गाप्रमाणे व महिन्याप्रमाणे व्यवस्थापन करण्यासाठी पुढे जा.
-              </p>
-            </div>
-            <button
-              onClick={() => setStep("classes")}
-              className="px-10 py-5 bg-[#1A1A1A] hover:bg-[#D6B97A] text-white rounded-full text-[10px] font-black uppercase tracking-[0.3em] transition-all shadow-xl flex items-center gap-3 active:scale-95 cursor-pointer"
-            >
-              Enter Teaching Diary <ArrowRight className="size-4 text-[#D6B97A] group-hover:translate-x-1" />
-            </button>
-          </motion.div>
-        )}
-
-        {step === "classes" && (
-          <motion.div
-            key="classes"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-8"
-          >
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <h3 className="text-xl font-black text-slate-800 flex items-center gap-2">
-                <BookOpen className="size-6 text-[#D6B97A]" /> Select Class / वर्ग निवडा
-              </h3>
-              <button
-                onClick={() => setStep("hub")}
-                className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
-              >
-                ← Back
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {classes.map((cls, idx) => {
-                return (
-                  <motion.div
-                    whileHover={{ scale: 1.03, y: -4 }}
-                    whileTap={{ scale: 0.98 }}
-                    key={cls}
-                  >
-                    <button
-                      onClick={() => {
-                        setSelectedClass(cls);
-                        setStep("months");
-                      }}
-                      className={`w-full min-h-[10rem] p-6 rounded-3xl bg-gradient-to-br ${classColors[idx % classColors.length]} text-white text-left flex flex-col justify-between shadow-md hover:shadow-lg transition-all relative overflow-hidden group cursor-pointer`}
-                    >
-                      <div className="absolute right-[-10%] bottom-[-10%] opacity-10 pointer-events-none">
-                        <BookOpen className="size-24" />
-                      </div>
-                      <span className="text-xs bg-white/20 px-3 py-1 rounded-full font-black self-start">
-                        Select
-                      </span>
-                      <div>
-                        <h4 className="text-lg font-black tracking-tight">{cls}</h4>
-                        <p className="text-[10px] text-white/80 font-bold uppercase tracking-wider mt-1">अध्यापन नोंद वही</p>
-                      </div>
-                    </button>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-
-        {step === "months" && selectedClass && (
-          <motion.div
-            key="months"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-8"
-          >
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div>
-                <h3 className="text-xl font-black text-slate-800 flex items-center gap-2">
-                  <BookOpen className="size-6 text-[#D6B97A]" /> Select Month / महिना निवडा
-                </h3>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
-                  Selected Class: {selectedClass}
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  setSelectedClass(null);
-                  setStep("classes");
-                }}
-                className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-800 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all cursor-pointer"
-              >
-                ← Change Class
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {months.map((m, idx) => {
-                const colorClass = monthColors[idx % monthColors.length];
-                return (
-                  <motion.button
-                    whileHover={{ scale: 1.05, y: -2 }}
-                    whileTap={{ scale: 0.98 }}
-                    key={m.en}
-                    onClick={() => {
-                      setSelectedMonth(m.en);
-                      setStep("files");
-                    }}
-                    className={`p-6 rounded-2xl bg-gradient-to-br ${colorClass} border text-center flex flex-col justify-center items-center gap-2 shadow-sm transition-all duration-300 cursor-pointer h-28`}
-                  >
-                    <Calendar className="size-5 opacity-70" />
-                    <span className="font-black text-sm tracking-tight">{m.mr}</span>
-                    <span className="text-[9px] uppercase tracking-wider font-bold opacity-60">
-                      {m.en}
-                    </span>
-                  </motion.button>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-
-        {step === "files" && selectedClass && selectedMonth && (
-          <motion.div
-            key="files"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
+            key="class-select"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
             className="space-y-6"
           >
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div>
-                <h3 className="text-xl font-black text-slate-800 flex items-center gap-2">
-                  <BookOpen className="size-6 text-[#D6B97A]" /> {selectedClass} — {selectedMonthMarathi} ({selectedMonth})
-                </h3>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
-                  Teaching Diaries Catalog / दैनिक अध्यापन टाचण वह्या
-                </p>
-              </div>
+            <div className="text-center space-y-1">
+              <h3 className="text-2xl font-black text-slate-800">Select Class / वर्ग निवडा</h3>
+              <p className="text-xs font-bold text-indigo-600 uppercase tracking-wider">Step 1: Standard Selection</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto w-full">
+              {classes.map((cls) => (
+                <button
+                  key={cls.id}
+                  onClick={() => {
+                    setSelectedClass(cls.id);
+                    setSelectedMedium(null);
+                  }}
+                  className={`group p-6 rounded-2xl border text-center transition-all shadow-sm hover:shadow-md bg-gradient-to-br ${cls.color} text-white border-black/5 cursor-pointer relative overflow-hidden flex flex-col items-center gap-3`}
+                >
+                  <div className="size-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20 backdrop-blur-sm text-white font-black text-xs">
+                    {cls.badge}
+                  </div>
+                  <div>
+                    <h4 className="text-base font-black leading-tight">{cls.mr}</h4>
+                    <p className="text-[9px] text-slate-100/70 font-bold uppercase tracking-wider">{cls.id}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Step 2: Select Medium */}
+        {selectedClass && !selectedMedium && (
+          <motion.div
+            key="medium-select"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            className="space-y-6"
+          >
+            <div className="text-center space-y-1">
+              <h3 className="text-2xl font-black text-slate-800">Select Medium / माध्यम निवडा</h3>
+              <p className="text-xs font-bold text-indigo-600 uppercase tracking-wider">Class Selected: {selectedClass}</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl mx-auto w-full">
+              {mediums.map((med) => (
+                <button
+                  key={med.id}
+                  onClick={() => setSelectedMedium(med.id)}
+                  className="group p-8 rounded-2xl border text-left transition-all shadow-sm hover:shadow-md cursor-pointer relative overflow-hidden flex items-start gap-4 bg-gradient-to-br from-indigo-600 to-purple-700 text-white border-indigo-500/30"
+                >
+                  <div className="size-10 rounded-full flex items-center justify-center border border-white/20 bg-white/10 backdrop-blur-sm text-white font-black text-sm shrink-0">
+                    {med.badge}
+                  </div>
+                  <div>
+                    <h4 className="font-black text-lg text-white">{med.mr}</h4>
+                    <p className="text-[9px] font-black uppercase tracking-wider text-indigo-200">{med.title} Medium</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <div className="flex justify-center">
               <button
-                onClick={() => {
-                  setSelectedMonth(null);
-                  setStep("months");
-                }}
-                className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-800 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all cursor-pointer"
+                onClick={() => setSelectedClass(null)}
+                className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-900 text-xs font-black uppercase tracking-wider cursor-pointer"
               >
-                ← Change Month
+                <ArrowLeft className="size-3.5" /> Back to Classes
               </button>
             </div>
+          </motion.div>
+        )}
 
-            {loading ? (
-              <div className="flex flex-col items-center justify-center py-20 space-y-4">
-                <Loader2 className="size-10 text-[#D6B97A] animate-spin" />
-                <p className="text-xs font-black uppercase tracking-widest text-slate-400 animate-pulse">
-                  Fetching teaching diaries from database...
-                </p>
-              </div>
-            ) : diaries.length === 0 ? (
-              <div className="p-16 text-center border-2 border-dashed border-slate-200 rounded-3xl space-y-4">
-                <div className="size-16 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 mx-auto">
-                  <BookOpen className="size-8" />
-                </div>
-                <div>
-                  <h4 className="text-slate-700 font-bold">कोणतीही फाईल आढळली नाही</h4>
-                  <p className="text-slate-400 text-xs mt-1">
-                    या वर्ग आणि महिन्यासाठी अद्याप कोणतीही अध्यापन टाचनवही फाईल अपलोड केलेली नाही.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {diaries.map((file: any) => (
-                  <div
-                    key={file.id}
-                    className="p-5 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-between group hover:border-[#D6B97A]/40 transition-all shadow-sm"
+        {/* Step 3: Viewer */}
+        {selectedClass && selectedMedium && (
+          <motion.div
+            key="viewer-panel"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            className="space-y-4"
+          >
+            {/* Viewer Control Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-white border border-slate-200/60 rounded-2xl p-3.5 shadow-sm">
+              <button
+                onClick={() => {
+                  setSelectedMedium(null);
+                  setPageData(null);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-700 font-bold text-[10px] uppercase tracking-wider cursor-pointer"
+              >
+                <ArrowLeft className="size-3.5" /> Back
+              </button>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Calendar popover */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="flex items-center gap-2 px-3 py-1.5 border border-slate-200 hover:border-indigo-600 rounded-lg text-slate-700 font-bold text-[10px] uppercase tracking-wider bg-white cursor-pointer">
+                      <Calendar className="size-3.5 text-indigo-600" />
+                      <span>{format(selectedDate, "dd/MM/yyyy")}</span>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 z-50">
+                    <CalendarComponent
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={(date) => date && setSelectedDate(date)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+
+                <div className="h-4 w-px bg-slate-200" />
+
+                {/* Date navigation */}
+                <div className="flex items-center gap-0.5">
+                  <button
+                    onClick={handlePrevDay}
+                    className="p-1.5 border border-slate-200 hover:bg-slate-50 rounded-md text-slate-600"
+                    title="Previous Day"
                   >
-                    <div className="flex items-center gap-4 overflow-hidden">
-                      <div className="size-12 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 group-hover:text-[#D6B97A] group-hover:border-[#D6B97A]/20 transition-all flex-shrink-0">
-                        <FileText className="size-6" />
-                      </div>
-                      <div className="overflow-hidden">
-                        <div className="font-bold text-slate-800 text-sm truncate max-w-[200px] sm:max-w-xs" title={file.name}>
-                          {file.name}
-                        </div>
-                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
-                          {file.size} • {file.date || "Unknown Date"}
-                        </div>
-                      </div>
-                    </div>
+                    <ChevronLeft className="size-3.5" />
+                  </button>
+                  <button
+                    onClick={handleNextDay}
+                    className="p-1.5 border border-slate-200 hover:bg-slate-50 rounded-md text-slate-600"
+                    title="Next Day"
+                  >
+                    <ChevronRight className="size-3.5" />
+                  </button>
+                </div>
 
-                    <div className="flex items-center gap-2">
-                      <a
-                        href={file.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="size-9 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-[#D6B97A] hover:border-[#D6B97A]/20 transition-all cursor-pointer shadow-sm"
-                        title="पहा (View)"
-                      >
-                        <Eye className="size-4.5" />
-                      </a>
-                      <a
-                        href={file.url}
-                        download={file.name}
-                        className="size-9 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-emerald-600 hover:border-emerald-200 transition-all cursor-pointer shadow-sm"
-                        title="डाउनलोड (Download)"
-                      >
-                        <Download className="size-4.5" />
-                      </a>
-                    </div>
-                  </div>
-                ))}
+                <div className="h-4 w-px bg-slate-200" />
+
+                {/* Zoom */}
+                <div className="flex items-center gap-0.5">
+                  <button
+                    onClick={handleZoomOut}
+                    className="p-1.5 border border-slate-200 hover:bg-slate-50 rounded-md text-slate-600"
+                    title="Zoom Out"
+                  >
+                    <ZoomOut className="size-3.5" />
+                  </button>
+                  <span className="text-[9px] font-black text-slate-400 w-8 text-center select-none">
+                    {Math.round(zoomLevel * 100)}%
+                  </span>
+                  <button
+                    onClick={handleZoomIn}
+                    className="p-1.5 border border-slate-200 hover:bg-slate-50 rounded-md text-slate-600"
+                    title="Zoom In"
+                  >
+                    <ZoomIn className="size-3.5" />
+                  </button>
+                </div>
+
+                <div className="h-4 w-px bg-slate-200" />
+
+                {/* Fullscreen and Download */}
+                <button
+                  onClick={handleToggleFullscreen}
+                  className={`p-1.5 border rounded-md ${
+                    isFullscreen ? "bg-indigo-600 border-indigo-600 text-white" : "border-slate-200 hover:bg-slate-50 text-slate-600"
+                  }`}
+                  title="Fullscreen"
+                >
+                  <Maximize2 className="size-3.5" />
+                </button>
+
+                <button
+                  onClick={handleDownload}
+                  disabled={!pageData?.pageUrl}
+                  className="p-1.5 border border-slate-200 hover:bg-slate-50 rounded-md text-slate-600 disabled:opacity-55"
+                  title="Download Page"
+                >
+                  <Download className="size-3.5" />
+                </button>
               </div>
-            )}
+            </div>
+
+            {/* Preview Frame */}
+            <div
+              ref={viewerRef}
+              className={`bg-white border border-slate-200 rounded-2xl p-4 flex flex-col items-center justify-center overflow-auto min-h-[500px] relative ${
+                isFullscreen ? "fixed inset-0 z-50 p-6 h-screen w-screen bg-slate-900 border-none rounded-none" : ""
+              }`}
+            >
+              {loading ? (
+                <div className="flex flex-col items-center gap-2.5 text-slate-400">
+                  <Loader2 className="size-8 animate-spin text-indigo-600" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Syncing page...</span>
+                </div>
+              ) : pageData?.pageUrl ? (
+                <div
+                  className="rounded-lg overflow-hidden shadow bg-white border border-slate-100 flex items-center justify-center"
+                  style={{
+                    width: `${950 * zoomLevel}px`,
+                    height: `${600 * zoomLevel}px`,
+                    maxWidth: "100%",
+                  }}
+                >
+                  <iframe
+                    src={`${pageData.pageUrl}#view=FitH`}
+                    title={`Page ${pageData.pageNumber}`}
+                    className="w-full h-full border-none"
+                  />
+                </div>
+              ) : (
+                <div className="flex flex-col items-center text-center p-8 space-y-3 max-w-sm">
+                  <div className="size-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                    <FileText className="size-6" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-bold text-slate-800 font-sans">No Page Found</h4>
+                    <p className="text-[11px] text-slate-400">
+                      No diary page uploaded for <strong className="text-slate-600">{format(selectedDate, "dd/MM/yyyy")}</strong>.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {isFullscreen && (
+                <div className="absolute top-4 left-4 bg-black/60 px-3 py-1.5 rounded-lg text-white text-[10px] font-bold">
+                  {selectedClass} — {selectedMedium} — {format(selectedDate, "dd/MM/yyyy")}
+                </div>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
