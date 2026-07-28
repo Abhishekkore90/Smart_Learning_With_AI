@@ -213,6 +213,8 @@ export function CCEStudentList({
           class: selectedClass,
           academicYear,
           role: "student",
+          medium: selectedMedium,
+          isSemiEnglish: selectedMedium === "semi",
           updatedAt: new Date().toISOString(),
         },
         { merge: true }

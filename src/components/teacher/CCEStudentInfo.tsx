@@ -421,6 +421,8 @@ export function CCEStudentInfo({
         rollNo: editRollNo.trim(),
         gender: editGender,
         photoUrl: editPhotoUrl,
+        medium: selectedMedium,
+        isSemiEnglish: selectedMedium === "semi",
       });
 
       await setDoc(

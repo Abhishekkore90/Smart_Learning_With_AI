@@ -26595,88 +26595,74 @@ export function normalizeClassKey(classKey: string): string {
   return s;
 }
 
+export const SEMI_ENGLISH_MATHS_REMARKS: string[] = [
+  "Solves addition, subtraction, and word problems accurately.",
+  "Understands place value and face value of numbers.",
+  "Identifies and draws geometric shapes accurately.",
+  "Performs multiplication and division calculations quickly.",
+  "Understands fraction concepts and decimal representation.",
+  "Reads clock time, calendar dates, and handles currency.",
+  "Applies mathematical formulas and steps correctly.",
+  "Measures length, mass, volume, and perimeter.",
+  "Interprets charts, tables, and bar graphs.",
+  "Completes math assignments and homework regularly.",
+  "Counts and writes numbers accurately.",
+  "Uses mathematical concepts in daily life situations.",
+  "Solves simple mental arithmetic problems effortlessly.",
+  "Understands patterns and geometric symmetry.",
+  "Explains mathematical reasoning step-by-step.",
+];
+
+// Explicit dataset object for Semi-English Medium codes
 export const SEMI_ENGLISH_REMARKS: SubjectRemarks = {
-  dvitiybhasha: [
-    "Reads words and simple sentences accurately.",
-    "Listens attentively to stories and rhymes.",
-    "Expresses thoughts and answers in simple English.",
-    "Identifies pictures, objects, and vocabulary words.",
-    "Writes neatly with correct spellings and punctuation.",
-    "Participates enthusiastically in conversation and games.",
-    "Recites poems and rhymes with proper rhythm.",
-    "Understands instructions and acts accordingly.",
-    "Uses dictionary and builds new word vocabulary.",
-    "Completes workbook exercises and self-study independently.",
-  ],
-  ganit: [
-    "Solves addition, subtraction, and word problems accurately.",
-    "Understands place value and face value of numbers.",
-    "Identifies and draws geometric shapes accurately.",
-    "Performs multiplication and division calculations quickly.",
-    "Understands fraction concepts and decimal representation.",
-    "Reads clock time, calendar dates, and handles currency.",
-    "Applies mathematical formulas and steps correctly.",
-    "Measures length, mass, volume, and perimeter.",
-    "Interprets charts, tables, and bar graphs.",
-    "Completes math assignments and homework regularly.",
-  ],
-  vijnan: [
-    "Performs science experiments enthusiastically with observations.",
-    "Understands concepts of human body, health, and hygiene.",
-    "Observes environmental changes and nature around.",
-    "Distinguishes between living and non-living organisms.",
-    "Draws neat labeled diagrams of scientific apparatus/organs.",
-    "Explains scientific causes and logical reasons clearly.",
-    "Participates in science exhibitions and projects.",
-    "Uses digital technology and computer tools effectively.",
-    "Demonstrates awareness of environmental conservation.",
-    "Maintains practical work file and experiment records.",
-  ],
-  parisar: [
-    "Observes nature and environmental surroundings carefully.",
-    "Understands natural resources, water, air, and plant life.",
-    "Participates actively in eco-friendly activities.",
-    "Reads maps, directions, and geographic features.",
-    "Understands history, civics, and community responsibilities.",
-    "Performs simple science experiments and records findings.",
-    "Shows curiosity and asks relevant questions about nature.",
-    "Understands health, personal hygiene, and safety rules.",
-    "Identifies historical monuments, symbols, and heritage.",
-    "Completes environmental projects and assignments on time.",
-  ],
+  ganit: SEMI_ENGLISH_MATHS_REMARKS,
+};
+
+// Explicit separate datasets in code for Marathi Medium vs Semi-English Medium
+export const MARATHI_MEDIUM_CLASS_REMARKS: Record<string, SubjectRemarks> = {
+  "1st": CLASS_1_REMARKS,
+  "2nd": CLASS_2_REMARKS,
+  "3rd": CLASS_3_REMARKS,
+  "4th": CLASS_4_REMARKS,
+  "5th": CLASS_5_REMARKS,
+  "6th": CLASS_6_REMARKS,
+  "7th": CLASS_7_REMARKS,
+  "8th": CLASS_8_REMARKS,
+  "9th": CLASS_9_REMARKS,
+  "10th": CLASS_10_REMARKS,
+};
+
+export const SEMI_MEDIUM_CLASS_REMARKS: Record<string, SubjectRemarks> = {
+  "1st": { ...CLASS_1_REMARKS, ganit: SEMI_ENGLISH_MATHS_REMARKS },
+  "2nd": { ...CLASS_2_REMARKS, ganit: SEMI_ENGLISH_MATHS_REMARKS },
+  "3rd": { ...CLASS_3_REMARKS, ganit: SEMI_ENGLISH_MATHS_REMARKS },
+  "4th": { ...CLASS_4_REMARKS, ganit: SEMI_ENGLISH_MATHS_REMARKS },
+  "5th": { ...CLASS_5_REMARKS, ganit: SEMI_ENGLISH_MATHS_REMARKS },
+  "6th": { ...CLASS_6_REMARKS, ganit: SEMI_ENGLISH_MATHS_REMARKS },
+  "7th": { ...CLASS_7_REMARKS, ganit: SEMI_ENGLISH_MATHS_REMARKS },
+  "8th": { ...CLASS_8_REMARKS, ganit: SEMI_ENGLISH_MATHS_REMARKS },
+  "9th": { ...CLASS_9_REMARKS, ganit: SEMI_ENGLISH_MATHS_REMARKS },
+  "10th": { ...CLASS_10_REMARKS, ganit: SEMI_ENGLISH_MATHS_REMARKS },
 };
 
 export function getClassRemarks(classKey: string, medium: string = "marathi"): SubjectRemarks {
   const normKey = normalizeClassKey(classKey);
+  const isSemi = medium === "semi";
   
-  // 1. Load base Marathi medium remarks for the requested class
-  let marathiRaw: SubjectRemarks;
-  switch (normKey) {
-    case "1st": marathiRaw = CLASS_1_REMARKS; break;
-    case "2nd": marathiRaw = CLASS_2_REMARKS; break;
-    case "3rd": marathiRaw = CLASS_3_REMARKS; break;
-    case "4th": marathiRaw = CLASS_4_REMARKS; break;
-    case "5th": marathiRaw = CLASS_5_REMARKS; break;
-    case "6th": marathiRaw = CLASS_6_REMARKS; break;
-    case "7th": marathiRaw = CLASS_7_REMARKS; break;
-    case "8th": marathiRaw = CLASS_8_REMARKS; break;
-    case "9th": marathiRaw = CLASS_9_REMARKS; break;
-    case "10th": marathiRaw = CLASS_10_REMARKS; break;
-    default: marathiRaw = CLASS_1_REMARKS; break;
-  }
+  // 1. Pick separate raw dataset based on medium (Semi vs Marathi)
+  const datasetMap = isSemi ? SEMI_MEDIUM_CLASS_REMARKS : MARATHI_MEDIUM_CLASS_REMARKS;
+  const rawData = datasetMap[normKey] || datasetMap["1st"];
 
   const cleaned: SubjectRemarks = {};
-  for (const [subKey, remarksList] of Object.entries(marathiRaw)) {
+  for (const [subKey, remarksList] of Object.entries(rawData)) {
     if (Array.isArray(remarksList) && remarksList.length > 0) {
       cleaned[subKey] = remarksList.map((r) => cleanDevanagari(r));
     }
   }
 
-  // 2. If medium is semi, override Mathematics, Science, Environmental Studies, and English with Semi-English remarks
-  if (medium === "semi") {
-    Object.entries(SEMI_ENGLISH_REMARKS).forEach(([subKey, remarksList]) => {
-      cleaned[subKey] = remarksList;
-    });
+  // 2. Ensure Maths (ganit) in semi medium has English remarks explicitly separated
+  if (isSemi) {
+    cleaned.ganit = SEMI_ENGLISH_MATHS_REMARKS;
   }
 
   // Aliases for subject key variations
