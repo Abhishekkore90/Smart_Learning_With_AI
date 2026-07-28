@@ -18,6 +18,10 @@ import {
 } from "lucide-react";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
+// @ts-ignore
+import { matchStudentClassAndMedium } from "@/result/firestoreMarksHelper";
+// @ts-ignore
+import { getTeacherId, matchStudentTeacherClassAndMedium } from "@/lib/teacherIsolationHelper";
 import { useState, useMemo, useEffect } from "react";
 import { showToast as toast } from "@/lib/custom-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -188,31 +192,23 @@ function TeacherResultsPage() {
     localStorage.setItem("cce_selected_medium", selectedMedium);
   }, [selectedMedium]);
 
-  // Real-time student count sync for selected class AND medium
-  useEffect(() => {
-    const isStudentSemi = (s: any) => {
-      if (s.isSemiEnglish === true) return true;
-      if (s.isSemiEnglish === false) return false;
-      if (!s.medium) return false;
-      const m = String(s.medium).toLowerCase();
-      return m.includes("semi") || m.includes("सेमी");
-    };
+  const teacherId = getTeacherId(user, profile);
 
+  // Real-time student count sync for selected class AND medium (isolated by teacherId)
+  useEffect(() => {
     const q = query(
       collection(db, "users"),
-      where("role", "==", "student"),
-      where("class", "==", selectedClass)
+      where("role", "==", "student")
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const raw = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       const filtered = raw.filter((s: any) => {
-        const isSemi = isStudentSemi(s);
-        return selectedMedium === "semi" ? isSemi : !isSemi;
+        return matchStudentTeacherClassAndMedium(s, teacherId, selectedClass, selectedMedium);
       });
       setStudentsCount(filtered.length);
     });
     return () => unsubscribe();
-  }, [selectedClass, selectedMedium]);
+  }, [selectedClass, selectedMedium, teacherId]);
 
   // Custom File Uploader List States
   const [searchTerm, setSearchTerm] = useState("");
@@ -222,28 +218,20 @@ function TeacherResultsPage() {
   const [resultsList, setResultsList] = useState<any[]>([]);
   const [cceInfo, setCceInfo] = useState<any>(null);
 
+  // Real-time listener for school_settings & local storage updates (isolated by teacherId)
   useEffect(() => {
-    if (cceInfo?.medium) {
-      const isSemi = cceInfo.medium.toLowerCase().includes("semi");
-      const m = isSemi ? "semi" : "marathi";
-      setSelectedMedium(m);
-      localStorage.setItem("cce_selected_medium", m);
-    }
-  }, [cceInfo]);
-
-  // Real-time listener for school_settings/general & local storage updates
-  useEffect(() => {
-    const unsubSettings = onSnapshot(doc(db, "school_settings", "general"), (snap) => {
+    const unsubSettings = onSnapshot(doc(db, "school_settings", `${teacherId}_general`), (snap) => {
       if (snap.exists() && snap.data().medium) {
-        const isSemi = snap.data().medium.toLowerCase().includes("semi");
+        const isSemi = String(snap.data().medium).toLowerCase().includes("semi");
         const m = isSemi ? "semi" : "marathi";
         setSelectedMedium(m);
+        localStorage.setItem(`cce_selected_medium_${teacherId}`, m);
         localStorage.setItem("cce_selected_medium", m);
       }
     });
 
     const handleCustomEvent = () => {
-      const stored = localStorage.getItem("cce_selected_medium");
+      const stored = localStorage.getItem(`cce_selected_medium_${teacherId}`) || localStorage.getItem("cce_selected_medium");
       if (stored) setSelectedMedium(stored);
     };
 
@@ -255,7 +243,7 @@ function TeacherResultsPage() {
       window.removeEventListener("cce_settings_updated", handleCustomEvent);
       window.removeEventListener("storage", handleCustomEvent);
     };
-  }, []);
+  }, [teacherId]);
 
   // Load cce_settings for the current class+year with instant cache and parallel fallback
   useEffect(() => {
@@ -540,22 +528,12 @@ function TeacherResultsPage() {
                     </select>
                   </div>
 
-                  {/* Medium Selector (Interactive Dropdown on Dashboard) */}
-                  <div className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-500/20 rounded-2xl px-4 py-2 ring-2 ring-purple-100">
-                    <span className="text-xs font-medium text-purple-100 uppercase tracking-wider">माध्यम:</span>
-                    <select
-                      className="bg-transparent text-white text-xs font-extrabold outline-none cursor-pointer border-none"
-                      value={selectedMedium}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setSelectedMedium(val);
-                        localStorage.setItem("cce_selected_medium", val);
-                        window.dispatchEvent(new Event("cce_settings_updated"));
-                      }}
-                    >
-                      <option value="marathi" className="text-slate-800 font-bold">मराठी माध्यम (Marathi)</option>
-                      <option value="semi" className="text-slate-800 font-bold">सेमी इंग्रजी (Semi-English)</option>
-                    </select>
+                  {/* Medium Indicator (Configured from School Info Settings) */}
+                  <div className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-500/20 rounded-2xl px-4 py-2 ring-2 ring-purple-100/50">
+                    <span className="text-xs font-bold text-purple-200 uppercase tracking-wider">माध्यम:</span>
+                    <span className="text-xs font-black text-white">
+                      {selectedMedium === "semi" ? "सेमी इंग्रजी (Semi-English)" : "मराठी माध्यम (Marathi)"}
+                    </span>
                   </div>
                 </div>
               </div>

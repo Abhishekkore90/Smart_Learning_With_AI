@@ -4,6 +4,9 @@ import { doc, getDoc, setDoc, collection, query, where, onSnapshot } from "fireb
 import { ChevronRight, ArrowLeft, Calendar, Users, CheckCircle2, Clock, Sparkles, Save, Check } from "lucide-react";
 import { toast } from "sonner";
 
+// @ts-ignore
+import { matchStudentClassAndMedium } from "@/result/firestoreMarksHelper";
+
 interface Student {
   id: string;
   fullName?: string;
@@ -58,16 +61,17 @@ export function CCEAttendance({
   const today = new Date();
   const todayDay = today.getDate();
 
-  // 1. Fetch student roster
+  // 1. Fetch student roster (Filtered by Class and Medium)
   useEffect(() => {
+    const currentMedium = localStorage.getItem("cce_selected_medium") || "marathi";
     const q = query(
       collection(db, "users"),
-      where("role", "==", "student"),
-      where("class", "==", selectedClass)
+      where("role", "==", "student")
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as Student[];
-      setStudents(data.sort((a, b) => parseInt(a.rollNo || "999") - parseInt(b.rollNo || "999")));
+      const filtered = data.filter((s) => matchStudentClassAndMedium(s, selectedClass, currentMedium));
+      setStudents(filtered.sort((a, b) => parseInt(a.rollNo || "999") - parseInt(b.rollNo || "999")));
     });
     return () => unsubscribe();
   }, [selectedClass]);

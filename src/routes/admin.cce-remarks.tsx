@@ -204,7 +204,7 @@ function isHeaderOrNoiseLine(line: string): boolean {
   return false;
 }
 
-export default function AdminCCERemarksPage() {
+function AdminCCERemarksPage() {
   const navigate = useNavigate();
   const [selectedClass, setSelectedClass] = useState("1st");
   const [mode, setMode] = useState<"pdf" | "manual">("pdf");
@@ -256,7 +256,8 @@ export default function AdminCCERemarksPage() {
         }
 
         // 2. Fetch directly from Bunny CDN URL
-        const cdnUrl = `https://SGKBRAINOVA.b-cdn.net/cce_remarks/class_${selectedClass}_remarks.json`;
+        const cdnBase = import.meta.env.DEV ? '/api/bunny-cdn' : 'https://sgkbrainova.b-cdn.net';
+        const cdnUrl = `${cdnBase}/cce_remarks/class_${selectedClass}_remarks.json`;
         const res = await fetch(cdnUrl);
         if (res.ok) {
           const data = await res.json();

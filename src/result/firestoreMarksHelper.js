@@ -2,30 +2,70 @@ import { db } from "../lib/firebase";
 import { doc, getDoc, collection, getDocs, query, where } from "firebase/firestore";
 import { fetchJsonFromBunny, saveJsonToBunny } from "../lib/bunnyStorage";
 
+export const normalizeClassKey = (cls) => {
+  if (!cls) return "";
+  const s = String(cls).trim().toLowerCase();
+  if (s.includes("1st") || s.includes("पहिली") || s === "1") return "1st";
+  if (s.includes("2nd") || s.includes("दुसरी") || s === "2") return "2nd";
+  if (s.includes("3rd") || s.includes("तिसरी") || s === "3") return "3rd";
+  if (s.includes("4th") || s.includes("चौथी") || s === "4") return "4th";
+  if (s.includes("5th") || s.includes("पाचवी") || s === "5") return "5th";
+  if (s.includes("6th") || s.includes("सहावी") || s === "6") return "6th";
+  if (s.includes("7th") || s.includes("सातवी") || s === "7") return "7th";
+  if (s.includes("8th") || s.includes("आठवी") || s === "8") return "8th";
+  return s.replace(/[^0-9a-z]/g, "");
+};
+
 export const isStudentSemiEnglish = (s) => {
   if (s.isSemiEnglish === true) return true;
   if (s.isSemiEnglish === false) return false;
-  if (!s.medium) return false;
-  const m = String(s.medium).toLowerCase();
-  return m.includes("semi") || m.includes("सेमी");
+  if (s.medium) {
+    const m = String(s.medium).toLowerCase().trim();
+    if (m === "semi" || m.includes("semi") || m.includes("सेमी") || m.includes("english")) return true;
+    if (m === "marathi" || m.includes("मराठी")) return false;
+  }
+  if (s.class || s.currentClass || s.className) {
+    const c = String(s.class || s.currentClass || s.className).toLowerCase();
+    if (c.includes("semi") || c.includes("सेमी")) return true;
+  }
+  return false;
+};
+
+export const matchStudentClassAndMedium = (student, targetClass, targetMedium, currentTeacherId = null) => {
+  if (!student) return false;
+
+  // If currentTeacherId is supplied or in localStorage, enforce teacher isolation
+  const tId = currentTeacherId || (typeof localStorage !== "undefined" ? localStorage.getItem("current_teacher_id") : null);
+  const sTeacherId = student.teacherId || student.createdById || student.userId;
+  if (tId && sTeacherId) {
+    if (sTeacherId !== tId) return false;
+  }
+
+  const stdClass = normalizeClassKey(student.class || student.currentClass || student.className);
+  const tgtClass = normalizeClassKey(targetClass);
+  if (stdClass !== tgtClass) return false;
+
+  const isSemi = isStudentSemiEnglish(student);
+  const targetIsSemi = String(targetMedium || "marathi").toLowerCase().trim() === "semi";
+  return targetIsSemi ? isSemi : !isSemi;
 };
 
 /**
  * Fetch students for a class from Firestore (users & students collections) and Bunny Storage CDN
  */
-export const fetchStudentsForClass = async (selectedClass, medium) => {
+export const fetchStudentsForClass = async (selectedClass, medium, teacherId = null) => {
   let loadedStudents = [];
-  const normalizeClass = (cls) => (cls ? String(cls).trim().toLowerCase().replace(/[^0-9a-z]/g, "") : "");
-  const targetClassNorm = normalizeClass(selectedClass);
+  const targetClassNorm = normalizeClassKey(selectedClass);
   const selectedMedium = medium || (typeof localStorage !== "undefined" ? localStorage.getItem("cce_selected_medium") : null) || "marathi";
+  const activeTeacherId = teacherId || (typeof localStorage !== "undefined" ? localStorage.getItem("current_teacher_id") : null);
 
   try {
     const uQuery = query(collection(db, "users"), where("role", "==", "student"));
     const uSnap = await getDocs(uQuery);
     uSnap.forEach((docSnap) => {
       const d = docSnap.data();
-      const stdClassNorm = normalizeClass(d.class || d.currentClass || d.className);
-      if (stdClassNorm === targetClassNorm || d.class === selectedClass) {
+      const studentObj = { id: docSnap.id, ...d };
+      if (matchStudentClassAndMedium(studentObj, targetClassNorm, selectedMedium, activeTeacherId)) {
         loadedStudents.push({
           id: docSnap.id,
           srNo: String(d.rollNo || d.srNo || loadedStudents.length + 1),
@@ -39,6 +79,7 @@ export const fetchStudentsForClass = async (selectedClass, medium) => {
           currentClass: d.class || d.currentClass || selectedClass,
           medium: d.medium,
           isSemiEnglish: d.isSemiEnglish,
+          teacherId: d.teacherId || d.createdById,
           division: d.division || "1",
           dob: d.dob || d.birthDate || "",
           caste: d.caste || d.category || "",
@@ -53,8 +94,8 @@ export const fetchStudentsForClass = async (selectedClass, medium) => {
       const studentsSnap = await getDocs(collection(db, "students"));
       studentsSnap.forEach((docSnap) => {
         const d = docSnap.data();
-        const stdClassNorm = normalizeClass(d.class || d.currentClass || d.className);
-        if (stdClassNorm === targetClassNorm || d.class === selectedClass) {
+        const studentObj = { id: docSnap.id, ...d };
+        if (matchStudentClassAndMedium(studentObj, targetClassNorm, selectedMedium)) {
           loadedStudents.push({
             id: docSnap.id,
             srNo: String(d.rollNo || d.srNo || loadedStudents.length + 1),
@@ -77,12 +118,6 @@ export const fetchStudentsForClass = async (selectedClass, medium) => {
       });
     } catch (e) {}
   }
-
-  // Filter students by selected Medium
-  loadedStudents = loadedStudents.filter((s) => {
-    const isSemi = isStudentSemiEnglish(s);
-    return selectedMedium === "semi" ? isSemi : !isSemi;
-  });
 
   // Fetch detailed student profiles from student_details collection
   const detailsMap = new Map();
@@ -130,44 +165,49 @@ export const fetchStudentsForClass = async (selectedClass, medium) => {
 /**
  * Fetch marks for a class & academicYear & term from all Firestore & Bunny CDN sources
  */
-export const fetchFirestoreMarks = async (selectedClass, academicYear, term = "first") => {
-  const filePathSec = `cce_results/${selectedClass}_${academicYear}_marks_second.json`;
-  const filePathFirst = `cce_results/${selectedClass}_${academicYear}_marks_first.json`;
+export const fetchFirestoreMarks = async (selectedClass, academicYear, term = "first", teacherId = null) => {
+  const activeTeacherId = teacherId || (typeof localStorage !== "undefined" ? localStorage.getItem("current_teacher_id") : null);
   
   let bunnyMarksSec = {};
   let bunnyMarksFirst = {};
 
   try {
-    bunnyMarksSec = (await fetchJsonFromBunny(filePathSec)) || {};
-    bunnyMarksFirst = (await fetchJsonFromBunny(filePathFirst)) || {};
+    if (activeTeacherId) {
+      bunnyMarksSec = (await fetchJsonFromBunny(`cce_results/${activeTeacherId}_${selectedClass}_${academicYear}_marks_second.json`)) || {};
+      bunnyMarksFirst = (await fetchJsonFromBunny(`cce_results/${activeTeacherId}_${selectedClass}_${academicYear}_marks_first.json`)) || {};
+    }
   } catch (e) {}
 
-  let fsDataGen = {};
-  let fsDataSem1 = {};
-  let fsDataSem2 = {};
+  let mergedMarks = {};
 
-  try {
-    const docId = `${selectedClass}_${academicYear}`;
-    const snapGen = await getDoc(doc(db, "cce_marks_v2", docId));
-    const snapSem1 = await getDoc(doc(db, "cce_marks_v2", `${selectedClass}_${academicYear}_sem1`));
-    const snapSem2 = await getDoc(doc(db, "cce_marks_v2", `${selectedClass}_${academicYear}_sem2`));
+  const loadDocData = async (examKey) => {
+    if (activeTeacherId) {
+      try {
+        const snap = await getDoc(doc(db, "cce_marks_v2", `${activeTeacherId}_${selectedClass}_${academicYear}_${examKey}`));
+        if (snap.exists()) return snap.data().records || snap.data().marksData || snap.data();
+      } catch (e) {}
+    }
+    // Fallback if no activeTeacherId or for legacy
+    try {
+      const snap = await getDoc(doc(db, "cce_marks_v2", `${selectedClass}_${academicYear}_${examKey}`));
+      if (snap.exists()) return snap.data().records || snap.data().marksData || snap.data();
+    } catch (e) {}
+    return {};
+  };
 
-    fsDataGen = snapGen.exists() ? snapGen.data() : {};
-    fsDataSem1 = snapSem1.exists() ? snapSem1.data() : {};
-    fsDataSem2 = snapSem2.exists() ? snapSem2.data() : {};
-  } catch (err) {
-    console.error("Error fetching marks:", err);
-  }
+  const sem1 = await loadDocData("sem1");
+  const sem2 = await loadDocData("sem2");
+  const gen = await loadDocData("");
 
-  const merged = {
-    ...(fsDataGen.semester2 || fsDataGen.semester1 || fsDataGen.marksData || fsDataGen.data || fsDataGen || {}),
-    ...(fsDataSem1.records || fsDataSem1.marksData || fsDataSem1 || {}),
-    ...(fsDataSem2.records || fsDataSem2.marksData || fsDataSem2 || {}),
+  mergedMarks = {
+    ...(gen.semester2 || gen.semester1 || gen.marksData || gen.data || gen || {}),
+    ...(sem1.records || sem1.marksData || sem1 || {}),
+    ...(sem2.records || sem2.marksData || sem2 || {}),
     ...bunnyMarksFirst,
     ...bunnyMarksSec,
   };
 
-  return merged;
+  return mergedMarks;
 };
 
 /**

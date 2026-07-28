@@ -203,8 +203,11 @@ const OutcomeTable = ({ title, outcomes, subjectName, getUserSelectedLevel, stud
   if (!outcomes || outcomes.length === 0) return null;
 
   return (
-    <div className="mb-4 break-inside-avoid">
-      <h3 className="text-xs font-black text-blue-950 mb-1 text-center bg-blue-100/90 py-1 rounded border border-blue-300">
+    <div className="mb-3">
+      <h3
+        className="text-xs font-black text-blue-950 mb-1 text-center bg-blue-100/90 py-1 rounded border border-blue-300"
+        style={{ breakAfter: "avoid", pageBreakAfter: "avoid" }}
+      >
         {title}
       </h3>
       <table className="w-full border-collapse border border-blue-400 text-xs font-medium table-fixed">
@@ -216,7 +219,7 @@ const OutcomeTable = ({ title, outcomes, subjectName, getUserSelectedLevel, stud
           <col style={{ width: "30px" }} />
           <col style={{ width: "30px" }} />
         </colgroup>
-        <thead>
+        <thead style={{ display: "table-header-group", breakAfter: "avoid", pageBreakAfter: "avoid" }}>
           <tr className="bg-blue-100 text-blue-950 font-bold text-center text-[10px]">
             <th rowSpan={2} style={{ width: "65px", minWidth: "65px", maxWidth: "65px" }} className="border border-blue-400 p-0.5 text-center align-middle leading-tight">
               अध्ययन<br />निष्पत्ती क्र.
@@ -239,7 +242,7 @@ const OutcomeTable = ({ title, outcomes, subjectName, getUserSelectedLevel, stud
           {outcomes.map((item) => {
             const level = getUserSelectedLevel(student, item.code, subjectName);
             return (
-              <tr key={item.code} className="border-b border-blue-300 hover:bg-slate-50">
+              <tr key={item.code} className="border-b border-blue-300 hover:bg-slate-50" style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
                 <td style={{ width: "65px", minWidth: "65px", maxWidth: "65px" }} className="border border-blue-400 py-0.5 px-0.5 text-center font-bold text-slate-900 text-[10px] whitespace-nowrap align-middle">
                   {item.code}
                 </td>
@@ -443,12 +446,12 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", onBa
       const { default: html2pdf } = await import("html2pdf.js");
       const element = printRef.current;
       const opt = {
-        margin: [0, 0, 0, 0],
+        margin: [4, 4, 4, 4],
         filename: `अध्ययन_निष्पत्ती_प्रगतीदर्शक_${selectedClass}_${academicYear}.pdf`,
         image: { type: "jpeg", quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, logging: false },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        pagebreak: { mode: ["css"] },
+        pagebreak: { mode: ["css", "legacy"] },
       };
       await html2pdf().set(opt).from(element).save();
       toast.success("PDF यशस्वीरित्या डाऊनलोड झाली!");
@@ -619,8 +622,12 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", onBa
       {/* -------------------- PRINT CONTAINER (CLASS-SPECIFIC OUTCOMES & USER SELECTED LEVELS) -------------------- */}
       <div ref={printRef} className="cce-pdf-container max-w-4xl mx-auto">
 
-        {students.map((student) => (
-          <div key={student.id} className="pdf-page bg-white p-6 border border-slate-200 rounded-3xl shadow-sm flex flex-col justify-between mb-4" style={{ pageBreakAfter: "always", breakAfter: "page" }}>
+        {students.map((student, idx) => (
+          <div
+            key={student.id}
+            className="pdf-page bg-white p-5 border border-slate-200 rounded-2xl shadow-sm flex flex-col justify-between mb-4"
+            style={idx < students.length - 1 ? { pageBreakAfter: "always", breakAfter: "page" } : { pageBreakAfter: "auto", breakAfter: "auto" }}
+          >
             <div>
               {/* Header Title */}
               <h1 className="text-xl font-black text-blue-900 text-center mb-4 border-b-2 border-blue-900 pb-2 tracking-tight">

@@ -1,4 +1,7 @@
 import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/use-auth";
+// @ts-ignore
+import { getTeacherId } from "@/lib/teacherIsolationHelper";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import {
@@ -254,13 +257,15 @@ export function CCESettings({
     subjects: DEFAULT_SUBJECTS,
     isSemiEnglish: false,
   });
+  const { user, profile } = useAuth();
+  const teacherId = getTeacherId(user, profile);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const activeMediumKey = activeTeacherMedium.toLowerCase().includes("semi") ? "semi" : "marathi";
   const currentKey = `${activeTeacherClass}_${activeMediumKey}`;
 
-  // 1. Load global school settings
+  // 1. Load teacher-isolated school settings
   useEffect(() => {
     let isMounted = true;
     const loadGlobal = async () => {
@@ -268,14 +273,20 @@ export function CCESettings({
       try {
         let globalData: any = {};
         try {
-          const cached = localStorage.getItem("cce_general_school_settings");
+          const cached = localStorage.getItem(`cce_general_school_settings_${teacherId}`) || localStorage.getItem("cce_general_school_settings");
           if (cached) globalData = JSON.parse(cached);
         } catch (e) {}
 
-        const genRef = doc(db, "school_settings", "general");
-        const genSnap = await getDoc(genRef);
-        if (genSnap.exists()) {
-          globalData = { ...globalData, ...genSnap.data() };
+        const teacherGenRef = doc(db, "school_settings", `${teacherId}_general`);
+        const teacherGenSnap = await getDoc(teacherGenRef);
+        if (teacherGenSnap.exists()) {
+          globalData = { ...globalData, ...teacherGenSnap.data() };
+        } else {
+          // Fallback to teacherId doc
+          const tSnap = await getDoc(doc(db, "school_settings", teacherId));
+          if (tSnap.exists()) {
+            globalData = { ...globalData, ...tSnap.data() };
+          }
         }
 
         if (isMounted) {
@@ -373,6 +384,7 @@ export function CCESettings({
 
       // Global settings payload (shared across all classes)
       const globalUpdated = {
+        teacherId,
         schoolName: settings.schoolName,
         address: settings.address,
         udiseCode: settings.udiseCode,
@@ -385,7 +397,9 @@ export function CCESettings({
         updatedAt: new Date().toISOString(),
       };
 
-      // Save global settings
+      // Save global & teacher-isolated school settings
+      await setDoc(doc(db, "school_settings", `${teacherId}_general`), globalUpdated, { merge: true });
+      await setDoc(doc(db, "school_settings", teacherId), globalUpdated, { merge: true });
       await setDoc(doc(db, "school_settings", "general"), globalUpdated, { merge: true });
 
       // Save class + medium specific teacher data for all edited/loaded keys
@@ -396,6 +410,7 @@ export function CCESettings({
 
         const classUpdated = {
           ...globalUpdated,
+          teacherId,
           teacherName: teacherData.teacherName || "",
           signatureUrl: teacherData.signatureUrl || "",
           class: cls,
@@ -404,26 +419,29 @@ export function CCESettings({
           academicYear,
         };
 
-        // 1. Save specific class + medium doc
-        await setDoc(doc(db, "cce_settings", `${cls}_${med}_${academicYear}`), classUpdated, { merge: true });
+        // 1. Save teacher-isolated class doc
+        await setDoc(doc(db, "cce_settings", `${teacherId}_${cls}_${academicYear}`), classUpdated, { merge: true });
+        await setDoc(doc(db, "cce_settings", `${teacherId}_${cls}_${med}_${academicYear}`), classUpdated, { merge: true });
 
-        // 2. Also save to main class doc for legacy compatibility
+        // 2. Also save to main class docs for compatibility
+        await setDoc(doc(db, "cce_settings", `${cls}_${med}_${academicYear}`), classUpdated, { merge: true });
         await setDoc(doc(db, "cce_settings", `${cls}_${academicYear}`), classUpdated, { merge: true });
 
         try {
           const { saveJsonToBunny } = await import("@/lib/bunnyStorage");
-          await saveJsonToBunny(`cce_results/${cls}_${med}_${academicYear}_settings.json`, classUpdated);
-          await saveJsonToBunny(`cce_results/${cls}_${academicYear}_settings.json`, classUpdated);
+          await saveJsonToBunny(`cce_results/${teacherId}_${cls}_${med}_${academicYear}_settings.json`, classUpdated);
         } catch (e) {}
       }
 
       // Local storage cache updates
       try {
+        localStorage.setItem(`cce_general_school_settings_${teacherId}`, JSON.stringify(globalUpdated));
         localStorage.setItem("cce_general_school_settings", JSON.stringify(globalUpdated));
         if (settings.schoolName) localStorage.setItem("schoolName", settings.schoolName);
         if (settings.udiseCode) localStorage.setItem("udiseNumber", settings.udiseCode);
       } catch (e) {}
 
+      localStorage.setItem(`cce_selected_medium_${teacherId}`, globalIsSemi ? "semi" : "marathi");
       localStorage.setItem("cce_selected_medium", globalIsSemi ? "semi" : "marathi");
       window.dispatchEvent(new Event("cce_settings_updated"));
       toast.success(`शाळेची माहिती आणि इयत्ता ${activeTeacherClass} (${activeMediumKey === "semi" ? "सेमी" : "मराठी"}) चे वर्गशिक्षक जतन झाले!`);

@@ -3,6 +3,9 @@ import { db } from "../lib/firebase";
 import { doc, getDoc, collection, getDocs, query, where } from "firebase/firestore";
 import { Download, Printer, ArrowLeft, Loader2, AlertCircle, FileText, Copy } from "lucide-react";
 import { toast } from "sonner";
+import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
+import { getTeacherId, matchStudentTeacherClassAndMedium } from "../lib/teacherIsolationHelper";
+import { fetchStudentsForClass } from "./firestoreMarksHelper";
 import "./result.css";
 
 const DEFAULT_SUBJECTS = [
@@ -107,135 +110,96 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
             teacherSignature: mergedSettings.signatureUrl || "",
             headmasterSignature: mergedSettings.principalSignature || "",
           });
-          if (mergedSettings.subjects && Array.isArray(mergedSettings.subjects) && mergedSettings.subjects.length > 0) {
-            setSubjects(mergedSettings.subjects);
-          }
         }
+
+        let classSubjects = [];
+        if (mergedSettings.subjects && Array.isArray(mergedSettings.subjects) && mergedSettings.subjects.length > 0) {
+          classSubjects = mergedSettings.subjects;
+        } else {
+          classSubjects = getDefaultSubjectsForClass(selectedClass, selectedMedium);
+        }
+        setSubjects(classSubjects);
       } catch (e) {
         console.error("Error fetching school settings:", e);
       }
 
-      // 2. Fetch User's Real Students for this selected class (checking users, students, cce_students & Bunny Storage)
-      let loadedStudents = [];
-
-      const normalizeClass = (cls) => {
-        if (!cls) return "";
-        return String(cls).trim().toLowerCase().replace(/[^0-9a-z]/g, "");
-      };
-      const targetClassNorm = normalizeClass(selectedClass);
-
-      // A. Query 'users' collection (role == "student")
-      try {
-        const uQuery = query(
-          collection(db, "users"),
-          where("role", "==", "student")
-        );
-        const uSnap = await getDocs(uQuery);
-        uSnap.forEach((docSnap) => {
-          const d = docSnap.data();
-          const stdClassNorm = normalizeClass(d.class || d.currentClass || d.className);
-          if (!stdClassNorm || stdClassNorm === targetClassNorm || d.class === selectedClass) {
-            loadedStudents.push({
-              id: docSnap.id,
-              name: d.fullName || d.name || d.studentName || "",
-              rollNo: String(d.rollNo || d.srNo || loadedStudents.length + 1),
-              caste: d.caste || d.category || "सर्वसाधारण",
-              gender: d.gender || "Male",
-            });
-          }
-        });
-      } catch (e) {
-        console.error("Error fetching users collection students:", e);
-      }
-
-      // B. Query 'students' collection if needed
-      if (loadedStudents.length === 0) {
-        try {
-          const studentsSnap = await getDocs(collection(db, "students"));
-          studentsSnap.forEach((docSnap) => {
-            const d = docSnap.data();
-            const stdClassNorm = normalizeClass(d.class || d.currentClass || d.className);
-            if (!stdClassNorm || stdClassNorm === targetClassNorm || d.class === selectedClass) {
-              loadedStudents.push({
-                id: docSnap.id,
-                name: d.fullName || d.name || d.studentName || "",
-                rollNo: String(d.rollNo || d.srNo || loadedStudents.length + 1),
-                caste: d.caste || d.category || "सर्वसाधारण",
-                gender: d.gender || "Male",
-              });
-            }
-          });
-        } catch (e) {}
-      }
-
-      // C. Query cce_students doc fallback
-      if (loadedStudents.length === 0) {
-        try {
-          const cceStudentsSnap = await getDoc(doc(db, "cce_students", docId));
-          if (cceStudentsSnap.exists() && cceStudentsSnap.data().students) {
-            loadedStudents = cceStudentsSnap.data().students;
-          }
-        } catch (e) {}
-      }
-
-      // D. Query Bunny Storage CDN fallback
-      if (loadedStudents.length === 0) {
-        try {
-          const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
-          const bunnyStudents = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_students.json`);
-          if (bunnyStudents && Array.isArray(bunnyStudents) && bunnyStudents.length > 0) {
-            loadedStudents = bunnyStudents;
-          }
-        } catch (e) {}
-      }
-
-      // Filter by Medium
-      const isStudentSemi = (s) => {
-        if (s.isSemiEnglish === true) return true;
-        if (s.isSemiEnglish === false) return false;
-        if (!s.medium) return false;
-        const m = String(s.medium).toLowerCase();
-        return m.includes("semi") || m.includes("सेमी");
-      };
-      loadedStudents = loadedStudents.filter((s) => {
-        const isSemi = isStudentSemi(s);
-        return selectedMedium === "semi" ? isSemi : !isSemi;
-      });
-
-      // Deduplicate students by name / rollNo
-      const uniqueMap = new Map();
-      loadedStudents.forEach(s => {
-        if (s.name) {
-          const key = s.rollNo ? `${s.rollNo}_${s.name}` : s.name;
-          if (!uniqueMap.has(key)) {
-            uniqueMap.set(key, s);
-          }
-        }
-      });
-      loadedStudents = Array.from(uniqueMap.values());
-
-      // Sort students by roll number
-      loadedStudents.sort((a, b) => (parseInt(a.rollNo) || 0) - (parseInt(b.rollNo) || 0));
+      // 2. Fetch User's Real Students for this selected class & medium (Isolated by teacherId)
+      const currentTeacherId = getTeacherId();
+      const loadedStudents = await fetchStudentsForClass(selectedClass, selectedMedium, currentTeacherId);
       setStudents(loadedStudents);
 
-      // 3. Fetch User's Entered Marks for this Class & Year (Merging all sources from Bunny CDN & Firestore)
+      // 3. Fetch User's Entered Marks for this Class & Year (Merging all exam docs & Bunny CDN)
       try {
-        const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
-        const bunnyMarksSec = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_marks_second.json`);
-        const bunnyMarksFirst = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_marks_first.json`);
-        const bunnyMarksSem2 = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_marks_sem2.json`);
-        const bunnyMarksSem1 = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_marks_sem1.json`);
+        let mergedMarks = {};
 
-        const marksSnap = await getDoc(doc(db, "cce_marks_v2", docId));
-        const fsData = marksSnap.exists() ? marksSnap.data() : {};
-
-        const mergedMarks = {
-          ...(fsData.semester2 || fsData.semester1 || fsData.marksData || fsData.data || fsData || {}),
-          ...(bunnyMarksSem1 || {}),
-          ...(bunnyMarksSem2 || {}),
-          ...(bunnyMarksFirst || {}),
-          ...(bunnyMarksSec || {}),
+        const loadMarksDoc = async (examKey) => {
+          const docIdsToTry = [
+            `${currentTeacherId}_${selectedClass}_${academicYear}_${examKey}`,
+            `${currentTeacherId}_${selectedClass}_${selectedMedium}_${academicYear}_${examKey}`,
+            `${selectedClass}_${academicYear}_${examKey}`,
+            `${selectedClass}_${selectedMedium}_${academicYear}_${examKey}`,
+          ];
+          for (const dId of docIdsToTry) {
+            try {
+              const snap = await getDoc(doc(db, "cce_marks_v2", dId));
+              if (snap.exists()) {
+                const d = snap.data();
+                return d.records || d.marksData || d.data || d;
+              }
+            } catch (e) {}
+          }
+          return null;
         };
+
+        const examKeys = ["sem2", "sem1", "test1", "test2", "oral1", "oral2", "pratyakshik1", "pratyakshik2", "general"];
+
+        for (const exKey of examKeys) {
+          const exData = await loadMarksDoc(exKey);
+          if (exData && typeof exData === "object") {
+            Object.keys(exData).forEach((stdKey) => {
+              if (!mergedMarks[stdKey]) mergedMarks[stdKey] = {};
+              const stdObj = exData[stdKey];
+              if (stdObj && typeof stdObj === "object") {
+                Object.keys(stdObj).forEach((subKey) => {
+                  if (!mergedMarks[stdKey][subKey]) mergedMarks[stdKey][subKey] = {};
+                  if (typeof stdObj[subKey] === "object") {
+                    Object.assign(mergedMarks[stdKey][subKey], stdObj[subKey]);
+                  } else {
+                    mergedMarks[stdKey][subKey] = stdObj[subKey];
+                  }
+                });
+              }
+            });
+          }
+        }
+
+        // Bunny CDN fallback
+        try {
+          const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
+          const bunnyFiles = [
+            `cce_results/${selectedClass}_${academicYear}_marks_second.json`,
+            `cce_results/${selectedClass}_${academicYear}_marks_first.json`,
+            `cce_results/${selectedClass}_${academicYear}_marks_sem2.json`,
+            `cce_results/${selectedClass}_${academicYear}_marks_sem1.json`,
+          ];
+          for (const file of bunnyFiles) {
+            const bData = await fetchJsonFromBunny(file);
+            if (bData && typeof bData === "object") {
+              Object.keys(bData).forEach((stdKey) => {
+                if (!mergedMarks[stdKey]) mergedMarks[stdKey] = {};
+                const stdObj = bData[stdKey];
+                if (stdObj && typeof stdObj === "object") {
+                  Object.keys(stdObj).forEach((subKey) => {
+                    if (!mergedMarks[stdKey][subKey]) mergedMarks[stdKey][subKey] = {};
+                    if (typeof stdObj[subKey] === "object") {
+                      Object.assign(mergedMarks[stdKey][subKey], stdObj[subKey]);
+                    }
+                  });
+                }
+              });
+            }
+          }
+        } catch (e) {}
 
         setMarksData(mergedMarks);
       } catch (e) {
@@ -265,6 +229,8 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
 
           if (!recs) {
             const docIds = [
+              `${currentTeacherId}_${selectedClass}_${academicYear}_${sem}_${selectedMedium}`,
+              `${currentTeacherId}_${selectedClass}_${academicYear}_${sem}`,
               `${selectedClass}_${academicYear}_${sem}_${selectedMedium}`,
               `${selectedClass}_${academicYear}_${sem}`,
             ];
@@ -633,7 +599,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
             <React.Fragment key={student.id}>
               {/* Page A: Formative & Summative Evaluation Table */}
               <div
-                className={`pdf-page bg-white border border-slate-200 rounded-3xl h-[285mm] max-h-[285mm] overflow-hidden shadow-sm flex flex-col justify-between mb-4 ${pageMode === "1page" ? "p-3" : "p-6"}`}
+                className={`pdf-page bg-white border border-slate-200 rounded-3xl min-h-[285mm] h-auto overflow-hidden shadow-sm flex flex-col justify-between mb-4 ${pageMode === "1page" ? "p-3" : "p-6"}`}
                 style={{ pageBreakAfter: "always", breakAfter: "page" }}
               >
                 <div>
@@ -790,12 +756,12 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
                           const sankalitLekhiObt = subData.sankalitLekhi ?? subData.semesterWritten ?? "";
 
                           const tondiKaamMax = subData.tondiKaamMax || (isPracticalSub ? (tondiKaamObt !== "" ? 20 : 20) : (tondiKaamObt !== "" ? (tondiKaamObt > 10 ? 20 : 10) : 10));
-                          const pratyakshikPrayogMax = subData.pratyakshikPrayogMax || (isPracticalSub ? (pratyakshikPrayogObt !== "" ? 20 : 20) : (pratyakshikPrayogObt !== "" ? 10 : 10));
+                          const pratyakshikPrayogMax = subData.pratyakshikPrayogMax || (isPracticalSub ? (pratyakshikPrayogObt !== "" ? 50 : 20) : (pratyakshikPrayogObt !== "" ? 10 : 10));
                           const upakramKritiMax = subData.upakramKritiMax || (isPracticalSub ? (upakramKritiObt !== "" ? 20 : 20) : (upakramKritiObt !== "" ? 10 : 10));
-                          const prakalpaMax = subData.prakalpaMax || (isPracticalSub ? (prakalpaObt !== "" ? 20 : 20) : (prakalpaObt !== "" ? 10 : 10));
+                          const prakalpaMax = subData.prakalpaMax || (isPracticalSub ? "" : (prakalpaObt !== "" ? 10 : ""));
                           const chaachaniLekhiMax = subData.chaachaniLekhiMax || (isPracticalSub ? "" : (chaachaniLekhiObt !== "" ? (chaachaniLekhiObt <= 10 ? 10 : 20) : 20));
-                          const swadhyayVargakaryaMax = subData.swadhyayVargakaryaMax || (isPracticalSub ? (swadhyayVargakaryaObt !== "" ? 20 : 20) : (swadhyayVargakaryaObt !== "" ? 10 : 10));
-                          const itarMax = subData.itarMax || (isPracticalSub ? "" : (itarObt !== "" ? 10 : ""));
+                          const swadhyayVargakaryaMax = subData.swadhyayVargakaryaMax || (isPracticalSub ? (swadhyayVargakaryaObt !== "" ? 10 : 10) : (swadhyayVargakaryaObt !== "" ? 10 : 10));
+                          const itarMax = subData.itarMax || "";
 
                           const sankalitTondiMax = subData.sankalitTondiMax || (isPracticalSub ? "" : (sankalitTondiObt !== "" ? (sankalitTondiObt > 10 ? 20 : 10) : 10));
                           const sankalitPratyakshikMax = subData.sankalitPratyakshikMax || (sankalitPratyakshikObt !== "" ? 5 : "");
@@ -814,37 +780,57 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
                           const grandMax = 100;
                           const grade = grandTotalObt !== "" ? getGrade((Number(grandTotalObt) / grandMax) * 100) : "";
 
-                          const cellPad = pageMode === "1page" ? "p-0.5" : "p-1";
+                          const cellPad = pageMode === "1page" ? "p-0.5 text-[8px]" : "p-1 text-xs";
 
                           return (
                             <React.Fragment key={subjectName}>
+                              {/* Row 1: पैकी */}
                               <tr className="bg-white text-slate-900 font-bold border-t border-[#0080ff]">
-                                <td className={`border border-[#0080ff] border-b-0 ${cellPad} font-bold align-middle`}>{subIdx + 1}</td>
-                                <td className={`border border-[#0080ff] border-b-0 ${cellPad} text-[#002b66] text-center font-bold align-middle leading-snug`}>{subjectName}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} text-slate-800 align-middle`}>पैकी</td>
-                                <td className={`border border-[#0080ff] ${cellPad} align-middle`}>{tondiKaamMax}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} align-middle`}>{pratyakshikPrayogMax}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} align-middle`}>{upakramKritiMax}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} align-middle`}>{prakalpaMax}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} align-middle`}>{chaachaniLekhiMax}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} align-middle`}>{swadhyayVargakaryaMax}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} align-middle`}>{itarMax}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} font-extrabold align-middle`}>{formTotalMax}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} align-middle`}>{sankalitTondiMax}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} align-middle`}>{sankalitPratyakshikMax}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} align-middle`}>{sankalitLekhiMax}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} font-extrabold align-middle`}>{semTotalMax}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} font-extrabold align-middle`}>{grandMax}</td>
-                                <td className={`border border-[#0080ff] border-b-0 ${cellPad} font-bold text-slate-900 align-middle text-center`}>{grade}</td>
+                                <td rowSpan={2} className={`border border-[#0080ff] ${cellPad} font-extrabold align-middle text-center`}>{subIdx + 1}</td>
+                                <td rowSpan={2} className={`border border-[#0080ff] ${cellPad} text-[#002b66] text-center font-bold align-middle leading-snug`}>{subjectName}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} text-slate-800 font-bold bg-white align-middle text-center`}>पैकी</td>
+                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{tondiKaamMax}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{pratyakshikPrayogMax}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{upakramKritiMax}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{prakalpaMax}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{chaachaniLekhiMax}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{swadhyayVargakaryaMax}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{itarMax}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} font-extrabold align-middle text-center bg-white`}>{formTotalMax}</td>
+                                {isPracticalSub ? (
+                                  <td colSpan={4} rowSpan={2} className="border border-[#0080ff] bg-slate-50 align-middle"></td>
+                                ) : (
+                                  <>
+                                    <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{sankalitTondiMax}</td>
+                                    <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{sankalitPratyakshikMax}</td>
+                                    <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{sankalitLekhiMax}</td>
+                                    <td className={`border border-[#0080ff] ${cellPad} font-extrabold align-middle text-center bg-white`}>{semTotalMax}</td>
+                                  </>
+                                )}
+                                <td className={`border border-[#0080ff] ${cellPad} font-extrabold align-middle text-center bg-white`}>{grandMax}</td>
+                                <td rowSpan={2} className={`border border-[#0080ff] ${cellPad} font-extrabold text-slate-900 align-middle text-center text-xs`}>{grade || "-"}</td>
                               </tr>
+
+                              {/* Row 2: प्राप्त */}
                               <tr className="bg-white text-slate-900 font-bold border-b-2 border-[#0080ff]">
-                                <td className="border border-[#0080ff] p-1 font-black align-middle">{formTotalObt !== "" ? formTotalObt : ""}</td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{sankalitTondiObt !== "" ? sankalitTondiObt : ""}</td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{sankalitPratyakshikObt !== "" ? sankalitPratyakshikObt : ""}</td>
-                                <td className="border border-[#0080ff] p-1 align-middle">{sankalitLekhiObt !== "" ? sankalitLekhiObt : ""}</td>
-                                <td className="border border-[#0080ff] p-1 font-black align-middle">{semTotalObt !== "" ? semTotalObt : ""}</td>
-                                <td className="border border-[#0080ff] p-1 font-black align-middle">{grandTotalObt !== "" ? grandTotalObt : ""}</td>
-                                <td className="border border-[#0080ff] border-t-0 p-1 align-middle"></td>
+                                <td className={`border border-[#0080ff] ${cellPad} text-slate-800 font-bold bg-white align-middle text-center`}>प्राप्त</td>
+                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{tondiKaamObt !== "" ? tondiKaamObt : ""}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{pratyakshikPrayogObt !== "" ? pratyakshikPrayogObt : ""}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{upakramKritiObt !== "" ? upakramKritiObt : ""}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{prakalpaObt !== "" ? prakalpaObt : ""}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{chaachaniLekhiObt !== "" ? chaachaniLekhiObt : ""}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{swadhyayVargakaryaObt !== "" ? swadhyayVargakaryaObt : ""}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{itarObt !== "" ? itarObt : ""}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} font-extrabold align-middle text-center bg-white`}>{formTotalObt !== "" ? formTotalObt : ""}</td>
+                                {!isPracticalSub && (
+                                  <>
+                                    <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{sankalitTondiObt !== "" ? sankalitTondiObt : ""}</td>
+                                    <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{sankalitPratyakshikObt !== "" ? sankalitPratyakshikObt : ""}</td>
+                                    <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{sankalitLekhiObt !== "" ? sankalitLekhiObt : ""}</td>
+                                    <td className={`border border-[#0080ff] ${cellPad} font-extrabold align-middle text-center bg-white`}>{semTotalObt !== "" ? semTotalObt : ""}</td>
+                                  </>
+                                )}
+                                <td className={`border border-[#0080ff] ${cellPad} font-extrabold align-middle text-center bg-white`}>{grandTotalObt !== "" ? grandTotalObt : ""}</td>
                               </tr>
                             </React.Fragment>
                           );

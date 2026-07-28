@@ -55,6 +55,15 @@ export default defineConfig({
             'Referer': 'https://storage.bunnycdn.com',
             'Origin': 'https://storage.bunnycdn.com'
           }
+        },
+        '/api/bunny-cdn': {
+          target: 'https://sgkbrainova.b-cdn.net',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api\/bunny-cdn/, ''),
+          headers: {
+            'Referer': 'https://sgkbrainova.b-cdn.net',
+            'Origin': 'https://sgkbrainova.b-cdn.net'
+          }
         }
       }
     },
