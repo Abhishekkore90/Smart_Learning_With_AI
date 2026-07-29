@@ -61,6 +61,7 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize2,
+  SunMedium,
 } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
 import { AcademicPlanningSystem } from "@/components/teacher/AcademicPlanningSystem";
@@ -1760,6 +1761,7 @@ function DailyAssemblyContent() {
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const [dbFormData, setDbFormData] = useState<any>(null);
+  const [holidayNotice, setHolidayNotice] = useState<{ isHoliday: boolean; reason: string } | null>(null);
 
   const [schoolInfo, setSchoolInfo] = useState({
     schoolName: "",
@@ -1794,6 +1796,39 @@ function DailyAssemblyContent() {
   useEffect(() => {
     if (!selectedDate) return; // Skip on SSR / before client mount
     const todayLocalStr = getLocalDateString();
+
+    // Check declared holidays
+    const holidaysRef = doc(db, "school_holidays", "declared");
+    getDoc(holidaysRef)
+      .then((hSnap) => {
+        if (hSnap.exists()) {
+          const hData = hSnap.data();
+          if (hData[selectedDate]?.isHoliday) {
+            setHolidayNotice({
+              isHoliday: true,
+              reason: hData[selectedDate].reason || "शाळेस सुट्टी",
+            });
+            return;
+          }
+        }
+        // Check Sunday
+        const parts = selectedDate.split("-").map(Number);
+        if (parts.length === 3) {
+          const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+          if (dateObj.getDay() === 0) {
+            setHolidayNotice({
+              isHoliday: true,
+              reason: "रविवारची सुट्टी",
+            });
+            return;
+          }
+        }
+        setHolidayNotice(null);
+      })
+      .catch((err) => {
+        console.error("Error checking holidays", err);
+        setHolidayNotice(null);
+      });
 
     const archiveRef = doc(db, "daily_paripath_archive", selectedDate);
     const unsubscribeArchive = onSnapshot(
@@ -1865,9 +1900,7 @@ function DailyAssemblyContent() {
   };
 
   const handleDownloadPdf = async () => {
-    // Always generate PDF from live page content so all content shows as-is
-    const element = document.getElementById("daily-assembly-content");
-    if (!element) {
+    if (!formData) {
       toast.error("परिपाठ content सापडला नाही. कृपया पुन्हा प्रयत्न करा.");
       return;
     }
@@ -1877,9 +1910,7 @@ function DailyAssemblyContent() {
     try {
       const html2pdfModule = await import("html2pdf.js");
       let html2pdfFn: any = html2pdfModule.default || html2pdfModule;
-      if (html2pdfFn && html2pdfFn.default) {
-        html2pdfFn = html2pdfFn.default;
-      }
+      if (html2pdfFn && html2pdfFn.default) html2pdfFn = html2pdfFn.default;
       if (typeof html2pdfFn !== "function") {
         if (typeof window !== "undefined" && typeof (window as any).html2pdf === "function") {
           html2pdfFn = (window as any).html2pdf;
@@ -1889,481 +1920,250 @@ function DailyAssemblyContent() {
         throw new Error("html2pdf library is not loaded properly.");
       }
 
+      // Helper for safe text with newlines
+      const nl2br = (text: string) => (text || "").replace(/\n/g, "<br/>");
+
+      const data = formData;
+      const dateStr = selectedDate || new Date().toISOString().split("T")[0];
+
+      // Build clean HTML template for PDF
+      const tempDiv = document.createElement("div");
+      tempDiv.id = "temp-pdf-render";
+      tempDiv.style.width = "794px";
+      tempDiv.style.padding = "0";
+      tempDiv.style.margin = "0";
+      tempDiv.style.background = "#FFFFFF";
+      tempDiv.style.color = "#1F2937";
+      tempDiv.style.fontFamily = "'Noto Sans Devanagari', 'Mukta', system-ui, sans-serif";
+
+
+      // Shared style helpers
+      const greenBar = (title: string) =>
+        `<div style="background: #2e7d32; color: #fff; text-align: center; font-size: 14px; font-weight: 800; padding: 6px 14px; border-radius: 6px; margin: 0 0 8px 0; letter-spacing: 0.5px; font-family: 'Noto Sans Devanagari', sans-serif;">${title}</div>`;
+
+      const sectionBox = (borderColor: string = "#e2e8f0") =>
+        `border: 1.5px solid ${borderColor}; border-radius: 10px; padding: 12px 16px; margin-bottom: 14px; background: #fff; page-break-inside: avoid;`;
+
+      const contentText = `font-size: 13px; font-weight: 600; line-height: 1.65; color: #1F2937; margin: 0; text-align: center; font-family: 'Noto Sans Devanagari', sans-serif; white-space: pre-line;`;
+
+      const pageHeader = `
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2.5px solid #2e7d32; padding-bottom: 6px; margin-bottom: 12px;">
+          <div style="font-size: 14px; font-weight: 800; color: #2e7d32; font-family: 'Noto Sans Devanagari', sans-serif;">📖 दैनिक परिपाठ</div>
+          <div style="font-size: 13px; font-weight: 700; color: #2e7d32; font-family: 'Noto Sans Devanagari', sans-serif;">दिनांक: ${dateStr}</div>
+        </div>
+      `;
+
+      // School Info Header
+      const schoolHeader = (schoolInfo.schoolName || schoolInfo.udise || schoolInfo.kendra) ? `
+        <div style="border: 2px solid #2e7d32; border-radius: 10px; padding: 12px 18px; margin-bottom: 14px; background: #f0fdf4; text-align: center; page-break-inside: avoid;">
+          ${schoolInfo.schoolName ? `<div style="font-size: 18px; font-weight: 900; color: #166534; margin-bottom: 6px; font-family: 'Noto Sans Devanagari', sans-serif;">शाळेचे नाव: ${schoolInfo.schoolName}</div>` : ''}
+          <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: #166534; border-top: 1px dashed #86efac; padding-top: 6px; font-family: 'Noto Sans Devanagari', sans-serif;">
+            <span>केंद्र: ${schoolInfo.kendra || '-'} | युडायस (UDISE): ${schoolInfo.udise || '-'}</span>
+            <span>तालुका: ${schoolInfo.taluka || '-'} | जिल्हा: ${schoolInfo.jilha || '-'}</span>
+          </div>
+        </div>
+      ` : '';
+
+      // --- All content data ---
+      const nationalAnthem = data.nationalAnthem || data.nationalAnthem_mr || assemblyItems[0]?.content || "";
+      const stateAnthem = data.stateAnthem || data.stateAnthem_mr || assemblyItems[1]?.content || "";
+      const pledge = data.pledge || data.pledge_mr || assemblyItems[2]?.content || "";
+
+      // --- ALL REMAINING CONTENT flows continuously (no forced page breaks) ---
+      const preamble = data.preamble || data.preamble_mr || assemblyItems[3]?.content || "";
+      const prayer = data.prayer || data.prayer_mr || assemblyItems[4]?.content || "";
+      const silentPasayadan = data.silentPasayadan || assemblyItems[5]?.content || "";
+
+      const panchangItems = [
+        { label: "वार", value: data.day },
+        { label: "मास", value: data.month },
+        { label: "पक्ष", value: data.paksha },
+        { label: "तिथी", value: data.tithi },
+        { label: "नक्षत्र", value: data.nakshatra },
+        { label: "योग", value: data.yog },
+        { label: "सूर्योदय", value: data.sunrise },
+        { label: "सूर्यास्त", value: data.sunset },
+      ].filter(item => Boolean(item.value));
+
+      const eventsContent = data.events || data.dinvishesh || "";
+      const newsContent = data.valueNews || data.batmya || data.news || "";
+
+      const gkItems = [1, 2, 3, 4].map(num => data[`gkQ${num}`] ? `
+        <div style="background: #f5f3ff; border: 1px solid #ede9fe; border-radius: 8px; padding: 8px 12px; margin-bottom: 6px;">
+          <div style="font-size: 13px; font-weight: 800; color: #5b21b6; font-family: 'Noto Sans Devanagari', sans-serif;">प्रश्न ${num}: ${data[`gkQ${num}`]}</div>
+          <div style="font-size: 13px; font-weight: 700; color: #166534; margin-top: 4px; font-family: 'Noto Sans Devanagari', sans-serif;">उत्तर: ${data[`gkA${num}`] || "-"}</div>
+        </div>
+      ` : '').join('');
+
+      // Build ALL content as one continuous flow (no forced page breaks - html2pdf paginates automatically)
+      const allContent = `
+        <div style="padding: 14px 22px;">
+          ${pageHeader}
+          ${schoolHeader}
+          ${greenBar("परिपाठ सुरुवात")}
+          <div style="${sectionBox('#bbf7d0')}">
+            ${greenBar(assemblyItems[0]?.label || 'राष्ट्रगीत')}
+            <div style="${contentText} font-weight: 700;">${nl2br(nationalAnthem)}</div>
+          </div>
+          <div style="${sectionBox('#bbf7d0')}">
+            ${greenBar(assemblyItems[1]?.label || 'राज्यगीत')}
+            <div style="${contentText} font-size: 12px; line-height: 1.5;">${nl2br(stateAnthem)}</div>
+          </div>
+          <div style="${sectionBox('#bbf7d0')}">
+            ${greenBar(assemblyItems[2]?.label || 'प्रतिज्ञा')}
+            <div style="${contentText}">${nl2br(pledge)}</div>
+          </div>
+
+          <div style="${sectionBox('#fed7aa')}">
+            ${greenBar(assemblyItems[3]?.label || 'संविधान उद्देशिका')}
+            <div style="${contentText}">${nl2br(preamble)}</div>
+          </div>
+
+          <div style="${sectionBox('#bbf7d0')}">
+            ${greenBar(assemblyItems[4]?.label || 'प्रार्थना')}
+            <div style="${contentText}">${nl2br(prayer)}</div>
+          </div>
+
+          ${silentPasayadan ? `
+          <div style="${sectionBox('#fde68a')}">
+            ${greenBar(assemblyItems[5]?.label || 'पसायदान')}
+            <div style="${contentText} font-size: 12px; line-height: 1.55;">${nl2br(silentPasayadan)}</div>
+          </div>
+          ` : ''}
+
+          ${panchangItems.length > 0 ? `
+          <div style="${sectionBox('#fed7aa')}">
+            ${greenBar("आजचे पंचांग")}
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
+              ${panchangItems.map(item => `
+                <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 6px; text-align: center;">
+                  <div style="font-size: 10px; font-weight: 700; color: #92400e; text-transform: uppercase; font-family: 'Noto Sans Devanagari', sans-serif;">${item.label}</div>
+                  <div style="font-size: 13px; font-weight: 800; color: #1f2937; font-family: 'Noto Sans Devanagari', sans-serif;">${item.value}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+          ` : ''}
+
+          ${data.thought ? `
+          <div style="${sectionBox('#ede9fe')}">
+            ${greenBar("सुविचार")}
+            <div style="padding: 14px; background: #faf5ff; border: 1px solid #ede9fe; border-radius: 8px; text-align: center;">
+              <div style="font-size: 16px; font-weight: 800; color: #1f2937; font-style: italic; font-family: 'Noto Sans Devanagari', sans-serif;">"${data.thought}"</div>
+            </div>
+          </div>
+          ` : ''}
+
+          ${data.shlok ? `
+          <div style="${sectionBox('#fecaca')}">
+            ${greenBar("श्लोक")}
+            <div style="padding: 14px; background: #fff5f5; border: 1px solid #fecaca; border-radius: 8px; text-align: center;">
+              <div style="${contentText} font-size: 14px;">${nl2br(data.shlok)}</div>
+            </div>
+          </div>
+          ` : ''}
+
+          ${data.proverb ? `
+          <div style="${sectionBox('#ccfbf1')}">
+            ${greenBar("म्हण व अर्थ")}
+            <div style="padding: 12px; background: #f0fdfa; border: 1px solid #ccfbf1; border-radius: 8px; text-align: center; margin-bottom: 6px;">
+              <div style="font-size: 10px; font-weight: 700; color: #0d9488; text-transform: uppercase; margin-bottom: 4px; font-family: 'Noto Sans Devanagari', sans-serif;">म्हण</div>
+              <div style="font-size: 15px; font-weight: 800; color: #1f2937; font-family: 'Noto Sans Devanagari', sans-serif;">"${data.proverb}"</div>
+            </div>
+            ${data.proverbMeaning ? `
+            <div style="padding: 10px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; text-align: center;">
+              <div style="font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; margin-bottom: 4px; font-family: 'Noto Sans Devanagari', sans-serif;">म्हणीचा अर्थ</div>
+              <div style="font-size: 13px; font-weight: 600; color: #4b5563; font-family: 'Noto Sans Devanagari', sans-serif;">${data.proverbMeaning}</div>
+            </div>
+            ` : ''}
+          </div>
+          ` : ''}
+
+          ${eventsContent ? `
+          <div style="${sectionBox('#bfdbfe')}">
+            ${greenBar(`${data.dateMonth ? data.dateMonth + ' ' : ''}दिनविशेष`)}
+            ${data.yearDay ? `<div style="font-size: 12px; font-weight: 700; color: #3b82f6; text-align: center; background: #dbeafe; border-radius: 20px; padding: 4px 12px; display: inline-block; margin: 0 auto 8px auto; font-family: 'Noto Sans Devanagari', sans-serif;">हा वर्षातील ${data.yearDay} वा दिवस आहे.</div>` : ''}
+            <div style="${contentText} text-align: left; font-size: 13px;">${nl2br(eventsContent)}</div>
+          </div>
+          ` : ''}
+
+          ${newsContent ? `
+          <div style="${sectionBox('#a7f3d0')}">
+            ${greenBar("सुसंस्कारक्षम बातम्या")}
+            <div style="${contentText} text-align: left; font-size: 13px;">${nl2br(newsContent)}</div>
+          </div>
+          ` : ''}
+
+          ${data.patrioticSong ? `
+          <div style="${sectionBox('#c7d2fe')}">
+            ${greenBar(`देशभक्ती गीत${data.songTitle ? ': ' + data.songTitle : ''}`)}
+            <div style="${contentText} font-size: 13px;">${nl2br(data.patrioticSong)}</div>
+          </div>
+          ` : ''}
+
+          ${data.story ? `
+          <div style="${sectionBox('#fecdd3')}">
+            ${greenBar(`बोधकथा${data.storyTitle ? ': ' + data.storyTitle : ''}`)}
+            <div style="${contentText} text-align: left; font-size: 13px;">${nl2br(data.story)}</div>
+            ${data.moral ? `
+            <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 8px 14px; border-radius: 0 6px 6px 0; margin-top: 8px;">
+              <span style="font-size: 12px; font-weight: 800; color: #92400e; font-family: 'Noto Sans Devanagari', sans-serif;">⭐ तात्पर्य: </span>
+              <span style="font-size: 13px; font-weight: 700; color: #1f2937; font-family: 'Noto Sans Devanagari', sans-serif;">${data.moral}</span>
+            </div>
+            ` : ''}
+          </div>
+          ` : ''}
+
+          ${gkItems ? `
+          <div style="${sectionBox('#f3e8ff')}">
+            ${greenBar("सामान्य ज्ञान (G.K.)")}
+            ${gkItems}
+          </div>
+          ` : ''}
+
+          ${data.personalityTitle || data.personality ? `
+          <div style="${sectionBox('#ccfbf1')}">
+            ${greenBar(`थोरव्यक्ती परिचय${data.personalityTitle ? ': ' + data.personalityTitle : ''}`)}
+            <div style="${contentText} text-align: left;">${nl2br(data.personality || "-")}</div>
+          </div>
+          ` : ''}
+
+          <div style="width: 100%; height: 1.5px; background: linear-gradient(90deg, transparent, #cbd5e1, transparent); margin: 14px 0;"></div>
+          <div style="text-align: center; padding: 8px 0; font-size: 10px; font-weight: 700; color: #9ca3af; font-family: 'Noto Sans Devanagari', sans-serif;">
+            निर्मिती: ${data.creator || "Smart Learning With AI"} | © दैनिक परिपाठ ${new Date().getFullYear()}
+          </div>
+        </div>
+      `;
+
+      tempDiv.innerHTML = allContent;
+      document.body.appendChild(tempDiv);
+
       const opt = {
-        margin: 0,
-        filename: `Paripath_${selectedDate || new Date().toISOString().split("T")[0]}.pdf`,
+        margin: [6, 8, 6, 8],
+        filename: `Paripath_${dateStr}.pdf`,
         image: { type: "jpeg", quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          allowTaint: false,
-          letterRendering: true,
-          windowWidth: 794,
-          ignoreElements: (node: any) => {
-            return node.classList && node.classList.contains("pdf-hide");
-          },
-          onclone: (clonedDoc: any) => {
-            // Reset body/html styles to prevent parent offsets
-            clonedDoc.body.style.margin = "0";
-            clonedDoc.body.style.padding = "0";
-            clonedDoc.documentElement.style.margin = "0";
-            clonedDoc.documentElement.style.padding = "0";
-
-            const container = clonedDoc.getElementById("daily-assembly-content");
-            if (container) {
-              // Reset all parents to prevent centering and negative offsets
-              let parent = container.parentElement;
-              while (parent && parent !== clonedDoc.body) {
-                parent.style.margin = "0";
-                parent.style.padding = "0";
-                parent.style.width = "auto";
-                parent.style.maxWidth = "none";
-                parent.style.minWidth = "auto";
-                parent.style.display = "block";
-                parent.style.position = "static";
-                parent.style.transform = "none";
-                parent = parent.parentElement;
-              }
-
-              container.style.width = "794px";
-              container.style.margin = "0";
-              container.style.padding = "0px";
-              container.style.background = "#FFFFFF";
-              container.style.borderRadius = "0";
-              container.style.overflow = "visible";
-            }
-
-            // Remove ALL problematic CSS effects except pdf-page-break
-            const elements = clonedDoc.querySelectorAll("*");
-            elements.forEach((el: any) => {
-              if (el.classList) {
-                const classesToRemove = Array.from(el.classList).filter((c: any) =>
-                  c.includes("blur") || c.includes("drop-shadow") || c.includes("mix-blend") ||
-                  c.includes("backdrop") || c.includes("hover:") || c.includes("group-hover") ||
-                  c.includes("transition") || c.includes("animate") || c.includes("scale")
-                );
-                classesToRemove.forEach((c: any) => el.classList.remove(c));
-              }
-              if (el.style) {
-                el.style.backdropFilter = "none";
-                el.style.webkitBackdropFilter = "none";
-                el.style.filter = "none";
-                el.style.transform = "none";
-                el.style.transition = "none";
-                el.style.animation = "none";
-              }
-            });
-
-            // Remove decorative blobs
-            const decorativeBlobs = clonedDoc.querySelectorAll('[class*="absolute"][class*="rounded-full"]');
-            decorativeBlobs.forEach((blob: any) => {
-              if (!blob.textContent?.trim()) {
-                blob.style.display = "none";
-              }
-            });
-
-            // Dynamically scale font size based on text length of the entire card content
-            // Get all assembly section cards
-            const cards = clonedDoc.querySelectorAll(".assembly-section-card");
-            
-            // Define which IDs belong to which page (Fixed 5-page layout)
-            const pageGroups: Record<number, string[]> = {
-              1: ["nationalAnthem", "stateAnthem", "pledge", "preamble"],
-              2: ["prayer", "silentPasayadan", "panchang"],
-              3: ["thought", "shlok", "proverb"],
-              4: ["valueNews", "events", "song"],
-              5: ["story", "gk", "personality"]
-            };
-            
-            cards.forEach((card: any, index: number) => {
-              // No forced page breaks - let content flow naturally
-              // Only ensure each card doesn't split across pages
-              card.style.setProperty("page-break-inside", "avoid", "important");
-              card.style.setProperty("break-inside", "avoid", "important");
-
-              // Dynamic content font scaling
-              const contentEl = card.children[1];
-              if (contentEl) {
-                const text = contentEl.textContent || "";
-                const charCount = text.trim().length;
-                
-                let fontSize = "10px";
-                let lineHeight = "1.2";
-                
-                if (charCount > 2500) {
-                  fontSize = "7px";
-                  lineHeight = "1.05";
-                } else if (charCount > 1800) {
-                  fontSize = "7.5px";
-                  lineHeight = "1.1";
-                } else if (charCount > 1200) {
-                  fontSize = "8px";
-                  lineHeight = "1.12";
-                } else if (charCount > 800) {
-                  fontSize = "8.5px";
-                  lineHeight = "1.15";
-                } else if (charCount > 400) {
-                  fontSize = "9px";
-                  lineHeight = "1.18";
-                } else {
-                  if (card.id === "events" || card.id === "song" || card.id === "valueNews" || card.id === "story" || card.id === "preamble" || card.id === "thought" || card.id === "shlok" || card.id === "proverb") {
-                    fontSize = "9px";
-                    lineHeight = "1.15";
-                  }
-                }
-                
-                contentEl.style.setProperty("font-size", fontSize, "important");
-                contentEl.style.setProperty("line-height", lineHeight, "important");
-                
-                const allChildren = contentEl.querySelectorAll("*");
-                allChildren.forEach((child: any) => {
-                  child.style.setProperty("font-size", fontSize, "important");
-                  child.style.setProperty("line-height", lineHeight, "important");
-                });
-              }
-            });
-
-            // Inject clean print styles
-            const style = clonedDoc.createElement('style');
-            style.innerHTML = `
-              @page {
-                size: A4 portrait !important;
-                margin: 0 !important;
-              }
-              * {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                font-family: 'Noto Sans Devanagari', 'Mukta', 'Hind', sans-serif !important;
-                box-sizing: border-box !important;
-              }
-              body {
-                background-color: #ffffff !important;
-                margin: 0 !important;
-                padding: 0 !important;
-              }
-              .pdf-hide {
-                display: none !important;
-              }
-              .space-y-6 > :not([hidden]) ~ :not([hidden]) {
-                margin-top: 0 !important;
-              }
-              #daily-assembly-content {
-                width: 794px !important;
-                max-width: 794px !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                background: #ffffff !important;
-                border-radius: 0 !important;
-                overflow: visible !important;
-                box-shadow: none !important;
-              }
-              .assembly-section-card label {
-                padding: 2px 8px !important;
-                font-size: 11px !important;
-                margin: 0 !important;
-                background-color: #2e7d32 !important;
-                color: #ffffff !important;
-                border-radius: 4px !important;
-                font-weight: 800 !important;
-                display: inline-flex !important;
-              }
-              .assembly-section-card h3 {
-                padding: 2px 8px !important;
-                font-size: 12px !important;
-                margin: 0 !important;
-                font-weight: 800 !important;
-                border-bottom: 1px solid #e2e8f0 !important;
-                width: 100% !important;
-                text-align: center !important;
-              }
-              
-              /* Each section card - ZERO spacing */
-              .assembly-section-card {
-                width: 100% !important;
-                max-width: 100% !important;
-                margin: 0 0 4px 0 !important;
-                padding: 4px 10px !important;
-                background: #ffffff !important;
-                border: 1px solid #e2e8f0 !important;
-                border-radius: 8px !important;
-                box-shadow: none !important;
-                display: flex !important;
-                flex-direction: column !important;
-                justify-content: flex-start !important;
-                align-items: stretch !important;
-                position: relative !important;
-                overflow: hidden !important;
-                box-sizing: border-box !important;
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
-              }
-              .html2pdf__page-break {
-                page-break-after: always !important;
-                break-after: page !important;
-              }
-              /* Kill ALL Tailwind spacing utilities */
-              .assembly-section-card .space-y-5 > :not([hidden]) ~ :not([hidden]),
-              .assembly-section-card .space-y-6 > :not([hidden]) ~ :not([hidden]),
-              .assembly-section-card .space-y-4 > :not([hidden]) ~ :not([hidden]),
-              .assembly-section-card .space-y-3 > :not([hidden]) ~ :not([hidden]) {
-                margin-top: 0px !important;
-              }
-              .assembly-section-card .mb-4, .assembly-section-card .mb-6,
-              .assembly-section-card .mb-3, .assembly-section-card .mb-2 {
-                margin-bottom: 0px !important;
-              }
-              .assembly-section-card .mt-4, .assembly-section-card .mt-6,
-              .assembly-section-card .mt-3, .assembly-section-card .mt-2 {
-                margin-top: 0px !important;
-              }
-              .assembly-section-card .p-4, .assembly-section-card .p-8,
-              .assembly-section-card .p-6, .assembly-section-card .p-5 {
-                padding: 4px !important;
-              }
-              .assembly-section-card .gap-4, .assembly-section-card .gap-6,
-              .assembly-section-card .gap-3 {
-                gap: 2px !important;
-              }
-
-              /* Professional Green Title Bar - TIGHT */
-              .assembly-section-card h3,
-              .assembly-section-card label {
-                display: block !important;
-                width: 100% !important;
-                background-color: #2e7d32 !important;
-                color: #ffffff !important;
-                font-size: 12px !important;
-                font-weight: 800 !important;
-                text-align: center !important;
-                padding: 2px 8px !important;
-                border-radius: 4px !important;
-                border: none !important;
-                box-shadow: none !important;
-                margin: 0 auto 2px auto !important;
-                font-family: 'Noto Sans Devanagari', sans-serif !important;
-                letter-spacing: 0.5px !important;
-                text-transform: uppercase !important;
-              }
-              
-              /* Hide icons/emojis in headings */
-              .assembly-section-card h3 span,
-              .assembly-section-card h3 svg,
-              .assembly-section-card label span,
-              .assembly-section-card label svg {
-                display: none !important;
-              }
-              
-              /* Font family */
-              .assembly-section-card p,
-              .assembly-section-card span,
-              .assembly-section-card div {
-                font-family: 'Noto Sans Devanagari', sans-serif !important;
-              }
-              
-              /* Content wrapper - ZERO gap after heading */
-              .assembly-section-card > div:first-child {
-                margin-bottom: 1px !important;
-                padding: 0 !important;
-              }
-              .assembly-section-card > div:last-child {
-                width: 100% !important;
-                display: flex !important;
-                flex-direction: column !important;
-                justify-content: flex-start !important;
-                align-items: stretch !important;
-                text-align: center !important;
-                margin-top: 0px !important;
-                padding: 0 !important;
-              }
-              /* Kill flex-justify-center wrappers that add vertical space */
-              .assembly-section-card .flex.justify-center {
-                margin: 0 !important;
-                padding: 0 !important;
-              }
- 
-              /* Specific section resets - all TIGHT */
-              #panchang .grid {
-                display: grid !important;
-                grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-                gap: 3px !important;
-                width: 100% !important;
-                margin: 2px 0 0 0 !important;
-                box-sizing: border-box !important;
-              }
-              #panchang .grid > div {
-                padding: 3px 2px !important;
-                background: #f8fafc !important;
-                border: 1px solid #e2e8f0 !important;
-                border-radius: 4px !important;
-                box-shadow: none !important;
-                transform: none !important;
-                box-sizing: border-box !important;
-              }
-              #panchang .grid > div .size-10, #panchang .grid > div .size-12 {
-                display: none !important;
-              }
- 
-              #thought > div:last-child > div {
-                padding: 6px !important;
-                background: #f8fafc !important;
-                border: 1px solid #e2e8f0 !important;
-                border-radius: 6px !important;
-                box-shadow: none !important;
-                width: 100% !important;
-                box-sizing: border-box !important;
-                margin: 2px 0 0 0 !important;
-              }
- 
-              #shlok > div:last-child > div {
-                padding: 6px !important;
-                background: #f8fafc !important;
-                border: 1px solid #e2e8f0 !important;
-                border-radius: 6px !important;
-                box-shadow: none !important;
-                width: 100% !important;
-                box-sizing: border-box !important;
-                margin: 2px 0 0 0 !important;
-              }
- 
-              #proverb > div:last-child > div {
-                width: 100% !important;
-                margin: 2px 0 0 0 !important;
-                box-sizing: border-box !important;
-              }
-              #proverb > div:last-child > div > div {
-                padding: 6px !important;
-                background: #f8fafc !important;
-                border: 1px solid #e2e8f0 !important;
-                border-radius: 6px !important;
-                box-shadow: none !important;
-                width: 100% !important;
-                box-sizing: border-box !important;
-              }
-              #proverb > div:last-child > div > div:last-child {
-                margin-top: 2px !important;
-                background: #ffffff !important;
-              }
- 
-              #events > div:last-child > div {
-                width: 100% !important;
-                margin: 2px 0 0 0 !important;
-                box-sizing: border-box !important;
-              }
-              #events > div:last-child > div > div.divide-y {
-                width: 100% !important;
-                box-sizing: border-box !important;
-              }
-              #events > div:last-child > div > div.divide-y > div {
-                padding: 2px 0 !important;
-                border-bottom: 1px solid #f1f5f9 !important;
-              }
-              #events > div:last-child > div > div:last-child {
-                padding: 6px !important;
-                background: #f8fafc !important;
-                border: 1px solid #e2e8f0 !important;
-                border-radius: 6px !important;
-                box-shadow: none !important;
-                width: 100% !important;
-                box-sizing: border-box !important;
-              }
- 
-              #song > div:last-child > div {
-                width: 100% !important;
-                margin: 2px 0 0 0 !important;
-                box-sizing: border-box !important;
-              }
-              #song > div:last-child > div > div:last-child {
-                padding: 6px !important;
-                background: #f8fafc !important;
-                border: 1px solid #e2e8f0 !important;
-                border-radius: 6px !important;
-                box-shadow: none !important;
-                margin-top: 2px !important;
-                width: 100% !important;
-                box-sizing: border-box !important;
-              }
- 
-              #story > div:last-child > div {
-                width: 100% !important;
-                margin: 2px 0 0 0 !important;
-                box-sizing: border-box !important;
-              }
-              #story > div:last-child > div > div {
-                padding: 6px !important;
-                background: #f8fafc !important;
-                border: 1px solid #e2e8f0 !important;
-                border-radius: 6px !important;
-                box-shadow: none !important;
-                width: 100% !important;
-                box-sizing: border-box !important;
-              }
-              #story > div:last-child > div > div:last-child {
-                margin-top: 2px !important;
-                background: #f0fdf4 !important;
-                border: 1px solid #bbf7d0 !important;
-              }
- 
-              #gk .grid {
-                display: grid !important;
-                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-                gap: 3px !important;
-                width: 100% !important;
-                margin: 2px 0 0 0 !important;
-                box-sizing: border-box !important;
-              }
-              #gk .grid > div {
-                padding: 4px !important;
-                background: #f8fafc !important;
-                border: 1px solid #e2e8f0 !important;
-                border-radius: 6px !important;
-                box-shadow: none !important;
-                box-sizing: border-box !important;
-              }
-              #gk .grid > div .size-14, #gk .grid > div .size-12 {
-                display: none !important;
-              }
- 
-              #personality > div:last-child > div {
-                width: 100% !important;
-                margin: 2px 0 0 0 !important;
-                box-sizing: border-box !important;
-              }
-              #personality > div:last-child > div > div:last-child {
-                padding: 6px !important;
-                background: #f8fafc !important;
-                border: 1px solid #e2e8f0 !important;
-                border-radius: 6px !important;
-                box-shadow: none !important;
-                width: 100% !important;
-                box-sizing: border-box !important;
-                margin-top: 2px !important;
-              }
-            `;
-            clonedDoc.head.appendChild(style);
-          }
-        },
-        pagebreak: { mode: ["avoid-all"] },
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
       };
 
-      const originalOverflow = element.style.overflow;
-      element.style.overflow = "visible";
-      element.classList.remove("overflow-hidden");
+      try {
+        const pdfBlob = await html2pdfFn().set(opt).from(tempDiv).outputPdf("blob");
+        document.body.removeChild(tempDiv);
 
-      const pdfBlob = await html2pdfFn().set(opt).from(element).output("blob");
-      const blobUrl = URL.createObjectURL(pdfBlob);
-      const downloadLink = document.createElement("a");
-      downloadLink.href = blobUrl;
-      downloadLink.download = opt.filename;
-      document.body.appendChild(downloadLink);
-      downloadLink.click();
-      document.body.removeChild(downloadLink);
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+        const blobUrl = URL.createObjectURL(pdfBlob);
+        const downloadLink = document.createElement("a");
+        downloadLink.href = blobUrl;
+        downloadLink.download = opt.filename;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
 
-      toast.success("PDF यशस्वीरीत्या डाउनलोड झाली! 🎉");
-
-      element.style.overflow = originalOverflow;
-      element.classList.add("overflow-hidden");
+        toast.success("PDF यशस्वीरीत्या डाउनलोड झाली! 🎉");
+      } catch (innerErr) {
+        if (tempDiv.parentNode) document.body.removeChild(tempDiv);
+        throw innerErr;
+      }
     } catch (err: any) {
       console.error("PDF generation error", err);
       toast.error(`PDF तयार करताना त्रुटी आली: ${err.message || "PDF generate failed"}. कृपया पुन्हा प्रयत्न करा.`);
@@ -2587,7 +2387,27 @@ function DailyAssemblyContent() {
             </div>
           </div>
 
-          {!dbFormData ? (
+          {holidayNotice?.isHoliday ? (
+            <div className="bg-gradient-to-br from-amber-500/10 via-orange-500/10 to-amber-500/20 border-2 border-amber-400/40 p-8 md:p-14 rounded-[3rem] text-center space-y-6 shadow-xl my-6">
+              <div className="size-20 bg-amber-500/20 border border-amber-400/50 rounded-3xl flex items-center justify-center mx-auto text-amber-600 shadow-inner">
+                <SunMedium className="size-10 animate-pulse" />
+              </div>
+              <div className="space-y-2">
+                <span className="px-4 py-1.5 rounded-full bg-amber-500/20 text-amber-900 border border-amber-400/40 font-black text-xs uppercase tracking-widest inline-block">
+                  🏖️ सुट्टीची सूचना / School Holiday Notice
+                </span>
+                <h3 className="text-2xl md:text-4xl font-black text-amber-950 tracking-tight pt-2">
+                  आज शाळेस सुट्टी आहे!
+                </h3>
+                <p className="text-base md:text-xl font-bold text-amber-800">
+                  कारण: <span className="underline decoration-amber-400 font-black text-amber-900">{holidayNotice.reason || "शाळेस सुट्टी"}</span>
+                </p>
+              </div>
+              <p className="text-slate-600 text-sm max-w-lg mx-auto font-semibold pt-2">
+                मासिक परिपाठ नोंदवहीमध्ये या दिनांकास सुट्टी म्हणून घोषित केले आहे. त्यामुळे या दिनांकाचा दैनिक परिपाठ स्थगित राहील.
+              </p>
+            </div>
+          ) : !dbFormData ? (
             <div className="bg-amber-50/80 border-2 border-dashed border-amber-200 p-10 md:p-14 rounded-[3rem] text-center space-y-4 shadow-sm my-6 pdf-hide">
               <div className="size-16 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto text-amber-600 shadow-inner">
                 <Calendar className="size-8" />

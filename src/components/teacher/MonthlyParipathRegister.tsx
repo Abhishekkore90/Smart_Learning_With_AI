@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   Printer,
   Download,
@@ -14,6 +15,11 @@ import {
   CheckCircle2,
   RefreshCw,
   Loader2,
+  CalendarDays,
+  Trash2,
+  Plus,
+  X,
+  SunMedium,
 } from "lucide-react";
 import { showToast as toast } from "@/lib/custom-toast";
 import { db } from "@/lib/firebase";
@@ -24,6 +30,8 @@ interface DayRowData {
   date: number;
   day: string;
   isSunday: boolean;
+  isHoliday?: boolean;
+  holidayReason?: string;
   rashtrageet: string;
   pratigya: string;
   sanvidhan: string;
@@ -66,10 +74,10 @@ const MARATHI_MONTHS = [
   "डिसेंबर",
 ];
 
-// Helper: extract the first line or a short version of a text
-function shortText(text: string | undefined, maxLen = 40): string {
+// Helper: extract the first line or a clean short version of a text
+function shortText(text: string | undefined, maxLen = 120): string {
   if (!text) return "";
-  const firstLine = text.split("\n")[0].trim();
+  const firstLine = text.split("\n").map((s) => s.trim()).filter(Boolean)[0] || "";
   if (firstLine.length <= maxLen) return firstLine;
   return firstLine.substring(0, maxLen) + "...";
 }
@@ -122,9 +130,66 @@ export function MonthlyParipathRegister() {
   const [isSaving, setIsSaving] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
 
+  // Holidays state
+  const [holidaysMap, setHolidaysMap] = useState<Record<string, { isHoliday: boolean; reason: string }>>({});
+  const [showHolidayModal, setShowHolidayModal] = useState(false);
+  const [holidayDate, setHolidayDate] = useState<string>(
+    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`
+  );
+  const [holidayReason, setHolidayReason] = useState("शाळेस सुट्टी");
+  const [isSavingHoliday, setIsSavingHoliday] = useState(false);
+
   // Firebase collection for daily paripath archive
   const getDateKey = (year: number, month: number, day: number) => {
     return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  };
+
+  // Declare a holiday
+  const handleDeclareHoliday = async (targetDateStr: string, reasonText: string) => {
+    if (!targetDateStr) {
+      toast.error("कृपया तारीख निवडा");
+      return;
+    }
+    setIsSavingHoliday(true);
+    try {
+      const declaredRef = doc(db, "school_holidays", "declared");
+      const updatedHolidays = {
+        ...holidaysMap,
+        [targetDateStr]: {
+          isHoliday: true,
+          reason: reasonText || "शाळेस सुट्टी",
+          declaredAt: new Date().toISOString(),
+        },
+      };
+      await setDoc(declaredRef, updatedHolidays, { merge: true });
+      setHolidaysMap(updatedHolidays);
+      toast.success(`${targetDateStr} ला सुट्टी घोषित करण्यात आली! 🎉`);
+      fetchMonthlyData();
+    } catch (err) {
+      console.error("Error declaring holiday:", err);
+      toast.error("सुट्टी सेव्ह करताना त्रुटी आली.");
+    } finally {
+      setIsSavingHoliday(false);
+    }
+  };
+
+  // Remove a holiday
+  const handleRemoveHoliday = async (targetDateStr: string) => {
+    setIsSavingHoliday(true);
+    try {
+      const declaredRef = doc(db, "school_holidays", "declared");
+      const updatedHolidays = { ...holidaysMap };
+      delete updatedHolidays[targetDateStr];
+      await setDoc(declaredRef, updatedHolidays);
+      setHolidaysMap(updatedHolidays);
+      toast.success(`${targetDateStr} ची सुट्टी रद्द करण्यात आली!`);
+      fetchMonthlyData();
+    } catch (err) {
+      console.error("Error removing holiday:", err);
+      toast.error("सुट्टी रद्द करताना त्रुटी आली.");
+    } finally {
+      setIsSavingHoliday(false);
+    }
   };
 
   // Fetch daily paripath data from Firebase for the selected month
@@ -133,12 +198,25 @@ export function MonthlyParipathRegister() {
     const daysInMonth = new Date(selectedYear, selectedMonthIndex + 1, 0).getDate();
     const newRows: Record<number, DayRowData> = {};
 
+    // 1. Fetch declared holidays first
+    let holidays: Record<string, { isHoliday: boolean; reason: string }> = {};
+    try {
+      const hSnap = await getDoc(doc(db, "school_holidays", "declared"));
+      if (hSnap.exists()) {
+        holidays = hSnap.data() as any;
+      }
+    } catch (e) {
+      console.error("Failed to fetch declared holidays", e);
+    }
+    setHolidaysMap(holidays);
+
     try {
       for (let d = 1; d <= daysInMonth; d++) {
         const dateObj = new Date(selectedYear, selectedMonthIndex, d);
         const dayName = MARATHI_DAYS[dateObj.getDay()];
         const isSunday = dateObj.getDay() === 0;
         const dateKey = getDateKey(selectedYear, selectedMonthIndex, d);
+        const holidayInfo = holidays[dateKey];
 
         if (isSunday) {
           newRows[d] = {
@@ -158,6 +236,32 @@ export function MonthlyParipathRegister() {
             samuhgeet: "रविवार",
             deshbhaktigeet: "रविवार",
             maun: "रविवार",
+            swakshari: "",
+          };
+          continue;
+        }
+
+        // Check if declared holiday
+        if (holidayInfo && holidayInfo.isHoliday) {
+          newRows[d] = {
+            date: d,
+            day: dayName,
+            isSunday: false,
+            isHoliday: true,
+            holidayReason: holidayInfo.reason || "शाळेस सुट्टी",
+            rashtrageet: `सुट्टी (${holidayInfo.reason || "शाळेस सुट्टी"})`,
+            pratigya: "सुट्टी",
+            sanvidhan: "सुट्टी",
+            prarthana: "सुट्टी",
+            shlok: "सुट्टी",
+            suvichar: "सुट्टी",
+            batmya: "सुट्टी",
+            dinvishesh: "सुट्टी",
+            mhan: "सुट्टी",
+            bodhkatha: "सुट्टी",
+            samuhgeet: "सुट्टी",
+            deshbhaktigeet: "सुट्टी",
+            maun: "सुट्टी",
             swakshari: "",
           };
           continue;
@@ -194,22 +298,22 @@ export function MonthlyParipathRegister() {
               sanvidhan: "आम्ही भारताचे नागरिक",
               // प्रार्थना - short name of prayer
               prarthana: getPrayerShortName(prayerContent),
-              // श्लोक - full shlok text
-              shlok: data.shlok || data.thought || "",
-              // सुविचार - full thought/suvichar
-              suvichar: data.thought || data.suvichar || "",
-              // बातम्या - all news items
-              batmya: data.events || data.batmya || "",
-              // दिनविशेष - full day significance
-              dinvishesh: data.events || data.dinvishesh || "",
+              // श्लोक - first line / short text
+              shlok: shortText(data.shlok, 70),
+              // सुविचार - full suvichar (allows up to 120 characters so it fits completely without '...')
+              suvichar: shortText(data.thought || data.suvichar, 120),
+              // बातम्या - only first line/title
+              batmya: shortText(data.valueNews || data.batmya, 80),
+              // दिनविशेष - only first line/title
+              dinvishesh: shortText(data.events || data.dinvishesh, 80),
               // म्हण - proverb text
-              mhan: data.proverb || data.mhan || "",
-              // बोधकथा - only heading/title
-              bodhkatha: data.storyTitle || data.bodhkatha || "",
-              // समूहगीत - only heading/title
-              samuhgeet: data.songTitle || data.samuhgeet || "",
-              // देशभक्ती गीत - song title
-              deshbhaktigeet: data.songTitle || data.deshbhaktigeet || "",
+              mhan: shortText(data.proverb || data.mhan, 80),
+              // बोधकथा - title
+              bodhkatha: data.storyTitle || shortText(data.story || data.bodhkatha, 50),
+              // समूहगीत - title
+              samuhgeet: data.songTitle || shortText(data.patrioticSong || data.samuhgeet, 50),
+              // देशभक्ती गीत - title
+              deshbhaktigeet: data.songTitle || shortText(data.patrioticSong || data.deshbhaktigeet, 50),
               // मौन पसायदान - just "पसायदान"
               maun: "पसायदान",
               // वर्गशिक्षकांची स्वाक्षरी - blank
@@ -576,6 +680,18 @@ export function MonthlyParipathRegister() {
     <div className="space-y-8 max-w-[1400px] mx-auto p-2 md:p-6">
       {/* Printable CSS */}
       <style>{`
+        textarea {
+          overflow: hidden !important;
+          resize: none !important;
+          scrollbar-width: none !important;
+          -ms-overflow-style: none !important;
+        }
+        textarea::-webkit-scrollbar {
+          display: none !important;
+          width: 0 !important;
+          height: 0 !important;
+        }
+
         @media print {
           body * {
             visibility: hidden !important;
@@ -615,6 +731,7 @@ export function MonthlyParipathRegister() {
             font-size: 9px !important;
             padding: 0 !important;
             resize: none !important;
+            overflow: hidden !important;
           }
         }
       `}</style>
@@ -661,11 +778,11 @@ export function MonthlyParipathRegister() {
             </button>
 
             <button
-              onClick={handlePrint}
-              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider border border-white/20 transition-all active:scale-95"
+              onClick={() => setShowHolidayModal(true)}
+              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-amber-900/30 active:scale-95"
             >
-              <Printer className="size-4 text-sky-400" />
-              प्रिंट नोंदवही
+              <CalendarDays className="size-4" />
+              📅 सुट्टी घोषित करा
             </button>
 
             <button
@@ -801,24 +918,28 @@ export function MonthlyParipathRegister() {
                   <tr
                     key={row.date}
                     className={`${
-                      row.isSunday
+                      row.isSunday || row.isHoliday
                         ? "bg-rose-50/70 text-rose-900 font-bold"
                         : "hover:bg-slate-50"
                     }`}
                   >
                      {/* Date */}
-                    <td className="p-1 border-r border-slate-800 text-center font-black text-slate-900">
+                    <td className={`p-1 border-r border-slate-800 text-center font-black ${row.isSunday || row.isHoliday ? 'text-rose-800' : 'text-slate-900'}`}>
                       {row.date}
                     </td>
 
                     {/* Day */}
-                    <td className="p-1 border-r border-slate-800 text-center font-bold text-[11px]">
+                    <td className={`p-1 border-r border-slate-800 text-center font-bold text-[11px] ${row.isSunday || row.isHoliday ? 'text-rose-800' : ''}`}>
                       {row.day}
                     </td>
 
                     {row.isSunday ? (
                       <td colSpan={6} className="p-1 text-center font-black text-rose-700 text-[13px] tracking-widest">
                         रविवार
+                      </td>
+                    ) : row.isHoliday ? (
+                      <td colSpan={6} className="p-1 text-center font-black text-rose-700 text-[13px] tracking-wider">
+                        सुट्टी ({row.holidayReason || "शाळेस सुट्टी"})
                       </td>
                     ) : (
                       <>
@@ -829,7 +950,7 @@ export function MonthlyParipathRegister() {
                             onChange={(e) =>
                               handleCellChange(row.date, "rashtrageet", e.target.value)
                             }
-                            className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight"
+                            className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                             rows={1}
                           />
                         </td>
@@ -841,7 +962,7 @@ export function MonthlyParipathRegister() {
                             onChange={(e) =>
                               handleCellChange(row.date, "pratigya", e.target.value)
                             }
-                            className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight"
+                            className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                             rows={1}
                           />
                         </td>
@@ -853,7 +974,7 @@ export function MonthlyParipathRegister() {
                             onChange={(e) =>
                               handleCellChange(row.date, "sanvidhan", e.target.value)
                             }
-                            className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight"
+                            className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                             rows={1}
                           />
                         </td>
@@ -865,7 +986,7 @@ export function MonthlyParipathRegister() {
                             onChange={(e) =>
                               handleCellChange(row.date, "prarthana", e.target.value)
                             }
-                            className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight"
+                            className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                             rows={1}
                           />
                         </td>
@@ -877,7 +998,7 @@ export function MonthlyParipathRegister() {
                             onChange={(e) =>
                               handleCellChange(row.date, "shlok", e.target.value)
                             }
-                            className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[10px] resize-none leading-tight"
+                            className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[10px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                             rows={2}
                             placeholder="श्लोक..."
                           />
@@ -890,7 +1011,7 @@ export function MonthlyParipathRegister() {
                             onChange={(e) =>
                               handleCellChange(row.date, "suvichar", e.target.value)
                             }
-                            className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[10px] resize-none leading-tight"
+                            className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[10px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                             rows={2}
                             placeholder="सुविचार..."
                           />
@@ -959,7 +1080,7 @@ export function MonthlyParipathRegister() {
                   <tr
                     key={row.date}
                     className={`${
-                      row.isSunday
+                      row.isSunday || row.isHoliday
                         ? "bg-rose-50/70 text-rose-900 font-bold"
                         : "hover:bg-slate-50"
                     }`}
@@ -967,6 +1088,10 @@ export function MonthlyParipathRegister() {
                     {row.isSunday ? (
                       <td colSpan={8} className="p-1 text-center font-black text-rose-700 text-[13px] tracking-widest">
                         रविवार
+                      </td>
+                    ) : row.isHoliday ? (
+                      <td colSpan={8} className="p-1 text-center font-black text-rose-700 text-[13px] tracking-wider">
+                        सुट्टी ({row.holidayReason || "शाळेस सुट्टी"})
                       </td>
                     ) : (
                       <>
@@ -977,7 +1102,7 @@ export function MonthlyParipathRegister() {
                             onChange={(e) =>
                               handleCellChange(row.date, "batmya", e.target.value)
                             }
-                            className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[10px] resize-none leading-tight"
+                            className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[10px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                             rows={2}
                             placeholder="बातम्या..."
                           />
@@ -990,7 +1115,7 @@ export function MonthlyParipathRegister() {
                             onChange={(e) =>
                               handleCellChange(row.date, "dinvishesh", e.target.value)
                             }
-                            className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[10px] resize-none leading-tight"
+                            className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[10px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                             rows={2}
                             placeholder="दिनविशेष..."
                           />
@@ -1003,7 +1128,7 @@ export function MonthlyParipathRegister() {
                             onChange={(e) =>
                               handleCellChange(row.date, "mhan", e.target.value)
                             }
-                            className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[10px] resize-none leading-tight"
+                            className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[10px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                             rows={2}
                             placeholder="म्हण..."
                           />
@@ -1016,7 +1141,7 @@ export function MonthlyParipathRegister() {
                             onChange={(e) =>
                               handleCellChange(row.date, "bodhkatha", e.target.value)
                             }
-                            className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight"
+                            className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                             rows={1}
                             placeholder="शीर्षक..."
                           />
@@ -1029,7 +1154,7 @@ export function MonthlyParipathRegister() {
                             onChange={(e) =>
                               handleCellChange(row.date, "samuhgeet", e.target.value)
                             }
-                            className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight"
+                            className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                             rows={1}
                             placeholder="गीत शीर्षक..."
                           />
@@ -1042,7 +1167,7 @@ export function MonthlyParipathRegister() {
                             onChange={(e) =>
                               handleCellChange(row.date, "deshbhaktigeet", e.target.value)
                             }
-                            className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight"
+                            className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                             rows={1}
                             placeholder="गीत शीर्षक..."
                           />
@@ -1055,7 +1180,7 @@ export function MonthlyParipathRegister() {
                             onChange={(e) =>
                               handleCellChange(row.date, "maun", e.target.value)
                             }
-                            className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight"
+                            className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                             rows={1}
                           />
                         </td>
@@ -1073,6 +1198,139 @@ export function MonthlyParipathRegister() {
           </div>
         </div>
       </div>
+
+      {/* Holiday Management Modal */}
+      {showHolidayModal &&
+        typeof window !== "undefined" &&
+        createPortal(
+          <div className="fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-black/75 animate-in fade-in duration-200 non-printable">
+            <div className="bg-slate-900 border border-slate-700 text-white rounded-3xl max-w-lg w-full p-6 space-y-6 shadow-2xl relative z-[1000000]">
+              <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="size-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
+                    <CalendarDays className="size-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black tracking-tight text-white">
+                      शाळा सुट्टी व्यवस्थापन (Holiday Calendar)
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      तारीख निवडून सुट्टी घोषित करा किंवा रद्द करा
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowHolidayModal(false)}
+                  className="size-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 transition-all"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+
+              {/* Declare New Holiday Section */}
+              <div className="space-y-4 bg-white/5 p-4 rounded-2xl border border-white/10">
+                <h4 className="text-xs font-black uppercase text-amber-400 tracking-wider flex items-center gap-1.5">
+                  <Plus className="size-3.5" /> नवीन सुट्टी घोषित करा
+                </h4>
+
+                <div className="space-y-3 text-xs">
+                  <div>
+                    <label className="block text-slate-300 font-bold mb-1">
+                      १. तारीख निवडा:
+                    </label>
+                    <input
+                      type="date"
+                      value={holidayDate}
+                      onChange={(e) => setHolidayDate(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-white/20 text-white font-bold outline-none focus:border-amber-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 font-bold mb-1">
+                      २. सुट्टीचे कारण:
+                    </label>
+                    <input
+                      type="text"
+                      value={holidayReason}
+                      onChange={(e) => setHolidayReason(e.target.value)}
+                      placeholder="उदा. सार्वजनिक सुट्टी, दिवाळी सुट्टी, इ."
+                      className="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-white/20 text-white font-bold outline-none focus:border-amber-400 mb-2"
+                    />
+
+                    {/* Presets */}
+                    <div className="flex flex-wrap gap-1.5">
+                      {["शाळेस सुट्टी", "सार्वजनिक सुट्टी", "स्थानिक सुट्टी", "जयंती सुट्टी", "सण सुट्टी"].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setHolidayReason(preset)}
+                          className="px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold"
+                        >
+                          {preset}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => handleDeclareHoliday(holidayDate, holidayReason)}
+                    disabled={isSavingHoliday}
+                    className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black uppercase tracking-wider transition-all shadow-lg active:scale-95 disabled:opacity-50 mt-2"
+                  >
+                    {isSavingHoliday ? "सेव्ह होत आहे..." : "🎉 सुट्टी घोषित करा"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Existing Declared Holidays List */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider">
+                  घोषित केलेल्या सुट्ट्यांची यादी ({MARATHI_MONTHS[selectedMonthIndex]} {selectedYear}):
+                </h4>
+
+                <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
+                  {Object.entries(holidaysMap)
+                    .filter(([dKey, val]) => val.isHoliday && dKey.startsWith(`${selectedYear}-${String(selectedMonthIndex + 1).padStart(2, "0")}`))
+                    .length === 0 ? (
+                    <p className="text-xs text-slate-500 italic text-center py-4">
+                      या महिन्यात कोणतीही सुट्टी घोषित केलेली नाही.
+                    </p>
+                  ) : (
+                    Object.entries(holidaysMap)
+                      .filter(([dKey, val]) => val.isHoliday && dKey.startsWith(`${selectedYear}-${String(selectedMonthIndex + 1).padStart(2, "0")}`))
+                      .sort(([a], [b]) => a.localeCompare(b))
+                      .map(([dKey, val]) => (
+                        <div
+                          key={dKey}
+                          className="flex items-center justify-between p-3 rounded-xl bg-slate-800/80 border border-slate-700/80 text-xs"
+                        >
+                          <div>
+                            <span className="font-bold text-amber-300 block">
+                              📅 {dKey}
+                            </span>
+                            <span className="text-slate-300 text-[11px]">
+                              कारण: {val.reason || "शाळेस सुट्टी"}
+                            </span>
+                          </div>
+
+                          <button
+                            onClick={() => handleRemoveHoliday(dKey)}
+                            disabled={isSavingHoliday}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/40 text-rose-300 border border-rose-500/30 font-bold transition-all text-[11px]"
+                          >
+                            <Trash2 className="size-3.5" />
+                            रद्द करा
+                          </button>
+                        </div>
+                      ))
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

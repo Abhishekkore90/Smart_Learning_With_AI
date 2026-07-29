@@ -21,7 +21,6 @@ import {
   ExternalLink,
   Download,
 } from "lucide-react";
-import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { uploadBlobToBunny } from "@/lib/bunnyStorage";
 import { toast } from "sonner";
@@ -32,6 +31,8 @@ export const Route = createFileRoute("/admin/cce-remarks")({
   }),
   component: AdminCCERemarksPage,
 });
+
+// NOTE: Do NOT export this component by name from a route file — it breaks code-splitting.
 
 const CLASSES_LIST = [
   { id: "1st", label: "इयत्ता १ ली (Class 1)" },
@@ -204,7 +205,7 @@ function isHeaderOrNoiseLine(line: string): boolean {
   return false;
 }
 
-export default function AdminCCERemarksPage() {
+function AdminCCERemarksPage() {
   const navigate = useNavigate();
   const [selectedClass, setSelectedClass] = useState("1st");
   const [mode, setMode] = useState<"pdf" | "manual">("pdf");
@@ -540,7 +541,6 @@ export default function AdminCCERemarksPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
-      <Header />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-8 space-y-6">
         {/* Top Header */}
