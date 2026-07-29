@@ -6,7 +6,9 @@ import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/lib/firebase";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { collection, query, where, onSnapshot, doc } from "firebase/firestore";
+// @ts-ignore
+import { matchStudentClassAndMedium } from "@/result/firestoreMarksHelper";
 import { CCEStudentList } from "@/components/teacher/CCEStudentList";
 import { CCEAttendance } from "@/components/teacher/CCEAttendance";
 import { CCEStudentInfo } from "@/components/teacher/CCEStudentInfo";
@@ -69,29 +71,45 @@ function TeacherHpcCardPage() {
 
   // Real-time student count sync for selected class AND medium
   useEffect(() => {
-    const isStudentSemi = (s: any) => {
-      if (s.isSemiEnglish === true) return true;
-      if (s.isSemiEnglish === false) return false;
-      if (!s.medium) return false;
-      const m = String(s.medium).toLowerCase();
-      return m.includes("semi") || m.includes("सेमी");
-    };
-
     const q = query(
       collection(db, "users"),
-      where("role", "==", "student"),
-      where("class", "==", selectedClass)
+      where("role", "==", "student")
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const raw = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       const filtered = raw.filter((s: any) => {
-        const isSemi = isStudentSemi(s);
-        return selectedMedium === "semi" ? isSemi : !isSemi;
+        return matchStudentClassAndMedium(s, selectedClass, selectedMedium);
       });
       setStudentsCount(filtered.length);
     });
     return () => unsubscribe();
   }, [selectedClass, selectedMedium]);
+
+  // Real-time listener for school_settings/general & local storage updates
+  useEffect(() => {
+    const unsubSettings = onSnapshot(doc(db, "school_settings", "general"), (snap) => {
+      if (snap.exists() && snap.data().medium) {
+        const isSemi = String(snap.data().medium).toLowerCase().includes("semi");
+        const m = isSemi ? "semi" : "marathi";
+        setSelectedMedium(m);
+        localStorage.setItem("cce_selected_medium", m);
+      }
+    });
+
+    const handleCustomEvent = () => {
+      const stored = localStorage.getItem("cce_selected_medium");
+      if (stored) setSelectedMedium(stored);
+    };
+
+    window.addEventListener("cce_settings_updated", handleCustomEvent);
+    window.addEventListener("storage", handleCustomEvent);
+
+    return () => {
+      unsubSettings();
+      window.removeEventListener("cce_settings_updated", handleCustomEvent);
+      window.removeEventListener("storage", handleCustomEvent);
+    };
+  }, []);
 
   useEffect(() => {
     if (!authLoading) {
@@ -183,22 +201,12 @@ function TeacherHpcCardPage() {
                     </select>
                   </div>
 
-                  {/* Medium Selector */}
-                  <div className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-500/20 rounded-2xl px-4 py-2 ring-2 ring-purple-100">
-                    <span className="text-xs font-medium text-purple-100 uppercase tracking-wider">माध्यम:</span>
-                    <select
-                      className="bg-transparent text-white text-xs font-extrabold outline-none cursor-pointer border-none"
-                      value={selectedMedium}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setSelectedMedium(val);
-                        localStorage.setItem("cce_selected_medium", val);
-                        window.dispatchEvent(new Event("cce_settings_updated"));
-                      }}
-                    >
-                      <option value="marathi" className="text-slate-800 font-bold">मराठी माध्यम (Marathi)</option>
-                      <option value="semi" className="text-slate-800 font-bold">सेमी इंग्रजी (Semi-English)</option>
-                    </select>
+                  {/* Medium Indicator (Configured from School Info Settings) */}
+                  <div className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-500/20 rounded-2xl px-4 py-2 ring-2 ring-purple-100/50">
+                    <span className="text-xs font-bold text-purple-200 uppercase tracking-wider">माध्यम:</span>
+                    <span className="text-xs font-black text-white">
+                      {selectedMedium === "semi" ? "सेमी इंग्रजी (Semi-English)" : "मराठी माध्यम (Marathi)"}
+                    </span>
                   </div>
                 </div>
               </div>

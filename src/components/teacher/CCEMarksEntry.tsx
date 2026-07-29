@@ -14,6 +14,8 @@ import {
   Award,
 } from "lucide-react";
 import { toast } from "sonner";
+// @ts-ignore
+import { matchStudentClassAndMedium } from "@/result/firestoreMarksHelper";
 import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
 
 const EXAMS_SEM1 = [
@@ -144,20 +146,11 @@ export function CCEMarksEntry({
 
   // Instant real-time listener for students
   useEffect(() => {
-    const isStudentSemi = (s: any) => {
-      if (s.isSemiEnglish === true) return true;
-      if (s.isSemiEnglish === false) return false;
-      if (!s.medium) return false;
-      const m = String(s.medium).toLowerCase();
-      return m.includes("semi") || m.includes("सेमी");
-    };
-
-    const q = query(collection(db, "users"), where("role", "==", "student"), where("class", "==", selectedClass));
+    const q = query(collection(db, "users"), where("role", "==", "student"));
     const unsub = onSnapshot(q, (snap) => {
       const raw = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as (Student & { medium?: string; isSemiEnglish?: boolean })[];
       const filtered = raw.filter((s) => {
-        const isSemi = isStudentSemi(s);
-        return selectedMedium === "semi" ? isSemi : !isSemi;
+        return matchStudentClassAndMedium(s, selectedClass, selectedMedium);
       });
       setStudents(filtered.sort((a, b) => parseInt(a.rollNo || "999") - parseInt(b.rollNo || "999")));
     });

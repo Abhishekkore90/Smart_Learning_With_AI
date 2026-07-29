@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
+// @ts-ignore
+import { matchStudentClassAndMedium } from "@/result/firestoreMarksHelper";
 import { db } from "@/lib/firebase";
 import {
   collection,
@@ -387,12 +389,17 @@ export function CCERemarks({
 
     async function fetchCustomAdminRemarks() {
       try {
-        const cdnUrl = `https://SGKBRAINOVA.b-cdn.net/cce_remarks/class_${selectedClass}_${selectedMedium}_remarks.json`;
+        const cdnBase = import.meta.env.DEV ? '/api/bunny-cdn' : 'https://sgkbrainova.b-cdn.net';
+        const cdnUrl = `${cdnBase}/cce_remarks/class_${selectedClass}_${selectedMedium}_remarks.json`;
         const res = await fetch(cdnUrl);
         if (isMounted && res.ok) {
           const data = await res.json();
           if (data && Object.keys(data).length > 0) {
-            setCustomClassRemarks(data);
+            setCustomClassRemarks((prev) => ({
+              ...masterData,
+              ...prev,
+              ...data,
+            }));
           }
         }
       } catch (err) {
@@ -461,16 +468,15 @@ export function CCERemarks({
 
     const q = query(
       collection(db, "users"),
-      where("role", "==", "student"),
-      where("class", "==", selectedClass)
+      where("role", "==", "student")
     );
     const unsub = onSnapshot(q, (snap) => {
       if (!isMounted) return;
       const raw = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Student[];
       const filtered = raw.filter((s: any) => {
-        const isSemi = isStudentSemi(s);
-        return selectedMedium === "semi" ? isSemi : !isSemi;
+        return matchStudentClassAndMedium(s, selectedClass, selectedMedium);
       });
+
       setStudents(filtered.sort((a, b) => parseInt(a.rollNo || "999") - parseInt(b.rollNo || "999")));
     });
     return () => {
@@ -479,7 +485,7 @@ export function CCERemarks({
     };
   }, [selectedClass, selectedMedium]);
 
-  // Load remarks for all students (strict medium isolation)
+  // Load remarks for all students (strict medium isolation with fallback)
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
@@ -501,8 +507,18 @@ export function CCERemarks({
       let merged: Record<string, StudentRemarks> = {};
 
       const primaryDocId = `${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`;
+      const fallbackDocId = `${selectedClass}_${academicYear}_${activeSemester}_marathi`;
+      const genericDocId = `${selectedClass}_${academicYear}_${activeSemester}`;
+
       try {
-        const sSnap = await getDoc(doc(db, "cce_remarks_v2", primaryDocId));
+        let sSnap = await getDoc(doc(db, "cce_remarks_v2", primaryDocId));
+        if (!sSnap.exists() && selectedMedium === "semi") {
+          sSnap = await getDoc(doc(db, "cce_remarks_v2", fallbackDocId));
+        }
+        if (!sSnap.exists()) {
+          sSnap = await getDoc(doc(db, "cce_remarks_v2", genericDocId));
+        }
+
         if (sSnap.exists()) {
           const data = sSnap.data();
           const recs = data.records || data.remarks || data.data || {};
@@ -515,7 +531,7 @@ export function CCERemarks({
       } catch (e) {}
 
       if (isMounted && Object.keys(merged).length > 0) {
-        setAllRemarks(merged);
+        setAllRemarks((prev) => ({ ...merged, ...prev }));
         setLoading(false);
       }
     };

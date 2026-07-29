@@ -1,4 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
+import { useAuth } from "@/hooks/use-auth";
+// @ts-ignore
+import { matchStudentClassAndMedium } from "@/result/firestoreMarksHelper";
+// @ts-ignore
+import { getTeacherId, matchStudentTeacherClassAndMedium } from "@/lib/teacherIsolationHelper";
 import { db } from "@/lib/firebase";
 import {
   collection,
@@ -298,8 +303,7 @@ export function CCEStudentInfo({
     setLoading(true);
     const q = query(
       collection(db, "users"),
-      where("role", "==", "student"),
-      where("class", "==", selectedClass)
+      where("role", "==", "student")
     );
     const unsub = onSnapshot(q, (snap) => {
       const data = snap.docs.map((d) => {
@@ -317,7 +321,7 @@ export function CCEStudentInfo({
           isSemiEnglish: dd.isSemiEnglish,
           academicYear: dd.academicYear || academicYear,
           role: "student",
-        } as StudentRecord & { medium?: string; isSemiEnglish?: boolean };
+        } as StudentRecord & { medium?: string; isSemiEnglish?: boolean; class?: string };
       });
       data.sort((a, b) => parseInt(a.rollNo || "999") - parseInt(b.rollNo || "999"));
       setStudents(data);
@@ -326,18 +330,12 @@ export function CCEStudentInfo({
     return () => unsub();
   }, [selectedClass, academicYear]);
 
-  const isStudentSemi = (s: any) => {
-    if (s.isSemiEnglish === true) return true;
-    if (s.isSemiEnglish === false) return false;
-    if (!s.medium) return false;
-    const m = String(s.medium).toLowerCase();
-    return m.includes("semi") || m.includes("सेमी");
-  };
+  const { user, profile } = useAuth();
+  const teacherId = getTeacherId(user, profile);
 
   const filteredStudents = useMemo(() => {
     let list = students.filter((s: any) => {
-      const isSemi = isStudentSemi(s);
-      return selectedMedium === "semi" ? isSemi : !isSemi;
+      return matchStudentTeacherClassAndMedium(s, teacherId, selectedClass, selectedMedium);
     });
 
     if (!searchQuery.trim()) return list;
@@ -347,7 +345,7 @@ export function CCEStudentInfo({
         s.name.toLowerCase().includes(q) ||
         (s.rollNo && s.rollNo.toString().includes(q))
     );
-  }, [students, searchQuery, selectedMedium]);
+  }, [students, searchQuery, selectedClass, selectedMedium, teacherId]);
 
   const openEdit = async (student: StudentRecord) => {
     setEditingStudent(student);
@@ -384,6 +382,8 @@ export function CCEStudentInfo({
         class: selectedClass,
         medium: selectedMedium,
         isSemiEnglish: selectedMedium === "semi",
+        teacherId,
+        createdById: teacherId,
         academicYear,
         role: "student",
         createdAt: new Date().toISOString(),
@@ -421,6 +421,8 @@ export function CCEStudentInfo({
         rollNo: editRollNo.trim(),
         gender: editGender,
         photoUrl: editPhotoUrl,
+        medium: selectedMedium,
+        isSemiEnglish: selectedMedium === "semi",
       });
 
       await setDoc(

@@ -5,6 +5,10 @@ import { Download, Printer, ArrowLeft, Loader2, AlertCircle, Copy, FileText } fr
 import { toast } from "sonner";
 import "./result.css";
 
+import { matchStudentClassAndMedium, fetchStudentsForClass } from "./firestoreMarksHelper";
+import { getDefaultSubjectsForClass } from "../data/cceSubjects";
+import { getTeacherId } from "../lib/teacherIsolationHelper";
+
 const DEFAULT_SUBJECTS = [
   "प्रथम भाषा : मराठी",
   "द्वितीय भाषा : इंग्रजी",
@@ -32,8 +36,8 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", onBack }
   const [selectedClass, setSelectedClass] = useState(initialClass || "1st");
   const [academicYear, setAcademicYear] = useState(initialYear || "2025-26");
   const [division, setDivision] = useState("1");
-  const [pageMode, setPageMode] = useState("1page");
-  const [showLayoutModal, setShowLayoutModal] = useState(true);
+  const [layoutMode, setLayoutMode] = useState("1page"); // "1page" (१ पान Portrait), "2pages" (२ पाने Portrait), "landscape" (आडवे)
+  const [showLayoutModal, setShowLayoutModal] = useState(false);
   const [selectedMedium, setSelectedMedium] = useState("marathi");
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
@@ -92,98 +96,22 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", onBack }
           slogan: mergedSettings.slogan || "✦ ज्ञान, संस्कार आणि प्रगतीसाठी ✦",
         });
 
+        let classSubjects = [];
         if (mergedSettings.subjects && Array.isArray(mergedSettings.subjects) && mergedSettings.subjects.length > 0) {
-          setSubjects(mergedSettings.subjects);
+          classSubjects = mergedSettings.subjects;
+        } else {
+          classSubjects = getDefaultSubjectsForClass(selectedClass, selectedMedium);
         }
+        setSubjects(classSubjects);
       } catch (e) {
         console.error("Error fetching school settings:", e);
       }
 
-      // 2. Fetch Students for Selected Class
-      let loadedStudents = [];
-      const normalizeClass = (cls) => (cls ? String(cls).trim().toLowerCase().replace(/[^0-9a-z]/g, "") : "");
-      const targetClassNorm = normalizeClass(selectedClass);
-
-      try {
-        const uQuery = query(collection(db, "users"), where("role", "==", "student"));
-        const uSnap = await getDocs(uQuery);
-        uSnap.forEach((docSnap) => {
-          const d = docSnap.data();
-          const stdClassNorm = normalizeClass(d.class || d.currentClass || d.className);
-          if (stdClassNorm === targetClassNorm || d.class === selectedClass) {
-            loadedStudents.push({
-              id: docSnap.id,
-              name: d.fullName || d.name || d.studentName || "",
-              rollNo: String(d.rollNo || d.srNo || loadedStudents.length + 1),
-              fatherName: d.fatherName || d.stdFather || "",
-              motherName: d.motherName || d.stdMother || "",
-              medium: d.medium,
-              isSemiEnglish: d.isSemiEnglish,
-              dob: d.dob || d.birthDate || "",
-              aadhar: d.aadhar || d.aadharNo || "",
-              generalRegNo: d.generalRegNo || d.grNo || d.srNo || "",
-              motherTongue: d.motherTongue || d.motherTounge || "",
-              caste: d.caste || d.category || "",
-              religion: d.religion || "",
-              address: d.address || "",
-              mobile: d.mobile || d.contact || d.phone || "",
-            });
-          }
-        });
-      } catch (e) {}
-
-      if (loadedStudents.length === 0) {
-        try {
-          const studentsSnap = await getDocs(collection(db, "students"));
-          studentsSnap.forEach((docSnap) => {
-            const d = docSnap.data();
-            const stdClassNorm = normalizeClass(d.class || d.currentClass || d.className);
-            if (stdClassNorm === targetClassNorm || d.class === selectedClass) {
-              loadedStudents.push({
-                id: docSnap.id,
-                name: d.fullName || d.name || d.studentName || "",
-                rollNo: String(d.rollNo || d.srNo || loadedStudents.length + 1),
-                fatherName: d.fatherName || d.stdFather || "",
-                motherName: d.motherName || d.stdMother || "",
-                medium: d.medium,
-                isSemiEnglish: d.isSemiEnglish,
-                dob: d.dob || d.birthDate || "",
-                aadhar: d.aadhar || d.aadharNo || "",
-                generalRegNo: d.generalRegNo || d.grNo || d.srNo || "",
-                motherTongue: d.motherTongue || d.motherTounge || "",
-                caste: d.caste || d.category || "",
-                religion: d.religion || "",
-                address: d.address || "",
-                mobile: d.mobile || d.contact || d.phone || "",
-              });
-            }
-          });
-        } catch (e) {}
-      }
-
-      // Filter by Medium
-      const currentMedium = selectedMedium || localStorage.getItem("cce_selected_medium") || "marathi";
-      const isStudentSemi = (s) => {
-        if (s.isSemiEnglish === true) return true;
-        if (s.isSemiEnglish === false) return false;
-        if (!s.medium) return false;
-        const m = String(s.medium).toLowerCase();
-        return m.includes("semi") || m.includes("सेमी");
-      };
-      loadedStudents = loadedStudents.filter((s) => {
-        const isSemi = isStudentSemi(s);
-        return currentMedium === "semi" ? isSemi : !isSemi;
-      });
-
-      // Deduplicate students
-      const uniqueMap = new Map();
-      loadedStudents.forEach((s) => {
-        if (s.name) {
-          const key = s.rollNo ? `${s.rollNo}_${s.name}` : s.name;
-          if (!uniqueMap.has(key)) uniqueMap.set(key, s);
-        }
-      });
-      loadedStudents = Array.from(uniqueMap.values());
+      // 2. Fetch Students for Selected Class and Medium (Isolated by teacherId)
+      const currentTeacherId = getTeacherId();
+      const currentMedium = selectedMedium || (typeof localStorage !== "undefined" ? localStorage.getItem("cce_selected_medium") : null) || "marathi";
+      const loadedStudents = await fetchStudentsForClass(selectedClass, currentMedium, currentTeacherId);
+      setStudents(loadedStudents);
 
       // Merge student_details collection (for exact user-filled details)
       try {
@@ -455,17 +383,49 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", onBack }
     setDownloading(true);
     toast.info("प्रगती पत्रक PDF तयार होत आहे, कृपया वाट पाहा...");
     try {
-      const { default: html2pdf } = await import("html2pdf.js");
-      const element = printRef.current;
-      const opt = {
-        margin: [0, 0, 0, 0],
-        filename: `प्रगती_पत्रक_${selectedClass}_${academicYear}.pdf`,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        pagebreak: { mode: ["css"] },
-      };
-      await html2pdf().set(opt).from(element).save();
+      const html2canvas = (await import("html2canvas")).default;
+      const { jsPDF } = await import("jspdf");
+
+      const pageElements = printRef.current.querySelectorAll(".pdf-page");
+      const pdf = new jsPDF({
+        unit: "mm",
+        format: "a4",
+        orientation: "portrait", // Standard A4 Portrait PDF page
+      });
+
+      for (let i = 0; i < pageElements.length; i++) {
+        const pageEl = pageElements[i];
+
+        // 1. Capture HTML element to canvas
+        const canvas1 = await html2canvas(pageEl, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: "#ffffff",
+        });
+
+        // 2. Rotate canvas image 90 degrees clockwise
+        const canvas2 = document.createElement("canvas");
+        canvas2.width = canvas1.height;
+        canvas2.height = canvas1.width;
+
+        const ctx = canvas2.getContext("2d");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas2.width, canvas2.height);
+
+        ctx.translate(canvas2.width / 2, canvas2.height / 2);
+        ctx.rotate((90 * Math.PI) / 180);
+        ctx.drawImage(canvas1, -canvas1.width / 2, -canvas1.height / 2);
+
+        // 3. Add rotated image onto A4 Portrait page
+        const imgData = canvas2.toDataURL("image/jpeg", 0.98);
+        if (i > 0) pdf.addPage("a4", "portrait");
+
+        // Fit onto A4 Portrait page (210mm x 297mm) with 5mm margin
+        pdf.addImage(imgData, "JPEG", 5, 5, 200, 287);
+      }
+
+      pdf.save(`प्रगती_पत्रक_${selectedClass}_${academicYear}.pdf`);
       toast.success("प्रगती पत्रक PDF यशस्वीरित्या डाऊनलोड झाली!");
     } catch (err) {
       console.error("PDF generation error:", err);
@@ -473,6 +433,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", onBack }
     }
     setDownloading(false);
   };
+
 
   const handlePrint = () => {
     window.print();
@@ -706,65 +667,10 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", onBack }
 
   return (
     <div className="w-full bg-slate-100 min-h-screen p-4 md:p-6 text-slate-800">
-      {/* Layout Selection Dialog Modal */}
-      {showLayoutModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-100 text-center animate-in fade-in zoom-in duration-200">
-            <div className="w-14 h-14 bg-orange-100 text-orange-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <FileText className="size-8" />
-            </div>
-            <h3 className="text-lg font-black text-slate-900 mb-1.5">प्रगती पत्रक PDF स्वरूप निवडा</h3>
-            <p className="text-xs text-slate-500 font-medium mb-6">
-              तुम्हाला एका विद्यार्थ्याचे प्रगती पत्रक १ पानामध्ये हवे आहे की २ पानांमध्ये?
-            </p>
 
-            <div className="grid grid-cols-1 gap-3.5 mb-2">
-              <button
-                onClick={() => {
-                  setPageMode("1page");
-                  setShowLayoutModal(false);
-                }}
-                className="p-4 rounded-2xl border-2 border-orange-500 bg-orange-50/50 hover:bg-orange-100/80 transition-all text-left flex items-center gap-3.5 cursor-pointer group active:scale-[0.98]"
-              >
-                <div className="w-10 h-10 rounded-xl bg-orange-600 text-white flex items-center justify-center font-bold text-base shadow-sm">
-                  1
-                </div>
-                <div>
-                  <h4 className="text-sm font-black text-orange-950 group-hover:text-orange-600">
-                    १ पानाचे प्रगती पत्रक (Single Page PDF)
-                  </h4>
-                  <p className="text-[11px] text-slate-600 font-medium leading-tight">
-                    एकाच पानावर विद्यार्थ्याची सर्व माहिती, गुण व नोंदी कॉम्पॅक्ट बसवा.
-                  </p>
-                </div>
-              </button>
-
-              <button
-                onClick={() => {
-                  setPageMode("2pages");
-                  setShowLayoutModal(false);
-                }}
-                className="p-4 rounded-2xl border-2 border-slate-200 bg-slate-50/50 hover:bg-slate-100 transition-all text-left flex items-center gap-3.5 cursor-pointer group active:scale-[0.98]"
-              >
-                <div className="w-10 h-10 rounded-xl bg-slate-700 text-white flex items-center justify-center font-bold text-base shadow-sm">
-                  2
-                </div>
-                <div>
-                  <h4 className="text-sm font-black text-slate-900 group-hover:text-slate-700">
-                    २ पानांचे प्रगती पत्रक (Two Pages PDF)
-                  </h4>
-                  <p className="text-[11px] text-slate-600 font-medium leading-tight">
-                    दोन पानांमध्ये सविस्तर माहिती, तक्ते व सर्व वर्णनात्मक नोंदी.
-                  </p>
-                </div>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Top Header Actions */}
-      <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm mb-6 no-print gap-3">
+      <div className={`${layoutMode === "landscape" ? "max-w-[300mm]" : "max-w-5xl"} mx-auto flex flex-wrap items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm mb-6 no-print gap-3 transition-all`}>
         <button
           onClick={onBack}
           className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-extrabold rounded-xl transition-all cursor-pointer"
@@ -778,32 +684,6 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", onBack }
           <p className="text-xs text-slate-500 font-medium">इयत्ता {selectedClass} | शैक्षणिक वर्ष {academicYear}</p>
         </div>
 
-
-        {/* Page Mode Switcher */}
-        <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
-          <button
-            onClick={() => setPageMode("1page")}
-            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
-              pageMode === "1page"
-                ? "bg-orange-600 text-white shadow-xs"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            <FileText className="size-3.5" />
-            <span>१ पान (1 Page)</span>
-          </button>
-          <button
-            onClick={() => setPageMode("2pages")}
-            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
-              pageMode === "2pages"
-                ? "bg-orange-600 text-white shadow-xs"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            <Copy className="size-3.5" />
-            <span>२ पाने (2 Pages)</span>
-          </button>
-        </div>
 
         <div className="flex items-center gap-2">
           <button
@@ -825,181 +705,616 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", onBack }
       </div>
 
       {/* -------------------- PRINTABLE PROGRESS SHEET CONTAINER -------------------- */}
-      <div ref={printRef} className="max-w-4xl mx-auto space-y-6">
+      <div ref={printRef} className="w-full max-w-[295mm] mx-auto overflow-x-auto space-y-6 p-2">
+
+        <style>{`
+          @media print {
+            @page {
+              size: A4 ${layoutMode === "landscape" ? "landscape" : "portrait"};
+              margin: 0;
+            }
+          }
+        `}</style>
         {students.map((student, idx) => {
-          if (pageMode === "1page") {
+          // ==================== LANDSCAPE / SIDE-BY-SIDE LAYOUT (आडवे - एकापुढे एक) ====================
+          if (layoutMode === "landscape") {
             return (
               <div
                 key={student.id}
-                className="pdf-page bg-white p-4 border-2 border-amber-400 rounded-3xl h-[285mm] max-h-[285mm] overflow-hidden shadow-sm flex flex-col justify-between mb-6"
+                className="pdf-page bg-white p-4 border-2 border-amber-400 rounded-3xl h-[200mm] max-h-[200mm] w-[290mm] max-w-[290mm] mx-auto overflow-hidden shadow-sm flex flex-col justify-between mb-6"
                 style={{ pageBreakAfter: "always", breakAfter: "page" }}
               >
                 <div>
-                  {/* Top Header Banner */}
-                  <div className="flex items-center justify-between border-b-2 border-amber-400 pb-2 mb-3">
+                  {/* Top Header Banner across full width */}
+                  <div className="flex items-center justify-between border-b-2 border-amber-400 pb-2 mb-2">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 bg-orange-600 text-white rounded-lg flex items-center justify-center font-black text-xs shadow-sm">
                         SS
                       </div>
                       <div>
                         <h3 className="text-[11px] font-black text-orange-700 tracking-wider uppercase">समग्र शिक्षा</h3>
-                        <p className="text-[9px] text-slate-500 font-bold">Samagra Shiksha</p>
+                        <p className="text-[8px] text-slate-500 font-bold">Samagra Shiksha</p>
                       </div>
                     </div>
 
                     <div className="text-center bg-amber-50 px-4 py-1 rounded-xl border border-amber-300">
-                      <h2 className="text-sm font-black text-amber-900 tracking-tight">विद्यार्थी प्रगतीपत्रक सन {academicYear}</h2>
+                      <h2 className="text-xs sm:text-sm font-black text-amber-900 tracking-tight">
+                        विद्यार्थी प्रगतीपत्रक सन {academicYear}
+                      </h2>
                     </div>
 
-                    <div className="text-right text-[10px] font-bold text-slate-700">
-                      <p>हजेरी क्र.: <b className="text-orange-700">{student.rollNo || idx + 1}</b></p>
-                      <p>यु-डायस: <b>{schoolData.udise || "-"}</b></p>
+                    <div className="text-right text-[9.5px] font-bold text-slate-700 flex items-center gap-3">
+                      <span>विद्यार्थी: <b className="text-blue-800 font-black">{student.name}</b></span>
+                      <span>इयत्ता: <b>{selectedClass} ({division})</b></span>
+                      <span>हजेरी क्र.: <b className="text-orange-700">{student.rollNo || idx + 1}</b></span>
+                      <span>यु-डायस: <b>{schoolData.udise || "-"}</b></span>
                     </div>
                   </div>
 
-                  {/* Main 2-Column Split Grid */}
-                  <div className="grid grid-cols-12 gap-3 mb-2">
-                    {/* Left Column: Student Details & Subject Grades */}
-                    <div className="col-span-6 space-y-2">
-                      {/* Student Profile Info */}
-                      <div className="border border-amber-400 rounded-xl p-2 bg-amber-50/30 text-[10px] space-y-1">
-                        <div className="font-bold text-slate-900 truncate">
-                          शाळा: <span className="font-extrabold text-amber-900">{schoolData.schoolName || "-"}</span>
-                        </div>
-                        <div className="font-bold text-slate-900">
-                          नाव: <span className="font-black text-blue-800 text-xs">{student.name}</span>
-                        </div>
-                        <div className="flex items-center justify-between font-bold text-slate-800 text-[9.5px]">
-                          <span>जन्म: <b>{student.dob || "-"}</b></span>
-                          <span>इयत्ता: <b>{selectedClass}</b></span>
-                          <span>रजि.: <b>{student.generalRegNo || "-"}</b></span>
-                        </div>
+                  {/* 2 Main Columns Side-by-Side (Page 1 Left, Page 2 Right) */}
+                  <div className="grid grid-cols-12 gap-3">
+                    {/* ================= LEFT PAGE (PAGE 1: Profile, Attendance, Grade Reference) ================= */}
+                    <div className="col-span-6 space-y-1.5 border-r border-dashed border-amber-300 pr-3">
+                      <div className="bg-amber-100/60 px-2 py-0.5 rounded text-[10px] font-black text-amber-900 text-center">
+                        १. विद्यार्थी माहिती व हजेरी तक्ता
                       </div>
 
-                      {/* Subject Grades Table */}
-                      <div className="border border-amber-400 rounded-xl p-2 bg-white">
-                        <h4 className="text-[11px] font-black text-amber-900 text-center mb-1 pb-0.5 border-b border-amber-200">विषयनिहाय श्रेणी</h4>
-                        <table className="w-full border-collapse border border-amber-300 text-[10px] text-center font-medium">
-                          <thead>
-                            <tr className="bg-amber-100 font-extrabold text-amber-950">
-                              <th className="border border-amber-300 p-1 text-left">विषय</th>
-                              <th className="border border-amber-300 p-1 w-14">प्रथम सत्र</th>
-                              <th className="border border-amber-300 p-1 w-14">द्वितीय सत्र</th>
-                            </tr>
-                          </thead>
+                      {/* Student Profile Info Table */}
+                      <div className="border border-amber-400 rounded-xl p-1 bg-white shadow-2xs overflow-hidden">
+                        <table className="w-full text-[8.5px] border-collapse">
                           <tbody>
-                            {subjects.map((subName) => {
-                              const sem1G = getSubjectGradeForTerm(student, subName, "sem1");
-                              const sem2G = getSubjectGradeForTerm(student, subName, "sem2");
-                              return (
-                                <tr key={subName} className="border-b border-amber-200">
-                                  <td className="border border-amber-300 p-0.5 text-left font-bold text-slate-900 bg-amber-50/20">{subName}</td>
-                                  <td className="border border-amber-300 p-0.5 font-black text-blue-700">{sem1G}</td>
-                                  <td className="border border-amber-300 p-0.5 font-black text-blue-700">{sem2G}</td>
-                                </tr>
-                              );
-                            })}
+                            <tr className="border-b border-amber-200 bg-amber-50/50">
+                              <td colSpan={4} className="py-0.5 px-1.5 font-bold text-slate-900">
+                                शाळा: <span className="font-extrabold text-amber-950">{schoolData.schoolName || "-"}</span>
+                              </td>
+                            </tr>
+                            <tr className="border-b border-amber-200 bg-blue-50/30">
+                              <td colSpan={4} className="py-0.5 px-1.5 font-bold text-slate-900">
+                                विद्यार्थ्याचे नाव: <span className="font-black text-blue-900 text-[9.5px]">{student.name || student.fullName || "-"}</span>
+                              </td>
+                            </tr>
+                            <tr className="border-b border-amber-100">
+                              <td className="w-[18%] py-0.5 px-1 font-bold text-slate-700">जन्म दि.:</td>
+                              <td className="w-[32%] py-0.5 px-1 font-extrabold text-slate-900">{student.dob || "-"}</td>
+                              <td className="w-[18%] py-0.5 px-1 font-bold text-slate-700">जन. रजि. क्र.:</td>
+                              <td className="w-[32%] py-0.5 px-1 font-extrabold text-slate-900">{student.generalRegNo || "-"}</td>
+                            </tr>
+                            <tr className="border-b border-amber-100">
+                              <td className="w-[18%] py-0.5 px-1 font-bold text-slate-700">आयडी:</td>
+                              <td className="w-[32%] py-0.5 px-1 font-extrabold text-slate-900">{student.studentId || student.id || "-"}</td>
+                              <td className="w-[18%] py-0.5 px-1 font-bold text-slate-700">संवर्ग:</td>
+                              <td className="w-[32%] py-0.5 px-1 font-extrabold text-slate-900">{student.caste || "-"}</td>
+                            </tr>
+                            <tr className="border-b border-amber-100">
+                              <td className="w-[18%] py-0.5 px-1 font-bold text-slate-700">आईचे नाव:</td>
+                              <td className="w-[32%] py-0.5 px-1 font-extrabold text-slate-900">{student.motherName || "-"}</td>
+                              <td className="w-[18%] py-0.5 px-1 font-bold text-slate-700">वडिलांचे नाव:</td>
+                              <td className="w-[32%] py-0.5 px-1 font-extrabold text-slate-900">{student.fatherName || "-"}</td>
+                            </tr>
+                            <tr className="border-b border-amber-100">
+                              <td className="w-[18%] py-0.5 px-1 font-bold text-slate-700">मातृभाषा:</td>
+                              <td className="w-[32%] py-0.5 px-1 font-extrabold text-slate-900">{student.motherTongue || "मराठी"}</td>
+                              <td className="w-[18%] py-0.5 px-1 font-bold text-slate-700">माध्यम:</td>
+                              <td className="w-[32%] py-0.5 px-1 font-extrabold text-slate-900">मराठी</td>
+                            </tr>
+                            <tr>
+                              <td className="w-[18%] py-0.5 px-1 font-bold text-slate-700">पत्ता:</td>
+                              <td className="w-[32%] py-0.5 px-1 font-extrabold text-slate-900 truncate max-w-[100px]">{student.address || schoolData.address || "-"}</td>
+                              <td className="w-[18%] py-0.5 px-1 font-bold text-slate-700">संपर्क:</td>
+                              <td className="w-[32%] py-0.5 px-1 font-extrabold text-slate-900">{student.mobile || "-"}</td>
+                            </tr>
                           </tbody>
                         </table>
                       </div>
 
-                      {/* Grade Classification Reference */}
-                      <div className="border border-amber-400 rounded-xl p-1.5 bg-white text-[9px]">
-                        <h4 className="font-bold text-amber-900 border-b border-amber-200 pb-0.5 mb-1 text-center">श्रेणी गुण</h4>
-                        <div className="grid grid-cols-3 gap-0.5 text-center font-semibold text-slate-700">
-                          <span className="bg-amber-50 p-0.5 rounded">91-100%: <b>अ-1</b></span>
-                          <span className="bg-amber-50 p-0.5 rounded">81-90%: <b>अ-2</b></span>
-                          <span className="bg-amber-50 p-0.5 rounded">71-80%: <b>ब-1</b></span>
-                          <span className="bg-amber-50 p-0.5 rounded">61-70%: <b>ब-2</b></span>
-                          <span className="bg-amber-50 p-0.5 rounded">51-60%: <b>क-1</b></span>
-                          <span className="bg-amber-50 p-0.5 rounded">41-50%: <b>क-2</b></span>
+                      {/* Attendance & Grade Classification Tables Side-by-Side */}
+                      <div className="grid grid-cols-12 gap-1.5">
+                        {/* Attendance Table */}
+                        <div className="col-span-7 border border-amber-400 rounded-xl p-1 bg-white">
+                          <h4 className="text-[9.5px] font-black text-amber-900 text-center mb-0.5 pb-0.5 border-b border-amber-200">उपस्थिती</h4>
+                          <table className="w-full border-collapse border border-amber-300 text-[8px] text-center">
+                            <thead>
+                              <tr className="bg-amber-100 font-extrabold text-amber-950">
+                                <th className="border border-amber-300 p-0.5">महिना</th>
+                                <th className="border border-amber-300 p-0.5">कामाचे दिवस</th>
+                                <th className="border border-amber-300 p-0.5">हजर दिवस</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {monthsList.map((m) => {
+                                const workingDays = getWorkingDaysForMonth(m);
+                                const pres = getStudentPresentDays(student, m);
+                                return (
+                                  <tr key={m.key} className="border-b border-amber-200">
+                                    <td className="border border-amber-300 p-0.2 font-bold text-slate-800 bg-amber-50/40">{m.label}</td>
+                                    <td className="border border-amber-300 p-0.2">{workingDays}</td>
+                                    <td className="border border-amber-300 p-0.2 font-bold text-blue-800">{pres}</td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* Grade Classification Reference Table */}
+                        <div className="col-span-5 border border-amber-400 rounded-xl p-1 bg-white flex flex-col justify-between">
+                          <div>
+                            <h4 className="text-[9.5px] font-black text-amber-900 text-center mb-0.5 pb-0.5 border-b border-amber-200">श्रेणी तक्ता</h4>
+                            <table className="w-full border-collapse border border-amber-300 text-[8px] text-center">
+                              <thead>
+                                <tr className="bg-amber-100 font-extrabold text-amber-950">
+                                  <th className="border border-amber-300 p-0.5">गुण range</th>
+                                  <th className="border border-amber-300 p-0.5">श्रेणी</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr className="border-b border-amber-200"><td className="border border-amber-300 p-0.2">91%-100%</td><td className="border border-amber-300 p-0.2 font-bold text-blue-700">अ-1</td></tr>
+                                <tr className="border-b border-amber-200"><td className="border border-amber-300 p-0.2">81%-90%</td><td className="border border-amber-300 p-0.2 font-bold text-blue-700">अ-2</td></tr>
+                                <tr className="border-b border-amber-200"><td className="border border-amber-300 p-0.2">71%-80%</td><td className="border border-amber-300 p-0.2 font-bold text-blue-700">ब-1</td></tr>
+                                <tr className="border-b border-amber-200"><td className="border border-amber-300 p-0.2">61%-70%</td><td className="border border-amber-300 p-0.2 font-bold text-blue-700">ब-2</td></tr>
+                                <tr className="border-b border-amber-200"><td className="border border-amber-300 p-0.2">51%-60%</td><td className="border border-amber-300 p-0.2 font-bold text-blue-700">क-1</td></tr>
+                                <tr className="border-b border-amber-200"><td className="border border-amber-300 p-0.2">41%-50%</td><td className="border border-amber-300 p-0.2 font-bold text-blue-700">क-2</td></tr>
+                                <tr className="border-b border-amber-200"><td className="border border-amber-300 p-0.2">33%-40%</td><td className="border border-amber-300 p-0.2 font-bold text-blue-700">ड</td></tr>
+                                <tr className="border-b border-amber-200"><td className="border border-amber-300 p-0.2">21%-32%</td><td className="border border-amber-300 p-0.2 font-bold text-blue-700">इ-1</td></tr>
+                                <tr><td className="border border-amber-300 p-0.2">≤20%</td><td className="border border-amber-300 p-0.2 font-bold text-blue-700">इ-2</td></tr>
+                              </tbody>
+                            </table>
+                          </div>
+
+                          {/* Health info with clean margin and background badge */}
+                          <div className="pt-1 pb-1 px-1.5 border-t border-amber-200 text-[8px] font-bold text-slate-800 space-y-0.5 mt-auto bg-amber-50/50 rounded-b-lg border-x border-b border-amber-200/80">
+                            <p>वजन: <b className="text-blue-900">{student.weight || "-"} kg</b> | उंची: <b className="text-blue-900">{student.height || "-"} cm</b></p>
+                            <p>पुढील इयत्ता: <b className="text-emerald-800 font-black">दुसरी</b></p>
+                          </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Right Column: Descriptive Remarks & Attendance */}
-                    <div className="col-span-6 space-y-2">
-                      {/* Descriptive Remarks Section */}
-                      <div className="border border-amber-400 rounded-xl p-2 bg-amber-50/20 text-[10px] space-y-1.5">
-                        <h4 className="font-black text-amber-900 border-b border-amber-200 pb-0.5 text-center">वर्णनात्मक नोंदी</h4>
-
-                        <div>
-                          <span className="font-extrabold text-amber-900 block mb-0.5">विशेष प्रगती:</span>
-                          <p className="text-slate-800 leading-tight font-medium bg-white p-1 rounded border border-amber-200 text-[9.5px]">
-                            {getFormattedRemark(student, "विशेष प्रगती", "sem2") !== "-"
-                              ? getFormattedRemark(student, "विशेष प्रगती", "sem2")
-                              : getFormattedRemark(student, "विशेष प्रगती", "sem1")}
-                          </p>
-                        </div>
-
-                        <div>
-                          <span className="font-extrabold text-amber-900 block mb-0.5">आवड / छंद:</span>
-                          <p className="text-slate-800 leading-tight font-medium bg-white p-1 rounded border border-amber-200 text-[9.5px]">
-                            {getFormattedRemark(student, "आवड / छंद", "sem2") !== "-"
-                              ? getFormattedRemark(student, "आवड / छंद", "sem2")
-                              : getFormattedRemark(student, "आवड / छंद", "sem1")}
-                          </p>
-                        </div>
-
-                        <div>
-                          <span className="font-extrabold text-amber-900 block mb-0.5">सुधारणा आवश्यक:</span>
-                          <p className="text-slate-800 leading-tight font-medium bg-white p-1 rounded border border-amber-200 text-[9.5px]">
-                            {getFormattedRemark(student, "सुधारणा आवश्यक", "sem2") !== "-"
-                              ? getFormattedRemark(student, "सुधारणा आवश्यक", "sem2")
-                              : getFormattedRemark(student, "सुधारणा आवश्यक", "sem1")}
-                          </p>
-                        </div>
+                    {/* ================= RIGHT PAGE (PAGE 2: Subject Grades & Descriptive Remarks) ================= */}
+                    <div className="col-span-6 space-y-1.5 pl-1">
+                      <div className="bg-amber-100/60 px-2 py-0.5 rounded text-[10px] font-black text-amber-900 text-center">
+                        २. विषयनिहाय मूल्यमापन व वर्णनात्मक नोंदी
                       </div>
 
-                      {/* Monthly Attendance Table */}
-                      <div className="border border-amber-400 rounded-xl p-1.5 bg-white text-[9px]">
-                        <h4 className="font-black text-amber-900 text-center mb-1 pb-0.5 border-b border-amber-200">उपस्थिती</h4>
-                        <table className="w-full border-collapse border border-amber-300 text-center">
-                          <thead>
-                            <tr className="bg-amber-100 font-extrabold text-amber-950">
-                              <th className="border border-amber-300 p-0.5">महिना</th>
-                              <th className="border border-amber-300 p-0.5">कामाचे दिवस</th>
-                              <th className="border border-amber-300 p-0.5">हजर दिवस</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {monthsList.slice(0, 10).map((m) => {
-                              const workingDays = getWorkingDaysForMonth(m);
-                              const pres = getStudentPresentDays(student, m);
-                              return (
-                                <tr key={m.key} className="border-b border-amber-200">
-                                  <td className="border border-amber-300 p-0.5 font-bold text-slate-800 bg-amber-50/40">{m.label}</td>
-                                  <td className="border border-amber-300 p-0.5">{workingDays}</td>
-                                  <td className="border border-amber-300 p-0.5 font-bold text-blue-800">{pres}</td>
+                      {/* Side-by-Side First Semester vs Second Semester */}
+                      <div className="grid grid-cols-12 gap-1.5">
+                        {/* FIRST SEMESTER */}
+                        <div className="col-span-6 border border-amber-400 rounded-xl p-1 bg-white flex flex-col justify-between">
+                          <div>
+                            <h4 className="text-[9.5px] font-black text-amber-900 text-center mb-0.5 pb-0.5 border-b border-amber-200">प्रथम सत्र</h4>
+
+                            {/* Subject Grades Table */}
+                            <table className="w-full border-collapse border border-amber-300 text-[8px] text-center font-medium mb-1">
+                              <thead>
+                                <tr className="bg-amber-100 font-extrabold text-amber-950">
+                                  <th className="border border-amber-300 p-0.5 text-left">विषय</th>
+                                  <th className="border border-amber-300 p-0.5 w-8">श्रेणी</th>
                                 </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
+                              </thead>
+                              <tbody>
+                                {subjects.map((subName) => {
+                                  const sem1Grade = getSubjectGradeForTerm(student, subName, "sem1");
+                                  return (
+                                    <tr key={subName} className="border-b border-amber-200">
+                                      <td className="border border-amber-300 p-0.2 text-left font-bold text-slate-900 bg-amber-50/20 truncate max-w-[90px]">{subName}</td>
+                                      <td className="border border-amber-300 p-0.2 font-black text-blue-700">{sem1Grade}</td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+
+                            {/* Remarks */}
+                            <div className="space-y-0.5 border border-amber-300 rounded-lg p-1 bg-amber-50/20 text-[8px]">
+                              <h5 className="font-black text-amber-900 text-center border-b border-amber-200 pb-0.2">वर्णनात्मक नोंदी</h5>
+                              <div>
+                                <span className="font-extrabold text-amber-900 block">विशेष प्रगती:</span>
+                                <p className="text-slate-800 leading-tight font-medium bg-white p-0.5 rounded border border-amber-200 min-h-[22px]">
+                                  {getFormattedRemark(student, "विशेष प्रगती", "sem1")}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="font-extrabold text-amber-900 block">आवड / छंद:</span>
+                                <p className="text-slate-800 leading-tight font-medium bg-white p-0.5 rounded border border-amber-200 min-h-[22px]">
+                                  {getFormattedRemark(student, "आवड / छंद", "sem1")}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="font-extrabold text-amber-900 block">सुधारणा आवश्यक:</span>
+                                <p className="text-slate-800 leading-tight font-medium bg-white p-0.5 rounded border border-amber-200 min-h-[22px]">
+                                  {getFormattedRemark(student, "सुधारणा आवश्यक", "sem1")}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* SECOND SEMESTER */}
+                        <div className="col-span-6 border border-amber-400 rounded-xl p-1 bg-white flex flex-col justify-between">
+                          <div>
+                            <h4 className="text-[9.5px] font-black text-amber-900 text-center mb-0.5 pb-0.5 border-b border-amber-200">द्वितीय सत्र</h4>
+
+                            {/* Subject Grades Table */}
+                            <table className="w-full border-collapse border border-amber-300 text-[8px] text-center font-medium mb-1">
+                              <thead>
+                                <tr className="bg-amber-100 font-extrabold text-amber-950">
+                                  <th className="border border-amber-300 p-0.5 text-left">विषय</th>
+                                  <th className="border border-amber-300 p-0.5 w-8">श्रेणी</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {subjects.map((subName) => {
+                                  const sem2Grade = getSubjectGradeForTerm(student, subName, "sem2");
+                                  return (
+                                    <tr key={subName} className="border-b border-amber-200">
+                                      <td className="border border-amber-300 p-0.2 text-left font-bold text-slate-900 bg-amber-50/20 truncate max-w-[90px]">{subName}</td>
+                                      <td className="border border-amber-300 p-0.2 font-black text-blue-700">{sem2Grade}</td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+
+                            {/* Remarks */}
+                            <div className="space-y-0.5 border border-amber-300 rounded-lg p-1 bg-amber-50/20 text-[8px]">
+                              <h5 className="font-black text-amber-900 text-center border-b border-amber-200 pb-0.2">वर्णनात्मक नोंदी</h5>
+                              <div>
+                                <span className="font-extrabold text-amber-900 block">विशेष प्रगती:</span>
+                                <p className="text-slate-800 leading-tight font-medium bg-white p-0.5 rounded border border-amber-200 min-h-[22px]">
+                                  {getFormattedRemark(student, "विशेष प्रगती", "sem2")}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="font-extrabold text-amber-900 block">आवड / छंद:</span>
+                                <p className="text-slate-800 leading-tight font-medium bg-white p-0.5 rounded border border-amber-200 min-h-[22px]">
+                                  {getFormattedRemark(student, "आवड / छंद", "sem2")}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="font-extrabold text-amber-900 block">सुधारणा आवश्यक:</span>
+                                <p className="text-slate-800 leading-tight font-medium bg-white p-0.5 rounded border border-amber-200 min-h-[22px]">
+                                  {getFormattedRemark(student, "सुधारणा आवश्यक", "sem2")}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Signatures Footer */}
-                <div className="flex items-center justify-between pt-2 border-t-2 border-amber-400 mt-1 text-[10px] font-bold text-slate-900">
+                {/* Signatures Footer Line across full landscape width */}
+                <div className="flex items-center justify-between pt-1 border-t-2 border-amber-400 mt-1 text-[9.5px] font-bold text-slate-900">
                   <div className="text-center">
                     <p className="font-extrabold">{schoolData.teacherName || "वर्गशिक्षक"}</p>
-                    <p className="text-[9px] text-slate-500 font-medium">वर्गशिक्षक</p>
+                    <p className="text-[8px] text-slate-500 font-medium">वर्गशिक्षक</p>
+                  </div>
+                  <div className="text-center text-[8.5px] text-slate-500 font-semibold">
+                    ✦ महाराष्ट्र शासन शालेय शिक्षण व क्रीडा विभाग - प्रगती पत्रक ✦
                   </div>
                   <div className="text-center">
                     <p className="font-extrabold">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
-                    <p className="text-[9px] text-slate-500 font-medium">मुख्याध्यापक</p>
+                    <p className="text-[8px] text-slate-500 font-medium">मुख्याध्यापक</p>
                   </div>
                   <div className="text-center">
                     <p className="font-extrabold">पालक स्वाक्षरी</p>
-                    <p className="text-[9px] text-slate-500 font-medium">पालक सही</p>
+                    <p className="text-[8px] text-slate-500 font-medium">पालक सही</p>
                   </div>
                 </div>
               </div>
             );
           }
 
+          // ==================== ROTATED 90 DEGREES LANDSCAPE ON PORTRAIT A4 LAYOUT ====================
+          if (layoutMode === "rotated90" || layoutMode === "1page" || layoutMode === "portrait") {
+            return (
+              <div
+                key={student.id}
+                className="pdf-page bg-white p-3.5 border-2 border-amber-400 rounded-3xl w-[280mm] max-w-[280mm] h-[192mm] max-h-[192mm] mx-auto overflow-hidden mb-6 flex flex-col justify-between shadow-sm"
+                style={{ pageBreakAfter: "always", breakAfter: "page" }}
+              >
+                <div>
+                  {/* Top Header Banner across full width */}
+                  <div className="border-b-2 border-amber-400 pb-1.5 mb-1.5 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 bg-orange-600 text-white rounded-lg flex items-center justify-center font-black text-xs shadow-sm">
+                          SS
+                        </div>
+                        <div>
+                          <h3 className="text-[11px] font-black text-orange-700 tracking-wider uppercase">समग्र शिक्षा</h3>
+                          <p className="text-[7.5px] text-slate-500 font-bold">Samagra Shiksha</p>
+                        </div>
+                      </div>
+
+                      <div className="text-center bg-amber-50 px-5 py-0.5 rounded-xl border border-amber-300">
+                        <h2 className="text-xs sm:text-sm font-black text-amber-900 tracking-tight">
+                          विद्यार्थी प्रगतीपत्रक सन {academicYear}
+                        </h2>
+                      </div>
+
+                      <div className="text-right text-[9px] font-bold text-slate-700">
+                        <p>यु-डायस क्र.: <b>{schoolData.udise || "-"}</b></p>
+                        <p>इयत्ता: <b>{selectedClass} ({division})</b></p>
+                      </div>
+                    </div>
+
+                    {/* Student Info Top Bar */}
+                    <div className="flex items-center justify-between bg-amber-50/80 px-2.5 py-0.5 rounded-lg border border-amber-200 text-[9.5px] font-bold text-slate-800">
+                      <span>विद्यार्थी नाव: <b className="text-blue-900 font-black text-[10.5px]">{student.name}</b></span>
+                      <span>हजेरी क्र.: <b className="text-orange-700 font-extrabold">{student.rollNo || idx + 1}</b></span>
+                      <span>जन. रजि. क्र.: <b>{student.generalRegNo || "-"}</b></span>
+                      <span>आयडी: <b>{student.studentId || student.id || "-"}</b></span>
+                    </div>
+                  </div>
+
+                  {/* 2 Main Columns Side-by-Side (Left: Info & Attendance, Right: Grades & Remarks) */}
+                  <div className="grid grid-cols-12 gap-2.5">
+                    {/* LEFT COLUMN: Section 1 */}
+                    <div className="col-span-6 space-y-1 border-r border-dashed border-amber-300 pr-2.5">
+                      <div className="bg-amber-100 px-2 py-0.5 rounded-lg text-[9.5px] font-black text-amber-900 text-center border border-amber-300">
+                        १. विद्यार्थी माहिती व हजेरी तक्ता
+                      </div>
+
+                      {/* Student Profile Info Table */}
+                      <div className="border border-amber-400 rounded-xl p-1 bg-white shadow-2xs overflow-hidden">
+                        <table className="w-full text-[8.5px] border-collapse">
+                          <tbody>
+                            <tr className="border-b border-amber-200 bg-amber-50/50">
+                              <td colSpan={4} className="py-0.5 px-1.5 font-bold text-slate-900">
+                                शाळा: <span className="font-extrabold text-amber-950">{schoolData.schoolName || "-"}</span>
+                              </td>
+                            </tr>
+                            <tr className="border-b border-amber-200 bg-blue-50/30">
+                              <td colSpan={4} className="py-0.5 px-1.5 font-bold text-slate-900">
+                                विद्यार्थ्याचे नाव: <span className="font-black text-blue-900 text-[9.5px]">{student.name || student.fullName || "-"}</span>
+                              </td>
+                            </tr>
+                            <tr className="border-b border-amber-100">
+                              <td className="w-[18%] py-0.5 px-1 font-bold text-slate-700">जन्म दि.:</td>
+                              <td className="w-[32%] py-0.5 px-1 font-extrabold text-slate-900">{student.dob || "-"}</td>
+                              <td className="w-[18%] py-0.5 px-1 font-bold text-slate-700">जन. रजि. क्र.:</td>
+                              <td className="w-[32%] py-0.5 px-1 font-extrabold text-slate-900">{student.generalRegNo || "-"}</td>
+                            </tr>
+                            <tr className="border-b border-amber-100">
+                              <td className="w-[18%] py-0.5 px-1 font-bold text-slate-700">आयडी:</td>
+                              <td className="w-[32%] py-0.5 px-1 font-extrabold text-slate-900">{student.studentId || student.id || "-"}</td>
+                              <td className="w-[18%] py-0.5 px-1 font-bold text-slate-700">संवर्ग:</td>
+                              <td className="w-[32%] py-0.5 px-1 font-extrabold text-slate-900">{student.caste || "-"}</td>
+                            </tr>
+                            <tr className="border-b border-amber-100">
+                              <td className="w-[18%] py-0.5 px-1 font-bold text-slate-700">आईचे नाव:</td>
+                              <td className="w-[32%] py-0.5 px-1 font-extrabold text-slate-900">{student.motherName || "-"}</td>
+                              <td className="w-[18%] py-0.5 px-1 font-bold text-slate-700">वडिलांचे नाव:</td>
+                              <td className="w-[32%] py-0.5 px-1 font-extrabold text-slate-900">{student.fatherName || "-"}</td>
+                            </tr>
+                            <tr className="border-b border-amber-100">
+                              <td className="w-[18%] py-0.5 px-1 font-bold text-slate-700">मातृभाषा:</td>
+                              <td className="w-[32%] py-0.5 px-1 font-extrabold text-slate-900">{student.motherTongue || "मराठी"}</td>
+                              <td className="w-[18%] py-0.5 px-1 font-bold text-slate-700">माध्यम:</td>
+                              <td className="w-[32%] py-0.5 px-1 font-extrabold text-slate-900">मराठी</td>
+                            </tr>
+                            <tr>
+                              <td className="w-[18%] py-0.5 px-1 font-bold text-slate-700">पत्ता:</td>
+                              <td className="w-[32%] py-0.5 px-1 font-extrabold text-slate-900 truncate max-w-[100px]">{student.address || schoolData.address || "-"}</td>
+                              <td className="w-[18%] py-0.5 px-1 font-bold text-slate-700">संपर्क:</td>
+                              <td className="w-[32%] py-0.5 px-1 font-extrabold text-slate-900">{student.mobile || "-"}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Attendance & Grade Reference Side-by-Side */}
+                      <div className="grid grid-cols-12 gap-1">
+                        {/* Attendance Table */}
+                        <div className="col-span-7 border border-amber-400 rounded-xl p-1 bg-white">
+                          <h4 className="text-[9px] font-black text-amber-900 text-center mb-0.5 pb-0.5 border-b border-amber-200">उपस्थिती तक्ता</h4>
+                          <table className="w-full border-collapse border border-amber-300 text-[7.5px] text-center">
+                            <thead>
+                              <tr className="bg-amber-100 font-extrabold text-amber-950">
+                                <th className="border border-amber-300 p-0.2">महिना</th>
+                                <th className="border border-amber-300 p-0.2">कामाचे</th>
+                                <th className="border border-amber-300 p-0.2">हजर</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {monthsList.map((m) => {
+                                const workingDays = getWorkingDaysForMonth(m);
+                                const pres = getStudentPresentDays(student, m);
+                                return (
+                                  <tr key={m.key} className="border-b border-amber-200">
+                                    <td className="border border-amber-300 p-0.2 font-bold text-slate-800 bg-amber-50/40">{m.label}</td>
+                                    <td className="border border-amber-300 p-0.2">{workingDays}</td>
+                                    <td className="border border-amber-300 p-0.2 font-bold text-blue-800">{pres}</td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* Grade Reference Table */}
+                        <div className="col-span-5 border border-amber-400 rounded-xl p-1 bg-white flex flex-col justify-between">
+                          <div>
+                            <h4 className="text-[9px] font-black text-amber-900 text-center mb-0.5 pb-0.5 border-b border-amber-200">श्रेणी तक्ता</h4>
+                            <table className="w-full border-collapse border border-amber-300 text-[7.5px] text-center">
+                              <thead>
+                                <tr className="bg-amber-100 font-extrabold text-amber-950">
+                                  <th className="border border-amber-300 p-0.2">गुण range</th>
+                                  <th className="border border-amber-300 p-0.2">श्रेणी</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr className="border-b border-amber-200"><td className="border border-amber-300 p-0.2">91%-100%</td><td className="border border-amber-300 p-0.2 font-bold text-blue-700">अ-1</td></tr>
+                                <tr className="border-b border-amber-200"><td className="border border-amber-300 p-0.2">81%-90%</td><td className="border border-amber-300 p-0.2 font-bold text-blue-700">अ-2</td></tr>
+                                <tr className="border-b border-amber-200"><td className="border border-amber-300 p-0.2">71%-80%</td><td className="border border-amber-300 p-0.2 font-bold text-blue-700">ब-1</td></tr>
+                                <tr className="border-b border-amber-200"><td className="border border-amber-300 p-0.2">61%-70%</td><td className="border border-amber-300 p-0.2 font-bold text-blue-700">ब-2</td></tr>
+                                <tr className="border-b border-amber-200"><td className="border border-amber-300 p-0.2">51%-60%</td><td className="border border-amber-300 p-0.2 font-bold text-blue-700">क-1</td></tr>
+                                <tr className="border-b border-amber-200"><td className="border border-amber-300 p-0.2">41%-50%</td><td className="border border-amber-300 p-0.2 font-bold text-blue-700">क-2</td></tr>
+                                <tr className="border-b border-amber-200"><td className="border border-amber-300 p-0.2">33%-40%</td><td className="border border-amber-300 p-0.2 font-bold text-blue-700">ड</td></tr>
+                                <tr className="border-b border-amber-200"><td className="border border-amber-300 p-0.2">21%-32%</td><td className="border border-amber-300 p-0.2 font-bold text-blue-700">इ-1</td></tr>
+                                <tr><td className="border border-amber-300 p-0.2">≤20%</td><td className="border border-amber-300 p-0.2 font-bold text-blue-700">इ-2</td></tr>
+                              </tbody>
+                            </table>
+                          </div>
+
+                          {/* Health info with clean margin and background badge */}
+                          <div className="pt-1 pb-1 px-1.5 border-t border-amber-200 text-[8px] font-bold text-slate-800 space-y-0.5 mt-auto bg-amber-50/50 rounded-b-lg border-x border-b border-amber-200/80">
+                            <p>वजन: <b className="text-blue-900">{student.weight || "-"} kg</b> | उंची: <b className="text-blue-900">{student.height || "-"} cm</b></p>
+                            <p>पुढील इयत्ता: <b className="text-emerald-800 font-black">दुसरी</b></p>
+                          </div>
+                        </div>
+                      </div>
+
+                    </div>
+
+                    {/* RIGHT COLUMN: Section 2 */}
+                    <div className="col-span-6 space-y-1 pl-0.5">
+                      <div className="bg-amber-100 px-2 py-0.5 rounded-lg text-[9.5px] font-black text-amber-900 text-center border border-amber-300">
+                        २. विषयनिहाय मूल्यमापन व वर्णनात्मक नोंदी
+                      </div>
+
+                      {/* FIRST SEMESTER (प्रथम सत्र) */}
+                      <div className="border-2 border-amber-400 rounded-2xl p-2 bg-white mb-2 shadow-2xs flex flex-col justify-between">
+                        <h4 className="text-[10px] font-black text-amber-900 text-center mb-1.5 pb-1 border-b border-amber-200 bg-amber-50 rounded-t-xl py-0.5">
+                          प्रथम सत्र
+                        </h4>
+                        <div className="grid grid-cols-12 gap-2 items-stretch">
+                          {/* Left: Subject & Grade Table */}
+                          <div className="col-span-5">
+                            <table className="w-full border-collapse border border-amber-300 text-[8.5px] text-center font-medium">
+                              <thead>
+                                <tr className="bg-amber-100 font-extrabold text-amber-950">
+                                  <th className="border border-amber-300 p-1 text-left w-[68%]">विषय</th>
+                                  <th className="border border-amber-300 p-1 w-[32%]">श्रेणी</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {subjects.map((subName) => (
+                                  <tr key={subName} className="border-b border-amber-200">
+                                    <td className="border border-amber-300 p-1 text-left font-bold text-slate-900 bg-amber-50/20">{subName}</td>
+                                    <td className="border border-amber-300 p-1 font-black text-blue-800 text-[9px]">{getSubjectGradeForTerm(student, subName, "sem1")}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+
+                          {/* Right: Descriptive Remarks */}
+                          <div className="col-span-7 border border-amber-300 rounded-xl p-1.5 bg-amber-50/30 text-[8.5px] flex flex-col justify-between shadow-2xs">
+                            <h5 className="font-extrabold text-amber-950 text-center border border-amber-300 pb-0.5 bg-amber-100 rounded-lg mb-1 py-0.5 text-[8.5px]">
+                              वर्णनात्मक नोंदी (प्रथम सत्र)
+                            </h5>
+                            <div className="space-y-1">
+                              <div>
+                                <span className="font-extrabold text-amber-950 block text-[8.5px]">विशेष प्रगती:</span>
+                                <p className="text-slate-900 leading-snug font-bold bg-white p-1.5 rounded-lg border border-amber-200 min-h-[24px] flex items-center break-words text-[8px]">
+                                  {getFormattedRemark(student, "विशेष प्रगती", "sem1")}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="font-extrabold text-amber-950 block text-[8.5px]">आवड / छंद:</span>
+                                <p className="text-slate-900 leading-snug font-bold bg-white p-1.5 rounded-lg border border-amber-200 min-h-[24px] flex items-center break-words text-[8px]">
+                                  {getFormattedRemark(student, "आवड / छंद", "sem1")}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="font-extrabold text-amber-950 block text-[8.5px]">सुधारणा आवश्यक:</span>
+                                <p className="text-slate-900 leading-snug font-bold bg-white p-1.5 rounded-lg border border-amber-200 min-h-[24px] flex items-center break-words text-[8px]">
+                                  {getFormattedRemark(student, "सुधारणा आवश्यक", "sem1")}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* SECOND SEMESTER (द्वितीय सत्र) */}
+                      <div className="border-2 border-amber-400 rounded-2xl p-2 bg-white shadow-2xs flex flex-col justify-between">
+                        <h4 className="text-[10px] font-black text-amber-900 text-center mb-1.5 pb-1 border-b border-amber-200 bg-amber-50 rounded-t-xl py-0.5">
+                          द्वितीय सत्र
+                        </h4>
+                        <div className="grid grid-cols-12 gap-2 items-stretch">
+                          {/* Left: Subject & Grade Table */}
+                          <div className="col-span-5">
+                            <table className="w-full border-collapse border border-amber-300 text-[8.5px] text-center font-medium">
+                              <thead>
+                                <tr className="bg-amber-100 font-extrabold text-amber-950">
+                                  <th className="border border-amber-300 p-1 text-left w-[68%]">विषय</th>
+                                  <th className="border border-amber-300 p-1 w-[32%]">श्रेणी</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {subjects.map((subName) => (
+                                  <tr key={subName} className="border-b border-amber-200">
+                                    <td className="border border-amber-300 p-1 text-left font-bold text-slate-900 bg-amber-50/20">{subName}</td>
+                                    <td className="border border-amber-300 p-1 font-black text-blue-800 text-[9px]">{getSubjectGradeForTerm(student, subName, "sem2")}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+
+                          {/* Right: Descriptive Remarks */}
+                          <div className="col-span-7 border border-amber-300 rounded-xl p-1.5 bg-amber-50/30 text-[8.5px] flex flex-col justify-between shadow-2xs">
+                            <h5 className="font-extrabold text-amber-950 text-center border border-amber-300 pb-0.5 bg-amber-100 rounded-lg mb-1 py-0.5 text-[8.5px]">
+                              वर्णनात्मक नोंदी (द्वितीय सत्र)
+                            </h5>
+                            <div className="space-y-1">
+                              <div>
+                                <span className="font-extrabold text-amber-950 block text-[8.5px]">विशेष प्रगती:</span>
+                                <p className="text-slate-900 leading-snug font-bold bg-white p-1.5 rounded-lg border border-amber-200 min-h-[24px] flex items-center break-words text-[8px]">
+                                  {getFormattedRemark(student, "विशेष प्रगती", "sem2")}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="font-extrabold text-amber-950 block text-[8.5px]">आवड / छंद:</span>
+                                <p className="text-slate-900 leading-snug font-bold bg-white p-1.5 rounded-lg border border-amber-200 min-h-[24px] flex items-center break-words text-[8px]">
+                                  {getFormattedRemark(student, "आवड / छंद", "sem2")}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="font-extrabold text-amber-950 block text-[8.5px]">सुधारणा आवश्यक:</span>
+                                <p className="text-slate-900 leading-snug font-bold bg-white p-1.5 rounded-lg border border-amber-200 min-h-[24px] flex items-center break-words text-[8px]">
+                                  {getFormattedRemark(student, "सुधारणा आवश्यक", "sem2")}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
+
+                {/* Signatures Footer */}
+                <div className="flex items-center justify-between pt-1 border-t-2 border-amber-400 mt-0.5 text-[9px] font-bold text-slate-900">
+                  <div className="text-center">
+                    <p className="font-extrabold text-slate-900">{schoolData.teacherName || "वर्गशिक्षक"}</p>
+                    <p className="text-[7.5px] text-slate-500 font-medium">वर्गशिक्षक सही</p>
+                  </div>
+                  <div className="text-center text-[8px] text-slate-500 font-semibold">
+                    ✦ महाराष्ट्र शासन शालेय शिक्षण व क्रीडा विभाग - प्रगती पत्रक ✦
+                  </div>
+                  <div className="text-center">
+                    <p className="font-extrabold text-slate-900">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
+                    <p className="text-[7.5px] text-slate-500 font-medium">मुख्याध्यापक सही</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="font-extrabold text-slate-900">पालक स्वाक्षरी</p>
+                    <p className="text-[7.5px] text-slate-500 font-medium">पालक सही</p>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+
+
+
+          // ==================== PORTRAIT LAYOUT (२ पाने - 2 PAGES STACKED) ====================
           return (
             <React.Fragment key={student.id}>
               {/* ==================== PAGE 1: FRONT PAGE (PROFILE, ATTENDANCE & GRADE SCALE) ==================== */}
@@ -1244,56 +1559,54 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", onBack }
                   {/* Side-by-Side First Semester vs Second Semester Containers */}
                   <div className="grid grid-cols-12 gap-4">
                     {/* FIRST SEMESTER (प्रथम सत्र) */}
-                    <div className="col-span-6 border-2 border-amber-400 rounded-2xl p-3 bg-white flex flex-col justify-between h-[210mm]">
+                    <div className="col-span-6 border-2 border-amber-400 rounded-2xl p-2 bg-white flex flex-col justify-between">
                       <div>
-                        <h3 className="text-sm font-black text-amber-900 text-center mb-3 pb-1.5 border-b-2 border-amber-300">प्रथम सत्र</h3>
+                        <h3 className="text-xs font-black text-amber-900 text-center mb-2 pb-1 border-b-2 border-amber-300">प्रथम सत्र</h3>
 
-                        {/* Subject Grades Table */}
-                        <table className="w-full border-collapse border border-amber-300 text-xs text-center font-medium mb-4">
+                        {/* Integrated 3-Column Table */}
+                        <table className="w-full border-collapse border border-amber-400 text-xs text-center font-medium">
                           <thead>
                             <tr className="bg-amber-100 font-extrabold text-amber-950">
-                              <th className="border border-amber-300 p-2 text-left w-3/4">विषय</th>
-                              <th className="border border-amber-300 p-2 w-1/4">श्रेणी</th>
+                              <th className="border border-amber-400 p-1 text-left w-[30%]">विषय</th>
+                              <th className="border border-amber-400 p-1 w-[15%]">श्रेणी</th>
+                              <th className="border border-amber-400 p-1 w-[55%]">वर्णनात्मक नोंदी</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {subjects.map((subName) => {
-                              const sem1Grade = getSubjectGradeForTerm(student, subName, "sem1");
-                              return (
-                                <tr key={subName} className="border-b border-amber-200">
-                                  <td className="border border-amber-300 p-1.5 text-left font-bold text-slate-900 bg-amber-50/30">{subName}</td>
-                                  <td className="border border-amber-300 p-1.5 font-black text-blue-700">{sem1Grade}</td>
-                                </tr>
-                              );
-                            })}
+                            <tr>
+                              <td className="border border-amber-300 p-1.5 text-left font-bold text-slate-900 bg-amber-50/20">{subjects[0]}</td>
+                              <td className="border border-amber-300 p-1.5 font-black text-blue-700">{getSubjectGradeForTerm(student, subjects[0], "sem1")}</td>
+                              <td rowSpan={subjects.length} className="border border-amber-300 p-2 text-left align-top bg-amber-50/10">
+                                <div className="flex flex-col justify-between h-full space-y-3 text-xs">
+                                  <div>
+                                    <span className="font-extrabold text-amber-950 block text-center mb-1">विशेष प्रगती</span>
+                                    <p className="text-slate-800 leading-relaxed font-medium text-center px-1">
+                                      {getFormattedRemark(student, "विशेष प्रगती", "sem1")}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <span className="font-extrabold text-amber-950 block text-center mb-1">आवड / छंद</span>
+                                    <p className="text-slate-800 leading-relaxed font-medium text-center px-1">
+                                      {getFormattedRemark(student, "आवड / छंद", "sem1")}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <span className="font-extrabold text-amber-950 block text-center mb-1">सुधारणा आवश्यक</span>
+                                    <p className="text-slate-800 leading-relaxed font-medium text-center px-1">
+                                      {getFormattedRemark(student, "सुधारणा आवश्यक", "sem1")}
+                                    </p>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                            {subjects.slice(1).map((subName) => (
+                              <tr key={subName}>
+                                <td className="border border-amber-300 p-1.5 text-left font-bold text-slate-900 bg-amber-50/20">{subName}</td>
+                                <td className="border border-amber-300 p-1.5 font-black text-blue-700">{getSubjectGradeForTerm(student, subName, "sem1")}</td>
+                              </tr>
+                            ))}
                           </tbody>
                         </table>
-
-                        {/* Descriptive Remarks Section */}
-                        <div className="space-y-2 border border-amber-300 rounded-xl p-2.5 bg-amber-50/20 text-xs">
-                          <h4 className="font-black text-amber-900 border-b border-amber-200 pb-1 text-center">वर्णनात्मक नोंदी</h4>
-                          
-                          <div>
-                            <span className="font-extrabold text-amber-900 block mb-0.5">विशेष प्रगती:</span>
-                            <p className="text-slate-800 leading-relaxed font-medium bg-white p-2 rounded-lg border border-amber-200 min-h-[36px]">
-                              {getFormattedRemark(student, "विशेष प्रगती", "sem1")}
-                            </p>
-                          </div>
-
-                          <div>
-                            <span className="font-extrabold text-amber-900 block mb-0.5">आवड / छंद:</span>
-                            <p className="text-slate-800 leading-relaxed font-medium bg-white p-2 rounded-lg border border-amber-200 min-h-[36px]">
-                              {getFormattedRemark(student, "आवड / छंद", "sem1")}
-                            </p>
-                          </div>
-
-                          <div>
-                            <span className="font-extrabold text-amber-900 block mb-0.5">सुधारणा आवश्यक:</span>
-                            <p className="text-slate-800 leading-relaxed font-medium bg-white p-2 rounded-lg border border-amber-200 min-h-[36px]">
-                              {getFormattedRemark(student, "सुधारणा आवश्यक", "sem1")}
-                            </p>
-                          </div>
-                        </div>
                       </div>
 
                       {/* Signatures */}
@@ -1314,56 +1627,54 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", onBack }
                     </div>
 
                     {/* SECOND SEMESTER (द्वितीय सत्र) */}
-                    <div className="col-span-6 border-2 border-amber-400 rounded-2xl p-3 bg-white flex flex-col justify-between h-[210mm]">
+                    <div className="col-span-6 border-2 border-amber-400 rounded-2xl p-2 bg-white flex flex-col justify-between">
                       <div>
-                        <h3 className="text-sm font-black text-amber-900 text-center mb-3 pb-1.5 border-b-2 border-amber-300">द्वितीय सत्र</h3>
+                        <h3 className="text-xs font-black text-amber-900 text-center mb-2 pb-1 border-b-2 border-amber-300">द्वितीय सत्र</h3>
 
-                        {/* Subject Grades Table */}
-                        <table className="w-full border-collapse border border-amber-300 text-xs text-center font-medium mb-4">
+                        {/* Integrated 3-Column Table */}
+                        <table className="w-full border-collapse border border-amber-400 text-xs text-center font-medium">
                           <thead>
                             <tr className="bg-amber-100 font-extrabold text-amber-950">
-                              <th className="border border-amber-300 p-2 text-left w-3/4">विषय</th>
-                              <th className="border border-amber-300 p-2 w-1/4">श्रेणी</th>
+                              <th className="border border-amber-400 p-1 text-left w-[30%]">विषय</th>
+                              <th className="border border-amber-400 p-1 w-[15%]">श्रेणी</th>
+                              <th className="border border-amber-400 p-1 w-[55%]">वर्णनात्मक नोंदी</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {subjects.map((subName) => {
-                              const sem2Grade = getSubjectGradeForTerm(student, subName, "sem2");
-                              return (
-                                <tr key={subName} className="border-b border-amber-200">
-                                  <td className="border border-amber-300 p-1.5 text-left font-bold text-slate-900 bg-amber-50/30">{subName}</td>
-                                  <td className="border border-amber-300 p-1.5 font-black text-blue-700">{sem2Grade}</td>
-                                </tr>
-                              );
-                            })}
+                            <tr>
+                              <td className="border border-amber-300 p-1.5 text-left font-bold text-slate-900 bg-amber-50/20">{subjects[0]}</td>
+                              <td className="border border-amber-300 p-1.5 font-black text-blue-700">{getSubjectGradeForTerm(student, subjects[0], "sem2")}</td>
+                              <td rowSpan={subjects.length} className="border border-amber-300 p-2 text-left align-top bg-amber-50/10">
+                                <div className="flex flex-col justify-between h-full space-y-3 text-xs">
+                                  <div>
+                                    <span className="font-extrabold text-amber-950 block text-center mb-1">विशेष प्रगती</span>
+                                    <p className="text-slate-800 leading-relaxed font-medium text-center px-1">
+                                      {getFormattedRemark(student, "विशेष प्रगती", "sem2")}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <span className="font-extrabold text-amber-950 block text-center mb-1">आवड / छंद</span>
+                                    <p className="text-slate-800 leading-relaxed font-medium text-center px-1">
+                                      {getFormattedRemark(student, "आवड / छंद", "sem2")}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <span className="font-extrabold text-amber-950 block text-center mb-1">सुधारणा आवश्यक</span>
+                                    <p className="text-slate-800 leading-relaxed font-medium text-center px-1">
+                                      {getFormattedRemark(student, "सुधारणा आवश्यक", "sem2")}
+                                    </p>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                            {subjects.slice(1).map((subName) => (
+                              <tr key={subName}>
+                                <td className="border border-amber-300 p-1.5 text-left font-bold text-slate-900 bg-amber-50/20">{subName}</td>
+                                <td className="border border-amber-300 p-1.5 font-black text-blue-700">{getSubjectGradeForTerm(student, subName, "sem2")}</td>
+                              </tr>
+                            ))}
                           </tbody>
                         </table>
-
-                        {/* Descriptive Remarks Section */}
-                        <div className="space-y-2 border border-amber-300 rounded-xl p-2.5 bg-amber-50/20 text-xs">
-                          <h4 className="font-black text-amber-900 border-b border-amber-200 pb-1 text-center">वर्णनात्मक नोंदी</h4>
-                          
-                          <div>
-                            <span className="font-extrabold text-amber-900 block mb-0.5">विशेष प्रगती:</span>
-                            <p className="text-slate-800 leading-relaxed font-medium bg-white p-2 rounded-lg border border-amber-200 min-h-[36px]">
-                              {getFormattedRemark(student, "विशेष प्रगती", "sem2")}
-                            </p>
-                          </div>
-
-                          <div>
-                            <span className="font-extrabold text-amber-900 block mb-0.5">आवड / छंद:</span>
-                            <p className="text-slate-800 leading-relaxed font-medium bg-white p-2 rounded-lg border border-amber-200 min-h-[36px]">
-                              {getFormattedRemark(student, "आवड / छंद", "sem2")}
-                            </p>
-                          </div>
-
-                          <div>
-                            <span className="font-extrabold text-amber-900 block mb-0.5">सुधारणा आवश्यक:</span>
-                            <p className="text-slate-800 leading-relaxed font-medium bg-white p-2 rounded-lg border border-amber-200 min-h-[36px]">
-                              {getFormattedRemark(student, "सुधारणा आवश्यक", "sem2")}
-                            </p>
-                          </div>
-                        </div>
                       </div>
 
                       {/* Signatures */}

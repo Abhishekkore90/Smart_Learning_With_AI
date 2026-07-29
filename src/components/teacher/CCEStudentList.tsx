@@ -12,6 +12,12 @@ import {
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { useAuth } from "@/hooks/use-auth";
+// @ts-ignore
+import { matchStudentClassAndMedium } from "@/result/firestoreMarksHelper";
+// @ts-ignore
+import { getTeacherId, matchStudentTeacherClassAndMedium } from "@/lib/teacherIsolationHelper";
+
 interface Student {
   id: string;
   name?: string;
@@ -129,6 +135,9 @@ export function CCEStudentList({
   const [photoUrl, setPhotoUrl] = useState("");
   const [currentId, setCurrentId] = useState<string | null>(null);
 
+  const { user, profile } = useAuth();
+  const teacherId = getTeacherId(user, profile);
+
   const [selectedMedium, setSelectedMedium] = useState<"marathi" | "semi">(() => {
     const stored = localStorage.getItem("cce_selected_medium");
     return stored === "semi" ? "semi" : "marathi";
@@ -136,32 +145,22 @@ export function CCEStudentList({
 
   // Subscribe to students list
   useEffect(() => {
-    const isStudentSemi = (s: any) => {
-      if (s.isSemiEnglish === true) return true;
-      if (s.isSemiEnglish === false) return false;
-      if (!s.medium) return false;
-      const m = String(s.medium).toLowerCase();
-      return m.includes("semi") || m.includes("सेमी");
-    };
-
     setLoading(true);
     const q = query(
       collection(db, "users"),
-      where("role", "==", "student"),
-      where("class", "==", selectedClass)
+      where("role", "==", "student")
     );
     const unsub = onSnapshot(q, (snap) => {
-      const raw = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as (Student & { medium?: string; isSemiEnglish?: boolean })[];
+      const raw = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as (Student & { medium?: string; isSemiEnglish?: boolean; class?: string; currentClass?: string; teacherId?: string; createdById?: string })[];
       const list = raw.filter((s) => {
-        const isSemi = isStudentSemi(s);
-        return selectedMedium === "semi" ? isSemi : !isSemi;
+        return matchStudentTeacherClassAndMedium(s, teacherId, selectedClass, selectedMedium);
       });
       list.sort((a, b) => parseInt(a.rollNo || "999") - parseInt(b.rollNo || "999"));
       setStudents(list);
       setLoading(false);
     });
     return () => unsub();
-  }, [selectedClass, selectedMedium]);
+  }, [selectedClass, selectedMedium, teacherId]);
 
   const openAdd = () => {
     const nextRoll =
@@ -213,6 +212,10 @@ export function CCEStudentList({
           class: selectedClass,
           academicYear,
           role: "student",
+          medium: selectedMedium,
+          isSemiEnglish: selectedMedium === "semi",
+          teacherId,
+          createdById: teacherId,
           updatedAt: new Date().toISOString(),
         },
         { merge: true }
