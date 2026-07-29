@@ -43,9 +43,7 @@ export const matchStudentTeacherClassAndMedium = (student, currentTeacherId, sel
 
   // 1. Strict Teacher ID Isolation
   const sTeacherId = student.teacherId || student.createdById || student.userId;
-  if (sTeacherId) {
-    if (sTeacherId !== currentTeacherId) return false;
-  }
+  if (sTeacherId !== currentTeacherId) return false;
 
   // 2. Class Normalization Matching
   const stdClass = normalizeClassKey(student.class || student.currentClass || student.className);
