@@ -247,8 +247,8 @@ function QuestionBankPage() {
       <TeacherHeader />
       <TeacherSidebar />
 
-      <main className="lg:pl-64 pt-20 min-h-screen bg-white">
-        <div className="p-4 md:p-8 space-y-6 max-w-[1200px] mx-auto">
+      <main className="lg:pl-0 pt-20 min-h-screen bg-white">
+        <div className="p-4 md:p-8 space-y-6 max-w-full mx-auto">
           {/* Top Filter Section */}
           <div className="bg-white p-6 border border-[#dee2e6] rounded-md shadow-sm">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">

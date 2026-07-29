@@ -12,7 +12,7 @@ function AllTimetablePage() {
       <TeacherHeader />
       <div className="flex flex-1 mt-16">
         <TeacherSidebar />
-        <main className="flex-1 lg:pl-64 p-6 relative">
+        <main className="flex-1 lg:pl-0 p-6 relative">
           <div className="absolute top-32 left-8 md:left-16 space-y-2 z-10">
             <button className="bg-[#2e7d32] hover:bg-green-800 text-white text-[13px] font-medium py-1.5 px-4 rounded-sm shadow-sm transition-colors">
               Print Timetable

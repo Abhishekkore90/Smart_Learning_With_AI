@@ -129,8 +129,8 @@ function ConceptMappingPage() {
       <TeacherHeader />
       <TeacherSidebar />
 
-      <main className="lg:pl-64 pt-20 min-h-screen bg-slate-50/30">
-        <div className="p-4 md:p-8 space-y-6 max-w-[1400px] mx-auto">
+      <main className="lg:pl-0 pt-20 min-h-screen bg-slate-50/30">
+        <div className="p-4 md:p-8 space-y-6 max-w-full mx-auto">
           <AnimatePresence mode="wait">
             {!selectedClass ? (
               /* VIEW 1: CLASS SELECTION */

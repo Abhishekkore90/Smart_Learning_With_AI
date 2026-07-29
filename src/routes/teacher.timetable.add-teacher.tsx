@@ -12,8 +12,8 @@ function AddTeacherPage() {
       <TeacherHeader />
       <TeacherSidebar />
 
-      <main className="lg:pl-64 pt-20 min-h-screen">
-        <div className="p-4 md:p-8 max-w-7xl mx-auto">
+      <main className="lg:pl-0 pt-20 min-h-screen">
+        <div className="p-4 md:p-8 max-w-full mx-auto">
           <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 md:p-8 mb-8 max-w-2xl mx-auto relative">
             <button className="absolute top-4 right-4 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded flex items-center justify-center transition-colors">
               <span className="sr-only">Close</span>

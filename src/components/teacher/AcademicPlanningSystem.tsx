@@ -43,6 +43,52 @@ import { toast } from "sonner";
 import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
 import { saveFileToIndexedDB, getFileFromIndexedDB } from "@/lib/indexedDbStorage";
 import { extractTableRowsFromPdf } from "@/lib/pdfParser";
+import * as XLSX from "xlsx";
+
+const extractTableRowsFromExcel = async (file: File): Promise<PlanningTableRow[]> => {
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const workbook = XLSX.read(arrayBuffer, { type: "array" });
+    const firstSheetName = workbook.SheetNames[0];
+    if (!firstSheetName) return [];
+
+    const worksheet = workbook.Sheets[firstSheetName];
+    const rawData = XLSX.utils.sheet_to_json<any[]>(worksheet, { header: 1 });
+    if (!rawData || rawData.length === 0) return [];
+
+    const extractedRows: PlanningTableRow[] = [];
+
+    rawData.forEach((row, idx) => {
+      if (!row || row.length === 0) return;
+
+      const strCells = row.map((cell) => (cell !== undefined && cell !== null ? String(cell).trim() : ""));
+      const rowText = strCells.join(" ").toLowerCase();
+
+      // Skip header row if it contains header keywords
+      if (idx === 0 && (rowText.includes("महिना") || rowText.includes("month") || rowText.includes("विषय") || rowText.includes("subject"))) {
+        return;
+      }
+
+      if (strCells.some((c) => c.length > 0)) {
+        extractedRows.push({
+          id: `${Date.now()}_${idx}`,
+          month: strCells[0] || `महिना ${idx + 1}`,
+          subject: strCells[1] || "मराठी",
+          weeks: strCells[2] || "4",
+          workingDays: strCells[3] || "20",
+          periods: strCells[4] || "50",
+          topics: strCells[5] || strCells.slice(5, 7).filter(Boolean).join(" - ") || "घटक माहिती",
+          outcomes: strCells[6] || strCells.slice(7).filter(Boolean).join(" - ") || "अध्ययन निष्पत्ती",
+        });
+      }
+    });
+
+    return extractedRows;
+  } catch (err) {
+    console.error("Excel parsing error:", err);
+    return [];
+  }
+};
 
 export interface PlanningFileRecord {
   id: string;
@@ -310,67 +356,23 @@ export function AcademicPlanningSystem({
     }
   };
 
-  // Editable Table Editor State
+  // Table Editor & Information Editing States
   const [isTableEditorOpen, setIsTableEditorOpen] = useState<boolean>(false);
   const [editingFileRecord, setEditingFileRecord] = useState<PlanningFileRecord | null>(null);
   const [tableRows, setTableRows] = useState<PlanningTableRow[]>(DEFAULT_ANNUAL_ROWS);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState<boolean>(false);
   const printableTableRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    if (isTableEditorOpen) {
-      // 1. If editing a specific PDF file record (e.g. viewModalFile)
-      if (editingFileRecord) {
-        if (editingFileRecord.tableRows && editingFileRecord.tableRows.length > 0) {
-          setTableRows(editingFileRecord.tableRows);
-          return;
-        }
-        const sub = (editingFileRecord.subjectId || "").toLowerCase();
-        const fName = (editingFileRecord.fileName || "").toLowerCase();
-        if (sub.includes("marathi") || sub.includes("मराठी") || fName.includes("marathi") || fName.includes("मराठी")) {
-          setTableRows(DEFAULT_ANNUAL_ROWS);
-          return;
-        }
-      }
-
-      // 2. Lookup active record in planningFiles or fallback by subject
-      const recKey = editingFileRecord ? editingFileRecord.id : getFileRecordKey(selectedPlanningType, selectedSubject || "all");
-      const activeRec = planningFiles[recKey] || planningFiles[getFileRecordKey(selectedPlanningType, "marathi")] || planningFiles[getFileRecordKey("annual", "all")];
-
-      if (activeRec && activeRec.tableRows && activeRec.tableRows.length > 0) {
-        setTableRows(activeRec.tableRows);
-      } else if (selectedSubject && selectedSubject !== "all" && selectedSubject !== "सर्व विषय") {
-        setTableRows(DEFAULT_ANNUAL_ROWS);
-      } else if (selectedPlanningType === "annual") {
-        setTableRows(DEFAULT_ALL_SUBJECTS_ANNUAL_ROWS);
-      } else {
-        setTableRows(DEFAULT_ANNUAL_ROWS);
-      }
+  const handleOpenTableEditor = (e: React.MouseEvent, rec?: PlanningFileRecord | null) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setEditingFileRecord(rec || null);
+    if (rec && rec.tableRows && rec.tableRows.length > 0) {
+      setTableRows(rec.tableRows);
+    } else {
+      setTableRows(DEFAULT_ANNUAL_ROWS);
     }
-  }, [isTableEditorOpen, editingFileRecord, selectedPlanningType, selectedSubject, planningFiles]);
-
-  const handleAddTableRow = () => {
-    const newRow: PlanningTableRow = {
-      id: Date.now().toString(),
-      month: "नवीन महिना",
-      subject: selectedPlanningType === "annual" ? "मराठी" : (selectedSubject || "मराठी"),
-      weeks: "4",
-      workingDays: "20",
-      periods: "50",
-      topics: "नवीन घटक / पाठ माहिती",
-      outcomes: "अध्ययन निष्पत्ती माहिती",
-    };
-    setTableRows((prev) => [...prev, newRow]);
-    toast.success("नवीन ओळ जोडली गेली.");
-  };
-
-  const handleRemoveTableRow = (id: string) => {
-    if (tableRows.length <= 1) {
-      toast.error("किमान एक ओळ असणे आवश्यक आहे.");
-      return;
-    }
-    setTableRows((prev) => prev.filter((r) => r.id !== id));
-    toast.info("ओळ हटवली गेली.");
+    setIsTableEditorOpen(true);
   };
 
   const handleUpdateTableRow = (id: string, field: keyof PlanningTableRow, value: string) => {
@@ -379,11 +381,35 @@ export function AcademicPlanningSystem({
     );
   };
 
+  const handleAddTableRow = () => {
+    const newRow: PlanningTableRow = {
+      id: Date.now().toString(),
+      month: "नवीन महिना",
+      subject: selectedSubject || "मराठी",
+      weeks: "4",
+      workingDays: "20",
+      periods: "50",
+      topics: "नवीन घटक / पाठ माहिती",
+      outcomes: "अध्ययन निष्पत्ती माहिती",
+    };
+    setTableRows((prev) => [...prev, newRow]);
+    toast.success("तक्त्यात नवीन ओळ जोडली गेली.");
+  };
+
+  const handleRemoveTableRow = (id: string) => {
+    if (tableRows.length <= 1) {
+      toast.error("किमान एक नोंद असणे आवश्यक आहे.");
+      return;
+    }
+    setTableRows((prev) => prev.filter((r) => r.id !== id));
+    toast.info("नोंद हटवली गेली.");
+  };
+
   const handleGeneratePdfFromEditedTable = async () => {
     const container = document.getElementById("printable-pdf-container");
     try {
       setIsGeneratingPdf(true);
-      toast.info("संपादित तक्त्याची PDF तयार होत आहे...");
+      toast.info("संपादित माहितीची नवीन PDF तयार होत आहे...");
 
       const printElement = printableTableRef.current;
       if (!printElement) {
@@ -456,8 +482,6 @@ export function AcademicPlanningSystem({
       } catch (e) {}
 
       setPlanningFiles((prev) => ({ ...prev, [recordKey]: updatedRecord }));
-      setViewModalFile(updatedRecord);
-      setEditingFileRecord(null);
       setIsTableEditorOpen(false);
       setIsGeneratingPdf(false);
 
@@ -469,7 +493,7 @@ export function AcademicPlanningSystem({
       a.click();
       document.body.removeChild(a);
 
-      toast.success("संपादित PDF फाईल डाउनलोड झाली आणि प्रणालीमध्ये जतन झाली!");
+      toast.success("🎉 संपादित तक्त्याची PDF यशस्वीरित्या तयार होऊन डाऊनलोड झाली!");
     } catch (err) {
       console.error("Generate PDF error:", err);
       if (container) {
@@ -481,6 +505,8 @@ export function AcademicPlanningSystem({
       toast.error("PDF तयार करताना अडथळा आला.");
     }
   };
+
+
 
   // Upload progress & compression states
   const [uploadProgress, setUploadProgress] = useState<number>(0);
@@ -698,15 +724,20 @@ export function AcademicPlanningSystem({
       return;
     }
 
-    // Validate type (PDF, DOC, DOCX)
+    // Validate type (PDF, DOC, DOCX, XLS, XLSX, CSV)
     const validTypes = [
       "application/pdf",
       "application/msword",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "text/csv",
+      "application/csv",
     ];
     const ext = file.name.split(".").pop()?.toLowerCase();
-    if (!validTypes.includes(file.type) && !["pdf", "doc", "docx"].includes(ext || "")) {
-      toast.error("केवळ PDF, DOC, किंवा DOCX फाईल्स स्वीकारल्या जातात.");
+    const validExtensions = ["pdf", "doc", "docx", "xls", "xlsx", "csv"];
+    if (!validTypes.includes(file.type) && !validExtensions.includes(ext || "")) {
+      toast.error("केवळ PDF, Word (DOC/DOCX), किंवा Excel (XLS/XLSX) फाईल्स स्वीकारल्या जातात.");
       setSelectedFile(null);
       return;
     }
@@ -733,9 +764,13 @@ export function AcademicPlanningSystem({
 
       const originalSizeMb = (selectedFile.size / (1024 * 1024)).toFixed(2);
 
-      // 1. Client-Side PDF Compression (pdf-lib)
-      toast.info("⚡ PDF फाईल कॉम्प्रेस होत आहे...");
-      const finalFileBlob = await compressPdfFile(selectedFile);
+      let finalFileBlob: Blob = selectedFile;
+      if (ext === "pdf" || selectedFile.type === "application/pdf") {
+        toast.info("⚡ PDF फाईल कॉम्प्रेस होत आहे...");
+        finalFileBlob = await compressPdfFile(selectedFile);
+      } else {
+        toast.info("⚡ फाईल जोडली जात आहे...");
+      }
       setCompressing(false);
       setUploadProgress(45);
 
@@ -773,13 +808,17 @@ export function AcademicPlanningSystem({
 
       setUploadProgress(95);
 
-      // 2. Extract structured table rows from uploaded PDF
-      toast.info("🔍 PDF फाईलमधून तक्ता व माहिती ऑटो-एक्सट्रॅक्ट होत आहे...");
+      // 2. Extract structured table rows from uploaded file (PDF or Excel)
+      toast.info("🔍 फाईलमधून तक्ता व माहिती ऑटो-एक्सट्रॅक्ट होत आहे...");
       let extractedRows: PlanningTableRow[] = [];
       try {
-        extractedRows = await extractTableRowsFromPdf(selectedFile);
+        if (ext === "xls" || ext === "xlsx" || ext === "csv") {
+          extractedRows = await extractTableRowsFromExcel(selectedFile);
+        } else {
+          extractedRows = await extractTableRowsFromPdf(selectedFile);
+        }
       } catch (exErr) {
-        console.warn("PDF extraction notice:", exErr);
+        console.warn("File extraction notice:", exErr);
       }
 
       const rowsToSave =
@@ -859,6 +898,36 @@ export function AcademicPlanningSystem({
     setViewModalFile({ ...rec, fileUrl: targetUrl });
   };
 
+  // Helper to trigger Direct Full Screen PDF Editor
+  const handleOpenDirectPdfEditor = async (
+    e?: React.MouseEvent,
+    rec?: PlanningFileRecord | null
+  ) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    if (!rec) {
+      toast.error("एडमिनने अद्याप या विषयाची PDF फाईल अपलोड केलेली नाही.");
+      return;
+    }
+
+    let targetUrl = rec.fileUrl;
+    const blobFromDb = await getFileFromIndexedDB(rec.id);
+    if (blobFromDb) {
+      targetUrl = URL.createObjectURL(blobFromDb);
+    }
+
+    if (!targetUrl) {
+      toast.error("अद्याप फाईल उपलब्ध नाही, कृपया फाईल निवडून पुन्हा अपलोड करा.");
+      return;
+    }
+
+    setViewModalFile({ ...rec, fileUrl: targetUrl });
+    setIsAnnotating(true);
+    setIsPdfFullscreen(true);
+  };
+
   // Helper to trigger download / open (checks IndexedDB for persistent blob across page refreshes)
   const handleDownloadFile = async (rec: PlanningFileRecord) => {
     if (!rec) return;
@@ -891,9 +960,9 @@ export function AcademicPlanningSystem({
   ];
 
   return (
-    <div className="w-full min-h-screen bg-slate-50 text-slate-800 p-4 md:p-8 font-sans">
+    <div className="w-full min-h-screen bg-slate-50 text-slate-800 p-2 sm:p-4 md:p-6 font-sans">
       {/* Top Header Bar */}
-      <div className="max-w-6xl mx-auto mb-8 bg-gradient-to-r from-slate-900 via-indigo-950 to-purple-950 text-white rounded-3xl p-6 shadow-xl border border-indigo-900/50 flex flex-wrap items-center justify-between gap-4">
+      <div className="w-full max-w-full mx-auto mb-6 bg-gradient-to-r from-slate-900 via-indigo-950 to-purple-950 text-white rounded-3xl p-6 shadow-xl border border-indigo-900/50 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           {onBack && (
             <button
@@ -966,7 +1035,7 @@ export function AcademicPlanningSystem({
       </div>
 
       {/* Progress Breadcrumbs Stepper */}
-      <div className="max-w-6xl mx-auto mb-8 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
+      <div className="w-full max-w-full mx-auto mb-6 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="flex items-center gap-3">
           <div className="size-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
             <Layers className="size-5" />
@@ -1022,7 +1091,7 @@ export function AcademicPlanningSystem({
       </div>
 
       {/* Main Content Area */}
-      <div className="max-w-6xl mx-auto">
+      <div className="w-full max-w-full mx-auto">
         <AnimatePresence mode="wait">
           {/* STEP 1: MEDIUM SELECTION */}
           {step === "medium" && (
@@ -1031,7 +1100,7 @@ export function AcademicPlanningSystem({
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
-              className="space-y-6 max-w-3xl mx-auto"
+              className="space-y-6 w-full max-w-full mx-auto"
             >
               <div className="text-center space-y-1">
                 <h2 className="text-2xl font-black text-slate-900">Select Medium / माध्यम निवडा</h2>
@@ -1170,7 +1239,7 @@ export function AcademicPlanningSystem({
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-full mx-auto">
                 {/* 1. Annual Planning Card (सर्व विषयांचे एकत्र संपूर्ण नियोजन - Direct Action) */}
                 {(() => {
                   const annualRecKey = getFileRecordKey("annual", "all");
@@ -1209,24 +1278,35 @@ export function AcademicPlanningSystem({
                       <div className="space-y-2 pt-3 border-t border-white/15">
                         <div className="grid grid-cols-2 gap-2">
                           <button
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               if (annualFile) handleViewFile(annualFile);
                               else toast.error("अद्याप संपूर्ण वार्षिक नियोजनाची फाईल अपलोड केलेली नाही.");
                             }}
-                            className="py-2.5 px-3 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer backdrop-blur-xs"
+                            className="py-3 px-4 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer backdrop-blur-xs shadow-sm"
                           >
-                            <Eye className="size-4 text-amber-300" /> VIEW
+                            <Eye className="size-4 text-amber-300" /> VIEW PDF
                           </button>
                           <button
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               if (annualFile) handleDownloadFile(annualFile);
                               else toast.error("अद्याप संपूर्ण वार्षिक नियोजनाची फाईल उपलब्ध नाही.");
                             }}
-                            className="py-2.5 px-3 rounded-xl bg-white text-indigo-950 hover:bg-indigo-50 text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                            className="py-3 px-4 rounded-xl bg-white text-indigo-950 hover:bg-indigo-50 text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
                           >
                             <Download className="size-4" /> DOWNLOAD
                           </button>
                         </div>
+
+                        <button
+                          onClick={(e) => handleOpenTableEditor(e, annualFile)}
+                          className="w-full py-2.5 px-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md mt-1"
+                        >
+                          <Edit3 className="size-4" /> <span>✏️ ऑनलाईन एडिट करा (Edit on Site)</span>
+                        </button>
+
+
 
                         {/* Admin Upload / Replace Master File */}
                         {mode === "admin" && (
@@ -1236,29 +1316,12 @@ export function AcademicPlanningSystem({
                               setUploadingType("annual");
                               setUploadModalOpen(true);
                             }}
-                            className="w-full py-2.5 px-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
+                            className="w-full py-2.5 px-3 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md mt-1"
                           >
                             <Upload className="size-4" />
                             {annualFile ? "REPLACE MASTER FILE (बदला)" : "UPLOAD ANNUAL REPORT (अपलोड करा)"}
                           </button>
                         )}
-
-                        {/* Edit Table Content & Generate Master PDF */}
-                        <button
-                          onClick={() => {
-                            setSelectedSubject("सर्व विषय");
-                            setSelectedPlanningType("annual");
-                            setIsTableEditorOpen(true);
-                          }}
-                          className={`w-full py-2.5 px-3 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md ${
-                            mode === "teacher"
-                              ? "bg-amber-400 hover:bg-amber-300 text-slate-950"
-                              : "bg-emerald-500 hover:bg-emerald-400 text-white"
-                          }`}
-                        >
-                          <Edit3 className="size-4" />
-                          <span>तक्ता एडिट करा व PDF बनवा (Edit & Export)</span>
-                        </button>
                       </div>
                     </div>
                   );
@@ -1375,7 +1438,7 @@ export function AcademicPlanningSystem({
               </div>
 
               {/* Grid of Subjects with File Actions */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-full mx-auto">
                 {availableSubjects.map((subjName, idx) => {
                   const recKey = getFileRecordKey(selectedPlanningType, subjName);
                   const fileRec = planningFiles[recKey];
@@ -1423,16 +1486,18 @@ export function AcademicPlanningSystem({
                       <div className="space-y-2 pt-3 border-t border-slate-100">
                         <div className="grid grid-cols-2 gap-2">
                           <button
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               if (fileRec) handleViewFile(fileRec);
                               else toast.error(`अद्याप ${subjName} ची फाईल उपलब्ध नाही.`);
                             }}
                             className="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                           >
-                            <Eye className="size-4 text-indigo-600" /> VIEW
+                            <Eye className="size-4 text-indigo-600" /> VIEW PDF
                           </button>
                           <button
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               if (fileRec) handleDownloadFile(fileRec);
                               else toast.error(`अद्याप ${subjName} ची फाईल उपलब्ध नाही.`);
                             }}
@@ -1442,6 +1507,15 @@ export function AcademicPlanningSystem({
                           </button>
                         </div>
 
+                        <button
+                          onClick={(e) => handleOpenTableEditor(e, fileRec)}
+                          className="w-full py-2.5 px-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm mt-1"
+                        >
+                          <Edit3 className="size-4" /> <span>✏️ ऑनलाईन एडिट करा (Edit on Site)</span>
+                        </button>
+
+
+
                         {/* Admin Upload / Replace Button */}
                         {mode === "admin" && (
                           <button
@@ -1450,28 +1524,12 @@ export function AcademicPlanningSystem({
                               setUploadingType(selectedPlanningType);
                               setUploadModalOpen(true);
                             }}
-                            className="w-full py-2.5 px-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm mt-1"
+                            className="w-full py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm mt-1"
                           >
                             <Upload className="size-4" />
                             {fileRec ? "REPLACE FILE (बदला)" : "UPLOAD FILE (अपलोड करा)"}
                           </button>
                         )}
-
-                        {/* Edit Table Content & Generate PDF Button (Primary for Teacher) */}
-                        <button
-                          onClick={() => {
-                            setSelectedSubject(subjName);
-                            setIsTableEditorOpen(true);
-                          }}
-                          className={`w-full py-2.5 px-3 rounded-xl font-black text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm ${
-                            mode === "teacher"
-                              ? "bg-amber-400 hover:bg-amber-300 text-slate-950 mt-1"
-                              : "bg-slate-900 hover:bg-slate-800 text-white"
-                          }`}
-                        >
-                          <Edit3 className="size-4" />
-                          <span>तक्ता एडिट करा व PDF बनवा (Edit & Export)</span>
-                        </button>
                       </div>
                     </div>
                   );
@@ -1545,17 +1603,7 @@ export function AcademicPlanningSystem({
               </button>
             </div>
 
-            {/* Validation Info Note */}
-            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-1">
-              <div className="font-bold flex items-center gap-1.5">
-                <ShieldCheck className="size-4 text-amber-600" /> Validation Rules:
-              </div>
-              <ul className="list-disc list-inside text-[11px] text-amber-800 space-y-0.5 pl-1">
-                <li>कमाल फाईल आकार (Max Size): 20 MB</li>
-                <li>परवानगी असलेली स्वरूपे: PDF (.pdf), DOC (.doc), DOCX (.docx)</li>
-                <li>नवीन फाईल अपलोड केल्यास जुनी फाईल आपोआप अपडेट होईल (Replace Option).</li>
-              </ul>
-            </div>
+
 
             {/* Dropzone File Input */}
             <div className="space-y-4">
@@ -1566,7 +1614,7 @@ export function AcademicPlanningSystem({
               <div className="border-2 border-dashed border-indigo-200 hover:border-indigo-500 rounded-3xl p-6 text-center bg-indigo-50/40 hover:bg-indigo-50 transition-all cursor-pointer relative group">
                 <input
                   type="file"
-                  accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                   onChange={handleFileChange}
                   className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
                 />
@@ -1587,8 +1635,8 @@ export function AcademicPlanningSystem({
                     <p className="text-sm font-bold text-slate-700">
                       इथे फाईल drag करा किंवा कॉम्प्युटरवरून निवडा
                     </p>
-                    <p className="text-[11px] text-slate-400 font-medium">
-                      PDF, DOC किंवा DOCX फाईल (कमाल २०MB)
+                    <p className="text-[11px] text-indigo-600 font-bold">
+                      PDF, Word (.docx) किंवा Excel (.xlsx) फाईल (कमाल २०MB)
                     </p>
                   </div>
                 )}
@@ -1683,26 +1731,7 @@ export function AcademicPlanningSystem({
               </div>
 
               <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap justify-end">
-                {/* SINGLE UNIFIED PDF EDIT BUTTON */}
-                <button
-                  onClick={() => {
-                    const targetSubj = viewModalFile.subjectId;
-                    const targetType = viewModalFile.planningType;
-                    setEditingFileRecord(viewModalFile);
-                    setViewModalFile(null);
-                    setIsAnnotating(false);
-                    setSelectedSubject(targetSubj);
-                    setSelectedPlanningType(targetType);
-                    setIsTableEditorOpen(true);
-                  }}
-                  title="PDF मधील माहिती एडिट करा (Edit PDF Content)"
-                  className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs sm:text-sm font-black flex items-center gap-2 transition-all cursor-pointer shadow-md"
-                >
-                  <Edit3 className="size-4" />
-                  <span>PDF एडिट करा</span>
-                </button>
-
-                {/* 4. OPEN IN NEW TAB */}
+                {/* OPEN IN NEW TAB */}
                 <button
                   onClick={() => window.open(viewModalFile.fileUrl, "_blank")}
                   title="नव्या टॅबमध्ये उघडा (Open in New Tab)"
@@ -1711,7 +1740,26 @@ export function AcademicPlanningSystem({
                   <ExternalLink className="size-4 sm:size-5" />
                 </button>
 
-                {/* 5. FULLSCREEN TOGGLE */}
+                {/* INBUILT BROWSER PDF EDITOR BUTTON */}
+                <button
+                  onClick={() => window.open(viewModalFile.fileUrl, "_blank")}
+                  title="ब्राऊझरच्या इन-बिल्ट PDF एडिटरमध्ये उघडून थेट मजकूर एडिट करा (Open Browser Built-in PDF Editor)"
+                  className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
+                >
+                  <Edit3 className="size-4 text-amber-300" />
+                  <span>✏️ इनबिल्ट एडिटरमध्ये एडिट करा (Edit PDF)</span>
+                </button>
+
+                {/* OPEN IN NEW TAB */}
+                <button
+                  onClick={() => window.open(viewModalFile.fileUrl, "_blank")}
+                  title="नव्या टॅबमध्ये उघडा (Open in New Tab)"
+                  className="p-2 rounded-xl text-slate-300 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+                >
+                  <ExternalLink className="size-4 sm:size-5" />
+                </button>
+
+                {/* FULLSCREEN TOGGLE */}
                 <button
                   onClick={() => setIsPdfFullscreen(!isPdfFullscreen)}
                   title={isPdfFullscreen ? "लहान आकार करा (Normal Size)" : "फुल स्क्रीन करा (Full Screen)"}
@@ -1720,7 +1768,7 @@ export function AcademicPlanningSystem({
                   {isPdfFullscreen ? <Minimize2 className="size-4 sm:size-5" /> : <Maximize2 className="size-4 sm:size-5" />}
                 </button>
 
-                {/* 6. DOWNLOAD */}
+                {/* DOWNLOAD */}
                 <button
                   onClick={() => handleDownloadFile(viewModalFile)}
                   className="px-3 sm:px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
@@ -1728,7 +1776,7 @@ export function AcademicPlanningSystem({
                   <Download className="size-4" /> <span className="hidden sm:inline">DOWNLOAD</span>
                 </button>
 
-                {/* 7. CLOSE */}
+                {/* CLOSE */}
                 <button
                   onClick={() => {
                     setViewModalFile(null);
@@ -1741,98 +1789,6 @@ export function AcademicPlanningSystem({
               </div>
             </div>
 
-            {/* ANNOTATION TOOLBAR WITH HELPER INSTRUCTION BANNER */}
-            {isAnnotating && (
-              <div className="bg-slate-800 text-white p-2 sm:px-4 flex items-center justify-between gap-2 shrink-0 border-b border-slate-700 flex-wrap">
-                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                  <span className="text-[11px] bg-purple-900/80 border border-purple-400/40 text-purple-200 px-3 py-1 rounded-lg font-semibold flex items-center gap-1">
-                    <Sparkles className="size-3.5 text-amber-300" /> PDF मधील कोणत्याही पानावर थेट लिहा, हायलाइट करा किंवा मजकूर नोंद जोडा.
-                  </span>
-                  
-                  {/* Tool selection */}
-                  <button
-                    onClick={() => setAnnotationTool("draw")}
-                    className={`p-2 rounded-lg text-xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
-                      annotationTool === "draw" ? "bg-amber-400 text-slate-950" : "bg-slate-700 hover:bg-slate-600"
-                    }`}
-                    title="पेन (Draw)"
-                  >
-                    <Pencil className="size-3.5" /> <span className="hidden md:inline">पेन</span>
-                  </button>
-
-                  <button
-                    onClick={() => setAnnotationTool("highlight")}
-                    className={`p-2 rounded-lg text-xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
-                      annotationTool === "highlight" ? "bg-amber-400 text-slate-950" : "bg-slate-700 hover:bg-slate-600"
-                    }`}
-                    title="हायलाइटर (Highlight)"
-                  >
-                    <Highlighter className="size-3.5" /> <span className="hidden md:inline">हायलाइट</span>
-                  </button>
-
-                  <button
-                    onClick={() => setAnnotationTool("whiteout")}
-                    className={`p-2 rounded-lg text-xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
-                      annotationTool === "whiteout" ? "bg-amber-400 text-slate-950" : "bg-slate-700 hover:bg-slate-600"
-                    }`}
-                    title="जुना मजकूर पुसा (Whiteout / Hide Old PDF Text)"
-                  >
-                    <Eraser className="size-3.5 text-amber-300" /> <span>जुना मजकूर पुसा (Whiteout)</span>
-                  </button>
-
-                  <button
-                    onClick={() => setAnnotationTool("text")}
-                    className={`p-2 rounded-lg text-xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
-                      annotationTool === "text" ? "bg-amber-400 text-slate-950" : "bg-slate-700 hover:bg-slate-600"
-                    }`}
-                    title="नवीन मजकूर टाइप करा (Add New Text)"
-                  >
-                    <Type className="size-3.5" /> <span>नवीन मजकूर (Text)</span>
-                  </button>
-
-                  <button
-                    onClick={() => setAnnotationTool("erase")}
-                    className={`p-2 rounded-lg text-xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
-                      annotationTool === "erase" ? "bg-amber-400 text-slate-950" : "bg-slate-700 hover:bg-slate-600"
-                    }`}
-                    title="रबर (Eraser)"
-                  >
-                    <Eraser className="size-3.5" /> <span className="hidden md:inline">रबर</span>
-                  </button>
-
-                  {/* Colors */}
-                  <div className="flex items-center gap-1 ml-2 pl-2 border-l border-slate-700">
-                    {["#ef4444", "#3b82f6", "#10b981", "#eab308", "#000000"].map((color) => (
-                      <button
-                        key={color}
-                        onClick={() => setAnnotationColor(color)}
-                        className={`size-6 rounded-full border-2 transition-transform cursor-pointer ${
-                          annotationColor === color ? "border-white scale-110 shadow-md" : "border-transparent opacity-80"
-                        }`}
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleClearCanvas}
-                    className="px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-bold flex items-center gap-1 cursor-pointer"
-                  >
-                    <RotateCcw className="size-3.5" /> रिसेट
-                  </button>
-
-                  <button
-                    onClick={handleSaveAnnotatedPdf}
-                    className="px-4 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-black flex items-center gap-1.5 shadow-md shadow-emerald-500/20 cursor-pointer"
-                  >
-                    <Save className="size-3.5" /> जतन करा (Save Edits)
-                  </button>
-                </div>
-              </div>
-            )}
-
             {/* Modal Preview Body */}
             <div className="flex-1 p-2 sm:p-4 overflow-hidden bg-slate-950/80 flex flex-col items-center justify-center relative">
               {viewModalFile.fileUrl.startsWith("data:application/pdf") ||
@@ -1841,41 +1797,74 @@ export function AcademicPlanningSystem({
               viewModalFile.fileName?.toLowerCase().endsWith(".pdf") ? (
                 <div className="w-full h-full min-h-0 flex-1 relative rounded-xl overflow-hidden bg-white shadow-2xl">
                   <iframe
-                    src={`${viewModalFile.fileUrl}#toolbar=1&view=FitH`}
+                    src={`${viewModalFile.fileUrl}#toolbar=1&navpanes=1&view=FitH`}
                     className="w-full h-full border-0 bg-white"
                     title="PDF Preview"
                   />
-                  {isAnnotating && (
-                    <canvas
-                      ref={canvasRef}
-                      onMouseDown={handleStartDrawing}
-                      onMouseMove={handleDraw}
-                      onMouseUp={handleStopDrawing}
-                      onMouseLeave={handleStopDrawing}
-                      onTouchStart={handleStartDrawing}
-                      onTouchMove={handleDraw}
-                      onTouchEnd={handleStopDrawing}
-                      className="absolute inset-0 z-20 cursor-crosshair touch-none"
-                    />
-                  )}
+                </div>
+              ) : viewModalFile.fileUrl.startsWith("http") ? (
+                <div className="w-full h-full min-h-0 flex-1 relative rounded-xl overflow-hidden bg-white shadow-2xl">
+                  <iframe
+                    src={`https://docs.google.com/gview?url=${encodeURIComponent(viewModalFile.fileUrl)}&embedded=true`}
+                    className="w-full h-full border-0 bg-white"
+                    title="Document PDF Preview"
+                  />
                 </div>
               ) : (
-                <div className="bg-white p-6 sm:p-10 rounded-3xl border border-slate-200 text-center space-y-4 max-w-md shadow-md my-auto">
-                  <div className="size-16 rounded-3xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
-                    <FileText className="size-8" />
+                <div className="w-full h-full min-h-0 flex-1 relative rounded-2xl overflow-y-auto bg-white p-6 shadow-2xl flex flex-col gap-4">
+                  <div className="bg-indigo-900 text-white p-4 rounded-2xl flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="size-10 rounded-xl bg-white/10 flex items-center justify-center text-amber-300 font-bold">
+                        <FileText className="size-5" />
+                      </div>
+                      <div>
+                        <h4 className="font-black text-sm">{viewModalFile.fileName} (PDF लेआऊट प्रिव्ह्यू)</h4>
+                        <p className="text-xs text-indigo-200">Word/Excel फाईलचे ऑनलाईन PDF लेआऊट प्रिव्ह्यू</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDownloadFile(viewModalFile)}
+                      className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center gap-1.5 cursor-pointer shadow-md"
+                    >
+                      <Download className="size-4" /> डाऊनलोड करा
+                    </button>
                   </div>
-                  <div>
-                    <h4 className="font-black text-slate-900 text-lg">{viewModalFile.fileName}</h4>
-                    <p className="text-xs text-slate-500 font-medium mt-1">
-                      या फाईलचा पूर्वावलोकन पाहा किंवा डाऊनलोड करा.
-                    </p>
+
+                  <div className="border border-slate-300 rounded-2xl p-6 bg-slate-50 flex-1 space-y-4">
+                    <div className="text-center border-b-2 border-slate-900 pb-3">
+                      <h2 className="text-lg font-black text-slate-950 uppercase">
+                        इयत्ता : {selectedClass} {selectedPlanningType === "annual" ? "संपूर्ण वार्षिक नियोजन" : selectedPlanningType === "monthly" ? "मासिक नियोजन" : "प्रश्नपेढी"} सन 2026-27
+                      </h2>
+                      <p className="text-xs font-bold text-slate-700 mt-1">
+                        विषय: {selectedSubject || "सर्व विषय"} | माध्यम: {selectedMedium === "semi" ? "सेमी-इंग्रजी" : "मराठी"}
+                      </p>
+                    </div>
+
+                    <table className="w-full border-collapse border border-slate-900 text-xs bg-white">
+                      <thead>
+                        <tr className="bg-slate-900 text-white font-bold text-center">
+                          <th className="border border-slate-900 p-2">महिना</th>
+                          <th className="border border-slate-900 p-2">आठवडा</th>
+                          <th className="border border-slate-900 p-2">कामाचे दिवस</th>
+                          <th className="border border-slate-900 p-2">प्राप्त तासिका</th>
+                          <th className="border border-slate-900 p-2 text-left">विषय / घटक विवरण</th>
+                          <th className="border border-slate-900 p-2 text-left">अध्ययन निष्पत्ती</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(viewModalFile.tableRows && viewModalFile.tableRows.length > 0 ? viewModalFile.tableRows : DEFAULT_ANNUAL_ROWS).map((r) => (
+                          <tr key={r.id} className="border-b border-slate-800">
+                            <td className="border border-slate-800 p-2 text-center font-bold">{r.month}</td>
+                            <td className="border border-slate-800 p-2 text-center">{r.weeks}</td>
+                            <td className="border border-slate-800 p-2 text-center">{r.workingDays}</td>
+                            <td className="border border-slate-800 p-2 text-center">{r.periods}</td>
+                            <td className="border border-slate-800 p-2 font-medium">{r.topics}</td>
+                            <td className="border border-slate-800 p-2">{r.outcomes}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                  <button
-                    onClick={() => handleDownloadFile(viewModalFile)}
-                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-md cursor-pointer flex items-center justify-center gap-2"
-                  >
-                    <Download className="size-4" /> डाऊनलोड करून उघडा (Download & Open)
-                  </button>
                 </div>
               )}
             </div>
@@ -1957,26 +1946,27 @@ export function AcademicPlanningSystem({
         </div>
       )}
 
-      {/* EDITABLE TABLE EDITOR MODAL */}
+
+      {/* LIVE SITE DOCUMENT EDITOR MODAL */}
       {isTableEditorOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-3xl w-full max-w-6xl h-[92vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200"
+            className="bg-white rounded-3xl w-full max-w-[95vw] h-[92vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200"
           >
             {/* Modal Header */}
-            <div className="p-4 sm:p-5 bg-gradient-to-r from-indigo-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between shrink-0 border-b border-indigo-800/50">
+            <div className="p-4 sm:p-5 bg-gradient-to-r from-indigo-900 via-indigo-950 to-slate-900 text-white flex flex-wrap items-center justify-between gap-3 shrink-0 border-b border-indigo-800/50">
               <div className="flex items-center gap-3">
                 <div className="size-10 rounded-2xl bg-amber-400/20 border border-amber-400/30 text-amber-300 flex items-center justify-center font-bold">
                   <Edit3 className="size-5" />
                 </div>
                 <div>
                   <h3 className="text-base sm:text-lg font-black tracking-tight">
-                    वार्षिक नियोजन तक्ता संपादन (Edit Annual Planning Table)
+                    वेबसाईटवर ऑनलाईन संपादन (In-Site Document Sheet Editor)
                   </h3>
                   <p className="text-xs text-indigo-200 font-semibold">
-                    इयत्ता: {selectedClass} | विषय: {selectedSubject || "मराठी"} | सन: 2026-27
+                    इयत्ता: {selectedClass} | विषय: {selectedSubject || "सर्व विषय"} | सन: 2026-27
                   </p>
                 </div>
               </div>
@@ -1986,13 +1976,13 @@ export function AcademicPlanningSystem({
                   onClick={handleAddTableRow}
                   className="px-3 sm:px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
                 >
-                  <Plus className="size-4" /> <span className="hidden sm:inline">+ नवीन ओळ (Add Row)</span>
+                  <Plus className="size-4" /> <span className="hidden sm:inline">+ ओळ जोडा (Add Row)</span>
                 </button>
 
                 <button
                   onClick={handleGeneratePdfFromEditedTable}
                   disabled={isGeneratingPdf}
-                  className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-black flex items-center gap-2 transition-all cursor-pointer shadow-md disabled:opacity-50"
+                  className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center gap-2 transition-all cursor-pointer shadow-md disabled:opacity-50"
                 >
                   {isGeneratingPdf ? (
                     <>
@@ -2000,7 +1990,7 @@ export function AcademicPlanningSystem({
                     </>
                   ) : (
                     <>
-                      <Download className="size-4" /> PDF तयार करा व डाऊनलोड करा
+                      <Download className="size-4" /> बदलांसह PDF डाऊनलोड करा (Save & Download PDF)
                     </>
                   )}
                 </button>
@@ -2014,17 +2004,17 @@ export function AcademicPlanningSystem({
               </div>
             </div>
 
-            {/* Table Editor Content Body */}
-            <div className="flex-1 p-4 sm:p-6 overflow-y-auto bg-slate-50 space-y-4">
-              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-xs text-amber-900 font-medium flex items-center gap-2">
+            {/* Table Body & Direct Cell Text Editors */}
+            <div className="flex-1 p-3 sm:p-5 overflow-y-auto bg-slate-100 flex flex-col gap-4">
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 text-xs text-amber-900 font-medium flex items-center gap-2.5 shadow-xs">
                 <Sparkles className="size-4 text-amber-600 shrink-0" />
                 <span>
-                  टीप: खालील तक्त्यामध्ये महिना, दिवस, तासिका, विषय घटक आणि अध्ययन निष्पत्ती संपादित करा. काम पूर्ण झाल्यावर <b>"PDF तयार करा व डाऊनलोड करा"</b> वर क्लिक करा.
+                  तक्त्यामधील कोणत्याही चौकटीत (महिना, तासिका, घटक विवरण, अध्ययन निष्पत्ती) थेट क्लिक करून माहिती वेबसाईटवर ऑनलाईन टाईप/संपादित करा. बदल पूर्ण झाल्यावर <b>"बदलांसह PDF डाऊनलोड करा"</b> वर क्लिक करा.
                 </span>
               </div>
 
-              <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-sm bg-white">
-                <table className="w-full text-left border-collapse min-w-[900px]">
+              <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-sm bg-white flex-1">
+                <table className="w-full text-left border-collapse min-w-[850px]">
                   <thead>
                     <tr className="bg-slate-900 text-white text-xs font-black uppercase tracking-wider">
                       <th className="p-3 w-28 text-center border-r border-slate-800">महिना</th>
@@ -2033,15 +2023,15 @@ export function AcademicPlanningSystem({
                       )}
                       <th className="p-3 w-20 text-center border-r border-slate-800">आठवडा</th>
                       <th className="p-3 w-24 text-center border-r border-slate-800">कामाचे दिवस</th>
-                      <th className="p-3 w-24 text-center border-r border-slate-800">तासिका</th>
+                      <th className="p-3 w-24 text-center border-r border-slate-800">प्राप्त तासिका</th>
                       <th className="p-3 border-r border-slate-800">विषय / घटक विवरण</th>
                       <th className="p-3 border-r border-slate-800">अध्ययन निष्पत्ती</th>
-                      <th className="p-3 w-16 text-center">कृती</th>
+                      <th className="p-3 w-14 text-center">कृती</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 text-xs">
                     {tableRows.map((row) => (
-                      <tr key={row.id} className="hover:bg-slate-50/80 transition-colors">
+                      <tr key={row.id} className="hover:bg-slate-50/90 transition-colors">
                         <td className="p-2 border-r border-slate-200">
                           <input
                             type="text"
@@ -2086,7 +2076,7 @@ export function AcademicPlanningSystem({
                         </td>
                         <td className="p-2 border-r border-slate-200">
                           <textarea
-                            rows={3}
+                            rows={2}
                             value={row.topics}
                             onChange={(e) => handleUpdateTableRow(row.id, "topics", e.target.value)}
                             className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-slate-900 font-medium text-xs resize-y"
@@ -2094,13 +2084,13 @@ export function AcademicPlanningSystem({
                         </td>
                         <td className="p-2 border-r border-slate-200">
                           <textarea
-                            rows={3}
+                            rows={2}
                             value={row.outcomes}
                             onChange={(e) => handleUpdateTableRow(row.id, "outcomes", e.target.value)}
                             className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-slate-900 font-medium text-xs resize-y"
                           />
                         </td>
-                        <td className="p-2 text-center">
+                        <td className="p-1.5 text-center">
                           <button
                             onClick={() => handleRemoveTableRow(row.id)}
                             title="ओळ हटवा"
@@ -2120,15 +2110,15 @@ export function AcademicPlanningSystem({
                   onClick={handleAddTableRow}
                   className="px-4 py-2 rounded-xl bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
                 >
-                  <Plus className="size-4" /> ओळ जोडा (Add New Row)
+                  <Plus className="size-4" /> + तक्त्यात नवीन ओळ जोडा (Add Row)
                 </button>
 
                 <button
                   onClick={handleGeneratePdfFromEditedTable}
                   disabled={isGeneratingPdf}
-                  className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black transition-all cursor-pointer shadow-md flex items-center gap-2 disabled:opacity-50"
+                  className="px-6 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black transition-all cursor-pointer shadow-md flex items-center gap-2 disabled:opacity-50"
                 >
-                  <Download className="size-4" /> PDF तयार करा व डाऊनलोड करा (Download PDF)
+                  <Download className="size-4" /> बदलांसह PDF डाऊनलोड करा (Save & Download PDF)
                 </button>
               </div>
             </div>
@@ -2136,7 +2126,7 @@ export function AcademicPlanningSystem({
         </div>
       )}
 
-      {/* PRINTABLE HTML CONTAINER FOR PERFECT PDF GENERATION */}
+      {/* PRINTABLE HTML CONTAINER FOR PDF GENERATION */}
       <div
         id="printable-pdf-container"
         style={{
@@ -2158,7 +2148,6 @@ export function AcademicPlanningSystem({
           className="p-5 bg-white text-slate-950 font-sans shadow-none"
           style={{ width: "195mm", boxSizing: "border-box" }}
         >
-          {/* Document Title Header */}
           <div className="text-center border-b-2 border-slate-950 pb-3 mb-4 space-y-1">
             <h2 className="text-lg font-black tracking-tight text-slate-950 uppercase">
               इयत्ता : {selectedClass === "1st" ? "पहिली" : selectedClass === "2nd" ? "दुसरी" : selectedClass === "3rd" ? "तिसरी" : selectedClass === "4th" ? "चौथी" : selectedClass === "5th" ? "पाचवी" : selectedClass} {selectedPlanningType === "annual" ? "संपूर्ण वार्षिक नियोजन (सर्व विषय एकत्र)" : "वार्षिक नियोजन"} सन :- 2026-27
@@ -2170,7 +2159,6 @@ export function AcademicPlanningSystem({
             </div>
           </div>
 
-          {/* Printable Table */}
           <table className="w-full border-collapse border border-slate-950 text-xs table-fixed">
             <thead>
               <tr className="bg-slate-100 text-slate-950 font-bold border-b border-slate-950 text-center">
@@ -2202,7 +2190,6 @@ export function AcademicPlanningSystem({
             </tbody>
           </table>
 
-          {/* Footer Signatures */}
           <div className="flex justify-between items-center pt-8 text-xs font-bold text-slate-900" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
             <div>शिक्षक स्वाक्षरी: ___________________</div>
             <div>मुख्याध्यापक स्वाक्षरी: ___________________</div>

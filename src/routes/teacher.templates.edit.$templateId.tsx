@@ -799,8 +799,8 @@ function TemplateEditorPage() {
       <TeacherHeader />
       <TeacherSidebar />
 
-      <main className="lg:pl-64 pt-16 min-h-screen">
-        <div className="p-6 md:p-10 max-w-7xl mx-auto grid grid-cols-1 xl:grid-cols-2 gap-10 items-start">
+      <main className="lg:pl-0 pt-16 min-h-screen">
+        <div className="p-6 md:p-10 max-w-full mx-auto grid grid-cols-1 xl:grid-cols-2 gap-10 items-start">
           {/* Editor Controls */}
           <div className="space-y-6">
             <button

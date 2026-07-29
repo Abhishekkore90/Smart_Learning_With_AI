@@ -31,14 +31,14 @@ function TimetableLayout() {
         <TeacherHeader />
         <TeacherSidebar />
 
-        <main className="lg:pl-64 pt-16 min-h-screen">
-          <div className="p-6 md:p-10 max-w-5xl mx-auto space-y-8 flex flex-col justify-center min-h-[calc(100vh-8rem)]">
+        <main className="lg:pl-0 pt-16 min-h-screen">
+          <div className="p-4 md:p-8 w-full max-w-full mx-auto space-y-8 flex flex-col justify-center min-h-[calc(100vh-8rem)]">
             <div className="text-center space-y-2">
               <h2 className="text-3xl font-black text-slate-900 tracking-tight">Select Class / इयत्ता निवडा</h2>
               <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest">Step 2: Choose the target standard</p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 w-full max-w-full mx-auto">
               {CLASSES.map((cls, idx) => {
                 return (
                   <motion.button

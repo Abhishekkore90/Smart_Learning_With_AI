@@ -79,8 +79,8 @@ function TeacherNoticesPage() {
       <TeacherHeader />
       <TeacherSidebar />
 
-      <main className="lg:pl-64 pt-16 min-h-screen">
-        <div className="p-6 md:p-10 space-y-8 max-w-5xl mx-auto">
+      <main className="lg:pl-0 pt-16 min-h-screen">
+        <div className="p-6 md:p-10 space-y-8 max-w-full mx-auto">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div>
               <h1 className="text-3xl font-black text-slate-900 tracking-tight">

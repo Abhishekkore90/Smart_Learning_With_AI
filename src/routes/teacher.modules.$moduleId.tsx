@@ -250,7 +250,7 @@ function ModulePage() {
       </div>
 
       <header className="bg-white/40 backdrop-blur-2xl border-b border-[#E8DFD1]/50 fixed top-0 left-0 right-0 h-16 z-30 px-4 md:px-8 flex items-center">
-        <div className="max-w-[1600px] w-full mx-auto flex items-center justify-between relative z-10">
+        <div className="max-w-full w-full mx-auto flex items-center justify-between relative z-10">
           <div className="flex items-center gap-3 md:gap-8">
             <button
               onClick={() => window.history.back()}
@@ -303,19 +303,17 @@ function ModulePage() {
         </div>
       </header>
 
-      <TeacherSidebar />
-
-      <main className="flex-1 lg:pl-64 pt-24 max-w-[1800px] mx-auto w-full px-4 md:px-8 py-12 md:py-20 relative z-10">
+      <main className="flex-1 lg:pl-0 px-2 sm:px-4 md:px-6 py-4 md:py-6 max-w-full pt-24 mx-auto w-full relative z-10">
         <PinGate sectionKey="planning" enabled={moduleId === "annual-monthly-planning"}>
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white/80 backdrop-blur-3xl rounded-[4rem] border border-white/50 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.1)] relative overflow-hidden"
+            className="bg-white/80 backdrop-blur-3xl rounded-2xl sm:rounded-[2.5rem] border border-white/50 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.1)] relative overflow-hidden w-full"
           >
             {/* Canvas Decoration */}
             <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-[#D6B97A]/30 to-transparent" />
 
-            <div className={`p-4 ${moduleId === 'special-day' ? 'md:p-8 lg:p-10' : 'md:p-16'}`}>
+            <div className={`p-2 sm:p-4 ${moduleId === 'special-day' ? 'md:p-8 lg:p-10' : moduleId === 'annual-monthly-planning' ? 'md:p-4 lg:p-6' : 'md:p-16'}`}>
               <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none group-hover:scale-110 transition-transform duration-1000">
                 <config.icon className="size-32 md:size-64 text-[#D6B97A]" />
               </div>
@@ -5325,7 +5323,7 @@ function AnnualMonthlyPlanningEditor({
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 30 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="bg-white border border-slate-200 rounded-[3rem] max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl text-slate-800 font-sans"
+            className="bg-white border border-slate-200 rounded-[3rem] max-w-full w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl text-slate-800 font-sans"
           >
             {/* Modal Controls header */}
             <div className="flex items-center justify-between p-6 md:p-8 border-b border-slate-200 bg-white/85 sticky top-0 backdrop-blur z-10">

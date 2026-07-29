@@ -11,9 +11,8 @@ function TeacherPlanningPage() {
   return (
     <div className="min-h-screen bg-slate-50">
       <TeacherHeader />
-      <TeacherSidebar />
 
-      <main className="lg:pl-64 pt-16 min-h-screen">
+      <main className="pt-16 min-h-screen w-full px-2 sm:px-4 py-4">
         <AcademicPlanningSystem mode="teacher" />
       </main>
     </div>

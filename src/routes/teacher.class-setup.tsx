@@ -187,8 +187,8 @@ function TeacherClassSetupPage() {
       <TeacherHeader />
       <TeacherSidebar />
 
-      <main className="lg:pl-64 pt-20 flex-1 relative z-10">
-        <div className="max-w-5xl mx-auto px-6 py-10 space-y-8">
+      <main className="lg:pl-0 pt-20 flex-1 relative z-10">
+        <div className="max-w-full mx-auto px-6 py-10 space-y-8">
           {/* Header Card */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white/60 backdrop-blur-md p-8 rounded-[2rem] border border-[#E8DFD1]/40 shadow-sm">
             <div className="flex items-center gap-4">

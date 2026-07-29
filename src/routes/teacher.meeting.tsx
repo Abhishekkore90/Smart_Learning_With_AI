@@ -1483,9 +1483,9 @@ function TeacherMeetingPage() {
       <TeacherSidebar />
 
       {/* Main Container */}
-      <main className="lg:pl-64 pt-16 min-h-screen">
+      <main className="lg:pl-0 pt-16 min-h-screen">
         <PinGate sectionKey="meeting">
-          <div className="p-4 md:p-8 space-y-8 max-w-[1600px] mx-auto print:p-0 print:pl-0">
+          <div className="p-4 md:p-8 space-y-8 max-w-full mx-auto print:p-0 print:pl-0">
             {/* Header section (Hidden on print) */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 print:hidden">
               <div>

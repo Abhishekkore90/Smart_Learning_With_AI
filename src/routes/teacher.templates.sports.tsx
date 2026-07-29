@@ -126,7 +126,7 @@ function SportsTemplatesPage() {
       <TeacherHeader />
       <TeacherSidebar />
 
-      <main className="lg:pl-64 pt-16 min-h-screen">
+      <main className="lg:pl-0 pt-16 min-h-screen">
         <div className="p-6 md:p-10 space-y-10">
           {/* Cinematic Header */}
           <motion.div

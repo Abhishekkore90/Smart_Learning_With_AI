@@ -7844,7 +7844,7 @@ function TeacherSqaafPage() {
         <TeacherSidebar />
       </div>
 
-      <main className={`${(activeStandardDetails !== null || view === "certificate" || view === "responses") ? "" : "lg:pl-64 pt-16"} min-h-screen transition-all duration-300`}>
+      <main className={`${(activeStandardDetails !== null || view === "certificate" || view === "responses") ? "" : "lg:pl-0 pt-16"} min-h-screen transition-all duration-300`}>
         {activeStandardDetails === null && (
           <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
             <div className="absolute top-24 left-1/4 size-[500px] bg-amber-200/10 rounded-full blur-[100px] animate-pulse" />
@@ -8404,7 +8404,7 @@ function TeacherSqaafPage() {
 
                 {/* Content */}
                 <div className="w-full flex-1 overflow-y-auto">
-                  <div className="max-w-7xl mx-auto px-5 md:px-8 py-6 space-y-6 pb-24">
+                  <div className="max-w-full mx-auto px-5 md:px-8 py-6 space-y-6 pb-24">
                   <div className="flex justify-between items-center">
                     <h2 className="text-[22px] font-bold text-slate-900 mb-1">
                       {selectedLang === "mr" ? "मूल्यांकन तक्ता अहवाल" : "Assessment Table Report"}
@@ -8804,7 +8804,7 @@ function TeacherSqaafPage() {
 
                 {/* Fixed Save Button */}
                 <div className="absolute bottom-0 left-0 right-0 w-full bg-gradient-to-t from-white via-white to-white/0 z-20">
-                  <div className="max-w-7xl mx-auto w-full flex justify-end px-5 md:px-8 py-4">
+                  <div className="max-w-full mx-auto w-full flex justify-end px-5 md:px-8 py-4">
                     <button
                       onClick={() => handleDownloadPdf("table")}
                       className="bg-[#1e1b4b] text-white px-8 py-3.5 rounded-full text-sm font-bold hover:bg-slate-800 transition-all shadow-lg shadow-indigo-950/20 active:scale-95 flex items-center gap-2"
@@ -8838,7 +8838,7 @@ function TeacherSqaafPage() {
 
                 {/* Content */}
                 <div className="w-full flex-1 overflow-y-auto">
-                  <div className="max-w-7xl mx-auto px-5 md:px-8 py-6 pb-24">
+                  <div className="max-w-full mx-auto px-5 md:px-8 py-6 pb-24">
                   <hr className="border-slate-300 mb-6" />
                   <h2 className="text-[22px] font-bold text-slate-900 mb-1">
                     {selectedLang === "mr" ? "शाळा प्रतिसाद अहवाल" : "School Responses Report"}
@@ -8870,7 +8870,7 @@ function TeacherSqaafPage() {
 
                 {/* Fixed Save Button */}
                 <div className="absolute bottom-0 left-0 right-0 w-full bg-gradient-to-t from-white via-white to-white/0 z-20">
-                  <div className="max-w-7xl mx-auto w-full flex justify-end px-5 md:px-8 py-4">
+                  <div className="max-w-full mx-auto w-full flex justify-end px-5 md:px-8 py-4">
                     <button
                       onClick={() => handleDownloadPdf("responses")}
                       className="bg-[#1e1b4b] text-white px-8 py-3.5 rounded-full text-sm font-bold hover:bg-slate-800 transition-all shadow-lg shadow-indigo-950/20 active:scale-95 flex items-center gap-2"

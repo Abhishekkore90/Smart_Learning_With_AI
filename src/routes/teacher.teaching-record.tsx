@@ -201,9 +201,9 @@ function TeachingRecordPage() {
         <TeacherSidebar />
       </div>
 
-      <main className="lg:pl-64 pt-16 min-h-screen print:pl-0 print:pt-0">
+      <main className="lg:pl-0 pt-16 min-h-screen print:pl-0 print:pt-0">
         <PinGate sectionKey="teaching_record">
-          <div className="p-4 sm:p-6 md:p-8 max-w-[1200px] mx-auto space-y-6 print:p-0 print:max-w-full">
+          <div className="p-4 sm:p-6 md:p-8 max-w-full mx-auto space-y-6 print:p-0 print:max-w-full">
             <AnimatePresence mode="wait">
               {/* Step 1: Select Class */}
               {!selectedClass && (
@@ -242,7 +242,7 @@ function TeachingRecordPage() {
                     <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest">Step 1: standard Standard Selection</p>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 max-w-5xl mx-auto w-full">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 max-w-full mx-auto w-full">
                     {DIARY_CLASSES.map((cls, idx) => (
                       <motion.button
                         key={cls.id}

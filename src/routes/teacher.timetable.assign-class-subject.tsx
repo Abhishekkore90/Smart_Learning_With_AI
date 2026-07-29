@@ -14,8 +14,8 @@ function AssignClassSubjectPage() {
       <TeacherHeader />
       <TeacherSidebar />
 
-      <main className="lg:pl-64 pt-20 min-h-screen">
-        <div className="p-4 md:p-8 max-w-7xl mx-auto">
+      <main className="lg:pl-0 pt-20 min-h-screen">
+        <div className="p-4 md:p-8 max-w-full mx-auto">
           <h2 className="text-xl md:text-2xl font-bold text-center text-[#0f2d69] mb-6">
             Assign Class & Subject to Teacher
           </h2>
@@ -79,7 +79,7 @@ function AssignClassSubjectPage() {
             </form>
           </div>
 
-          <div className="max-w-5xl mx-auto">
+          <div className="max-w-full mx-auto">
             <h3 className="text-lg font-medium text-center text-slate-800 mb-4">
               Saved Data
             </h3>

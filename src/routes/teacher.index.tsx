@@ -188,7 +188,7 @@ function TeacherDashboard() {
       <TeacherHeader />
       <TeacherSidebar />
 
-      <main className="lg:pl-64 pt-16 min-h-screen bg-slate-50/50">
+      <main className="lg:pl-0 pt-16 min-h-screen bg-slate-50/50">
         <div className="p-6 space-y-6">
           {/* Quick Access Modules Card Grid */}
           <div className="space-y-6">

@@ -68,8 +68,8 @@ function ActivitiesHubPage() {
       <TeacherHeader />
       <TeacherSidebar />
 
-      <main className="lg:pl-64 pt-16 min-h-screen">
-        <div className="p-6 md:p-12 space-y-12 max-w-7xl mx-auto">
+      <main className="lg:pl-0 pt-16 min-h-screen">
+        <div className="p-6 md:p-12 space-y-12 max-w-full mx-auto">
           {/* Hero Header */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}

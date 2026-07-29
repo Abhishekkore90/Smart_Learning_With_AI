@@ -215,7 +215,7 @@ function TeacherSettings() {
       <TeacherHeader />
       <TeacherSidebar />
 
-      <main className="lg:pl-64 pt-20 lg:pt-24 min-h-screen pb-12">
+      <main className="lg:pl-0 pt-20 lg:pt-24 min-h-screen pb-12">
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           <div className="mb-8">
             <h1 className="text-3xl font-black text-slate-900 tracking-tight">
