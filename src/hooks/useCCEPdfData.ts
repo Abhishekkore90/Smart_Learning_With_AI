@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, getDocs, collection, query, where } from "firebase/firestore";
+// @ts-ignore
+import { getTeacherId, matchStudentTeacherClassAndMedium } from "@/lib/teacherIsolationHelper";
 import { toast } from "sonner";
 
 export interface CCEDataBundle {
@@ -34,11 +36,14 @@ export function useCCEPdfData(currentClass: string, academicYear: string, medium
         // 1. Fetch Students
         const studentsQuery = query(
           collection(db, "users"),
-          where("role", "==", "student"),
-          where("class", "==", currentClass)
+          where("role", "==", "student")
         );
         const studentsSnap = await getDocs(studentsQuery);
-        const fetchedStudents = studentsSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+        const rawStudents = studentsSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+        const teacherId = getTeacherId();
+        const fetchedStudents = rawStudents.filter((s) => {
+          return matchStudentTeacherClassAndMedium(s, teacherId, currentClass, medium);
+        });
         fetchedStudents.sort((a, b) => (parseInt(a.rollNo) || 0) - (parseInt(b.rollNo) || 0));
         setStudents(fetchedStudents);
 

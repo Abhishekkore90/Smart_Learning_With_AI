@@ -37,7 +37,7 @@ export const matchStudentClassAndMedium = (student, targetClass, targetMedium, c
   // If currentTeacherId is supplied or in localStorage, enforce teacher isolation
   const tId = currentTeacherId || (typeof localStorage !== "undefined" ? localStorage.getItem("current_teacher_id") : null);
   const sTeacherId = student.teacherId || student.createdById || student.userId;
-  if (tId && sTeacherId) {
+  if (tId) {
     if (sTeacherId !== tId) return false;
   }
 
@@ -95,7 +95,7 @@ export const fetchStudentsForClass = async (selectedClass, medium, teacherId = n
       studentsSnap.forEach((docSnap) => {
         const d = docSnap.data();
         const studentObj = { id: docSnap.id, ...d };
-        if (matchStudentClassAndMedium(studentObj, targetClassNorm, selectedMedium)) {
+        if (matchStudentClassAndMedium(studentObj, targetClassNorm, selectedMedium, activeTeacherId)) {
           loadedStudents.push({
             id: docSnap.id,
             srNo: String(d.rollNo || d.srNo || loadedStudents.length + 1),

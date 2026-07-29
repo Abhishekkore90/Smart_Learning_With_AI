@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, collection, query, where, onSnapshot } from "firebase/firestore";
+// @ts-ignore
+import { getTeacherId, matchStudentTeacherClassAndMedium } from "@/lib/teacherIsolationHelper";
 import { ArrowLeft, ChevronDown, ChevronUp, Plus, Trash2, Save, Sparkles, Check } from "lucide-react";
 import { toast } from "sonner";
 import { CLASS_1_OUTCOMES, OutcomeItem } from "@/data/class1_outcomes";
@@ -147,12 +149,14 @@ export function CCESubjectWise({
   useEffect(() => {
     const q = query(
       collection(db, "users"),
-      where("role", "==", "student"),
-      where("class", "==", activeClass)
+      where("role", "==", "student")
     );
     const unsub = onSnapshot(q, (snap) => {
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Student[];
-      setStudents(data.sort((a, b) => parseInt(a.rollNo || "999") - parseInt(b.rollNo || "999")));
+      const teacherId = getTeacherId();
+      const currentMedium = localStorage.getItem("cce_selected_medium") || "marathi";
+      const raw = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Student[];
+      const filtered = raw.filter((s) => matchStudentTeacherClassAndMedium(s, teacherId, activeClass, currentMedium));
+      setStudents(filtered.sort((a, b) => parseInt(a.rollNo || "999") - parseInt(b.rollNo || "999")));
     });
     return () => unsub();
   }, [activeClass]);

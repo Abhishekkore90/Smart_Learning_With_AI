@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, collection, query, where, onSnapshot } from "firebase/firestore";
+// @ts-ignore
+import { getTeacherId, matchStudentTeacherClassAndMedium } from "@/lib/teacherIsolationHelper";
 import {
   ArrowLeft,
   Plus,
@@ -257,14 +259,16 @@ export function CCEWeightage({
   useEffect(() => {
     const q = query(
       collection(db, "users"),
-      where("role", "==", "student"),
-      where("class", "==", selectedClass)
+      where("role", "==", "student")
     );
     const unsub = onSnapshot(q, (snap) => {
-      const list = snap.docs.map((d) => {
-        const dd = d.data();
+      const teacherId = getTeacherId();
+      const currentMedium = localStorage.getItem("cce_selected_medium") || "marathi";
+      const raw = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const filtered = raw.filter((s) => matchStudentTeacherClassAndMedium(s, teacherId, selectedClass, currentMedium));
+      const list = filtered.map((dd: any) => {
         return {
-          id: d.id,
+          id: dd.id,
           name: dd.fullName || dd.name || "",
           rollNo: dd.rollNo || "",
         };

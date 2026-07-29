@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { db } from "../lib/firebase";
 import { doc, getDoc, collection, getDocs, query, where } from "firebase/firestore";
+import { matchStudentClassAndMedium } from "./firestoreMarksHelper";
 import { Download, Printer, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import "./result.css";
@@ -331,16 +332,14 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", onBa
 
       // 2. Fetch Students for Selected Class
       let loadedStudents = [];
-      const normalizeClass = (cls) => (cls ? String(cls).trim().toLowerCase().replace(/[^0-9a-z]/g, "") : "");
-      const targetClassNorm = normalizeClass(selectedClass);
+      const currentMedium = localStorage.getItem("cce_selected_medium") || "marathi";
 
       try {
         const uQuery = query(collection(db, "users"), where("role", "==", "student"));
         const uSnap = await getDocs(uQuery);
         uSnap.forEach((docSnap) => {
           const d = docSnap.data();
-          const stdClassNorm = normalizeClass(d.class || d.currentClass || d.className);
-          if (!stdClassNorm || stdClassNorm === targetClassNorm || d.class === selectedClass) {
+          if (matchStudentClassAndMedium({ id: docSnap.id, ...d }, selectedClass, currentMedium)) {
             loadedStudents.push({
               id: docSnap.id,
               name: d.fullName || d.name || d.studentName || "",
@@ -355,8 +354,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", onBa
           const studentsSnap = await getDocs(collection(db, "students"));
           studentsSnap.forEach((docSnap) => {
             const d = docSnap.data();
-            const stdClassNorm = normalizeClass(d.class || d.currentClass || d.className);
-            if (!stdClassNorm || stdClassNorm === targetClassNorm || d.class === selectedClass) {
+            if (matchStudentClassAndMedium({ id: docSnap.id, ...d }, selectedClass, currentMedium)) {
               loadedStudents.push({
                 id: docSnap.id,
                 name: d.fullName || d.name || d.studentName || "",
