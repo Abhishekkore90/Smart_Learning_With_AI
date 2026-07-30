@@ -144,6 +144,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
 import { AuthProvider } from "@/hooks/use-auth";
 import { Toaster } from "@/components/ui/sonner";
 import { Header } from "@/components/Header";
+import { DiaryProcessingProvider } from "@/contexts/DiaryProcessingContext";
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
@@ -151,9 +152,11 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Header />
-        <Outlet />
-        <Toaster position="top-center" richColors />
+        <DiaryProcessingProvider>
+          <Header />
+          <Outlet />
+          <Toaster position="top-center" richColors />
+        </DiaryProcessingProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

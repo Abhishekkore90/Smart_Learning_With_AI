@@ -75,9 +75,9 @@ export function AcademicPlanningSystem({
   initialClass,
   onBack,
 }: AcademicPlanningSystemProps) {
-  // Wizard Steps: 1: Class -> 2: Medium -> 3: Subject -> 4: Planning Dashboard
-  const [step, setStep] = useState<"class" | "medium" | "subject" | "dashboard">(
-    initialClass ? "medium" : "class"
+  // Wizard Steps: 1: Medium -> 2: Class -> 3: Subject -> 4: Planning Dashboard
+  const [step, setStep] = useState<"medium" | "class" | "subject" | "dashboard">(
+    "medium"
   );
 
   const [selectedClass, setSelectedClass] = useState<string>(initialClass || "5th");
@@ -476,8 +476,8 @@ export function AcademicPlanningSystem({
   };
 
   const stepsList = [
-    { id: "class", labelMr: "इयत्ता", labelEn: "Class" },
     { id: "medium", labelMr: "माध्यम", labelEn: "Medium" },
+    { id: "class", labelMr: "इयत्ता", labelEn: "Class" },
     { id: "subject", labelMr: "विषय", labelEn: "Subject" },
     { id: "dashboard", labelMr: "नियोजन प्रकार", labelEn: "Planning" },
   ];
@@ -549,8 +549,8 @@ export function AcademicPlanningSystem({
               PLANNING PROGRESS / टप्पे
             </h3>
             <p className="text-xs text-slate-500 font-medium">
-              {step === "class" && "१. इयत्ता निवडा (Select Class)"}
-              {step === "medium" && "२. माध्यम निवडा (Select Medium)"}
+              {step === "medium" && "१. माध्यम निवडा (Select Medium)"}
+              {step === "class" && "२. इयत्ता निवडा (Select Class)"}
               {step === "subject" && "३. विषय निवडा (Select Subject)"}
               {step === "dashboard" && "४. नियोजन प्रकार (Annual / Question Bank)"}
             </p>
@@ -560,7 +560,7 @@ export function AcademicPlanningSystem({
         {/* Step Circles */}
         <div className="flex items-center gap-3">
           {stepsList.map((s, idx) => {
-            const stepsOrder = ["class", "medium", "subject", "dashboard"];
+            const stepsOrder = ["medium", "class", "subject", "dashboard"];
             const currIdx = stepsOrder.indexOf(step);
             const thisIdx = stepsOrder.indexOf(s.id);
             const isCompleted = thisIdx < currIdx;
@@ -597,7 +597,52 @@ export function AcademicPlanningSystem({
       {/* Main Content Area */}
       <div className="max-w-6xl mx-auto">
         <AnimatePresence mode="wait">
-          {/* STEP 1: CLASS SELECTION */}
+          {/* STEP 1: MEDIUM SELECTION */}
+          {step === "medium" && (
+            <motion.div
+              key="step-medium"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              className="space-y-6 max-w-3xl mx-auto"
+            >
+              <div className="text-center space-y-1">
+                <h2 className="text-2xl font-black text-slate-900">Select Medium / माध्यम निवडा</h2>
+                <p className="text-xs text-slate-500 font-semibold">
+                  प्रथम माध्यम निवडा
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {MEDIUM_OPTIONS.map((med) => {
+                  const isSelected = selectedMedium === med.id;
+                  return (
+                    <button
+                      key={med.id}
+                      onClick={() => {
+                        setSelectedMedium(med.id);
+                        setStep("class");
+                      }}
+                      className={`p-8 rounded-3xl border text-left transition-all duration-300 cursor-pointer flex flex-col justify-between gap-6 relative overflow-hidden group ${
+                        isSelected
+                          ? "bg-indigo-600 text-white border-indigo-600 shadow-xl shadow-indigo-200 scale-105"
+                          : "bg-white text-slate-800 border-slate-200 hover:border-indigo-400 hover:shadow-lg hover:scale-102"
+                      }`}
+                    >
+                      <div className="space-y-1">
+                        <h4 className="font-black text-xl">{med.labelMr}</h4>
+                        <p className={`text-xs font-bold ${isSelected ? "text-indigo-200" : "text-slate-400"}`}>
+                          {med.labelEn}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+
+          {/* STEP 2: CLASS SELECTION */}
           {step === "class" && (
             <motion.div
               key="step-class"
@@ -609,7 +654,7 @@ export function AcademicPlanningSystem({
               <div className="text-center space-y-1">
                 <h2 className="text-2xl font-black text-slate-900">Select Class / इयत्ता निवडा</h2>
                 <p className="text-xs text-slate-500 font-semibold">
-                  ज्या इयत्तेचे नियोजन पाहायचे किंवा अपलोड करायचे आहे ती इयत्ता निवडा
+                  निवडलेले माध्यम: <span className="font-bold text-indigo-600">{selectedMedium === "marathi" ? "मराठी माध्यम" : "सेमी-इंग्रजी माध्यम"}</span>
                 </p>
               </div>
 
@@ -621,7 +666,7 @@ export function AcademicPlanningSystem({
                       key={cls.id}
                       onClick={() => {
                         setSelectedClass(cls.id);
-                        setStep("medium");
+                        setStep("subject");
                       }}
                       className={`p-6 rounded-3xl border text-center transition-all duration-300 cursor-pointer flex flex-col items-center gap-3 relative overflow-hidden group ${
                         isSelected
@@ -648,78 +693,13 @@ export function AcademicPlanningSystem({
                   );
                 })}
               </div>
-            </motion.div>
-          )}
-
-          {/* STEP 2: MEDIUM SELECTION */}
-          {step === "medium" && (
-            <motion.div
-              key="step-medium"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              className="space-y-6 max-w-3xl mx-auto"
-            >
-              <div className="text-center space-y-1">
-                <h2 className="text-2xl font-black text-slate-900">Select Medium / माध्यम निवडा</h2>
-                <p className="text-xs text-slate-500 font-semibold">
-                  निवडलेली इयत्ता: <span className="font-bold text-indigo-600">{selectedClass}</span>
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {MEDIUM_OPTIONS.map((med) => {
-                  const isSelected = selectedMedium === med.id;
-                  return (
-                    <button
-                      key={med.id}
-                      onClick={() => {
-                        setSelectedMedium(med.id);
-                        setStep("subject");
-                      }}
-                      className={`p-8 rounded-3xl border text-left transition-all duration-300 cursor-pointer flex flex-col justify-between gap-6 relative overflow-hidden group ${
-                        isSelected
-                          ? "bg-gradient-to-br from-indigo-700 to-purple-800 text-white border-indigo-700 shadow-2xl scale-102"
-                          : "bg-white text-slate-800 border-slate-200 hover:border-indigo-400 hover:shadow-xl hover:scale-101"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between w-full">
-                        <div
-                          className={`size-14 rounded-2xl flex items-center justify-center font-black text-lg ${
-                            isSelected
-                              ? "bg-white/20 text-white"
-                              : "bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors"
-                          }`}
-                        >
-                          <Languages className="size-7" />
-                        </div>
-                        <span className={`text-xs font-bold px-3 py-1 rounded-full ${isSelected ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"}`}>
-                          {med.id === "semi" ? "Semi English" : "Marathi"}
-                        </span>
-                      </div>
-
-                      <div>
-                        <h3 className="text-xl font-black">{med.labelMr}</h3>
-                        <p className={`text-xs font-semibold mt-1 ${isSelected ? "text-indigo-200" : "text-slate-500"}`}>
-                          {med.labelEn}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-2 text-xs font-bold text-indigo-500 group-hover:text-indigo-600">
-                        <span>विषय निवडीसाठी पुढे जा</span>
-                        <span>→</span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
 
               <div className="flex justify-center pt-4">
                 <button
-                  onClick={() => setStep("class")}
+                  onClick={() => setStep("medium")}
                   className="px-6 py-2.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-xs"
                 >
-                  <ChevronLeft className="size-4" /> मागे जा (Back to Class)
+                  <ChevronLeft className="size-4" /> मागे जा (Back to Medium)
                 </button>
               </div>
             </motion.div>
@@ -815,10 +795,10 @@ export function AcademicPlanningSystem({
 
               <div className="flex justify-center pt-4">
                 <button
-                  onClick={() => setStep("medium")}
+                  onClick={() => setStep("class")}
                   className="px-6 py-2.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-xs"
                 >
-                  <ChevronLeft className="size-4" /> मागे जा (Back to Medium)
+                  <ChevronLeft className="size-4" /> मागे जा (Back to Class)
                 </button>
               </div>
             </motion.div>
