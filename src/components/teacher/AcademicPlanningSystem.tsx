@@ -45,50 +45,410 @@ import { saveFileToIndexedDB, getFileFromIndexedDB } from "@/lib/indexedDbStorag
 import { extractTableRowsFromPdf } from "@/lib/pdfParser";
 import * as XLSX from "xlsx";
 
-const extractTableRowsFromExcel = async (file: File): Promise<PlanningTableRow[]> => {
+// Helper to identify subject change / section header rows in raw Excel data
+const isSubjectHeaderOrChangeRow = (row: string[], prevRow?: string[]): boolean => {
+  if (!row || !Array.isArray(row)) return false;
+  const joined = row.join(" ").toLowerCase();
+
+  const isHeader =
+    joined.includes("विषय :") ||
+    joined.includes("विषय:") ||
+    joined.includes("विषय-") ||
+    joined.includes("subject:") ||
+    joined.includes("subject :") ||
+    (joined.includes("महिना") && (joined.includes("आठवडा") || joined.includes("दिवस") || joined.includes("तासिका")));
+
+  // If previous row was ALSO a header row, do NOT trigger duplicate banner for consecutive rows
+  if (prevRow && Array.isArray(prevRow)) {
+    const prevJoined = prevRow.join(" ").toLowerCase();
+    const prevIsHeader =
+      prevJoined.includes("विषय :") ||
+      prevJoined.includes("विषय:") ||
+      prevJoined.includes("विषय-") ||
+      prevJoined.includes("subject:") ||
+      prevJoined.includes("subject :") ||
+      (prevJoined.includes("महिना") && (prevJoined.includes("आठवडा") || prevJoined.includes("दिवस") || prevJoined.includes("तासिका")));
+
+    if (isHeader && prevIsHeader) {
+      return false;
+    }
+  }
+
+  if (isHeader) return true;
+
+  if (prevRow && Array.isArray(prevRow)) {
+    const prevJoined = prevRow.join(" ").toLowerCase();
+    if (prevJoined.includes("एप्रिल") && (joined.includes("जून") || joined.includes("जुलै"))) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+type RowType = "title" | "meta" | "header_repeat" | "signature" | "data";
+
+const detectRowType = (row: string[]): RowType => {
+  if (!row || !Array.isArray(row)) return "data";
+  const joined = row.join(" ").toLowerCase().trim();
+  const nonEmpties = row.map((c) => (c || "").trim()).filter((c) => c !== "");
+
+  if (nonEmpties.length === 0) return "data";
+
+  // 1. Month-End Signature row (Image 1)
+  if (joined.includes("वर्ग शिक्षक") || joined.includes("मुख्याध्यापक") || joined.includes("स्वाक्षरी") || joined.includes("signature")) {
+    return "signature";
+  }
+
+  // 2. Month-Start Title banner (Image 2 Top)
+  if (joined.includes("मासिक व घटक नियोजन") || joined.includes("अभ्यासक्रमाचे मासिक") || (nonEmpties.length === 1 && joined.includes("माहे"))) {
+    return "title";
+  }
+
+  // 3. Meta info row (Image 2 Middle: इयत्ता / विषय / तासिका / कामाचे दिवस)
+  if (joined.includes("इयत्ता") || joined.includes("नियोजित तासिका") || (joined.includes("विषय") && joined.includes("दिवस"))) {
+    return "meta";
+  }
+
+  // 4. Repeated column headers row (Image 2 Bottom)
+  if (joined.includes("दिनांक") && (joined.includes("घटक") || joined.includes("निष्पत्ती") || joined.includes("उद्दिष्ट"))) {
+    return "header_repeat";
+  }
+
+  // 5. Fallback for single merged banner
+  if (nonEmpties.length === 1 && !joined.includes("१") && !joined.includes("२")) {
+    return "title";
+  }
+
+  return "data";
+};
+
+// Helper to calculate dynamic rows count for textareas to prevent inner scrollbars
+const getDynamicRows = (text: string, isHeaderRow: boolean): number => {
+  if (isHeaderRow) return 1;
+  if (!text) return 1;
+  const lines = text.split("\n");
+  let totalRows = 0;
+  for (const line of lines) {
+    totalRows += Math.max(1, Math.ceil(line.length / 32));
+  }
+  return Math.max(1, totalRows);
+};
+
+// Helper to determine optimal column width style for planning table columns (both raw Excel/PDF headers & standard columns)
+const getRawColumnWidthStyle = (headerName: string, index: number, totalCols: number): React.CSSProperties => {
+  const h = (headerName || "").toLowerCase().trim();
+
+  // Standard 6-column Annual / Monthly layout
+  if (totalCols === 6) {
+    if (h.includes("महिना") || h.includes("month") || index === 0) return { width: "6%", minWidth: "50px" };
+    if (h.includes("आठवडा") || h.includes("week") || index === 1) return { width: "5%", minWidth: "40px" };
+    if (h.includes("कामाचे") || h.includes("दिवस") || index === 2) return { width: "6%", minWidth: "55px" };
+    if (h.includes("तासिका") || index === 3) return { width: "6%", minWidth: "55px" };
+    if (h.includes("निष्पत्ती") || h.includes("outcome") || index === 5) return { width: "27%", minWidth: "200px" };
+    if (h.includes("विषय") || h.includes("घटक") || index === 4) return { width: "50%", minWidth: "320px" };
+  }
+
+  // Small metadata columns
+  if (h.includes("अ.क्र") || h.includes("sr") || h.includes("no") || h.includes("क्रमांक")) {
+    return { width: "5%", minWidth: "45px" };
+  }
+  if (h.includes("महिना") || h.includes("month") || h.includes("मास")) {
+    return { width: "8%", minWidth: "60px" };
+  }
+  if (h.includes("आठवडा") || h.includes("week") || h.includes("दिनांक") || h.includes("तारीख")) {
+    return { width: "8%", minWidth: "65px" };
+  }
+  if (h.includes("दिवस") || h.includes("कामाचे")) {
+    return { width: "7%", minWidth: "55px" };
+  }
+  if (h.includes("तासिका") || h.includes("तास")) {
+    return { width: "7%", minWidth: "55px" };
+  }
+  if (h.includes("साहित्य") || h.includes("साधने")) {
+    return { width: "12%", minWidth: "100px" };
+  }
+  if (h.includes("मूल्यमापन") || h.includes("नोंदी")) {
+    return { width: "15%", minWidth: "120px" };
+  }
+
+  // Content columns (topics, sub-topics, activities, outcomes, objectives)
+  if (h.includes("निष्पत्ती") || h.includes("साध्य") || h.includes("उद्दिष्टे")) {
+    return { width: "25%", minWidth: "180px" };
+  }
+  if (h.includes("विषय") || h.includes("घटक") || h.includes("उपघटक") || h.includes("प्रक्रिया") || h.includes("कृती") || h.includes("विवरण")) {
+    return { width: "35%", minWidth: "240px" };
+  }
+
+  // Dynamic fallback for any arbitrary totalCols in custom Monthly Excel structure
+  if (totalCols > 0) {
+    const widthPct = Math.max(8, Math.floor(100 / totalCols));
+    return { width: `${widthPct}%`, minWidth: "80px" };
+  }
+
+  return {};
+};
+
+// Helper to clean column header names (e.g. replaces "विषय : मराठी" with generic "विषय / घटक विवरण")
+const getCleanHeaderName = (h: string): string => {
+  if (!h) return "";
+  const trimmed = h.trim();
+  if (
+    trimmed.startsWith("विषय :") ||
+    trimmed.startsWith("विषय:") ||
+    trimmed.toLowerCase().includes("मराठी")
+  ) {
+    return "विषय / घटक विवरण";
+  }
+  return trimmed;
+};
+
+// Helper to identify header placeholder strings like "अध्ययन निष्पत्ती"
+const isHeaderLabelText = (str: string): boolean => {
+  if (!str) return false;
+  const s = str.trim().toLowerCase();
+  return (
+    s === "अध्ययन निष्पत्ती" ||
+    s === "अध्ययन निष्पती" ||
+    s === "अध्ययन निष्पत्ति" ||
+    s === "अध्ययन निष्पत्ती:" ||
+    s === "अध्ययन निष्पती:"
+  );
+};
+
+// Helper to detect raw PDF binary stream noise (e.g. /Contents, 4 0 obj, endobj, stream, cm)
+const isPdfNoiseLine = (row: string[] | string | undefined): boolean => {
+  if (!row) return false;
+  const str = Array.isArray(row) ? row.join(" ") : String(row);
+  if (!str || !str.trim()) return false;
+  const lower = str.toLowerCase().trim();
+
+  const pdfKeywords = [
+    "/contents",
+    "endobj",
+    "stream",
+    "endstream",
+    "/length",
+    "/type /page",
+    "/type/page",
+    "/mediabox",
+    "/resources",
+    "/catalog",
+    "/parent",
+    "/flatedecode",
+    "/font",
+  ];
+
+  if (pdfKeywords.some((kw) => lower.includes(kw))) return true;
+  if (/^\d+\s+\d+\s+obj/i.test(lower)) return true;
+  if (/\b\d+\.\d+\s+cm\b/i.test(lower)) return true;
+  if (/\b\d+\.\d+\s+w\b/i.test(lower)) return true;
+  if (/^\/i\d+\s+do/i.test(lower)) return true;
+  if (lower === "q" || lower === "<<" || lower === ">>") return true;
+
+  return false;
+};
+
+// Helper to clean cell content: removes PDF stream noise while preserving exact text
+const cleanCellContent = (val: string): string => {
+  if (!val) return "";
+  const trimmed = val.trim();
+  if (isPdfNoiseLine(trimmed)) {
+    return "";
+  }
+  return val;
+};
+
+// Extracts exact Excel structure handling merged cells via forward-fill + grouping
+const extractExcelData = async (
+  file: File
+): Promise<{ mappedRows: PlanningTableRow[]; rawHeaders: string[]; rawDataRows: string[][] }> => {
+  const empty = { mappedRows: [], rawHeaders: [], rawDataRows: [] };
   try {
     const arrayBuffer = await file.arrayBuffer();
-    const workbook = XLSX.read(arrayBuffer, { type: "array" });
+    const workbook = XLSX.read(arrayBuffer, { type: "array", cellStyles: true });
     const firstSheetName = workbook.SheetNames[0];
-    if (!firstSheetName) return [];
+    if (!firstSheetName) return empty;
 
     const worksheet = workbook.Sheets[firstSheetName];
-    const rawData = XLSX.utils.sheet_to_json<any[]>(worksheet, { header: 1 });
-    if (!rawData || rawData.length === 0) return [];
+    // Read all rows as raw 2D array (empty string for blank cells)
+    const rawData = XLSX.utils.sheet_to_json<any[]>(worksheet, { header: 1, defval: "" });
+    if (!rawData || rawData.length === 0) return empty;
 
-    const extractedRows: PlanningTableRow[] = [];
+    // ── Step 1: Locate the header row ─────────────────────────────────────────
+    const HEADER_KEYWORDS = [
+      "महिना", "month", "मास", "कालावधी",
+      "आठवडा", "आठवडे", "week", "दिनांक", "तारीख", "date",
+      "कामाचे", "दिवस", "working", "days",
+      "तासिका", "तास", "period",
+      "विषय", "घटक", "उपघटक", "पाठ", "topic", "unit", "विवरण", "content", "तपशील",
+      "निष्पत्ती", "outcome", "साध्य", "उद्दिष्टे", "उद्दिष्ट",
+      "साहित्य", "साधने", "उपक्रम", "कृती", "प्रक्रिया",
+      "मूल्यमापन", "नोंदी", "नोंद", "अ.क्र", "क्र", "sr"
+    ];
+    let headerRowIdx = -1;
+    let maxHeaderMatches = 0;
 
-    rawData.forEach((row, idx) => {
-      if (!row || row.length === 0) return;
+    for (let r = 0; r < Math.min(rawData.length, 20); r++) {
+      const row = rawData[r];
+      if (!row || !Array.isArray(row)) continue;
 
-      const strCells = row.map((cell) => (cell !== undefined && cell !== null ? String(cell).trim() : ""));
-      const rowText = strCells.join(" ").toLowerCase();
+      const nonEmptyCells = row.map((c: any) => String(c ?? "").trim()).filter((h) => h.length > 0 && !isPdfNoiseLine(h));
+      if (nonEmptyCells.length < 2) continue; // Skip single-cell title banners like "अभ्यासक्रमाचे मासिक व घटक नियोजन"
 
-      // Skip header row if it contains header keywords
-      if (idx === 0 && (rowText.includes("महिना") || rowText.includes("month") || rowText.includes("विषय") || rowText.includes("subject"))) {
-        return;
+      // Count how many header keywords match in this row
+      let matches = 0;
+      row.forEach((cell: any) => {
+        const val = String(cell ?? "").trim().toLowerCase();
+        if (val && HEADER_KEYWORDS.some((kw) => val.includes(kw))) {
+          matches++;
+        }
+      });
+
+      // Choose row with highest header keyword matches & non-empty column count
+      const score = matches * 10 + nonEmptyCells.length;
+      if (score > maxHeaderMatches) {
+        maxHeaderMatches = score;
+        headerRowIdx = r;
+      }
+    }
+
+    // Fallback: if no keyword score >= 10, pick the row in first 15 rows with most non-empty columns (>= 3)
+    if (headerRowIdx === -1) {
+      let maxColsCount = 0;
+      for (let r = 0; r < Math.min(rawData.length, 15); r++) {
+        const row = rawData[r];
+        if (!row || !Array.isArray(row)) continue;
+        const nonEmpty = row.filter((c: any) => String(c ?? "").trim().length > 0).length;
+        if (nonEmpty >= 3 && nonEmpty > maxColsCount) {
+          maxColsCount = nonEmpty;
+          headerRowIdx = r;
+        }
+      }
+    }
+
+    if (headerRowIdx === -1) return empty;
+
+    // ── Step 2: Determine full column count & build raw headers ────────
+    // 1. Find max columns across all rows from headerRowIdx onwards
+    let maxCols = 0;
+    for (let r = headerRowIdx; r < Math.min(rawData.length, headerRowIdx + 40); r++) {
+      if (Array.isArray(rawData[r])) {
+        maxCols = Math.max(maxCols, rawData[r].length);
+      }
+    }
+    if (maxCols === 0) return empty;
+
+    // 2. Build headers across all maxCols columns
+    const rawHeaders: string[] = [];
+    for (let ci = 0; ci < maxCols; ci++) {
+      let hVal = String(rawData[headerRowIdx]?.[ci] ?? "").trim();
+      // If blank in primary header row, look 1 row above or below
+      if (!hVal && rawData[headerRowIdx + 1]?.[ci]) {
+        const nextVal = String(rawData[headerRowIdx + 1][ci]).trim();
+        if (nextVal && !isPdfNoiseLine(nextVal)) hVal = nextVal;
+      }
+      if (!hVal && headerRowIdx > 0 && rawData[headerRowIdx - 1]?.[ci]) {
+        const prevVal = String(rawData[headerRowIdx - 1][ci]).trim();
+        if (prevVal && !isPdfNoiseLine(prevVal)) hVal = prevVal;
+      }
+      rawHeaders.push(hVal);
+    }
+
+    // 3. Trim completely empty trailing columns at end of sheet
+    while (rawHeaders.length > 0 && rawHeaders[rawHeaders.length - 1] === "") {
+      // Check if any data row has content in this trailing column
+      const hasContent = rawData.some((r, ri) => ri > headerRowIdx && Array.isArray(r) && String(r[rawHeaders.length - 1] ?? "").trim() !== "");
+      if (!hasContent) {
+        rawHeaders.pop();
+      } else {
+        break;
+      }
+    }
+
+    // Replace any remaining empty column headers with descriptive default (e.g. "तपशील / घटक")
+    for (let ci = 0; ci < rawHeaders.length; ci++) {
+      if (!rawHeaders[ci]) {
+        rawHeaders[ci] = ci === 0 ? "अ.क्र / महिना" : `तपशील / माहिती ${ci + 1}`;
+      }
+    }
+
+    const numCols = rawHeaders.length;
+    if (numCols === 0 || rawHeaders.some((h) => isPdfNoiseLine(h))) return empty;
+
+    // ── Step 3: Gather data rows, normalize to numCols length ─────────────────
+    const startIdx = headerRowIdx + 1;
+    const dataRows: string[][] = [];
+    for (let i = startIdx; i < rawData.length; i++) {
+      const row = rawData[i];
+      if (!row || !Array.isArray(row)) continue;
+      const strRow: string[] = Array.from({ length: numCols }, (_, ci) =>
+        String(row[ci] ?? "").trim()
+      );
+      // Skip only completely empty rows or raw PDF stream noise
+      if (strRow.every((c) => c === "") || isPdfNoiseLine(strRow)) continue;
+      dataRows.push(strRow);
+    }
+    if (dataRows.length === 0) return empty;
+
+    // ── Step 4: Forward-fill merged cells row by row (Preserve all rows 1:1) ─
+    // Carry forward merged cell values (e.g. topic name merged across multiple sub-points),
+    // but reset whenever a new month section title row appears so months stay 100% distinct.
+    const lastVal: string[] = new Array(numCols).fill("");
+    const rawDataRows: string[][] = dataRows.map((row) => {
+      const nonEmpties = row.filter((c) => c !== "");
+      const isTitleRow = nonEmpties.length === 1 && (nonEmpties[0].toLowerCase().includes("नियोजन") || nonEmpties[0].toLowerCase().includes("माहे"));
+      
+      if (isTitleRow) {
+        lastVal.fill("");
+        return row;
       }
 
-      if (strCells.some((c) => c.length > 0)) {
-        extractedRows.push({
-          id: `${Date.now()}_${idx}`,
-          month: strCells[0] || `महिना ${idx + 1}`,
-          subject: strCells[1] || "मराठी",
-          weeks: strCells[2] || "4",
-          workingDays: strCells[3] || "20",
-          periods: strCells[4] || "50",
-          topics: strCells[5] || strCells.slice(5, 7).filter(Boolean).join(" - ") || "घटक माहिती",
-          outcomes: strCells[6] || strCells.slice(7).filter(Boolean).join(" - ") || "अध्ययन निष्पत्ती",
-        });
-      }
+      return row.map((cell, ci) => {
+        if (cell !== "") {
+          lastVal[ci] = cell;
+          return cell;
+        }
+        return nonEmpties.length > 1 ? lastVal[ci] : "";
+      });
     });
 
-    return extractedRows;
+    // ── Step 7: Build column map for schema-mapped fallback ───────────────────
+    const colMap = { srNo: -1, month: -1, subject: -1, weeks: -1, workingDays: -1, periods: -1, topics: -1, outcomes: -1 };
+    rawData[headerRowIdx].forEach((cell: any, cIdx: number) => {
+      if (cIdx >= numCols) return;
+      const ct = String(cell ?? "").trim().toLowerCase();
+      if (!ct) return;
+      if ((ct.includes("अ.क्र") || ct.includes("क्र") || ct === "sr" || ct === "no") && colMap.srNo === -1) colMap.srNo = cIdx;
+      else if ((ct.includes("महिना") || ct.includes("month") || ct.includes("कालावधी") || ct.includes("मास")) && colMap.month === -1) colMap.month = cIdx;
+      else if ((ct.includes("विषय") || ct.includes("subject")) && !ct.includes("घटक") && colMap.subject === -1) colMap.subject = cIdx;
+      else if ((ct.includes("आठवडा") || ct.includes("आठवडे") || ct.includes("week")) && colMap.weeks === -1) colMap.weeks = cIdx;
+      else if ((ct.includes("कामाचे") || ct.includes("दिवस") || ct.includes("working") || ct.includes("days")) && colMap.workingDays === -1) colMap.workingDays = cIdx;
+      else if ((ct.includes("तासिका") || ct.includes("तास") || ct.includes("period") || ct.includes("hour")) && colMap.periods === -1) colMap.periods = cIdx;
+      else if ((ct.includes("घटक") || ct.includes("पाठ") || ct.includes("topic") || ct.includes("unit") || ct.includes("विवरण") || ct.includes("content")) && colMap.topics === -1) colMap.topics = cIdx;
+      else if ((ct.includes("निष्पत्ती") || ct.includes("outcome") || ct.includes("साध्य") || ct.includes("skill")) && colMap.outcomes === -1) colMap.outcomes = cIdx;
+    });
+
+    // ── Step 8: Build schema-mapped PlanningTableRow[] as fallback ────────────
+    const get = (row: string[], idx: number) => (idx !== -1 && row[idx] ? row[idx] : "");
+    const mappedRows: PlanningTableRow[] = rawDataRows.map((row, i) => ({
+      id: `excel_${Date.now()}_${i}`,
+      month: get(row, colMap.month) || row[0] || `महिना ${i + 1}`,
+      subject: get(row, colMap.subject) || "मराठी",
+      weeks: get(row, colMap.weeks) || "4",
+      workingDays: get(row, colMap.workingDays) || "20",
+      periods: get(row, colMap.periods) || "50",
+      topics: get(row, colMap.topics) || "घटक माहिती",
+      outcomes: get(row, colMap.outcomes) || "अध्ययन निष्पत्ती",
+    }));
+
+    return { mappedRows, rawHeaders, rawDataRows };
   } catch (err) {
-    console.error("Excel parsing error:", err);
-    return [];
+    console.error("Excel extraction error:", err);
+    return empty;
   }
 };
+
 
 export interface PlanningFileRecord {
   id: string;
@@ -103,6 +463,9 @@ export interface PlanningFileRecord {
   uploadedBy: "teacher" | "admin";
   uploadedAt: string;
   tableRows?: PlanningTableRow[];
+  // Raw Excel structure (exact headers + rows as uploaded)
+  rawHeaders?: string[];
+  rawDataRows?: string[][];
 }
 
 export interface PlanningTableRow {
@@ -344,7 +707,7 @@ export function AcademicPlanningSystem({
 
       try {
         await setDoc(doc(db, "academic_plannings", recordKey), updatedRecord, { merge: true });
-      } catch (e) {}
+      } catch (e) { }
 
       setPlanningFiles((prev) => ({ ...prev, [recordKey]: updatedRecord }));
       setViewModalFile(updatedRecord);
@@ -361,15 +724,77 @@ export function AcademicPlanningSystem({
   const [editingFileRecord, setEditingFileRecord] = useState<PlanningFileRecord | null>(null);
   const [tableRows, setTableRows] = useState<PlanningTableRow[]>(DEFAULT_ANNUAL_ROWS);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState<boolean>(false);
+  const [isSavingTableData, setIsSavingTableData] = useState<boolean>(false);
   const printableTableRef = useRef<HTMLDivElement | null>(null);
+  // Raw Excel editing states (exact Excel structure)
+  const [rawEditorHeaders, setRawEditorHeaders] = useState<string[]>([]);
+  const [rawEditorRows, setRawEditorRows] = useState<string[][]>([]);
+
+  const handleSaveTableDataOnly = async () => {
+    try {
+      setIsSavingTableData(true);
+      toast.info("वार्षिक नियोजन माहिती जतन होत आहे...");
+
+      const recordKey = editingFileRecord
+        ? editingFileRecord.id
+        : getFileRecordKey(selectedPlanningType, selectedSubject);
+
+      const fileNameStr = editingFileRecord?.fileName || `इयत्ता_${selectedClass}_वार्षिक_नियोजन_2026-27.pdf`;
+
+      const updatedRecord: PlanningFileRecord = {
+        ...(editingFileRecord || {}),
+        id: recordKey,
+        classId: selectedClass,
+        mediumId: selectedMedium,
+        subjectId: editingFileRecord?.subjectId || selectedSubject || "मराठी",
+        planningType: editingFileRecord?.planningType || selectedPlanningType,
+        fileName: fileNameStr,
+        fileUrl: editingFileRecord?.fileUrl || "",
+        fileSize: editingFileRecord?.fileSize || "0.5 MB",
+        fileType: "application/pdf",
+        uploadedBy: mode,
+        uploadedAt: new Date().toISOString(),
+        tableRows: tableRows,
+        ...(rawEditorHeaders.length > 0 && { rawHeaders: rawEditorHeaders }),
+        ...(rawEditorRows.length > 0 && { rawDataRows: rawEditorRows }),
+      };
+
+      try {
+        await setDoc(doc(db, "academic_plannings", recordKey), updatedRecord, { merge: true });
+      } catch (e) {
+        console.warn("Firestore save notice:", e);
+      }
+
+      setPlanningFiles((prev) => ({ ...prev, [recordKey]: updatedRecord }));
+      if (viewModalFile && viewModalFile.id === recordKey) {
+        setViewModalFile(updatedRecord);
+      }
+
+      setIsSavingTableData(false);
+      setIsTableEditorOpen(false);
+      toast.success("🎉 वार्षिक नियोजन माहिती यशस्वीरित्या जतन झाली!");
+    } catch (err) {
+      console.error("Save table data error:", err);
+      setIsSavingTableData(false);
+      toast.error("माहिती सेव्ह करताना अडथळा आला.");
+    }
+  };
 
   const handleOpenTableEditor = (e: React.MouseEvent, rec?: PlanningFileRecord | null) => {
     e.stopPropagation();
     e.preventDefault();
     setEditingFileRecord(rec || null);
-    if (rec && rec.tableRows && rec.tableRows.length > 0) {
+    if (rec && rec.rawHeaders && rec.rawHeaders.length > 0) {
+      setRawEditorHeaders(rec.rawHeaders);
+      setRawEditorRows(rec.rawDataRows ? rec.rawDataRows.map((r) => [...r]) : []);
+      setTableRows([]);  // clear schema rows when using raw mode
+    } else if (rec && rec.tableRows && rec.tableRows.length > 0) {
+      setRawEditorHeaders([]);
+      setRawEditorRows([]);
       setTableRows(rec.tableRows);
     } else {
+      setRawEditorHeaders([]);
+      setRawEditorRows([]);
       setTableRows(DEFAULT_ANNUAL_ROWS);
     }
     setIsTableEditorOpen(true);
@@ -419,19 +844,45 @@ export function AcademicPlanningSystem({
       }
 
       if (container) {
+        container.style.position = "fixed";
+        container.style.left = "-9999px";
+        container.style.top = "0px";
+        container.style.width = "190mm";
+        container.style.margin = "0px";
+        container.style.padding = "0px";
         container.style.display = "block";
         container.style.visibility = "visible";
         container.style.opacity = "1";
+        container.style.zIndex = "99999";
       }
 
       const html2pdfModule = await import("html2pdf.js");
       const html2pdf = html2pdfModule.default || html2pdfModule;
 
       const subjectName = selectedSubject || "मराठी";
-      const fileNameStr = `${selectedClass}_${subjectName}_annual_planning.pdf`;
+      const classNameStr =
+        selectedClass === "1st"
+          ? "1ली"
+          : selectedClass === "2nd"
+            ? "2री"
+            : selectedClass === "3rd"
+              ? "3री"
+              : selectedClass === "4th"
+                ? "4थी"
+                : selectedClass === "5th"
+                  ? "5वी"
+                  : selectedClass === "6th"
+                    ? "6वी"
+                    : selectedClass === "7th"
+                      ? "7वी"
+                      : selectedClass === "8th"
+                        ? "8वी"
+                        : selectedClass;
+
+      const fileNameStr = `इयत्ता_${classNameStr}_${selectedPlanningType === "annual" ? "संपूर्ण_वार्षिक_नियोजन" : subjectName}_2026-27.pdf`;
 
       const opt = {
-        margin: [6, 6, 6, 6],
+        margin: [10, 10, 10, 10],
         filename: fileNameStr,
         image: { type: "jpeg", quality: 0.98 },
         html2canvas: {
@@ -440,10 +891,10 @@ export function AcademicPlanningSystem({
           logging: false,
           scrollX: 0,
           scrollY: 0,
-          windowHeight: Math.max(printElement.scrollHeight || 0, 2500),
+          letterRendering: true,
         },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        pagebreak: { mode: ["avoid-all", "css", "legacy"] },
+        pagebreak: { mode: ["avoid-all", "css"], avoid: ["tr", "td", "th", "div", "p", ".avoid-break"] },
       };
 
       const pdfBlob = await (html2pdf() as any).from(printElement).set(opt).output("blob");
@@ -474,12 +925,15 @@ export function AcademicPlanningSystem({
         fileType: "application/pdf",
         uploadedBy: mode,
         uploadedAt: new Date().toISOString(),
-        tableRows: tableRows,
+        tableRows: rawEditorHeaders.length > 0 ? tableRows : tableRows,
+        ...(rawEditorHeaders.length > 0 && { rawHeaders: rawEditorHeaders }),
+        ...(rawEditorRows.length > 0 && { rawDataRows: rawEditorRows }),
       };
+
 
       try {
         await setDoc(doc(db, "academic_plannings", recordKey), updatedRecord, { merge: true });
-      } catch (e) {}
+      } catch (e) { }
 
       setPlanningFiles((prev) => ({ ...prev, [recordKey]: updatedRecord }));
       setIsTableEditorOpen(false);
@@ -565,7 +1019,7 @@ export function AcademicPlanningSystem({
             const parsed = JSON.parse(cached);
             Object.assign(cMap, parsed);
           }
-        } catch (e) {}
+        } catch (e) { }
         setCustomSubjectsMap(cMap);
       },
       (err) => {
@@ -598,7 +1052,7 @@ export function AcademicPlanningSystem({
               }
             });
           }
-        } catch (e) {}
+        } catch (e) { }
 
         setPlanningFiles(filesMap);
         setLoadingFiles(false);
@@ -611,7 +1065,7 @@ export function AcademicPlanningSystem({
           if (cached) {
             setPlanningFiles(JSON.parse(cached));
           }
-        } catch (e) {}
+        } catch (e) { }
         setLoadingFiles(false);
       }
     );
@@ -811,9 +1265,14 @@ export function AcademicPlanningSystem({
       // 2. Extract structured table rows from uploaded file (PDF or Excel)
       toast.info("🔍 फाईलमधून तक्ता व माहिती ऑटो-एक्सट्रॅक्ट होत आहे...");
       let extractedRows: PlanningTableRow[] = [];
+      let excelRawHeaders: string[] = [];
+      let excelRawDataRows: string[][] = [];
       try {
         if (ext === "xls" || ext === "xlsx" || ext === "csv") {
-          extractedRows = await extractTableRowsFromExcel(selectedFile);
+          const excelResult = await extractExcelData(selectedFile);
+          extractedRows = excelResult.mappedRows;
+          excelRawHeaders = excelResult.rawHeaders;
+          excelRawDataRows = excelResult.rawDataRows;
         } else {
           extractedRows = await extractTableRowsFromPdf(selectedFile);
         }
@@ -825,8 +1284,8 @@ export function AcademicPlanningSystem({
         extractedRows.length > 0
           ? extractedRows
           : uploadingType === "annual"
-          ? DEFAULT_ALL_SUBJECTS_ANNUAL_ROWS
-          : DEFAULT_ANNUAL_ROWS;
+            ? DEFAULT_ALL_SUBJECTS_ANNUAL_ROWS
+            : DEFAULT_ANNUAL_ROWS;
 
       setUploadProgress(100);
 
@@ -845,6 +1304,8 @@ export function AcademicPlanningSystem({
         uploadedBy: mode,
         uploadedAt: new Date().toISOString(),
         tableRows: rowsToSave,
+        ...(excelRawHeaders.length > 0 && { rawHeaders: excelRawHeaders }),
+        ...(excelRawDataRows.length > 0 && { rawDataRows: excelRawDataRows }),
       };
 
       // 3. Save metadata to Firestore (~250 bytes document -> ~50ms save!)
@@ -859,13 +1320,19 @@ export function AcademicPlanningSystem({
         const updated = { ...prev, [recordKey]: newRecord };
         try {
           localStorage.setItem("cce_academic_plannings_cache", JSON.stringify(updated));
-        } catch (e) {}
+        } catch (e) { }
         return updated;
       });
 
-      toast.success(
-        `🎉 फाईल यशस्वीरित्या जतन झाली! (${originalSizeMb}MB -> ${compressedSizeMb}MB कॉम्प्रेस झाली)`
-      );
+      if (extractedRows.length > 0) {
+        toast.success(
+          `🎉 Excel/फाईलमधून ${extractedRows.length} तक्ता नोंदी (Rows) यशस्वीरित्या एक्सट्रॅक्ट करून सेव्ह झाल्या!`
+        );
+      } else {
+        toast.success(
+          `🎉 फाईल यशस्वीरित्या जतन झाली! (${originalSizeMb}MB -> ${compressedSizeMb}MB कॉम्प्रेस झाली)`
+        );
+      }
 
       setUploading(false);
       setUploadProgress(0);
@@ -895,8 +1362,48 @@ export function AcademicPlanningSystem({
       return;
     }
 
-    setViewModalFile({ ...rec, fileUrl: targetUrl });
+    // ── Auto-parse Excel structure if rawHeaders are missing ─────────────────
+    // This handles records uploaded before the raw Excel parsing logic was added.
+    // We fetch the blob from IndexedDB, re-parse it, and enrich the record.
+    let enrichedRec = { ...rec, fileUrl: targetUrl };
+    const isExcel =
+      rec.fileName?.match(/\.(xlsx?|csv)$/i) ||
+      rec.fileType?.includes("spreadsheet") ||
+      rec.fileType?.includes("excel") ||
+      rec.fileType?.includes("csv");
+
+    if (
+      isExcel &&
+      (!rec.rawHeaders || rec.rawHeaders.length <= 1) &&
+      blobFromDb
+    ) {
+      try {
+        toast.info("📊 Excel संरचना वाचत आहे...", { duration: 2000 });
+        // Convert Blob to File for extractExcelData
+        const excelFile = new File([blobFromDb], rec.fileName || "file.xlsx", {
+          type: blobFromDb.type || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        });
+        const { rawHeaders, rawDataRows, mappedRows } = await extractExcelData(excelFile);
+        if (rawHeaders.length > 0) {
+          enrichedRec = { ...enrichedRec, rawHeaders, rawDataRows };
+          // Save enriched data back to Firestore in background (don't await — non-blocking)
+          const updatedRecord: PlanningFileRecord = {
+            ...rec,
+            rawHeaders,
+            rawDataRows,
+            ...(mappedRows.length > 0 && (!rec.tableRows || rec.tableRows.length === 0) && { tableRows: mappedRows }),
+          };
+          setDoc(doc(db, "academic_plannings", rec.id), updatedRecord, { merge: true }).catch(() => { });
+          setPlanningFiles((prev) => ({ ...prev, [rec.id]: updatedRecord }));
+        }
+      } catch (parseErr) {
+        console.warn("Excel re-parse notice:", parseErr);
+      }
+    }
+
+    setViewModalFile(enrichedRec);
   };
+
 
   // Helper to trigger Direct Full Screen PDF Editor
   const handleOpenDirectPdfEditor = async (
@@ -928,11 +1435,26 @@ export function AcademicPlanningSystem({
     setIsPdfFullscreen(true);
   };
 
-  // Helper to trigger download / open (checks IndexedDB for persistent blob across page refreshes)
+  // Helper to trigger download / open (converts Excel/table data into PDF before downloading)
   const handleDownloadFile = async (rec: PlanningFileRecord) => {
     if (!rec) return;
-    let targetUrl = rec.fileUrl;
 
+    // If rec has structured table data or Excel rows, convert to PDF and download
+    if ((rec.rawHeaders && rec.rawHeaders.length > 0) || (rec.tableRows && rec.tableRows.length > 0) || (rec.rawDataRows && rec.rawDataRows.length > 0)) {
+      if (rec.rawHeaders && rec.rawHeaders.length > 0) {
+        setRawEditorHeaders(rec.rawHeaders);
+        setRawEditorRows(rec.rawDataRows ? rec.rawDataRows.map((r) => [...r]) : []);
+      } else if (rec.tableRows && rec.tableRows.length > 0) {
+        setTableRows(rec.tableRows);
+      }
+      setEditingFileRecord(rec);
+      setTimeout(() => {
+        handleGeneratePdfFromEditedTable();
+      }, 100);
+      return;
+    }
+
+    let targetUrl = rec.fileUrl;
     const blobFromDb = await getFileFromIndexedDB(rec.id);
     if (blobFromDb) {
       targetUrl = URL.createObjectURL(blobFromDb);
@@ -943,13 +1465,15 @@ export function AcademicPlanningSystem({
       return;
     }
 
+    const pdfName = (rec.fileName || `${rec.planningType}_planning`).replace(/\.[^/.]+$/, "") + ".pdf";
+
     const a = document.createElement("a");
     a.href = targetUrl;
-    a.download = rec.fileName || `${rec.planningType}_planning.pdf`;
+    a.download = pdfName;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    toast.success("फाईल डाऊनलोड होत आहे...");
+    toast.success("PDF फाईल डाऊनलोड होत आहे...");
   };
 
   const stepsList = [
@@ -1015,8 +1539,8 @@ export function AcademicPlanningSystem({
                     {selectedPlanningType === "annual"
                       ? "वार्षिक नियोजन"
                       : selectedPlanningType === "monthly"
-                      ? "मासिक नियोजन"
-                      : "प्रश्नपेढी"}
+                        ? "मासिक नियोजन"
+                        : "प्रश्नपेढी"}
                   </span>
                 </div>
               </>
@@ -1066,21 +1590,19 @@ export function AcademicPlanningSystem({
               <React.Fragment key={s.id}>
                 {idx > 0 && (
                   <div
-                    className={`h-1 w-6 sm:w-10 rounded-full transition-all ${
-                      isCompleted ? "bg-indigo-600" : "bg-slate-200"
-                    }`}
+                    className={`h-1 w-6 sm:w-10 rounded-full transition-all ${isCompleted ? "bg-indigo-600" : "bg-slate-200"
+                      }`}
                   />
                 )}
                 <button
                   disabled={thisIdx > currIdx}
                   onClick={() => setStep(s.id as any)}
-                  className={`size-10 rounded-2xl flex items-center justify-center text-xs font-black transition-all cursor-pointer ${
-                    isActive
+                  className={`size-10 rounded-2xl flex items-center justify-center text-xs font-black transition-all cursor-pointer ${isActive
                       ? "bg-indigo-600 text-white shadow-lg ring-4 ring-indigo-100 scale-110"
                       : isCompleted
-                      ? "bg-slate-900 text-white hover:bg-slate-800"
-                      : "bg-slate-100 text-slate-400 cursor-not-allowed"
-                  }`}
+                        ? "bg-slate-900 text-white hover:bg-slate-800"
+                        : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                    }`}
                 >
                   {isCompleted ? <CheckCircle2 className="size-4 text-emerald-400" /> : idx + 1}
                 </button>
@@ -1119,19 +1641,17 @@ export function AcademicPlanningSystem({
                         setSelectedMedium(med.id);
                         setStep("class");
                       }}
-                      className={`p-8 rounded-3xl border text-left transition-all duration-300 cursor-pointer flex flex-col justify-between gap-6 relative overflow-hidden group ${
-                        isSelected
+                      className={`p-8 rounded-3xl border text-left transition-all duration-300 cursor-pointer flex flex-col justify-between gap-6 relative overflow-hidden group ${isSelected
                           ? "bg-gradient-to-br from-indigo-700 to-purple-800 text-white border-indigo-700 shadow-2xl scale-102"
                           : "bg-white text-slate-800 border-slate-200 hover:border-indigo-400 hover:shadow-xl hover:scale-101"
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center justify-between w-full">
                         <div
-                          className={`size-14 rounded-2xl flex items-center justify-center font-black text-lg ${
-                            isSelected
+                          className={`size-14 rounded-2xl flex items-center justify-center font-black text-lg ${isSelected
                               ? "bg-white/20 text-white"
                               : "bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors"
-                          }`}
+                            }`}
                         >
                           <Languages className="size-7" />
                         </div>
@@ -1184,18 +1704,16 @@ export function AcademicPlanningSystem({
                         setSelectedClass(cls.id);
                         setStep("type");
                       }}
-                      className={`p-6 rounded-3xl border text-center transition-all duration-300 cursor-pointer flex flex-col items-center gap-3 relative overflow-hidden group ${
-                        isSelected
+                      className={`p-6 rounded-3xl border text-center transition-all duration-300 cursor-pointer flex flex-col items-center gap-3 relative overflow-hidden group ${isSelected
                           ? "bg-indigo-600 text-white border-indigo-600 shadow-xl shadow-indigo-200 scale-105"
                           : "bg-white text-slate-800 border-slate-200 hover:border-indigo-400 hover:shadow-lg hover:scale-102"
-                      }`}
+                        }`}
                     >
                       <div
-                        className={`size-12 rounded-2xl flex items-center justify-center font-black text-base ${
-                          isSelected
+                        className={`size-12 rounded-2xl flex items-center justify-center font-black text-base ${isSelected
                             ? "bg-white/20 text-white"
                             : "bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors"
-                        }`}
+                          }`}
                       >
                         <GraduationCap className="size-6" />
                       </div>
@@ -1303,7 +1821,7 @@ export function AcademicPlanningSystem({
                           onClick={(e) => handleOpenTableEditor(e, annualFile)}
                           className="w-full py-2.5 px-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md mt-1"
                         >
-                          <Edit3 className="size-4" /> <span>✏️ ऑनलाईन एडिट करा (Edit on Site)</span>
+                          <Edit3 className="size-4" /> <span>✏️ एडिट करा (Edit)</span>
                         </button>
 
 
@@ -1511,7 +2029,7 @@ export function AcademicPlanningSystem({
                           onClick={(e) => handleOpenTableEditor(e, fileRec)}
                           className="w-full py-2.5 px-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm mt-1"
                         >
-                          <Edit3 className="size-4" /> <span>✏️ ऑनलाईन एडिट करा (Edit on Site)</span>
+                          <Edit3 className="size-4" /> <span>✏️ एडिट करा (Edit)</span>
                         </button>
 
 
@@ -1588,8 +2106,8 @@ export function AcademicPlanningSystem({
                     {uploadingType === "annual"
                       ? "वार्षिक नियोजन"
                       : uploadingType === "monthly"
-                      ? "मासिक नियोजन"
-                      : "प्रश्नपेढी"}{" "}
+                        ? "मासिक नियोजन"
+                        : "प्रश्नपेढी"}{" "}
                     | {selectedClass} | {selectedMedium === "semi" ? "सेमी" : "मराठी"} | {selectedSubject}
                   </p>
                 </div>
@@ -1706,15 +2224,14 @@ export function AcademicPlanningSystem({
 
       {/* VIEW FILE PREVIEW MODAL */}
       {viewModalFile && (
-        <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
+        <div className="fixed inset-0 z-[100] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 pt-16 sm:pt-20">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className={`bg-white rounded-2xl sm:rounded-3xl w-full flex flex-col shadow-2xl overflow-hidden border border-slate-700/50 transition-all duration-300 ${
-              isPdfFullscreen
+            className={`bg-white rounded-2xl sm:rounded-3xl w-full flex flex-col shadow-2xl overflow-hidden border border-slate-700/50 transition-all duration-300 ${isPdfFullscreen
                 ? "h-full max-w-none max-h-none rounded-xl sm:rounded-2xl"
-                : "max-w-5xl h-[85vh] max-h-[90vh]"
-            }`}
+                : "max-w-5xl h-[82vh] max-h-[85vh] mt-10"
+              }`}
           >
             {/* Modal Header */}
             <div className="p-4 sm:p-5 bg-slate-900 text-white flex items-center justify-between shrink-0 border-b border-slate-800">
@@ -1723,49 +2240,21 @@ export function AcademicPlanningSystem({
                   <Eye className="size-5" />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="text-sm sm:text-base font-black truncate max-w-xs sm:max-w-md md:max-w-lg">{viewModalFile.fileName}</h3>
-                  <p className="text-[11px] sm:text-xs text-slate-400 font-medium truncate">
-                    आकार: {viewModalFile.fileSize} | अपलोड दिनांक: {new Date(viewModalFile.uploadedAt).toLocaleDateString("en-GB")}
-                  </p>
+                  <h3 className="text-sm sm:text-base font-black tracking-tight">
+                    {selectedPlanningType === "annual" ? "वार्षिक नियोजन" : selectedPlanningType === "monthly" ? "मासिक नियोजन" : "प्रश्नपेढी"}
+                  </h3>
                 </div>
               </div>
 
               <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap justify-end">
-                {/* OPEN IN NEW TAB */}
+                {/* EDIT TABLE DATA BUTTON */}
                 <button
-                  onClick={() => window.open(viewModalFile.fileUrl, "_blank")}
-                  title="नव्या टॅबमध्ये उघडा (Open in New Tab)"
-                  className="p-2 rounded-xl text-slate-300 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+                  onClick={(e) => handleOpenTableEditor(e, viewModalFile)}
+                  title="माहिती एडिट करा (Edit Data)"
+                  className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
                 >
-                  <ExternalLink className="size-4 sm:size-5" />
-                </button>
-
-                {/* INBUILT BROWSER PDF EDITOR BUTTON */}
-                <button
-                  onClick={() => window.open(viewModalFile.fileUrl, "_blank")}
-                  title="ब्राऊझरच्या इन-बिल्ट PDF एडिटरमध्ये उघडून थेट मजकूर एडिट करा (Open Browser Built-in PDF Editor)"
-                  className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
-                >
-                  <Edit3 className="size-4 text-amber-300" />
-                  <span>✏️ इनबिल्ट एडिटरमध्ये एडिट करा (Edit PDF)</span>
-                </button>
-
-                {/* OPEN IN NEW TAB */}
-                <button
-                  onClick={() => window.open(viewModalFile.fileUrl, "_blank")}
-                  title="नव्या टॅबमध्ये उघडा (Open in New Tab)"
-                  className="p-2 rounded-xl text-slate-300 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
-                >
-                  <ExternalLink className="size-4 sm:size-5" />
-                </button>
-
-                {/* FULLSCREEN TOGGLE */}
-                <button
-                  onClick={() => setIsPdfFullscreen(!isPdfFullscreen)}
-                  title={isPdfFullscreen ? "लहान आकार करा (Normal Size)" : "फुल स्क्रीन करा (Full Screen)"}
-                  className="p-2 rounded-xl text-slate-300 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
-                >
-                  {isPdfFullscreen ? <Minimize2 className="size-4 sm:size-5" /> : <Maximize2 className="size-4 sm:size-5" />}
+                  <Edit3 className="size-4" />
+                  <span>✏️ एडिट करा (Edit)</span>
                 </button>
 
                 {/* DOWNLOAD */}
@@ -1791,44 +2280,11 @@ export function AcademicPlanningSystem({
 
             {/* Modal Preview Body */}
             <div className="flex-1 p-2 sm:p-4 overflow-hidden bg-slate-950/80 flex flex-col items-center justify-center relative">
-              {viewModalFile.fileUrl.startsWith("data:application/pdf") ||
-              viewModalFile.fileUrl.includes(".pdf") ||
-              viewModalFile.fileType?.includes("pdf") ||
-              viewModalFile.fileName?.toLowerCase().endsWith(".pdf") ? (
-                <div className="w-full h-full min-h-0 flex-1 relative rounded-xl overflow-hidden bg-white shadow-2xl">
-                  <iframe
-                    src={`${viewModalFile.fileUrl}#toolbar=1&navpanes=1&view=FitH`}
-                    className="w-full h-full border-0 bg-white"
-                    title="PDF Preview"
-                  />
-                </div>
-              ) : viewModalFile.fileUrl.startsWith("http") ? (
-                <div className="w-full h-full min-h-0 flex-1 relative rounded-xl overflow-hidden bg-white shadow-2xl">
-                  <iframe
-                    src={`https://docs.google.com/gview?url=${encodeURIComponent(viewModalFile.fileUrl)}&embedded=true`}
-                    className="w-full h-full border-0 bg-white"
-                    title="Document PDF Preview"
-                  />
-                </div>
-              ) : (
+              {(viewModalFile.rawHeaders && viewModalFile.rawHeaders.length > 0) ||
+                (viewModalFile.tableRows && viewModalFile.tableRows.length > 0) ||
+                (viewModalFile.rawDataRows && viewModalFile.rawDataRows.length > 0) ? (
                 <div className="w-full h-full min-h-0 flex-1 relative rounded-2xl overflow-y-auto bg-white p-6 shadow-2xl flex flex-col gap-4">
-                  <div className="bg-indigo-900 text-white p-4 rounded-2xl flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="size-10 rounded-xl bg-white/10 flex items-center justify-center text-amber-300 font-bold">
-                        <FileText className="size-5" />
-                      </div>
-                      <div>
-                        <h4 className="font-black text-sm">{viewModalFile.fileName} (PDF लेआऊट प्रिव्ह्यू)</h4>
-                        <p className="text-xs text-indigo-200">Word/Excel फाईलचे ऑनलाईन PDF लेआऊट प्रिव्ह्यू</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleDownloadFile(viewModalFile)}
-                      className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center gap-1.5 cursor-pointer shadow-md"
-                    >
-                      <Download className="size-4" /> डाऊनलोड करा
-                    </button>
-                  </div>
+
 
                   <div className="border border-slate-300 rounded-2xl p-6 bg-slate-50 flex-1 space-y-4">
                     <div className="text-center border-b-2 border-slate-900 pb-3">
@@ -1840,31 +2296,162 @@ export function AcademicPlanningSystem({
                       </p>
                     </div>
 
-                    <table className="w-full border-collapse border border-slate-900 text-xs bg-white">
-                      <thead>
-                        <tr className="bg-slate-900 text-white font-bold text-center">
-                          <th className="border border-slate-900 p-2">महिना</th>
-                          <th className="border border-slate-900 p-2">आठवडा</th>
-                          <th className="border border-slate-900 p-2">कामाचे दिवस</th>
-                          <th className="border border-slate-900 p-2">प्राप्त तासिका</th>
-                          <th className="border border-slate-900 p-2 text-left">विषय / घटक विवरण</th>
-                          <th className="border border-slate-900 p-2 text-left">अध्ययन निष्पत्ती</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(viewModalFile.tableRows && viewModalFile.tableRows.length > 0 ? viewModalFile.tableRows : DEFAULT_ANNUAL_ROWS).map((r) => (
-                          <tr key={r.id} className="border-b border-slate-800">
-                            <td className="border border-slate-800 p-2 text-center font-bold">{r.month}</td>
-                            <td className="border border-slate-800 p-2 text-center">{r.weeks}</td>
-                            <td className="border border-slate-800 p-2 text-center">{r.workingDays}</td>
-                            <td className="border border-slate-800 p-2 text-center">{r.periods}</td>
-                            <td className="border border-slate-800 p-2 font-medium">{r.topics}</td>
-                            <td className="border border-slate-800 p-2">{r.outcomes}</td>
+                    {/* If raw Excel headers exist & are valid (not PDF stream noise) → show exact Excel structure */}
+                    {viewModalFile.rawHeaders &&
+                      viewModalFile.rawHeaders.length > 0 &&
+                      !viewModalFile.rawHeaders.some((h) => isPdfNoiseLine(h)) &&
+                      viewModalFile.rawDataRows &&
+                      viewModalFile.rawDataRows.some((r) => !isPdfNoiseLine(r)) ? (
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse border border-slate-900 text-xs bg-white table-fixed">
+                          <thead>
+                            <tr className="bg-slate-200 text-slate-950 font-black text-xs border-b-2 border-slate-400">
+                              {viewModalFile.rawHeaders.filter((h) => !isPdfNoiseLine(h)).map((h, hi) => {
+                                const style = getRawColumnWidthStyle(h, hi, viewModalFile.rawHeaders!.length);
+                                return (
+                                  <th key={hi} className="border border-slate-300 bg-slate-200 text-slate-950 font-black p-2 text-center text-xs" style={style}>
+                                    {getCleanHeaderName(h)}
+                                  </th>
+                                );
+                              })}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {viewModalFile.rawDataRows.filter((r) => !isPdfNoiseLine(r)).map((row, ri) => {
+                              const numCols = viewModalFile.rawHeaders!.length;
+                              const rowType = detectRowType(row);
+
+                              if (rowType === "signature") {
+                                const leftTxt = row.find((c) => c && (c.includes("शिक्षक") || c.includes("वर्ग"))) || "विषय / वर्ग शिक्षक";
+                                const rightTxt = row.find((c) => c && c.includes("मुख्याध्यापक")) || "मुख्याध्यापक";
+                                const halfCols = Math.ceil(numCols / 2);
+                                const remCols = numCols - halfCols;
+                                return (
+                                  <tr key={ri} className="bg-slate-100 font-black border-t-2 border-b-2 border-slate-400">
+                                    <td colSpan={halfCols} className="border border-slate-300 p-3 text-left font-black text-xs text-slate-950">
+                                      {leftTxt}
+                                    </td>
+                                    <td colSpan={remCols} className="border border-slate-300 p-3 text-right font-black text-xs text-slate-950">
+                                      {rightTxt}
+                                    </td>
+                                  </tr>
+                                );
+                              }
+
+                              if (rowType === "title") {
+                                const titleTxt = row.find((c) => c && c.trim() !== "") || "अभ्यासक्रमाचे मासिक व घटक नियोजन";
+                                return (
+                                  <tr key={ri} className="bg-slate-200 font-black border-t-2 border-b-2 border-slate-400">
+                                    <td colSpan={numCols} className="border border-slate-300 p-2.5 text-center font-black text-xs text-slate-950 uppercase tracking-wide">
+                                      {titleTxt}
+                                    </td>
+                                  </tr>
+                                );
+                              }
+
+                              if (rowType === "meta") {
+                                const nonEmpties = row.filter((c) => c && c.trim() !== "");
+                                const leftTxt = nonEmpties[0] || "";
+                                const rightTxt = nonEmpties[1] || "";
+                                const halfCols = Math.ceil(numCols / 2);
+                                const remCols = numCols - halfCols;
+                                return (
+                                  <tr key={ri} className="bg-slate-50 font-bold border-b border-slate-300">
+                                    <td colSpan={halfCols} className="border border-slate-300 p-2 text-left font-bold text-xs text-slate-950">
+                                      {leftTxt}
+                                    </td>
+                                    <td colSpan={remCols} className="border border-slate-300 p-2 text-right font-bold text-xs text-slate-950">
+                                      {rightTxt}
+                                    </td>
+                                  </tr>
+                                );
+                              }
+
+                              if (rowType === "header_repeat") {
+                                return (
+                                  <tr key={ri} className="bg-slate-200 font-black border-b-2 border-slate-400">
+                                    {viewModalFile.rawHeaders!.map((h, ci) => {
+                                      const style = getRawColumnWidthStyle(h, ci, numCols);
+                                      return (
+                                        <th key={ci} className="border border-slate-300 p-2 text-center text-xs font-black text-slate-950 bg-slate-200" style={style}>
+                                          {getCleanHeaderName(h)}
+                                        </th>
+                                      );
+                                    })}
+                                  </tr>
+                                );
+                              }
+
+                              return (
+                                <tr key={ri} className="border-b border-slate-300 hover:bg-slate-50 transition-colors">
+                                  {viewModalFile.rawHeaders!.map((h, ci) => {
+                                    const style = getRawColumnWidthStyle(h, ci, numCols);
+                                    return (
+                                      <td
+                                        key={ci}
+                                        className="border border-slate-300 p-2 whitespace-pre-line break-words align-top text-slate-950 text-xs font-normal"
+                                        style={style}
+                                      >
+                                        {cleanCellContent(row[ci] ?? "")}
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <table className="w-full border-collapse border border-slate-900 text-xs bg-white table-fixed">
+                        <thead>
+                          <tr className="bg-slate-200 text-slate-950 font-black text-center text-xs border-b-2 border-slate-400">
+                            <th className="border border-slate-300 bg-slate-200 text-slate-950 font-black p-2 text-center w-[7%]">महिना</th>
+                            <th className="border border-slate-300 bg-slate-200 text-slate-950 font-black p-2 text-center w-[5%]">आठवडा</th>
+                            <th className="border border-slate-300 bg-slate-200 text-slate-950 font-black p-2 text-center w-[7%]">कामाचे दिवस</th>
+                            <th className="border border-slate-300 bg-slate-200 text-slate-950 font-black p-2 text-center w-[7%]">प्राप्त तासिका</th>
+                            <th className="border border-slate-300 bg-slate-200 text-slate-950 font-black p-2 text-left w-[47%]">विषय / घटक विवरण</th>
+                            <th className="border border-slate-300 bg-slate-200 text-slate-950 font-black p-2 text-left w-[27%]">अध्ययन निष्पत्ती</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {(viewModalFile.tableRows && viewModalFile.tableRows.length > 0 ? viewModalFile.tableRows : DEFAULT_ANNUAL_ROWS).map((r) => (
+                            <tr key={r.id} className="border-b border-slate-800">
+                              <td className="border border-slate-800 p-2 text-center font-bold w-[7%]">{r.month}</td>
+                              <td className="border border-slate-800 p-2 text-center w-[5%]">{r.weeks}</td>
+                              <td className="border border-slate-800 p-2 text-center w-[7%]">{r.workingDays}</td>
+                              <td className="border border-slate-800 p-2 text-center w-[7%]">{r.periods}</td>
+                              <td className="border border-slate-800 p-2 font-medium w-[47%]">{r.topics}</td>
+                              <td className="border border-slate-800 p-2 w-[27%]">{cleanCellContent(r.outcomes)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
                   </div>
+                </div>
+              ) : viewModalFile.fileUrl.startsWith("data:application/pdf") ||
+                viewModalFile.fileUrl.includes(".pdf") ||
+                viewModalFile.fileType?.includes("pdf") ||
+                viewModalFile.fileName?.toLowerCase().endsWith(".pdf") ? (
+                <div className="w-full h-full min-h-0 flex-1 relative rounded-xl overflow-hidden bg-white shadow-2xl">
+                  <iframe
+                    src={`${viewModalFile.fileUrl}#toolbar=1&navpanes=1&view=FitH`}
+                    className="w-full h-full border-0 bg-white"
+                    title="PDF Preview"
+                  />
+                </div>
+              ) : viewModalFile.fileUrl.startsWith("http") && !viewModalFile.fileUrl.startsWith("blob:") ? (
+                <div className="w-full h-full min-h-0 flex-1 relative rounded-xl overflow-hidden bg-white shadow-2xl">
+                  <iframe
+                    src={`https://docs.google.com/gview?url=${encodeURIComponent(viewModalFile.fileUrl)}&embedded=true`}
+                    className="w-full h-full border-0 bg-white"
+                    title="Document PDF Preview"
+                  />
+                </div>
+              ) : (
+                <div className="w-full h-full min-h-0 flex-1 relative rounded-2xl overflow-y-auto bg-white p-6 shadow-2xl flex flex-col items-center justify-center p-8">
+                  <p className="text-slate-400 font-bold text-sm">अद्याप कोणतीही माहिती उपलब्ध नाही.</p>
                 </div>
               )}
             </div>
@@ -1949,48 +2536,38 @@ export function AcademicPlanningSystem({
 
       {/* LIVE SITE DOCUMENT EDITOR MODAL */}
       {isTableEditorOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
+        <div className="fixed inset-0 z-[100] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 pt-16 sm:pt-20">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-3xl w-full max-w-[95vw] h-[92vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200"
+            className="bg-white rounded-3xl w-full max-w-[95vw] h-[84vh] max-h-[86vh] mt-10 flex flex-col shadow-2xl overflow-hidden border border-slate-200"
           >
             {/* Modal Header */}
-            <div className="p-4 sm:p-5 bg-gradient-to-r from-indigo-900 via-indigo-950 to-slate-900 text-white flex flex-wrap items-center justify-between gap-3 shrink-0 border-b border-indigo-800/50">
+            <div className="p-4 sm:p-5 bg-gradient-to-r from-indigo-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between gap-3 shrink-0 border-b border-indigo-800/50">
               <div className="flex items-center gap-3">
                 <div className="size-10 rounded-2xl bg-amber-400/20 border border-amber-400/30 text-amber-300 flex items-center justify-center font-bold">
                   <Edit3 className="size-5" />
                 </div>
                 <div>
                   <h3 className="text-base sm:text-lg font-black tracking-tight">
-                    वेबसाईटवर ऑनलाईन संपादन (In-Site Document Sheet Editor)
+                    वार्षिक नियोजन एडिट करा
                   </h3>
-                  <p className="text-xs text-indigo-200 font-semibold">
-                    इयत्ता: {selectedClass} | विषय: {selectedSubject || "सर्व विषय"} | सन: 2026-27
-                  </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <button
-                  onClick={handleAddTableRow}
-                  className="px-3 sm:px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                  onClick={handleSaveTableDataOnly}
+                  disabled={isSavingTableData}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-black flex items-center gap-2 transition-all cursor-pointer shadow-md disabled:opacity-50"
                 >
-                  <Plus className="size-4" /> <span className="hidden sm:inline">+ ओळ जोडा (Add Row)</span>
-                </button>
-
-                <button
-                  onClick={handleGeneratePdfFromEditedTable}
-                  disabled={isGeneratingPdf}
-                  className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center gap-2 transition-all cursor-pointer shadow-md disabled:opacity-50"
-                >
-                  {isGeneratingPdf ? (
+                  {isSavingTableData ? (
                     <>
-                      <RefreshCw className="size-4 animate-spin" /> PDF तयार होत आहे...
+                      <RefreshCw className="size-4 animate-spin" /> जतन होत आहे...
                     </>
                   ) : (
                     <>
-                      <Download className="size-4" /> बदलांसह PDF डाऊनलोड करा (Save & Download PDF)
+                      <Save className="size-4" /> जतन करा (Save)
                     </>
                   )}
                 </button>
@@ -2013,112 +2590,297 @@ export function AcademicPlanningSystem({
                 </span>
               </div>
 
-              <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-sm bg-white flex-1">
-                <table className="w-full text-left border-collapse min-w-[850px]">
-                  <thead>
-                    <tr className="bg-slate-900 text-white text-xs font-black uppercase tracking-wider">
-                      <th className="p-3 w-28 text-center border-r border-slate-800">महिना</th>
-                      {(selectedPlanningType === "annual" || selectedSubject === "सर्व विषय" || selectedSubject === "all") && (
-                        <th className="p-3 w-32 text-center border-r border-slate-800">विषय (Subject)</th>
-                      )}
-                      <th className="p-3 w-20 text-center border-r border-slate-800">आठवडा</th>
-                      <th className="p-3 w-24 text-center border-r border-slate-800">कामाचे दिवस</th>
-                      <th className="p-3 w-24 text-center border-r border-slate-800">प्राप्त तासिका</th>
-                      <th className="p-3 border-r border-slate-800">विषय / घटक विवरण</th>
-                      <th className="p-3 border-r border-slate-800">अध्ययन निष्पत्ती</th>
-                      <th className="p-3 w-14 text-center">कृती</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200 text-xs">
-                    {tableRows.map((row) => (
-                      <tr key={row.id} className="hover:bg-slate-50/90 transition-colors">
-                        <td className="p-2 border-r border-slate-200">
-                          <input
-                            type="text"
-                            value={row.month}
-                            onChange={(e) => handleUpdateTableRow(row.id, "month", e.target.value)}
-                            className="w-full px-2 py-1.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 font-bold text-slate-800 text-center text-xs"
-                          />
-                        </td>
+              {/* ═══ RAW EXCEL STRUCTURE EDITOR ═══ */}
+              {rawEditorHeaders.length > 0 && !rawEditorHeaders.some((h) => isPdfNoiseLine(h)) && rawEditorRows.some((r) => !isPdfNoiseLine(r)) ? (
+                <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-sm bg-white flex-1">
+                  <table className="w-full text-left border-collapse table-fixed min-w-[750px]">
+                    <thead>
+                      <tr className="bg-slate-200 text-slate-950 text-xs font-black border-b-2 border-slate-400">
+                        {rawEditorHeaders.map((h, hi) => {
+                          const style = getRawColumnWidthStyle(h, hi, rawEditorHeaders.length);
+                          return (
+                            <th key={hi} className="p-2 border-r border-slate-300 bg-slate-200 text-slate-950 font-black text-center text-xs" style={style}>
+                              {getCleanHeaderName(h)}
+                            </th>
+                          );
+                        })}
+                        <th className="p-2 w-12 text-center bg-slate-200 text-slate-950 font-black text-xs">कृती</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-xs">
+                      {rawEditorRows.map((row, ri) => {
+                        const numCols = rawEditorHeaders.length;
+                        const rowType = detectRowType(row);
+
+                        if (rowType === "signature") {
+                          const leftTxt = row.find((c) => c && (c.includes("शिक्षक") || c.includes("वर्ग"))) || "विषय / वर्ग शिक्षक";
+                          const rightTxt = row.find((c) => c && c.includes("मुख्याध्यापक")) || "मुख्याध्यापक";
+                          const halfCols = Math.ceil(numCols / 2);
+                          const remCols = numCols - halfCols;
+                          return (
+                            <tr key={ri} className="bg-amber-100/90 font-black border-t-2 border-b-2 border-amber-300">
+                              <td colSpan={halfCols} className="p-2.5 text-left font-black text-xs text-amber-950 border-r border-amber-200">
+                                <input
+                                  type="text"
+                                  value={leftTxt}
+                                  onChange={(e) => {
+                                    setRawEditorRows((prev) => {
+                                      const updated = prev.map((r, idx) => idx === ri ? [...r] : r);
+                                      updated[ri][0] = e.target.value;
+                                      return updated;
+                                    });
+                                  }}
+                                  className="w-full px-2 py-1 bg-amber-50 border border-amber-300 rounded font-black text-amber-950"
+                                />
+                              </td>
+                              <td colSpan={remCols + 1} className="p-2.5 text-right font-black text-xs text-amber-950">
+                                <input
+                                  type="text"
+                                  value={rightTxt}
+                                  onChange={(e) => {
+                                    setRawEditorRows((prev) => {
+                                      const updated = prev.map((r, idx) => idx === ri ? [...r] : r);
+                                      const lastIdx = numCols - 1;
+                                      updated[ri][lastIdx] = e.target.value;
+                                      return updated;
+                                    });
+                                  }}
+                                  className="w-full px-2 py-1 bg-amber-50 border border-amber-300 rounded font-black text-amber-950 text-right"
+                                />
+                              </td>
+                            </tr>
+                          );
+                        }
+
+                        if (rowType === "title") {
+                          const titleTxt = row.find((c) => c && c.trim() !== "") || "अभ्यासक्रमाचे मासिक व घटक नियोजन";
+                          return (
+                            <tr key={ri} className="bg-amber-100 font-bold border-b border-amber-200">
+                              <td colSpan={numCols + 1} className="p-2 text-center align-middle">
+                                <input
+                                  type="text"
+                                  value={titleTxt}
+                                  onChange={(e) => {
+                                    setRawEditorRows((prev) => {
+                                      const updated = prev.map((r, idx) => idx === ri ? [...r] : r);
+                                      const targetIdx = row.findIndex((c) => c && c.trim() !== "") >= 0 ? row.findIndex((c) => c && c.trim() !== "") : 0;
+                                      updated[ri][targetIdx] = e.target.value;
+                                      return updated;
+                                    });
+                                  }}
+                                  className="w-full px-2 py-1.5 rounded-lg border border-amber-300 bg-amber-50 text-amber-950 font-black text-xs text-center focus:ring-2 focus:ring-amber-500"
+                                />
+                              </td>
+                            </tr>
+                          );
+                        }
+
+                        if (rowType === "meta") {
+                          const nonEmpties = row.filter((c) => c && c.trim() !== "");
+                          const leftTxt = nonEmpties[0] || "";
+                          const rightTxt = nonEmpties[1] || "";
+                          const halfCols = Math.ceil(numCols / 2);
+                          const remCols = numCols - halfCols;
+                          return (
+                            <tr key={ri} className="bg-amber-50/80 font-bold border-b border-amber-200">
+                              <td colSpan={halfCols} className="p-2 text-left align-middle">
+                                <input
+                                  type="text"
+                                  value={leftTxt}
+                                  onChange={(e) => {
+                                    setRawEditorRows((prev) => {
+                                      const updated = prev.map((r, idx) => idx === ri ? [...r] : r);
+                                      updated[ri][0] = e.target.value;
+                                      return updated;
+                                    });
+                                  }}
+                                  className="w-full px-2 py-1 rounded border border-amber-200 bg-white font-bold text-xs"
+                                />
+                              </td>
+                              <td colSpan={remCols + 1} className="p-2 text-right align-middle">
+                                <input
+                                  type="text"
+                                  value={rightTxt}
+                                  onChange={(e) => {
+                                    setRawEditorRows((prev) => {
+                                      const updated = prev.map((r, idx) => idx === ri ? [...r] : r);
+                                      const targetIdx = numCols - 1;
+                                      updated[ri][targetIdx] = e.target.value;
+                                      return updated;
+                                    });
+                                  }}
+                                  className="w-full px-2 py-1 rounded border border-amber-200 bg-white font-bold text-xs text-right"
+                                />
+                              </td>
+                            </tr>
+                          );
+                        }
+
+                        if (rowType === "header_repeat") {
+                          return (
+                            <tr key={ri} className="bg-amber-200/90 font-black border-b-2 border-amber-400">
+                              {rawEditorHeaders.map((h, ci) => {
+                                const style = getRawColumnWidthStyle(h, ci, numCols);
+                                return (
+                                  <th key={ci} className="p-2 border-r border-amber-300 text-center text-xs font-black text-amber-950 bg-amber-200" style={style}>
+                                    {getCleanHeaderName(h)}
+                                  </th>
+                                );
+                              })}
+                              <td className="p-1 text-center bg-amber-200"></td>
+                            </tr>
+                          );
+                        }
+
+                        return (
+                          <tr key={ri} className="border-b border-slate-100 hover:bg-slate-50/90 transition-colors">
+                            {rawEditorHeaders.map((h, ci) => {
+                              const style = getRawColumnWidthStyle(h, ci, numCols);
+                              const val = cleanCellContent(row[ci] ?? "");
+                              const dynRows = getDynamicRows(val, false);
+                              return (
+                                <td key={ci} className="p-1 border-r border-slate-100 align-top" style={style}>
+                                  <textarea
+                                    rows={dynRows}
+                                    value={val}
+                                    onChange={(e) => {
+                                      setRawEditorRows((prev) => {
+                                        const updated = prev.map((r, idx) => idx === ri ? [...r] : r);
+                                        updated[ri][ci] = e.target.value;
+                                        return updated;
+                                      });
+                                    }}
+                                    className="w-full px-1.5 py-1.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-xs overflow-hidden resize-none leading-relaxed text-slate-900 font-medium bg-white"
+                                  />
+                                </td>
+                              );
+                            })}
+                            <td className="p-1 text-center align-middle">
+                              <button
+                                type="button"
+                                onClick={() => setRawEditorRows((prev) => prev.filter((_, idx) => idx !== ri))}
+                                className="p-1.5 rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors cursor-pointer"
+                                title="ओळ हटवा (Delete Row)"
+                              >
+                                <Trash2 className="size-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-sm bg-white flex-1">
+                  <table className="w-full text-left border-collapse min-w-[850px] table-fixed">
+                    <thead>
+                      <tr className="bg-slate-900 text-white text-xs font-black uppercase tracking-wider">
+                        <th className="p-2.5 w-[7%] text-center border-r border-slate-800">महिना</th>
                         {(selectedPlanningType === "annual" || selectedSubject === "सर्व विषय" || selectedSubject === "all") && (
-                          <td className="p-2 border-r border-slate-200">
+                          <th className="p-2.5 w-[10%] text-center border-r border-slate-800">विषय (Subject)</th>
+                        )}
+                        <th className="p-2.5 w-[5%] text-center border-r border-slate-800">आठवडा</th>
+                        <th className="p-2.5 w-[7%] text-center border-r border-slate-800">कामाचे दिवस</th>
+                        <th className="p-2.5 w-[7%] text-center border-r border-slate-800">प्राप्त तासिका</th>
+                        <th className="p-2.5 w-[42%] border-r border-slate-800">विषय / घटक विवरण</th>
+                        <th className="p-2.5 w-[22%] border-r border-slate-800">अध्ययन निष्पत्ती</th>
+                        <th className="p-2.5 w-12 text-center">कृती</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 text-xs">
+                      {tableRows.map((row) => (
+                        <tr key={row.id} className="hover:bg-slate-50/90 transition-colors">
+                          <td className="p-1.5 border-r border-slate-200">
                             <input
                               type="text"
-                              value={row.subject || "मराठी"}
-                              onChange={(e) => handleUpdateTableRow(row.id, "subject", e.target.value)}
-                              className="w-full px-2 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50/50 focus:ring-2 focus:ring-indigo-500 font-black text-indigo-900 text-center text-xs"
+                              value={row.month}
+                              onChange={(e) => handleUpdateTableRow(row.id, "month", e.target.value)}
+                              className="w-full px-1.5 py-1 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 font-bold text-slate-800 text-center text-xs"
                             />
                           </td>
-                        )}
-                        <td className="p-2 border-r border-slate-200">
-                          <input
-                            type="text"
-                            value={row.weeks}
-                            onChange={(e) => handleUpdateTableRow(row.id, "weeks", e.target.value)}
-                            className="w-full px-2 py-1.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-slate-800 text-center text-xs font-semibold"
-                          />
-                        </td>
-                        <td className="p-2 border-r border-slate-200">
-                          <input
-                            type="text"
-                            value={row.workingDays}
-                            onChange={(e) => handleUpdateTableRow(row.id, "workingDays", e.target.value)}
-                            className="w-full px-2 py-1.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-slate-800 text-center text-xs font-semibold"
-                          />
-                        </td>
-                        <td className="p-2 border-r border-slate-200">
-                          <input
-                            type="text"
-                            value={row.periods}
-                            onChange={(e) => handleUpdateTableRow(row.id, "periods", e.target.value)}
-                            className="w-full px-2 py-1.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-slate-800 text-center text-xs font-semibold"
-                          />
-                        </td>
-                        <td className="p-2 border-r border-slate-200">
-                          <textarea
-                            rows={2}
-                            value={row.topics}
-                            onChange={(e) => handleUpdateTableRow(row.id, "topics", e.target.value)}
-                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-slate-900 font-medium text-xs resize-y"
-                          />
-                        </td>
-                        <td className="p-2 border-r border-slate-200">
-                          <textarea
-                            rows={2}
-                            value={row.outcomes}
-                            onChange={(e) => handleUpdateTableRow(row.id, "outcomes", e.target.value)}
-                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-slate-900 font-medium text-xs resize-y"
-                          />
-                        </td>
-                        <td className="p-1.5 text-center">
-                          <button
-                            onClick={() => handleRemoveTableRow(row.id)}
-                            title="ओळ हटवा"
-                            className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition-colors"
-                          >
-                            <Trash2 className="size-4" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                          {(selectedPlanningType === "annual" || selectedSubject === "सर्व विषय" || selectedSubject === "all") && (
+                            <td className="p-1.5 border-r border-slate-200">
+                              <input
+                                type="text"
+                                value={row.subject || "मराठी"}
+                                onChange={(e) => handleUpdateTableRow(row.id, "subject", e.target.value)}
+                                className="w-full px-1.5 py-1 rounded-lg border border-indigo-200 bg-indigo-50/50 focus:ring-2 focus:ring-indigo-500 font-black text-indigo-900 text-center text-xs"
+                              />
+                            </td>
+                          )}
+                          <td className="p-1.5 border-r border-slate-200">
+                            <input
+                              type="text"
+                              value={row.weeks}
+                              onChange={(e) => handleUpdateTableRow(row.id, "weeks", e.target.value)}
+                              className="w-full px-1.5 py-1 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-slate-800 text-center text-xs font-semibold"
+                            />
+                          </td>
+                          <td className="p-1.5 border-r border-slate-200">
+                            <input
+                              type="text"
+                              value={row.workingDays}
+                              onChange={(e) => handleUpdateTableRow(row.id, "workingDays", e.target.value)}
+                              className="w-full px-1.5 py-1 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-slate-800 text-center text-xs font-semibold"
+                            />
+                          </td>
+                          <td className="p-1.5 border-r border-slate-200">
+                            <input
+                              type="text"
+                              value={row.periods}
+                              onChange={(e) => handleUpdateTableRow(row.id, "periods", e.target.value)}
+                              className="w-full px-1.5 py-1 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-slate-800 text-center text-xs font-semibold"
+                            />
+                          </td>
+                          <td className="p-1.5 border-r border-slate-200">
+                            <textarea
+                              rows={getDynamicRows(row.topics, false)}
+                              value={row.topics}
+                              onChange={(e) => handleUpdateTableRow(row.id, "topics", e.target.value)}
+                              className="w-full px-2 py-1.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-slate-900 font-medium text-xs overflow-hidden resize-none leading-relaxed"
+                            />
+                          </td>
+                          <td className="p-1.5 border-r border-slate-200">
+                            <textarea
+                              rows={getDynamicRows(row.outcomes, false)}
+                              value={cleanCellContent(row.outcomes)}
+                              onChange={(e) => handleUpdateTableRow(row.id, "outcomes", e.target.value)}
+                              className="w-full px-2 py-1.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 text-slate-900 font-medium text-xs overflow-hidden resize-none leading-relaxed"
+                            />
+                          </td>
+                          <td className="p-1 text-center">
+                            <button
+                              onClick={() => handleRemoveTableRow(row.id)}
+                              title="ओळ हटवा"
+                              className="p-1 rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition-colors"
+                            >
+                              <Trash2 className="size-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
-              <div className="flex justify-between items-center pt-2">
-                <button
-                  onClick={handleAddTableRow}
-                  className="px-4 py-2 rounded-xl bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
-                >
-                  <Plus className="size-4" /> + तक्त्यात नवीन ओळ जोडा (Add Row)
-                </button>
+              <div className="flex justify-end items-center pt-2">
 
                 <button
-                  onClick={handleGeneratePdfFromEditedTable}
-                  disabled={isGeneratingPdf}
-                  className="px-6 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black transition-all cursor-pointer shadow-md flex items-center gap-2 disabled:opacity-50"
+                  onClick={handleSaveTableDataOnly}
+                  disabled={isSavingTableData}
+                  className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-black transition-all cursor-pointer shadow-md flex items-center gap-2 disabled:opacity-50"
                 >
-                  <Download className="size-4" /> बदलांसह PDF डाऊनलोड करा (Save & Download PDF)
+                  {isSavingTableData ? (
+                    <>
+                      <RefreshCw className="size-4 animate-spin" /> जतन होत आहे...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="size-4" /> बदलांसह सेव्ह करा (Save & Close)
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -2133,7 +2895,7 @@ export function AcademicPlanningSystem({
           position: "absolute",
           top: 0,
           left: 0,
-          width: "195mm",
+          width: "190mm",
           height: "auto",
           zIndex: -9999,
           display: "none",
@@ -2141,56 +2903,184 @@ export function AcademicPlanningSystem({
           opacity: 0,
           pointerEvents: "none",
           backgroundColor: "#ffffff",
+          padding: 0,
+          margin: 0,
         }}
       >
+        <style>{`
+          #printable-pdf-container table {
+            width: 100% !important;
+            table-layout: fixed !important;
+            border-collapse: collapse !important;
+            page-break-inside: auto !important;
+          }
+          #printable-pdf-container tr {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            break-inside: avoid-page !important;
+          }
+          #printable-pdf-container td, #printable-pdf-container th {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            break-inside: avoid-page !important;
+            word-wrap: break-word !important;
+            overflow-wrap: break-word !important;
+          }
+        `}</style>
         <div
           ref={printableTableRef}
-          className="p-5 bg-white text-slate-950 font-sans shadow-none"
-          style={{ width: "195mm", boxSizing: "border-box" }}
+          className="bg-white text-slate-950 font-sans shadow-none"
+          style={{ width: "190mm", boxSizing: "border-box", padding: "0px", margin: "0px" }}
         >
-          <div className="text-center border-b-2 border-slate-950 pb-3 mb-4 space-y-1">
-            <h2 className="text-lg font-black tracking-tight text-slate-950 uppercase">
-              इयत्ता : {selectedClass === "1st" ? "पहिली" : selectedClass === "2nd" ? "दुसरी" : selectedClass === "3rd" ? "तिसरी" : selectedClass === "4th" ? "चौथी" : selectedClass === "5th" ? "पाचवी" : selectedClass} {selectedPlanningType === "annual" ? "संपूर्ण वार्षिक नियोजन (सर्व विषय एकत्र)" : "वार्षिक नियोजन"} सन :- 2026-27
+          <div className="text-center border-b-2 border-slate-900 pb-3 mb-4 space-y-1.5" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+            <h2 className="text-xl font-black tracking-tight text-slate-950 uppercase">
+              इयत्ता : {selectedClass === "1st" ? "1ली" : selectedClass === "2nd" ? "2री" : selectedClass === "3rd" ? "3री" : selectedClass === "4th" ? "4थी" : selectedClass === "5th" ? "5वी" : selectedClass === "6th" ? "6वी" : selectedClass === "7th" ? "7वी" : selectedClass === "8th" ? "8वी" : selectedClass} {selectedPlanningType === "annual" ? "संपूर्ण वार्षिक नियोजन (सर्व विषय एकत्र)" : "वार्षिक नियोजन"} सन :- 2026-27
             </h2>
-            <div className="flex justify-between items-center text-xs font-bold text-slate-800 pt-1">
+            <div className="flex justify-between items-center text-xs font-bold text-slate-800 pt-1.5 border-t border-slate-300">
               <span>विषय : {selectedPlanningType === "annual" ? "सर्व विषय (All Subjects)" : (selectedSubject || "मराठी")}</span>
               <span>माध्यम : {selectedMedium === "semi" ? "सेमी-इंग्रजी" : "मराठी"}</span>
-              <span>वर्ष : 2026-27</span>
+              <span>सन : 2026-27</span>
             </div>
           </div>
 
-          <table className="w-full border-collapse border border-slate-950 text-xs table-fixed">
-            <thead>
-              <tr className="bg-slate-100 text-slate-950 font-bold border-b border-slate-950 text-center">
-                <th className="border border-slate-950 p-2 text-center" style={{ width: selectedPlanningType === "annual" ? "10%" : "12%" }}>महिना</th>
-                {(selectedPlanningType === "annual" || selectedSubject === "सर्व विषय" || selectedSubject === "all") && (
-                  <th className="border border-slate-950 p-2 text-center" style={{ width: "12%" }}>विषय</th>
-                )}
-                <th className="border border-slate-950 p-2 text-center" style={{ width: selectedPlanningType === "annual" ? "7%" : "8%" }}>आठवडा</th>
-                <th className="border border-slate-950 p-2 text-center" style={{ width: selectedPlanningType === "annual" ? "9%" : "10%" }}>कामाचे दिवस</th>
-                <th className="border border-slate-950 p-2 text-center" style={{ width: selectedPlanningType === "annual" ? "9%" : "10%" }}>प्राप्त तासिका</th>
-                <th className="border border-slate-950 p-2 text-left" style={{ width: selectedPlanningType === "annual" ? "27%" : "32%" }}>विषय / घटक विवरण</th>
-                <th className="border border-slate-950 p-2 text-left" style={{ width: selectedPlanningType === "annual" ? "26%" : "28%" }}>अध्ययन निष्पत्ती</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tableRows.map((r) => (
-                <tr key={r.id} className="border-b border-slate-950" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
-                  <td className="border border-slate-950 p-2 text-center font-bold break-words">{r.month}</td>
-                  {(selectedPlanningType === "annual" || selectedSubject === "सर्व विषय" || selectedSubject === "all") && (
-                    <td className="border border-slate-950 p-2 text-center font-black text-indigo-950 bg-slate-50 break-words">{r.subject || "सर्व विषय"}</td>
-                  )}
-                  <td className="border border-slate-950 p-2 text-center break-words">{r.weeks}</td>
-                  <td className="border border-slate-950 p-2 text-center break-words">{r.workingDays}</td>
-                  <td className="border border-slate-950 p-2 text-center break-words">{r.periods}</td>
-                  <td className="border border-slate-950 p-2 whitespace-pre-line break-words font-medium text-left">{r.topics}</td>
-                  <td className="border border-slate-950 p-2 whitespace-pre-line break-words text-left">{r.outcomes}</td>
+          {/* Printable table: use raw Excel structure when available */}
+          {rawEditorHeaders.length > 0 && !rawEditorHeaders.some((h) => isPdfNoiseLine(h)) && rawEditorRows.some((r) => !isPdfNoiseLine(r)) ? (
+            <table className="w-full border-collapse border border-slate-800 text-xs table-fixed">
+              <thead>
+                <tr className="bg-slate-200 text-slate-950 font-black border-b-2 border-slate-900" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                  {rawEditorHeaders.map((h, hi) => {
+                    const style = getRawColumnWidthStyle(h, hi, rawEditorHeaders.length);
+                    return (
+                      <th key={hi} className="border border-slate-800 bg-slate-200 text-slate-950 font-black p-2 text-center text-xs" style={style}>
+                        {getCleanHeaderName(h)}
+                      </th>
+                    );
+                  })}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {rawEditorRows.filter((r) => !isPdfNoiseLine(r)).map((row, ri) => {
+                  const numCols = rawEditorHeaders.length;
+                  const rowType = detectRowType(row);
 
-          <div className="flex justify-between items-center pt-8 text-xs font-bold text-slate-900" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                  if (rowType === "signature") {
+                    const leftTxt = row.find((c) => c && (c.includes("शिक्षक") || c.includes("वर्ग"))) || "विषय / वर्ग शिक्षक";
+                    const rightTxt = row.find((c) => c && c.includes("मुख्याध्यापक")) || "मुख्याध्यापक";
+                    const halfCols = Math.ceil(numCols / 2);
+                    const remCols = numCols - halfCols;
+                    return (
+                      <tr key={ri} className="bg-slate-100 font-black border-t-2 border-b-2 border-slate-800" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                        <td colSpan={halfCols} className="border border-slate-800 p-3 text-left font-black text-xs text-slate-950">
+                          {leftTxt}
+                        </td>
+                        <td colSpan={remCols} className="border border-slate-800 p-3 text-right font-black text-xs text-slate-950">
+                          {rightTxt}
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  if (rowType === "title") {
+                    const titleTxt = row.find((c) => c && c.trim() !== "") || "अभ्यासक्रमाचे मासिक व घटक नियोजन";
+                    return (
+                      <tr key={ri} className="bg-slate-200 font-black border-t-2 border-b-2 border-slate-800" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                        <td colSpan={numCols} className="border border-slate-800 p-2.5 text-center font-black text-xs text-slate-950 uppercase tracking-wide">
+                          {titleTxt}
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  if (rowType === "meta") {
+                    const nonEmpties = row.filter((c) => c && c.trim() !== "");
+                    const leftTxt = nonEmpties[0] || "";
+                    const rightTxt = nonEmpties[1] || "";
+                    const halfCols = Math.ceil(numCols / 2);
+                    const remCols = numCols - halfCols;
+                    return (
+                      <tr key={ri} className="bg-slate-50 font-bold border-b border-slate-800" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                        <td colSpan={halfCols} className="border border-slate-800 p-2 text-left font-bold text-xs text-slate-950">
+                          {leftTxt}
+                        </td>
+                        <td colSpan={remCols} className="border border-slate-800 p-2 text-right font-bold text-xs text-slate-950">
+                          {rightTxt}
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  if (rowType === "header_repeat") {
+                    return (
+                      <tr key={ri} className="bg-slate-200 font-black border-b-2 border-slate-800" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                        {rawEditorHeaders.map((h, ci) => {
+                          const style = getRawColumnWidthStyle(h, ci, numCols);
+                          return (
+                            <th key={ci} className="border border-slate-800 p-2 text-center text-xs font-black text-slate-950 bg-slate-200" style={style}>
+                              {getCleanHeaderName(h)}
+                            </th>
+                          );
+                        })}
+                      </tr>
+                    );
+                  }
+
+                  return (
+                    <tr
+                      key={ri}
+                      className="border-b border-slate-800"
+                      style={{ pageBreakInside: "avoid", breakInside: "avoid" }}
+                    >
+                      {rawEditorHeaders.map((h, ci) => {
+                        const style = getRawColumnWidthStyle(h, ci, numCols);
+                        return (
+                          <td
+                            key={ci}
+                            className="border border-slate-800 p-1.5 whitespace-pre-line break-words align-top text-slate-950 text-xs font-normal"
+                            style={style}
+                          >
+                            {cleanCellContent(row[ci] ?? "")}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <table className="w-full border-collapse border border-slate-800 text-xs table-fixed">
+              <thead>
+                <tr className="bg-slate-200 text-slate-950 font-black border-b-2 border-slate-900 text-center" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                  <th className="border border-slate-800 p-1.5 text-center" style={{ width: selectedPlanningType === "annual" ? "7%" : "8%" }}>महिना</th>
+                  {(selectedPlanningType === "annual" || selectedSubject === "सर्व विषय" || selectedSubject === "all") && (
+                    <th className="border border-slate-800 p-1.5 text-center" style={{ width: "10%" }}>विषय</th>
+                  )}
+                  <th className="border border-slate-800 p-1.5 text-center" style={{ width: selectedPlanningType === "annual" ? "5%" : "6%" }}>आठवडा</th>
+                  <th className="border border-slate-800 p-1.5 text-center" style={{ width: selectedPlanningType === "annual" ? "6%" : "7%" }}>कामाचे दिवस</th>
+                  <th className="border border-slate-800 p-1.5 text-center" style={{ width: selectedPlanningType === "annual" ? "6%" : "7%" }}>प्राप्त तासिका</th>
+                  <th className="border border-slate-800 p-1.5 text-left" style={{ width: selectedPlanningType === "annual" ? "42%" : "46%" }}>विषय / घटक विवरण</th>
+                  <th className="border border-slate-800 p-1.5 text-left" style={{ width: selectedPlanningType === "annual" ? "24%" : "26%" }}>अध्ययन निष्पत्ती</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tableRows.map((r) => (
+                  <tr key={r.id} className="border-b border-slate-800" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                    <td className="border border-slate-800 p-1.5 text-center font-bold break-words">{r.month}</td>
+                    {(selectedPlanningType === "annual" || selectedSubject === "सर्व विषय" || selectedSubject === "all") && (
+                      <td className="border border-slate-800 p-1.5 text-center font-black text-slate-950 bg-slate-50 break-words">{r.subject || "सर्व विषय"}</td>
+                    )}
+                    <td className="border border-slate-800 p-1.5 text-center break-words">{r.weeks}</td>
+                    <td className="border border-slate-800 p-1.5 text-center break-words">{r.workingDays}</td>
+                    <td className="border border-slate-800 p-1.5 text-center break-words">{r.periods}</td>
+                    <td className="border border-slate-800 p-1.5 whitespace-pre-line break-words font-medium text-left">{r.topics}</td>
+                    <td className="border border-slate-800 p-1.5 whitespace-pre-line break-words text-left">{cleanCellContent(r.outcomes)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          <div className="flex justify-between items-center pt-6 mt-4 text-xs font-bold text-slate-900 border-t border-slate-300" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
             <div>शिक्षक स्वाक्षरी: ___________________</div>
             <div>मुख्याध्यापक स्वाक्षरी: ___________________</div>
           </div>

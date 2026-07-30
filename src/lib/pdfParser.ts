@@ -114,9 +114,17 @@ export async function extractTableRowsFromPdf(file: File): Promise<PlanningTable
       }
 
       // Collect topics & outcomes text
-      if (line.includes("निष्पत्ती") || line.includes("साध्य") || line.includes("कौशल्य")) {
+      const trimmedLine = line.trim();
+      const isHeaderLabel =
+        trimmedLine === "अध्ययन निष्पत्ती" ||
+        trimmedLine === "अध्ययन निष्पती" ||
+        trimmedLine === "अध्ययन निष्पत्ति" ||
+        trimmedLine === "अध्ययन निष्पत्ती:" ||
+        trimmedLine === "अध्ययन निष्पती:";
+
+      if (!isHeaderLabel && (line.includes("निष्पत्ती") || line.includes("साध्य") || line.includes("कौशल्य"))) {
         currentOutcomes.push(line);
-      } else if (line.length > 2 && !line.startsWith("इयत्ता") && !line.startsWith("वर्ष")) {
+      } else if (!isHeaderLabel && line.length > 2 && !line.startsWith("इयत्ता") && !line.startsWith("वर्ष")) {
         currentTopics.push(line);
       }
     }
