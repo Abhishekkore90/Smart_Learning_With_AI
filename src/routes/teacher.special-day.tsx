@@ -14,8 +14,8 @@ function TeacherSpecialDayPage() {
       <TeacherHeader />
       <TeacherSidebar />
 
-      <main className="lg:pl-64 pt-16 min-h-screen">
-        <div className="p-6 md:p-10 max-w-5xl mx-auto space-y-8 flex flex-col justify-center min-h-[calc(100vh-8rem)]">
+      <main className="lg:pl-0 pt-16 min-h-screen">
+        <div className="p-6 md:p-10 max-w-full mx-auto space-y-8 flex flex-col justify-center min-h-[calc(100vh-8rem)]">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}

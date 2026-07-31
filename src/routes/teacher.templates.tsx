@@ -87,8 +87,8 @@ function TemplatesLayout() {
         <TeacherHeader />
         <TeacherSidebar />
 
-        <main className="lg:pl-64 pt-16 min-h-screen">
-          <div className="p-6 md:p-10 max-w-5xl mx-auto space-y-8 flex flex-col justify-center min-h-[calc(100vh-8rem)]">
+        <main className="lg:pl-0 pt-16 min-h-screen">
+          <div className="p-6 md:p-10 max-w-full mx-auto space-y-8 flex flex-col justify-center min-h-[calc(100vh-8rem)]">
             <div className="text-center space-y-2">
               <h2 className="text-3xl font-black text-slate-900 tracking-tight">Select Template Category / वर्ग निवडा</h2>
               <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest">Choose a template type to view and download</p>

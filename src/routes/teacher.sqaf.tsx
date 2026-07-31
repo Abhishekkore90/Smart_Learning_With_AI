@@ -5194,7 +5194,7 @@ function TeacherSqafPage() {
         <TeacherSidebar />
       </div>
 
-      <main className={`${(activeStandardDetails !== null || view === "certificate") ? "" : "lg:pl-64 pt-16"} min-h-screen transition-all duration-300`}>
+      <main className={`${(activeStandardDetails !== null || view === "certificate") ? "" : "lg:pl-0 pt-16"} min-h-screen transition-all duration-300`}>
         {activeStandardDetails === null && (
           <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
             <div className="absolute top-24 left-1/4 size-[500px] bg-amber-200/10 rounded-full blur-[100px] animate-pulse" />

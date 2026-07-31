@@ -39,15 +39,15 @@ function AddSubjectPage() {
       <TeacherHeader />
       <TeacherSidebar />
 
-      <main className="lg:pl-64 pt-20 min-h-screen">
-        <div className="p-4 md:p-8 max-w-5xl mx-auto">
+      <main className="lg:pl-0 pt-20 min-h-screen">
+        <div className="p-4 md:p-8 w-full max-w-full mx-auto">
           <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 md:p-8">
             <h2 className="text-xl md:text-2xl font-bold text-center text-[#0f2d69] mb-8">
               Add Subject
             </h2>
 
             <form
-              className="space-y-6 max-w-3xl mx-auto"
+              className="space-y-6 w-full max-w-full mx-auto"
               onSubmit={(e) => {
                 e.preventDefault();
                 handleSave();

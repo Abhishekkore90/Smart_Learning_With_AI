@@ -1,9 +1,6 @@
-/**
- * parse-diary-file.ts
- * 
- * Utility to extract text from PDF/DOCX files and parse it into
- * the teaching diary structure used by teacher.teaching-record.tsx
- */
+import * as XLSX from "xlsx";
+import { format } from "date-fns";
+import { generateAIResponseCallable } from "@/lib/firebase";
 
 // ─── Types ───
 export interface ParsedPeriod {
@@ -358,11 +355,129 @@ function parseTextToDiary(rawText: string, className: string): ParsedDiaryConten
   };
 }
 
-/**
- * Extract text from a binary .doc (97-2003) file by scanning for printable ranges
- */
+function extractWordDocumentStream(bytes: Uint8Array): Uint8Array | null {
+  try {
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+
+    // Verify magic bytes: d0 cf 11 e0 a1 b1 1a e1
+    if (
+      bytes[0] !== 0xd0 ||
+      bytes[1] !== 0xcf ||
+      bytes[2] !== 0x11 ||
+      bytes[3] !== 0xe0 ||
+      bytes[4] !== 0xa1 ||
+      bytes[5] !== 0xb1 ||
+      bytes[6] !== 0x1a ||
+      bytes[7] !== 0xe1
+    ) {
+      return null;
+    }
+
+    const sectorSizeShift = view.getUint16(30, true);
+    const sectorSize = 1 << sectorSizeShift;
+    const dirStartSector = view.getUint32(48, true);
+    const entrySize = 128;
+
+    const getSectorOffset = (sectorIdx: number) => 512 + sectorIdx * sectorSize;
+
+    let currentDirSector = dirStartSector;
+    const entries: { name: string; startSector: number; streamSize: number }[] = [];
+
+    for (let s = 0; s < 20; s++) {
+      if (currentDirSector === 0xfffffffe || currentDirSector === 0xffffffff) break;
+      const offset = getSectorOffset(currentDirSector);
+      if (offset + sectorSize > bytes.length) break;
+
+      for (let e = 0; e < sectorSize; e += entrySize) {
+        const entryOffset = offset + e;
+        const nameLen = view.getUint16(entryOffset + 64, true);
+        if (nameLen > 2 && nameLen <= 64) {
+          let name = "";
+          for (let i = 0; i < nameLen - 2; i += 2) {
+            name += String.fromCharCode(view.getUint16(entryOffset + i, true));
+          }
+          const startSector = view.getUint32(entryOffset + 116, true);
+          const streamSize = view.getUint32(entryOffset + 120, true);
+          entries.push({ name, startSector, streamSize });
+        }
+      }
+      currentDirSector++;
+    }
+
+    const wordDocEntry = entries.find((e) => e.name === "WordDocument");
+    if (!wordDocEntry) return null;
+
+    const satSectors: number[] = [];
+    for (let i = 0; i < 109; i++) {
+      const satSec = view.getUint32(76 + i * 4, true);
+      if (satSec === 0xffffffff || satSec === 0xfffffffe) break;
+      satSectors.push(satSec);
+    }
+
+    const satTable: number[] = [];
+    for (const satSec of satSectors) {
+      const offset = getSectorOffset(satSec);
+      if (offset + sectorSize <= bytes.length) {
+        for (let i = 0; i < sectorSize; i += 4) {
+          satTable.push(view.getUint32(offset + i, true));
+        }
+      }
+    }
+
+    const chain: number[] = [];
+    let nextSec = wordDocEntry.startSector;
+    while (nextSec !== 0xfffffffe && nextSec !== 0xffffffff && nextSec < satTable.length) {
+      chain.push(nextSec);
+      nextSec = satTable[nextSec];
+    }
+
+    const streamData = new Uint8Array(wordDocEntry.streamSize);
+    let written = 0;
+    for (const sec of chain) {
+      const offset = getSectorOffset(sec);
+      if (offset + sectorSize <= bytes.length) {
+        const chunk = bytes.subarray(offset, offset + Math.min(sectorSize, wordDocEntry.streamSize - written));
+        streamData.set(chunk, written);
+        written += chunk.length;
+        if (written >= wordDocEntry.streamSize) break;
+      }
+    }
+
+    return streamData;
+  } catch (err) {
+    console.error("Error extracting WordDocument stream from OLE:", err);
+    return null;
+  }
+}
+
+function cleanExtractedText(rawText: string): string {
+  let cleaned = "";
+  for (let i = 0; i < rawText.length; i++) {
+    const code = rawText.charCodeAt(i);
+    if (
+      (code >= 32 && code <= 126) ||
+      (code >= 0x0900 && code <= 0x097F) ||
+      (code >= 0xA0 && code <= 0xFF) ||
+      code === 10 ||
+      code === 13 ||
+      code === 9
+    ) {
+      cleaned += rawText[i];
+    } else {
+      cleaned += " ";
+    }
+  }
+
+  return cleaned
+    .replace(/[ \t]+/g, " ")
+    .replace(/\r\n/g, "\n")
+    .replace(/\n\s*\n+/g, "\n")
+    .trim();
+}
+
 async function extractTextFromBinaryDOC(base64Data: string): Promise<string> {
   try {
+    console.log("extractTextFromBinaryDOC: start, data length =", base64Data.length);
     const binaryString = atob(base64Data);
     const len = binaryString.length;
     const bytes = new Uint8Array(len);
@@ -370,40 +485,58 @@ async function extractTextFromBinaryDOC(base64Data: string): Promise<string> {
       bytes[i] = binaryString.charCodeAt(i);
     }
     
-    const arrayBuffer = bytes.buffer;
-    const view = new DataView(arrayBuffer);
-    let text = "";
-    
-    // Extract UTF-16LE characters (Word binary stores most unicode text this way)
-    for (let i = 0; i < arrayBuffer.byteLength - 1; i += 2) {
-      const code = view.getUint16(i, true);
-      // Allow Basic Latin (32-126), Devanagari/Marathi (0x0900-0x097F), newline (10), carriage return (13), and Extended Latin-1 (0xA0-0xFF) for legacy Shree-Lipi/KrutiDev
-      if ((code >= 32 && code <= 126) || (code >= 0x0900 && code <= 0x097F) || (code >= 0xA0 && code <= 0xFF) || code === 10 || code === 13) {
-        text += String.fromCharCode(code);
-      } else if (text.length > 0 && text[text.length - 1] !== ' ' && text[text.length - 1] !== '\n') {
-        text += ' ';
-      }
-    }
-    
-    // If the text is too short, fall back to byte scan including the 128-255 range (critical for legacy font encodings like Shree-Lipi/KrutiDev)
-    if (text.trim().length < 50) {
-      text = "";
-      for (let i = 0; i < len; i++) {
-        const code = bytes[i];
-        if ((code >= 32 && code <= 255) || code === 10 || code === 13) {
-          text += String.fromCharCode(code);
-        } else if (text.length > 0 && text[text.length - 1] !== ' ' && text[text.length - 1] !== '\n') {
-          text += ' ';
+    // Attempt high-fidelity OLE stream extraction
+    console.log("extractTextFromBinaryDOC: attempting OLE stream extraction...");
+    const stream = extractWordDocumentStream(bytes);
+    if (stream) {
+      console.log("extractTextFromBinaryDOC: OLE stream extracted successfully, stream size =", stream.byteLength);
+      
+      // Decode as UTF-16LE using built-in TextDecoder (millisecond-speed, no browser hang!)
+      const utf16Decoder = new TextDecoder("utf-16le");
+      const utf16Text = utf16Decoder.decode(stream);
+
+      // Decode as Latin1 (windows-1252) using built-in TextDecoder
+      const latin1Decoder = new TextDecoder("windows-1252");
+      const latin1Text = latin1Decoder.decode(stream);
+
+      // Check if UTF-16LE contains Devanagari characters (scan first 2000 chars for efficiency)
+      let hasDevanagari = false;
+      const scanLimit = Math.min(utf16Text.length, 2000);
+      for (let i = 0; i < scanLimit; i++) {
+        const code = utf16Text.charCodeAt(i);
+        if (code >= 0x0900 && code <= 0x097F) {
+          hasDevanagari = true;
+          break;
         }
       }
+      console.log("extractTextFromBinaryDOC: hasDevanagari =", hasDevanagari);
+
+      const selectedText = hasDevanagari ? utf16Text : latin1Text;
+      const cleaned = cleanExtractedText(selectedText);
+      console.log("extractTextFromBinaryDOC: cleaned text length =", cleaned.length);
+      if (cleaned.length > 50) {
+        return cleaned;
+      }
     }
-    
-    // Collapse horizontal spaces but preserve newlines
-    return text
-      .replace(/[ \t]+/g, " ")
-      .replace(/\r\n/g, "\n")
-      .replace(/\n\s*\n+/g, "\n")
-      .trim();
+
+    // Fallback to simple TextDecoder decode instead of character loop to prevent browser hang
+    console.log("extractTextFromBinaryDOC: OLE stream extraction failed or was too short. Running fast fallback...");
+    const fallbackUtf16 = new TextDecoder("utf-16le").decode(bytes);
+    let hasDevanagariFallback = false;
+    const fallbackScanLimit = Math.min(fallbackUtf16.length, 2000);
+    for (let i = 0; i < fallbackScanLimit; i++) {
+      const code = fallbackUtf16.charCodeAt(i);
+      if (code >= 0x0900 && code <= 0x097F) {
+        hasDevanagariFallback = true;
+        break;
+      }
+    }
+
+    const fallbackText = hasDevanagariFallback 
+      ? fallbackUtf16 
+      : new TextDecoder("windows-1252").decode(bytes);
+      
+    return cleanExtractedText(fallbackText);
   } catch (err) {
     console.error("Binary .doc text extraction error:", err);
     return "";
@@ -435,11 +568,441 @@ function createFallbackStructure(className: string): ParsedDiaryContent {
   };
 }
 
-// ─── Main Export ───
+function parseAndStandardizeDate(dateStr: string): string | null {
+  const clean = dateStr.trim();
+  // Match DD/MM/YYYY or DD-MM-YYYY
+  let m = clean.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+  if (m) {
+    const day = m[1].padStart(2, '0');
+    const month = m[2].padStart(2, '0');
+    const year = m[3];
+    return `${year}-${month}-${day}`;
+  }
+  // Match YYYY-MM-DD
+  m = clean.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+  if (m) {
+    const year = m[1];
+    const month = m[2].padStart(2, '0');
+    const day = m[3].padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  return null;
+}
 
-/**
- * Parse a diary file (PDF, DOC, or DOCX) from its data URL and return structured content.
- */
+export function splitTextByDates(rawText: string, className: string): ParsedDiaryContent[] {
+  const dateRegex = /(?:तारीख|दिनांक|Date)\s*[:：]?\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/gi;
+  const matches: { dateStr: string; index: number }[] = [];
+  let match;
+  
+  while ((match = dateRegex.exec(rawText)) !== null) {
+    matches.push({ dateStr: match[1], index: match.index });
+  }
+
+  if (matches.length === 0) {
+    return [parseTextToDiary(rawText, className)];
+  }
+
+  const entries: ParsedDiaryContent[] = [];
+  for (let i = 0; i < matches.length; i++) {
+    const start = matches[i].index;
+    const end = i + 1 < matches.length ? matches[i + 1].index : rawText.length;
+    const sectionText = rawText.substring(start, end);
+    const parsed = parseTextToDiary(sectionText, className);
+    const standardizedDate = parseAndStandardizeDate(matches[i].dateStr);
+    if (standardizedDate) {
+      parsed.date = standardizedDate;
+    }
+    entries.push(parsed);
+  }
+
+  return entries;
+}
+
+export function parseExcelToDiaries(arrayBuffer: ArrayBuffer, className: string): ParsedDiaryContent[] {
+  const workbook = XLSX.read(arrayBuffer, { type: "array" });
+  const entriesMap: Record<string, ParsedDiaryContent> = {};
+
+  workbook.SheetNames.forEach((sheetName) => {
+    const sheet = workbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1 });
+    if (rows.length < 2) return;
+
+    let headerRowIndex = 0;
+    for (let r = 0; r < Math.min(5, rows.length); r++) {
+      const row = rows[r];
+      if (row && row.some(cell => typeof cell === 'string' && /तारीख|दिनांक|Date|विषय|तास/i.test(cell))) {
+        headerRowIndex = r;
+        break;
+      }
+    }
+
+    const headers = (rows[headerRowIndex] || []).map(h => String(h || "").trim().toLowerCase());
+    
+    const colIndex = {
+      date: headers.findIndex(h => /तारीख|दिनांक|date/i.test(h)),
+      period: headers.findIndex(h => /तास|तासिका|period|time/i.test(h)),
+      subject: headers.findIndex(h => /विषय|subject/i.test(h)),
+      topic: headers.findIndex(h => /घटक|पाठ|topic|chapter/i.test(h)),
+      experience: headers.findIndex(h => /अनुभव|अध्ययन अनुभव|experience/i.test(h)),
+      tools: headers.findIndex(h => /साधन|तंत्र|tools|method/i.test(h)),
+      materials: headers.findIndex(h => /साहित्य|materials/i.test(h)),
+      outcome: headers.findIndex(h => /निष्पत्ती|outcome/i.test(h)),
+      thought: headers.findIndex(h => /सुविचार|thought/i.test(h)),
+      dinvishesh: headers.findIndex(h => /दिनविशेष|special/i.test(h)),
+      highlights: headers.findIndex(h => /प्रमुख उपक्रम|highlights/i.test(h)),
+    };
+
+    if (colIndex.date === -1) colIndex.date = 0;
+
+    for (let r = headerRowIndex + 1; r < rows.length; r++) {
+      const row = rows[r];
+      if (!row || row.length === 0) continue;
+
+      const rawDate = String(row[colIndex.date] || "").trim();
+      if (!rawDate) continue;
+
+      let dateKey = parseAndStandardizeDate(rawDate);
+      if (!dateKey) {
+        if (!isNaN(Number(rawDate)) && Number(rawDate) > 30000) {
+          const excelDate = new Date((Number(rawDate) - 25569) * 86400 * 1000);
+          dateKey = format(excelDate, "yyyy-MM-dd");
+        } else {
+          continue;
+        }
+      }
+
+      if (!entriesMap[dateKey]) {
+        entriesMap[dateKey] = {
+          date: dateKey,
+          day: "",
+          thought: colIndex.thought !== -1 ? String(row[colIndex.thought] || "").trim() : "",
+          dinvishesh: colIndex.dinvishesh !== -1 ? String(row[colIndex.dinvishesh] || "").trim() : "",
+          highlights: colIndex.highlights !== -1 ? String(row[colIndex.highlights] || "").trim() : "",
+          periods: [],
+        };
+      }
+
+      const entry = entriesMap[dateKey];
+      
+      const periodNum = colIndex.period !== -1 ? String(row[colIndex.period] || "").trim() : (entry.periods.length + 1).toString();
+      const subject = colIndex.subject !== -1 ? String(row[colIndex.subject] || "").trim() : "";
+      const topic = colIndex.topic !== -1 ? String(row[colIndex.topic] || "").trim() : "";
+      const experience = colIndex.experience !== -1 ? String(row[colIndex.experience] || "").trim() : "";
+      const tools = colIndex.tools !== -1 ? String(row[colIndex.tools] || "").trim() : "";
+      const materials = colIndex.materials !== -1 ? String(row[colIndex.materials] || "").trim() : "";
+      const outcome = colIndex.outcome !== -1 ? String(row[colIndex.outcome] || "").trim() : "";
+
+      if (subject || topic || experience) {
+        entry.periods.push({
+          period: periodNum,
+          class: className,
+          subject,
+          topic,
+          experience,
+          tools,
+          materials,
+          outcome,
+        });
+      }
+    }
+  });
+
+  return Object.values(entriesMap);
+}
+
+export function parseDocxHtmlToDiaries(html: string, className: string): ParsedDiaryContent[] {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+  const bodyElements = Array.from(doc.body.children);
+  
+  const sections: { dateStr: string; elements: Element[] }[] = [];
+  let currentSection: { dateStr: string; elements: Element[] } | null = null;
+  
+  const dateRegex = /(?:तारीख|दिनांक|Date)\s*[:：]?\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/i;
+
+  bodyElements.forEach((el) => {
+    const text = el.textContent || "";
+    const dateMatch = text.match(dateRegex);
+    
+    if (dateMatch) {
+      const dateStr = dateMatch[1];
+      currentSection = { dateStr, elements: [] };
+      sections.push(currentSection);
+    }
+    
+    if (currentSection) {
+      currentSection.elements.push(el);
+    } else {
+      currentSection = { dateStr: "", elements: [el] };
+      sections.push(currentSection);
+    }
+  });
+
+  if (sections.length === 0 || (sections.length === 1 && !sections[0].dateStr)) {
+    return [parseHtmlSection({ dateStr: "", elements: bodyElements }, className)];
+  }
+
+  return sections.map(sec => parseHtmlSection(sec, className)).filter(Boolean) as ParsedDiaryContent[];
+}
+
+function parseHtmlSection(sec: { dateStr: string; elements: Element[] }, className: string): ParsedDiaryContent {
+  let date = parseAndStandardizeDate(sec.dateStr) || "";
+  let day = "";
+  let thought = "";
+  let dinvishesh = "";
+  let highlights = "";
+  const periods: ParsedPeriod[] = [];
+
+  const thoughtRegex = /(?:सुविचार|आजचा सुविचार|Thought|Today.?s Thought)\s*[:：]?\s*(.+)/i;
+  const dinvisheshRegex = /(?:दिनविशेष|आजचा दिनविशेष|Day Special|Special Day)\s*[:：]?\s*(.+)/i;
+  const highlightsRegex = /(?:दिवसातील प्रमुख उपक्रम|प्रमुख उपक्रम|Highlights|Activities)\s*[:：]?\s*(.+)/i;
+  const dayRegex = /(?:दिवस|Day)\s*[:：]?\s*(सोमवार|मंगळवार|बुधवार|गुरुवार|शुक्रवार|शनिवार|रविवार|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/i;
+
+  sec.elements.forEach((el) => {
+    const text = el.textContent || "";
+    
+    const dayMatch = text.match(dayRegex);
+    if (dayMatch && !day) {
+      day = dayMatch[1].trim();
+    }
+
+    const thoughtMatch = text.match(thoughtRegex);
+    if (thoughtMatch && !thought) {
+      thought = thoughtMatch[1].trim();
+    }
+
+    const dinMatch = text.match(dinvisheshRegex);
+    if (dinMatch && !dinvishesh) {
+      dinvishesh = dinMatch[1].trim();
+    }
+
+    const highMatch = text.match(highlightsRegex);
+    if (highMatch && !highlights) {
+      highlights = highMatch[1].trim();
+    }
+
+    if (el.tagName === "TABLE") {
+      const rows = Array.from(el.querySelectorAll("tr"));
+      if (rows.length > 0) {
+        let headerRowIndex = -1;
+        for (let r = 0; r < Math.min(3, rows.length); r++) {
+          const cells = Array.from(rows[r].querySelectorAll("td, th"));
+          if (cells.some(c => /तास|तासिका|विषय|घटक|Period|Subject|Topic/i.test(c.textContent || ""))) {
+            headerRowIndex = r;
+            break;
+          }
+        }
+
+        let colMap = { period: 0, subject: 1, topic: 2, experience: 3, tools: 4, materials: 5, outcome: 6 };
+
+        if (headerRowIndex !== -1) {
+          const headerCells = Array.from(rows[headerRowIndex].querySelectorAll("td, th")).map(c => (c.textContent || "").trim().toLowerCase());
+          colMap = {
+            period: headerCells.findIndex(h => /तास|तासिका|period|time/i.test(h)),
+            subject: headerCells.findIndex(h => /विषय|subject/i.test(h)),
+            topic: headerCells.findIndex(h => /घटक|पाठ|topic|chapter/i.test(h)),
+            experience: headerCells.findIndex(h => /अनुभव|अध्ययन अनुभव|experience/i.test(h)),
+            tools: headerCells.findIndex(h => /साधन|तपशील|tools|method/i.test(h)),
+            materials: headerCells.findIndex(h => /साहित्य|materials/i.test(h)),
+            outcome: headerCells.findIndex(h => /निष्पत्ती|outcome/i.test(h)),
+          };
+
+          if (colMap.period === -1) colMap.period = 0;
+          if (colMap.subject === -1) colMap.subject = 1;
+          if (colMap.topic === -1) colMap.topic = 2;
+          if (colMap.experience === -1) colMap.experience = 3;
+        }
+
+        const startRow = headerRowIndex !== -1 ? headerRowIndex + 1 : 0;
+        for (let r = startRow; r < rows.length; r++) {
+          const cells = Array.from(rows[r].querySelectorAll("td")).map(c => (c.textContent || "").trim());
+          if (cells.length < 2) continue;
+
+          const periodNum = colMap.period !== -1 && cells[colMap.period] ? cells[colMap.period] : (periods.length + 1).toString();
+          const subject = colMap.subject !== -1 && cells[colMap.subject] ? cells[colMap.subject] : "";
+          const topic = colMap.topic !== -1 && cells[colMap.topic] ? cells[colMap.topic] : "";
+          const experience = colMap.experience !== -1 && cells[colMap.experience] ? cells[colMap.experience] : "";
+          const tools = colMap.tools !== -1 && cells[colMap.tools] ? cells[colMap.tools] : "";
+          const materials = colMap.materials !== -1 && cells[colMap.materials] ? cells[colMap.materials] : "";
+          const outcome = colMap.outcome !== -1 && cells[colMap.outcome] ? cells[colMap.outcome] : "";
+
+          if (subject || topic || experience) {
+            periods.push({
+              period: periodNum,
+              class: className,
+              subject,
+              topic,
+              experience,
+              tools,
+              materials,
+              outcome,
+            });
+          }
+        }
+      }
+    }
+  });
+
+  return {
+    date,
+    day,
+    thought,
+    dinvishesh,
+    highlights,
+    periods,
+  };
+}
+async function parseDiaryTextWithAI(rawText: string, className: string): Promise<ParsedDiaryContent[] | null> {
+  try {
+    console.log("parseDiaryTextWithAI: Sending text directly from browser to Gemini...");
+    
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) {
+      console.warn("parseDiaryTextWithAI: VITE_GEMINI_API_KEY is not defined in frontend environment.");
+      return null;
+    }
+
+    const systemPrompt = `You are an expert school teacher's diary parser. 
+I will give you the raw extracted text of a teacher's daily teaching diary. 
+This text might contain layout shifts, column text joined together, Marathi text, and spelling mistakes.
+Your task is to reconstruct the exact table structure of the diary.
+Identify each day's entry. For each entry, extract:
+1. date (standardized as YYYY-MM-DD)
+2. day (in Marathi, e.g., सोमवार, मंगळवार, बुधवार, गुरुवार, शुक्रवार, शनिवार, रविवार)
+3. thought (सुविचार)
+4. dinvishesh (दिनविशेष)
+5. highlights (प्रमुख उपक्रम)
+6. periods (taas / तासिका list)
+For each period in the table, extract:
+- period: the period number (e.g. 1, 2, 3...)
+- subject: the subject name (e.g. मराठी, गणित, इंग्रजी...)
+- topic: the topic/chapter name (घटक / पाठ)
+- experience: the learning experience details (अध्ययन अनुभव)
+- tools: teaching tools used (साधन / तंत्र)
+- materials: required materials (साहित्य)
+- outcome: learning outcome (निष्पत्ती)
+
+If a column is empty or missing, set its value to "".
+Return ONLY a valid JSON array of these entries matching this TypeScript structure:
+[
+  {
+    "date": "YYYY-MM-DD",
+    "day": "वार",
+    "thought": "सुविचार",
+    "dinvishesh": "दिनविशेष",
+    "highlights": "प्रमुख उपक्रम",
+    "periods": [
+      {
+        "period": "1",
+        "subject": "विषय",
+        "topic": "घटक",
+        "experience": "अध्ययन अनुभव",
+        "tools": "साधन",
+        "materials": "साहित्य",
+        "outcome": "निष्पत्ती"
+      }
+    ]
+  }
+]`;
+
+    const userText = `Class: ${className}\n\nRaw Text:\n${rawText.substring(0, 15000)}`;
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ role: "user", parts: [{ text: userText }] }],
+        generationConfig: {
+          responseMimeType: "application/json",
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Gemini API returned status ${response.status}`);
+    }
+
+    const result = await response.json();
+    const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!jsonText) {
+      console.warn("parseDiaryTextWithAI: Empty text in Gemini response.");
+      return null;
+    }
+
+    const parsedEntries = JSON.parse(jsonText.trim()) as ParsedDiaryContent[];
+    console.log("parseDiaryTextWithAI: Successfully structured", parsedEntries.length, "entries directly from browser.");
+    
+    parsedEntries.forEach((entry) => {
+      if (entry.periods) {
+        entry.periods.forEach((p) => {
+          p.class = className;
+        });
+      }
+    });
+
+    return parsedEntries;
+  } catch (err) {
+    console.error("parseDiaryTextWithAI: Browser Gemini parsing failed:", err);
+    return null;
+  }
+}
+
+export async function parseDiaryFileFromArrayBuffer(
+  arrayBuffer: ArrayBuffer,
+  fileType: string,
+  className: string
+): Promise<ParsedDiaryContent[] | null> {
+  try {
+    const lowerType = fileType.toLowerCase();
+
+    if (
+      lowerType.includes("officedocument.wordprocessingml.document") ||
+      lowerType.includes("docx")
+    ) {
+      const mammoth = await import("mammoth");
+      const result = await mammoth.convertToHtml({ arrayBuffer });
+      const html = result.value;
+      return parseDocxHtmlToDiaries(html, className);
+    } else if (
+      lowerType.includes("msword") ||
+      lowerType.includes("doc")
+    ) {
+      const bytes = new Uint8Array(arrayBuffer);
+      let binaryString = "";
+      for (let i = 0; i < bytes.length; i++) {
+        binaryString += String.fromCharCode(bytes[i]);
+      }
+      const base64Data = btoa(binaryString);
+      const rawText = await extractTextFromBinaryDOC(base64Data);
+      
+      // Attempt structured AI parsing first
+      const aiParsed = await parseDiaryTextWithAI(rawText, className);
+      if (aiParsed && aiParsed.length > 0) {
+        return aiParsed;
+      }
+      
+      return splitTextByDates(rawText, className);
+    } else if (
+      lowerType.includes("spreadsheet") ||
+      lowerType.includes("excel") ||
+      lowerType.includes("xls") ||
+      lowerType.includes("xlsx")
+    ) {
+      return parseExcelToDiaries(arrayBuffer, className);
+    } else {
+      console.warn("Unsupported file type for splitting:", fileType);
+      return null;
+    }
+  } catch (err) {
+    console.error("Error in parseDiaryFileFromArrayBuffer:", err);
+    return null;
+  }
+}
+
 export async function parseDiaryFile(
   dataUrl: string,
   fileType: string,

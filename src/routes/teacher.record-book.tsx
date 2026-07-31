@@ -14,8 +14,8 @@ function RecordBookPage() {
       <TeacherHeader />
       <TeacherSidebar />
 
-      <main className="lg:pl-64 pt-16 min-h-screen">
-        <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
+      <main className="lg:pl-0 pt-16 min-h-screen">
+        <div className="p-4 md:p-8 max-w-full mx-auto space-y-6">
           {/* Header Bar */}
           <div className="flex items-center justify-between bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
             <div>

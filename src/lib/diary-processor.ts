@@ -30,10 +30,120 @@ export async function processDiaryJob(jobId: string, jobData: DiaryJob) {
     // 1. Fetch the master PDF if we haven't started processing
     await updateDoc(jobRef, { status: "processing", lastUpdatedAt: Date.now() });
     
-    console.log(`Fetching master PDF for job ${jobId} from ${jobData.masterPdfUrl}`);
-    const response = await fetch(jobData.masterPdfUrl);
+    // Convert CDN URL to storage API URL to fetch it using AccessKey authenticated download.
+    // This avoids CDN Pull Zone misconfigurations (like returning Vercel index.html fallback)
+    // and bypasses CORS and hotlinking restrictions.
+    let fetchUrl = jobData.masterPdfUrl;
+    const headers: Record<string, string> = {};
+    
+    if (fetchUrl.includes("b-cdn.net") || fetchUrl.includes("bunny")) {
+      try {
+        const urlObj = new URL(fetchUrl);
+        const path = urlObj.pathname.replace(/^\//, "");
+        const zone = import.meta.env.VITE_BUNNY_STORAGE_ZONE || "sgkbrainova";
+        const apiKey = import.meta.env.VITE_BUNNY_STORAGE_API_KEY || "";
+        
+        if (import.meta.env.DEV) {
+          fetchUrl = `/api/bunny-storage/${zone}/${path}`;
+        } else {
+          const host = import.meta.env.VITE_BUNNY_STORAGE_HOST || "storage.bunnycdn.com";
+          fetchUrl = `https://${host}/${zone}/${path}`;
+        }
+        
+        if (apiKey) {
+          headers["AccessKey"] = apiKey;
+        }
+      } catch (err) {
+        console.warn("Failed to parse master PDF URL for storage proxy, fetching direct:", err);
+      }
+    }
+
+    console.log(`Fetching master PDF for job ${jobId} from ${fetchUrl}`);
+    const response = await fetch(fetchUrl, { headers });
     if (!response.ok) throw new Error("Failed to download master PDF for processing.");
     const arrayBuffer = await response.arrayBuffer();
+
+    // Check file type
+    const firstFewBytes = new Uint8Array(arrayBuffer.slice(0, 5));
+    const headerStr = String.fromCharCode(...firstFewBytes);
+    const isPdf = headerStr === "%PDF-";
+    
+    if (!isPdf) {
+      const fileUrlLower = jobData.masterPdfUrl.toLowerCase();
+      const isWord = fileUrlLower.endsWith(".docx") || fileUrlLower.endsWith(".doc");
+      const isExcel = fileUrlLower.endsWith(".xlsx") || fileUrlLower.endsWith(".xls");
+      
+      if (isWord || isExcel) {
+        console.log(`Document job detected for ${jobId}. Parsing Word/Excel file...`);
+        await updateDoc(jobRef, { status: "splitting", lastUpdatedAt: Date.now() });
+        
+        // Import our parser dynamically to preserve code splitting
+        const { parseDiaryFileFromArrayBuffer } = await import("@/lib/parse-diary-file");
+        
+        const fileType = fileUrlLower.endsWith(".docx") ? "docx" : fileUrlLower.endsWith(".doc") ? "doc" : fileUrlLower.endsWith(".xlsx") ? "xlsx" : "xls";
+        const parsedEntries = await parseDiaryFileFromArrayBuffer(arrayBuffer, fileType, jobData.className);
+        
+        if (!parsedEntries || parsedEntries.length === 0) {
+          throw new Error("Failed to parse any entries from the uploaded Word/Excel document.");
+        }
+        
+        console.log(`Parsed ${parsedEntries.length} entries from document. Writing to Firestore...`);
+        await updateDoc(jobRef, { totalPages: parsedEntries.length, lastUpdatedAt: Date.now() });
+        await updateDoc(jobRef, { status: "uploading_pages", lastUpdatedAt: Date.now() });
+        
+        const startDateObj = new Date(jobData.startDate);
+        
+        // Write each parsed entry to Firestore
+        for (let idx = 0; idx < parsedEntries.length; idx++) {
+          const entry = parsedEntries[idx];
+          
+          let targetDateStr = entry.date;
+          if (!targetDateStr) {
+            const nextDate = new Date(startDateObj);
+            nextDate.setDate(startDateObj.getDate() + idx);
+            targetDateStr = format(nextDate, "yyyy-MM-dd");
+          }
+          
+          const daysOfWeek = ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
+          const entryDateObj = new Date(targetDateStr);
+          const marathiDay = daysOfWeek[entryDateObj.getDay()];
+          
+          // Save mapping to Firestore under teacher_diaries/{class}/{medium}/{date}
+          const pageRef = doc(db, "teacher_diaries", jobData.className, jobData.medium, targetDateStr);
+          await setDoc(pageRef, {
+            diaryDate: targetDateStr,
+            class: jobData.className,
+            medium: jobData.medium,
+            pageUrl: jobData.masterPdfUrl, // original file URL (Word/Excel)
+            pageURL: jobData.masterPdfUrl,
+            masterPdfUrl: jobData.masterPdfUrl,
+            pageNumber: idx + 1,
+            timestamp: Date.now(),
+            parsedContent: {
+              ...entry,
+              date: targetDateStr,
+              day: entry.day || marathiDay,
+            }
+          });
+          
+          // Update progress
+          await updateDoc(jobRef, {
+            processedPages: idx + 1,
+            lastUpdatedAt: Date.now(),
+          });
+        }
+        
+        // Update job status to completed!
+        await updateDoc(jobRef, {
+          status: "completed",
+          lastUpdatedAt: Date.now(),
+        });
+        
+        return; // Finished Word/Excel processing!
+      } else {
+        throw new Error("Downloaded file is not a valid PDF document (missing %PDF- header) and not a recognized Word/Excel file.");
+      }
+    }
 
     await yieldThread();
 

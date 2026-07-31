@@ -4309,7 +4309,7 @@ const handleDemandReportPdfDownload = async () => {
       <TeacherHeader />
       <TeacherSidebar />
 
-      <main className="lg:pl-64 pt-20 min-h-screen pb-20 relative z-10">
+      <main className="lg:pl-0 pt-20 min-h-screen pb-20 relative z-10">
         <PinGate sectionKey="mdm">
           <div className="p-4 md:p-8 space-y-6 w-full">
 
@@ -9603,7 +9603,7 @@ const handleDemandReportPdfDownload = async () => {
                 {/* Certificate Tab */}
                 {activeTab === "monthly-report" && (
                   <div className="bg-white p-12 border border-slate-300 w-full min-h-[800px] flex flex-col items-center">
-                    <div className={`w-full ${isMonthlyReportGenerated ? 'max-w-[1200px]' : 'max-w-[800px]'} space-y-10`}>
+                    <div className={`w-full ${isMonthlyReportGenerated ? 'max-w-full' : 'max-w-[800px]'} space-y-10`}>
                       <div className="text-center py-4">
                         <h2 className="text-2xl font-bold text-[#004C99]">
                           {t("मासिक अहवाल", "Monthly Report", "मासिक रिपोर्ट")}

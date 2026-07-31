@@ -16,16 +16,19 @@ import {
   Sparkles,
   AlertTriangle,
   Loader2,
+  Edit,
+  CheckCircle2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { showToast as toast } from "@/lib/custom-toast";
 import { db } from "@/lib/firebase";
-import { collection, query, where, orderBy, getDocs, doc, getDoc } from "firebase/firestore";
+import { collection, query, where, orderBy, getDocs, doc, getDoc, updateDoc } from "firebase/firestore";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format, addDays, subDays } from "date-fns";
 import { PinGate } from "@/components/teacher/PinGate";
 import { useDiaryProcessing } from "@/contexts/DiaryProcessingContext";
+import { useAuthenticatedPdf } from "@/lib/bunny-auth-pdf";
 
 export const Route = createFileRoute("/teacher/teaching-record")({
   head: () => ({
@@ -75,6 +78,23 @@ function TeachingRecordPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Authenticate page PDF fetch to direct storage REST API with key
+  const { pdfBlobUrl: authenticatedPageUrl, loading: loadingPagePdf } = useAuthenticatedPdf(pageData?.pageUrl || null);
+
+  const [editableContent, setEditableContent] = useState<any>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  // Sync editableContent when pageData changes
+  useEffect(() => {
+    if (pageData?.parsedContent) {
+      setEditableContent(JSON.parse(JSON.stringify(pageData.parsedContent)));
+    } else {
+      setEditableContent(null);
+    }
+    setIsEditing(false);
+  }, [pageData]);
+
   useEffect(() => { setIsMounted(true); }, []);
 
   // Save selections to localStorage so refresh keeps state intact
@@ -102,13 +122,19 @@ function TeachingRecordPage() {
 
   const activeJob = selectedClass && selectedMedium ? activeJobs[`${selectedClass}_${selectedMedium}`] : undefined;
   const isJobProcessing = activeJob && activeJob.status !== "completed" && activeJob.status !== "failed";
+  const [prevJobWasProcessing, setPrevJobWasProcessing] = useState(false);
 
-  // Auto-refresh when job completes
+  // Auto-refresh when background processing finishes
   useEffect(() => {
-    if (activeJob && activeJob.status === "completed") {
-      fetchDiaryRecords(selectedClass!, selectedMedium!, selectedDate);
+    if (isJobProcessing) {
+      setPrevJobWasProcessing(true);
+    } else if (prevJobWasProcessing && !isJobProcessing) {
+      setPrevJobWasProcessing(false);
+      if (selectedClass && selectedMedium) {
+        fetchDiaryRecords(selectedClass, selectedMedium, selectedDate);
+      }
     }
-  }, [activeJob?.status]);
+  }, [isJobProcessing, prevJobWasProcessing, selectedClass, selectedMedium, selectedDate]);
 
   // Automatically select standard start date of standard uploaded diary when class and medium are selected
   useEffect(() => {
@@ -275,9 +301,9 @@ function TeachingRecordPage() {
         <TeacherSidebar />
       </div>
 
-      <main className="lg:pl-64 pt-16 min-h-screen print:pl-0 print:pt-0">
+      <main className="lg:pl-0 pt-16 min-h-screen print:pl-0 print:pt-0">
         <PinGate sectionKey="teaching_record">
-          <div className="p-4 sm:p-6 md:p-8 max-w-[1200px] mx-auto space-y-6 print:p-0 print:max-w-full">
+          <div className="p-4 sm:p-6 md:p-8 max-w-full mx-auto space-y-6 print:p-0 print:max-w-full">
             <AnimatePresence mode="wait">
               {/* Step 1: Select Medium */}
               {!selectedMedium && (
@@ -382,7 +408,7 @@ function TeachingRecordPage() {
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 max-w-5xl mx-auto w-full">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 max-w-full mx-auto w-full">
                     {DIARY_CLASSES.map((cls) => (
                       <motion.button
                         key={cls.id}
@@ -589,12 +615,216 @@ function TeachingRecordPage() {
                       isFullscreen ? "fixed inset-0 z-50 p-10 h-screen w-screen bg-slate-900 border-none rounded-none" : ""
                     }`}
                   >
-                    {loading ? (
+                    {loading || loadingPagePdf ? (
                       <div className="flex flex-col items-center gap-3 text-slate-400">
                         <Loader2 className="size-10 animate-spin text-indigo-600" />
                         <span className="text-xs font-bold uppercase tracking-wider">Syncing diary page...</span>
                       </div>
-                    ) : pageData?.pageUrl ? (
+                    ) : editableContent ? (
+                      <div className="w-full max-w-4xl bg-white border border-slate-100 rounded-3xl p-6 md:p-8 space-y-6 shadow-sm">
+                        <div className="flex flex-wrap justify-between items-center pb-4 border-b border-slate-100 gap-4">
+                          <div className="space-y-1">
+                            <h3 className="text-xl font-black text-slate-800">दैनिक पाठ टाचन (Teaching Diary)</h3>
+                            <p className="text-xs font-bold text-indigo-600 uppercase tracking-wider">
+                              Class: {selectedClass} | Medium: {selectedMedium === "Marathi" ? "मराठी" : "सेमी इंग्रजी"}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={async () => {
+                                if (isEditing) {
+                                  setSavingEdit(true);
+                                  try {
+                                    const dateKey = pageData.diaryDate || pageData.id;
+                                    const docRef = doc(db, "teacher_diaries", selectedClass!, selectedMedium!, dateKey);
+                                    await updateDoc(docRef, {
+                                      parsedContent: editableContent
+                                    });
+                                    setPageData((prev: any) => ({
+                                      ...prev,
+                                      parsedContent: editableContent
+                                    }));
+                                    toast.success("बदल यशस्वीरीत्या जतन केले! / Changes saved successfully!");
+                                    setIsEditing(false);
+                                  } catch (err: any) {
+                                    console.error("Error saving diary changes:", err);
+                                    toast.error("Failed to save changes.");
+                                  } finally {
+                                    setSavingEdit(false);
+                                  }
+                                } else {
+                                  setIsEditing(true);
+                                }
+                              }}
+                              disabled={savingEdit}
+                              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-sm ${
+                                isEditing
+                                  ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-100"
+                                  : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-100"
+                              }`}
+                            >
+                              {savingEdit ? (
+                                <Loader2 className="size-4 animate-spin" />
+                              ) : isEditing ? (
+                                <CheckCircle2 className="size-4" />
+                              ) : (
+                                <Edit className="size-4" />
+                              )}
+                              <span>{isEditing ? "Save Changes / जतन करा" : "Edit Content / संपादन करा"}</span>
+                            </button>
+                            {isEditing && (
+                              <button
+                                onClick={() => {
+                                  setEditableContent(JSON.parse(JSON.stringify(pageData.parsedContent)));
+                                  setIsEditing(false);
+                                }}
+                                className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl text-xs font-black uppercase tracking-wider transition-colors cursor-pointer"
+                              >
+                                Cancel
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Top Metadata Fields */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                          <div className="bg-indigo-50/50 border border-indigo-100/50 rounded-2xl p-4 space-y-2">
+                            <label className="text-[10px] font-black text-indigo-600 uppercase tracking-wider block">आजचा सुविचार / Thought</label>
+                            {isEditing ? (
+                              <textarea
+                                value={editableContent.thought || ""}
+                                onChange={(e) => setEditableContent((prev: any) => ({ ...prev, thought: e.target.value }))}
+                                className="w-full text-xs font-bold p-3 border border-indigo-100 rounded-xl focus:ring-2 focus:ring-indigo-500 bg-white"
+                                rows={2}
+                              />
+                            ) : (
+                              <p className="text-xs font-black text-slate-700 italic">
+                                {editableContent.thought || "सुविचार उपलब्ध नाही."}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="bg-purple-50/50 border border-purple-100/50 rounded-2xl p-4 space-y-2">
+                            <label className="text-[10px] font-black text-purple-600 uppercase tracking-wider block">आजचा दिनविशेष / Special Day</label>
+                            {isEditing ? (
+                              <textarea
+                                value={editableContent.dinvishesh || ""}
+                                onChange={(e) => setEditableContent((prev: any) => ({ ...prev, dinvishesh: e.target.value }))}
+                                className="w-full text-xs font-bold p-3 border border-purple-100 rounded-xl focus:ring-2 focus:ring-indigo-500 bg-white"
+                                rows={2}
+                              />
+                            ) : (
+                              <p className="text-xs font-black text-slate-700">
+                                {editableContent.dinvishesh || "दिनविशेष उपलब्ध नाही."}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="bg-slate-50/60 border border-slate-100/80 rounded-2xl p-4 space-y-2 text-left">
+                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">प्रमुख उपक्रम / Highlights of the Day</label>
+                          {isEditing ? (
+                            <textarea
+                              value={editableContent.highlights || ""}
+                              onChange={(e) => setEditableContent((prev: any) => ({ ...prev, highlights: e.target.value }))}
+                              className="w-full text-xs font-bold p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 bg-white"
+                              rows={2}
+                            />
+                          ) : (
+                            <p className="text-xs text-slate-600 font-bold leading-relaxed">
+                              {editableContent.highlights || "प्रमुख उपक्रम उपलब्ध नाहीत."}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Periods Table */}
+                        <div className="space-y-3 text-left">
+                          <label className="text-[10px] font-black text-indigo-600 uppercase tracking-wider block">तासिका आणि विषय तपशील (Periods Details)</label>
+                          <div className="overflow-x-auto border border-slate-200/80 rounded-2xl">
+                            <table className="w-full text-left border-collapse text-xs">
+                              <thead>
+                                <tr className="border-b border-slate-200 bg-slate-50/50 text-slate-600 font-black uppercase tracking-wider text-[10px]">
+                                  <th className="p-3 w-16">तास</th>
+                                  <th className="p-3 w-40">विषय</th>
+                                  <th className="p-3 w-60">घटक/उपघटक</th>
+                                  <th className="p-3">अध्ययन अनुभव/ कृती स्वरूप</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {editableContent.periods?.map((p: any, pIdx: number) => (
+                                  <tr key={pIdx} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/20">
+                                    <td className="p-3 font-bold text-slate-400">
+                                      {isEditing ? (
+                                        <input
+                                          type="text"
+                                          value={p.period || ""}
+                                          onChange={(e) => {
+                                            const updated = [...editableContent.periods];
+                                            updated[pIdx].period = e.target.value;
+                                            setEditableContent((prev: any) => ({ ...prev, periods: updated }));
+                                          }}
+                                          className="w-full p-1 border border-slate-200 rounded text-center font-bold text-slate-700"
+                                        />
+                                      ) : (
+                                        p.period
+                                      )}
+                                    </td>
+                                    <td className="p-3">
+                                      {isEditing ? (
+                                        <input
+                                          type="text"
+                                          value={p.subject || ""}
+                                          onChange={(e) => {
+                                            const updated = [...editableContent.periods];
+                                            updated[pIdx].subject = e.target.value;
+                                            setEditableContent((prev: any) => ({ ...prev, periods: updated }));
+                                          }}
+                                          className="w-full p-1.5 border border-slate-200 rounded font-black text-slate-800 bg-white"
+                                        />
+                                      ) : (
+                                        <span className="font-black text-slate-800">{p.subject || '-'}</span>
+                                      )}
+                                    </td>
+                                    <td className="p-3">
+                                      {isEditing ? (
+                                        <textarea
+                                          value={p.topic || ""}
+                                          onChange={(e) => {
+                                            const updated = [...editableContent.periods];
+                                            updated[pIdx].topic = e.target.value;
+                                            setEditableContent((prev: any) => ({ ...prev, periods: updated }));
+                                          }}
+                                          className="w-full p-1.5 border border-slate-200 rounded font-bold text-slate-700 bg-white"
+                                          rows={2}
+                                        />
+                                      ) : (
+                                        <p className="font-bold text-slate-700">{p.topic || '-'}</p>
+                                      )}
+                                    </td>
+                                    <td className="p-3">
+                                      {isEditing ? (
+                                        <textarea
+                                          value={p.experience || ""}
+                                          onChange={(e) => {
+                                            const updated = [...editableContent.periods];
+                                            updated[pIdx].experience = e.target.value;
+                                            setEditableContent((prev: any) => ({ ...prev, periods: updated }));
+                                          }}
+                                          className="w-full p-1.5 border border-slate-200 rounded text-slate-600 font-bold bg-white"
+                                          rows={2}
+                                        />
+                                      ) : (
+                                        <p className="text-slate-600 font-bold">{p.experience || '-'}</p>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </div>
+                    ) : authenticatedPageUrl ? (
                       <div
                         className="transition-all duration-200 rounded-xl overflow-hidden shadow-md bg-white border border-slate-100 flex items-center justify-center"
                         style={{
@@ -604,7 +834,7 @@ function TeachingRecordPage() {
                         }}
                       >
                         <iframe
-                          src={`${pageData.pageUrl}#view=FitH`}
+                          src={`${authenticatedPageUrl}#view=FitH`}
                           title={`Page ${pageData.pageNumber}`}
                           className="w-full h-full border-none"
                         />

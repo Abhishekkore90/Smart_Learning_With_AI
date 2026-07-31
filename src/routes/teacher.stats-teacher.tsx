@@ -13,7 +13,7 @@ function TeacherStatsPage() {
       <TeacherHeader />
       <TeacherSidebar />
 
-      <main className="lg:pl-64 pt-16 h-screen flex flex-col">
+      <main className="lg:pl-0 pt-16 h-screen flex flex-col">
         {/* Top bar */}
         <div className="flex items-center gap-3 px-4 py-2 bg-white border-b border-slate-200 shadow-sm shrink-0">
           <Link

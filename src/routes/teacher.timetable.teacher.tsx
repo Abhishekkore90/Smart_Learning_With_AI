@@ -21,8 +21,8 @@ function TeacherTimetablePage() {
       <TeacherHeader />
       <div className="flex flex-1 mt-16">
         <TeacherSidebar />
-        <main className="flex-1 lg:pl-64 p-6">
-          <div className="max-w-5xl mx-auto space-y-8 pt-4">
+        <main className="flex-1 lg:pl-0 p-6">
+          <div className="max-w-full mx-auto space-y-8 pt-4">
             <div className="text-center space-y-4">
               <h1 className="text-xl font-medium text-slate-800">
                 Teacher Timetable

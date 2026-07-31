@@ -2807,7 +2807,7 @@ function StudentPortfolioPage() {
       <TeacherSidebar />
 
       <main
-        className="lg:pl-64 pt-20 px-6 pb-2"
+        className="lg:pl-0 pt-20 px-6 pb-2"
         style={{ height: "fit-content" }}
       >
         {/* Sheets presentation workspace */}

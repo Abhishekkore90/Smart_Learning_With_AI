@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { ArrowLeft, Download, Printer, Loader2, RefreshCw } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { matchStudentClassAndMedium } from "./firestoreMarksHelper";
 import { toast } from "sonner";
 
 // Default Class Definitions
@@ -145,13 +146,17 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
         const uSnap = await getDocs(query(collection(db, "users"), where("role", "==", "student")));
         const studentsByClass = {};
 
+        const currentMedium = localStorage.getItem("cce_selected_medium") || "marathi";
         uSnap.forEach((docSnap) => {
           const sData = docSnap.data();
           const rawClass = String(sData.class || sData.currentClass || "").toLowerCase();
           const idx = getClassIndex(rawClass);
           if (idx >= 0 && idx < INITIAL_CLASSES.length) {
-            if (!studentsByClass[idx]) studentsByClass[idx] = [];
-            studentsByClass[idx].push({ id: docSnap.id, ...sData });
+            const classId = INITIAL_CLASSES[idx].id; // e.g., "1st", "2nd"
+            if (matchStudentClassAndMedium({ id: docSnap.id, ...sData }, classId, currentMedium)) {
+              if (!studentsByClass[idx]) studentsByClass[idx] = [];
+              studentsByClass[idx].push({ id: docSnap.id, ...sData });
+            }
           }
         });
 
