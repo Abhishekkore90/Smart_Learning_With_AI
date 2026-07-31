@@ -466,6 +466,151 @@ export function MonthlyParipathRegister() {
     setTableData(rows);
   };
 
+  const handleDownloadPdf = async () => {
+    const element = printRef.current;
+    if (!element) return;
+    toast.success("PDF निर्मिती सुरू आहे...");
+    try {
+      const html2canvasModule = await import("html2canvas");
+      const jsPDFModule = await import("jspdf");
+      const html2canvas = html2canvasModule.default || html2canvasModule;
+      const jsPDF = jsPDFModule.jsPDF || (jsPDFModule as any).default;
+
+      // Select each of the 3 page chunk containers
+      const chunkEls = element.querySelectorAll(".page-chunk-box");
+      if (!chunkEls || chunkEls.length === 0) return;
+
+      const pdf = new jsPDF({
+        orientation: "landscape",
+        unit: "mm",
+        format: "a4",
+      });
+
+      for (let i = 0; i < chunkEls.length; i++) {
+        const chunkEl = chunkEls[i] as HTMLElement;
+
+        // Clone the single page chunk element
+        const clonedChunk = chunkEl.cloneNode(true) as HTMLElement;
+
+        // 1. Hide non-printables
+        clonedChunk.querySelectorAll(".non-printable").forEach((el: any) => el.remove());
+
+        // 2. Replace textareas with plain text divs
+        clonedChunk.querySelectorAll("textarea").forEach((ta: HTMLTextAreaElement) => {
+          const div = document.createElement("div");
+          div.textContent = ta.value || "";
+          div.style.cssText = `
+            font-family: 'Noto Sans Devanagari', sans-serif;
+            font-size: 8px;
+            font-weight: 600;
+            line-height: 1.15;
+            text-align: ${ta.classList.contains("text-center") ? "center" : "left"};
+            padding: 0.5px 1px;
+            word-break: break-word;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            max-height: 20px;
+          `;
+          ta.parentNode?.replaceChild(div, ta);
+        });
+
+        // 3. Wrap in a clean printable container matching A4 landscape canvas
+        const container = document.createElement("div");
+        container.style.cssText = `
+          position: absolute;
+          left: -9999px;
+          top: -9999px;
+          width: 1040px;
+          background: #ffffff;
+          padding: 8px;
+          box-sizing: border-box;
+          font-family: 'Noto Sans Devanagari', sans-serif;
+        `;
+
+        // Inject PDF specific styling to ensure clean borders & text
+        const style = document.createElement("style");
+        style.textContent = `
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            box-sizing: border-box !important;
+          }
+          table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            table-layout: fixed !important;
+            font-size: 8px !important;
+            margin: 0 !important;
+          }
+          th {
+            padding: 3px 2px !important;
+            border: 1.2px solid #0f172a !important;
+            background-color: #f1f5f9 !important;
+            font-weight: 900 !important;
+            font-size: 8.5px !important;
+            text-align: center !important;
+            font-family: 'Noto Sans Devanagari', sans-serif !important;
+            color: #0f172a !important;
+          }
+          td {
+            padding: 2px 2.5px !important;
+            border: 1px solid #334155 !important;
+            font-size: 8px !important;
+            font-family: 'Noto Sans Devanagari', sans-serif !important;
+            vertical-align: middle !important;
+            word-break: break-word !important;
+            color: #1e293b !important;
+            line-height: 1.15 !important;
+          }
+          tr[class*="bg-rose"] td {
+            background-color: #fff1f2 !important;
+            color: #be123c !important;
+            font-weight: 800 !important;
+            text-align: center !important;
+          }
+          .overflow-x-auto {
+            overflow: visible !important;
+            border: 1.5px solid #0f172a !important;
+            border-radius: 0 !important;
+            margin-top: 6px !important;
+            margin-bottom: 16px !important;
+          }
+        `;
+        container.appendChild(style);
+        container.appendChild(clonedChunk);
+        document.body.appendChild(container);
+
+        const canvas = await html2canvas(container, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          windowWidth: 1040,
+        });
+
+        document.body.removeChild(container);
+
+        const imgData = canvas.toDataURL("image/jpeg", 0.98);
+
+        if (i > 0) {
+          pdf.addPage("a4", "landscape");
+        }
+
+        // A4 Landscape is 297mm x 210mm. Margins: 6mm left/right, 5mm top/bottom
+        const pdfWidth = 285;
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        pdf.addImage(imgData, "JPEG", 6, 5, pdfWidth, Math.min(pdfHeight, 200));
+      }
+
+      pdf.save(`Masik_Paripath_${MARATHI_MONTHS[selectedMonthIndex]}_${selectedYear}.pdf`);
+      toast.success("PDF यशस्वीरित्या डाउनलोड झाली!");
+    } catch (err) {
+      console.error("PDF generation error:", err);
+      toast.error("PDF निर्मितीमध्ये त्रुटी आली.");
+    }
+  };
+
   // Auto-fetch when month/year changes
   useEffect(() => {
     fetchAndArchiveToday();
@@ -514,166 +659,6 @@ export function MonthlyParipathRegister() {
     }
   };
 
-  const handleDownloadPdf = async () => {
-    const element = printRef.current;
-    if (!element) return;
-    toast.success("PDF निर्मिती सुरू आहे...");
-    try {
-      const html2pdfModule = await import("html2pdf.js");
-      let html2pdfFn: any = html2pdfModule.default || html2pdfModule;
-      if (html2pdfFn && html2pdfFn.default) html2pdfFn = html2pdfFn.default;
-
-      const opt = {
-        margin: [5, 5, 5, 5],
-        filename: `Masik_Paripath_${MARATHI_MONTHS[selectedMonthIndex]}_${selectedYear}.pdf`,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          letterRendering: true,
-          windowWidth: 1400,
-          onclone: (clonedDoc: Document) => {
-            // 1. Hide all non-printable elements (buttons, control panel, visual page-break divider)
-            const nonPrintables = clonedDoc.querySelectorAll(".non-printable");
-            nonPrintables.forEach((el: any) => {
-              el.style.display = "none";
-            });
-
-            // 2. Replace all textareas with plain-text divs so content shows in PDF
-            const textareas = clonedDoc.querySelectorAll("textarea");
-            textareas.forEach((ta: HTMLTextAreaElement) => {
-              const div = clonedDoc.createElement("div");
-              div.textContent = ta.value || "";
-              div.style.cssText = `
-                font-family: 'Noto Sans Devanagari', sans-serif;
-                font-size: 8px;
-                font-weight: 600;
-                line-height: 1.2;
-                text-align: ${ta.classList.contains("text-center") ? "center" : "left"};
-                padding: 1px 2px;
-                word-break: break-word;
-                overflow: hidden;
-                white-space: pre-wrap;
-              `;
-              ta.parentNode?.replaceChild(div, ta);
-            });
-
-            // 3. Inject PDF-specific styles
-            const style = clonedDoc.createElement("style");
-            style.textContent = `
-              * {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-              }
-              
-              #printable-paripath-register {
-                width: 100% !important;
-                max-width: 100% !important;
-                padding: 0 !important;
-                margin: 0 !important;
-                background: #ffffff !important;
-                font-family: 'Noto Sans Devanagari', sans-serif !important;
-              }
-
-              .page-break {
-                page-break-before: always !important;
-                break-before: page !important;
-              }
-
-              table {
-                width: 100% !important;
-                border-collapse: collapse !important;
-                table-layout: fixed !important;
-                font-size: 8px !important;
-              }
-
-              th {
-                padding: 3px 2px !important;
-                border: 1.5px solid #1e293b !important;
-                background-color: #f1f5f9 !important;
-                font-weight: 900 !important;
-                font-size: 8px !important;
-                text-align: center !important;
-                font-family: 'Noto Sans Devanagari', sans-serif !important;
-                color: #0f172a !important;
-              }
-
-              td {
-                padding: 2px 2px !important;
-                border: 1px solid #334155 !important;
-                font-size: 8px !important;
-                font-family: 'Noto Sans Devanagari', sans-serif !important;
-                vertical-align: top !important;
-                word-break: break-word !important;
-                color: #1e293b !important;
-              }
-
-              tr {
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
-              }
-
-              /* Sunday rows */
-              tr.bg-rose-50\\/70 td,
-              tr[class*="bg-rose"] td {
-                background-color: #fff1f2 !important;
-                color: #be123c !important;
-                font-weight: 800 !important;
-                text-align: center !important;
-              }
-
-              /* Headers */
-              .border-b-2 {
-                border-bottom: 2px solid #0f172a !important;
-              }
-
-              /* Space between pages */
-              .space-y-8 > * + * {
-                margin-top: 0 !important;
-              }
-              .space-y-3 > * + * {
-                margin-top: 6px !important;
-              }
-
-              /* Table container */
-              .overflow-x-auto {
-                overflow: visible !important;
-                border: 2px solid #0f172a !important;
-                border-radius: 0 !important;
-              }
-
-              /* Ensure rounded corners don't interfere */
-              .rounded-\\[2rem\\] {
-                border-radius: 0 !important;
-                border: none !important;
-                box-shadow: none !important;
-                padding: 8px !important;
-              }
-            `;
-            clonedDoc.head.appendChild(style);
-          },
-        },
-        jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
-        pagebreak: { mode: ["css", "legacy"], before: ".page-break" },
-      };
-
-      const pdfBlob = await html2pdfFn().set(opt).from(element).output("blob");
-      const blobUrl = URL.createObjectURL(pdfBlob);
-      const downloadLink = document.createElement("a");
-      downloadLink.href = blobUrl;
-      downloadLink.download = opt.filename;
-      document.body.appendChild(downloadLink);
-      downloadLink.click();
-      document.body.removeChild(downloadLink);
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
-
-      toast.success("PDF यशस्वीरीत्या डाउनलोड झाली!");
-    } catch (err: any) {
-      console.error(err);
-      toast.error("PDF तयार करताना त्रुटी आली. Print पर्याय वापरा.");
-    }
-  };
-
   const daysList = Object.values(tableData);
 
   return (
@@ -683,17 +668,10 @@ export function MonthlyParipathRegister() {
         textarea {
           overflow: hidden !important;
           resize: none !important;
-          scrollbar-width: none !important;
-          -ms-overflow-style: none !important;
-        }
-        textarea::-webkit-scrollbar {
-          display: none !important;
-          width: 0 !important;
-          height: 0 !important;
         }
 
         @media print {
-          body * {
+          body {
             visibility: hidden !important;
           }
           .non-printable, header, aside, footer, nav, button {
@@ -723,15 +701,6 @@ export function MonthlyParipathRegister() {
             padding: 2px 3px !important;
             border: 1px solid #000000 !important;
             word-break: break-word !important;
-          }
-          textarea, input {
-            border: none !important;
-            background: transparent !important;
-            box-shadow: none !important;
-            font-size: 9px !important;
-            padding: 0 !important;
-            resize: none !important;
-            overflow: hidden !important;
           }
         }
       `}</style>
@@ -875,328 +844,295 @@ export function MonthlyParipathRegister() {
         ref={printRef}
         className="bg-white p-4 md:p-6 rounded-[2rem] shadow-xl border border-slate-300 font-sans space-y-8"
       >
-        {/* ==================== PAGE 1: दैनिक ==================== */}
-        <div className="space-y-3">
-          {/* Header Line 1 */}
-          <div className="flex items-center justify-between border-b-2 border-slate-900 pb-3">
-            <div className="flex items-center gap-8 font-black text-slate-900 text-sm md:text-base">
-              <div>
-                शाळेचे नाव :{" "}
-                <span className="border-b-2 border-dotted border-slate-700 px-3 py-0.5 text-indigo-900">
-                  {schoolName || "..................................................."}
-                </span>
+        {/* ==================== COMBINED PAGE CHUNKS: 1-10, 11-20, 21-31 ==================== */}
+        {[
+          { min: 1, max: 10, label: "दिनांक १ ते १०" },
+          { min: 11, max: 20, label: "दिनांक ११ ते २०" },
+          { min: 21, max: 31, label: "दिनांक २१ ते ३१" },
+        ].map((chunk, chunkIdx) => {
+          const chunkRows = daysList.filter(row => row.date >= chunk.min && row.date <= chunk.max);
+          if (chunkRows.length === 0) return null;
+
+          return (
+            <React.Fragment key={`page-chunk-${chunkIdx}`}>
+              {chunkIdx > 0 && (
+                <div className="relative my-8 border-t-4 border-dashed border-slate-300 non-printable flex items-center justify-center">
+                  <span className="bg-slate-200 text-slate-700 px-6 py-1.5 rounded-full text-xs font-black uppercase tracking-widest -mt-4 shadow-sm border border-slate-300">
+                    पानाचे विभाजन / Page {chunkIdx + 1} ({chunk.label})
+                  </span>
+                </div>
+              )}
+
+              <div className={`page-chunk-box space-y-4 ${chunkIdx > 0 ? "page-break" : ""}`}>
+                {/* ---------- SINGLE UNIFIED HEADER ---------- */}
+                <div className="flex items-center justify-between border-b-2 border-slate-900 pb-3">
+                  <div className="space-y-1 font-black text-slate-900 text-xs md:text-sm">
+                    <div>
+                      शाळेचे नाव :{" "}
+                      <span className="border-b border-dotted border-slate-700 px-2 py-0.5 text-indigo-900">
+                        {schoolName || "..................................................."}
+                      </span>
+                    </div>
+                    <div>
+                      सन :{" "}
+                      <span className="border-b border-dotted border-slate-700 px-2 py-0.5 text-indigo-900">
+                        {academicYear || ".........................................."}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-wider">
+                      दैनिक व परिपाठातील उपक्रम ({chunk.label})
+                    </h2>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase">
+                      महिना: {MARATHI_MONTHS[selectedMonthIndex]} {selectedYear}
+                    </p>
+                  </div>
+                </div>
+
+                {/* ---------- TABLE 1: दैनिक ---------- */}
+                <div className="overflow-x-auto border-2 border-slate-900 rounded-none bg-white">
+                  <table className="w-full table-fixed text-left text-[10px] text-slate-900 border-collapse">
+                    <thead>
+                      <tr className="bg-slate-100 border-b-2 border-slate-900 text-center font-black text-slate-900 uppercase text-xs">
+                        <th className="p-1.5 border-r border-slate-900 w-[4%]">दिनांक</th>
+                        <th className="p-1.5 border-r border-slate-900 w-[6%]">वार</th>
+                        <th className="p-1.5 border-r border-slate-900 w-[10%]">राष्ट्रगीत</th>
+                        <th className="p-1.5 border-r border-slate-900 w-[10%]">प्रतिज्ञा</th>
+                        <th className="p-1.5 border-r border-slate-900 w-[11%]">भारताचे संविधान</th>
+                        <th className="p-1.5 border-r border-slate-900 w-[11%]">प्रार्थना</th>
+                        <th className="p-1.5 border-r border-slate-900 w-[16%]">श्लोक</th>
+                        <th className="p-1.5 w-[32%]">सुविचार</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800 font-medium">
+                      {chunkRows.map((row) => (
+                        <tr
+                          key={row.date}
+                          className={`${
+                            row.isSunday || row.isHoliday
+                              ? "bg-rose-50/70 text-rose-900 font-bold"
+                              : "hover:bg-slate-50"
+                          }`}
+                        >
+                          <td className={`p-1 border-r border-slate-800 text-center font-black ${row.isSunday || row.isHoliday ? 'text-rose-800' : 'text-slate-900'}`}>
+                            {row.date}
+                          </td>
+                          <td className={`p-1 border-r border-slate-800 text-center font-bold text-[11px] ${row.isSunday || row.isHoliday ? 'text-rose-800' : ''}`}>
+                            {row.day}
+                          </td>
+                          {row.isSunday ? (
+                            <td colSpan={6} className="p-1 text-center font-black text-rose-700 text-[13px] tracking-widest">
+                              रविवार
+                            </td>
+                          ) : row.isHoliday ? (
+                            <td colSpan={6} className="p-1 text-center font-black text-rose-700 text-[13px] tracking-wider">
+                              सुट्टी ({row.holidayReason || "शाळेस सुट्टी"})
+                            </td>
+                          ) : (
+                            <>
+                              <td className="p-0.5 border-r border-slate-800">
+                                <textarea
+                                  value={row.rashtrageet}
+                                  onChange={(e) =>
+                                    handleCellChange(row.date, "rashtrageet", e.target.value)
+                                  }
+                                  className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                  rows={1}
+                                />
+                              </td>
+                              <td className="p-0.5 border-r border-slate-800">
+                                <textarea
+                                  value={row.pratigya}
+                                  onChange={(e) =>
+                                    handleCellChange(row.date, "pratigya", e.target.value)
+                                  }
+                                  className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                  rows={1}
+                                />
+                              </td>
+                              <td className="p-0.5 border-r border-slate-800">
+                                <textarea
+                                  value={row.sanvidhan}
+                                  onChange={(e) =>
+                                    handleCellChange(row.date, "sanvidhan", e.target.value)
+                                  }
+                                  className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                  rows={1}
+                                />
+                              </td>
+                              <td className="p-0.5 border-r border-slate-800">
+                                <textarea
+                                  value={row.prarthana}
+                                  onChange={(e) =>
+                                    handleCellChange(row.date, "prarthana", e.target.value)
+                                  }
+                                  className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                  rows={1}
+                                />
+                              </td>
+                              <td className="p-0.5 border-r border-slate-800">
+                                <textarea
+                                  value={row.shlok}
+                                  onChange={(e) =>
+                                    handleCellChange(row.date, "shlok", e.target.value)
+                                  }
+                                  className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[10px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                  rows={2}
+                                  placeholder="श्लोक..."
+                                />
+                              </td>
+                              <td className="p-0.5">
+                                <textarea
+                                  value={row.suvichar}
+                                  onChange={(e) =>
+                                    handleCellChange(row.date, "suvichar", e.target.value)
+                                  }
+                                  className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[10px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                  rows={2}
+                                  placeholder="सुविचार..."
+                                />
+                              </td>
+                            </>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* ---------- TABLE 2: परिपाठातील उपक्रम ---------- */}
+                <div className="overflow-x-auto border-2 border-slate-900 rounded-none bg-white">
+                  <table className="w-full text-left text-[10px] text-slate-900 border-collapse">
+                    <thead>
+                      <tr className="bg-slate-100 border-b-2 border-slate-900 text-center font-black text-slate-900 uppercase text-[11px]">
+                        <th className="p-1.5 border-r border-slate-900 w-[14%]">
+                          सुसंस्कारक्षम बातम्या
+                        </th>
+                        <th className="p-1.5 border-r border-slate-900 w-[14%]">दिनविशेष</th>
+                        <th className="p-1.5 border-r border-slate-900 w-[13%]">म्हण</th>
+                        <th className="p-1.5 border-r border-slate-900 w-[12%]">बोधकथा</th>
+                        <th className="p-1.5 border-r border-slate-900 w-[12%]">समूहगीत</th>
+                        <th className="p-1.5 border-r border-slate-900 w-[13%]">
+                          देशभक्ती गीत
+                        </th>
+                        <th className="p-1.5 border-r border-slate-900 w-[10%]">
+                          मौन पसायदान
+                        </th>
+                        <th className="p-1.5 w-[12%]">वर्गशिक्षकांची स्वाक्षरी</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800 font-medium">
+                      {chunkRows.map((row) => (
+                        <tr
+                          key={row.date}
+                          className={`${
+                            row.isSunday || row.isHoliday
+                              ? "bg-rose-50/70 text-rose-900 font-bold"
+                              : "hover:bg-slate-50"
+                          }`}
+                        >
+                          {row.isSunday ? (
+                            <td colSpan={8} className="p-1 text-center font-black text-rose-700 text-[13px] tracking-widest">
+                              रविवार
+                            </td>
+                          ) : row.isHoliday ? (
+                            <td colSpan={8} className="p-1 text-center font-black text-rose-700 text-[13px] tracking-wider">
+                              सुट्टी ({row.holidayReason || "शाळेस सुट्टी"})
+                            </td>
+                          ) : (
+                            <>
+                              <td className="p-0.5 border-r border-slate-800">
+                                <textarea
+                                  value={row.batmya}
+                                  onChange={(e) =>
+                                    handleCellChange(row.date, "batmya", e.target.value)
+                                  }
+                                  className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[10px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                  rows={2}
+                                  placeholder="बातम्या..."
+                                />
+                              </td>
+                              <td className="p-0.5 border-r border-slate-800">
+                                <textarea
+                                  value={row.dinvishesh}
+                                  onChange={(e) =>
+                                    handleCellChange(row.date, "dinvishesh", e.target.value)
+                                  }
+                                  className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[10px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                  rows={2}
+                                  placeholder="दिनविशेष..."
+                                />
+                              </td>
+                              <td className="p-0.5 border-r border-slate-800">
+                                <textarea
+                                  value={row.mhan}
+                                  onChange={(e) =>
+                                    handleCellChange(row.date, "mhan", e.target.value)
+                                  }
+                                  className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[10px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                  rows={2}
+                                  placeholder="म्हण..."
+                                />
+                              </td>
+                              <td className="p-0.5 border-r border-slate-800">
+                                <textarea
+                                  value={row.bodhkatha}
+                                  onChange={(e) =>
+                                    handleCellChange(row.date, "bodhkatha", e.target.value)
+                                  }
+                                  className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                  rows={1}
+                                  placeholder="शीर्षक..."
+                                />
+                              </td>
+                              <td className="p-0.5 border-r border-slate-800">
+                                <textarea
+                                  value={row.samuhgeet}
+                                  onChange={(e) =>
+                                    handleCellChange(row.date, "samuhgeet", e.target.value)
+                                  }
+                                  className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                  rows={1}
+                                  placeholder="गीत शीर्षक..."
+                                />
+                              </td>
+                              <td className="p-0.5 border-r border-slate-800">
+                                <textarea
+                                  value={row.deshbhaktigeet}
+                                  onChange={(e) =>
+                                    handleCellChange(row.date, "deshbhaktigeet", e.target.value)
+                                  }
+                                  className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                  rows={1}
+                                  placeholder="गीत शीर्षक..."
+                                />
+                              </td>
+                              <td className="p-0.5 border-r border-slate-800">
+                                <textarea
+                                  value={row.maun}
+                                  onChange={(e) =>
+                                    handleCellChange(row.date, "maun", e.target.value)
+                                  }
+                                  className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                  rows={1}
+                                />
+                              </td>
+                              <td className="p-1">
+                                <div className="h-6 w-full"></div>
+                              </td>
+                            </>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-
-            <div className="text-right">
-              <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-wider">
-                दैनिक
-              </h2>
-              <p className="text-[10px] font-bold text-slate-500 uppercase">
-                {MARATHI_MONTHS[selectedMonthIndex]} {selectedYear}
-              </p>
-            </div>
-          </div>
-
-          {/* Page 1 Table */}
-          <div className="overflow-x-auto border-2 border-slate-900 rounded-none bg-white">
-            <table className="w-full table-fixed text-left text-[10px] text-slate-900 border-collapse">
-              <thead>
-                <tr className="bg-slate-100 border-b-2 border-slate-900 text-center font-black text-slate-900 uppercase text-xs">
-                  <th className="p-1.5 border-r border-slate-900 w-[2%]">दिनांक</th>
-                  <th className="p-1.5 border-r border-slate-900 w-[6%]">वार</th>
-                  <th className="p-1.5 border-r border-slate-900 w-[10%]">राष्ट्रगीत</th>
-                  <th className="p-1.5 border-r border-slate-900 w-[10%]">प्रतिज्ञा</th>
-                  <th className="p-1.5 border-r border-slate-900 w-[11%]">भारताचे संविधान</th>
-                  <th className="p-1.5 border-r border-slate-900 w-[11%]">प्रार्थना</th>
-                  <th className="p-1.5 border-r border-slate-900 w-[16%]">श्लोक</th>
-                  <th className="p-1.5 w-[34%]">सुविचार</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800 font-medium">
-                {daysList.map((row) => (
-                  <tr
-                    key={row.date}
-                    className={`${
-                      row.isSunday || row.isHoliday
-                        ? "bg-rose-50/70 text-rose-900 font-bold"
-                        : "hover:bg-slate-50"
-                    }`}
-                  >
-                     {/* Date */}
-                    <td className={`p-1 border-r border-slate-800 text-center font-black ${row.isSunday || row.isHoliday ? 'text-rose-800' : 'text-slate-900'}`}>
-                      {row.date}
-                    </td>
-
-                    {/* Day */}
-                    <td className={`p-1 border-r border-slate-800 text-center font-bold text-[11px] ${row.isSunday || row.isHoliday ? 'text-rose-800' : ''}`}>
-                      {row.day}
-                    </td>
-
-                    {row.isSunday ? (
-                      <td colSpan={6} className="p-1 text-center font-black text-rose-700 text-[13px] tracking-widest">
-                        रविवार
-                      </td>
-                    ) : row.isHoliday ? (
-                      <td colSpan={6} className="p-1 text-center font-black text-rose-700 text-[13px] tracking-wider">
-                        सुट्टी ({row.holidayReason || "शाळेस सुट्टी"})
-                      </td>
-                    ) : (
-                      <>
-                        {/* Rashtrageet */}
-                        <td className="p-0.5 border-r border-slate-800">
-                          <textarea
-                            value={row.rashtrageet}
-                            onChange={(e) =>
-                              handleCellChange(row.date, "rashtrageet", e.target.value)
-                            }
-                            className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                            rows={1}
-                          />
-                        </td>
-
-                        {/* Pratigya */}
-                        <td className="p-0.5 border-r border-slate-800">
-                          <textarea
-                            value={row.pratigya}
-                            onChange={(e) =>
-                              handleCellChange(row.date, "pratigya", e.target.value)
-                            }
-                            className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                            rows={1}
-                          />
-                        </td>
-
-                        {/* Sanvidhan */}
-                        <td className="p-0.5 border-r border-slate-800">
-                          <textarea
-                            value={row.sanvidhan}
-                            onChange={(e) =>
-                              handleCellChange(row.date, "sanvidhan", e.target.value)
-                            }
-                            className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                            rows={1}
-                          />
-                        </td>
-
-                        {/* Prarthana */}
-                        <td className="p-0.5 border-r border-slate-800">
-                          <textarea
-                            value={row.prarthana}
-                            onChange={(e) =>
-                              handleCellChange(row.date, "prarthana", e.target.value)
-                            }
-                            className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                            rows={1}
-                          />
-                        </td>
-
-                        {/* Shlok */}
-                        <td className="p-0.5 border-r border-slate-800">
-                          <textarea
-                            value={row.shlok}
-                            onChange={(e) =>
-                              handleCellChange(row.date, "shlok", e.target.value)
-                            }
-                            className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[10px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                            rows={2}
-                            placeholder="श्लोक..."
-                          />
-                        </td>
-
-                        {/* Suvichar */}
-                        <td className="p-0.5">
-                          <textarea
-                            value={row.suvichar}
-                            onChange={(e) =>
-                              handleCellChange(row.date, "suvichar", e.target.value)
-                            }
-                            className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[10px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                            rows={2}
-                            placeholder="सुविचार..."
-                          />
-                        </td>
-                      </>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Page Break */}
-        <div className="relative my-6 border-t-4 border-dashed border-slate-300 non-printable flex items-center justify-center">
-          <span className="bg-slate-200 text-slate-700 px-6 py-1.5 rounded-full text-xs font-black uppercase tracking-widest -mt-4 shadow-sm border border-slate-300">
-            पानाचे विभाजन / Page 2 (परिपाठातील उपक्रम)
-          </span>
-        </div>
-
-        {/* ==================== PAGE 2: परिपाठातील उपक्रम ==================== */}
-        <div className="space-y-3 page-break">
-          {/* Header Line 2 */}
-          <div className="flex items-center justify-between border-b-2 border-slate-900 pb-3">
-            <div className="font-black text-slate-900 text-sm md:text-base">
-              सन :{" "}
-              <span className="border-b-2 border-dotted border-slate-700 px-4 py-0.5 text-indigo-900">
-                {academicYear || ".........................................."}
-              </span>
-            </div>
-
-            <div className="text-center">
-              <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-wider">
-                परिपाठातील उपक्रम
-              </h2>
-            </div>
-
-            <div className="text-right text-xs font-bold text-slate-600">
-              महिना: {MARATHI_MONTHS[selectedMonthIndex]} {selectedYear}
-            </div>
-          </div>
-
-          {/* Page 2 Table */}
-          <div className="overflow-x-auto border-2 border-slate-900 rounded-none bg-white">
-            <table className="w-full text-left text-[10px] text-slate-900 border-collapse">
-              <thead>
-                <tr className="bg-slate-100 border-b-2 border-slate-900 text-center font-black text-slate-900 uppercase text-[11px]">
-                  <th className="p-1.5 border-r border-slate-900 w-[14%]">
-                    सुसंस्कारक्षम बातम्या
-                  </th>
-                  <th className="p-1.5 border-r border-slate-900 w-[14%]">दिनविशेष</th>
-                  <th className="p-1.5 border-r border-slate-900 w-[13%]">म्हण</th>
-                  <th className="p-1.5 border-r border-slate-900 w-[12%]">बोधकथा</th>
-                  <th className="p-1.5 border-r border-slate-900 w-[12%]">समूहगीत</th>
-                  <th className="p-1.5 border-r border-slate-900 w-[13%]">
-                    देशभक्ती गीत
-                  </th>
-                  <th className="p-1.5 border-r border-slate-900 w-[10%]">
-                    मौन पसायदान
-                  </th>
-                  <th className="p-1.5 w-[12%]">वर्गशिक्षकांची स्वाक्षरी</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800 font-medium">
-                {daysList.map((row) => (
-                  <tr
-                    key={row.date}
-                    className={`${
-                      row.isSunday || row.isHoliday
-                        ? "bg-rose-50/70 text-rose-900 font-bold"
-                        : "hover:bg-slate-50"
-                    }`}
-                  >
-                    {row.isSunday ? (
-                      <td colSpan={8} className="p-1 text-center font-black text-rose-700 text-[13px] tracking-widest">
-                        रविवार
-                      </td>
-                    ) : row.isHoliday ? (
-                      <td colSpan={8} className="p-1 text-center font-black text-rose-700 text-[13px] tracking-wider">
-                        सुट्टी ({row.holidayReason || "शाळेस सुट्टी"})
-                      </td>
-                    ) : (
-                      <>
-                        {/* बातम्या - all news */}
-                        <td className="p-0.5 border-r border-slate-800">
-                          <textarea
-                            value={row.batmya}
-                            onChange={(e) =>
-                              handleCellChange(row.date, "batmya", e.target.value)
-                            }
-                            className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[10px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                            rows={2}
-                            placeholder="बातम्या..."
-                          />
-                        </td>
-
-                        {/* दिनविशेष - full */}
-                        <td className="p-0.5 border-r border-slate-800">
-                          <textarea
-                            value={row.dinvishesh}
-                            onChange={(e) =>
-                              handleCellChange(row.date, "dinvishesh", e.target.value)
-                            }
-                            className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[10px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                            rows={2}
-                            placeholder="दिनविशेष..."
-                          />
-                        </td>
-
-                        {/* म्हण */}
-                        <td className="p-0.5 border-r border-slate-800">
-                          <textarea
-                            value={row.mhan}
-                            onChange={(e) =>
-                              handleCellChange(row.date, "mhan", e.target.value)
-                            }
-                            className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[10px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                            rows={2}
-                            placeholder="म्हण..."
-                          />
-                        </td>
-
-                        {/* बोधकथा - only heading */}
-                        <td className="p-0.5 border-r border-slate-800">
-                          <textarea
-                            value={row.bodhkatha}
-                            onChange={(e) =>
-                              handleCellChange(row.date, "bodhkatha", e.target.value)
-                            }
-                            className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                            rows={1}
-                            placeholder="शीर्षक..."
-                          />
-                        </td>
-
-                        {/* समूहगीत - only heading */}
-                        <td className="p-0.5 border-r border-slate-800">
-                          <textarea
-                            value={row.samuhgeet}
-                            onChange={(e) =>
-                              handleCellChange(row.date, "samuhgeet", e.target.value)
-                            }
-                            className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                            rows={1}
-                            placeholder="गीत शीर्षक..."
-                          />
-                        </td>
-
-                        {/* देशभक्ती गीत - title */}
-                        <td className="p-0.5 border-r border-slate-800">
-                          <textarea
-                            value={row.deshbhaktigeet}
-                            onChange={(e) =>
-                              handleCellChange(row.date, "deshbhaktigeet", e.target.value)
-                            }
-                            className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                            rows={1}
-                            placeholder="गीत शीर्षक..."
-                          />
-                        </td>
-
-                        {/* मौन पसायदान */}
-                        <td className="p-0.5 border-r border-slate-800">
-                          <textarea
-                            value={row.maun}
-                            onChange={(e) =>
-                              handleCellChange(row.date, "maun", e.target.value)
-                            }
-                            className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                            rows={1}
-                          />
-                        </td>
-
-                        {/* वर्गशिक्षकांची स्वाक्षरी - blank */}
-                        <td className="p-1">
-                          <div className="h-6 w-full"></div>
-                        </td>
-                      </>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+            </React.Fragment>
+          );
+        })}
       </div>
 
       {/* Holiday Management Modal */}

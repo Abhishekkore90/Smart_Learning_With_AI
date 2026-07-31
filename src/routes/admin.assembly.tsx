@@ -163,16 +163,17 @@ function AssemblyBookAdmin() {
 
     const tempDiv = document.createElement("div");
     tempDiv.id = "temp-pdf-render";
-    tempDiv.style.width = "750px";
+    tempDiv.style.width = "718px";
     tempDiv.style.padding = "24px 32px";
     tempDiv.style.background = "#FFFFFF";
     tempDiv.style.color = "#1F2937";
     tempDiv.style.fontFamily = "'Noto Sans Devanagari', 'Mukta', system-ui, sans-serif";
+    tempDiv.style.boxSizing = "border-box";
   
     // Shared styles
-    const sectionBox = (bg: string, border: string) => `background: ${bg}; border: 1.5px solid ${border}; border-radius: 14px; padding: 16px 18px; margin-bottom: 14px;`;
-    const sectionTitle = (color: string) => `font-size: 15px; font-weight: 800; color: ${color}; margin: 0 0 8px 0; letter-spacing: 0.3px;`;
-    const bodyText = `font-size: 12.5px; font-weight: 600; line-height: 1.65; color: #1F2937; margin: 0; white-space: pre-line;`;
+    const sectionBox = (bg: string, border: string) => `background: ${bg}; border: 1.5px solid ${border}; border-radius: 14px; padding: 16px 22px; margin-bottom: 14px; box-sizing: border-box;`;
+    const sectionTitle = (color: string) => `font-size: 15px; font-weight: 800; color: ${color}; margin: 0 0 8px 0; letter-spacing: 0.3px; box-sizing: border-box;`;
+    const bodyText = `font-size: 12.5px; font-weight: 600; line-height: 1.65; color: #1F2937; margin: 0; white-space: pre-line; word-break: break-word; overflow-wrap: break-word; box-sizing: border-box; padding: 0 10px;`;
     const divider = `<div style="width: 100%; height: 1.5px; background: linear-gradient(90deg, transparent, #CBD5E1, transparent); margin: 10px 0;"></div>`;
 
     // Page header helper
@@ -349,7 +350,8 @@ function AssemblyBookAdmin() {
       </div>
     `;
 
-    tempDiv.innerHTML = page1 + page2 + page3 + page4 + page5 + page6;
+    const styleBlock = `<style>#temp-pdf-render, #temp-pdf-render * { box-sizing: border-box !important; word-break: break-word; overflow-wrap: break-word; }</style>`;
+    tempDiv.innerHTML = styleBlock + page1 + page2 + page3 + page4 + page5 + page6;
   
     document.body.appendChild(tempDiv);
   
@@ -357,7 +359,7 @@ function AssemblyBookAdmin() {
       margin: [8, 10, 8, 10],
       filename: `Paripath_${dateStr}.pdf`,
       image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+      html2canvas: { scale: 2, useCORS: true, letterRendering: true, windowWidth: 718 },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
     };
   
