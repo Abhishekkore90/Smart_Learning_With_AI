@@ -14,6 +14,7 @@ import {
   Sparkles,
   RefreshCw,
   FileText,
+  Download,
   Eye,
   ArrowRight,
 } from "lucide-react";
@@ -64,7 +65,7 @@ function TeacherDiaryAdmin() {
   const failedJob = failedJobs[`${selectedClass}_${selectedMedium}`];
   const isJobProcessing = activeJob && activeJob.status !== "completed" && activeJob.status !== "failed";
   const [prevJobWasProcessing, setPrevJobWasProcessing] = useState(false);
-  const [parsedDocPreview, setParsedDocPreview] = useState<any[] | null>(null);
+  const [docHtmlPreview, setDocHtmlPreview] = useState<string | null>(null);
 
   // Fetch the authenticated PDF preview URL to display in the iframe
   const [existingPreviewUrl, setExistingPreviewUrl] = useState<string | null>(null);
@@ -218,36 +219,48 @@ function TeacherDiaryAdmin() {
       
       if (ext === "pdf") {
         setSelectedFile(file);
-        if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
+        setDocHtmlPreview(null);
+        if (localPreviewUrl && localPreviewUrl !== "doc-html-preview") URL.revokeObjectURL(localPreviewUrl);
         setLocalPreviewUrl(URL.createObjectURL(file));
       } else if (ext === "docx" || ext === "doc" || ext === "xlsx" || ext === "xls") {
         setSelectedFile(file);
-        if (localPreviewUrl && localPreviewUrl !== "parsed-preview") URL.revokeObjectURL(localPreviewUrl);
+        if (localPreviewUrl && localPreviewUrl !== "doc-html-preview") URL.revokeObjectURL(localPreviewUrl);
         
         setUploading(true);
-        setUploadStatus("Reading document content...");
-        toast.info("Reading document content for structured preview...");
+        setUploadStatus("Rendering document preview...");
 
         try {
           const arrayBuffer = await file.arrayBuffer();
-          const { parseDiaryFileFromArrayBuffer } = await import("@/lib/parse-diary-file");
-          const fileType = ext; // docx, doc, xlsx, xls
-          const entries = await parseDiaryFileFromArrayBuffer(arrayBuffer, fileType, selectedClass);
-          
-          if (entries && entries.length > 0) {
-            setParsedDocPreview(entries);
-            setLocalPreviewUrl("parsed-preview");
-            toast.success("Document successfully read! Preview loaded below.");
+
+          if (ext === "docx" || ext === "doc") {
+            // Convert Word to HTML using mammoth for direct visual preview
+            const mammoth = await import("mammoth");
+            const result = await mammoth.convertToHtml({ arrayBuffer });
+            if (result.value && result.value.trim().length > 0) {
+              setDocHtmlPreview(result.value);
+              setLocalPreviewUrl("doc-html-preview");
+              toast.success("Document preview loaded!");
+            } else {
+              // Fallback: show file info card
+              setDocHtmlPreview(`<div style="text-align:center;padding:40px;"><h3>📄 ${file.name}</h3><p>Size: ${(file.size / 1024 / 1024).toFixed(2)} MB</p><p style="color:#888;">This .doc file cannot be previewed directly. It will be processed after upload.</p></div>`);
+              setLocalPreviewUrl("doc-html-preview");
+              toast.info("File selected. Preview not available for this format, but upload will work.");
+            }
           } else {
-            setParsedDocPreview(null);
-            setLocalPreviewUrl(null);
-            toast.warning("No entries found in document, but it can still be uploaded.");
+            // Excel: Convert to HTML table using SheetJS
+            const XLSX = await import("xlsx");
+            const workbook = XLSX.read(arrayBuffer, { type: "array" });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const htmlTable = XLSX.utils.sheet_to_html(firstSheet, { editable: false });
+            setDocHtmlPreview(htmlTable);
+            setLocalPreviewUrl("doc-html-preview");
+            toast.success("Excel preview loaded!");
           }
         } catch (err: any) {
-          console.error("Error generating preview:", err);
-          toast.warning("Could not generate a live preview, but you can still upload the file.");
-          setParsedDocPreview(null);
-          setLocalPreviewUrl(null);
+          console.error("Error rendering preview:", err);
+          // Show file info as fallback
+          setDocHtmlPreview(`<div style="text-align:center;padding:40px;"><h3>📄 ${file.name}</h3><p>Size: ${(file.size / 1024 / 1024).toFixed(2)} MB</p><p style="color:#888;">Preview could not be generated, but the file can still be uploaded.</p></div>`);
+          setLocalPreviewUrl("doc-html-preview");
         } finally {
           setUploading(false);
           setUploadStatus("");
@@ -330,25 +343,28 @@ function TeacherDiaryAdmin() {
       });
       
       const masterPdfUrl = result.url;
-      const jobId = `${selectedClass}_${selectedMedium}`;
-      const jobRef = doc(db, "teacher_diary_jobs", jobId);
 
-      // Create a job in Firestore for background processing
-      await setDoc(jobRef, {
-        status: "uploading",
-        totalPages: 0,
-        processedPages: 0,
-        masterPdfUrl,
+      // 1. Wipe out any old split/corrupted Firestore documents for this class and medium
+      await deleteExistingDiary(selectedClass, selectedMedium);
+
+      // 2. Save directly to Firestore teacher_diaries as master_diary (no splitting needed!)
+      const diaryDocRef = doc(db, "teacher_diaries", selectedClass, selectedMedium, "master_diary");
+      await setDoc(diaryDocRef, {
+        pageUrl: masterPdfUrl,
+        masterPdfUrl: masterPdfUrl,
+        fileName: selectedFile.name,
+        uploadedAt: Date.now(),
         startDate: format(effectiveStartDate, "yyyy-MM-dd"),
         className: selectedClass,
         medium: selectedMedium,
-        lastUpdatedAt: Date.now(),
+        pageNumber: 1,
       });
 
-      toast.success("PDF Successfully Uploaded. Background processing started.");
+      toast.success("Document uploaded successfully! Direct preview available on teacher dashboard.");
 
       setUploadProgress(100);
-      setUploadStatus("Processing in background...");
+      setUploadStatus("Upload complete!");
+      await fetchExistingDiaryInfo(selectedClass, selectedMedium);
       
       // Clean up selected file state
       setSelectedFile(null);
@@ -670,50 +686,12 @@ function TeacherDiaryAdmin() {
                 ) : null}
               </div>
 
-              {localPreviewUrl === "parsed-preview" && parsedDocPreview ? (
-                <div className="w-full rounded-2xl border border-indigo-50 bg-slate-50/40 p-4 overflow-y-auto space-y-4 scrollbar-thin" style={{ height: "530px" }}>
-                  <div className="text-center pb-2 border-b border-slate-100">
-                    <h4 className="text-xs font-black text-indigo-600 uppercase tracking-wider">Document Parse Preview</h4>
-                    <p className="text-[10px] text-slate-400 font-bold">Successfully detected {parsedDocPreview.length} entries</p>
-                  </div>
-                  {parsedDocPreview.map((entry, idx) => (
-                    <div key={idx} className="bg-white border border-slate-200/60 rounded-2xl p-4 space-y-3 shadow-sm">
-                      <div className="flex justify-between items-center bg-slate-50/80 -mx-4 -mt-4 p-3 border-b border-slate-100 rounded-t-2xl">
-                        <span className="text-xs font-black text-slate-700">{entry.date || `Entry ${idx + 1}`}</span>
-                        {entry.day && <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[9px] font-black">{entry.day}</span>}
-                      </div>
-                      {entry.thought && (
-                        <div className="text-[10px] font-bold text-indigo-700 bg-indigo-50/40 p-2 rounded-lg border border-indigo-50">
-                          सुविचार: {entry.thought}
-                        </div>
-                      )}
-                      {entry.periods && entry.periods.length > 0 ? (
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-left border-collapse text-[9px]">
-                            <thead>
-                              <tr className="border-b border-slate-100 text-slate-400 font-black uppercase">
-                                <th className="pb-1.5 font-black w-8">तास</th>
-                                <th className="pb-1.5 font-black">विषय</th>
-                                <th className="pb-1.5 font-black">घटक</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {entry.periods.map((p: any, pIdx: number) => (
-                                <tr key={pIdx} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/40">
-                                  <td className="py-1.5 font-bold text-slate-400">{p.period}</td>
-                                  <td className="py-1.5 font-black text-slate-800">{p.subject || '-'}</td>
-                                  <td className="py-1.5 text-slate-600 font-bold truncate max-w-[120px]">{p.topic || '-'}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      ) : (
-                        <p className="text-[9px] text-slate-400 text-center font-bold uppercase py-2">No periods parsed</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
+              {localPreviewUrl === "doc-html-preview" && docHtmlPreview ? (
+                <div
+                  className="w-full rounded-2xl border border-indigo-100 bg-white p-4 overflow-y-auto scrollbar-thin prose prose-sm max-w-none"
+                  style={{ height: "550px" }}
+                  dangerouslySetInnerHTML={{ __html: docHtmlPreview }}
+                />
               ) : localPreviewUrl ? (
                 <div className="w-full rounded-2xl overflow-hidden border border-gray-200 bg-gray-50" style={{ height: "550px" }}>
                   <iframe
@@ -724,11 +702,29 @@ function TeacherDiaryAdmin() {
                 </div>
               ) : existingPreviewUrl ? (
                 <div className="space-y-2">
-                  <div className="w-full rounded-2xl overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center relative" style={{ height: "530px" }}>
+                  <div className="w-full rounded-2xl overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center relative p-6" style={{ minHeight: "450px", height: "530px" }}>
                     {loadingPreview ? (
                       <div className="flex flex-col items-center gap-3 text-slate-400">
                         <Loader2 className="size-8 animate-spin text-indigo-600" />
                         <span className="text-[10px] font-bold uppercase tracking-wider">Syncing preview page...</span>
+                      </div>
+                    ) : existingPreviewUrl.match(/\.(docx?|xlsx?)$/i) ? (
+                      <div className="flex flex-col items-center justify-center p-8 text-center space-y-4 bg-white rounded-2xl border border-indigo-100 shadow-sm max-w-sm w-full">
+                        <div className="size-16 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-md">
+                          <FileText className="size-8" />
+                        </div>
+                        <div className="space-y-1">
+                          <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider">Active Word / Excel Diary</h4>
+                          <p className="text-xs text-slate-500 font-bold">Document is active for {selectedClass} ({selectedMedium})</p>
+                        </div>
+                        <a
+                          href={existingPreviewUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl uppercase tracking-wider transition-colors shadow-sm cursor-pointer"
+                        >
+                          <Download className="size-4" /> Download / View File
+                        </a>
                       </div>
                     ) : authenticatedPreviewUrl ? (
                       <iframe
@@ -744,7 +740,7 @@ function TeacherDiaryAdmin() {
                     )}
                   </div>
                   <p className="text-[10px] text-center text-slate-500 font-bold uppercase tracking-wider">
-                    Active Saved Diary (Page 1 — {existingDiary.startDateStr})
+                    Active Saved Diary ({existingDiary.startDateStr})
                   </p>
                 </div>
               ) : (

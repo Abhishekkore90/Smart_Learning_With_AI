@@ -1,6 +1,5 @@
 import * as XLSX from "xlsx";
 import { format } from "date-fns";
-import { generateAIResponseCallable } from "@/lib/firebase";
 
 // ─── Types ───
 export interface ParsedPeriod {

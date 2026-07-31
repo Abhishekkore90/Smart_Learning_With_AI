@@ -78,7 +78,8 @@ export function useAuthenticatedPdf(originalUrl: string | null) {
         }
 
         if (active) {
-          localUrl = URL.createObjectURL(blob);
+          const pdfBlob = new Blob([blob], { type: "application/pdf" });
+          localUrl = URL.createObjectURL(pdfBlob);
           setPdfBlobUrl(localUrl);
         }
       } catch (err: any) {

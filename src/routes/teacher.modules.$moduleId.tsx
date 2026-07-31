@@ -5540,11 +5540,12 @@ function TeachingDiaryManager({
 
         setDiaryRecords(validRecords);
 
-        // Exact match for selectedDate: show ONLY that date's teaching diary page
+        // Match selectedDate if split pages exist, otherwise fallback to master_diary or uploaded file
         const exactMatch = validRecords.find(
           (r) => r.diaryDate === selectedDateStr || r.id === selectedDateStr
         );
-        setPageData(exactMatch || null);
+        const masterFallback = allDocs.find((r) => r.id === "master_diary" || r.pageUrl) || allDocs[0];
+        setPageData(exactMatch || masterFallback || null);
       } else {
         setDiaryRecords([]);
         setPageData(null);

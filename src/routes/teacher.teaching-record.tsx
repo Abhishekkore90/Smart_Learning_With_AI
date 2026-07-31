@@ -79,9 +79,10 @@ function TeachingRecordPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Authenticate page PDF fetch to direct storage REST API with key
-  const { pdfBlobUrl: authenticatedPageUrl, loading: loadingPagePdf } = useAuthenticatedPdf(pageData?.pageUrl || null);
+  const { pdfBlobUrl: authenticatedPageUrl, loading: loadingPagePdf, error: pdfError } = useAuthenticatedPdf(pageData?.pageUrl || null);
 
   const [editableContent, setEditableContent] = useState<any>(null);
+  const [viewMode, setViewMode] = useState<"document" | "table">("document");
   const [isEditing, setIsEditing] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
 
@@ -225,11 +226,12 @@ function TeachingRecordPage() {
 
         setDiaryRecords(validRecords);
 
-        // Exact match for selectedDate: show ONLY that date's teaching diary page
+        // Match selectedDate if split pages exist, otherwise fallback to master_diary or uploaded file
         const exactMatch = validRecords.find(
           (r) => r.diaryDate === selectedDateStr || r.id === selectedDateStr
         );
-        setPageData(exactMatch || null);
+        const masterFallback = allDocs.find((r) => r.id === "master_diary" || r.pageUrl) || allDocs[0];
+        setPageData(exactMatch || masterFallback || null);
       } else {
         setDiaryRecords([]);
         setPageData(null);
@@ -552,6 +554,34 @@ function TeachingRecordPage() {
 
                       <div className="h-6 w-px bg-slate-200" />
 
+                      {/* View Mode Toggle */}
+                      {editableContent && (
+                        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                          <button
+                            type="button"
+                            onClick={() => setViewMode("document")}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                              viewMode === "document"
+                                ? "bg-white text-indigo-600 shadow-sm"
+                                : "text-slate-600 hover:text-slate-900"
+                            }`}
+                          >
+                            📄 Document / मूळ फाईल
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setViewMode("table")}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                              viewMode === "table"
+                                ? "bg-white text-indigo-600 shadow-sm"
+                                : "text-slate-600 hover:text-slate-900"
+                            }`}
+                          >
+                            📝 Table / कोष्टक
+                          </button>
+                        </div>
+                      )}
+
                       {/* Fullscreen and Download */}
                       <button
                         onClick={handleToggleFullscreen}
@@ -619,6 +649,33 @@ function TeachingRecordPage() {
                       <div className="flex flex-col items-center gap-3 text-slate-400">
                         <Loader2 className="size-10 animate-spin text-indigo-600" />
                         <span className="text-xs font-bold uppercase tracking-wider">Syncing diary page...</span>
+                      </div>
+                    ) : (viewMode === "document" || !editableContent) && authenticatedPageUrl && !pdfError ? (
+                      <div
+                        className="transition-all duration-200 rounded-xl overflow-hidden shadow-md bg-white border border-slate-100 flex items-center justify-center"
+                        style={{
+                          width: `${1000 * zoomLevel}px`,
+                          height: `${650 * zoomLevel}px`,
+                          maxWidth: "100%",
+                        }}
+                      >
+                        <iframe
+                          src={`${authenticatedPageUrl}#view=FitH`}
+                          title={`Page ${pageData?.pageNumber || 1}`}
+                          className="w-full h-full border-none"
+                        />
+                      </div>
+                    ) : pdfError ? (
+                      <div className="flex flex-col items-center justify-center p-12 text-center space-y-4 max-w-md bg-white rounded-3xl border border-slate-100 shadow-sm">
+                        <div className="size-16 rounded-3xl bg-rose-50 flex items-center justify-center text-rose-500">
+                          <AlertTriangle className="size-8" />
+                        </div>
+                        <div className="space-y-1">
+                          <h3 className="text-base font-black text-slate-800">नवीन फाईल अपलोड करा / Please Re-upload File</h3>
+                          <p className="text-xs text-slate-500 font-bold">
+                            The uploaded diary file for this class is outdated or cannot be opened. Please upload a fresh PDF/Word file from the Admin Panel.
+                          </p>
+                        </div>
                       </div>
                     ) : editableContent ? (
                       <div className="w-full max-w-4xl bg-white border border-slate-100 rounded-3xl p-6 md:p-8 space-y-6 shadow-sm">
