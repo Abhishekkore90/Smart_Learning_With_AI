@@ -18,6 +18,9 @@ export default defineConfig({
     },
   },
   vite: {
+    build: {
+      minify: 'esbuild',
+    },
     resolve: {
       alias: {
         html2canvas: require.resolve('html2canvas-pro'),

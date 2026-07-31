@@ -1597,149 +1597,143 @@ function AssemblyBookViewer() {
       {/* Daily Assembly Structured Content at Center */}
       <DailyAssemblyContent />
 
-      {/* Divider */}
-      <div className="border-b-2 border-slate-800 pb-2 mb-6 mt-12">
-        <h3 className="text-lg font-bold text-slate-800 uppercase tracking-widest">
-          {lang === "en" ? "Reference Books & Materials Report" : "संदर्भ ग्रंथ आणि साहित्य अहवाल"}
-        </h3>
-      </div>
-
-      {loading ? (
-        <div className="py-12 flex flex-col items-center justify-center text-slate-500 border border-slate-200 bg-slate-50">
-          <Loader2 className="size-6 text-slate-400 animate-spin mb-2" />
-          <p className="text-sm font-semibold uppercase tracking-wider">
-            {lang === "en" ? "Loading Data..." : "माहिती लोड होत आहे..."}
-          </p>
-        </div>
-      ) : books.length === 0 ? (
-        <div className="py-12 text-center border border-slate-300 bg-slate-50 text-slate-500">
-          <AlertCircle className="size-6 mx-auto mb-2 text-slate-400" />
-          <h4 className="font-bold text-sm mb-1">
-            {lang === "en" ? "No Reference Materials Found" : "कोणतेही संदर्भ साहित्य आढळले नाही"}
-          </h4>
-          <p className="text-xs">
-            {lang === "en" ? "Please contact administration for updates." : "अपडेटसाठी कृपया प्रशासनाशी संपर्क साधा."}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-8">
-          <div className="overflow-x-auto border border-slate-300 bg-white">
-            <table className="w-full text-left text-sm text-slate-600">
-              <thead className="bg-slate-100 text-slate-800 text-xs uppercase font-bold border-b border-slate-300">
-                <tr>
-                  <th className="px-4 py-3 border-r border-slate-200">#</th>
-                  <th className="px-4 py-3 border-r border-slate-200">{lang === "en" ? "Document Name" : "दस्तऐवजाचे नाव"}</th>
-                  <th className="px-4 py-3 border-r border-slate-200">{lang === "en" ? "Size" : "आकार"}</th>
-                  <th className="px-4 py-3 border-r border-slate-200">{lang === "en" ? "Date Added" : "तारीख"}</th>
-                  <th className="px-4 py-3 text-center">{lang === "en" ? "Actions" : "कृती"}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {books.map((book, index) => {
-                  const isSelected = selectedBook?.id === book.id;
-                  return (
-                    <tr
-                      key={book.id}
-                      className={`border-b last:border-0 transition-colors ${isSelected ? "bg-blue-50" : "hover:bg-slate-50"}`}
-                    >
-                      <td className="px-4 py-3 border-r border-slate-200 font-semibold">{index + 1}</td>
-                      <td className="px-4 py-3 border-r border-slate-200 font-semibold text-slate-800 flex items-center gap-2">
-                        <FileText className="size-4 text-slate-500" />
-                        {book.name}
-                      </td>
-                      <td className="px-4 py-3 border-r border-slate-200">{book.size}</td>
-                      <td className="px-4 py-3 border-r border-slate-200">{book.date}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => handleSelectBook(book)}
-                            disabled={loadingData && !isSelected}
-                            className={`px-3 py-1.5 text-xs font-bold uppercase border rounded disabled:opacity-50 ${isSelected
-                                ? "bg-slate-800 text-white border-slate-800"
-                                : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
-                              }`}
-                          >
-                            {loadingData && isSelected ? (
-                              <Loader2 className="size-3 animate-spin inline mr-1" />
-                            ) : null}
-                            {isSelected ? (lang === "en" ? "Close" : "बंद करा") : (lang === "en" ? "View" : "पहा")}
-                          </button>
-                          <button
-                            onClick={() => handleDownload(book)}
-                            disabled={loadingData}
-                            className="px-3 py-1.5 text-xs font-bold uppercase bg-slate-100 text-slate-700 border border-slate-300 rounded hover:bg-slate-200 disabled:opacity-50 flex items-center gap-1"
-                          >
-                            {downloadingId === book.id ? (
-                              <Loader2 className="size-3 animate-spin" />
-                            ) : (
-                              <Download className="size-3" />
-                            )}
-                            {lang === "en" ? "Download" : "डाउनलोड"}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+      {books.length > 0 && (
+        <>
+          {/* Divider */}
+          <div className="border-b-2 border-slate-800 pb-2 mb-6 mt-12">
+            <h3 className="text-lg font-bold text-slate-800 uppercase tracking-widest">
+              {lang === "en" ? "Reference Books & Materials Report" : "संदर्भ ग्रंथ आणि साहित्य अहवाल"}
+            </h3>
           </div>
 
-          {selectedBook && (
-            <div className="border border-slate-300 bg-white shadow-sm p-4">
-              <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-4">
-                <h4 className="font-bold text-slate-800 text-sm flex items-center gap-2">
-                  <FileText className="size-4 text-slate-500" />
-                  {lang === "en" ? "Document Preview:" : "दस्तऐवज पूर्वावलोकन:"} {selectedBook.name}
-                </h4>
-                <button
-                  onClick={() => {
-                    setSelectedBook(null);
-                    setBookData(null);
-                  }}
-                  className="px-3 py-1 text-xs font-bold text-slate-600 border border-slate-300 hover:bg-slate-100"
-                >
-                  {lang === "en" ? "Close Preview" : "पूर्वावलोकन बंद करा"}
-                </button>
+          {loading ? (
+            <div className="py-12 flex flex-col items-center justify-center text-slate-500 border border-slate-200 bg-slate-50">
+              <Loader2 className="size-6 text-slate-400 animate-spin mb-2" />
+              <p className="text-sm font-semibold uppercase tracking-wider">
+                {lang === "en" ? "Loading Data..." : "माहिती लोड होत आहे..."}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-8">
+              <div className="overflow-x-auto border border-slate-300 bg-white">
+                <table className="w-full text-left text-sm text-slate-600">
+                  <thead className="bg-slate-100 text-slate-800 text-xs uppercase font-bold border-b border-slate-300">
+                    <tr>
+                      <th className="px-4 py-3 border-r border-slate-200">#</th>
+                      <th className="px-4 py-3 border-r border-slate-200">{lang === "en" ? "Document Name" : "दस्तऐवजाचे नाव"}</th>
+                      <th className="px-4 py-3 border-r border-slate-200">{lang === "en" ? "Size" : "आकार"}</th>
+                      <th className="px-4 py-3 border-r border-slate-200">{lang === "en" ? "Date Added" : "तारीख"}</th>
+                      <th className="px-4 py-3 text-center">{lang === "en" ? "Actions" : "कृती"}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {books.map((book, index) => {
+                      const isSelected = selectedBook?.id === book.id;
+                      return (
+                        <tr
+                          key={book.id}
+                          className={`border-b last:border-0 transition-colors ${isSelected ? "bg-blue-50" : "hover:bg-slate-50"}`}
+                        >
+                          <td className="px-4 py-3 border-r border-slate-200 font-semibold">{index + 1}</td>
+                          <td className="px-4 py-3 border-r border-slate-200 font-semibold text-slate-800 flex items-center gap-2">
+                            <FileText className="size-4 text-slate-500" />
+                            {book.name}
+                          </td>
+                          <td className="px-4 py-3 border-r border-slate-200">{book.size}</td>
+                          <td className="px-4 py-3 border-r border-slate-200">{book.date}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center justify-center gap-2">
+                              <button
+                                onClick={() => handleSelectBook(book)}
+                                disabled={loadingData && !isSelected}
+                                className={`px-3 py-1.5 text-xs font-bold uppercase border rounded disabled:opacity-50 ${isSelected
+                                    ? "bg-slate-800 text-white border-slate-800"
+                                    : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
+                                  }`}
+                              >
+                                {loadingData && isSelected ? (
+                                  <Loader2 className="size-3 animate-spin inline mr-1" />
+                                ) : null}
+                                {isSelected ? (lang === "en" ? "Close" : "बंद करा") : (lang === "en" ? "View" : "पहा")}
+                              </button>
+                              <button
+                                onClick={() => handleDownload(book)}
+                                disabled={loadingData}
+                                className="px-3 py-1.5 text-xs font-bold uppercase bg-slate-100 text-slate-700 border border-slate-300 rounded hover:bg-slate-200 disabled:opacity-50 flex items-center gap-1"
+                              >
+                                {downloadingId === book.id ? (
+                                  <Loader2 className="size-3 animate-spin" />
+                                ) : (
+                                  <Download className="size-3" />
+                                )}
+                                {lang === "en" ? "Download" : "डाउनलोड"}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
 
-              <div className="w-full relative min-h-[400px] bg-slate-50 border border-slate-200 flex flex-col justify-center items-center">
-                {loadingData ? (
-                  <div className="flex flex-col items-center gap-2 text-slate-500">
-                    <Loader2 className="size-6 animate-spin" />
-                    <p className="text-xs font-bold uppercase">
-                      {lang === "en" ? "Loading document..." : "दस्तऐवज लोड होत आहे..."}
-                    </p>
+              {selectedBook && (
+                <div className="border border-slate-300 bg-white shadow-sm p-4">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-4">
+                    <h4 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                      <FileText className="size-4 text-slate-500" />
+                      {lang === "en" ? "Document Preview:" : "दस्तऐवज पूर्वावलोकन:"} {selectedBook.name}
+                    </h4>
+                    <button
+                      onClick={() => {
+                        setSelectedBook(null);
+                        setBookData(null);
+                      }}
+                      className="px-3 py-1 text-xs font-bold text-slate-600 border border-slate-300 hover:bg-slate-100"
+                    >
+                      {lang === "en" ? "Close Preview" : "पूर्वावलोकन बंद करा"}
+                    </button>
                   </div>
-                ) : bookData ? (
-                  <div className="w-full h-full p-2">
-                    {bookData.type.includes("pdf") ? (
-                      <iframe
-                        src={bookData.base64}
-                        className="w-full h-[600px] border-0"
-                        title={bookData.name}
-                        allowFullScreen
-                      />
+
+                  <div className="w-full relative min-h-[400px] bg-slate-50 border border-slate-200 flex flex-col justify-center items-center">
+                    {loadingData ? (
+                      <div className="flex flex-col items-center gap-2 text-slate-500">
+                        <Loader2 className="size-6 animate-spin" />
+                        <p className="text-xs font-bold uppercase">
+                          {lang === "en" ? "Loading document..." : "दस्तऐवज लोड होत आहे..."}
+                        </p>
+                      </div>
+                    ) : bookData ? (
+                      <div className="w-full h-full p-2">
+                        {bookData.type.includes("pdf") ? (
+                          <iframe
+                            src={bookData.base64}
+                            className="w-full h-[600px] border-0"
+                            title={bookData.name}
+                            allowFullScreen
+                          />
+                        ) : (
+                          <img
+                            src={bookData.base64}
+                            alt={bookData.name}
+                            className="max-w-full h-auto mx-auto border border-slate-300 shadow-sm"
+                          />
+                        )}
+                      </div>
                     ) : (
-                      <img
-                        src={bookData.base64}
-                        alt={bookData.name}
-                        className="max-w-full h-auto mx-auto border border-slate-300 shadow-sm"
-                      />
+                      <div className="text-slate-400 flex flex-col items-center">
+                        <AlertCircle className="size-6 mb-2" />
+                        <span className="text-xs font-bold">
+                          {lang === "en" ? "Preview Not Available" : "पूर्वावलोकन उपलब्ध नाही"}
+                        </span>
+                      </div>
                     )}
                   </div>
-                ) : (
-                  <div className="text-slate-400 flex flex-col items-center">
-                    <AlertCircle className="size-6 mb-2" />
-                    <span className="text-xs font-bold">
-                      {lang === "en" ? "Preview Not Available" : "पूर्वावलोकन उपलब्ध नाही"}
-                    </span>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           )}
-        </div>
+        </>
       )}
     </div>
   );
@@ -1927,22 +1921,23 @@ function DailyAssemblyContent() {
       // Build clean HTML template for PDF
       const tempDiv = document.createElement("div");
       tempDiv.id = "temp-pdf-render";
-      tempDiv.style.width = "794px";
+      tempDiv.style.width = "733px";
       tempDiv.style.padding = "0";
       tempDiv.style.margin = "0";
       tempDiv.style.background = "#FFFFFF";
       tempDiv.style.color = "#1F2937";
       tempDiv.style.fontFamily = "'Noto Sans Devanagari', 'Mukta', system-ui, sans-serif";
+      tempDiv.style.boxSizing = "border-box";
 
 
       // Shared style helpers
       const greenBar = (title: string) =>
-        `<div style="background: #2e7d32; color: #fff; text-align: center; font-size: 14px; font-weight: 800; padding: 6px 14px; border-radius: 6px; margin: 0 0 8px 0; letter-spacing: 0.5px; font-family: 'Noto Sans Devanagari', sans-serif;">${title}</div>`;
+        `<div style="background: #2e7d32; color: #fff; text-align: center; font-size: 14px; font-weight: 800; padding: 6px 14px; border-radius: 6px; margin: 0 0 8px 0; letter-spacing: 0.5px; font-family: 'Noto Sans Devanagari', sans-serif; box-sizing: border-box;">${title}</div>`;
 
       const sectionBox = (borderColor: string = "#e2e8f0") =>
-        `border: 1.5px solid ${borderColor}; border-radius: 10px; padding: 12px 16px; margin-bottom: 14px; background: #fff; page-break-inside: avoid;`;
+        `border: 1.5px solid ${borderColor}; border-radius: 10px; padding: 12px 20px; margin-bottom: 14px; background: #fff; page-break-inside: avoid; box-sizing: border-box;`;
 
-      const contentText = `font-size: 13px; font-weight: 600; line-height: 1.65; color: #1F2937; margin: 0; text-align: center; font-family: 'Noto Sans Devanagari', sans-serif; white-space: pre-line;`;
+      const contentText = `font-size: 13px; font-weight: 600; line-height: 1.65; color: #1F2937; margin: 0; text-align: center; font-family: 'Noto Sans Devanagari', sans-serif; white-space: pre-line; word-break: break-word; overflow-wrap: break-word; box-sizing: border-box; padding: 0 10px;`;
 
       const pageHeader = `
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2.5px solid #2e7d32; padding-bottom: 6px; margin-bottom: 12px;">
@@ -1995,7 +1990,14 @@ function DailyAssemblyContent() {
 
       // Build ALL content as one continuous flow (no forced page breaks - html2pdf paginates automatically)
       const allContent = `
-        <div style="padding: 14px 22px;">
+        <style>
+          #temp-pdf-render, #temp-pdf-render * {
+            box-sizing: border-box !important;
+            word-break: break-word;
+            overflow-wrap: break-word;
+          }
+        </style>
+        <div style="padding: 14px 22px; width: 100%; box-sizing: border-box;">
           ${pageHeader}
           ${schoolHeader}
           ${greenBar("परिपाठ सुरुवात")}
@@ -2140,7 +2142,7 @@ function DailyAssemblyContent() {
         margin: [6, 8, 6, 8],
         filename: `Paripath_${dateStr}.pdf`,
         image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true, windowWidth: 733 },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
       };
 
