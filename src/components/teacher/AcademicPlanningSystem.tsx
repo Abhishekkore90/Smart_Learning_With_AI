@@ -1675,6 +1675,8 @@ export function AcademicPlanningSystem({
                   );
                 })}
               </div>
+
+
             </motion.div>
           )}
 
@@ -1730,10 +1732,10 @@ export function AcademicPlanningSystem({
 
               <div className="flex justify-center pt-4">
                 <button
-                  onClick={() => setStep("medium")}
+                  onClick={() => setStep("class")}
                   className="px-6 py-2.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-xs"
                 >
-                  <ChevronLeft className="size-4" /> मागे जा (Back to Medium)
+                  <ChevronLeft className="size-4" /> मागे जा (Back to Class)
                 </button>
               </div>
             </motion.div>
