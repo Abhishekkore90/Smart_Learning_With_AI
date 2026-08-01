@@ -285,10 +285,14 @@ function BirthdayTemplatesPage() {
                       <Edit3 className="size-3.5" />{" "}
                       {lang === "mr" ? "संपादन" : lang === "hi" ? "संपादन" : "Edit"}
                     </Link>
-                    <button className="flex-1 py-3 bg-blue-600 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-blue-700 transition-all shadow-md font-black">
+                    <Link
+                      to="/teacher/templates/edit/$templateId"
+                      params={{ templateId: `birthday-${template.id}` }}
+                      className="flex-1 py-3 bg-blue-600 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-blue-700 transition-all shadow-md font-black text-center"
+                    >
                       <Download className="size-3.5" />{" "}
                       {lang === "mr" ? "डाउनलोड" : lang === "hi" ? "डाउनलोड" : "Download"}
-                    </button>
+                    </Link>
                   </div>
                 </div>
               </motion.div>

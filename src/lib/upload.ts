@@ -19,6 +19,15 @@ export interface UploadResult {
  * Robust file uploader utility that uploads to Firebase Storage or Bunny Storage CDN.
  * Prefers fast direct binary upload to Firebase Storage by default.
  */
+export async function uploadCardImage(file: File): Promise<string> {
+  if (!storage) throw new Error("Storage not initialized");
+  const timestamp = Date.now();
+  const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+  const storageRef = ref(storage, `cards/${timestamp}_${safeName}`);
+  await uploadBytes(storageRef, file);
+  return await getDownloadURL(storageRef);
+}
+
 export async function uploadFileWithProgress(
   file: File,
   options: UploadOptions = {}

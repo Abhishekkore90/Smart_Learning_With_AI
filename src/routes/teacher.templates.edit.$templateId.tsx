@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   Download,
   Share2,
+  Copy,
   Save,
   User,
   GraduationCap,
@@ -21,6 +22,7 @@ import {
   Cake,
   Send,
   MessageCircle,
+  Phone,
   Heart,
   Star,
   PartyPopper,
@@ -38,14 +40,56 @@ import {
   FileText,
 } from "lucide-react";
 import { useState, useRef, useMemo, useEffect } from "react";
-import { flushSync } from "react-dom";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import { showToast as toast } from "@/lib/custom-toast";
 import { useLanguage } from "@/hooks/use-language";
 import { db } from "@/lib/firebase";
 import { collection, addDoc } from "firebase/firestore";
+import { uploadFileWithProgress } from "@/lib/upload";
 import { toPng } from "html-to-image";
+
+const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> => {
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error(`Timed out after ${ms}ms`)), ms)
+  );
+  return Promise.race([promise, timeout]);
+};
+
+const captureCardAsImage = async (el: HTMLElement): Promise<string> => {
+  const width = el.offsetWidth || 400;
+  const height = el.offsetHeight || 534;
+
+  // Use html-to-image toPng — SVG-based, no canvas taint issues
+  try {
+    const dataUrl = await withTimeout(
+      toPng(el, {
+        pixelRatio: 2,
+        width,
+        height,
+        cacheBust: true,
+        includeQueryParams: true,
+        skipFonts: false,
+        filter: (node) => {
+          // Skip elements that cause CORS issues (external bg images via CSS)
+          if (node instanceof HTMLElement) {
+            const bg = window.getComputedStyle(node).backgroundImage;
+            if (bg && bg.includes("url(") && !bg.includes("data:") && !bg.includes("localhost")) {
+              node.style.backgroundImage = "none";
+            }
+          }
+          return true;
+        },
+      }),
+      12000
+    );
+    if (dataUrl && dataUrl.length > 1000) return dataUrl;
+    throw new Error("Empty output from toPng");
+  } catch (err) {
+    console.warn("toPng failed:", err);
+    throw new Error(`Card capture failed: ${err}`);
+  }
+};
 
 export const Route = createFileRoute("/teacher/templates/edit/$templateId")({
   component: TemplateEditorPage,
@@ -345,8 +389,12 @@ function TemplateEditorPage() {
   const [studentClass, setStudentClass] = useState("CLASS 5-A");
   const [cardTitle, setCardTitle] = useState("");
   const [cardQuote, setCardQuote] = useState("");
+  const [parentPhone, setParentPhone] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
+  const [shareMessage, setShareMessage] = useState("");
   const templateRef = useRef<HTMLDivElement>(null);
   const [studentPhoto, setStudentPhoto] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -646,149 +694,110 @@ function TemplateEditorPage() {
 
 
 
+  const captureCard = async (): Promise<string> => {
+    if (!templateRef.current) throw new Error("Card element not found");
+    // Small wait so any in-progress animations settle
+    await new Promise((r) => setTimeout(r, 100));
+    return captureCardAsImage(templateRef.current);
+  };
+
   const handleDownloadTemplate = async () => {
-    if (!templateRef.current) return;
+    if (!templateRef.current || isDownloading) return;
     setIsDownloading(true);
-    
-    // Wait for React to re-render the DOM with isDownloading = true
-    setTimeout(async () => {
-      try {
-        const dataUrl = await toPng(templateRef.current!, {
-          quality: 0.95,
-          pixelRatio: 2,
-          cacheBust: true,
-          fontEmbedCSS: "", // Skip embedding web fonts to avoid CORS issues
-        });
-        const link = document.createElement("a");
-        const safeStudentName = (studentName || "student").replace(/\s+/g, '_');
-        const safeTitle = (configToUse.title || "template").replace(/\s+/g, '_');
-        link.download = `${safeStudentName}_${safeTitle}.png`;
-        link.href = dataUrl;
-        link.click();
-        toast.success(
-          lang === "mr" ? "टेम्पलेट यशस्वीरित्या डाउनलोड झाले!" :
-            lang === "hi" ? "टेम्पलेट सफलतापूर्वक डाउनलोड किया गया!" :
-              "Template downloaded successfully!"
-        );
-      } catch (error) {
-        console.error("Error downloading template:", error);
-        const errMsg = error instanceof Error ? error.message : String(error);
-        toast.error(
-          lang === "mr" ? `टेम्पलेट डाउनलोड करण्यात त्रुटी: ${errMsg}` :
-            lang === "hi" ? `टेम्पलेट डाउनलोड करने में त्रुटि: ${errMsg}` :
-              `Failed to download template: ${errMsg}`
-        );
-      } finally {
-        setIsDownloading(false);
-      }
-    }, 150);
+    try {
+      const dataUrl = await captureCard();
+      const link = document.createElement("a");
+      const safeStudentName = (studentName || "student").replace(/\s+/g, '_');
+      const safeTitle = (configToUse.title || "template").replace(/\s+/g, '_');
+      link.download = `${safeStudentName}_${safeTitle}.png`;
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success(
+        lang === "mr" ? "✅ डाउनलोड झाले!" :
+          lang === "hi" ? "✅ डाउनलोड हो गया!" :
+            "✅ Downloaded successfully!"
+      );
+    } catch (error) {
+      console.error("Error downloading template:", error);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      toast.error(`Download failed: ${errMsg}`);
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const handleWhatsAppShare = async () => {
-    const isAdmission = templateId?.includes("admission");
-    const isSports = templateId?.includes("sports");
-    const isAnnual = templateId?.includes("annual");
-    const isCultural = templateId?.includes("cultural");
-    const isAchievement = templateId?.includes("achievement");
-
-    let message = `🎉 *Special Message from School* 🎓\n\nDear Parent, we are celebrating ${studentName}'s achievements! \n\n"${configToUse.quote}"\n\n— From School Management ❤️`;
-
-    if (isAdmission) {
-      message = `🎉 *Congratulations & Welcome to Our School!* 🎓\n\nDear Parent, we are delighted to welcome ${studentName} to our school family in ${studentClass}!\n\n"${configToUse.quote}"\n\n— From School Management ❤️`;
-    } else if (isSports) {
-      message = `🏆 *Sports Excellence News!* 🏅\n\nDear Parent, we are proud to share a special update regarding ${studentName}'s sports performance!\n\n"${configToUse.quote}"\n\n— School Sports Department ⚡`;
-    } else if (isAnnual) {
-      message = `🎭 *Grand Annual Function 2026* 🌟\n\nDear Parent, you are cordially invited to witness ${studentName}'s performance in the Annual Gala!\n\n✨ *Role/Item:* ${studentClass}\n\n"${configToUse.quote}"\n\n— School Events Team 🎭`;
-    } else if (isCultural) {
-      message = `🎨 *Cultural Achievement News* ✨\n\nDear Parent, we are proud to celebrate ${studentName}'s creative participation in our Cultural Events!\n\n✨ *Activity:* ${studentClass}\n\n"${configToUse.quote}"\n\n— School Arts Council 🎨`;
-    } else if (isAchievement) {
-      message = `🏆 *Achievement Celebration* 🏅\n\nDear Parent, we are thrilled to celebrate ${studentName}'s victory in ${studentClass}!\n\n"${configToUse.quote}"\n\n— Proud School Management ❤️`;
-    }
-
-    if (!templateRef.current) return;
-    
-    // Use flushSync to guarantee DOM updates immediately WITHOUT breaking the user-gesture token!
-    // This allows navigator.share and clipboard APIs to work correctly.
-    flushSync(() => {
-      setIsDownloading(true);
-    });
-
+    if (!templateRef.current || isDownloading) return;
+    setIsDownloading(true);
     try {
-      const dataUrl = await toPng(templateRef.current!, {
-        quality: 0.95,
-        pixelRatio: 2,
-        cacheBust: true,
-        fontEmbedCSS: "",
-      });
-
-      // Convert dataUrl to blob
+      const dataUrl = await captureCard();
+      const safeStudentName = (studentName || "student").replace(/\s+/g, "_");
+      const safeTitle = (configToUse.title || "template").replace(/\s+/g, "_");
+      const filename = `${safeStudentName}_${safeTitle}.png`;
       const res = await fetch(dataUrl);
       const blob = await res.blob();
-
-      const safeStudentName = (studentName || "student").replace(/\s+/g, '_');
-      const safeTitle = (configToUse.title || "template").replace(/\s+/g, '_');
-      const filename = `${safeStudentName}_${safeTitle}.png`;
       const file = new File([blob], filename, { type: "image/png" });
 
-      let sharedSuccessfully = false;
-
+      // Mobile: native share sheet — directly picks WhatsApp
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
-          await navigator.share({
-            files: [file],
-            title: filename,
-          });
-          toast.success(lang === "mr" ? "व्हाट्सॲपवर पाठवले!" : "Shared on WhatsApp!");
-          sharedSuccessfully = true;
+          await navigator.share({ files: [file], title: `${studentName} - Card` });
+          toast.success(lang === "mr" ? "कार्ड इमेज शेअर झाली!" : "Card image shared!");
+          return;
         } catch (shareErr: any) {
-          if (shareErr.name === "AbortError") {
-            // User cancelled the share dialog, no need to show an error or fallback
-            return;
-          }
-          console.error("Native share failed:", shareErr);
-          // Let it fall through to the clipboard/download fallback
+          if (shareErr.name === "AbortError") return;
         }
       }
 
-      if (!sharedSuccessfully) {
-        // Fallback for Desktop or if Native Share failed
-        try {
-          await navigator.clipboard.write([
-            new window.ClipboardItem({
-              "image/png": blob
-            })
-          ]);
-          toast.success(
-            lang === "mr" 
-              ? "टेम्पलेट कॉपी झाले! आता WhatsApp मध्ये Paste करा (Ctrl+V)." 
-              : "Template copied! Now paste it in WhatsApp (Ctrl+V)."
-          );
-          
-          setTimeout(() => {
-            window.open("https://wa.me/", "_blank");
-          }, 1500);
-        } catch (err) {
-          console.error("Clipboard failed, falling back to download:", err);
-          const link = document.createElement("a");
-          link.download = filename;
-          link.href = dataUrl;
-          link.click();
-          
-          toast.success(
-            lang === "mr" 
-              ? "टेम्पलेट डाउनलोड झाले! आता ते WhatsApp मध्ये जोडा (Attach करा)." 
-              : "Template downloaded! Now attach it in WhatsApp."
-          );
-          
-          setTimeout(() => {
-            window.open("https://wa.me/", "_blank");
-          }, 1500);
+      // Desktop: download image + copy to clipboard + show modal with WhatsApp button
+      const link = document.createElement("a");
+      link.download = filename;
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      try {
+        if (window.ClipboardItem && navigator.clipboard) {
+          await navigator.clipboard.write([new window.ClipboardItem({ "image/png": blob })]);
         }
-      }
+      } catch (_) {}
+
+      // Store preview URL and show modal — user clicks "Open WhatsApp" button (synchronous = no popup block)
+      setPreviewDataUrl(dataUrl);
+      setShowShareModal(true);
+
     } catch (error: any) {
       console.error("Error sharing template:", error);
-      const errMsg = error?.message || String(error);
-      toast.error(lang === "mr" ? `टेम्पलेट शेअर करण्यात त्रुटी: ${errMsg}` : `Failed to share template: ${errMsg}`);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      toast.error(`Failed to share: ${errMsg}`);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleCopyCardImage = async () => {
+    if (!templateRef.current || isDownloading) return;
+    setIsDownloading(true);
+    try {
+      const dataUrl = await captureCard();
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      if (window.ClipboardItem && navigator.clipboard) {
+        await navigator.clipboard.write([new window.ClipboardItem({ "image/png": blob })]);
+        toast.success(
+          lang === "mr"
+            ? "📋 कार्ड इमेज क्लिपबोर्डवर कॉपी झाली!"
+            : "📋 Card image copied to clipboard!"
+        );
+      } else {
+        toast.error("Clipboard image copy not supported in this browser.");
+      }
+    } catch (err: any) {
+      console.error("Error copying card image:", err);
+      toast.error(lang === "mr" ? "इमेज कॉपी करण्यात त्रुटी." : "Failed to copy card image.");
     } finally {
       setIsDownloading(false);
     }
@@ -931,6 +940,23 @@ function TemplateEditorPage() {
                   </div>
                 </div>
 
+                {/* Optional Parent WhatsApp Phone Number Field */}
+                <div className="space-y-2 group">
+                  <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">
+                    {lang === "mr" ? "पालकांचा/विद्यार्थ्याचा WhatsApp नंबर (ऐच्छिक / Direct Forward)" : "Parent WhatsApp Mobile (Optional Direct Forward)"}
+                  </label>
+                  <div className="bg-slate-50 rounded-[2rem] flex items-center gap-4 px-8 border-2 border-transparent focus-within:bg-white focus-within:border-emerald-500/20 transition-all shadow-inner">
+                    <Phone className="size-5 text-slate-300 group-focus-within:text-emerald-500" />
+                    <input
+                      type="tel"
+                      value={parentPhone}
+                      onChange={(e) => setParentPhone(e.target.value)}
+                      placeholder={lang === "mr" ? "उदा. 9876543210 (थेट चॅट उघडण्यासाठी)" : "e.g. 9876543210 (opens direct chat)"}
+                      className="bg-transparent outline-none w-full py-5 text-sm font-black text-slate-900"
+                    />
+                  </div>
+                </div>
+
                 {/* Photo Upload Option */}
                 <div className="space-y-2 group">
                   <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">
@@ -968,7 +994,7 @@ function TemplateEditorPage() {
                   <button
                     onClick={handleShareToStudent}
                     disabled={isSaving}
-                    className="w-full bg-slate-900 text-white py-6 rounded-[2rem] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-slate-800 transition-all shadow-xl"
+                    className="w-full bg-slate-900 text-white py-6 rounded-[2rem] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-slate-800 transition-all shadow-xl cursor-pointer"
                   >
                     {isSaving ? (
                       <Loader2 className="size-5 animate-spin" />
@@ -978,11 +1004,11 @@ function TemplateEditorPage() {
                     {lang === "mr" ? "डॅशबोर्डवर शेअर करा" : lang === "hi" ? "डैशबोर्ड पर साझा करें" : "Share to Dashboard"}
                   </button>
                   
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <button
                       onClick={handleDownloadTemplate}
                       disabled={isDownloading}
-                      className="w-full bg-indigo-500 text-white py-4 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-indigo-600 transition-all shadow-lg"
+                      className="w-full bg-indigo-600 text-white py-4 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-1.5 hover:bg-indigo-700 transition-all shadow-lg cursor-pointer"
                     >
                       {isDownloading ? (
                         <Loader2 className="size-4 animate-spin" />
@@ -995,14 +1021,27 @@ function TemplateEditorPage() {
                     <button
                       onClick={handleWhatsAppShare}
                       disabled={isDownloading}
-                      className="w-full bg-[#25D366] text-white py-4 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#128C7E] transition-all shadow-lg"
+                      className="w-full bg-[#25D366] text-white py-4 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-1.5 hover:bg-[#128C7E] transition-all shadow-lg cursor-pointer"
                     >
                       {isDownloading ? (
                         <Loader2 className="size-4 animate-spin" />
                       ) : (
                         <Share2 className="size-4" />
                       )}{" "}
-                      {lang === "mr" ? "शेअर" : lang === "hi" ? "शेयर" : "Share"}
+                      {lang === "mr" ? "कार्ड शेअर" : lang === "hi" ? "कार्ड शेयर" : "Share Card"}
+                    </button>
+
+                    <button
+                      onClick={handleCopyCardImage}
+                      disabled={isDownloading}
+                      className="w-full bg-purple-600 text-white py-4 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-1.5 hover:bg-purple-700 transition-all shadow-lg cursor-pointer"
+                    >
+                      {isDownloading ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Copy className="size-4" />
+                      )}{" "}
+                      {lang === "mr" ? "इमेज कॉपी" : lang === "hi" ? "इमेज कॉपी" : "Copy Image"}
                     </button>
                   </div>
                 </div>
@@ -1021,7 +1060,6 @@ function TemplateEditorPage() {
               <div
                 ref={templateRef}
                 className="w-full h-full relative overflow-hidden"
-                style={{ fontFamily: isDownloading ? "system-ui, -apple-system, sans-serif" : undefined }}
               >
                 {/* Dynamic Background */}
                 <div
@@ -1030,7 +1068,7 @@ function TemplateEditorPage() {
                 />
 
                 {/* Animated Floating Elements */}
-                {!isDownloading && (
+                {true && (
                   <div className="absolute inset-0 overflow-hidden pointer-events-none">
                     {[...Array(8)].map((_, i) => (
                       <motion.div
@@ -1058,7 +1096,7 @@ function TemplateEditorPage() {
                 )}
 
                 {/* Decorative Glows */}
-                {!isDownloading && (
+                {true && (
                   <>
                     <div className="absolute -top-32 -right-32 size-96 bg-white/10 rounded-full blur-[120px] animate-pulse" />
                     <div className="absolute -bottom-32 -left-32 size-96 bg-black/40 rounded-full blur-[120px]" />
@@ -1071,16 +1109,17 @@ function TemplateEditorPage() {
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     transition={{ type: "spring", damping: 12 }}
-                    className={`size-28 bg-white/10 rounded-[2.5rem] flex items-center justify-center mb-10 border border-white/20 shadow-2xl relative ${isDownloading ? "" : "backdrop-blur-2xl"}`}
+                    className={`size-28 bg-white/10 rounded-[2.5rem] flex items-center justify-center mb-10 border border-white/20 shadow-2xl relative backdrop-blur-2xl`}
                   >
                     {studentPhoto ? (
                       <img 
                         src={studentPhoto} 
                         alt="Student" 
+                        crossOrigin="anonymous"
                         className="w-full h-full object-cover rounded-[2.5rem]" 
                       />
                     ) : (
-                      <configToUse.icon className={`size-14 text-white ${isDownloading ? "" : "drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]"}`} />
+                      <configToUse.icon className="size-14 text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]" />
                     )}
                     <div
                       className="absolute -top-4 -right-4 size-10 bg-pink-500 rounded-2xl flex items-center justify-center shadow-lg rotate-12 animate-pulse"
@@ -1115,11 +1154,10 @@ function TemplateEditorPage() {
                       animate={{ opacity: 1, scale: 1 }}
                       className="text-5xl md:text-6xl font-black tracking-tighter leading-none"
                       style={{
-                        backgroundImage: isDownloading ? "none" : configToUse.accent,
-                        WebkitBackgroundClip: isDownloading ? "unset" : "text",
-                        WebkitTextFillColor: isDownloading ? "#ffffff" : "transparent",
-                        color: isDownloading ? "#ffffff" : undefined,
-                        filter: isDownloading ? "none" : "drop-shadow(0 10px 20px rgba(0,0,0,0.4))",
+                        backgroundImage: configToUse.accent,
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
+                        filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.4))",
                       }}
                     >
                       {studentName}
@@ -1185,6 +1223,92 @@ function TemplateEditorPage() {
           </div>
         </div>
       </main>
+
+      {/* Card Share Modal */}
+      <AnimatePresence>
+        {showShareModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-white rounded-[3rem] p-8 md:p-10 max-w-md w-full shadow-2xl border border-slate-100 space-y-6 relative text-center"
+            >
+              {/* Close */}
+              <button
+                onClick={() => setShowShareModal(false)}
+                className="absolute top-6 right-6 size-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+
+              {/* Header */}
+              <div className="space-y-2">
+                <div className="size-16 bg-emerald-100 text-[#25D366] rounded-3xl flex items-center justify-center mx-auto border border-emerald-200 shadow-md">
+                  <Share2 className="size-8" />
+                </div>
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight">
+                  {lang === "mr" ? "कार्ड तयार आहे!" : "Card Ready to Share!"}
+                </h3>
+                <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest">
+                  {lang === "mr" ? "इमेज डाउनलोड व क्लिपबोर्डवर कॉपी झाली आहे" : "Image downloaded & copied to clipboard"}
+                </p>
+              </div>
+
+              {/* Card Preview */}
+              {previewDataUrl && (
+                <div className="w-full rounded-2xl overflow-hidden border-4 border-slate-100 shadow-lg bg-slate-900">
+                  <img src={previewDataUrl} alt="Card Preview" className="w-full object-contain max-h-64" />
+                </div>
+              )}
+
+              {/* Steps */}
+              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-left space-y-2">
+                <p className="text-xs font-black text-emerald-800">
+                  {lang === "mr" ? "WhatsApp वर कसे पाठवायचे:" : "How to send on WhatsApp:"}
+                </p>
+                <ol className="text-xs font-bold text-emerald-700 space-y-1 list-decimal ml-4">
+                  <li>{lang === "mr" ? "खाली 'WhatsApp उघडा' वर क्लिक करा" : "Click 'Open WhatsApp' below"}</li>
+                  <li>{lang === "mr" ? "📎 Attach बटण दाबा → Photos मधून कार्ड निवडा" : "Press 📎 Attach → select card from Photos/Downloads"}</li>
+                  <li>{lang === "mr" ? "Send दाबा! 🎉" : "Hit Send! 🎉"}</li>
+                </ol>
+              </div>
+
+              {/* Buttons */}
+              <div className="space-y-3">
+                {/* This button is a direct synchronous click → popup blocker won't block it */}
+                <button
+                  onClick={() => {
+                    const cleanPhone = parentPhone.replace(/\D/g, "");
+                    const formattedPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+                    const waUrl = formattedPhone
+                      ? `https://api.whatsapp.com/send?phone=${formattedPhone}`
+                      : "https://web.whatsapp.com/";
+                    window.open(waUrl, "_blank");
+                    setShowShareModal(false);
+                  }}
+                  className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all shadow-xl cursor-pointer"
+                >
+                  <MessageCircle className="size-5" />
+                  {lang === "mr" ? "WhatsApp उघडा" : "Open WhatsApp"}
+                </button>
+
+                <button
+                  onClick={() => setShowShareModal(false)}
+                  className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-4 rounded-[1.5rem] font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
+                >
+                  {lang === "mr" ? "बंद करा" : "Close"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
