@@ -1069,18 +1069,51 @@ const handleDemandReportPdfDownload = async () => {
     "Onion Garlic Masala": false,
     Cumin: false,
     Mustard: false,
-    Chili: false,
-    "Garam Masala": false,
     Oil: false,
   });
+
+  const [recipeIngredientsMap, setRecipeIngredientsMap] = useState<
+    Record<string, Record<string, boolean>>
+  >({});
+
+  const handleRecipeChange = (recipe: string) => {
+    setMenuType(recipe);
+    if (recipe && recipe !== "Select Menu") {
+      if (recipeIngredientsMap[recipe]) {
+        setSelectedMenuItems(recipeIngredientsMap[recipe]);
+      } else {
+        setSelectedMenuItems({
+          Rice: false,
+          Pease: false,
+          Mugdal: false,
+          Cowpea: false,
+          Gram: false,
+          Masurdal: false,
+          Matki: false,
+          Moong: false,
+          Turdal: false,
+          "Soyabean Wadi": false,
+          Turmeric: false,
+          Salt: false,
+          "Onion Garlic Masala": false,
+          Cumin: false,
+          Mustard: false,
+          Chili: false,
+          "Garam Masala": false,
+          Oil: false,
+          "Milk-Milk Powder": false,
+          "Ragi Satva": false,
+          "Sugar-Jaggery": false
+        });
+      }
+    } else {
+      setSelectedMenuItems({});
+    }
+  };
+
   const [menuRecords, setMenuRecords] = useState<
     Record<string, { menu: string; selectedItems: Record<string, boolean> }>
-  >({
-    "2. Tuesday": {
-      menu: "Vegetable Pulav",
-      selectedItems: { Masurdal: true, Mugdal: true, Rice: true, Turdal: true },
-    },
-  });
+  >({});
   const [showMenuReportModal, setShowMenuReportModal] = useState(false);
 
   const DAYS_OPTIONS = [
@@ -3120,19 +3153,27 @@ const handleDemandReportPdfDownload = async () => {
 
   const handleSaveMenu = async () => {
     if (!user) return;
-    if (menuDay === "Select Day") {
-      toast.warning(t("कृपया दिवस निवडा.", "Please select a Day first."));
+    if (!menuType || menuType === "Select Menu") {
+      toast.warning(t("कृपया प्रथम ड्रॉपडाउनमधून पाककृती (Recipe) निवडा.", "Please select a Recipe first."));
       return;
     }
     setSaving(true);
     try {
       const udise = getUdise();
+      const updatedRecipeMap = {
+        ...recipeIngredientsMap,
+        [menuType]: selectedMenuItems,
+      };
+      setRecipeIngredientsMap(updatedRecipeMap);
+
       const updatedRecords = {
         ...menuRecords,
-        [menuDay]: {
-          menu: menuType,
-          selectedItems: selectedMenuItems,
-        },
+        ...(menuDay && menuDay !== "Select Day" ? {
+          [menuDay]: {
+            menu: menuType,
+            selectedItems: selectedMenuItems,
+          }
+        } : {})
       };
       setMenuRecords(updatedRecords);
 
@@ -3182,6 +3223,7 @@ const handleDemandReportPdfDownload = async () => {
             selectedItems: selectedMenuItems,
           },
           menuRecords: updatedRecords,
+          recipeIngredientsMap: updatedRecipeMap,
           stockRecords,
           registerRecords,
           updatedAt: new Date().toISOString(),
@@ -4257,6 +4299,139 @@ const handleDemandReportPdfDownload = async () => {
     "Garam Masala",   // गरम मसाला
     "Oil",            // सोयाबीन तेल
   ];
+
+  const numberToMarathiWords = (amount: number): string => {
+    if (isNaN(amount) || amount <= 0) return "शून्य रुपये फक्त";
+    const num = Math.round(amount * 100) / 100;
+
+    const units = ["", "एक", "दोन", "तीन", "चार", "पाच", "सहा", "सात", "आठ", "नऊ", "दहा", "अकरा", "बारा", "तेरा", "चौदा", "पंधरा", "सोळा", "सतरा", "अठरा", "एकोणीस"];
+    const tens = ["", "", "वीस", "तीस", "चाळीस", "पन्नास", "साठ", "सत्तर", "ऐंशी", "नव्वद"];
+    const exactTens: Record<number, string> = {
+      21: "एकवीस", 22: "बावीस", 23: "तेवीस", 24: "चौवीस", 25: "पंचवीस", 26: "सव्वीस", 27: "सत्तावीस", 28: "अठ्ठावीस", 29: "एकोणतीस",
+      31: "एकतीस", 32: "बत्तीस", 33: "तेत्तीस", 34: "चौतीस", 35: "पस्तीस", 36: "छत्तीस", 37: "सदतीस", 38: "अडतीस", 39: "एकोणचाळीस",
+      41: "एकचाळीस", 42: "बेचाळीस", 43: "त्रेशहाळीस", 44: "चौ्वेचाळीस", 45: "पंचेचाळीस", 46: "शास्त्रेचाळीस", 47: "सत्तेचाळीस", 48: "अठ्ठेचाळीस", 49: "एकोणपन्नास",
+      51: "एकपन्नास", 52: "बावन्न", 53: "त्रेपन्न", 54: "चौपन्न", 55: "पन्नपन्न", 56: "छाप्पन्न", 57: "सत्तावन्न", 58: "अठ्ठावन्न", 59: "एकोणसाठ",
+      61: "एकसष्ट", 62: "बासष्ट", 63: "त्रेसष्ट", 64: "चौसष्ट", 65: "पासष्ट", 66: "साहसष्ट", 67: "सदसष्ट", 68: "अडसष्ट", 69: "एकोणसत्तर",
+      71: "एकहत्तर", 72: "बाहत्तर", 73: "त्रिहत्तर", 74: "चौहत्तर", 75: "पंचहत्तर", 76: "शहात्तर", 77: "सत्त्यात्तर", 78: "अठ्ठ्यात्तर", 79: "एकोणऐंशी",
+      81: "एक्याऐंशी", 82: "ब्याऐंशी", 83: "त्र्याऐंशी", 84: "चौऱ्याऐंशी", 85: "पंच्याऐंशी", 86: "स्याऐंशी", 87: "सत्त्याऐंशी", 88: "अठ्ठ्याऐंशी", 89: "एकोणनव्वद",
+      91: "एक्याण्णव", 92: "ब्याण्णव", 93: "त्र्याण्णव", 94: "चौऱ्याण्णव", 95: "पंच्याण्णव", 96: "स्याण्णव", 97: "सत्त्याण्णव", 98: "अठ्ठ्याण्णव", 99: "एकोणशंभर"
+    };
+
+    const convertTwoDigits = (n: number): string => {
+      if (n <= 0) return "";
+      if (n < 20) return units[n];
+      if (exactTens[n]) return exactTens[n];
+      const t = Math.floor(n / 10);
+      const u = n % 10;
+      return `${tens[t]} ${units[u]}`.trim();
+    };
+
+    const convertHundreds = (n: number): string => {
+      if (n < 100) return convertTwoDigits(n);
+      const h = Math.floor(n / 100);
+      const rem = n % 100;
+      const hStr = h === 1 ? "एकशे" : `${units[h]}शे`;
+      return rem > 0 ? `${hStr} ${convertTwoDigits(rem)}` : hStr;
+    };
+
+    const convertThousands = (n: number): string => {
+      if (n < 1000) return convertHundreds(n);
+      const th = Math.floor(n / 1000);
+      const rem = n % 1000;
+      return rem > 0 ? `${convertTwoDigits(th)} हजार ${convertHundreds(rem)}` : `${convertTwoDigits(th)} हजार`;
+    };
+
+    const rupees = Math.floor(num);
+    const paise = Math.round((num - rupees) * 100);
+
+    const rupStr = rupees > 0 ? `${convertThousands(rupees)} रुपये` : "";
+    const paiseStr = paise > 0 ? `${convertTwoDigits(paise)} पैसे` : "";
+
+    if (rupStr && paiseStr) return `${rupStr} ${paiseStr} फक्त`;
+    if (rupStr) return `${rupStr} फक्त`;
+    if (paiseStr) return `${paiseStr} फक्त`;
+    return "शून्य रुपये फक्त";
+  };
+
+  const getDamagedForMonth = (itemName: string, month: string, year: number) => {
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const mIdx = monthNames.findIndex(m => m.toLowerCase() === month.toLowerCase());
+    if (mIdx === -1) return 0;
+    let total = 0;
+    damagedRecords.forEach((rec) => {
+      const d = new Date(rec.date);
+      if (!isNaN(d.getTime()) && d.getMonth() === mIdx && d.getFullYear() === year) {
+        if (rec.item.toLowerCase() === itemName.toLowerCase()) {
+          total += parseFloat(rec.qty) || 0;
+        }
+      }
+    });
+    return total;
+  };
+
+  const getLokForMonth = (itemName: string, month: string, year: number) => {
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const mIdx = monthNames.findIndex(m => m.toLowerCase() === month.toLowerCase());
+    if (mIdx === -1) return 0;
+    let total = 0;
+    lokRecords.forEach((rec) => {
+      const d = new Date(rec.date);
+      if (!isNaN(d.getTime()) && d.getMonth() === mIdx && d.getFullYear() === year) {
+        if (rec.item.toLowerCase() === itemName.toLowerCase()) {
+          total += parseFloat(rec.qty) || 0;
+        }
+      }
+    });
+    return total;
+  };
+
+  const getDailyDataForMonthDate = (dateISO: string, classSection: "1 To 5" | "6 To 8" = "1 To 5") => {
+    const regRecord = registerRecords ? registerRecords[dateISO] : undefined;
+    if (regRecord) {
+      const classRec = regRecord[classSection] || (classSection === "1 To 5" ? regRecord : null);
+      if (classRec && (Number(classRec.beneficiary) > 0 || classRec.menu)) {
+        return {
+          beneficiary: Number(classRec.beneficiary) || 0,
+          enrolled: Number(classRec.totalEnrolled || classRec.pat) || (classSection === "1 To 5" ? 45 : 35),
+          menu: classRec.menu || getMenuForRegisterDate(dateISO, classSection),
+          selectedItems: classRec.selectedItems || getSelectedItemsForRegisterDate(dateISO, classSection),
+          isHoliday: false,
+          holidayReason: ""
+        };
+      }
+    }
+
+    const d = new Date(dateISO);
+    if (!isNaN(d.getTime())) {
+      const year = d.getFullYear();
+      const monthNum = d.getMonth() + 1;
+      const sectionKey = classSection === "1 To 5" ? "1-5" : "6-8";
+      const calKey = `${year}_${monthNum}_${sectionKey}`;
+      const calData = monthlyCalendarRecords[calKey];
+      if (calData && calData[dateISO]) {
+        const entry = calData[dateISO];
+        return {
+          beneficiary: Number(entry.beneficiary) || 0,
+          enrolled: classSection === "1 To 5" ? 45 : 35,
+          menu: entry.menu || getMenuForRegisterDate(dateISO, classSection),
+          selectedItems: getSelectedItemsForRegisterDate(dateISO, classSection),
+          isHoliday: !!entry.isHoliday,
+          holidayReason: entry.holidayReason || ""
+        };
+      }
+    }
+
+    const dObj = new Date(dateISO);
+    const isSunday = dObj.getDay() === 0;
+    return {
+      beneficiary: 0,
+      enrolled: classSection === "1 To 5" ? 45 : 35,
+      menu: isSunday ? "— Select recipe —" : getMenuForRegisterDate(dateISO, classSection),
+      selectedItems: getSelectedItemsForRegisterDate(dateISO, classSection),
+      isHoliday: isSunday,
+      holidayReason: isSunday ? "रविवार सुट्टी" : ""
+    };
+  };
 
   const REPORT_ITEMS = [
     { key: "Rice", nameMr: "तांदूळ", unit: "kg" },
@@ -5922,7 +6097,7 @@ const handleDemandReportPdfDownload = async () => {
                         </label>
                         <select
                           value={menuType}
-                          onChange={(e) => setMenuType(e.target.value)}
+                          onChange={(e) => handleRecipeChange(e.target.value)}
                           className="w-full h-10 px-3.5 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-emerald-600 transition-colors"
                         >
                           <option value="Select Menu">Select Recipe</option>
@@ -5977,111 +6152,125 @@ const handleDemandReportPdfDownload = async () => {
                         </select>
                       </div>
 
-                      {/* Instruction Subtext */}
-                      <p className="text-xs text-slate-500 leading-relaxed">
-                        Select ingredients used for <span className="font-bold text-slate-900">{menuType === "Select Menu" ? "निवडलेली पाककृती" : getTranslatedMenu(menuType)}</span>. Your selection is saved until you change it. Deselected ingredients keep formula rows at zero and are excluded from daily entry.
-                      </p>
+                      {/* Show ingredients checklist ONLY when a recipe is selected */}
+                      {menuType && menuType !== "Select Menu" ? (
+                        <>
+                          {/* Instruction Subtext */}
+                          <p className="text-xs text-slate-500 leading-relaxed">
+                            Select ingredients used for <span className="font-bold text-slate-900">{getTranslatedMenu(menuType)}</span>. Your selection is saved until you change it. Deselected ingredients keep formula rows at zero and are excluded from daily entry.
+                          </p>
 
-                      {/* Checklist Box */}
-                      <div className="border border-slate-200 rounded-lg p-3 bg-white max-h-[380px] overflow-y-auto">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                          {/* Column 1 */}
-                          <div className="space-y-2">
-                            {[
-                              "Rice",
-                              "Turdal",
-                              "Matki",
-                              "Cowpea",
-                              "Pease",
-                              "Cumin",
-                              "Turmeric",
-                              "Salt",
-                              "Garam Masala",
-                              "Milk-Milk Powder",
-                              "Ragi Satva"
-                            ].map((item) => {
-                              const isChecked = !!selectedMenuItems[item];
-                              return (
-                                <label
-                                  key={item}
-                                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50 cursor-pointer select-none"
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={isChecked}
-                                    onChange={(e) =>
-                                      setSelectedMenuItems({
-                                        ...selectedMenuItems,
-                                        [item]: e.target.checked,
-                                      })
-                                    }
-                                    className="size-4 rounded border-slate-300 text-emerald-600 focus:ring-0 cursor-pointer"
-                                  />
-                                  <span className="text-sm font-medium">
-                                    {getTranslatedItem(item)}
-                                  </span>
-                                </label>
-                              );
-                            })}
+                          {/* Checklist Box */}
+                          <div className="border border-slate-200 rounded-lg p-3 bg-white max-h-[380px] overflow-y-auto">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                              {/* Column 1 */}
+                              <div className="space-y-2">
+                                {[
+                                  "Rice",
+                                  "Turdal",
+                                  "Matki",
+                                  "Cowpea",
+                                  "Pease",
+                                  "Cumin",
+                                  "Turmeric",
+                                  "Salt",
+                                  "Garam Masala",
+                                  "Milk-Milk Powder",
+                                  "Ragi Satva"
+                                ].map((item) => {
+                                  const isChecked = !!selectedMenuItems[item];
+                                  return (
+                                    <label
+                                      key={item}
+                                      className="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50 cursor-pointer select-none"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={isChecked}
+                                        onChange={(e) =>
+                                          setSelectedMenuItems({
+                                            ...selectedMenuItems,
+                                            [item]: e.target.checked,
+                                          })
+                                        }
+                                        className="size-4 rounded border-slate-300 text-emerald-600 focus:ring-0 cursor-pointer"
+                                      />
+                                      <span className="text-sm font-medium">
+                                        {getTranslatedItem(item)}
+                                      </span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+
+                              {/* Column 2 */}
+                              <div className="space-y-2">
+                                {[
+                                  "Mugdal",
+                                  "Masurdal",
+                                  "Moong",
+                                  "Gram",
+                                  "Soyabean Wadi",
+                                  "Mustard",
+                                  "Onion Garlic Masala",
+                                  "Chili",
+                                  "Oil",
+                                  "Sugar-Jaggery"
+                                ].map((item) => {
+                                  const isChecked = !!selectedMenuItems[item];
+                                  return (
+                                    <label
+                                      key={item}
+                                      className="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50 cursor-pointer select-none"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={isChecked}
+                                        onChange={(e) =>
+                                          setSelectedMenuItems({
+                                            ...selectedMenuItems,
+                                            [item]: e.target.checked,
+                                          })
+                                        }
+                                        className="size-4 rounded border-slate-300 text-emerald-600 focus:ring-0 cursor-pointer"
+                                      />
+                                      <span className="text-sm font-medium">
+                                        {getTranslatedItem(item)}
+                                      </span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            </div>
                           </div>
 
-                          {/* Column 2 */}
-                          <div className="space-y-2">
-                            {[
-                              "Mugdal",
-                              "Masurdal",
-                              "Moong",
-                              "Gram",
-                              "Soyabean Wadi",
-                              "Mustard",
-                              "Onion Garlic Masala",
-                              "Chili",
-                              "Oil",
-                              "Sugar-Jaggery"
-                            ].map((item) => {
-                              const isChecked = !!selectedMenuItems[item];
-                              return (
-                                <label
-                                  key={item}
-                                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50 cursor-pointer select-none"
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={isChecked}
-                                    onChange={(e) =>
-                                      setSelectedMenuItems({
-                                        ...selectedMenuItems,
-                                        [item]: e.target.checked,
-                                      })
-                                    }
-                                    className="size-4 rounded border-slate-300 text-emerald-600 focus:ring-0 cursor-pointer"
-                                  />
-                                  <span className="text-sm font-medium">
-                                    {getTranslatedItem(item)}
-                                  </span>
-                                </label>
-                              );
-                            })}
+                          {/* Action Bar */}
+                          <div className="flex items-center gap-4 pt-1">
+                            <button
+                              onClick={handleSaveMenu}
+                              disabled={saving}
+                              className="px-4 py-2 bg-[#047857] hover:bg-[#065f46] text-white rounded-lg text-sm font-bold shadow-sm flex items-center gap-2 transition-colors cursor-pointer"
+                            >
+                              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                              <span>Save ingredients</span>
+                            </button>
+                            <button
+                              onClick={() => setActiveTab("quantity")}
+                              className="text-sm font-semibold text-[#047857] hover:underline cursor-pointer"
+                            >
+                              Go to Recipe Formulas →
+                            </button>
                           </div>
+                        </>
+                      ) : (
+                        <div className="p-8 text-center border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+                          <p className="text-sm font-semibold text-slate-600">
+                            {lang === "mr"
+                              ? "साहित्य निवडण्यासाठी कृपया प्रथम वरील ड्रॉपडाउनमधून पाककृती (Recipe) निवडा."
+                              : "Please select a Recipe from the dropdown above to choose its ingredients."}
+                          </p>
                         </div>
-                      </div>
-
-                      {/* Action Bar */}
-                      <div className="flex items-center gap-4 pt-1">
-                        <button
-                          onClick={handleSaveMenu}
-                          className="px-4 py-2 bg-[#047857] hover:bg-[#065f46] text-white rounded-lg text-sm font-bold shadow-sm flex items-center gap-2 transition-colors"
-                        >
-                          <Save className="w-4 h-4" />
-                          <span>Save ingredients</span>
-                        </button>
-                        <button
-                          onClick={() => setActiveTab("quantity")}
-                          className="text-sm font-semibold text-[#047857] hover:underline cursor-pointer"
-                        >
-                          Go to Recipe Formulas →
-                        </button>
-                      </div>
+                      )}
                     </div>
 
                       {/* Food Menu Report Modal */}
@@ -8435,47 +8624,60 @@ const handleDemandReportPdfDownload = async () => {
                                 <th className="border-r border-black p-1 text-right w-[15.6%] font-black">अंतिम मागणी</th>
                               </tr>
                             </thead>
-                            <tbody>
-                              {(() => {
-                                const pat = parseFloat(stockDemandPatSankhya) || 80;
-                                const ratio = pat / 80;
+                              <tbody>
+                                {(() => {
+                                  const pat = parseFloat(stockDemandPatSankhya) || 80;
 
-                                const demandItems = [
-                                  { name: "तांदूळ (kg)", stock: -0.2000, expUsed: 24.0000 * ratio, reqMonth: 208.0000 * ratio },
-                                  { name: "मूगडाळ (kg)", stock: -0.0400, expUsed: 0.0000 * ratio, reqMonth: 6.4000 * ratio },
-                                  { name: "तूरडाळ (kg)", stock: 0.0000, expUsed: 0.0000 * ratio, reqMonth: 1.6000 * ratio },
-                                  { name: "मसूरडाळ (kg)", stock: 0.0000, expUsed: 0.0000 * ratio, reqMonth: 3.2000 * ratio },
-                                  { name: "मटकी (kg)", stock: 43.0000, expUsed: 1.6000 * ratio, reqMonth: 6.4000 * ratio },
-                                  { name: "अख्खा मूग (kg)", stock: 9867.0000, expUsed: 0.0000 * ratio, reqMonth: 1.6000 * ratio },
-                                  { name: "चवळी (kg)", stock: 0.0000, expUsed: 1.6000 * ratio, reqMonth: 3.2000 * ratio },
-                                  { name: "हरभरा (kg)", stock: 0.0000, expUsed: 1.6000 * ratio, reqMonth: 3.2000 * ratio },
-                                  { name: "वाटाणा (kg)", stock: -1.8000, expUsed: 0.0000 * ratio, reqMonth: 12.8000 * ratio },
-                                  { name: "सोयाबीन वडी (kg)", stock: 0.0000, expUsed: 0.0000 * ratio, reqMonth: 3.2000 * ratio },
-                                  { name: "तिळ (kg)", stock: -0.0047, expUsed: 0.0120 * ratio, reqMonth: 0.1200 * ratio },
-                                  { name: "मोहरी (kg)", stock: -0.0092, expUsed: 0.0240 * ratio, reqMonth: 0.2080 * ratio },
-                                  { name: "हळद (kg)", stock: -0.0002, expUsed: 0.0400 * ratio, reqMonth: 0.2000 * ratio },
-                                  { name: "तीट मसाला / कांदा लसूण मसाला (kg)", stock: -0.0920, expUsed: 0.4800 * ratio, reqMonth: 2.6960 * ratio },
-                                  { name: "मीठ (kg)", stock: -0.0920, expUsed: 0.2400 * ratio, reqMonth: 2.0800 * ratio },
-                                  { name: "तेल (kg)", stock: -0.4600, expUsed: 1.2000 * ratio, reqMonth: 10.4000 * ratio },
-                                  { name: "भाजीपाला (kg)", stock: 0.0000, expUsed: 0.0000 * ratio, reqMonth: 0.0001 * ratio },
-                                ];
+                                  const demandItemDefs = [
+                                    { itemKey: "Rice", name: "तांदूळ (kg)", qty15: 0.100 },
+                                    { itemKey: "Mugdal", name: "मूगडाळ (kg)", qty15: 0.020 },
+                                    { itemKey: "Turdal", name: "तूरडाळ (kg)", qty15: 0.020 },
+                                    { itemKey: "Masurdal", name: "मसूरडाळ (kg)", qty15: 0.020 },
+                                    { itemKey: "Matki", name: "मटकी (kg)", qty15: 0.020 },
+                                    { itemKey: "Moong", name: "अख्खा मूग (kg)", qty15: 0.020 },
+                                    { itemKey: "Cowpea", name: "चवळी (kg)", qty15: 0.020 },
+                                    { itemKey: "Gram", name: "हरभरा (kg)", qty15: 0.020 },
+                                    { itemKey: "Pease", name: "वाटाणा (kg)", qty15: 0.020 },
+                                    { itemKey: "Soyabean Wadi", name: "सोयाबीन वडी (kg)", qty15: 0.020 },
+                                    { itemKey: "Cumin", name: "जिरे (kg)", qty15: 0.0004 },
+                                    { itemKey: "Mustard", name: "मोहरी (kg)", qty15: 0.0004 },
+                                    { itemKey: "Turmeric", name: "हळद (kg)", qty15: 0.0004 },
+                                    { itemKey: "Onion Garlic Masala", name: "तीट मसाला / कांदा लसूण मसाला (kg)", qty15: 0.0008 },
+                                    { itemKey: "Salt", name: "मीठ (kg)", qty15: 0.004 },
+                                    { itemKey: "Oil", name: "तेल (kg)", qty15: 0.005495 },
+                                    { itemKey: "Vegetables", name: "भाजीपाला (kg)", qty15: 0.010 },
+                                  ];
 
-                                return demandItems.map((it, idx) => {
-                                  const expBal = it.stock - it.expUsed;
-                                  const finalDemand = Math.max(0, it.reqMonth - expBal);
+                                  const marToEngMonth: Record<string, string> = {
+                                    "ऑगस्ट": "August", "सप्टेंबर": "September", "ऑक्टोबर": "October", "नोव्हेंबर": "November",
+                                    "डिसेंबर": "December", "जानेवारी": "January", "फेब्रुवारी": "February", "मार्च": "March",
+                                    "एप्रिल": "April", "मे": "May", "जून": "June", "जुलै": "July"
+                                  };
+                                  const selMonthEng = marToEngMonth[stockDemandMonth] || "August";
 
-                                  return (
-                                    <tr key={idx} className="border-b border-black h-5 text-right font-medium hover:bg-slate-50">
-                                      <td className="border-r border-black px-1.5 py-0.5 text-[9px] text-left font-bold text-slate-900">{it.name}</td>
-                                      <td className="border-r border-black px-1.5 py-0.5 text-[9px]">{it.stock.toFixed(4)}</td>
-                                      <td className="border-r border-black px-1.5 py-0.5 text-[9px]">{it.expUsed.toFixed(4)}</td>
-                                      <td className="border-r border-black px-1.5 py-0.5 text-[9px]">{expBal.toFixed(4)}</td>
-                                      <td className="border-r border-black px-1.5 py-0.5 text-[9px]">{it.reqMonth.toFixed(4)}</td>
-                                      <td className="border-r border-black px-1.5 py-0.5 text-[9px] font-extrabold text-slate-900">{finalDemand.toFixed(4)}</td>
-                                    </tr>
-                                  );
-                                });
-                              })()}
+                                  return demandItemDefs.map((it, idx) => {
+                                    const stock = getOpeningStock(selMonthEng, "2026", "1 To 5", it.itemKey);
+                                    const rule = quantityRules.find(r => r.item.toLowerCase() === it.itemKey.toLowerCase());
+                                    const qVal = rule ? parseFloat(rule.qty15) || it.qty15 : it.qty15;
+                                    const unitQty = qVal >= 1 ? qVal / 1000 : qVal;
+
+                                    const expUsed = unitQty * pat * 3;
+                                    const reqMonth = unitQty * pat * 20;
+                                    const expBal = stock - expUsed;
+                                    const finalDemand = Math.max(0, reqMonth - expBal);
+
+                                    return (
+                                      <tr key={idx} className="border-b border-black h-5 text-right font-medium hover:bg-slate-50">
+                                        <td className="border-r border-black px-1.5 py-0.5 text-[9px] text-left font-bold text-slate-900">{it.name}</td>
+                                        <td className="border-r border-black px-1.5 py-0.5 text-[9px]">{stock.toFixed(4)}</td>
+                                        <td className="border-r border-black px-1.5 py-0.5 text-[9px]">{expUsed.toFixed(4)}</td>
+                                        <td className="border-r border-black px-1.5 py-0.5 text-[9px]">{expBal.toFixed(4)}</td>
+                                        <td className="border-r border-black px-1.5 py-0.5 text-[9px]">{reqMonth.toFixed(4)}</td>
+                                        <td className="border-r border-black px-1.5 py-0.5 text-[9px] font-extrabold text-slate-900">{finalDemand.toFixed(4)}</td>
+                                      </tr>
+                                    );
+                                  });
+                                })()}
                             </tbody>
                           </table>
                         </div>
@@ -8605,7 +8807,7 @@ const handleDemandReportPdfDownload = async () => {
                             </div>
 
                             {/* Table */}
-                            <table className="w-full border-collapse text-black text-xs text-center mt-4">
+                            <table className="w-full border-collapse border-black text-black text-xs text-center mt-4">
                               <thead>
                                 <tr className="bg-slate-50 font-bold border-b border-black">
                                   <th className="border-r border-black p-1 w-[15%]">
@@ -8807,7 +9009,8 @@ const handleDemandReportPdfDownload = async () => {
                             "मे": 5, "जून": 6, "जुलै": 7, "ऑगस्ट": 8,
                             "सप्टेंबर": 9, "ऑक्टोबर": 10, "नोव्हेंबर": 11, "डिसेंबर": 12
                           };
-                          const monthNum = monthMap[monthName] || 7;
+                          const engMonthNames = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                          const monthNum = monthMap[monthName] || 6;
                           const year = monthNum >= 6 ? 2026 : 2027;
                           const monthYearStr = `${monthName} ${year}`;
                           const daysInMonth = new Date(year, monthNum, 0).getDate();
@@ -8824,44 +9027,54 @@ const handleDemandReportPdfDownload = async () => {
                             "भाजीपाला\nkg", "पूरक\nआहार", "इंधन व\nभाजीपाला\nअनुदान"
                           ];
 
+                          const itemKeysOrder = [
+                            "Rice", "Mugdal", "Turdal", "Masurdal", "Matki",
+                            "Moong", "Cowpea", "Gram", "Pease", "Soyabean Wadi",
+                            "Cumin", "Mustard", "Turmeric", "Onion Garlic Masala",
+                            "Salt", "Chili", "Garam Masala", "Oil"
+                          ];
+
+                          const prevRiceStock = getOpeningStock(engMonthNames[monthNum], year.toString(), "1 To 5", "Rice");
+                          let monthlyTotalRiceUsed = 0;
+                          let monthlyTotalTat = 0;
+                          let monthlyTotalGrant = 0;
+
                           const renderPage = (startDay: number, endDay: number, isFirstPage: boolean) => {
                             const days = Array.from({ length: endDay - startDay + 1 }, (_, i) => {
                               const day = startDay + i;
                               const date = new Date(year, monthNum - 1, day);
                               const weekday = marDays[date.getDay()];
                               const isSunday = date.getDay() === 0;
-                              return { day, weekday, isSunday };
+                              const dateISO = `${year}-${String(monthNum).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                              const daily = getDailyDataForMonthDate(dateISO, "1 To 5");
+                              return { day, weekday, isSunday, dateISO, daily };
                             });
+
                             return (
                               <div key={`page-${startDay}`} className="mb-6">
-                                {/* School Header — only on first page */}
                                 {isFirstPage && (
                                   <div className="text-center mb-2">
                                     <h2 className="text-[11px] font-black text-slate-900 tracking-tight uppercase">प्रधानमंत्री पोषण शक्ती निर्माण योजना — पोषण आहार दैनंदिन नोंदी</h2>
                                     <h3 className="text-[10px] font-extrabold text-slate-900">पोषण आहार दैनंदिन नोंदी</h3>
                                     <p className="text-[9px] font-bold text-slate-700">{schoolName}</p>
                                     <p className="text-[8.5px] font-semibold text-slate-600">पोषण आहार दैनंदिन नोंदी — {monthYearStr} · प्राथमिक ( इयत्ता १ ते ५ )</p>
-                                    {/* UDISE row */}
                                     <div className="grid grid-cols-5 border border-black text-[8px] font-bold mt-1.5 text-center divide-x divide-black">
-                                      <div className="p-0.5">UDISE कोड<br/><span className="font-black">{profile?.udise || "27350800701"}</span></div>
-                                      <div className="p-0.5">केंद्र<br/><span className="font-black">{profile?.kendra || "NARSINGPUR"}</span></div>
+                                      <div className="p-0.5">UDISE कोड<br/><span className="font-black">{profile?.udise || getUdise() || "27350800701"}</span></div>
+                                      <div className="p-0.5">केंद्र<br/><span className="font-black">{profile?.kendra || profile?.center || "NARSINGPUR"}</span></div>
                                       <div className="p-0.5">तालुका<br/><span className="font-black">{profile?.taluka || "तासगाव"}</span></div>
                                       <div className="p-0.5">जिल्हा<br/><span className="font-black">{profile?.district || "सांगली"}</span></div>
-                                      <div className="p-0.5">पिन कोड<br/><span className="font-black">{profile?.pinCode || "416312"}</span></div>
+                                      <div className="p-0.5">पिन कोड<br/><span className="font-black">{profile?.pinCode || profile?.pincode || "416312"}</span></div>
                                     </div>
-                                    {/* Magil shillak row */}
                                     <div className="mt-1 border border-black text-[8px] font-bold text-left p-0.5">
-                                      <span className="font-black">मागील शिल्लक :</span> तांदूळ — <span className="font-black">10.0000</span> kg
+                                      <span className="font-black">मागील शिल्लक :</span> तांदूळ — <span className="font-black">{prevRiceStock.toFixed(4)}</span> kg
                                     </div>
                                   </div>
                                 )}
 
-                                {/* Page date range title */}
                                 <div className="text-[9px] font-black text-slate-800 mb-1 text-left border-b border-slate-400 pb-0.5">
                                   {monthYearStr} — दिनांक {isFirstPage ? "१–१५" : `१६–${daysInMonth}`}
                                 </div>
 
-                                {/* Main Table */}
                                 <div className="overflow-x-auto">
                                   <table className="w-full border-collapse border border-black text-center text-[7px] font-medium" style={{tableLayout: 'fixed'}}>
                                     <thead>
@@ -8874,47 +9087,81 @@ const handleDemandReportPdfDownload = async () => {
                                       </tr>
                                     </thead>
                                     <tbody>
-                                      {days.map(({ day, weekday, isSunday }, rowIdx) => (
-                                        <tr key={day} className={`border-b border-black h-4 ${isSunday ? "bg-red-50/50" : rowIdx % 2 === 0 ? "bg-white" : "bg-slate-50/30"}`}>
-                                          <td className="border-r border-black py-0 text-[7px] font-bold">{rowIdx + 1}</td>
-                                          <td className="border-r border-black py-0 text-[7px] font-semibold">{String(day).padStart(2,'0')}/{String(monthNum).padStart(2,'0')}</td>
-                                          <td className={`border-r border-black py-0 text-[7px] font-semibold ${isSunday ? "text-red-600 font-bold" : ""}`}>{weekday}</td>
-                                          {Array.from({length: 27}, (_, ci) => (
-                                            <td key={ci} className="border-r border-black py-0"></td>
-                                          ))}
-                                        </tr>
-                                      ))}
-                                      {/* Ekun row - only on last page */}
+                                      {days.map(({ day, weekday, isSunday, daily }, rowIdx) => {
+                                        const bene = daily.beneficiary;
+                                        if (bene > 0) {
+                                          monthlyTotalTat += bene;
+                                          monthlyTotalGrant += bene * (parseFloat(primaryRate) || 5.45);
+                                        }
+
+                                        return (
+                                          <tr key={day} className={`border-b border-black h-4 ${isSunday || daily.isHoliday ? "bg-red-50/50" : rowIdx % 2 === 0 ? "bg-white" : "bg-slate-50/30"}`}>
+                                            <td className="border-r border-black py-0 text-[7px] font-bold">{rowIdx + 1}</td>
+                                            <td className="border-r border-black py-0 text-[7px] font-semibold">{String(day).padStart(2,'0')}/{String(monthNum).padStart(2,'0')}</td>
+                                            <td className={`border-r border-black py-0 text-[7px] font-semibold ${isSunday || daily.isHoliday ? "text-red-600 font-bold" : ""}`}>{weekday}</td>
+                                            <td className="border-r border-black py-0 font-semibold">{daily.isHoliday ? "" : daily.enrolled}</td>
+                                            <td className="border-r border-black py-0 font-bold">{daily.isHoliday || bene === 0 ? "" : bene}</td>
+                                            <td className="border-r border-black py-0 font-bold">{daily.isHoliday || bene === 0 ? "" : bene}</td>
+                                            {itemKeysOrder.map((itemKey) => {
+                                              if (daily.isHoliday || bene === 0) return <td key={itemKey} className="border-r border-black py-0"></td>;
+                                              const wasSelected = daily.selectedItems ? !!daily.selectedItems[itemKey] : true;
+                                              if (!wasSelected) return <td key={itemKey} className="border-r border-black py-0"></td>;
+                                              const rule = quantityRules.find(r => r.item.toLowerCase() === itemKey.toLowerCase());
+                                              const qStr = rule ? rule.qty15 : "0.02";
+                                              const qVal = parseFloat(qStr) || 0;
+                                              const qKg = qVal >= 1 ? qVal / 1000 : qVal;
+                                              const usedKg = qKg * bene;
+                                              if (itemKey === "Rice") monthlyTotalRiceUsed += usedKg;
+                                              return (
+                                                <td key={itemKey} className="border-r border-black py-0 text-[6.5px]">
+                                                  {usedKg > 0 ? usedKg.toFixed(3) : ""}
+                                                </td>
+                                              );
+                                            })}
+                                            <td className="border-r border-black py-0"></td>
+                                            <td className="border-r border-black py-0"></td>
+                                            <td className="border-r border-black py-0"></td>
+                                            <td className="border-r border-black py-0 text-[6.5px]">{bene > 0 ? (bene * 0.01).toFixed(2) : ""}</td>
+                                            <td className="border-r border-black py-0 text-[6px]">{bene > 0 ? "अंडी/केळी" : ""}</td>
+                                            <td className="border-r border-black py-0 text-[6.5px] font-bold">{bene > 0 ? (bene * (parseFloat(primaryRate) || 5.45)).toFixed(2) : ""}</td>
+                                          </tr>
+                                        );
+                                      })}
+
                                       {!isFirstPage && (
                                         <tr className="border-b border-black bg-amber-50 font-black text-[7px]">
                                           <td className="border-r border-black p-0.5 font-black text-left" colSpan={3}>एकूण</td>
-                                          {Array.from({length: 27}, (_, ci) => (
+                                          <td className="border-r border-black p-0.5"></td>
+                                          <td className="border-r border-black p-0.5">{monthlyTotalTat}</td>
+                                          <td className="border-r border-black p-0.5">{monthlyTotalTat}</td>
+                                          <td className="border-r border-black p-0.5">{monthlyTotalRiceUsed.toFixed(3)}</td>
+                                          {Array.from({length: 23}, (_, ci) => (
                                             <td key={ci} className="border-r border-black p-0.5"></td>
                                           ))}
+                                          <td className="border-r border-black p-0.5">{monthlyTotalGrant.toFixed(2)}</td>
                                         </tr>
                                       )}
                                     </tbody>
                                   </table>
                                 </div>
 
-                                {/* Bottom summary — only on last page */}
                                 {!isFirstPage && (
                                   <div className="mt-2 space-y-1.5">
                                     <div className="text-[8px] font-bold border border-black p-1 bg-slate-50">
                                       <div className="flex justify-between">
                                         <span>शिल्लक धान्यादी :</span>
-                                        <span className="font-black">तांदूळ — kg</span>
+                                        <span className="font-black">तांदूळ — {Math.max(0, prevRiceStock - monthlyTotalRiceUsed).toFixed(3)} kg</span>
                                       </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-2 text-[8px] font-bold border border-black divide-x divide-black">
-                                      <div className="p-1">महिन्यातील एकूण ताटांची संख्या : <span className="font-black">__________</span></div>
-                                      <div className="p-1">इंधन व भाजीपाल्यासाठी खर्च केलेले अनुदान रु. : <span className="font-black">₹__________</span></div>
+                                      <div className="p-1">महिन्यातील एकूण ताटांची संख्या : <span className="font-black">{monthlyTotalTat}</span></div>
+                                      <div className="p-1">इंधन व भाजीपाल्यासाठी खर्च केलेले अनुदान रु. : <span className="font-black">₹{monthlyTotalGrant.toFixed(2)}</span></div>
                                     </div>
                                     <div className="text-[8px] font-semibold border border-black p-1 bg-slate-50 text-slate-700">
                                       (दैनंदिन नोंदवही — वापरलेली ताटे × प्रति ताट अनुदान)
                                     </div>
                                     <div className="text-[8px] font-bold border border-black p-1">
-                                      स्वयंपाकी तथा मदतनीस मानधन रु. : <span className="font-black">__________</span>
+                                      स्वयंपाकी तथा मदतनीस मानधन रु. : <span className="font-black">₹{(helpers.length * 1000).toFixed(2)}</span>
                                       <span className="text-[7px] font-semibold text-slate-500 ml-2">(ताटांची संख्या × दर) (शासनस्तरावरून निश्चित केल्यानुसार)</span>
                                     </div>
                                     <div className="text-[8px] font-semibold border border-slate-400 p-1 bg-amber-50/40 text-slate-800">
@@ -8922,7 +9169,7 @@ const handleDemandReportPdfDownload = async () => {
                                     </div>
                                     <div className="flex items-end justify-between pt-3 text-[9px] font-bold">
                                       <div>
-                                        <p>Date : __________</p>
+                                        <p>Date : {new Date().toLocaleDateString('en-GB')}</p>
                                       </div>
                                       <div className="text-center">
                                         <p className="font-black">मुख्याध्यापक/सचिव</p>
@@ -8954,47 +9201,56 @@ const handleDemandReportPdfDownload = async () => {
                             "मे": 5, "जून": 6, "जुलै": 7, "ऑगस्ट": 8,
                             "सप्टेंबर": 9, "ऑक्टोबर": 10, "नोव्हेंबर": 11, "डिसेंबर": 12
                           };
-                          const monthNum = monthMap[monthName] || 7;
+                          const engMonthNames = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                          const monthNum = monthMap[monthName] || 6;
                           const year = monthNum >= 6 ? 2026 : 2027;
-                          const monthYearStr = `${monthName} ${year}`;
                           const schoolName = profile?.schoolName || "Z P SCHOOL DHONDEWADI PED";
 
-                          // Data row
-                          const prevTandul = 10, recTandul = 0, usnaTandul = 0;
+                          const riceData = getStockDataForItem("Rice", engMonthNames[monthNum], year, "1 To 5");
+                          const prevTandul = riceData.prev;
+                          const recTandul = riceData.received;
+                          const usnaTandul = 0;
                           const totalTandul = prevTandul + recTandul + usnaTandul;
-                          const shijvunTandul = 9.2, usnaParatTandul = 0;
-                          const shillakTandul = totalTandul - shijvunTandul - usnaParatTandul;
-                          const kendraHissa = 143.52, rajyaHissa = 94.76, ekunKharc = kendraHissa + rajyaHissa;
-                          const kamacheDivs = 2, shijvunDivs = 2, pudheManagi = 290.2;
-                          const pat = 100, labharthi = 92;
+                          const shijvunTandul = riceData.used;
+                          const usnaParatTandul = 0;
+                          const shillakTandul = Math.max(0, totalTandul - shijvunTandul - usnaParatTandul);
+
+                          const labharthi = riceData.beneficiary;
+                          const kamacheDivs = riceData.cookedDays;
+                          const shijvunDivs = riceData.cookedDays;
+
+                          const kendraRate = 1.56;
+                          const rajyaRate = 1.03;
+                          const kendraHissa = parseFloat((labharthi * kendraRate).toFixed(2));
+                          const rajyaHissa = parseFloat((labharthi * rajyaRate).toFixed(2));
+                          const ekunKharc = kendraHissa + rajyaHissa;
+
+                          const pudheManagi = Math.max(0, parseFloat(((labharthi > 0 ? labharthi : 45) * 0.1 * 20 - shillakTandul).toFixed(1)));
+                          const pat = 45;
 
                           return (
                             <div className="space-y-2">
-                              {/* Title */}
                               <div className="text-center space-y-0.5 mb-2">
-                                <p className="text-[9px] font-bold text-slate-700">पंचायत समिती _______________ ( शिक्षण विभाग _______________ )</p>
+                                <p className="text-[9px] font-bold text-slate-700">पंचायत समिती {profile?.taluka || "तासगाव"} ( शिक्षण विभाग {profile?.district || "सांगली"} )</p>
                                 <h2 className="text-[11px] font-black text-slate-900 tracking-tight uppercase">प्रधानमंत्री पोषण शक्ती निर्माण योजना तांदूळ शिजवून दिल्याचा अहवाल (सन {year}/{String(year+1).slice(-2)})</h2>
                               </div>
 
-                              {/* School Info */}
                               <div className="text-[9px] font-bold border border-black grid grid-cols-2 gap-0 divide-x divide-black">
                                 <div className="p-1 space-y-0.5">
                                   <div>शाळेचे नाव : <span className="font-black">{schoolName}</span></div>
                                   <div>इयत्ता गट : <span className="font-black">प्राथमिक ( इयत्ता १ ते ५ )</span></div>
-                                  <div>केंद्र : <span className="font-black">{profile?.kendra || "NARSINGPUR"}</span></div>
+                                  <div>केंद्र : <span className="font-black">{profile?.kendra || profile?.center || "NARSINGPUR"}</span></div>
                                 </div>
                                 <div className="p-1 space-y-0.5">
-                                  <div>बीट : <span className="font-black">{profile?.kendra || "NARSINGPUR"}</span></div>
+                                  <div>बीट : <span className="font-black">{profile?.kendra || profile?.center || "NARSINGPUR"}</span></div>
                                   <div>ता. : <span className="font-black">{profile?.taluka || "तासगाव"}</span></div>
                                   <div>जि. : <span className="font-black">{profile?.district || "सांगली"}</span></div>
                                 </div>
                               </div>
 
-                              {/* Main 17-Column Table */}
                               <div className="overflow-x-auto">
                                 <table className="w-full border-collapse border border-black text-center text-[7.5px] font-medium">
                                   <thead>
-                                    {/* Row 1 - Merged headers */}
                                     <tr className="bg-slate-100 text-slate-900 font-bold border-b border-black text-[7px]">
                                       <th className="border-r border-black p-0.5" rowSpan={2}>अ.न.<br/><span className="font-normal">1</span></th>
                                       <th className="border-r border-black p-0.5" rowSpan={2}>शाळेचे नाव<br/><span className="font-normal">2</span></th>
@@ -9020,17 +9276,16 @@ const handleDemandReportPdfDownload = async () => {
                                     </tr>
                                   </thead>
                                   <tbody>
-                                    {/* Data Row */}
                                     <tr className="border-b border-black hover:bg-amber-50/20 font-semibold">
                                       <td className="border-r border-black p-0.5 font-black">1</td>
                                       <td className="border-r border-black p-0.5 text-left font-bold text-[7px] leading-tight">{schoolName}</td>
                                       <td className="border-r border-black p-0.5 font-black">{pat}</td>
                                       <td className="border-r border-black p-0.5 font-black">{labharthi}</td>
-                                      <td className="border-r border-black p-0.5">{prevTandul}</td>
+                                      <td className="border-r border-black p-0.5">{prevTandul.toFixed(1)}</td>
                                       <td className="border-r border-black p-0.5">{recTandul || ""}</td>
                                       <td className="border-r border-black p-0.5">{usnaTandul || ""}</td>
-                                      <td className="border-r border-black p-0.5 font-black">{totalTandul}</td>
-                                      <td className="border-r border-black p-0.5 font-black">{shijvunTandul}</td>
+                                      <td className="border-r border-black p-0.5 font-black">{totalTandul.toFixed(1)}</td>
+                                      <td className="border-r border-black p-0.5 font-black">{shijvunTandul.toFixed(1)}</td>
                                       <td className="border-r border-black p-0.5">{usnaParatTandul || ""}</td>
                                       <td className="border-r border-black p-0.5 font-black text-red-700">{shillakTandul.toFixed(1)}</td>
                                       <td className="border-r border-black p-0.5">{kendraHissa.toFixed(2)}</td>
@@ -9040,16 +9295,15 @@ const handleDemandReportPdfDownload = async () => {
                                       <td className="border-r border-black p-0.5">{shijvunDivs}</td>
                                       <td className="border-r border-black p-0.5 font-black">{pudheManagi}</td>
                                     </tr>
-                                    {/* Ekun Row */}
                                     <tr className="border-b border-black bg-slate-100 font-black text-[8px]">
                                       <td className="border-r border-black p-0.5 text-left font-black" colSpan={2}>एकूण</td>
                                       <td className="border-r border-black p-0.5">{pat}</td>
                                       <td className="border-r border-black p-0.5">{labharthi}</td>
-                                      <td className="border-r border-black p-0.5">{prevTandul}</td>
+                                      <td className="border-r border-black p-0.5">{prevTandul.toFixed(1)}</td>
                                       <td className="border-r border-black p-0.5">{recTandul || ""}</td>
                                       <td className="border-r border-black p-0.5">{usnaTandul || ""}</td>
-                                      <td className="border-r border-black p-0.5">{totalTandul}</td>
-                                      <td className="border-r border-black p-0.5">{shijvunTandul}</td>
+                                      <td className="border-r border-black p-0.5">{totalTandul.toFixed(1)}</td>
+                                      <td className="border-r border-black p-0.5">{shijvunTandul.toFixed(1)}</td>
                                       <td className="border-r border-black p-0.5">{usnaParatTandul || ""}</td>
                                       <td className="border-r border-black p-0.5 text-red-700">{shillakTandul.toFixed(1)}</td>
                                       <td className="border-r border-black p-0.5">{kendraHissa.toFixed(2)}</td>
@@ -9063,16 +9317,12 @@ const handleDemandReportPdfDownload = async () => {
                                 </table>
                               </div>
 
-                              {/* Akshari Amount */}
                               <div className="text-[9px] font-bold border border-black p-1 bg-amber-50/40">
-                                अक्षरी रु. : <span className="font-black">दोनशे अडतीस रुपये अठ्ठावीस पैसे फक्त</span>
+                                अक्षरी रु. : <span className="font-black">{numberToMarathiWords(ekunKharc)}</span>
                               </div>
 
-                              {/* Signature */}
                               <div className="flex items-end justify-between pt-4 text-[9px] font-bold">
-                                <div>
-                                  <p>Date : __________</p>
-                                </div>
+                                <div><p>Date : {new Date().toLocaleDateString('en-GB')}</p></div>
                                 <div className="text-center">
                                   <p className="font-black">मुख्याध्यापक</p>
                                   <p className="text-[7px] text-slate-400 mt-0.5">{schoolName}</p>
@@ -9085,37 +9335,61 @@ const handleDemandReportPdfDownload = async () => {
 
                         {/* === MASIK SATHA NODVAHI (प्रपत्र ब) — EXACT PDF FORMAT === */}
                         {monthlyMdmReportType === "masik_goshwara" && (() => {
+                          const monthName = monthlyMdmReportMonth.split(' ')[0];
+                          const monthMap: { [k: string]: number } = {
+                            "जानेवारी": 1, "फेब्रुवारी": 2, "मार्च": 3, "एप्रिल": 4,
+                            "मे": 5, "जून": 6, "जुलै": 7, "ऑगस्ट": 8,
+                            "सप्टेंबर": 9, "ऑक्टोबर": 10, "नोव्हेंबर": 11, "डिसेंबर": 12
+                          };
+                          const engMonthNames = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                          const monthNum = monthMap[monthName] || 6;
+                          const year = monthNum >= 6 ? 2026 : 2027;
                           const schoolName = profile?.schoolName || "Z P SCHOOL DHONDEWADI PED";
 
-                          // Exact data from PDF
-                          const items = [
-                            { sr: 1,  name: "तांदूळ",                          prev: 10,   rec: 0,    used: 10.2,  demand: 0 },
-                            { sr: 2,  name: "मूगडाळ",                          prev: 0,    rec: 0,    used: 0.04,  demand: 0 },
-                            { sr: 3,  name: "तूरडाळ",                          prev: 0,    rec: 0,    used: 0,     demand: 0 },
-                            { sr: 4,  name: "मसूरडाळ",                         prev: 0,    rec: 0,    used: 0,     demand: 0 },
-                            { sr: 5,  name: "मटकी",                            prev: 43,   rec: 0,    used: 0,     demand: 0 },
-                            { sr: 6,  name: "अख्खा मूग",                       prev: 9867, rec: 0,    used: 0,     demand: 0 },
-                            { sr: 7,  name: "चवळी",                            prev: 0,    rec: 0,    used: 0,     demand: 0 },
-                            { sr: 8,  name: "हरभरा",                           prev: 0,    rec: 0,    used: 0,     demand: 0 },
-                            { sr: 9,  name: "वाटाणा",                          prev: 0,    rec: 0,    used: 1.8,   demand: 0 },
-                            { sr: 10, name: "सोयाबीन वडी",                     prev: 0,    rec: 0,    used: 0,     demand: 0 },
-                            { sr: 11, name: "जिरे",                            prev: 0,    rec: 0,    used: 0.005, demand: 0 },
-                            { sr: 12, name: "मोहरी",                           prev: 0,    rec: 0,    used: 0.009, demand: 0 },
-                            { sr: 13, name: "हळद",                             prev: 0,    rec: 0,    used: 0,     demand: 0 },
-                            { sr: 14, name: "तिखट मसाला/कांदा लसूण मसाला",    prev: 0,    rec: 0,    used: 0.092, demand: 0 },
-                            { sr: 15, name: "मीठ",                             prev: 0,    rec: 0,    used: 0.092, demand: 0 },
-                            { sr: 16, name: "मिरची पावडर",                     prev: 0,    rec: 0,    used: 0,     demand: 0 },
-                            { sr: 17, name: "गरम मसाला",                       prev: 0,    rec: 0,    used: 0,     demand: 0 },
-                            { sr: 18, name: "तेल",                             prev: 0,    rec: 0,    used: 0.46,  demand: 0 },
-                            { sr: 19, name: "गूळ / साखर",                      prev: 0,    rec: 0,    used: 0,     demand: 0 },
-                            { sr: 20, name: "दूध पावडर",                       prev: 0,    rec: 0,    used: 0,     demand: 0 },
-                            { sr: 21, name: "नाचणी सत्त्व",                    prev: 0,    rec: 0,    used: 0,     demand: 0 },
-                            { sr: 22, name: "भाजीपाला",                        prev: 0,    rec: 0,    used: 0,     demand: 0 },
+                          const itemDefs = [
+                            { sr: 1,  key: "Rice", name: "तांदूळ" },
+                            { sr: 2,  key: "Mugdal", name: "मूगडाळ" },
+                            { sr: 3,  key: "Turdal", name: "तूरडाळ" },
+                            { sr: 4,  key: "Masurdal", name: "मसूरडाळ" },
+                            { sr: 5,  key: "Matki", name: "मटकी" },
+                            { sr: 6,  key: "Moong", name: "अख्खा मूग" },
+                            { sr: 7,  key: "Cowpea", name: "चवळी" },
+                            { sr: 8,  key: "Gram", name: "हरभरा" },
+                            { sr: 9,  key: "Pease", name: "वाटाणा" },
+                            { sr: 10, key: "Soyabean Wadi", name: "सोयाबीन वडी" },
+                            { sr: 11, key: "Cumin", name: "जिरे" },
+                            { sr: 12, key: "Mustard", name: "मोहरी" },
+                            { sr: 13, key: "Turmeric", name: "हळद" },
+                            { sr: 14, key: "Onion Garlic Masala", name: "तिखट मसाला/कांदा लसूण मसाला" },
+                            { sr: 15, key: "Salt", name: "मीठ" },
+                            { sr: 16, key: "Chili", name: "मिरची पावडर" },
+                            { sr: 17, key: "Garam Masala", name: "गरम मसाला" },
+                            { sr: 18, key: "Oil", name: "तेल" },
+                            { sr: 19, key: "Sugar", name: "गूळ / साखर" },
+                            { sr: 20, key: "Milk", name: "दूध पावडर" },
+                            { sr: 21, key: "Ragi", name: "नाचणी सत्त्व" },
+                            { sr: 22, key: "Vegetables", name: "भाजीपाला" },
                           ];
+
+                          const items = itemDefs.map(def => {
+                            const prev = getOpeningStock(engMonthNames[monthNum], year.toString(), "1 To 5", def.key);
+                            const rec = getIncomingForItem(def.key, engMonthNames[monthNum], year, "1 To 5");
+                            const used = getUsedForMonth(engMonthNames[monthNum], year.toString(), "1 To 5", def.key);
+                            const demand = Math.max(0, (45 * 0.02 * 20) - (prev + rec - used));
+                            return { sr: def.sr, name: def.name, prev, rec, used, demand: parseFloat(demand.toFixed(2)) };
+                          });
+
+                          const riceData = getStockDataForItem("Rice", engMonthNames[monthNum], year, "1 To 5");
+                          const labharthi = riceData.beneficiary;
+                          const cookedDays = riceData.cookedDays;
+
+                          const rateVal = parseFloat(primaryRate) || 5.45;
+                          const vegCost = parseFloat((labharthi * (rateVal * (parseFloat(vegPercent) || 70) / 100)).toFixed(2));
+                          const fuelCost = parseFloat((labharthi * (rateVal * (parseFloat(fuelPercent) || 30) / 100)).toFixed(2));
+                          const ekunGrant = vegCost + fuelCost;
 
                           return (
                             <div className="space-y-2">
-                              {/* Title — exact PDF text */}
                               <div className="text-center space-y-0.5 mb-2">
                                 <h2 className="text-[12px] font-black text-slate-900 tracking-tight">
                                   प्रधानमंत्री पोषण शक्ती निर्माण योजना : प्रपत्र (ब)
@@ -9123,31 +9397,29 @@ const handleDemandReportPdfDownload = async () => {
                                 <p className="text-[9px] font-bold text-slate-700">शाळेने केंद्रप्रमुखांना दरमहा द्यावयाचा अहवाल ( २ प्रती )</p>
                               </div>
 
-                              {/* School Info Grid — exact PDF layout */}
                               <div className="border border-black text-[9px] font-bold">
                                 <div className="grid grid-cols-3 divide-x divide-black border-b border-black">
                                   <div className="p-1">शाळेचे नाव : <span className="font-black">{schoolName}</span></div>
                                   <div className="p-1">इयत्ता गट : <span className="font-black">प्राथमिक ( इयत्ता १ ते ५ )</span></div>
-                                  <div className="p-1">केंद्र : <span className="font-black">{profile?.kendra || "NARSINGPUR"}</span></div>
+                                  <div className="p-1">केंद्र : <span className="font-black">{profile?.kendra || profile?.center || "NARSINGPUR"}</span></div>
                                 </div>
                                 <div className="grid grid-cols-3 divide-x divide-black border-b border-black">
-                                  <div className="p-1">बीट : <span className="font-black">{profile?.kendra || "NARSINGPUR"}</span></div>
+                                  <div className="p-1">बीट : <span className="font-black">{profile?.kendra || profile?.center || "NARSINGPUR"}</span></div>
                                   <div className="p-1">ता. : <span className="font-black">{profile?.taluka || "तासगाव"}</span></div>
                                   <div className="p-1">जिल्हा : <span className="font-black">{profile?.district || "सांगली"}</span></div>
                                 </div>
                                 <div className="grid grid-cols-3 divide-x divide-black border-b border-black">
                                   <div className="p-1">माहे : <span className="font-black">{monthlyMdmReportMonth}</span></div>
-                                  <div className="p-1">पटसंख्या (१ ते ५) : <span className="font-black">23</span></div>
-                                  <div className="p-1">एकूण लाभार्थी संख्या : <span className="font-black">92</span></div>
+                                  <div className="p-1">पटसंख्या (१ ते ५) : <span className="font-black">45</span></div>
+                                  <div className="p-1">एकूण लाभार्थी संख्या : <span className="font-black">{labharthi}</span></div>
                                 </div>
                                 <div className="grid grid-cols-3 divide-x divide-black">
-                                  <div className="p-1">एकूण कामाचे दिवस : <span className="font-black">2</span></div>
-                                  <div className="p-1">शिजवून दिलेले दिवस : <span className="font-black">2</span></div>
-                                  <div className="p-1">तांदूळ व धान्याधी माल प्राप्त दिनांक : <span className="font-black">24-07-2026</span></div>
+                                  <div className="p-1">एकूण कामाचे दिवस : <span className="font-black">{cookedDays}</span></div>
+                                  <div className="p-1">शिजवून दिलेले दिवस : <span className="font-black">{cookedDays}</span></div>
+                                  <div className="p-1">तांदूळ व धान्याधी माल प्राप्त दिनांक : <span className="font-black">01-{String(monthNum).padStart(2,'0')}-{year}</span></div>
                                 </div>
                               </div>
 
-                              {/* Main Table — 9 Columns exact PDF */}
                               <div className="overflow-x-auto">
                                 <table className="w-full border-collapse border border-black text-center text-[9px] font-medium">
                                   <thead>
@@ -9158,7 +9430,7 @@ const handleDemandReportPdfDownload = async () => {
                                       <th className="border-r border-black p-1 w-[10%]">चालू महिन्यात प्राप्त वस्तू<br/><span className="text-[7px] font-normal">( किलोग्रॅम )</span><br/><span className="font-normal text-[8px]">4</span></th>
                                       <th className="border-r border-black p-1 w-[10%]">एकूण वस्तू<br/><span className="text-[7px] font-normal">( 3 + 4 ) ( किलोग्रॅम )</span><br/><span className="font-normal text-[8px]">5</span></th>
                                       <th className="border-r border-black p-1 w-[13%]">अन्न शिजवण्यासाठी वापरलेल्या वस्तू<br/><span className="text-[7px] font-normal">( किलोग्रॅम )</span><br/><span className="font-normal text-[8px]">6</span></th>
-                                      <th className="border-r border-black p-1 w-[10%]">शिल्लक वस्तू<br/><span className="text-[7px] font-normal">( 5 + 6 ) ( किलोग्रॅम )</span><br/><span className="font-normal text-[8px]">7</span></th>
+                                      <th className="border-r border-black p-1 w-[10%]">शिल्लक वस्तू<br/><span className="text-[7px] font-normal">( 5 - 6 ) ( किलोग्रॅम )</span><br/><span className="font-normal text-[8px]">7</span></th>
                                       <th className="border-r border-black p-1 w-[10%]">पुढील महिन्यासाठी मागणी<br/><span className="text-[7px] font-normal">( किलोग्रॅम )</span><br/><span className="font-normal text-[8px]">8</span></th>
                                       <th className="border-r border-black p-1 w-[8%]">शेरा<br/><span className="font-normal text-[8px]">9</span></th>
                                     </tr>
@@ -9171,12 +9443,12 @@ const handleDemandReportPdfDownload = async () => {
                                         <tr key={row.sr} className={`border-b border-black h-5 ${row.sr % 2 === 0 ? "bg-slate-50/30" : "bg-white"} hover:bg-amber-50/20`}>
                                           <td className="border-r border-black py-0.5 text-[9px]">{row.sr}</td>
                                           <td className="border-r border-black py-0.5 text-left font-bold text-slate-900 pl-1 text-[9px]">{row.name}</td>
-                                          <td className="border-r border-black py-0.5 font-semibold">{row.prev !== 0 ? row.prev : ""}</td>
-                                          <td className="border-r border-black py-0.5">{row.rec !== 0 ? row.rec : ""}</td>
-                                          <td className="border-r border-black py-0.5 font-bold">{total !== 0 ? total : ""}</td>
-                                          <td className="border-r border-black py-0.5 font-bold text-slate-900">{row.used !== 0 ? row.used : ""}</td>
-                                          <td className={`border-r border-black py-0.5 font-extrabold ${bal < 0 ? "text-red-600" : "text-slate-900"}`}>{bal !== 0 ? bal.toFixed(bal % 1 !== 0 ? 3 : 0) : ""}</td>
-                                          <td className="border-r border-black py-0.5">{row.demand !== 0 ? row.demand : ""}</td>
+                                          <td className="border-r border-black py-0.5 font-semibold">{row.prev !== 0 ? row.prev.toFixed(3) : ""}</td>
+                                          <td className="border-r border-black py-0.5">{row.rec !== 0 ? row.rec.toFixed(3) : ""}</td>
+                                          <td className="border-r border-black py-0.5 font-bold">{total !== 0 ? total.toFixed(3) : ""}</td>
+                                          <td className="border-r border-black py-0.5 font-bold text-slate-900">{row.used !== 0 ? row.used.toFixed(3) : ""}</td>
+                                          <td className={`border-r border-black py-0.5 font-extrabold ${bal < 0 ? "text-red-600" : "text-slate-900"}`}>{bal !== 0 ? bal.toFixed(3) : ""}</td>
+                                          <td className="border-r border-black py-0.5">{row.demand !== 0 ? row.demand.toFixed(2) : ""}</td>
                                           <td className="border-r border-black py-0.5"></td>
                                         </tr>
                                       );
@@ -9185,16 +9457,12 @@ const handleDemandReportPdfDownload = async () => {
                                 </table>
                               </div>
 
-                              {/* Bottom Note — exact PDF text */}
                               <p className="text-[8.5px] font-semibold border border-slate-400 bg-amber-50/40 p-1 text-slate-800">
                                 मागणी नोंदवताना शाळेकडे वीस दिवसांचा साठा शिल्लक राहील याची दक्षता घेवून मागणी नोंदवावी, जास्त साठा करून धान्य खराब होणार नाही याची दक्षता घ्यावी.
                               </p>
 
-                              {/* Bottom Summary — exact PDF layout */}
                               <div className="border border-slate-400 divide-y divide-slate-400 bg-amber-50/20 text-slate-900 text-[9px] font-bold">
                                 <div className="grid grid-cols-3 divide-x divide-slate-400 p-1 text-center">
-                                  <div>महिन्यातील ताटांची संख्या : <strong className="font-black">92</strong></div>
-                                  <div>भाजीपाला (0.98 पै.) : <strong className="font-black">₹90.16</strong></div>
                                   <div></div>
                                 </div>
                                 <div className="grid grid-cols-3 divide-x divide-slate-400 p-1 text-center">
