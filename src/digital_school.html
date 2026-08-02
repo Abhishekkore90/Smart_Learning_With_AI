@@ -1,0 +1,1342 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <style type="text/css">
+      :root {
+        --toastify-color-light: #fff;
+        --toastify-color-dark: #121212;
+        --toastify-color-info: #3498db;
+        --toastify-color-success: #07bc0c;
+        --toastify-color-warning: #f1c40f;
+        --toastify-color-error: hsl(6, 78%, 57%);
+        --toastify-color-transparent: rgba(255, 255, 255, 0.7);
+        --toastify-icon-color-info: var(--toastify-color-info);
+        --toastify-icon-color-success: var(--toastify-color-success);
+        --toastify-icon-color-warning: var(--toastify-color-warning);
+        --toastify-icon-color-error: var(--toastify-color-error);
+        --toastify-container-width: fit-content;
+        --toastify-toast-width: 320px;
+        --toastify-toast-offset: 16px;
+        --toastify-toast-top: max(
+          var(--toastify-toast-offset),
+          env(safe-area-inset-top)
+        );
+        --toastify-toast-right: max(
+          var(--toastify-toast-offset),
+          env(safe-area-inset-right)
+        );
+        --toastify-toast-left: max(
+          var(--toastify-toast-offset),
+          env(safe-area-inset-left)
+        );
+        --toastify-toast-bottom: max(
+          var(--toastify-toast-offset),
+          env(safe-area-inset-bottom)
+        );
+        --toastify-toast-background: #fff;
+        --toastify-toast-padding: 14px;
+        --toastify-toast-min-height: 64px;
+        --toastify-toast-max-height: 800px;
+        --toastify-toast-bd-radius: 6px;
+        --toastify-toast-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+        --toastify-font-family: sans-serif;
+        --toastify-z-index: 9999;
+        --toastify-text-color-light: #757575;
+        --toastify-text-color-dark: #fff;
+        --toastify-text-color-info: #fff;
+        --toastify-text-color-success: #fff;
+        --toastify-text-color-warning: #fff;
+        --toastify-text-color-error: #fff;
+        --toastify-spinner-color: #616161;
+        --toastify-spinner-color-empty-area: #e0e0e0;
+        --toastify-color-progress-light: linear-gradient(
+          to right,
+          #4cd964,
+          #5ac8fa,
+          #007aff,
+          #34aadc,
+          #5856d6,
+          #ff2d55
+        );
+        --toastify-color-progress-dark: #bb86fc;
+        --toastify-color-progress-info: var(--toastify-color-info);
+        --toastify-color-progress-success: var(--toastify-color-success);
+        --toastify-color-progress-warning: var(--toastify-color-warning);
+        --toastify-color-progress-error: var(--toastify-color-error);
+        --toastify-color-progress-bgo: 0.2;
+      }
+      .Toastify__toast-container {
+        z-index: var(--toastify-z-index);
+        -webkit-transform: translate3d(0, 0, var(--toastify-z-index));
+        position: fixed;
+        width: var(--toastify-container-width);
+        box-sizing: border-box;
+        color: #fff;
+        display: flex;
+        flex-direction: column;
+      }
+      .Toastify__toast-container--top-left {
+        top: var(--toastify-toast-top);
+        left: var(--toastify-toast-left);
+      }
+      .Toastify__toast-container--top-center {
+        top: var(--toastify-toast-top);
+        left: 50%;
+        transform: translate(-50%);
+        align-items: center;
+      }
+      .Toastify__toast-container--top-right {
+        top: var(--toastify-toast-top);
+        right: var(--toastify-toast-right);
+        align-items: end;
+      }
+      .Toastify__toast-container--bottom-left {
+        bottom: var(--toastify-toast-bottom);
+        left: var(--toastify-toast-left);
+      }
+      .Toastify__toast-container--bottom-center {
+        bottom: var(--toastify-toast-bottom);
+        left: 50%;
+        transform: translate(-50%);
+        align-items: center;
+      }
+      .Toastify__toast-container--bottom-right {
+        bottom: var(--toastify-toast-bottom);
+        right: var(--toastify-toast-right);
+        align-items: end;
+      }
+      @media only screen and (max-width: 480px) {
+        .Toastify__toast-container {
+          width: 100vw;
+          left: env(safe-area-inset-left);
+          margin: 0;
+        }
+        .Toastify__toast-container--top-left,
+        .Toastify__toast-container--top-center,
+        .Toastify__toast-container--top-right {
+          top: env(safe-area-inset-top);
+          transform: translate(0);
+        }
+        .Toastify__toast-container--bottom-left,
+        .Toastify__toast-container--bottom-center,
+        .Toastify__toast-container--bottom-right {
+          bottom: env(safe-area-inset-bottom);
+          transform: translate(0);
+        }
+        .Toastify__toast-container--rtl {
+          right: env(safe-area-inset-right);
+          left: initial;
+        }
+        .Toastify__toast {
+          --toastify-toast-width: 100%;
+          margin-bottom: 0;
+          border-radius: 0;
+        }
+      }
+      .Toastify__toast {
+        --y: 0;
+        position: relative;
+        touch-action: none;
+        width: var(--toastify-toast-width);
+        min-height: var(--toastify-toast-min-height);
+        box-sizing: border-box;
+        margin-bottom: 1rem;
+        padding: var(--toastify-toast-padding);
+        border-radius: var(--toastify-toast-bd-radius);
+        box-shadow: var(--toastify-toast-shadow);
+        max-height: var(--toastify-toast-max-height);
+        font-family: var(--toastify-font-family);
+        z-index: 0;
+        display: flex;
+        flex: 1 auto;
+        align-items: center;
+        word-break: break-word;
+      }
+      .Toastify__toast-container[data-stacked="true"] {
+        width: var(--toastify-toast-width);
+      }
+      .Toastify__toast--stacked {
+        position: absolute;
+        width: 100%;
+        transform: translate3d(0, var(--y), 0) scale(var(--s));
+        transition: transform 0.3s;
+      }
+      .Toastify__toast--stacked[data-collapsed] .Toastify__toast-body,
+      .Toastify__toast--stacked[data-collapsed] .Toastify__close-button {
+        transition: opacity 0.1s;
+      }
+      .Toastify__toast--stacked[data-collapsed="false"] {
+        overflow: visible;
+      }
+      .Toastify__toast--stacked[data-collapsed="true"]:not(:last-child) > * {
+        opacity: 0;
+      }
+      .Toastify__toast--stacked:after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: calc(var(--g) * 1px);
+        bottom: 100%;
+      }
+      .Toastify__toast--stacked[data-pos="top"] {
+        top: 0;
+      }
+      .Toastify__toast--stacked[data-pos="bot"] {
+        bottom: 0;
+      }
+      .Toastify__toast--stacked[data-pos="bot"].Toastify__toast--stacked:before {
+        transform-origin: top;
+      }
+      .Toastify__toast--stacked[data-pos="top"].Toastify__toast--stacked:before {
+        transform-origin: bottom;
+      }
+      .Toastify__toast--stacked:before {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 100%;
+        transform: scaleY(3);
+        z-index: -1;
+      }
+      .Toastify__toast--rtl {
+        direction: rtl;
+      }
+      .Toastify__toast--close-on-click {
+        cursor: pointer;
+      }
+      .Toastify__toast-icon {
+        margin-inline-end: 10px;
+        width: 22px;
+        flex-shrink: 0;
+        display: flex;
+      }
+      .Toastify--animate {
+        animation-fill-mode: both;
+        animation-duration: 0.5s;
+      }
+      .Toastify--animate-icon {
+        animation-fill-mode: both;
+        animation-duration: 0.3s;
+      }
+      .Toastify__toast-theme--dark {
+        background: var(--toastify-color-dark);
+        color: var(--toastify-text-color-dark);
+      }
+      .Toastify__toast-theme--light,
+      .Toastify__toast-theme--colored.Toastify__toast--default {
+        background: var(--toastify-color-light);
+        color: var(--toastify-text-color-light);
+      }
+      .Toastify__toast-theme--colored.Toastify__toast--info {
+        color: var(--toastify-text-color-info);
+        background: var(--toastify-color-info);
+      }
+      .Toastify__toast-theme--colored.Toastify__toast--success {
+        color: var(--toastify-text-color-success);
+        background: var(--toastify-color-success);
+      }
+      .Toastify__toast-theme--colored.Toastify__toast--warning {
+        color: var(--toastify-text-color-warning);
+        background: var(--toastify-color-warning);
+      }
+      .Toastify__toast-theme--colored.Toastify__toast--error {
+        color: var(--toastify-text-color-error);
+        background: var(--toastify-color-error);
+      }
+      .Toastify__progress-bar-theme--light {
+        background: var(--toastify-color-progress-light);
+      }
+      .Toastify__progress-bar-theme--dark {
+        background: var(--toastify-color-progress-dark);
+      }
+      .Toastify__progress-bar--info {
+        background: var(--toastify-color-progress-info);
+      }
+      .Toastify__progress-bar--success {
+        background: var(--toastify-color-progress-success);
+      }
+      .Toastify__progress-bar--warning {
+        background: var(--toastify-color-progress-warning);
+      }
+      .Toastify__progress-bar--error {
+        background: var(--toastify-color-progress-error);
+      }
+      .Toastify__progress-bar-theme--colored.Toastify__progress-bar--info,
+      .Toastify__progress-bar-theme--colored.Toastify__progress-bar--success,
+      .Toastify__progress-bar-theme--colored.Toastify__progress-bar--warning,
+      .Toastify__progress-bar-theme--colored.Toastify__progress-bar--error {
+        background: var(--toastify-color-transparent);
+      }
+      .Toastify__close-button {
+        color: #fff;
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        background: transparent;
+        outline: none;
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        opacity: 0.7;
+        transition: 0.3s ease;
+        z-index: 1;
+      }
+      .Toastify__toast--rtl .Toastify__close-button {
+        left: 6px;
+        right: unset;
+      }
+      .Toastify__close-button--light {
+        color: #000;
+        opacity: 0.3;
+      }
+      .Toastify__close-button > svg {
+        fill: currentColor;
+        height: 16px;
+        width: 14px;
+      }
+      .Toastify__close-button:hover,
+      .Toastify__close-button:focus {
+        opacity: 1;
+      }
+      @keyframes Toastify__trackProgress {
+        0% {
+          transform: scaleX(1);
+        }
+        to {
+          transform: scaleX(0);
+        }
+      }
+      .Toastify__progress-bar {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+        opacity: 0.7;
+        transform-origin: left;
+      }
+      .Toastify__progress-bar--animated {
+        animation: Toastify__trackProgress linear 1 forwards;
+      }
+      .Toastify__progress-bar--controlled {
+        transition: transform 0.2s;
+      }
+      .Toastify__progress-bar--rtl {
+        right: 0;
+        left: initial;
+        transform-origin: right;
+        border-bottom-left-radius: initial;
+      }
+      .Toastify__progress-bar--wrp {
+        position: absolute;
+        overflow: hidden;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 5px;
+        border-bottom-left-radius: var(--toastify-toast-bd-radius);
+        border-bottom-right-radius: var(--toastify-toast-bd-radius);
+      }
+      .Toastify__progress-bar--wrp[data-hidden="true"] {
+        opacity: 0;
+      }
+      .Toastify__progress-bar--bg {
+        opacity: var(--toastify-color-progress-bgo);
+        width: 100%;
+        height: 100%;
+      }
+      .Toastify__spinner {
+        width: 20px;
+        height: 20px;
+        box-sizing: border-box;
+        border: 2px solid;
+        border-radius: 100%;
+        border-color: var(--toastify-spinner-color-empty-area);
+        border-right-color: var(--toastify-spinner-color);
+        animation: Toastify__spin 0.65s linear infinite;
+      }
+      @keyframes Toastify__bounceInRight {
+        0%,
+        60%,
+        75%,
+        90%,
+        to {
+          animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+        }
+        0% {
+          opacity: 0;
+          transform: translate3d(3000px, 0, 0);
+        }
+        60% {
+          opacity: 1;
+          transform: translate3d(-25px, 0, 0);
+        }
+        75% {
+          transform: translate3d(10px, 0, 0);
+        }
+        90% {
+          transform: translate3d(-5px, 0, 0);
+        }
+        to {
+          transform: none;
+        }
+      }
+      @keyframes Toastify__bounceOutRight {
+        20% {
+          opacity: 1;
+          transform: translate3d(-20px, var(--y), 0);
+        }
+        to {
+          opacity: 0;
+          transform: translate3d(2000px, var(--y), 0);
+        }
+      }
+      @keyframes Toastify__bounceInLeft {
+        0%,
+        60%,
+        75%,
+        90%,
+        to {
+          animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+        }
+        0% {
+          opacity: 0;
+          transform: translate3d(-3000px, 0, 0);
+        }
+        60% {
+          opacity: 1;
+          transform: translate3d(25px, 0, 0);
+        }
+        75% {
+          transform: translate3d(-10px, 0, 0);
+        }
+        90% {
+          transform: translate3d(5px, 0, 0);
+        }
+        to {
+          transform: none;
+        }
+      }
+      @keyframes Toastify__bounceOutLeft {
+        20% {
+          opacity: 1;
+          transform: translate3d(20px, var(--y), 0);
+        }
+        to {
+          opacity: 0;
+          transform: translate3d(-2000px, var(--y), 0);
+        }
+      }
+      @keyframes Toastify__bounceInUp {
+        0%,
+        60%,
+        75%,
+        90%,
+        to {
+          animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+        }
+        0% {
+          opacity: 0;
+          transform: translate3d(0, 3000px, 0);
+        }
+        60% {
+          opacity: 1;
+          transform: translate3d(0, -20px, 0);
+        }
+        75% {
+          transform: translate3d(0, 10px, 0);
+        }
+        90% {
+          transform: translate3d(0, -5px, 0);
+        }
+        to {
+          transform: translateZ(0);
+        }
+      }
+      @keyframes Toastify__bounceOutUp {
+        20% {
+          transform: translate3d(0, calc(var(--y) - 10px), 0);
+        }
+        40%,
+        45% {
+          opacity: 1;
+          transform: translate3d(0, calc(var(--y) + 20px), 0);
+        }
+        to {
+          opacity: 0;
+          transform: translate3d(0, -2000px, 0);
+        }
+      }
+      @keyframes Toastify__bounceInDown {
+        0%,
+        60%,
+        75%,
+        90%,
+        to {
+          animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+        }
+        0% {
+          opacity: 0;
+          transform: translate3d(0, -3000px, 0);
+        }
+        60% {
+          opacity: 1;
+          transform: translate3d(0, 25px, 0);
+        }
+        75% {
+          transform: translate3d(0, -10px, 0);
+        }
+        90% {
+          transform: translate3d(0, 5px, 0);
+        }
+        to {
+          transform: none;
+        }
+      }
+      @keyframes Toastify__bounceOutDown {
+        20% {
+          transform: translate3d(0, calc(var(--y) - 10px), 0);
+        }
+        40%,
+        45% {
+          opacity: 1;
+          transform: translate3d(0, calc(var(--y) + 20px), 0);
+        }
+        to {
+          opacity: 0;
+          transform: translate3d(0, 2000px, 0);
+        }
+      }
+      .Toastify__bounce-enter--top-left,
+      .Toastify__bounce-enter--bottom-left {
+        animation-name: Toastify__bounceInLeft;
+      }
+      .Toastify__bounce-enter--top-right,
+      .Toastify__bounce-enter--bottom-right {
+        animation-name: Toastify__bounceInRight;
+      }
+      .Toastify__bounce-enter--top-center {
+        animation-name: Toastify__bounceInDown;
+      }
+      .Toastify__bounce-enter--bottom-center {
+        animation-name: Toastify__bounceInUp;
+      }
+      .Toastify__bounce-exit--top-left,
+      .Toastify__bounce-exit--bottom-left {
+        animation-name: Toastify__bounceOutLeft;
+      }
+      .Toastify__bounce-exit--top-right,
+      .Toastify__bounce-exit--bottom-right {
+        animation-name: Toastify__bounceOutRight;
+      }
+      .Toastify__bounce-exit--top-center {
+        animation-name: Toastify__bounceOutUp;
+      }
+      .Toastify__bounce-exit--bottom-center {
+        animation-name: Toastify__bounceOutDown;
+      }
+      @keyframes Toastify__zoomIn {
+        0% {
+          opacity: 0;
+          transform: scale3d(0.3, 0.3, 0.3);
+        }
+        50% {
+          opacity: 1;
+        }
+      }
+      @keyframes Toastify__zoomOut {
+        0% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0;
+          transform: translate3d(0, var(--y), 0) scale3d(0.3, 0.3, 0.3);
+        }
+        to {
+          opacity: 0;
+        }
+      }
+      .Toastify__zoom-enter {
+        animation-name: Toastify__zoomIn;
+      }
+      .Toastify__zoom-exit {
+        animation-name: Toastify__zoomOut;
+      }
+      @keyframes Toastify__flipIn {
+        0% {
+          transform: perspective(400px) rotateX(90deg);
+          animation-timing-function: ease-in;
+          opacity: 0;
+        }
+        40% {
+          transform: perspective(400px) rotateX(-20deg);
+          animation-timing-function: ease-in;
+        }
+        60% {
+          transform: perspective(400px) rotateX(10deg);
+          opacity: 1;
+        }
+        80% {
+          transform: perspective(400px) rotateX(-5deg);
+        }
+        to {
+          transform: perspective(400px);
+        }
+      }
+      @keyframes Toastify__flipOut {
+        0% {
+          transform: translate3d(0, var(--y), 0) perspective(400px);
+        }
+        30% {
+          transform: translate3d(0, var(--y), 0) perspective(400px)
+            rotateX(-20deg);
+          opacity: 1;
+        }
+        to {
+          transform: translate3d(0, var(--y), 0) perspective(400px)
+            rotateX(90deg);
+          opacity: 0;
+        }
+      }
+      .Toastify__flip-enter {
+        animation-name: Toastify__flipIn;
+      }
+      .Toastify__flip-exit {
+        animation-name: Toastify__flipOut;
+      }
+      @keyframes Toastify__slideInRight {
+        0% {
+          transform: translate3d(110%, 0, 0);
+          visibility: visible;
+        }
+        to {
+          transform: translate3d(0, var(--y), 0);
+        }
+      }
+      @keyframes Toastify__slideInLeft {
+        0% {
+          transform: translate3d(-110%, 0, 0);
+          visibility: visible;
+        }
+        to {
+          transform: translate3d(0, var(--y), 0);
+        }
+      }
+      @keyframes Toastify__slideInUp {
+        0% {
+          transform: translate3d(0, 110%, 0);
+          visibility: visible;
+        }
+        to {
+          transform: translate3d(0, var(--y), 0);
+        }
+      }
+      @keyframes Toastify__slideInDown {
+        0% {
+          transform: translate3d(0, -110%, 0);
+          visibility: visible;
+        }
+        to {
+          transform: translate3d(0, var(--y), 0);
+        }
+      }
+      @keyframes Toastify__slideOutRight {
+        0% {
+          transform: translate3d(0, var(--y), 0);
+        }
+        to {
+          visibility: hidden;
+          transform: translate3d(110%, var(--y), 0);
+        }
+      }
+      @keyframes Toastify__slideOutLeft {
+        0% {
+          transform: translate3d(0, var(--y), 0);
+        }
+        to {
+          visibility: hidden;
+          transform: translate3d(-110%, var(--y), 0);
+        }
+      }
+      @keyframes Toastify__slideOutDown {
+        0% {
+          transform: translate3d(0, var(--y), 0);
+        }
+        to {
+          visibility: hidden;
+          transform: translate3d(0, 500px, 0);
+        }
+      }
+      @keyframes Toastify__slideOutUp {
+        0% {
+          transform: translate3d(0, var(--y), 0);
+        }
+        to {
+          visibility: hidden;
+          transform: translate3d(0, -500px, 0);
+        }
+      }
+      .Toastify__slide-enter--top-left,
+      .Toastify__slide-enter--bottom-left {
+        animation-name: Toastify__slideInLeft;
+      }
+      .Toastify__slide-enter--top-right,
+      .Toastify__slide-enter--bottom-right {
+        animation-name: Toastify__slideInRight;
+      }
+      .Toastify__slide-enter--top-center {
+        animation-name: Toastify__slideInDown;
+      }
+      .Toastify__slide-enter--bottom-center {
+        animation-name: Toastify__slideInUp;
+      }
+      .Toastify__slide-exit--top-left,
+      .Toastify__slide-exit--bottom-left {
+        animation-name: Toastify__slideOutLeft;
+        animation-timing-function: ease-in;
+        animation-duration: 0.3s;
+      }
+      .Toastify__slide-exit--top-right,
+      .Toastify__slide-exit--bottom-right {
+        animation-name: Toastify__slideOutRight;
+        animation-timing-function: ease-in;
+        animation-duration: 0.3s;
+      }
+      .Toastify__slide-exit--top-center {
+        animation-name: Toastify__slideOutUp;
+        animation-timing-function: ease-in;
+        animation-duration: 0.3s;
+      }
+      .Toastify__slide-exit--bottom-center {
+        animation-name: Toastify__slideOutDown;
+        animation-timing-function: ease-in;
+        animation-duration: 0.3s;
+      }
+      @keyframes Toastify__spin {
+        0% {
+          transform: rotate(0);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+    <meta charset="utf-8" />
+    <link rel="icon" href="../src/assets/images/e-guruji-logo.png" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="Digital School Software streamlines school operations with features like automated fee management, customizable report cards, and comprehensive student profiles. It offers real-time attendance tracking, automated payroll processing, and efficient exam management. Additionally, the software includes accounts management for financial reporting, inventory tracking, and customizable alerts to enhance communication with parents and students, ultimately improving operational efficiency and the educational experience"
+    />
+    <title>Digital School Software</title>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script
+      src="https://cdn.razorpay.com/static/cx/razorpay-risk-detection/bundle.js"
+      async=""
+    ></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC"
+      crossorigin="anonymous"
+    />
+    <script defer="defer" src="/static/js/main.c6ea35e7.js"></script>
+    <link href="/static/css/main.b3c6d4a2.css" rel="stylesheet" />
+    <style data-emotion="css" data-s=""></style>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root">
+      <div
+        class="Navbar fixed-top"
+        style="
+          background-color: rgb(0, 77, 153);
+          padding: 10px 20px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+        "
+      >
+        <div class="leftSide" style="display: flex; align-items: center">
+          <img
+            class="rounded-circle"
+            src="/static/media/e-guruji-logo.cf5cf5a3f241d59ffccd.png"
+            alt="School Logo"
+            style="height: 40px; width: 40px; margin-right: 10px"
+          /><span
+            class="eguruji-heading"
+            style="color: white; font-weight: bold; font-size: 20px"
+            >Digital School</span
+          >
+        </div>
+        <div class="rightSide" style="display: flex; align-items: center"></div>
+        <style>
+            .panel-open {
+            transform: translateX(0) !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
+          }
+
+          .panel-closed {
+            transform: translateX(100%) !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+          }
+          .panel {
+            position: fixed;
+            top: 66px;
+            right: 10px;
+            width: 80px;
+            height: 400px;
+            background-color:rgba(204, 223, 243, 0.8);
+            {/* box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); */}
+            box-shadow: -10px 0px 30px 10px rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 20px 10px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: stretch;
+            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+            transform: translateX(100%);
+            opacity: 0;
+            pointer-events: none; text-align: center;
+          }
+        </style>
+      </div>
+      <div
+        style="
+          position: relative;
+          width: 100%;
+          min-height: 100vh;
+          background: linear-gradient(
+            135deg,
+            rgb(245, 247, 250) 0%,
+            rgb(195, 207, 226) 100%
+          );
+          overflow: auto;
+          padding: 2rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        "
+      >
+        <style>
+          /* Keep all your existing animations */
+          @keyframes fadeIn {
+            from {
+              opacity: 0;
+              transform: translateY(20px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+
+          @keyframes slideDown {
+            from {
+              opacity: 0;
+              transform: translateY(-20px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+
+          @keyframes shake {
+            0%,
+            100% {
+              transform: translateX(0);
+            }
+            25% {
+              transform: translateX(-5px);
+            }
+            75% {
+              transform: translateX(5px);
+            }
+          }
+
+          @keyframes pulse {
+            0% {
+              transform: scale(1);
+            }
+            50% {
+              transform: scale(1.05);
+            }
+            100% {
+              transform: scale(1);
+            }
+          }
+
+          @keyframes floatCircle {
+            0% {
+              transform: translate(0, 0) rotate(0deg);
+            }
+            33% {
+              transform: translate(30px, -50px) rotate(120deg);
+            }
+            66% {
+              transform: translate(-20px, 20px) rotate(240deg);
+            }
+            100% {
+              transform: translate(0, 0) rotate(360deg);
+            }
+          }
+
+          @keyframes rotateSquare {
+            0% {
+              transform: rotate(0deg) scale(1);
+            }
+            50% {
+              transform: rotate(180deg) scale(1.2);
+            }
+            100% {
+              transform: rotate(360deg) scale(1);
+            }
+          }
+
+          /* Add responsive styles */
+          @media (max-width: 768px) {
+            .form-card {
+              width: 95%;
+              padding: 1.5rem;
+              margin: 1rem;
+            }
+
+            .form-row {
+              flex-direction: column;
+            }
+
+            .logo-column,
+            .form-column {
+              width: 100%;
+              min-width: 100%;
+            }
+
+            .school-logo {
+              max-width: 150px;
+            }
+          }
+
+          /* Keep your existing input and button styles */
+          input:focus {
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+          }
+
+          button:hover {
+            background-color: #4338ca;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(79, 70, 229, 0.3);
+          }
+
+          button:active {
+            transform: translateY(0);
+          }
+        </style>
+        <div
+          style="
+            position: fixed;
+            top: 0px;
+            left: 0px;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 0;
+            pointer-events: none;
+          "
+        >
+          <div
+            style="
+              position: absolute;
+              width: 150px;
+              height: 150px;
+              background-color: rgb(139, 92, 246);
+              border-radius: 50%;
+              opacity: 0.15;
+              animation: 20s ease-in-out 0s infinite normal none running
+                floatCircle;
+              top: 10%;
+              left: 18%;
+            "
+          ></div>
+          <div
+            style="
+              position: absolute;
+              width: 100px;
+              height: 100px;
+              background-color: rgb(99, 102, 241);
+              border-radius: 50%;
+              opacity: 0.15;
+              animation: 15s ease-in-out 2s infinite normal none running
+                floatCircle;
+              top: 70%;
+              left: 10%;
+            "
+          ></div>
+          <div
+            style="
+              position: absolute;
+              width: 200px;
+              height: 200px;
+              background-color: rgb(59, 130, 246);
+              border-radius: 50%;
+              opacity: 0.15;
+              animation: 25s ease-in-out 1s infinite normal none running
+                floatCircle;
+              top: 40%;
+              right: 15%;
+            "
+          ></div>
+          <div
+            style="
+              position: absolute;
+              width: 120px;
+              height: 120px;
+              background-color: rgb(124, 58, 237);
+              opacity: 0.15;
+              animation: 18s linear 3s infinite normal none running rotateSquare;
+              top: 20%;
+              right: 5%;
+            "
+          ></div>
+          <div
+            style="
+              position: absolute;
+              width: 80px;
+              height: 80px;
+              background-color: rgb(79, 70, 229);
+              opacity: 0.15;
+              animation: 22s linear 2s infinite normal none running rotateSquare;
+              bottom: 15%;
+              right: 10%;
+            "
+          ></div>
+          <div
+            style="
+              position: absolute;
+              width: 160px;
+              height: 160px;
+              background-color: rgb(37, 99, 235);
+              opacity: 0.15;
+              animation: 20s linear 4s infinite normal none running rotateSquare;
+              top: 60%;
+              left: 5%;
+            "
+          ></div>
+          <div
+            style="
+              position: absolute;
+              width: 160px;
+              height: 160px;
+              background-color: rgb(37, 99, 235);
+              opacity: 0.15;
+              animation: 40s linear 8s infinite normal none running rotateSquare;
+              top: 15%;
+              left: 5%;
+            "
+          ></div>
+          <div
+            style="
+              position: absolute;
+              width: 200px;
+              height: 200px;
+              background-color: rgb(59, 130, 246);
+              border-radius: 50%;
+              opacity: 0.15;
+              animation: 25s ease-in-out 1s infinite normal none running
+                floatCircle;
+              top: 70%;
+              right: 5%;
+            "
+          ></div>
+        </div>
+        <div
+          class="form-card"
+          style="
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: rgba(0, 0, 0, 0.1) 0px 10px 30px;
+            backdrop-filter: blur(10px);
+            padding: 1rem;
+            max-width: 800px;
+            width: 100%;
+            transform: translateY(0px);
+            transition: 0.3s;
+            animation: 0.5s ease-out 0s 1 normal none running fadeIn;
+            margin: 0px auto;
+          "
+        >
+          <h1
+            style="
+              font-size: 2.5rem;
+              font-weight: bold;
+              color: red;
+              margin-bottom: 0.5rem;
+              text-align: center;
+              animation: 0.5s ease-out 0s 1 normal none running slideDown;
+            "
+          >
+            School Login
+          </h1>
+          <div
+            class="form-row"
+            style="
+              display: flex;
+              flex-flow: wrap;
+              margin: 1rem -1rem;
+              align-items: center;
+            "
+          >
+            <div
+              class="logo-column"
+              style="
+                flex: 1 1 0%;
+                min-width: 300px;
+                padding: 1rem;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+              "
+            >
+              <img
+                class="school-logo"
+                src="/static/media/school.4927c54e9ba42a498b22.jpg"
+                alt="School"
+                style="
+                  width: 100%;
+                  max-width: 200px;
+                  height: auto;
+                  border-radius: 15px;
+                  box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 6px;
+                  animation: 2s ease 0s infinite normal none running pulse;
+                  margin-bottom: 3rem;
+                "
+              />
+            </div>
+            <div
+              class="form-column"
+              style="flex: 2 1 0%; min-width: 300px; padding: 1rem"
+            >
+              <form>
+                <div style="margin-bottom: 1rem">
+                  <label
+                    for="mobileNumber"
+                    style="
+                      display: block;
+                      margin-bottom: 0.5rem;
+                      color: rgb(55, 65, 81);
+                      font-weight: 500;
+                    "
+                    >Mobile Number:</label
+                  ><input
+                    maxlength="10"
+                    type="text"
+                    id="mobileNumber"
+                    value=""
+                    style="
+                      width: 100%;
+                      padding: 0.3rem 0.4rem;
+                      border-radius: 10px;
+                      border: 2px solid rgb(229, 231, 235);
+                      transition: 0.3s;
+                      font-size: 1rem;
+                      outline: none;
+                    "
+                  />
+                </div>
+                <div style="margin-bottom: 1rem">
+                  <label
+                    for="password"
+                    style="
+                      display: block;
+                      margin-bottom: 0.5rem;
+                      color: rgb(55, 65, 81);
+                      font-weight: 500;
+                    "
+                    >Password:</label
+                  ><input
+                    type="password"
+                    id="password"
+                    value=""
+                    style="
+                      width: 100%;
+                      padding: 0.3rem 0.4rem;
+                      border-radius: 10px;
+                      border: 2px solid rgb(229, 231, 235);
+                      transition: 0.3s;
+                      font-size: 1rem;
+                      outline: none;
+                    "
+                  />
+                </div>
+                <button
+                  type="submit"
+                  style="
+                    width: 100%;
+                    padding: 0.4rem 1rem;
+                    border-radius: 10px;
+                    background-color: rgb(79, 70, 229);
+                    color: white;
+                    border-width: medium;
+                    border-style: none;
+                    border-color: currentcolor;
+                    border-image: initial;
+                    font-size: 1rem;
+                    font-weight: 500;
+                    cursor: pointer;
+                    transition: 0.3s;
+                    margin-top: 1rem;
+                    transform: translateY(0px);
+                    box-shadow: rgba(79, 70, 229, 0.2) 0px 4px 6px;
+                  "
+                >
+                  Login
+                </button>
+                <div style="text-align: center; margin-top: 1rem">
+                  <span
+                    >Not Registered Yet?
+                    <a
+                      href="/school-register"
+                      style="
+                        color: rgb(79, 70, 229);
+                        text-decoration: none;
+                        font-weight: 500;
+                        transition: color 0.3s;
+                      "
+                      >Register</a
+                    ><br /><a
+                      href="/forget-password"
+                      style="
+                        color: rgb(79, 70, 229);
+                        text-decoration: none;
+                        font-weight: 500;
+                        transition: color 0.3s;
+                      "
+                      >Forget Password?</a
+                    ></span
+                  >
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="footer fixed-bottom mt-5 text-start">
+        <p class="me-2">Copyright © 2025 Digital School Software</p>
+      </div>
+    </div>
+    <div
+      class="razorpay-container"
+      style="
+        z-index: 2147483647;
+        position: fixed;
+        top: 0px;
+        display: none;
+        left: 0px;
+        height: 100%;
+        width: 100%;
+        max-height: 100dvh;
+        backface-visibility: hidden;
+        overflow-y: visible;
+      "
+    >
+      <style>
+        @keyframes rzp-rot {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+        @-webkit-keyframes rzp-rot {
+          to {
+            -webkit-transform: rotate(360deg);
+          }
+        }
+        .razorpay-container > iframe {
+          min-height: 100% !important;
+        }
+      </style>
+      <div
+        class="razorpay-backdrop"
+        style="
+          min-height: 100%;
+          transition: 0.3s ease-out;
+          position: fixed;
+          top: 0px;
+          left: 0px;
+          width: 100%;
+          height: 100%;
+        "
+      >
+        <span
+          style="
+            text-decoration: none;
+            background: rgb(214, 68, 68);
+            border: 1px dashed white;
+            padding: 3px;
+            opacity: 0;
+            transform: rotate(45deg);
+            transition: opacity 0.3s ease-in;
+            font-family: lato, ubuntu, helvetica, sans-serif;
+            color: white;
+            position: absolute;
+            width: 200px;
+            text-align: center;
+            right: -50px;
+            top: 50px;
+          "
+          >Test Mode</span
+        >
+      </div>
+      <iframe
+        allowtransparency="true"
+        frameborder="0"
+        width="100%"
+        height="100%"
+        src="https://api.razorpay.com/v1/checkout/public?traffic_env=production&amp;build=99e97647b9bd5819914c0b847a887bf03ecb73b8&amp;build_v1=da4ee3f43a28ad81dba8ed06daf899a4520c691f&amp;checkout_v2=1&amp;new_session=1&amp;rzp_device_id=1.36f9693360d7fefe67d5488520a659cabe3ce8db.1778751044646.61483855&amp;unified_session_id=SpCAr1wiKOqu4d"
+        class="razorpay-checkout-frame"
+        allow="
+          otp-credentials;
+          payment;
+          clipboard-write;
+          publickey-credentials-get https://api.razorpay.com;
+          publickey-credentials-create 'self' https://api.razorpay.com;
+          web-share;
+          camera *;
+          local-network-access 'none';
+          loopback-network 'none';
+        "
+        style="
+          opacity: 1;
+          height: 100%;
+          position: relative;
+          background: none;
+          display: block;
+          border: 0px transparent;
+          margin: 0px;
+          padding: 0px;
+          z-index: 2;
+        "
+      ></iframe>
+    </div>
+  </body>
+</html>
