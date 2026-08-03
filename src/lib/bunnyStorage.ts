@@ -26,11 +26,19 @@ export async function uploadBlobToBunny(filePath: string, blob: Blob): Promise<s
   const cleanPath = filePath.startsWith("/") ? filePath.slice(1) : filePath;
   const uploadUrl = `https://${STORAGE_REGION_HOST}/${STORAGE_ZONE_NAME}/${cleanPath}`;
 
+  // Force application/pdf header when uploading .pdf files to Bunny Storage
+  let contentType = blob.type;
+  if (cleanPath.endsWith(".pdf")) {
+    contentType = "application/pdf";
+  } else if (!contentType) {
+    contentType = "application/octet-stream";
+  }
+
   const response = await fetch(uploadUrl, {
     method: "PUT",
     headers: {
       "AccessKey": ACCESS_KEY,
-      "Content-Type": blob.type || "application/octet-stream",
+      "Content-Type": contentType,
     },
     body: blob,
   });
@@ -103,7 +111,8 @@ export async function fetchJsonFromBunny<T = any>(filePath: string): Promise<T |
  */
 export async function convertElementToPdfBlob(
   element: HTMLElement,
-  filename: string = "document.pdf"
+  filename: string = "document.pdf",
+  orientation: "landscape" | "portrait" = "landscape"
 ): Promise<Blob> {
   if (typeof window === "undefined") {
     throw new Error("PDF generation is only supported in the browser environment.");
@@ -112,16 +121,37 @@ export async function convertElementToPdfBlob(
   const html2pdf = (await import("html2pdf.js")).default;
 
   const opt = {
-    margin: [10, 10, 10, 10],
+    margin: [5, 5, 5, 5],
     filename,
     image: { type: "jpeg", quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true, logging: false },
-    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+    html2canvas: {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      scrollX: 0,
+      scrollY: 0,
+      windowWidth: element.scrollWidth || 1200,
+    },
+    jsPDF: { unit: "mm", format: "a4", orientation },
   };
 
-  const worker = html2pdf().from(element).set(opt);
-  const pdfBlob = (await worker.output("blob")) as Blob;
-  return pdfBlob;
+  return new Promise<Blob>((resolve, reject) => {
+    try {
+      (html2pdf() as any)
+        .from(element)
+        .set(opt)
+        .outputPdf("blob")
+        .then((rawBlob: Blob) => {
+          const pdfBlob = new Blob([rawBlob], { type: "application/pdf" });
+          resolve(pdfBlob);
+        })
+        .catch((err: any) => {
+          reject(err);
+        });
+    } catch (err) {
+      reject(err);
+    }
+  });
 }
 
 /**

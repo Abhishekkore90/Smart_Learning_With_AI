@@ -21,7 +21,7 @@ import {
   QuestionBankFlatRow,
   QuestionBankGroupItem,
 } from "@/lib/questionBankParser";
-import { convertElementToPdfBlob } from "@/lib/bunnyStorage";
+import { convertElementToPdfBlob, uploadBlobToBunny } from "@/lib/bunnyStorage";
 
 interface QuestionBankViewerProps {
   data: QuestionBankTargetSchema;
@@ -163,19 +163,53 @@ export const QuestionBankViewer: React.FC<QuestionBankViewerProps> = ({ data, on
     setDownloading(true);
     toast.info("📄 PDF तक्ता तयार करून डाऊनलोड होत आहे...");
     try {
-      const cleanSubj = (metadata.subject || "Question_Bank").replace(/[^a-zA-Z0-9_\-]/g, "_");
+      // Extract clean Class and Subject names for official Marathi PDF filename (Filter noise words like semi, ok, bhavika)
+      let rawClass = (metadata.standard_class || "इयत्ता")
+        .replace(/^इयत्त्ता\s*[:\-–]?\s*/i, "")
+        .replace(/^इयत्ता\s*[:\-–]?\s*/i, "")
+        .replace(/^Class\s*[:\-–]?\s*/i, "")
+        .replace(/^Std\.?\s*[:\-–]?\s*/i, "")
+        .replace(/\b(semi|english|medium|ok|bhavika|bhavik|margdarshak|prapatra|08|07|06|05|04|03|02|01)\b/gi, "")
+        .replace(/[()\[\]]/g, " ")
+        .trim();
+
+      let rawSubj = (metadata.subject || "विषय")
+        .replace(/^विषय\s*[:\-–]?\s*/i, "")
+        .replace(/^Subject\s*[:\-–]?\s*/i, "")
+        .replace(/\b(semi|english|medium|ok|bhavika|bhavik|margdarshak|prapatra|08|07|06|05|04|03|02|01)\b/gi, "")
+        .replace(/[()\[\]]/g, " ")
+        .trim();
+
+      rawClass = rawClass.replace(/\s+/g, "_").replace(/_+/g, "_").replace(/^_+|_+$/g, "");
+      rawSubj = rawSubj.replace(/\s+/g, "_").replace(/_+/g, "_").replace(/^_+|_+$/g, "");
+
+      if (!rawClass) rawClass = "इयत्ता";
+      if (!rawSubj) rawSubj = "विषय";
+
+      const pdfFileName = `${rawClass}_प्रश्नपेढी_${rawSubj}.pdf`.replace(/[\/\\:*?"<>|]/g, "_");
+
       const pdfBlob = await convertElementToPdfBlob(
         containerRef.current,
-        `Question_Bank_${cleanSubj}.pdf`
+        pdfFileName,
+        "landscape"
       );
+
+      // Async upload generated PDF binary to Bunny Storage Zone with application/pdf Content-Type
+      uploadBlobToBunny(`question_banks/${pdfFileName}`, pdfBlob).catch((err: any) => {
+        console.warn("Bunny Storage PDF upload notice:", err);
+      });
+
       const url = URL.createObjectURL(pdfBlob);
       const a = document.createElement("a");
+      a.style.display = "none";
       a.href = url;
-      a.download = `Question_Bank_Table_${cleanSubj}.pdf`;
+      a.download = pdfFileName;
       document.body.appendChild(a);
       a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      setTimeout(() => {
+        a.remove();
+        URL.revokeObjectURL(url);
+      }, 10000);
       toast.success("🎉 PDF तक्ता यशस्वीरित्या डाऊनलोड झाला!");
     } catch (pdfErr) {
       console.warn("PDF generation notice, falling back to window print:", pdfErr);
@@ -272,15 +306,15 @@ export const QuestionBankViewer: React.FC<QuestionBankViewerProps> = ({ data, on
           {/* 9 COLUMNS HEADER (Exact reference titles & light yellow bg #fef3c7) */}
           <thead>
             <tr className="bg-amber-100 text-slate-900 font-black border-b-2 border-slate-900 text-center" style={{ backgroundColor: "#fef3c7" }}>
-              <th className="p-3 border border-slate-400 font-extrabold w-[6%]">{headers[0]}</th>
-              <th className="p-3 border border-slate-400 font-extrabold w-[13%]">{headers[1]}</th>
-              <th className="p-3 border border-slate-400 font-extrabold text-left w-[33%]">{headers[2]}</th>
-              <th className="p-3 border border-slate-400 font-extrabold w-[5%]">{headers[3]}</th>
-              <th className="p-3 border border-slate-400 font-extrabold w-[8%]">{headers[4]}</th>
-              <th className="p-3 border border-slate-400 font-extrabold w-[9%]">{headers[5]}</th>
-              <th className="p-3 border border-slate-400 font-extrabold w-[9%]">{headers[6]}</th>
-              <th className="p-3 border border-slate-400 font-extrabold w-[9%]">{headers[7]}</th>
-              <th className="p-3 border border-slate-400 font-extrabold w-[8%]">{headers[8]}</th>
+              <th className="p-3 border border-slate-400 font-extrabold w-[6%]" style={{ width: "6%" }}>{headers[0]}</th>
+              <th className="p-3 border border-slate-400 font-extrabold w-[12%]" style={{ width: "12%" }}>{headers[1]}</th>
+              <th className="p-3 border border-slate-400 font-extrabold text-left w-[38%]" style={{ width: "38%" }}>{headers[2]}</th>
+              <th className="p-3 border border-slate-400 font-extrabold w-[5%]" style={{ width: "5%" }}>{headers[3]}</th>
+              <th className="p-3 border border-slate-400 font-extrabold w-[9%]" style={{ width: "9%" }}>{headers[4]}</th>
+              <th className="p-3 border border-slate-400 font-extrabold w-[10%]" style={{ width: "10%" }}>{headers[5]}</th>
+              <th className="p-3 border border-slate-400 font-extrabold w-[8%]" style={{ width: "8%" }}>{headers[6]}</th>
+              <th className="p-3 border border-slate-400 font-extrabold w-[7%]" style={{ width: "7%" }}>{headers[7]}</th>
+              <th className="p-3 border border-slate-400 font-extrabold w-[5%]" style={{ width: "5%" }}>{headers[8]}</th>
             </tr>
           </thead>
 

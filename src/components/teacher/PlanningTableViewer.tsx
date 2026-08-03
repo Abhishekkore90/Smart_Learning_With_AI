@@ -970,7 +970,7 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
           <div className="w-full h-full bg-slate-900">
             <iframe
               src={
-                fileUrl.endsWith(".pdf")
+                fileUrl.startsWith("blob:") || fileUrl.startsWith("data:") || fileUrl.toLowerCase().includes(".pdf")
                   ? fileUrl
                   : `https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`
               }
