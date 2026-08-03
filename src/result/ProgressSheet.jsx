@@ -74,13 +74,13 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", onBack }
         try {
           const cachedGen = localStorage.getItem("cce_general_school_settings");
           if (cachedGen) globalSettings = JSON.parse(cachedGen);
-        } catch (e) {}
+        } catch (e) { }
 
         if (!globalSettings) {
           try {
             const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
             globalSettings = await fetchJsonFromBunny("cce_results/general_school_settings.json");
-          } catch (e) {}
+          } catch (e) { }
         }
 
         const settingsSnap = await getDoc(doc(db, "cce_settings", docId));
@@ -110,7 +110,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", onBack }
       // 2. Fetch Students for Selected Class and Medium (Isolated by teacherId)
       const currentTeacherId = getTeacherId();
       const currentMedium = selectedMedium || (typeof localStorage !== "undefined" ? localStorage.getItem("cce_selected_medium") : null) || "marathi";
-      const loadedStudents = await fetchStudentsForClass(selectedClass, currentMedium, currentTeacherId);
+      let loadedStudents = await fetchStudentsForClass(selectedClass, currentMedium, currentTeacherId);
       setStudents(loadedStudents);
 
       // Merge student_details collection (for exact user-filled details)
@@ -143,7 +143,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", onBack }
             weight: det.weight || "",
           };
         });
-      } catch (e) {}
+      } catch (e) { }
 
       loadedStudents.sort((a, b) => (parseInt(a.rollNo) || 0) - (parseInt(b.rollNo) || 0));
       setStudents(loadedStudents);
@@ -226,7 +226,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", onBack }
                 recs = parsed;
               }
             }
-          } catch (e) {}
+          } catch (e) { }
 
           // 2. Try Firestore docs for selectedMedium strictly
           if (!recs) {
@@ -245,7 +245,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", onBack }
                     break;
                   }
                 }
-              } catch (e) {}
+              } catch (e) { }
             }
           }
           return recs;
@@ -283,7 +283,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", onBack }
           if (bunnyRemarks && typeof bunnyRemarks === "object") {
             mergeStudentRecords(bunnyRemarks, null);
           }
-        } catch (e) {}
+        } catch (e) { }
 
         setRemarksData(mergedRemarks);
       } catch (e) {
@@ -301,7 +301,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", onBack }
           if (wDaysSnap.exists()) {
             setWorkingDaysData(wDaysSnap.data().workingDays || {});
           }
-        } catch (e) {}
+        } catch (e) { }
 
         // B. Fetch general attendance docs from Firestore & Bunny CDN
         try {
@@ -322,7 +322,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", onBack }
               Object.assign(attendanceMap[stdId], bunnyAtt[stdId]);
             });
           }
-        } catch (e) {}
+        } catch (e) { }
 
         // C. Fetch daily attendance documents for all 12 months
         for (const mKey of monthKeys) {
@@ -346,7 +346,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", onBack }
                 attendanceMap[stdId][mKey] = presentCount;
               });
             }
-          } catch (e) {}
+          } catch (e) { }
         }
 
         // D. Fetch explicit student-wise monthly summary attendance (HIGHEST PRIORITY)
@@ -365,7 +365,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", onBack }
               });
             });
           }
-        } catch (e) {}
+        } catch (e) { }
 
         setAttendanceData(attendanceMap);
       } catch (e) {
@@ -442,7 +442,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", onBack }
   // Helper to format student remarks by category/subject
   const getFormattedRemark = (student, labelOrKey, term = "sem1") => {
     if (!student || !remarksData) return "-";
-    
+
     const stdKeys = [
       student.id,
       student.rollNo,
