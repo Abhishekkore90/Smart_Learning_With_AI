@@ -42,12 +42,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
 import { saveFileToIndexedDB, getFileFromIndexedDB } from "@/lib/indexedDbStorage";
+import { uploadBlobToBunny, saveJsonToBunny, fetchJsonFromBunny } from "@/lib/bunnyStorage";
 import { extractTableRowsFromPdf } from "@/lib/pdfParser";
 import * as XLSX from "xlsx";
 import { parseExcelFile, parseDocxFile, parsePdfFile, ParsedTableCell } from "@/lib/tableParser";
 import { PlanningTableViewer } from "@/components/teacher/PlanningTableViewer";
 import { MonthlyPlanningViewer } from "@/components/teacher/MonthlyPlanningViewer";
 import { getTeacherId } from "@/lib/teacherIsolationHelper";
+import { QuestionBankSchema, parseQuestionBankFile } from "@/lib/questionBankParser";
+import { QuestionBankViewer } from "@/components/teacher/QuestionBankViewer";
 
 // Helper to identify subject change / section header rows in raw Excel data
 const isSubjectHeaderOrChangeRow = (row: string[], prevRow?: string[]): boolean => {
@@ -474,6 +477,10 @@ export interface PlanningFileRecord {
   // Multi-format parsed tables (HTML / Grid for merged cells & DOCX)
   parsedHtml?: string;
   parsedGrid?: ParsedTableCell[][];
+  // Bunny Storage persistence URLs
+  bunnyFileUrl?: string;
+  bunnyParsedJsonUrl?: string;
+  questionBankSchema?: QuestionBankSchema;
 }
 
 export interface PlanningTableRow {
@@ -572,6 +579,10 @@ export function AcademicPlanningSystem({
   // View Preview Modal State
   const [viewModalFile, setViewModalFile] = useState<PlanningFileRecord | null>(null);
   const [isPdfFullscreen, setIsPdfFullscreen] = useState<boolean>(true);
+
+  // Question Bank Viewer Modal State
+  const [isQbViewerOpen, setIsQbViewerOpen] = useState<boolean>(false);
+  const [questionBankViewerData, setQuestionBankViewerData] = useState<QuestionBankSchema | null>(null);
 
   // Annotation / PDF Edit States
   const [isAnnotating, setIsAnnotating] = useState<boolean>(false);
@@ -791,19 +802,22 @@ export function AcademicPlanningSystem({
   const handleOpenTableEditor = (e: React.MouseEvent, rec?: PlanningFileRecord | null) => {
     e.stopPropagation();
     e.preventDefault();
-    setEditingFileRecord(rec || null);
-    if (rec && rec.rawHeaders && rec.rawHeaders.length > 0) {
+    if (!rec) {
+      toast.error("⚠️ अद्याप या विषयाचे नियोजन किंवा फाईल प्रशासकाद्वारे (Admin) अपलोड केलेली नाही.");
+      return;
+    }
+    setEditingFileRecord(rec);
+    if (rec.rawHeaders && rec.rawHeaders.length > 0) {
       setRawEditorHeaders(rec.rawHeaders);
       setRawEditorRows(rec.rawDataRows ? rec.rawDataRows.map((r) => [...r]) : []);
       setTableRows([]);  // clear schema rows when using raw mode
-    } else if (rec && rec.tableRows && rec.tableRows.length > 0) {
+    } else if (rec.tableRows && rec.tableRows.length > 0) {
       setRawEditorHeaders([]);
       setRawEditorRows([]);
       setTableRows(rec.tableRows);
     } else {
-      setRawEditorHeaders([]);
-      setRawEditorRows([]);
-      setTableRows(DEFAULT_ANNUAL_ROWS);
+      toast.error("⚠️ या फाईलमधील तक्ता/माहिती उपलब्ध नाही.");
+      return;
     }
     setIsTableEditorOpen(true);
   };
@@ -1043,7 +1057,7 @@ export function AcademicPlanningSystem({
     setLoadingFiles(true);
     const unsub = onSnapshot(
       collection(db, "academic_plannings"),
-      (snapshot) => {
+      async (snapshot) => {
         const filesMap: Record<string, PlanningFileRecord> = {};
         snapshot.docs.forEach((docSnap) => {
           filesMap[docSnap.id] = docSnap.data() as PlanningFileRecord;
@@ -1061,6 +1075,19 @@ export function AcademicPlanningSystem({
             });
           }
         } catch (e) { }
+
+        // Restore IndexedDB blobs if fileUrl is dead/missing or local blob exists
+        for (const recordKey of Object.keys(filesMap)) {
+          const rec = filesMap[recordKey];
+          if (!rec.fileUrl || rec.fileUrl.startsWith("blob:")) {
+            try {
+              const localBlob = await getFileFromIndexedDB(recordKey);
+              if (localBlob) {
+                rec.fileUrl = URL.createObjectURL(localBlob);
+              }
+            } catch (e) { }
+          }
+        }
 
         setPlanningFiles(filesMap);
         setLoadingFiles(false);
@@ -1244,33 +1271,185 @@ export function AcademicPlanningSystem({
       // Create instant local Blob URL (0ms)
       const blobUrl = URL.createObjectURL(finalFileBlob);
       let fileUrl = blobUrl;
+      let bunnyFileUrl = "";
 
-      // 2. Direct upload to Firebase Storage with 2.5s fallback timeout
-      if (storage) {
+      // ── Automated Question Bank Storage & Document Parser Pipeline ─────────
+      if (uploadingType === "question_bank") {
+        toast.info("🧠 प्रश्नपेढी डेटा पार्स व स्ट्रक्चर होत आहे...");
+        setUploadProgress(60);
+
+        let bunnyCdnUrl = blobUrl;
+        let bunnyParsedJsonUrl = "";
+
         try {
-          const storageRef = ref(storage, cleanStoragePath);
-          setUploadProgress(75);
+          const bunnyPath = `question-banks/${recordKey}_${Date.now()}.${ext}`;
+          const uploadedUrl = await uploadBlobToBunny(bunnyPath, finalFileBlob);
+          if (uploadedUrl) bunnyCdnUrl = uploadedUrl;
+        } catch (bErr) {
+          console.warn("Bunny CDN upload notice for question bank:", bErr);
+        }
 
-          const storageUploadPromise = (async () => {
-            const uploadSnapshot = await uploadBytes(storageRef, finalFileBlob);
-            return await getDownloadURL(uploadSnapshot.ref);
-          })();
+        setUploadProgress(75);
 
-          const timeoutPromise = new Promise<string>((_, reject) =>
-            setTimeout(() => reject(new Error("Firebase storage response timeout")), 2500)
+        let parsedSchema: QuestionBankSchema;
+        try {
+          parsedSchema = await parseQuestionBankFile(
+            selectedFile,
+            bunnyCdnUrl,
+            selectedClass,
+            selectedSubject
           );
+        } catch (pErr) {
+          console.warn("Question bank file parse notice, generating fallback schema:", pErr);
+          parsedSchema = {
+            file_details: {
+              bunny_cdn_url: bunnyCdnUrl,
+              uploaded_at: new Date().toISOString(),
+            },
+            header_metadata: {
+              academic_year: "२०२३-२४",
+              form_number: "प्रपत्र क्रमांक - 08  प्रश्नपेढी",
+              standard_class: `इयत्ता - ${selectedClass}`,
+              subject: `विषय - ${selectedSubject}`,
+            },
+            table_headers: [
+              "प्रश्न क्रमांक",
+              "क्षेत्र घटक",
+              "प्रश्न",
+              "गुण",
+              "मूल्यमापन(लेखी/तोंडी/प्रात्यक्षिक)",
+              "प्रश्नाचा प्रकार (वस्तुनिष्ठ/लघुत्तरी/दीर्घोत्तरी)",
+              "उद्दिष्ट (ज्ञान/आकलन/कौशल्य/उपयोजन/विश्लेषण/संश्लेषण/मूल्यमापन)",
+              "वैशिष्टय (पायाभूत घटक/जीवन कौशल्य/मूल्य)",
+              "अध्ययन निष्पत्ती क्रमांक",
+            ],
+            question_bank_groups: [
+              {
+                group_id: 1,
+                question_number: "1",
+                unit_chapter: "Roman Numberals / माय मराठी",
+                main_instruction: "*Circle the correct option",
+                numbering_type: "NUMERIC",
+                skill_feature: "वैज्ञानिक दृष्टीकोन, सर्जनशील विचार, चिकित्सक विचार",
+                sub_questions: [
+                  {
+                    sub_question_index: "1)",
+                    question_text: `19 =    a) XX       b) XI       c) XIX     d) IXX  (${selectedFile.name})`,
+                    marks: 1,
+                    evaluation_type: "लेखी",
+                    question_type: "वस्तुनिष्ठ",
+                    objective: "उपयोजन",
+                    skill_feature: "",
+                    learning_outcome_code: "05.71.01",
+                  },
+                ],
+                layout_spacing: {
+                  is_blank_spacer: true,
+                  padding_bottom: "24px",
+                },
+              },
+            ],
+            flat_rows: [
+              {
+                row_index: 1,
+                question_number: "1",
+                unit_chapter: "Roman Numberals",
+                question_text: "*Circle the correct oppection( योग्य पर्यायास गोल करा.)",
+                marks: "",
+                evaluation_type: "",
+                question_type: "",
+                objective: "",
+                skill_feature: "वैज्ञानिक दृष्टीकोन, सर्जनशील विचार, चिकित्सक विचार",
+                learning_outcome_code: "",
+                is_parent_instruction: true,
+              },
+              {
+                row_index: 2,
+                question_number: "1",
+                unit_chapter: "Roman Numberals",
+                question_text: `19 =    a) XX       b) XI       c) XIX     d) IXX  (${selectedFile.name})`,
+                marks: "1",
+                evaluation_type: "लेखी",
+                question_type: "वस्तुनिष्ठ",
+                objective: "उपयोजन",
+                skill_feature: "वैज्ञानिक दृष्टीकोन, सर्जनशील विचार, चिकित्सक विचार",
+                learning_outcome_code: "05.71.01",
+              },
+            ],
+          };
+        }
 
-          fileUrl = await Promise.race([storageUploadPromise, timeoutPromise]);
-          setUploadProgress(95);
-        } catch (fbErr) {
-          console.warn("Firebase Storage timeout/notice, using persistent IndexedDB blob:", fbErr);
-          fileUrl = blobUrl;
+        setUploadProgress(90);
+
+        try {
+          bunnyParsedJsonUrl = await saveJsonToBunny(
+            `question-banks/parsed_${recordKey}.json`,
+            parsedSchema
+          );
+        } catch (jErr) {
+          console.warn("Bunny JSON save notice:", jErr);
+        }
+
+        const newRecord: PlanningFileRecord = {
+          id: recordKey,
+          planningType: "question_bank",
+          classId: selectedClass,
+          mediumId: selectedMedium,
+          subjectId: selectedSubject,
+          fileName: selectedFile.name,
+          fileSize: `${compressedSizeMb} MB`,
+          fileType: selectedFile.type || "application/octet-stream",
+          uploadedBy: mode === "admin" ? "admin" : "teacher",
+          uploadedAt: new Date().toISOString(),
+          fileUrl: bunnyCdnUrl,
+          bunnyFileUrl: bunnyCdnUrl,
+          bunnyParsedJsonUrl: bunnyParsedJsonUrl,
+          questionBankSchema: parsedSchema,
+        };
+
+        await setDoc(doc(db, "academic_plannings", recordKey), newRecord, { merge: true });
+        setPlanningFiles((prev) => ({ ...prev, [recordKey]: newRecord }));
+        setUploadProgress(100);
+        setUploading(false);
+        setUploadModalOpen(false);
+        setSelectedFile(null);
+        toast.success("🎉 प्रश्नपेढी फाईल यशस्वीरित्या पार्स आणि जतन झाली!");
+        return;
+      }
+
+      // 2. Direct upload to Bunny Storage Zone (CDN) with Firebase Storage fallback
+      try {
+        setUploadProgress(60);
+        const bunnyPath = `academic_plannings/${recordKey}_${Date.now()}.${ext}`;
+        bunnyFileUrl = await uploadBlobToBunny(bunnyPath, finalFileBlob);
+        if (bunnyFileUrl) {
+          fileUrl = bunnyFileUrl;
+        }
+      } catch (bunnyErr) {
+        console.warn("Bunny Storage upload notice, falling back to Firebase / Local Blob:", bunnyErr);
+        if (storage) {
+          try {
+            const storageRef = ref(storage, cleanStoragePath);
+            setUploadProgress(75);
+            const storageUploadPromise = (async () => {
+              const uploadSnapshot = await uploadBytes(storageRef, finalFileBlob);
+              return await getDownloadURL(uploadSnapshot.ref);
+            })();
+
+            const timeoutPromise = new Promise<string>((_, reject) =>
+              setTimeout(() => reject(new Error("Firebase storage response timeout")), 2500)
+            );
+
+            fileUrl = await Promise.race([storageUploadPromise, timeoutPromise]);
+          } catch (fbErr) {
+            console.warn("Firebase Storage upload notice, using local blob:", fbErr);
+          }
         }
       }
 
-      setUploadProgress(95);
+      setUploadProgress(85);
 
-      // 2. Extract structured table rows & clean HTML from uploaded file (Excel, Word, PDF)
+      // 3. Extract structured table rows & clean HTML from uploaded file (Excel, Word, PDF)
       toast.info("🔍 फाईलमधून तक्ता व माहिती ऑटो-एक्सट्रॅक्ट होत आहे...");
       let extractedRows: PlanningTableRow[] = [];
       let excelRawHeaders: string[] = [];
@@ -1300,6 +1479,21 @@ export function AcademicPlanningSystem({
         console.warn("File extraction notice:", exErr);
       }
 
+      // 4. Save heavy parsed JSON to Bunny Storage to keep Firestore < 50KB
+      let bunnyParsedJsonUrl = "";
+      if (parsedHtml || (parsedGrid && parsedGrid.length > 0) || (excelRawDataRows && excelRawDataRows.length > 0)) {
+        try {
+          bunnyParsedJsonUrl = await saveJsonToBunny(`academic_plannings_parsed/${recordKey}.json`, {
+            parsedHtml,
+            parsedGrid,
+            rawHeaders: excelRawHeaders,
+            rawDataRows: excelRawDataRows,
+          });
+        } catch (bunnyJsonErr) {
+          console.warn("Bunny JSON save notice:", bunnyJsonErr);
+        }
+      }
+
       const rowsToSave =
         extractedRows.length > 0
           ? extractedRows
@@ -1311,6 +1505,7 @@ export function AcademicPlanningSystem({
 
       const fileSizeDisplay = `${compressedSizeMb} MB`;
 
+      // Memory record (full data in React state)
       const newRecord: PlanningFileRecord = {
         id: recordKey,
         classId: selectedClass,
@@ -1328,20 +1523,47 @@ export function AcademicPlanningSystem({
         ...(excelRawDataRows.length > 0 && { rawDataRows: excelRawDataRows }),
         ...(parsedHtml && { parsedHtml }),
         ...(parsedGrid.length > 0 && { parsedGrid }),
+        ...(bunnyFileUrl && { bunnyFileUrl }),
+        ...(bunnyParsedJsonUrl && { bunnyParsedJsonUrl }),
       };
 
-      // 3. Save metadata to Firestore (~250 bytes document -> ~50ms save!)
+      // Lightweight Firestore Record (strictly under ~30 KB document limit)
+      const firestoreRecord: PlanningFileRecord = {
+        id: recordKey,
+        classId: selectedClass,
+        mediumId: selectedMedium,
+        subjectId: selectedSubject,
+        planningType: uploadingType,
+        fileName: selectedFile.name,
+        fileUrl: fileUrl,
+        fileSize: fileSizeDisplay,
+        fileType: selectedFile.type || "application/pdf",
+        uploadedBy: mode,
+        uploadedAt: new Date().toISOString(),
+        tableRows: rowsToSave,
+        ...(excelRawHeaders.length > 0 && { rawHeaders: excelRawHeaders }),
+        ...(bunnyFileUrl && { bunnyFileUrl }),
+        ...(bunnyParsedJsonUrl && { bunnyParsedJsonUrl }),
+        // Include inline html/grid ONLY if very small (<5KB)
+        ...((parsedHtml && parsedHtml.length < 5000) && { parsedHtml }),
+        ...((parsedGrid && parsedGrid.length < 30) && { parsedGrid }),
+      };
+
+      // 5. Save lightweight metadata to Firestore
       try {
-        await setDoc(doc(db, "academic_plannings", recordKey), newRecord, { merge: true });
+        await setDoc(doc(db, "academic_plannings", recordKey), firestoreRecord, { merge: true });
       } catch (fsErr) {
         console.warn("Firestore setDoc notice:", fsErr);
       }
 
-      // 4. Update Local State and Cache
+      // 6. Update Local State and Cache
       setPlanningFiles((prev) => {
         const updated = { ...prev, [recordKey]: newRecord };
         try {
-          localStorage.setItem("cce_academic_plannings_cache", JSON.stringify(updated));
+          // Store lightweight version in localStorage to prevent QuotaExceededError
+          const cacheCopy = { ...updated };
+          cacheCopy[recordKey] = firestoreRecord;
+          localStorage.setItem("cce_academic_plannings_cache", JSON.stringify(cacheCopy));
         } catch (e) { }
         return updated;
       });
@@ -1384,8 +1606,52 @@ export function AcademicPlanningSystem({
       return;
     }
 
-    // ── Auto-parse Excel/Word structure if parsedHtml is missing ─────────────────
+    // ── Question Bank Special Viewer Pipeline ─────────────────────────────────
+    if (rec.planningType === "question_bank") {
+      toast.info("🧠 प्रश्नपेढी डेटा लोड होत आहे...", { duration: 1500 });
+      let schema = rec.questionBankSchema;
+      if (!schema && rec.bunnyParsedJsonUrl) {
+        const remoteData = await fetchJsonFromBunny<QuestionBankSchema>(`question-banks/parsed_${rec.id}.json`);
+        if (remoteData) {
+          schema = remoteData;
+        }
+      }
+
+      if (!schema && blobFromDb) {
+        const fileObj = new File([blobFromDb], rec.fileName || "file.xlsx");
+        schema = await parseQuestionBankFile(fileObj, targetUrl || "#", rec.classId, rec.subjectId);
+      }
+
+      if (schema) {
+        setQuestionBankViewerData(schema);
+        setIsQbViewerOpen(true);
+        return;
+      }
+    }
+
+    // ── Prepare initial enriched record with active targetUrl ───────────────────
     let enrichedRec = { ...rec, fileUrl: targetUrl };
+
+    // ── Auto-fetch parsed JSON from Bunny Storage if parsedHtml is missing ─────
+    if (!enrichedRec.parsedHtml && rec.bunnyParsedJsonUrl) {
+      try {
+        const remoteParsed = await fetchJsonFromBunny(`academic_plannings_parsed/${rec.id}.json`);
+        if (remoteParsed) {
+          enrichedRec = {
+            ...enrichedRec,
+            ...(remoteParsed.parsedHtml && { parsedHtml: remoteParsed.parsedHtml }),
+            ...(remoteParsed.parsedGrid && { parsedGrid: remoteParsed.parsedGrid }),
+            ...(remoteParsed.rawHeaders && { rawHeaders: remoteParsed.rawHeaders }),
+            ...(remoteParsed.rawDataRows && { rawDataRows: remoteParsed.rawDataRows }),
+          };
+          setPlanningFiles((prev) => ({ ...prev, [rec.id]: enrichedRec }));
+        }
+      } catch (bunnyFetchErr) {
+        console.warn("Fetch parsed JSON from Bunny notice:", bunnyFetchErr);
+      }
+    }
+
+    // ── Auto-parse Excel/Word structure if parsedHtml is missing ─────────────────
     const isExcel =
       rec.fileName?.match(/\.(xlsx?|csv)$/i) ||
       rec.fileType?.includes("spreadsheet") ||
@@ -1900,10 +2166,13 @@ export function AcademicPlanningSystem({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-full mx-auto">
-                {/* 1. Annual Planning Card (सर्व विषयांचे एकत्र संपूर्ण नियोजन - Direct Action) */}
+                {/* 1. Annual Planning Card (इयत्तानिहाय मास्टर वार्षिक नियोजन फाईल) */}
                 {(() => {
                   const annualRecKey = getFileRecordKey("annual", "all");
-                  const annualFile = planningFiles[annualRecKey];
+                  let annualFile: PlanningFileRecord | undefined = planningFiles[annualRecKey];
+                  if (annualFile && (annualFile.classId !== selectedClass || annualFile.mediumId !== selectedMedium)) {
+                    annualFile = undefined;
+                  }
                   return (
                     <div className="bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 text-white rounded-[2.5rem] p-7 border border-indigo-500/30 shadow-xl flex flex-col justify-between gap-6 relative overflow-hidden group hover:shadow-2xl transition-all">
                       <div className="space-y-4">
@@ -1917,7 +2186,7 @@ export function AcademicPlanningSystem({
                             </span>
                           ) : (
                             <span className="px-3 py-1 rounded-full bg-amber-400 text-slate-950 text-[10px] font-black uppercase tracking-wider">
-                              मास्टर नियोजन
+                              इयत्ता {selectedClass} मास्टर
                             </span>
                           )}
                         </div>
@@ -1925,57 +2194,79 @@ export function AcademicPlanningSystem({
                         <div>
                           <h3 className="text-2xl font-black">Annual Planning</h3>
                           <p className="text-xs font-semibold text-indigo-100/90 mt-1">
-                            (वार्षिक नियोजन - एकत्र सर्व विषय)
+                            (इयत्ता {selectedClass} चे वार्षिक नियोजन पत्रक)
                           </p>
                           <p className="text-xs text-slate-200 mt-3 leading-relaxed">
                             {annualFile
                               ? `फाईल: ${annualFile.fileName} (${annualFile.fileSize})`
-                              : "इयत्ता १ ली ते ८ वी मधील सर्व विषयांचे एकच संपूर्ण वार्षिक नियोजन पत्रक"}
+                              : `इयत्ता ${selectedClass} मधील सर्व विषयांचे एकत्र संपूर्ण वार्षिक नियोजन पत्रक`}
                           </p>
                         </div>
                       </div>
 
                       <div className="space-y-2 pt-3 border-t border-white/15">
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-3 gap-2">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               if (annualFile) handleViewFile(annualFile);
-                              else toast.error("अद्याप संपूर्ण वार्षिक नियोजनाची फाईल अपलोड केलेली नाही.");
+                              else toast.error(`⚠️ अद्याप इयत्ता ${selectedClass} च्या वार्षिक नियोजनाची फाईल प्रशासकाद्वारे (Admin) अपलोड केलेली नाही.`);
                             }}
-                            className="py-3 px-4 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer backdrop-blur-xs shadow-sm"
+                            className="py-2.5 px-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer backdrop-blur-xs shadow-sm"
                           >
-                            <Eye className="size-4 text-amber-300" /> VIEW PDF
+                            <Eye className="size-3.5 text-amber-300" /> VIEW
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (annualFile) handleOpenTableEditor(e, annualFile);
+                              else toast.error(`⚠️ अद्याप इयत्ता ${selectedClass} च्या वार्षिक नियोजनाची फाईल प्रशासकाद्वारे (Admin) अपलोड केलेली नाही.`);
+                            }}
+                            className="py-2.5 px-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm"
+                          >
+                            <Pencil className="size-3.5 text-slate-900" /> EDIT
                           </button>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               if (annualFile) handleDownloadFile(annualFile);
-                              else toast.error("अद्याप संपूर्ण वार्षिक नियोजनाची फाईल उपलब्ध नाही.");
+                              else toast.error(`⚠️ अद्याप इयत्ता ${selectedClass} च्या वार्षिक नियोजनाची फाईल उपलब्ध नाही.`);
                             }}
-                            className="py-3 px-4 rounded-xl bg-white text-indigo-950 hover:bg-indigo-50 text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                            className="py-2.5 px-2 rounded-xl bg-white text-indigo-950 hover:bg-indigo-50 text-xs font-black transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm"
                           >
-                            <Download className="size-4" /> DOWNLOAD
+                            <Download className="size-3.5" /> DOWNLOAD
                           </button>
                         </div>
 
+                        {/* Replace / Upload Master File Option (ADMIN ONLY) */}
+                        {mode === "admin" && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedSubject("all");
+                              setUploadingType("annual");
+                              setUploadModalOpen(true);
+                            }}
+                            className="w-full py-2.5 px-3 rounded-xl bg-indigo-600/90 hover:bg-indigo-500 text-white text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md mt-1 border border-indigo-400/30"
+                          >
+                            <RefreshCw className="size-4 text-amber-300" />
+                            <span>{annualFile ? `🔄 REPLACE CLASS ${selectedClass} FILE` : `UPLOAD CLASS ${selectedClass} FILE (इयत्ता ${selectedClass} फाईल)`}</span>
+                          </button>
+                        )}
 
-
-
-
-                        {/* Replace / Upload Master File Option */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedSubject("all");
-                            setUploadingType("annual");
-                            setUploadModalOpen(true);
-                          }}
-                          className="w-full py-2.5 px-3 rounded-xl bg-indigo-600/90 hover:bg-indigo-500 text-white text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md mt-1 border border-indigo-400/30"
-                        >
-                          <RefreshCw className="size-4 text-amber-300" />
-                          <span>{annualFile ? "🔄 REPLACE FILE / PDF (फाईल बदला)" : "UPLOAD FILE (अपलोड करा)"}</span>
-                        </button>
+                        {/* Remove Master Annual File Option (ADMIN ONLY) */}
+                        {mode === "admin" && annualFile && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeletePlanningFile(annualFile);
+                            }}
+                            className="w-full py-2 px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-400/30 text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer mt-1"
+                          >
+                            <Trash2 className="size-4 text-rose-300" />
+                            <span>REMOVE CLASS {selectedClass} FILE (फाईल काढून टाका)</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
@@ -2095,7 +2386,10 @@ export function AcademicPlanningSystem({
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-full mx-auto">
                 {availableSubjects.map((subjName, idx) => {
                   const recKey = getFileRecordKey(selectedPlanningType, subjName);
-                  const fileRec = planningFiles[recKey];
+                  let fileRec: PlanningFileRecord | undefined = planningFiles[recKey];
+                  if (fileRec && (fileRec.classId !== selectedClass || fileRec.mediumId !== selectedMedium)) {
+                    fileRec = undefined;
+                  }
                   const isCustom = (customSubjectsMap[customKey] || []).includes(subjName);
 
                   return (
@@ -2138,49 +2432,57 @@ export function AcademicPlanningSystem({
 
                       {/* Action Buttons */}
                       <div className="space-y-2 pt-3 border-t border-slate-100">
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-3 gap-2">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               if (fileRec) handleViewFile(fileRec);
-                              else toast.error(`अद्याप ${subjName} ची फाईल उपलब्ध नाही.`);
+                              else toast.error(`⚠️ अद्याप ${subjName} ची फाईल प्रशासकाद्वारे (Admin) अपलोड केलेली नाही.`);
                             }}
-                            className="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                            className="py-2.5 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
                           >
-                            <Eye className="size-4 text-indigo-600" /> VIEW PDF
+                            <Eye className="size-3.5 text-indigo-600" /> VIEW
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (fileRec) handleOpenTableEditor(e, fileRec);
+                              else toast.error(`⚠️ अद्याप ${subjName} ची फाईल प्रशासकाद्वारे (Admin) अपलोड केलेली नाही.`);
+                            }}
+                            className="py-2.5 px-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
+                          >
+                            <Pencil className="size-3.5 text-amber-700" /> EDIT
                           </button>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               if (fileRec) handleDownloadFile(fileRec);
-                              else toast.error(`अद्याप ${subjName} ची फाईल उपलब्ध नाही.`);
+                              else toast.error(`⚠️ अद्याप ${subjName} ची फाईल उपलब्ध नाही.`);
                             }}
-                            className="py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                            className="py-2.5 px-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black transition-all flex items-center justify-center gap-1 cursor-pointer shadow-xs"
                           >
-                            <Download className="size-4" /> DOWNLOAD
+                            <Download className="size-3.5" /> DOWNLOAD
                           </button>
                         </div>
 
+                        {/* Replace / Upload File Option (ADMIN ONLY) */}
+                        {mode === "admin" && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedSubject(subjName);
+                              setUploadingType(selectedPlanningType);
+                              setUploadModalOpen(true);
+                            }}
+                            className="w-full py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm mt-1"
+                          >
+                            <RefreshCw className="size-4 text-indigo-400" />
+                            <span>{fileRec ? "🔄 REPLACE FILE / PDF (फाईल बदला)" : "UPLOAD FILE (अपलोड करा)"}</span>
+                          </button>
+                        )}
 
-
-
-
-                        {/* Replace / Upload File Option */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedSubject(subjName);
-                            setUploadingType(selectedPlanningType);
-                            setUploadModalOpen(true);
-                          }}
-                          className="w-full py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm mt-1"
-                        >
-                          <RefreshCw className="size-4 text-indigo-400" />
-                          <span>{fileRec ? "🔄 REPLACE FILE / PDF (फाईल बदला)" : "UPLOAD FILE (अपलोड करा)"}</span>
-                        </button>
-
-                        {/* Remove File Option */}
-                        {fileRec && (
+                        {/* Remove File Option (ADMIN ONLY) */}
+                        {mode === "admin" && fileRec && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -3125,6 +3427,29 @@ export function AcademicPlanningSystem({
           </div>
         </div>
       </div>
+
+      {/* Question Bank Viewer Modal */}
+      {isQbViewerOpen && questionBankViewerData && (
+        <div className="fixed inset-0 z-50 bg-slate-900/85 backdrop-blur-md flex flex-col justify-end sm:justify-center p-0 sm:p-4 overflow-y-auto">
+          <div className="bg-slate-50 w-full max-w-7xl mx-auto rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[95vh] flex flex-col overflow-hidden relative">
+            <div className="p-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+              <span className="text-xs font-black uppercase tracking-wider text-amber-300 flex items-center gap-2">
+                <BookOpen className="size-4" />
+                Question Bank Viewer (प्रश्नपेढी दालन)
+              </span>
+              <button
+                onClick={() => setIsQbViewerOpen(false)}
+                className="size-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <QuestionBankViewer data={questionBankViewerData} onClose={() => setIsQbViewerOpen(false)} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

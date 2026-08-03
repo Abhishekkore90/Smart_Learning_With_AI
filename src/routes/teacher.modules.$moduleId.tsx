@@ -249,61 +249,63 @@ function ModulePage() {
         <div className="absolute -bottom-64 left-1/4 size-[800px] bg-[#D6B97A]/10 rounded-full blur-[100px] animate-blob animation-delay-2000" />
       </div>
 
-      <header className="bg-white/40 backdrop-blur-2xl border-b border-[#E8DFD1]/50 fixed top-0 left-0 right-0 h-16 z-30 px-4 md:px-8 flex items-center">
-        <div className="max-w-full w-full mx-auto flex items-center justify-between relative z-10">
-          <div className="flex items-center gap-3 md:gap-8">
-            <button
-              onClick={() => window.history.back()}
-              className="size-10 md:size-12 flex items-center justify-center bg-white/50 hover:bg-white rounded-xl md:rounded-2xl transition-all border border-[#E8DFD1]/50 text-[#D6B97A] shadow-sm hover:shadow-md"
-            >
-              <ChevronLeft className="size-5 md:size-6" />
-            </button>
-            <div className="flex items-center gap-3 md:gap-6">
-              <div
-                className={`size-10 md:size-14 ${config.color} rounded-xl md:rounded-[1.5rem] flex items-center justify-center text-white shadow-2xl shadow-[#D6B97A]/20 ring-4 ring-white/50`}
+      {moduleId !== "annual-monthly-planning" && (
+        <header className="bg-white/40 backdrop-blur-2xl border-b border-[#E8DFD1]/50 fixed top-0 left-0 right-0 h-16 z-30 px-4 md:px-8 flex items-center">
+          <div className="max-w-full w-full mx-auto flex items-center justify-between relative z-10">
+            <div className="flex items-center gap-3 md:gap-8">
+              <button
+                onClick={() => window.history.back()}
+                className="size-10 md:size-12 flex items-center justify-center bg-white/50 hover:bg-white rounded-xl md:rounded-2xl transition-all border border-[#E8DFD1]/50 text-[#D6B97A] shadow-sm hover:shadow-md"
               >
-                <config.icon className="size-5 md:size-7" />
-              </div>
-              <div>
-                <h1 className="font-black text-[#1A1A1A] text-lg md:text-2xl tracking-tight leading-none">
-                  {config.m}
-                </h1>
-                <p className="text-[8px] md:text-[11px] font-bold text-[#D6B97A] uppercase tracking-[0.3em] mt-1 md:mt-2">
-                  {config.e}
-                </p>
+                <ChevronLeft className="size-5 md:size-6" />
+              </button>
+              <div className="flex items-center gap-3 md:gap-6">
+                <div
+                  className={`size-10 md:size-14 ${config.color} rounded-xl md:rounded-[1.5rem] flex items-center justify-center text-white shadow-2xl shadow-[#D6B97A]/20 ring-4 ring-white/50`}
+                >
+                  <config.icon className="size-5 md:size-7" />
+                </div>
+                <div>
+                  <h1 className="font-black text-[#1A1A1A] text-lg md:text-2xl tracking-tight leading-none">
+                    {config.m}
+                  </h1>
+                  <p className="text-[8px] md:text-[11px] font-bold text-[#D6B97A] uppercase tracking-[0.3em] mt-1 md:mt-2">
+                    {config.e}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-2 md:gap-4">
-            {moduleId === "teacher-statistics" && (
-              <button
-                onClick={() => window.dispatchEvent(new Event("download-teacher-portfolio-pdf"))}
-                className="group flex items-center gap-2 md:gap-4 px-6 md:px-12 py-3 md:py-5 bg-white text-slate-800 text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] rounded-full hover:bg-[#D6B97A] hover:text-white hover:border-[#D6B97A] border border-slate-200 transition-all duration-700 shadow-xl cursor-pointer"
-              >
-                <Download className="size-3 md:size-4 text-[#D6B97A] group-hover:text-white" />
-                <span className="hidden sm:inline">Download PDF</span>
-                <span className="sm:hidden">PDF</span>
-              </button>
-            )}
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="group flex items-center gap-2 md:gap-4 px-6 md:px-12 py-3 md:py-5 bg-[#1A1A1A] text-white text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] rounded-full hover:bg-[#D6B97A] transition-all duration-700 shadow-2xl disabled:opacity-50"
-            >
-              {saving ? (
-                <Loader2 className="size-3 md:size-4 animate-spin" />
-              ) : (
-                <Save className="size-3 md:size-4 group-hover:rotate-12 transition-transform text-[#D6B97A] group-hover:text-white" />
+            <div className="flex items-center gap-2 md:gap-4">
+              {moduleId === "teacher-statistics" && (
+                <button
+                  onClick={() => window.dispatchEvent(new Event("download-teacher-portfolio-pdf"))}
+                  className="group flex items-center gap-2 md:gap-4 px-6 md:px-12 py-3 md:py-5 bg-white text-slate-800 text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] rounded-full hover:bg-[#D6B97A] hover:text-white hover:border-[#D6B97A] border border-slate-200 transition-all duration-700 shadow-xl cursor-pointer"
+                >
+                  <Download className="size-3 md:size-4 text-[#D6B97A] group-hover:text-white" />
+                  <span className="hidden sm:inline">Download PDF</span>
+                  <span className="sm:hidden">PDF</span>
+                </button>
               )}
-              <span className="hidden sm:inline">Commit Sync</span>
-              <span className="sm:hidden">Save</span>
-            </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="group flex items-center gap-2 md:gap-4 px-6 md:px-12 py-3 md:py-5 bg-[#1A1A1A] text-white text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] rounded-full hover:bg-[#D6B97A] transition-all duration-700 shadow-2xl disabled:opacity-50"
+              >
+                {saving ? (
+                  <Loader2 className="size-3 md:size-4 animate-spin" />
+                ) : (
+                  <Save className="size-3 md:size-4 group-hover:rotate-12 transition-transform text-[#D6B97A] group-hover:text-white" />
+                )}
+                <span className="hidden sm:inline">Commit Sync</span>
+                <span className="sm:hidden">Save</span>
+              </button>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
-      <main className="flex-1 lg:pl-0 px-2 sm:px-4 md:px-6 py-4 md:py-6 max-w-full pt-24 mx-auto w-full relative z-10">
+      <main className={`flex-1 lg:pl-0 px-2 sm:px-4 md:px-6 py-4 md:py-6 max-w-full ${moduleId === 'annual-monthly-planning' ? 'pt-4' : 'pt-24'} mx-auto w-full relative z-10`}>
         <PinGate sectionKey="planning" enabled={moduleId === "annual-monthly-planning"}>
           <motion.div
             initial={{ opacity: 0, y: 30 }}
