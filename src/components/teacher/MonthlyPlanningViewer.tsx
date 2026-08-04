@@ -279,33 +279,78 @@ export const MonthlyPlanningViewer: React.FC<MonthlyPlanningViewerProps> = ({
     toast.info("मासिक नियोजन संपादन रद्द केले.");
   };
 
+const isMonthlyBannerRow = (row: ParsedTableCell[]): boolean => {
+  if (!row || !Array.isArray(row)) return false;
+  return row.some((c) => {
+    if (!c || !c.value) return false;
+    const s = c.value.toLowerCase().trim();
+    return (
+      s.includes("अभ्यासक्रमाचे") ||
+      s.includes("मासिक व घटक") ||
+      s.includes("monthly & unit planning") ||
+      s.includes("monthly unit planning") ||
+      s.includes("monthly planning") ||
+      (s.startsWith("month ") && s.includes("202"))
+    );
+  });
+};
+
+const isMonthlyMetadataRow = (row: ParsedTableCell[]): boolean => {
+  if (!row || !Array.isArray(row)) return false;
+  return row.some((c) => {
+    if (!c || !c.value) return false;
+    const s = c.value.toLowerCase().trim();
+    return (
+      s.includes("class :") ||
+      s.includes("class:") ||
+      s.includes("sub :") ||
+      s.includes("sub:") ||
+      s.includes("subject:") ||
+      s.includes("working days") ||
+      s.includes("available period") ||
+      s.includes("नियोजित तासिका") ||
+      s.includes("कामाचे दिवस")
+    );
+  });
+};
+
+const isMonthlyColumnHeaderRow = (row: ParsedTableCell[]): boolean => {
+  if (!row || !Array.isArray(row)) return false;
+  const joined = row.map((c) => (c?.value || "").toLowerCase().trim()).join(" ");
+  const hasDateOrDay = joined.includes("दिनांक") || joined.includes("day");
+  const hasTopicOrLesson = joined.includes("पाठ") || joined.includes("घटक") || joined.includes("lesson") || joined.includes("point");
+  return hasDateOrDay && hasTopicOrLesson;
+};
+
+const isMonthlySignatureRow = (row: ParsedTableCell[]): boolean => {
+  if (!row || !Array.isArray(row)) return false;
+  const joined = row.map((c) => (c?.value || "").toLowerCase().trim()).join(" ");
+  return (
+    joined.includes("class teacher sign") ||
+    joined.includes("headmaster sign") ||
+    joined.includes("शिक्षक स्वाक्षरी") ||
+    joined.includes("मुख्याध्यापक स्वाक्षरी") ||
+    joined.includes("स्वाक्षरी") ||
+    joined.includes("sign")
+  );
+};
+
 const isRowInvalid = (row: ParsedTableCell[]): boolean => {
   if (!row || !Array.isArray(row) || row.length === 0) return true;
 
   // 1. Skip 100% empty rows (where all cells are empty)
-  const isAllEmpty = row.every((c) => !c || !c.value || c.value.trim() === "");
+  const isAllEmpty = row.every((c) => !c || !c.value || cleanCellValue(c.value) === "");
   if (isAllEmpty) return true;
 
-  // 2. Keep Month Banner rows intact
-  const isBanner = row.some((c) => c && c.value && (c.value.includes("अभ्यासक्रमाचे") || c.value.includes("मासिक व घटक नियोजन")));
-  if (isBanner) return false;
+  // 2. Keep Month Banner rows intact (used to split month cards)
+  if (isMonthlyBannerRow(row)) return false;
 
   // 3. Skip repeated structural headers / metadata / signature rows from inside table data
-  const col0Val = (row[0]?.value || "").trim();
-  const isStructuralHeader =
-    col0Val === "दिनांक" ||
-    col0Val.includes("इयत्ता :") ||
-    col0Val.includes("विषय :") ||
-    col0Val.includes("स्वाक्षरी") ||
-    col0Val.includes("वर्ग शिक्षक") ||
-    col0Val.includes("मुख्याध्यापक");
+  if (isMonthlyMetadataRow(row) || isMonthlyColumnHeaderRow(row) || isMonthlySignatureRow(row)) {
+    return true;
+  }
 
-  if (isStructuralHeader) return true;
-
-  // 4. Drop orphan date-only rows (where Column 0 has text/number, but Columns 1..6 are ALL empty)
-  const hasContentInCols1To6 = row.slice(1, 7).some((c) => c && c.value && c.value.trim() !== "");
-  if (!hasContentInCols1To6) return true;
-
+  // 4. Any row reaching here with content is a valid data row
   return false;
 };
 
@@ -322,14 +367,15 @@ const splitGridByMonthBlocks = (grid: ParsedTableCell[][]): MonthBlock[] => {
   grid.forEach((row) => {
     if (isRowInvalid(row)) return;
 
-    const isBanner = row.some((c) => c && c.value && (c.value.includes("अभ्यासक्रमाचे") || c.value.includes("मासिक व घटक नियोजन")));
-
-    if (isBanner) {
+    if (isMonthlyBannerRow(row)) {
       const bannerVal = row.find((c) => c && c.value && c.value.trim() !== "")?.value || "";
       let monthName = bannerVal
-        .replace("✨", "")
-        .replace("अभ्यासक्रमाचे मासिक व घटक नियोजन माहे -", "")
-        .replace("अभ्यासक्रमाचे मासिक व घटक नियोजन", "")
+        .replace(/✨/g, "")
+        .replace(/Monthly & Unit Planning - Month /gi, "")
+        .replace(/Monthly & Unit Planning/gi, "")
+        .replace(/अभ्यासक्रमाचे मासिक व घटक नियोजन माहे -/gi, "")
+        .replace(/अभ्यासक्रमाचे मासिक व घटक नियोजन/gi, "")
+        .replace(/मासिक व घटक नियोजन/gi, "")
         .trim();
 
       if (currentRows.length > 0) {
@@ -670,11 +716,12 @@ const splitGridByMonthBlocks = (grid: ParsedTableCell[][]): MonthBlock[] => {
               {currentDisplayGrid.map((row, rowIndex) => {
                 if (!isEditMode && isRowInvalid(row)) return null;
 
-                const isBanner = row.some((c) => c && c.value && (c.value.includes("अभ्यासक्रमाचे") || c.value.includes("मासिक व घटक नियोजन")));
+                const isBanner = isMonthlyBannerRow(row);
                 const spanWidth = role === "admin" && isEditMode ? 8 : 7;
 
                 if (isBanner) {
-                  const bannerText = row.find((c) => c.value && c.value.trim() !== "")?.value || `अभ्यासक्रमाचे मासिक व घटक नियोजन | विषय: ${subjectName}`;
+                  const rawVal = row.find((c) => c.value && c.value.trim() !== "")?.value;
+                  const bannerText = title && title.length > 5 ? title : (rawVal || `अभ्यासक्रमाचे मासिक व घटक नियोजन | विषय: ${subjectName}`);
                   return (
                     <tr key={rowIndex} className="bg-amber-100 text-amber-950 font-bold text-center border-y-2 border-amber-300">
                       <td colSpan={spanWidth} className="py-2.5 px-4 text-sm tracking-wide font-extrabold text-amber-950">

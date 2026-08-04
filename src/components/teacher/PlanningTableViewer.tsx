@@ -46,7 +46,7 @@ const DEFAULT_ANNUAL_PLANNING_HEADERS = [
   "कामाचे दिवस",
   "प्राप्त तासिका",
   "विषय",
-  "अध्ययन निष्पत्ती",
+  "अध्ययन निष्पत्ती क्रमांक",
 ];
 
 /**
@@ -396,7 +396,7 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
 
       if (isBannerRow) {
         const bannerVal = row.find((c) => c.value && (c.value.includes("इयत्ता") || c.value.includes("नियोजन")))?.value;
-        if (bannerVal) currentBannerText = bannerVal.trim();
+        currentBannerText = title && title.length > 5 ? title : (bannerVal ? bannerVal.trim() : "");
         return;
       }
 
@@ -475,8 +475,7 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
       }
 
       // 1. Subject Header Banner
-      const defaultBanner = title && title.length > 5 ? title : "वार्षिक नियोजन सन :- 2026-27";
-      const bannerText = group.bannerText || defaultBanner;
+      const bannerText = title && title.length > 5 ? title : (group.bannerText || "वार्षिक नियोजन सन :- 2026-27");
       html += `<div class="bg-indigo-900 text-white font-bold text-center border-b-2 border-indigo-950 p-2.5 rounded-t-lg mb-2 text-sm tracking-wide bg-gradient-to-r from-indigo-900 via-indigo-800 to-indigo-900" style="background-color: #1e1b4b !important; color: #ffffff !important; padding: 8px; text-align: center; font-weight: bold; border-radius: 6px; margin-bottom: 8px;">`;
       html += `✨ ${escapeHtml(bannerText)} | 📌 ${escapeHtml(group.subjectName)}`;
       html += `</div>`;
@@ -500,7 +499,7 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
       html += `<th class="p-2 border border-amber-300 text-center font-bold" style="width: 10%;">कामाचे दिवस</th>`;
       html += `<th class="p-2 border border-amber-300 text-center font-bold" style="width: 10%;">प्राप्त तासिका</th>`;
       html += `<th class="p-2 border border-amber-300 text-left bg-amber-200/80 font-extrabold text-amber-950" style="width: 35%;">📌 ${escapeHtml(group.subjectName)}</th>`;
-      html += `<th class="p-2 border border-amber-300 text-left font-bold" style="width: 27%;">अध्ययन निष्पत्ती</th>`;
+      html += `<th class="p-2 border border-amber-300 text-left font-bold" style="width: 27%;">अध्ययन निष्पत्ती क्रमांक</th>`;
       html += `</tr>`;
       html += `</thead>`;
 
@@ -780,8 +779,8 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
                   const spanWidth = role === "admin" && isEditMode ? colCount + 1 : colCount;
 
                   if (isBannerRow) {
-                    const defaultBanner = title && title.length > 5 ? title : "वार्षिक नियोजन सन :- 2026-27";
-                    const bannerText = row.find((c) => c.value && (c.value.includes("इयत्ता") || c.value.includes("नियोजन")))?.value || defaultBanner;
+                    const rawVal = row.find((c) => c.value && (c.value.includes("इयत्ता") || c.value.includes("नियोजन")))?.value;
+                    const bannerText = title && title.length > 5 ? title : (rawVal || "वार्षिक नियोजन सन :- 2026-27");
                     return (
                       <tr key={rowIndex} className="bg-indigo-900 text-white font-bold text-center border-t-4 border-indigo-950">
                         <td
@@ -800,7 +799,8 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
                     const daysHeader = row[2]?.value || "कामाचे दिवस";
                     const periodsHeader = row[3]?.value || "प्राप्त तासिका";
                     const subjectHeader = row[4]?.value || "विषय";
-                    const outcomesHeader = row[5]?.value || "अध्ययन निष्पती";
+                    const rawOutcomesHeader = (row[5]?.value || "").trim();
+                    const outcomesHeader = (!rawOutcomesHeader || rawOutcomesHeader === "अध्ययन निष्पत्ती" || rawOutcomesHeader === "अध्ययन निष्पती") ? "अध्ययन निष्पत्ती क्रमांक" : rawOutcomesHeader;
 
                     return (
                       <tr key={rowIndex} className="bg-amber-100 text-slate-900 font-bold sticky top-0 z-10 border-b-2 border-amber-300 shadow-sm">

@@ -3247,7 +3247,7 @@ export function AcademicPlanningSystem({
                         <th className="p-2.5 w-[7%] text-center border-r border-slate-800">कामाचे दिवस</th>
                         <th className="p-2.5 w-[7%] text-center border-r border-slate-800">प्राप्त तासिका</th>
                         <th className="p-2.5 w-[42%] border-r border-slate-800">विषय / घटक विवरण</th>
-                        <th className="p-2.5 w-[22%] border-r border-slate-800">अध्ययन निष्पत्ती</th>
+                        <th className="p-2.5 w-[22%] border-r border-slate-800">अध्ययन निष्पत्ती क्रमांक</th>
                         <th className="p-2.5 w-12 text-center">कृती</th>
                       </tr>
                     </thead>
@@ -3535,7 +3535,7 @@ export function AcademicPlanningSystem({
                   <th className="border border-slate-800 p-1.5 text-center" style={{ width: selectedPlanningType === "annual" ? "6%" : "7%" }}>कामाचे दिवस</th>
                   <th className="border border-slate-800 p-1.5 text-center" style={{ width: selectedPlanningType === "annual" ? "6%" : "7%" }}>प्राप्त तासिका</th>
                   <th className="border border-slate-800 p-1.5 text-left" style={{ width: selectedPlanningType === "annual" ? "42%" : "46%" }}>विषय / घटक विवरण</th>
-                  <th className="border border-slate-800 p-1.5 text-left" style={{ width: selectedPlanningType === "annual" ? "24%" : "26%" }}>अध्ययन निष्पत्ती</th>
+                  <th className="border border-slate-800 p-1.5 text-left" style={{ width: selectedPlanningType === "annual" ? "24%" : "26%" }}>अध्ययन निष्पत्ती क्रमांक</th>
                 </tr>
               </thead>
               <tbody>
