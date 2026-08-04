@@ -124,6 +124,23 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
   const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
 
+  const [schoolInfo] = useState<{
+    schoolName?: string;
+    centerName?: string;
+    udiseCode?: string;
+    taluka?: string;
+    district?: string;
+    classTeacherName?: string;
+    headmasterName?: string;
+  }>(() => {
+    try {
+      const cached = localStorage.getItem("cce_school_profile_info");
+      return cached ? JSON.parse(cached) : {};
+    } catch {
+      return {};
+    }
+  });
+
   // Synchronize master state when propGridData updates externally & normalize to 6 columns
   useEffect(() => {
     if (propGridData && propGridData.length > 0) {
@@ -445,6 +462,18 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
 
       html += `<div class="${pageBreakClass}" style="${pageBreakStyle}">`;
 
+      // 0. Top School Information Header Block
+      if (schoolInfo.schoolName) {
+        html += `<div class="school-header-banner bg-slate-900 text-white p-3 rounded-t-xl border-b-2 border-amber-400 mb-2 font-sans" style="background-color: #0f172a !important; color: #ffffff !important; padding: 10px; border-radius: 8px; margin-bottom: 8px;">`;
+        html += `<div style="text-align: center; font-size: 15px; font-weight: 900; color: #fde047 !important; text-transform: uppercase;">${escapeHtml(schoolInfo.schoolName)}</div>`;
+        html += `<div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 700; margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.2); color: #e2e8f0 !important;">`;
+        html += `<div><b>केंद्र:</b> ${escapeHtml(schoolInfo.centerName || "—")}</div>`;
+        html += `<div><b>युडीएस कोड:</b> <span style="font-family: monospace;">${escapeHtml(schoolInfo.udiseCode || "—")}</span></div>`;
+        html += `<div><b>तालुका:</b> ${escapeHtml(schoolInfo.taluka || "—")}</div>`;
+        html += `<div><b>जिल्हा:</b> ${escapeHtml(schoolInfo.district || "—")}</div>`;
+        html += `</div></div>`;
+      }
+
       // 1. Subject Header Banner
       const bannerText = group.bannerText || "इयत्ता : पहिली वार्षिक नियोजन सन :- 2026-27";
       html += `<div class="bg-indigo-900 text-white font-bold text-center border-b-2 border-indigo-950 p-2.5 rounded-t-lg mb-2 text-sm tracking-wide bg-gradient-to-r from-indigo-900 via-indigo-800 to-indigo-900" style="background-color: #1e1b4b !important; color: #ffffff !important; padding: 8px; text-align: center; font-weight: bold; border-radius: 6px; margin-bottom: 8px;">`;
@@ -470,7 +499,7 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
       html += `<th class="p-2 border border-amber-300 text-center font-bold" style="width: 10%;">कामाचे दिवस</th>`;
       html += `<th class="p-2 border border-amber-300 text-center font-bold" style="width: 10%;">प्राप्त तासिका</th>`;
       html += `<th class="p-2 border border-amber-300 text-left bg-amber-200/80 font-extrabold text-amber-950" style="width: 35%;">📌 ${escapeHtml(group.subjectName)}</th>`;
-      html += `<th class="p-2 border border-amber-300 text-left font-bold" style="width: 27%;">अध्ययन निष्पती</th>`;
+      html += `<th class="p-2 border border-amber-300 text-left font-bold" style="width: 27%;">अध्ययन निष्पत्ती</th>`;
       html += `</tr>`;
       html += `</thead>`;
 
@@ -500,13 +529,22 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
       html += `</tbody>`;
       html += `</table>`;
 
-      // 3. Subject Signatures
-      const teacherSig = group.signatureRow?.find((c) => c.value && c.value.includes("शिक्षक"))?.value || "✍️ शिक्षक स्वाक्षरी";
-      const hmSig = group.signatureRow?.find((c) => c.value && c.value.includes("मुख्याध्यापक"))?.value || "✍️ मुख्याध्यापक स्वाक्षरी";
+      // 3. Subject Signatures Block (Class Teacher & Headmaster)
+      const teacherName = schoolInfo.classTeacherName || "वर्गशिक्षक";
+      const hmName = schoolInfo.headmasterName || "मुख्याध्यापक";
 
-      html += `<div class="flex justify-between items-center mt-3 px-6 pt-2 text-xs font-bold text-slate-800 border-t border-slate-300" style="display: flex; justify-space-between; margin-top: 10px; margin-bottom: 0px; padding-top: 8px; padding-bottom: 0px; font-weight: bold; font-size: 11px;">`;
-      html += `<div>${escapeHtml(teacherSig)}</div>`;
-      html += `<div>${escapeHtml(hmSig)}</div>`;
+      html += `<div class="signature-block" style="display: flex; justify-space-between: space-between; justify-content: space-between; align-items: flex-end; margin-top: 16px; padding-top: 10px; font-size: 11px; font-weight: bold; page-break-inside: avoid; break-inside: avoid;">`;
+      html += `<div style="text-align: center; width: 45%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; background-color: #f8fafc;">`;
+      html += `<div style="font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">वर्गशिक्षक स्वाक्षरी</div>`;
+      html += `<div style="font-size: 13px; font-weight: 900; color: #1e1b4b; margin-top: 4px;">${escapeHtml(teacherName)}</div>`;
+      html += `<div style="margin-top: 20px; font-style: italic; color: #475569; border-top: 1px solid #cbd5e1; padding-top: 4px;">(स्वाक्षरी / Signature)</div>`;
+      html += `</div>`;
+
+      html += `<div style="text-align: center; width: 45%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; background-color: #f8fafc;">`;
+      html += `<div style="font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">मुख्याध्यापक स्वाक्षरी</div>`;
+      html += `<div style="font-size: 13px; font-weight: 900; color: #581c87; margin-top: 4px;">${escapeHtml(hmName)}</div>`;
+      html += `<div style="margin-top: 20px; font-style: italic; color: #475569; border-top: 1px solid #cbd5e1; padding-top: 4px;">(स्वाक्षरी / Signature)</div>`;
+      html += `</div>`;
       html += `</div>`;
 
       html += `</div>`; // end subject-pdf-page
