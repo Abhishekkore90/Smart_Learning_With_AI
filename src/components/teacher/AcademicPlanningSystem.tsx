@@ -302,6 +302,7 @@ const extractExcelData = async (
 
       const nonEmptyCells = row.map((c: any) => String(c ?? "").trim()).filter((h) => h.length > 0 && !isPdfNoiseLine(h));
       if (nonEmptyCells.length < 2) continue; // Skip single-cell title banners like "अभ्यासक्रमाचे मासिक व घटक नियोजन"
+      if (new Set(nonEmptyCells).size === 1) continue; // Skip merged title banner rows where all cells have identical text!
 
       // Count how many header keywords match in this row
       let matches = 0;
@@ -392,8 +393,11 @@ const extractExcelData = async (
       const strRow: string[] = Array.from({ length: numCols }, (_, ci) =>
         String(row[ci] ?? "").trim()
       );
-      // Skip only completely empty rows or raw PDF stream noise
+      // Skip completely empty rows or raw PDF stream noise
       if (strRow.every((c) => c === "") || isPdfNoiseLine(strRow)) continue;
+      // Skip merged title banner rows where all non-empty cells contain the exact same repeated title
+      const nonBlankVals = strRow.filter((c) => c !== "");
+      if (nonBlankVals.length > 1 && new Set(nonBlankVals).size === 1) continue;
       dataRows.push(strRow);
     }
     if (dataRows.length === 0) return empty;
