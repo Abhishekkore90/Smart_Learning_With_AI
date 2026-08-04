@@ -81,14 +81,11 @@ export async function fetchJsonFromBunny<T = any>(filePath: string): Promise<T |
     const cdnUrl = `${PULL_ZONE_URL}/${cleanPath}?t=${Date.now()}`;
     const res = await fetch(cdnUrl);
     if (res.ok) {
-      const contentType = res.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        const data = await res.json();
-        try {
-          localStorage.setItem(cacheKey, JSON.stringify(data));
-        } catch (e) {}
-        return data as T;
-      }
+      const data = await res.json();
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(data));
+      } catch (e) {}
+      return data as T;
     }
   } catch (err) {
     console.warn(`Could not fetch ${cleanPath} from Bunny CDN, trying cache...`, err);

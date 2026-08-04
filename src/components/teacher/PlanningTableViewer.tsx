@@ -721,12 +721,12 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
           <table className="w-full table-fixed text-left border-collapse text-slate-900 text-sm font-sans">
             <colgroup>
               {role === "admin" && isEditMode && <col className="w-[4%]" />}
-              <col className="w-[9%]" />
-              <col className="w-[7%]" />
-              <col className="w-[10%]" />
-              <col className="w-[10%]" />
-              <col className="w-[36%]" />
-              <col className="w-[28%]" />
+              <col className="w-[9%]" />   {/* महिना */}
+              <col className="w-[7%]" />   {/* आठवडा */}
+              <col className="w-[10%]" />  {/* कामाचे दिवस */}
+              <col className="w-[10%]" />  {/* प्राप्त तासिका */}
+              <col className="w-[36%]" />  {/* विषय */}
+              <col className="w-[28%]" />  {/* अध्ययन निष्पत्ती */}
             </colgroup>
             <tbody className="divide-y divide-slate-300">
               {(() => {

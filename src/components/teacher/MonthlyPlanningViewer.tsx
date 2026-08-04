@@ -641,13 +641,13 @@ const splitGridByMonthBlocks = (grid: ParsedTableCell[][]): MonthBlock[] => {
           <table className="w-full table-fixed text-left border-collapse text-slate-900 text-xs font-sans">
             <colgroup>
               {role === "admin" && isEditMode && <col className="w-[4%]" />}
-              <col className="w-[6%]" />
-              <col className="w-[18%]" />
-              <col className="w-[18%]" />
-              <col className="w-[18%]" />
-              <col className="w-[16%]" />
-              <col className="w-[12%]" />
-              <col className="w-[12%]" />
+              <col className="w-[6%]" />   {/* दिनांक */}
+              <col className="w-[18%]" />  {/* पाठ / घटक / उपघटक */}
+              <col className="w-[18%]" />  {/* अध्ययन निष्पत्ती */}
+              <col className="w-[18%]" />  {/* अध्ययन मुद्दे / पाठ्यांश उद्देश */}
+              <col className="w-[16%]" />  {/* अध्ययन अनुभवाचे स्वरूप */}
+              <col className="w-[12%]" />  {/* साधन तंत्रे */}
+              <col className="w-[12%]" />  {/* आवश्यक साहित्य */}
             </colgroup>
 
             <thead>

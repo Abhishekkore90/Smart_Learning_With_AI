@@ -1642,7 +1642,7 @@ const handleDemandReportPdfDownload = async () => {
     }
   };
 
-  // Anudan (Grant & Cooking Cost Settings) States & Logic — Learnify-style
+  // Anudan (Grant & Cooking Cost Settings) States & Logic
   const [anudanYear, setAnudanYear] = useState("2026-27");
   const [effectiveDate, setEffectiveDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [primaryRate, setPrimaryRate] = useState("5.45");
@@ -1650,71 +1650,12 @@ const handleDemandReportPdfDownload = async () => {
   const [eggRate, setEggRate] = useState("5.00");
   const [vegPercent, setVegPercent] = useState("70");
   const [fuelPercent, setFuelPercent] = useState("30");
-  // Learnify-style per-section breakdown
-  const [primaryCentralShare, setPrimaryCentralShare] = useState("1.56");
-  const [primaryStateShare, setPrimaryStateShare] = useState("1.03");
-  const [upperCentralShare, setUpperCentralShare] = useState("2.32");
-  const [upperStateShare, setUpperStateShare] = useState("1.56");
-  const [anudanRateHistory, setAnudanRateHistory] = useState<Array<{ date: string; primary: string; upper: string; centralPrimary: string; statePrimary: string; centralUpper: string; stateUpper: string }>>([]);
-  const [anudanLoaded, setAnudanLoaded] = useState(false);
-
-  // Derived totals for Learnify-style display
-  const primaryTotal = (parseFloat(primaryCentralShare || "0") + parseFloat(primaryStateShare || "0")).toFixed(2);
-  const upperTotal = (parseFloat(upperCentralShare || "0") + parseFloat(upperStateShare || "0")).toFixed(2);
-  const primaryGovRate = parseFloat(primaryRate || "0");
-  const upperGovRate = parseFloat(upperRate || "0");
-
-  // Load anudan settings from Firestore
-  useEffect(() => {
-    async function loadAnudanSettings() {
-      try {
-        const udise = getUdise();
-        const snap = await getDoc(doc(db, "school_data", `${udise}_mdm`));
-        if (snap.exists() && snap.data().anudanSettings) {
-          const s = snap.data().anudanSettings;
-          if (s.year) setAnudanYear(s.year);
-          if (s.effectiveDate) setEffectiveDate(s.effectiveDate);
-          if (s.primaryRate) setPrimaryRate(s.primaryRate);
-          if (s.upperRate) setUpperRate(s.upperRate);
-          if (s.eggRate) setEggRate(s.eggRate);
-          if (s.vegPercent) setVegPercent(s.vegPercent);
-          if (s.fuelPercent) setFuelPercent(s.fuelPercent);
-          if (s.primaryCentralShare) setPrimaryCentralShare(s.primaryCentralShare);
-          if (s.primaryStateShare) setPrimaryStateShare(s.primaryStateShare);
-          if (s.upperCentralShare) setUpperCentralShare(s.upperCentralShare);
-          if (s.upperStateShare) setUpperStateShare(s.upperStateShare);
-        }
-        if (snap.exists() && snap.data().anudanRateHistory) {
-          setAnudanRateHistory(snap.data().anudanRateHistory);
-        }
-      } catch (e) {
-        console.warn("Error loading anudan settings:", e);
-      } finally {
-        setAnudanLoaded(true);
-      }
-    }
-    loadAnudanSettings();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const handleSaveAnudanSettings = async () => {
     if (!user) return;
     setSaving(true);
     try {
       const udise = getUdise();
-      const newHistoryEntry = {
-        date: effectiveDate,
-        primary: primaryRate,
-        upper: upperRate,
-        centralPrimary: primaryCentralShare,
-        statePrimary: primaryStateShare,
-        centralUpper: upperCentralShare,
-        stateUpper: upperStateShare,
-      };
-      const updatedHistory = [
-        newHistoryEntry,
-        ...anudanRateHistory.filter((h) => h.date !== effectiveDate),
-      ].slice(0, 20);
       await setDoc(
         doc(db, "school_data", `${udise}_mdm`),
         {
@@ -1726,17 +1667,11 @@ const handleDemandReportPdfDownload = async () => {
             eggRate,
             vegPercent,
             fuelPercent,
-            primaryCentralShare,
-            primaryStateShare,
-            upperCentralShare,
-            upperStateShare,
           },
-          anudanRateHistory: updatedHistory,
           updatedAt: new Date().toISOString(),
         },
         { merge: true },
       );
-      setAnudanRateHistory(updatedHistory);
       toast.success(t("अनुदान सेटिंग यशस्वीरित्या जतन केली!", "Anudan settings saved successfully!"));
     } catch (e) {
       console.error(e);
@@ -5029,28 +4964,26 @@ const handleDemandReportPdfDownload = async () => {
                   </div>
                 )}
 
-                {/* ANUDAN SETTINGS (GRANT & COOKING COST) TAB — Learnify Style */}
+                {/* ANUDAN SETTINGS (GRANT & COOKING COST) TAB */}
                 {activeTab === "anudan" && (
-                  <div className="w-full space-y-6 font-sans">
-
-                    {/* Page Header */}
+                  <div className="w-full space-y-5 font-sans">
+                    {/* Page Header Title */}
                     <h2 className="text-xl font-bold text-slate-800 border-b border-slate-200 pb-3">
                       {lang === "mr" ? "अनुदान सेटिंग" : "Anudan Settings"}
                     </h2>
 
-                    {/* Card 1: Information Banner */}
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6 space-y-2">
+                    {/* Card 1: Top Information Banner */}
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-2">
                       <h3 className="text-lg font-bold text-slate-800">
                         {lang === "mr" ? "अनुदान सेटिंग" : "Anudan Settings"}
                       </h3>
                       <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                        GR नुसार शासन दर व अनुदान वर्गीकरण (केंद्र / राज्य हिस्सा) येथे नियंत्रित करा. आपली शाळा: <strong className="text-slate-900">प्राथमिक ( इयत्ता १ ते ५ )</strong> — दैनंदिन नोंद, मासिक तांदूळ अहवाल/बिल व प्रपत्र (ब) यामध्ये <strong className="text-slate-900">लागू दिनांक</strong> नुसार दर वापरले जातात.
-                        <br />सध्या प्रणालीचे मूळ दर वापरले जात आहेत.
+                        GR नुसार शासन दर व अनुदान वर्गीकरण (केंद्र / राज्य हिस्सा) येथे नियंत्रित करा. आपली शाळा: <strong className="text-slate-900">प्राथमिक ( इयत्ता १ ते ५ )</strong> — दैनंदिन नोंद, मासिक तांदूळ अहवाल/बिल व प्रपत्र (ब) यामध्ये <strong className="text-slate-900">लागू दिनांक</strong> नुसार दर वापरले जातात. सध्या प्रणालीचे मूळ दर वापरले जात आहेत.
                       </p>
                     </div>
 
-                    {/* Card 2: Effective Date */}
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6 space-y-2">
+                    {/* Card 2: Effective Date Selector */}
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-2">
                       <label className="text-sm font-bold text-slate-700 block">
                         {lang === "mr" ? "लागू दिनांक (Effective from) *" : "Effective Date (Effective from) *"}
                       </label>
@@ -5067,200 +5000,161 @@ const handleDemandReportPdfDownload = async () => {
                       </p>
                     </div>
 
-                    {/* Card 3: Primary & Upper Primary Rate Breakdown — Learnify-style side-by-side bordered sections */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                    {/* Cards 3 & 4: Form & Share Calculations */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                      {/* Left Form Card */}
+                      <div className="lg:col-span-6 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <h3 className="font-bold text-base text-slate-800 border-b border-slate-100 pb-2">
+                          {lang === "mr" ? "प्रति विद्यार्थी शिजवण्याचा खर्च दर (GR दर)" : "Per Student Cooking Cost Rates"}
+                        </h3>
 
-                      {/* Left: प्राथमिक (इयत्ता १ ते ५) */}
-                      <div className="bg-white rounded-2xl border-2 border-emerald-500 shadow-sm overflow-hidden">
-                        <div className="bg-emerald-50 border-b-2 border-emerald-500 px-5 py-3">
-                          <h3 className="text-base font-bold text-emerald-800">
-                            {lang === "mr" ? "प्राथमिक ( इयत्ता १ ते ५ )" : "Primary (Class 1 to 5)"}
-                          </h3>
+                        <div className="space-y-4">
+                          <div>
+                            <label className="text-xs font-bold text-slate-700 block mb-1">
+                              {lang === "mr" ? "शैक्षणिक वर्ष *" : "Academic Year *"}
+                            </label>
+                            <select
+                              value={anudanYear}
+                              onChange={(e) => setAnudanYear(e.target.value)}
+                              className="w-full h-10 px-3 border border-slate-300 rounded-lg text-sm font-medium focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+                            >
+                              <option value="2026-27">2026-27</option>
+                              <option value="2025-26">2025-26</option>
+                            </select>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <label className="text-xs font-bold text-slate-700 block mb-1">
+                                {lang === "mr" ? "प्राथमिक (इयत्ता १ ली ते ५ वी) प्रति विद्यार्थी दर (₹) *" : "Primary (1-5) Rate (₹) *"}
+                              </label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={primaryRate}
+                                onChange={(e) => setPrimaryRate(e.target.value)}
+                                className="w-full h-10 px-3 border border-slate-300 rounded-lg text-sm font-bold text-slate-800 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-xs font-bold text-slate-700 block mb-1">
+                                {lang === "mr" ? "उच्च प्राथमिक (इयत्ता ६ वी ते ८ वी) प्रति विद्यार्थी दर (₹) *" : "Upper Primary (6-8) Rate (₹) *"}
+                              </label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={upperRate}
+                                onChange={(e) => setUpperRate(e.target.value)}
+                                className="w-full h-10 px-3 border border-slate-300 rounded-lg text-sm font-bold text-slate-800 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <label className="text-xs font-bold text-slate-700 block mb-1">
+                                {lang === "mr" ? "भाजीपाला व मसाले (%) *" : "Vegetables & Spices (%) *"}
+                              </label>
+                              <input
+                                type="number"
+                                value={vegPercent}
+                                onChange={(e) => setVegPercent(e.target.value)}
+                                className="w-full h-10 px-3 border border-slate-300 rounded-lg text-sm font-bold text-slate-800 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-xs font-bold text-slate-700 block mb-1">
+                                {lang === "mr" ? "इंधन व इतर खर्च (%) *" : "Fuel & Other (%) *"}
+                              </label>
+                              <input
+                                type="number"
+                                value={fuelPercent}
+                                onChange={(e) => setFuelPercent(e.target.value)}
+                                className="w-full h-10 px-3 border border-slate-300 rounded-lg text-sm font-bold text-slate-800 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="text-xs font-bold text-slate-700 block mb-1">
+                              {lang === "mr" ? "अंडी / केळी पूरक आहार दर (₹) *" : "Egg / Banana Rate (₹) *"}
+                            </label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={eggRate}
+                              onChange={(e) => setEggRate(e.target.value)}
+                              className="w-full h-10 px-3 border border-slate-300 rounded-lg text-sm font-bold text-slate-800 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+                            />
+                          </div>
+
+                          <button
+                            onClick={handleSaveAnudanSettings}
+                            disabled={saving}
+                            className="px-5 py-2.5 bg-[#047857] hover:bg-[#065f46] text-white font-bold text-sm rounded-lg shadow-sm transition-colors flex items-center justify-center gap-2"
+                          >
+                            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                            <span>Save Settings (अनुदान सेटिंग जतन करा)</span>
+                          </button>
                         </div>
-                        <div className="p-5 space-y-4">
-                          {/* शासन दर (₹) */}
-                          <div>
-                            <label className="text-xs font-bold text-slate-600 block mb-1">
-                              {lang === "mr" ? "शासन दर (₹)" : "Govt. Rate (₹)"}
-                            </label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={primaryRate}
-                              onChange={(e) => setPrimaryRate(e.target.value)}
-                              className="w-full h-10 px-3 border border-slate-300 rounded-lg text-lg font-extrabold text-right text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
-                            />
+                      </div>
+
+                      {/* Right Information & Government Classification Share Card */}
+                      <div className="lg:col-span-6 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <h3 className="font-bold text-base text-slate-800 border-b border-slate-100 pb-2">
+                          {lang === "mr" ? "अनुदान वर्गीकरण (केंद्र व राज्य हिस्सा)" : "Grant Classification (Central & State Share)"}
+                        </h3>
+
+                        <div className="space-y-3 text-xs text-slate-700 leading-relaxed font-medium">
+                          {/* Primary 1-5 Breakdown */}
+                          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-1.5">
+                            <div className="flex items-center justify-between font-bold text-slate-900 text-sm">
+                              <span>इयत्ता १ ली ते ५ वी (प्राथमिक)</span>
+                              <span className="text-emerald-700 font-extrabold">₹{primaryRate} / विद्यार्थी</span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs text-slate-600 pt-1 border-t border-slate-200/60">
+                              <span>• केंद्र हिस्सा (६०%):</span>
+                              <span className="font-bold text-slate-900">₹{(parseFloat(primaryRate || "0") * 0.6).toFixed(2)}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs text-slate-600">
+                              <span>• राज्य हिस्सा (४०%):</span>
+                              <span className="font-bold text-slate-900">₹{(parseFloat(primaryRate || "0") * 0.4).toFixed(2)}</span>
+                            </div>
                           </div>
-                          {/* केंद्र हिस्सा (₹) */}
-                          <div>
-                            <label className="text-xs font-bold text-slate-600 block mb-1">
-                              {lang === "mr" ? "केंद्र हिस्सा (₹)" : "Central Share (₹)"}
-                            </label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={primaryCentralShare}
-                              onChange={(e) => setPrimaryCentralShare(e.target.value)}
-                              className="w-full h-10 px-3 border border-slate-300 rounded-lg text-lg font-extrabold text-right text-blue-700 focus:ring-2 focus:ring-blue-400 focus:border-blue-500 transition-all"
-                            />
+
+                          {/* Upper Primary 6-8 Breakdown */}
+                          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-1.5">
+                            <div className="flex items-center justify-between font-bold text-slate-900 text-sm">
+                              <span>इयत्ता ६ वी ते ८ वी (उच्च प्राथमिक)</span>
+                              <span className="text-emerald-700 font-extrabold">₹{upperRate} / विद्यार्थी</span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs text-slate-600 pt-1 border-t border-slate-200/60">
+                              <span>• केंद्र हिस्सा (६०%):</span>
+                              <span className="font-bold text-slate-900">₹{(parseFloat(upperRate || "0") * 0.6).toFixed(2)}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs text-slate-600">
+                              <span>• राज्य हिस्सा (४०%):</span>
+                              <span className="font-bold text-slate-900">₹{(parseFloat(upperRate || "0") * 0.4).toFixed(2)}</span>
+                            </div>
                           </div>
-                          {/* राज्य हिस्सा / एकूण हिस्सा */}
-                          <div>
-                            <label className="text-xs font-bold text-slate-600 block mb-1">
-                              {lang === "mr" ? "राज्य हिस्सा (₹)" : "State Share (₹)"}
-                            </label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={primaryStateShare}
-                              onChange={(e) => setPrimaryStateShare(e.target.value)}
-                              className="w-full h-10 px-3 border border-slate-300 rounded-lg text-lg font-extrabold text-right text-orange-600 focus:ring-2 focus:ring-orange-400 focus:border-orange-500 transition-all"
-                            />
+
+                          {/* Egg/Banana Rate */}
+                          <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 flex items-center justify-between">
+                            <span className="font-bold text-slate-800">बुधवार पूरक आहार (अंडी / केळी)</span>
+                            <span className="font-bold text-sm text-emerald-700">₹{eggRate} / विद्यार्थी</span>
                           </div>
-                          <div className="bg-slate-50 rounded-lg border border-slate-200 px-3 py-2 flex items-center justify-between">
-                            <span className="text-xs font-bold text-slate-600">{lang === "mr" ? "एकूण" : "Total"}: {primaryCentralShare} + {primaryStateShare}</span>
-                            <span className="text-sm font-extrabold text-slate-900">₹ {primaryTotal}</span>
+
+                          {/* Cost Division */}
+                          <div className="bg-emerald-50/60 p-3.5 rounded-xl border border-emerald-200 text-emerald-950">
+                            <span className="font-bold block mb-1">खर्च विभागणी सूत्री (Cost Splitting Formula):</span>
+                            <span>• भाजीपाला व मसाले: <strong>{vegPercent}%</strong> (₹{(parseFloat(primaryRate || "0") * (parseFloat(vegPercent || "70") / 100)).toFixed(2)})</span> <br />
+                            <span>• इंधन व इतर खर्च: <strong>{fuelPercent}%</strong> (₹{(parseFloat(primaryRate || "0") * (parseFloat(fuelPercent || "30") / 100)).toFixed(2)})</span>
                           </div>
                         </div>
                       </div>
-
-                      {/* Right: उच्च प्राथमिक (इयत्ता ६ ते ८) */}
-                      <div className="bg-white rounded-2xl border-2 border-emerald-500 shadow-sm overflow-hidden">
-                        <div className="bg-emerald-50 border-b-2 border-emerald-500 px-5 py-3">
-                          <h3 className="text-base font-bold text-emerald-800">
-                            {lang === "mr" ? "उच्च प्राथमिक ( इयत्ता ६ ते ८ )" : "Upper Primary (Class 6 to 8)"}
-                          </h3>
-                        </div>
-                        <div className="p-5 space-y-4">
-                          {/* शासन दर (₹) */}
-                          <div>
-                            <label className="text-xs font-bold text-slate-600 block mb-1">
-                              {lang === "mr" ? "शासन दर (₹)" : "Govt. Rate (₹)"}
-                            </label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={upperRate}
-                              onChange={(e) => setUpperRate(e.target.value)}
-                              className="w-full h-10 px-3 border border-slate-300 rounded-lg text-lg font-extrabold text-right text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all"
-                            />
-                          </div>
-                          {/* केंद्र हिस्सा (₹) */}
-                          <div>
-                            <label className="text-xs font-bold text-slate-600 block mb-1">
-                              {lang === "mr" ? "केंद्र हिस्सा (₹)" : "Central Share (₹)"}
-                            </label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={upperCentralShare}
-                              onChange={(e) => setUpperCentralShare(e.target.value)}
-                              className="w-full h-10 px-3 border border-slate-300 rounded-lg text-lg font-extrabold text-right text-blue-700 focus:ring-2 focus:ring-blue-400 focus:border-blue-500 transition-all"
-                            />
-                          </div>
-                          {/* राज्य हिस्सा */}
-                          <div>
-                            <label className="text-xs font-bold text-slate-600 block mb-1">
-                              {lang === "mr" ? "राज्य हिस्सा (₹)" : "State Share (₹)"}
-                            </label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={upperStateShare}
-                              onChange={(e) => setUpperStateShare(e.target.value)}
-                              className="w-full h-10 px-3 border border-slate-300 rounded-lg text-lg font-extrabold text-right text-orange-600 focus:ring-2 focus:ring-orange-400 focus:border-orange-500 transition-all"
-                            />
-                          </div>
-                          <div className="bg-slate-50 rounded-lg border border-slate-200 px-3 py-2 flex items-center justify-between">
-                            <span className="text-xs font-bold text-slate-600">{lang === "mr" ? "एकूण" : "Total"}: {upperCentralShare} + {upperStateShare}</span>
-                            <span className="text-sm font-extrabold text-slate-900">₹ {upperTotal}</span>
-                          </div>
-                        </div>
-                      </div>
                     </div>
-
-
-
-                    {/* Save Button */}
-                    <button
-                      onClick={handleSaveAnudanSettings}
-                      disabled={saving}
-                      className="px-6 py-2.5 bg-[#047857] hover:bg-[#065f46] text-white font-bold text-sm rounded-lg shadow-sm transition-colors flex items-center justify-center gap-2"
-                    >
-                      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                      <span>{lang === "mr" ? "दर नमूना पत्रा" : "Save Rate Settings"}</span>
-                    </button>
-
-                    {/* Card 5: आपले अनुदान दर (इतिहास) — Learnify Style */}
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6 space-y-2">
-                      <h3 className="font-bold text-base text-slate-800">
-                        {lang === "mr" ? "आपले अनुदान दर (इतिहास)" : "Your Grant Rates (History)"}
-                      </h3>
-                      {anudanRateHistory.length === 0 ? (
-                        <p className="text-sm text-slate-500 font-medium">
-                          {lang === "mr" ? "अद्याप कोणतेही दर नोंदवलेले नाहीत." : "No rates recorded yet."}
-                        </p>
-                      ) : (
-                        <div className="overflow-x-auto rounded-lg border border-slate-200 mt-2">
-                          <table className="w-full text-xs text-left border-collapse">
-                            <thead>
-                              <tr className="bg-slate-100 text-slate-700 font-bold">
-                                <th className="p-2.5 border-b border-slate-200">{lang === "mr" ? "लागू दिनांक" : "Effective Date"}</th>
-                                <th className="p-2.5 border-b border-slate-200">{lang === "mr" ? "प्राथमिक ( इयत्ता १ ते ५ )" : "Primary (1-5)"}</th>
-                                <th className="p-2.5 border-b border-slate-200">{lang === "mr" ? "उच्च प्राथमिक ( इयत्ता ६ ते ८ )" : "Upper Primary (6-8)"}</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {anudanRateHistory.map((h, i) => (
-                                <tr key={i} className={`${i % 2 === 0 ? "bg-white" : "bg-slate-50"} hover:bg-emerald-50/40 transition-colors`}>
-                                  <td className="p-2.5 border-b border-slate-100 font-bold text-slate-800">{h.date}</td>
-                                  <td className="p-2.5 border-b border-slate-100">
-                                    <span className="font-bold text-slate-900">₹{h.primary}</span>
-                                    <span className="text-[10px] text-slate-500 ml-1">({lang === "mr" ? "केंद्र" : "C"} ₹{h.centralPrimary} + {lang === "mr" ? "राज्य" : "S"} ₹{h.statePrimary})</span>
-                                  </td>
-                                  <td className="p-2.5 border-b border-slate-100">
-                                    <span className="font-bold text-slate-900">₹{h.upper}</span>
-                                    <span className="text-[10px] text-slate-500 ml-1">({lang === "mr" ? "केंद्र" : "C"} ₹{h.centralUpper} + {lang === "mr" ? "राज्य" : "S"} ₹{h.stateUpper})</span>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Card 6: प्रणालीचे मूळ दर (GR) — Default System Rates */}
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6 space-y-2">
-                      <h3 className="font-bold text-base text-slate-800">
-                        {lang === "mr" ? "प्रणालीचे मूळ दर (GR)" : "System Default Rates (GR)"}
-                      </h3>
-                      <div className="overflow-x-auto rounded-lg border border-slate-200 mt-2">
-                        <table className="w-full text-xs text-left border-collapse">
-                          <thead>
-                            <tr className="bg-slate-100 text-slate-700 font-bold">
-                              <th className="p-2.5 border-b border-slate-200">{lang === "mr" ? "लागू दिनांक" : "Effective Date"}</th>
-                              <th className="p-2.5 border-b border-slate-200">{lang === "mr" ? "प्राथमिक ( इयत्ता १ ते ५ )" : "Primary (1-5)"}</th>
-                              <th className="p-2.5 border-b border-slate-200">{lang === "mr" ? "उच्च प्राथमिक ( इयत्ता ६ ते ८ )" : "Upper Primary (6-8)"}</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr className="bg-white hover:bg-emerald-50/40 transition-colors">
-                              <td className="p-2.5 border-b border-slate-100 font-bold text-slate-800">01-04-2024</td>
-                              <td className="p-2.5 border-b border-slate-100">
-                                <span className="font-bold text-slate-900">₹2.59</span>
-                                <span className="text-[10px] text-slate-500 ml-1">({lang === "mr" ? "केंद्र" : "C"} ₹1.56 + {lang === "mr" ? "राज्य" : "S"} ₹1.03)</span>
-                              </td>
-                              <td className="p-2.5 border-b border-slate-100">
-                                <span className="font-bold text-slate-900">₹3.88</span>
-                                <span className="text-[10px] text-slate-500 ml-1">({lang === "mr" ? "केंद्र" : "C"} ₹2.32 + {lang === "mr" ? "राज्य" : "S"} ₹1.56)</span>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-
                   </div>
                 )}
 
@@ -10392,182 +10286,6 @@ const handleDemandReportPdfDownload = async () => {
                                   </div>
                                 );
                               };
-
-                              if (selectedReportCategory === "tandul_bhag1") {
-                                const mIdx = monthIndex !== -1 ? monthIndex : 7;
-                                const daysInMonth = new Date(reportYear, mIdx + 1, 0).getDate();
-                                const clsSection = monthlySubTab === "6-8" ? "6 To 8" : "1 To 5";
-
-                                const openingRiceData = getStockDataForItem("Rice", monthlyReportMonth || "August", reportYear, clsSection);
-                                const currentBalance = openingRiceData?.prev || 0;
-
-                                let totalLabharthiMonth = 0;
-                                let totalCookedDays = 0;
-                                let totalSpentRiceMonth = 0;
-                                let totalReceivedRiceMonth = 0;
-
-                                const dailyRows = [];
-                                let currentShillak = currentBalance;
-
-                                for (let day = 1; day <= daysInMonth; day++) {
-                                  const dayStr = String(day).padStart(2, '0');
-                                  const monthNumStr = String(mIdx + 1).padStart(2, '0');
-                                  const dateISO = `${reportYear}-${monthNumStr}-${dayStr}`;
-                                  const dateDisplay = `${dayStr}/${monthNumStr}/${reportYear}`;
-
-                                  const dailyInfo = getDailyDataForMonthDate(dateISO, clsSection);
-                                  const labharthi = dailyInfo?.beneficiary || 0;
-                                  const pat = dailyInfo?.enrolled || (monthlySubTab === "6-8" ? (parseInt(profile?.patUpper || "0", 10) || 35) : (parseInt(profile?.patPrimary || "0", 10) || 23));
-                                  const isSunday = dailyInfo?.isHoliday || false;
-                                  const sheraText = dailyInfo?.holidayReason || (isSunday ? "रविवार सुट्टी" : "");
-
-                                  const prapt = 0;
-                                  const magilShillak = currentShillak;
-                                  const ekunSatakha = magilShillak + prapt;
-
-                                  const ratePerStudent = clsSection === "1 To 5" ? 0.100 : 0.150;
-                                  const kharchTandul = labharthi > 0 ? (labharthi * ratePerStudent) : 0;
-                                  const shillakSatakha = Math.max(0, ekunSatakha - kharchTandul);
-
-                                  currentShillak = shillakSatakha;
-
-                                  if (labharthi > 0) {
-                                    totalLabharthiMonth += labharthi;
-                                    totalCookedDays++;
-                                    totalSpentRiceMonth += kharchTandul;
-                                  }
-                                  totalReceivedRiceMonth += prapt;
-
-                                  dailyRows.push({
-                                    day,
-                                    dateDisplay,
-                                    pat,
-                                    magilShillak,
-                                    prapt,
-                                    ekunSatakha,
-                                    labharthi,
-                                    kharchTandul,
-                                    shillakSatakha,
-                                    shera: sheraText,
-                                    isSunday
-                                  });
-                                }
-
-                                const currentPat = monthlySubTab === "6-8"
-                                  ? (profile?.patUpper || "35")
-                                  : (profile?.patPrimary || "23");
-
-                                return (
-                                  <div className="print-page border border-slate-300 p-6 bg-white text-black font-sans text-xs relative w-full shadow-md flex flex-col justify-between print:w-full print:h-auto print:border-none print:shadow-none print:p-0">
-                                    <div>
-                                      {/* Top Header Banner matching Learnify */}
-                                      <div className="bg-red-50 border border-red-200 text-center py-2.5 px-4 rounded-xl mb-3">
-                                        <h1 className="text-sm md:text-base font-extrabold text-red-900 tracking-wide">
-                                          प्रधानमंत्री पोषण शक्ती निर्माण योजना
-                                        </h1>
-                                        <h2 className="text-xs md:text-sm font-bold text-red-800">
-                                          दैनंदिन तांदूळ खर्च नोंदवही (भाग १)
-                                        </h2>
-                                      </div>
-
-                                      {/* School Info Table Header matching Learnify */}
-                                      <div className="border border-black text-[10px] font-bold text-black mb-3">
-                                        <div className="grid grid-cols-6 divide-x divide-black border-b border-black p-1 text-center bg-slate-50">
-                                          <div className="col-span-2 text-left pl-2">शाळेचे नाव : <span className="font-extrabold">{reportSchoolName || profile?.schoolName || "Z P SCHOOL DHONDEWADI PED"}</span></div>
-                                          <div className="col-span-2">इयत्ता गट : <span className="font-extrabold">{monthlySubTab === "6-8" ? "उच्च प्राथमिक (इयत्ता ६ ते ८)" : "प्राथमिक (इयत्ता १ ते ५)"}</span></div>
-                                          <div>केंद्र : <span className="font-extrabold">{profile?.kendra || profile?.center || "NARSINGPUR"}</span></div>
-                                          <div>बीट : <span className="font-extrabold">{profile?.kendra || profile?.center || "NARSINGPUR"}</span></div>
-                                        </div>
-                                        <div className="grid grid-cols-6 divide-x divide-black border-b border-black p-1 text-center bg-slate-50">
-                                          <div>ता. : <span className="font-extrabold">{profile?.taluka || "तासगाव"}</span></div>
-                                          <div>जि. : <span className="font-extrabold">{profile?.district || "सांगली"}</span></div>
-                                          <div className="col-span-2">माहे : <span className="font-extrabold">{marathiMonthName || "ऑगस्ट"} सन {reportYear}/{String(reportYear + 1).slice(-2)}</span></div>
-                                          <div>पटसंख्या ({monthlySubTab === "6-8" ? "६ ते ८" : "१ ते ५"}) : <span className="font-extrabold">{toMarathiNumbers(currentPat.toString())}</span></div>
-                                          <div>एकूण लाभार्थी संख्या : <span className="font-extrabold">{toMarathiNumbers(totalLabharthiMonth.toString())}</span></div>
-                                        </div>
-                                        <div className="grid grid-cols-3 divide-x divide-black p-1 text-center bg-slate-50">
-                                          <div>एकूण कामाचे दिवस : <span className="font-extrabold">{toMarathiNumbers(totalCookedDays.toString())}</span></div>
-                                          <div>शिजवून दिलेले दिवस : <span className="font-extrabold">{toMarathiNumbers(totalCookedDays.toString())}</span></div>
-                                          <div>अंजूळ वाटप दिनांक : <span className="font-extrabold">{toMarathiNumbers(new Date().toLocaleDateString('en-GB'))}</span></div>
-                                        </div>
-                                      </div>
-
-                                      <div className="text-[10px] font-semibold text-slate-600 mb-2">
-                                        {toMarathiNumbers(totalCookedDays.toString())} / {toMarathiNumbers(daysInMonth.toString())} दिवसांची नोंद या महिन्यासाठी.
-                                      </div>
-
-                                      {/* Main 10-Column Daily Rice Log Table */}
-                                      <div className="overflow-x-auto">
-                                        <table className="w-full border-collapse border border-black text-center text-[9px] font-medium table-fixed">
-                                          <colgroup>
-                                            <col className="w-[4%]" />
-                                            <col className="w-[12%]" />
-                                            <col className="w-[7%]" />
-                                            <col className="w-[12%]" />
-                                            <col className="w-[10%]" />
-                                            <col className="w-[13%]" />
-                                            <col className="w-[9%]" />
-                                            <col className="w-[13%]" />
-                                            <col className="w-[13%]" />
-                                            <col className="w-[7%]" />
-                                          </colgroup>
-                                          <thead>
-                                            <tr className="bg-slate-100 font-bold border-b border-black text-[9px]">
-                                              <th className="border border-black p-1">अ.क्र.</th>
-                                              <th className="border border-black p-1">दिनांक</th>
-                                              <th className="border border-black p-1">पट</th>
-                                              <th className="border border-black p-1">मागील शिल्लक (KG)</th>
-                                              <th className="border border-black p-1">प्राप्त (KG)</th>
-                                              <th className="border border-black p-1">एकूण साठा (4+5) (KG)</th>
-                                              <th className="border border-black p-1">लाभार्थी</th>
-                                              <th className="border border-black p-1">खर्च तांदूळ (KG)</th>
-                                              <th className="border border-black p-1">शिल्लक साठा (6-8) (KG)</th>
-                                              <th className="border border-black p-1">शेरा</th>
-                                            </tr>
-                                            <tr className="bg-slate-50 text-[8px] font-bold border-b border-black text-slate-700">
-                                              <th className="border border-black p-0.5">1</th>
-                                              <th className="border border-black p-0.5">2</th>
-                                              <th className="border border-black p-0.5">3</th>
-                                              <th className="border border-black p-0.5">4</th>
-                                              <th className="border border-black p-0.5">5</th>
-                                              <th className="border border-black p-0.5">6</th>
-                                              <th className="border border-black p-0.5">7</th>
-                                              <th className="border border-black p-0.5">8</th>
-                                              <th className="border border-black p-0.5">9</th>
-                                              <th className="border border-black p-0.5">10</th>
-                                            </tr>
-                                          </thead>
-                                          <tbody>
-                                            {dailyRows.map((r) => (
-                                              <tr
-                                                key={r.day}
-                                                className={`border-b border-black h-[20px] ${r.isSunday ? "bg-red-50/60 text-red-700 font-semibold" : "hover:bg-slate-50"}`}
-                                              >
-                                                <td className="border border-black p-0.5 font-bold">{toMarathiNumbers(r.day.toString())}</td>
-                                                <td className="border border-black p-0.5 font-bold">{toMarathiNumbers(r.dateDisplay)}</td>
-                                                <td className="border border-black p-0.5">{r.labharthi > 0 || r.pat > 0 ? toMarathiNumbers(r.pat.toString()) : ""}</td>
-                                                <td className="border border-black p-0.5">{toMarathiNumbers(r.magilShillak.toFixed(4))}</td>
-                                                <td className="border border-black p-0.5">{r.prapt > 0 ? toMarathiNumbers(r.prapt.toFixed(4)) : ""}</td>
-                                                <td className="border border-black p-0.5">{toMarathiNumbers(r.ekunSatakha.toFixed(4))}</td>
-                                                <td className="border border-black p-0.5">{r.labharthi > 0 ? toMarathiNumbers(r.labharthi.toString()) : ""}</td>
-                                                <td className="border border-black p-0.5">{r.kharchTandul > 0 ? toMarathiNumbers(r.kharchTandul.toFixed(4)) : ""}</td>
-                                                <td className="border border-black p-0.5">{toMarathiNumbers(r.shillakSatakha.toFixed(4))}</td>
-                                                <td className="border border-black p-0.5 text-[8px] truncate">{r.shera}</td>
-                                              </tr>
-                                            ))}
-                                          </tbody>
-                                        </table>
-                                      </div>
-
-                                      {/* Footer */}
-                                      <div className="flex justify-between items-end mt-8 text-xs font-bold text-black px-4 pt-4">
-                                        <div>Date</div>
-                                        <div className="text-center font-bold">मुख्याध्यापक</div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              }
 
                               return (
                                 <>

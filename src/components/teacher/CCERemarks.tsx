@@ -343,25 +343,20 @@ export function CCERemarks({
 
   useEffect(() => {
     let isMounted = true;
-
-    // 1. Explicit propMedium is authoritative
+    let newMedium: Medium | null = null;
     if (propMedium === "semi" || propMedium === "marathi") {
-      if (selectedMedium !== propMedium) {
-        setSelectedMedium(propMedium as Medium);
+      newMedium = propMedium as Medium;
+    } else {
+      const stored = localStorage.getItem("cce_selected_medium") || localStorage.getItem("selectedMedium");
+      if (stored === "semi" || stored === "marathi") {
+        newMedium = stored as Medium;
       }
+    }
+    if (newMedium && newMedium !== selectedMedium) {
+      setSelectedMedium(newMedium);
       return;
     }
 
-    // 2. Local storage preference fallback
-    const stored = localStorage.getItem("cce_selected_medium") || localStorage.getItem("selectedMedium");
-    if (stored === "semi" || stored === "marathi") {
-      if (selectedMedium !== stored) {
-        setSelectedMedium(stored as Medium);
-      }
-      return;
-    }
-
-    // 3. School config fallback when no prop or stored medium exists
     async function checkSchoolConfig() {
       try {
         const udise = localStorage.getItem("teacher_udise") || localStorage.getItem("udiseNumber");
@@ -384,7 +379,7 @@ export function CCERemarks({
     return () => {
       isMounted = false;
     };
-  }, [propMedium, selectedClass]);
+  }, [propMedium, selectedClass, selectedMedium]);
 
   // Load master remarks for the standard
   useEffect(() => {
@@ -398,16 +393,13 @@ export function CCERemarks({
         const cdnUrl = `${cdnBase}/cce_remarks/class_${selectedClass}_${selectedMedium}_remarks.json`;
         const res = await fetch(cdnUrl);
         if (isMounted && res.ok) {
-          const contentType = res.headers.get("content-type");
-          if (contentType && contentType.includes("application/json")) {
-            const data = await res.json();
-            if (data && Object.keys(data).length > 0) {
-              setCustomClassRemarks((prev) => ({
-                ...masterData,
-                ...prev,
-                ...data,
-              }));
-            }
+          const data = await res.json();
+          if (data && Object.keys(data).length > 0) {
+            setCustomClassRemarks((prev) => ({
+              ...masterData,
+              ...prev,
+              ...data,
+            }));
           }
         }
       } catch (err) {

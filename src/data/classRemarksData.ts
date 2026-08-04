@@ -27362,14 +27362,14 @@ export const MARATHI_MEDIUM_CLASS_REMARKS: Record<string, SubjectRemarks> = {
 };
 
 export const SEMI_MEDIUM_CLASS_REMARKS: Record<string, SubjectRemarks> = {
-  "1st": SEMI_CLASS_1_REMARKS,
-  "2nd": SEMI_CLASS_2_REMARKS,
-  "3rd": SEMI_CLASS_3_REMARKS,
-  "4th": SEMI_CLASS_4_REMARKS,
-  "5th": SEMI_CLASS_5_REMARKS,
-  "6th": SEMI_CLASS_6_REMARKS,
-  "7th": SEMI_CLASS_7_REMARKS,
-  "8th": SEMI_CLASS_8_REMARKS,
+  "1st": { ...CLASS_1_REMARKS, ganit: SEMI_ENGLISH_MATHS_REMARKS },
+  "2nd": { ...CLASS_2_REMARKS, ganit: SEMI_ENGLISH_MATHS_REMARKS },
+  "3rd": { ...CLASS_3_REMARKS, ganit: SEMI_ENGLISH_MATHS_REMARKS },
+  "4th": { ...CLASS_4_REMARKS, ganit: SEMI_ENGLISH_MATHS_REMARKS },
+  "5th": { ...CLASS_5_REMARKS, ganit: SEMI_ENGLISH_MATHS_REMARKS },
+  "6th": { ...CLASS_6_REMARKS, ganit: SEMI_ENGLISH_MATHS_REMARKS },
+  "7th": { ...CLASS_7_REMARKS, ganit: SEMI_ENGLISH_MATHS_REMARKS },
+  "8th": { ...CLASS_8_REMARKS, ganit: SEMI_ENGLISH_MATHS_REMARKS },
   "9th": { ...CLASS_9_REMARKS, ganit: SEMI_ENGLISH_MATHS_REMARKS },
   "10th": { ...CLASS_10_REMARKS, ganit: SEMI_ENGLISH_MATHS_REMARKS },
 };
@@ -27389,8 +27389,8 @@ export function getClassRemarks(classKey: string, medium: string = "marathi"): S
     }
   }
 
-  // 2. Ensure Maths (ganit) in semi medium has English remarks if not present
-  if (isSemi && (!cleaned.ganit || cleaned.ganit.length === 0)) {
+  // 2. Ensure Maths (ganit) in semi medium has English remarks explicitly separated
+  if (isSemi) {
     cleaned.ganit = SEMI_ENGLISH_MATHS_REMARKS;
   }
 
@@ -27415,8 +27415,8 @@ export function getClassRemarks(classKey: string, medium: string = "marathi"): S
     }
   }
 
-  // Fallback to SEMI_CLASS_1_REMARKS for semi or CLASS_1_REMARKS for marathi for any empty or missing subject arrays
-  const fallback = isSemi ? SEMI_CLASS_1_REMARKS : CLASS_1_REMARKS;
+  // Fallback to CLASS_1_REMARKS for any empty or missing subject arrays
+  const fallback = CLASS_1_REMARKS;
   Object.keys(fallback).forEach((k) => {
     if (!cleaned[k] || cleaned[k].length === 0) {
       cleaned[k] = (fallback[k] || []).map((r) => cleanDevanagari(r));
