@@ -2864,6 +2864,7 @@ export function AcademicPlanningSystem({
               gridData={viewModalFile.parsedGrid}
               fileUrl={viewModalFile.fileUrl}
               fileName={viewModalFile.fileName}
+              title={`इयत्ता : ${viewModalFile.classId === "1st" ? "पहिली" : viewModalFile.classId === "2nd" ? "दुसरी" : viewModalFile.classId === "3rd" ? "तिसरी" : viewModalFile.classId === "4th" ? "चौथी" : viewModalFile.classId === "5th" ? "पाचवी" : viewModalFile.classId === "6th" ? "सहावी" : viewModalFile.classId === "7th" ? "सातवी" : viewModalFile.classId === "8th" ? "आठवी" : (selectedClass === "1st" ? "पहिली" : selectedClass === "2nd" ? "दुसरी" : selectedClass === "3rd" ? "तिसरी" : selectedClass === "4th" ? "चौथी" : selectedClass === "5th" ? "पाचवी" : selectedClass === "6th" ? "सहावी" : selectedClass === "7th" ? "सातवी" : selectedClass === "8th" ? "आठवी" : selectedClass)} ${viewModalFile.planningType === "annual" ? "वार्षिक नियोजन" : "मासिक घटक नियोजन"} सन :- 2026-27`}
               role={mode === "admin" ? "admin" : "user"}
               recordId={viewModalFile.id}
               onClose={() => setViewModalFile(null)}
@@ -2916,11 +2917,6 @@ export function AcademicPlanningSystem({
                   toast.success("🎉 तुमचे सुधारित बदल तुमच्या अकाऊंटसाठी (User Specific) जतन झाले आहेत!");
                 }
               }}
-              title={`इयत्ता : ${selectedClass} ${
-                selectedPlanningType === "annual"
-                  ? "संपूर्ण वार्षिक नियोजन"
-                  : "प्रश्नपेढी"
-              } सन 2026-27`}
             />
           )}
         </div>
@@ -3402,7 +3398,7 @@ export function AcademicPlanningSystem({
           {/* Top School Information Header Block */}
           <div className="border-2 border-slate-900 rounded-xl overflow-hidden mb-3 bg-slate-900 text-white p-3 text-center" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
             <h1 className="text-base font-black text-amber-300 uppercase tracking-wide">
-              {schoolInfo.schoolName || "शाळेचे नाव प्रविष्ट केलेले नाही"}
+              शाळेचे नाव : {schoolInfo.schoolName || "—"}
             </h1>
             <div className="flex flex-wrap items-center justify-between text-xs font-bold text-slate-200 mt-2 pt-2 border-t border-slate-700">
               <span><b>केंद्र:</b> {schoolInfo.centerName || "—"}</span>
@@ -3562,15 +3558,21 @@ export function AcademicPlanningSystem({
 
           {/* Bottom Staff Signatures Block */}
           <div className="grid grid-cols-2 gap-8 pt-4 mt-6 border-t-2 border-slate-900 text-xs font-bold text-slate-900" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
-            <div className="text-center p-3 border border-slate-300 rounded-xl bg-slate-50 space-y-4">
-              <span className="text-[10px] text-slate-500 block uppercase tracking-wider">वर्गशिक्षक स्वाक्षरी</span>
-              <span className="text-sm font-black text-indigo-950 block">{schoolInfo.classTeacherName || "वर्गशिक्षक"}</span>
-              <div className="pt-4 border-t border-slate-300 text-slate-600 font-semibold italic">(स्वाक्षरी / Signature)</div>
+            <div className="p-3.5 border border-slate-300 rounded-xl bg-slate-50 space-y-2.5">
+              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center">वर्गशिक्षक</div>
+              <div className="text-sm font-black text-indigo-950 text-center">{schoolInfo.classTeacherName || "वर्गशिक्षक"}</div>
+              <div className="pt-3 border-t border-slate-300 text-xs font-bold text-slate-800 flex items-center justify-between gap-2">
+                <span className="whitespace-nowrap font-black">स्वाक्षरी / Sign :</span>
+                <span className="flex-1 border-b-2 border-slate-600 min-h-[16px] block"></span>
+              </div>
             </div>
-            <div className="text-center p-3 border border-slate-300 rounded-xl bg-slate-50 space-y-4">
-              <span className="text-[10px] text-slate-500 block uppercase tracking-wider">मुख्याध्यापक स्वाक्षरी</span>
-              <span className="text-sm font-black text-purple-950 block">{schoolInfo.headmasterName || "मुख्याध्यापक"}</span>
-              <div className="pt-4 border-t border-slate-300 text-slate-600 font-semibold italic">(स्वाक्षरी / Signature)</div>
+            <div className="p-3.5 border border-slate-300 rounded-xl bg-slate-50 space-y-2.5">
+              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center">मुख्याध्यापक</div>
+              <div className="text-sm font-black text-purple-950 text-center">{schoolInfo.headmasterName || "मुख्याध्यापक"}</div>
+              <div className="pt-3 border-t border-slate-300 text-xs font-bold text-slate-800 flex items-center justify-between gap-2">
+                <span className="whitespace-nowrap font-black">स्वाक्षरी / Sign :</span>
+                <span className="flex-1 border-b-2 border-slate-600 min-h-[16px] block"></span>
+              </div>
             </div>
           </div>
         </div>

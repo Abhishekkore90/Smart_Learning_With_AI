@@ -390,13 +390,13 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
     grid.forEach((row) => {
       if (!row || row.length === 0) return;
 
-      const isBannerRow = row.some((c) => c.value && (c.value.includes("इयत्ता :") || c.value.includes("इयत्ता:")));
+      const isBannerRow = row.some((c) => c.value && (c.value.includes("इयत्ता") || c.value.includes("नियोजन")));
       const isHeaderRow = isColumnHeaderRow(row);
       const isSignatureRow = row.some((c) => c.value && c.value.includes("स्वाक्षरी"));
 
       if (isBannerRow) {
-        const bannerVal = row.find((c) => c.value && c.value.includes("इयत्ता :"))?.value;
-        if (bannerVal) currentBannerText = bannerVal;
+        const bannerVal = row.find((c) => c.value && (c.value.includes("इयत्ता") || c.value.includes("नियोजन")))?.value;
+        if (bannerVal) currentBannerText = bannerVal.trim();
         return;
       }
 
@@ -465,7 +465,7 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
       // 0. Top School Information Header Block
       if (schoolInfo.schoolName) {
         html += `<div class="school-header-banner bg-slate-900 text-white p-3 rounded-t-xl border-b-2 border-amber-400 mb-2 font-sans" style="background-color: #0f172a !important; color: #ffffff !important; padding: 10px; border-radius: 8px; margin-bottom: 8px;">`;
-        html += `<div style="text-align: center; font-size: 15px; font-weight: 900; color: #fde047 !important; text-transform: uppercase;">${escapeHtml(schoolInfo.schoolName)}</div>`;
+        html += `<div style="text-align: center; font-size: 15px; font-weight: 900; color: #fde047 !important; text-transform: uppercase;">शाळेचे नाव : ${escapeHtml(schoolInfo.schoolName)}</div>`;
         html += `<div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 700; margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.2); color: #e2e8f0 !important;">`;
         html += `<div><b>केंद्र:</b> ${escapeHtml(schoolInfo.centerName || "—")}</div>`;
         html += `<div><b>युडीएस कोड:</b> <span style="font-family: monospace;">${escapeHtml(schoolInfo.udiseCode || "—")}</span></div>`;
@@ -475,7 +475,8 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
       }
 
       // 1. Subject Header Banner
-      const bannerText = group.bannerText || "इयत्ता : पहिली वार्षिक नियोजन सन :- 2026-27";
+      const defaultBanner = title && title.length > 5 ? title : "वार्षिक नियोजन सन :- 2026-27";
+      const bannerText = group.bannerText || defaultBanner;
       html += `<div class="bg-indigo-900 text-white font-bold text-center border-b-2 border-indigo-950 p-2.5 rounded-t-lg mb-2 text-sm tracking-wide bg-gradient-to-r from-indigo-900 via-indigo-800 to-indigo-900" style="background-color: #1e1b4b !important; color: #ffffff !important; padding: 8px; text-align: center; font-weight: bold; border-radius: 6px; margin-bottom: 8px;">`;
       html += `✨ ${escapeHtml(bannerText)} | 📌 ${escapeHtml(group.subjectName)}`;
       html += `</div>`;
@@ -533,18 +534,22 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
       const teacherName = schoolInfo.classTeacherName || "वर्गशिक्षक";
       const hmName = schoolInfo.headmasterName || "मुख्याध्यापक";
 
-      html += `<div class="signature-block" style="display: flex; justify-space-between: space-between; justify-content: space-between; align-items: flex-end; margin-top: 16px; padding-top: 10px; font-size: 11px; font-weight: bold; page-break-inside: avoid; break-inside: avoid;">`;
-      html += `<div style="text-align: center; width: 45%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; background-color: #f8fafc;">`;
-      html += `<div style="font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">वर्गशिक्षक स्वाक्षरी</div>`;
-      html += `<div style="font-size: 13px; font-weight: 900; color: #1e1b4b; margin-top: 4px;">${escapeHtml(teacherName)}</div>`;
-      html += `<div style="margin-top: 20px; font-style: italic; color: #475569; border-top: 1px solid #cbd5e1; padding-top: 4px;">(स्वाक्षरी / Signature)</div>`;
-      html += `</div>`;
+      html += `<div class="signature-block" style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 16px; padding-top: 10px; font-size: 11px; font-weight: bold; page-break-inside: avoid; break-inside: avoid;">`;
+      html += `<div style="text-align: center; width: 46%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; background-color: #f8fafc;">`;
+      html += `<div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">वर्गशिक्षक</div>`;
+      html += `<div style="font-size: 14px; font-weight: 900; color: #1e1b4b; margin-top: 4px; margin-bottom: 8px;">${escapeHtml(teacherName)}</div>`;
+      html += `<div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #cbd5e1; padding-top: 8px; font-size: 11px; color: #334155;">`;
+      html += `<span style="font-weight: 800; white-space: nowrap;">स्वाक्षरी / Sign :</span>`;
+      html += `<span style="flex-grow: 1; margin-left: 8px; border-bottom: 2px solid #475569; height: 14px; display: inline-block;"></span>`;
+      html += `</div></div>`;
 
-      html += `<div style="text-align: center; width: 45%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; background-color: #f8fafc;">`;
-      html += `<div style="font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">मुख्याध्यापक स्वाक्षरी</div>`;
-      html += `<div style="font-size: 13px; font-weight: 900; color: #581c87; margin-top: 4px;">${escapeHtml(hmName)}</div>`;
-      html += `<div style="margin-top: 20px; font-style: italic; color: #475569; border-top: 1px solid #cbd5e1; padding-top: 4px;">(स्वाक्षरी / Signature)</div>`;
-      html += `</div>`;
+      html += `<div style="text-align: center; width: 46%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; background-color: #f8fafc;">`;
+      html += `<div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">मुख्याध्यापक</div>`;
+      html += `<div style="font-size: 14px; font-weight: 900; color: #581c87; margin-top: 4px; margin-bottom: 8px;">${escapeHtml(hmName)}</div>`;
+      html += `<div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #cbd5e1; padding-top: 8px; font-size: 11px; color: #334155;">`;
+      html += `<span style="font-weight: 800; white-space: nowrap;">स्वाक्षरी / Sign :</span>`;
+      html += `<span style="flex-grow: 1; margin-left: 8px; border-bottom: 2px solid #475569; height: 14px; display: inline-block;"></span>`;
+      html += `</div></div>`;
       html += `</div>`;
 
       html += `</div>`; // end subject-pdf-page
@@ -775,7 +780,8 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
                   const spanWidth = role === "admin" && isEditMode ? colCount + 1 : colCount;
 
                   if (isBannerRow) {
-                    const bannerText = row.find((c) => c.value && c.value.includes("इयत्ता :"))?.value || "इयत्ता : पहिली वार्षिक नियोजन सन :- 2026-27";
+                    const defaultBanner = title && title.length > 5 ? title : "वार्षिक नियोजन सन :- 2026-27";
+                    const bannerText = row.find((c) => c.value && (c.value.includes("इयत्ता") || c.value.includes("नियोजन")))?.value || defaultBanner;
                     return (
                       <tr key={rowIndex} className="bg-indigo-900 text-white font-bold text-center border-t-4 border-indigo-950">
                         <td
