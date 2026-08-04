@@ -46,7 +46,7 @@ const DEFAULT_ANNUAL_PLANNING_HEADERS = [
   "कामाचे दिवस",
   "प्राप्त तासिका",
   "विषय",
-  "अध्ययन निष्पत्ती",
+  "अध्ययन निष्पत्ती क्रमांक",
 ];
 
 /**
@@ -123,6 +123,23 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
+
+  const [schoolInfo] = useState<{
+    schoolName?: string;
+    centerName?: string;
+    udiseCode?: string;
+    taluka?: string;
+    district?: string;
+    classTeacherName?: string;
+    headmasterName?: string;
+  }>(() => {
+    try {
+      const cached = localStorage.getItem("cce_school_profile_info");
+      return cached ? JSON.parse(cached) : {};
+    } catch {
+      return {};
+    }
+  });
 
   // Synchronize master state when propGridData updates externally & normalize to 6 columns
   useEffect(() => {
@@ -373,13 +390,13 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
     grid.forEach((row) => {
       if (!row || row.length === 0) return;
 
-      const isBannerRow = row.some((c) => c.value && (c.value.includes("इयत्ता :") || c.value.includes("इयत्ता:")));
+      const isBannerRow = row.some((c) => c.value && (c.value.includes("इयत्ता") || c.value.includes("नियोजन")));
       const isHeaderRow = isColumnHeaderRow(row);
       const isSignatureRow = row.some((c) => c.value && c.value.includes("स्वाक्षरी"));
 
       if (isBannerRow) {
-        const bannerVal = row.find((c) => c.value && c.value.includes("इयत्ता :"))?.value;
-        if (bannerVal) currentBannerText = bannerVal;
+        const bannerVal = row.find((c) => c.value && (c.value.includes("इयत्ता") || c.value.includes("नियोजन")))?.value;
+        currentBannerText = title && title.length > 5 ? title : (bannerVal ? bannerVal.trim() : "");
         return;
       }
 
@@ -445,8 +462,20 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
 
       html += `<div class="${pageBreakClass}" style="${pageBreakStyle}">`;
 
+      // 0. Top School Information Header Block
+      if (schoolInfo.schoolName) {
+        html += `<div class="school-header-banner bg-slate-900 text-white p-3 rounded-t-xl border-b-2 border-amber-400 mb-2 font-sans" style="background-color: #0f172a !important; color: #ffffff !important; padding: 10px; border-radius: 8px; margin-bottom: 8px;">`;
+        html += `<div style="text-align: center; font-size: 15px; font-weight: 900; color: #fde047 !important; text-transform: uppercase;">शाळेचे नाव : ${escapeHtml(schoolInfo.schoolName)}</div>`;
+        html += `<div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 700; margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.2); color: #e2e8f0 !important;">`;
+        html += `<div><b>केंद्र:</b> ${escapeHtml(schoolInfo.centerName || "—")}</div>`;
+        html += `<div><b>युडीएस कोड:</b> <span style="font-family: monospace;">${escapeHtml(schoolInfo.udiseCode || "—")}</span></div>`;
+        html += `<div><b>तालुका:</b> ${escapeHtml(schoolInfo.taluka || "—")}</div>`;
+        html += `<div><b>जिल्हा:</b> ${escapeHtml(schoolInfo.district || "—")}</div>`;
+        html += `</div></div>`;
+      }
+
       // 1. Subject Header Banner
-      const bannerText = group.bannerText || "इयत्ता : पहिली वार्षिक नियोजन सन :- 2026-27";
+      const bannerText = title && title.length > 5 ? title : (group.bannerText || "वार्षिक नियोजन सन :- 2026-27");
       html += `<div class="bg-indigo-900 text-white font-bold text-center border-b-2 border-indigo-950 p-2.5 rounded-t-lg mb-2 text-sm tracking-wide bg-gradient-to-r from-indigo-900 via-indigo-800 to-indigo-900" style="background-color: #1e1b4b !important; color: #ffffff !important; padding: 8px; text-align: center; font-weight: bold; border-radius: 6px; margin-bottom: 8px;">`;
       html += `✨ ${escapeHtml(bannerText)} | 📌 ${escapeHtml(group.subjectName)}`;
       html += `</div>`;
@@ -470,7 +499,7 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
       html += `<th class="p-2 border border-amber-300 text-center font-bold" style="width: 10%;">कामाचे दिवस</th>`;
       html += `<th class="p-2 border border-amber-300 text-center font-bold" style="width: 10%;">प्राप्त तासिका</th>`;
       html += `<th class="p-2 border border-amber-300 text-left bg-amber-200/80 font-extrabold text-amber-950" style="width: 35%;">📌 ${escapeHtml(group.subjectName)}</th>`;
-      html += `<th class="p-2 border border-amber-300 text-left font-bold" style="width: 27%;">अध्ययन निष्पती</th>`;
+      html += `<th class="p-2 border border-amber-300 text-left font-bold" style="width: 27%;">अध्ययन निष्पत्ती क्रमांक</th>`;
       html += `</tr>`;
       html += `</thead>`;
 
@@ -500,13 +529,26 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
       html += `</tbody>`;
       html += `</table>`;
 
-      // 3. Subject Signatures
-      const teacherSig = group.signatureRow?.find((c) => c.value && c.value.includes("शिक्षक"))?.value || "✍️ शिक्षक स्वाक्षरी";
-      const hmSig = group.signatureRow?.find((c) => c.value && c.value.includes("मुख्याध्यापक"))?.value || "✍️ मुख्याध्यापक स्वाक्षरी";
+      // 3. Subject Signatures Block (Class Teacher & Headmaster)
+      const teacherName = schoolInfo.classTeacherName || "वर्गशिक्षक";
+      const hmName = schoolInfo.headmasterName || "मुख्याध्यापक";
 
-      html += `<div class="flex justify-between items-center mt-3 px-6 pt-2 text-xs font-bold text-slate-800 border-t border-slate-300" style="display: flex; justify-space-between; margin-top: 10px; margin-bottom: 0px; padding-top: 8px; padding-bottom: 0px; font-weight: bold; font-size: 11px;">`;
-      html += `<div>${escapeHtml(teacherSig)}</div>`;
-      html += `<div>${escapeHtml(hmSig)}</div>`;
+      html += `<div class="signature-block" style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 16px; padding-top: 10px; font-size: 11px; font-weight: bold; page-break-inside: avoid; break-inside: avoid;">`;
+      html += `<div style="text-align: center; width: 46%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; background-color: #f8fafc;">`;
+      html += `<div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">वर्गशिक्षक</div>`;
+      html += `<div style="font-size: 14px; font-weight: 900; color: #1e1b4b; margin-top: 4px; margin-bottom: 8px;">${escapeHtml(teacherName)}</div>`;
+      html += `<div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #cbd5e1; padding-top: 8px; font-size: 11px; color: #334155;">`;
+      html += `<span style="font-weight: 800; white-space: nowrap;">स्वाक्षरी / Sign :</span>`;
+      html += `<span style="flex-grow: 1; margin-left: 8px; border-bottom: 2px solid #475569; height: 14px; display: inline-block;"></span>`;
+      html += `</div></div>`;
+
+      html += `<div style="text-align: center; width: 46%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; background-color: #f8fafc;">`;
+      html += `<div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">मुख्याध्यापक</div>`;
+      html += `<div style="font-size: 14px; font-weight: 900; color: #581c87; margin-top: 4px; margin-bottom: 8px;">${escapeHtml(hmName)}</div>`;
+      html += `<div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #cbd5e1; padding-top: 8px; font-size: 11px; color: #334155;">`;
+      html += `<span style="font-weight: 800; white-space: nowrap;">स्वाक्षरी / Sign :</span>`;
+      html += `<span style="flex-grow: 1; margin-left: 8px; border-bottom: 2px solid #475569; height: 14px; display: inline-block;"></span>`;
+      html += `</div></div>`;
       html += `</div>`;
 
       html += `</div>`; // end subject-pdf-page
@@ -737,7 +779,8 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
                   const spanWidth = role === "admin" && isEditMode ? colCount + 1 : colCount;
 
                   if (isBannerRow) {
-                    const bannerText = row.find((c) => c.value && c.value.includes("इयत्ता :"))?.value || "इयत्ता : पहिली वार्षिक नियोजन सन :- 2026-27";
+                    const rawVal = row.find((c) => c.value && (c.value.includes("इयत्ता") || c.value.includes("नियोजन")))?.value;
+                    const bannerText = title && title.length > 5 ? title : (rawVal || "वार्षिक नियोजन सन :- 2026-27");
                     return (
                       <tr key={rowIndex} className="bg-indigo-900 text-white font-bold text-center border-t-4 border-indigo-950">
                         <td
@@ -756,7 +799,8 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
                     const daysHeader = row[2]?.value || "कामाचे दिवस";
                     const periodsHeader = row[3]?.value || "प्राप्त तासिका";
                     const subjectHeader = row[4]?.value || "विषय";
-                    const outcomesHeader = row[5]?.value || "अध्ययन निष्पती";
+                    const rawOutcomesHeader = (row[5]?.value || "").trim();
+                    const outcomesHeader = (!rawOutcomesHeader || rawOutcomesHeader === "अध्ययन निष्पत्ती" || rawOutcomesHeader === "अध्ययन निष्पती") ? "अध्ययन निष्पत्ती क्रमांक" : rawOutcomesHeader;
 
                     return (
                       <tr key={rowIndex} className="bg-amber-100 text-slate-900 font-bold sticky top-0 z-10 border-b-2 border-amber-300 shadow-sm">
