@@ -18,6 +18,7 @@ import {
   BookOpen,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuthenticatedPdf } from "@/lib/bunny-auth-pdf";
 
 export interface MonthlyPlanningViewerProps {
   htmlContent?: string;
@@ -207,6 +208,11 @@ export const MonthlyPlanningViewer: React.FC<MonthlyPlanningViewerProps> = ({
   const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<"grid" | "html" | "preview">("grid");
+
+  // Authenticated PDF fetch for Bunny CDN URLs (fixes CORS/X-Frame-Options on other PCs)
+  const isBunnyUrl = !!(fileUrl && (fileUrl.includes("b-cdn.net") || fileUrl.includes("bunny") || fileUrl.includes("storage.bunnycdn")));
+  const bunnyPdfUrl = isBunnyUrl ? fileUrl || null : null;
+  const { pdfBlobUrl: authenticatedPdfUrl, loading: pdfLoading, error: pdfError } = useAuthenticatedPdf(bunnyPdfUrl);
 
   useEffect(() => {
     if (propGridData && propGridData.length > 0) {
@@ -663,7 +669,85 @@ const splitGridByMonthBlocks = (grid: ParsedTableCell[][]): MonthBlock[] => {
         </div>
       )}
 
+      {/* Tab Bar: Grid | PDF Preview */}
+      {fileUrl && !fileUrl.startsWith("blob:") && (
+        <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 p-2 rounded-xl">
+          <button
+            onClick={() => setActiveTab("grid")}
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${activeTab === "grid" ? "bg-amber-500 text-slate-950 shadow" : "bg-slate-800 text-slate-300 hover:bg-slate-700"}`}
+          >
+            <TableIcon className="w-3.5 h-3.5" />
+            <span>📊 तक्ता (Grid)</span>
+          </button>
+          <button
+            onClick={() => setActiveTab("preview")}
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${activeTab === "preview" ? "bg-amber-500 text-slate-950 shadow" : "bg-slate-800 text-slate-300 hover:bg-slate-700"}`}
+          >
+            <Eye className="w-3.5 h-3.5" />
+            <span>📄 मूळ फाईल पहा</span>
+          </button>
+        </div>
+      )}
+
+      {/* PDF/Original File Preview Tab */}
+      {activeTab === "preview" && fileUrl && !fileUrl.startsWith("blob:") && (
+        <div className="w-full flex-1 bg-slate-900 rounded-xl border border-slate-700 overflow-hidden flex items-center justify-center min-h-[500px]">
+          {pdfLoading ? (
+            <div className="flex flex-col items-center gap-3 text-slate-300">
+              <Loader2 className="w-10 h-10 animate-spin text-amber-400" />
+              <span className="text-sm font-semibold">PDF लोड होत आहे...</span>
+            </div>
+          ) : (() => {
+            const resolvedUrl = authenticatedPdfUrl || fileUrl;
+            const isBlob = resolvedUrl.startsWith("blob:") || resolvedUrl.startsWith("data:");
+            const isPdf = resolvedUrl.toLowerCase().includes(".pdf");
+
+            if (!isPdf && !isBlob) {
+              return (
+                <div className="text-center p-8 bg-slate-800 rounded-2xl border border-slate-700 max-w-md shadow-2xl">
+                  <div className="w-12 h-12 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-3 text-amber-400 font-bold text-xl">
+                    📊
+                  </div>
+                  <h3 className="text-amber-400 font-extrabold text-base mb-1">मासिक घटक नियोजन तक्ता</h3>
+                  <p className="text-slate-300 text-xs mb-5 leading-relaxed">
+                    या फाईलची सर्व माहिती खालील **"तक्ता" (Grid View)** मध्ये सर्व युजर्ससाठी ऑनलाईन उपलब्ध आहे.
+                  </p>
+                  <div className="flex flex-wrap items-center justify-center gap-3">
+                    <button
+                      onClick={() => setActiveTab("grid")}
+                      className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-xs shadow-lg transition-all cursor-pointer transform hover:scale-105"
+                    >
+                      📊 ऑनलाईन तक्ता उघडा (View Table)
+                    </button>
+                    {resolvedUrl && (
+                      <a
+                        href={resolvedUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs shadow-lg transition-all cursor-pointer"
+                      >
+                        📥 मूळ फाईल डाऊनलोड करा (Download File)
+                      </a>
+                    )}
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <iframe
+                key={resolvedUrl}
+                src={resolvedUrl}
+                className="w-full h-full border-0 min-h-[500px]"
+                title="मासिक नियोजन फाईल"
+              />
+            );
+          })()}
+        </div>
+      )}
+
       {/* Main Excel Structure Container */}
+      {activeTab !== "preview" && (
       <div className="w-full flex-1 bg-white rounded-xl shadow-2xl border border-slate-300 overflow-auto p-4 text-slate-900 max-h-[calc(100vh-160px)] min-h-0">
         {/* 1. Main Header Title Banner */}
         <div className="bg-indigo-900 text-white text-center font-bold text-base md:text-lg py-2.5 px-4 rounded-t-lg shadow-sm">
@@ -799,6 +883,7 @@ const splitGridByMonthBlocks = (grid: ParsedTableCell[][]): MonthBlock[] => {
           <div>मुख्याध्यापक</div>
         </div>
       </div>
+      )}
     </div>
   );
 };

@@ -33,6 +33,7 @@ export const QuestionBankViewer: React.FC<QuestionBankViewerProps> = ({ data, on
   const [selectedUnit, setSelectedUnit] = useState<string>("ALL");
   const [selectedObjective, setSelectedObjective] = useState<string>("ALL");
   const [downloading, setDownloading] = useState(false);
+  const [showPdfModal, setShowPdfModal] = useState(false);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -242,8 +243,15 @@ export const QuestionBankViewer: React.FC<QuestionBankViewerProps> = ({ data, on
             </h1>
           </div>
 
-          {/* PDF Download Button */}
+          {/* PDF Action Buttons */}
           <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setShowPdfModal(true)}
+              className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black transition-all flex items-center gap-2 shadow-md cursor-pointer"
+            >
+              <ExternalLink className="size-4" />
+              <span>👁️ PDF प्रीव्ह्यू उघडा (View PDF Preview)</span>
+            </button>
             <button
               onClick={handleDownloadPdfTable}
               disabled={downloading}
@@ -407,6 +415,49 @@ export const QuestionBankViewer: React.FC<QuestionBankViewerProps> = ({ data, on
           <div>✍️ मुख्याध्यापक स्वाक्षरी</div>
         </div>
       </div>
+
+      {/* ── 5. FULLSCREEN INTERACTIVE PDF PREVIEW MODAL ───────────────────────── */}
+      {showPdfModal && (
+        <div className="fixed inset-0 z-[200] bg-slate-950/90 backdrop-blur-md p-4 md:p-8 flex flex-col gap-4 overflow-hidden">
+          <div className="flex items-center justify-between bg-slate-900 px-6 py-3 rounded-2xl border border-slate-800 text-white shadow-xl">
+            <div className="flex items-center gap-3">
+              <span className="text-xl">📄</span>
+              <h2 className="text-base font-extrabold text-amber-300">
+                {metadata.standard_class} | {metadata.subject} — ऑनलाईन PDF प्रीव्ह्यू (PDF Preview)
+              </h2>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleDownloadPdfTable}
+                disabled={downloading}
+                className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
+              >
+                <FileDown className="size-4" />
+                <span>डाऊनलोड (Download PDF)</span>
+              </button>
+              <button
+                onClick={() => window.print()}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
+              >
+                <span>🖨️ प्रिंंट (Print)</span>
+              </button>
+              <button
+                onClick={() => setShowPdfModal(false)}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md"
+              >
+                ✖ बंद करा (Close)
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-1 bg-white rounded-2xl border border-slate-300 overflow-auto p-6 text-slate-900 shadow-2xl">
+            <div
+              className="prose max-w-none text-slate-900"
+              dangerouslySetInnerHTML={{ __html: containerRef.current?.innerHTML || "" }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

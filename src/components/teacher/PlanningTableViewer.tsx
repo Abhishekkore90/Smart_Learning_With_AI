@@ -21,6 +21,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuthenticatedPdf } from "@/lib/bunny-auth-pdf";
 
 interface PlanningTableViewerProps {
   parsedData?: ParsedTableResult | null;
@@ -177,6 +178,11 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
   const [activeTab, setActiveTab] = useState<"html" | "grid" | "preview">(
     (tableData.length > 0 || workingData.length > 0 || propGridData.length > 0) ? "grid" : propHtmlContent ? "html" : "preview"
   );
+
+  // Authenticated PDF fetch for Bunny CDN URLs (fixes CORS/X-Frame-Options on other PCs)
+  const isBunnyUrl = !!(fileUrl && (fileUrl.includes("b-cdn.net") || fileUrl.includes("bunny") || fileUrl.includes("storage.bunnycdn")));
+  const bunnyPdfUrl = isBunnyUrl ? fileUrl || null : null;
+  const { pdfBlobUrl: authenticatedPdfUrl, loading: pdfLoading, error: pdfError } = useAuthenticatedPdf(bunnyPdfUrl);
 
   // Enter Edit Mode: Deep clone tableData into workingData (On-demand cell rendering)
   const handleEnterEditMode = () => {
@@ -759,6 +765,38 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
 
       {/* Fullscreen Table Viewport */}
       <div className="w-full flex-1 bg-white rounded-xl shadow-2xl border border-slate-700 overflow-auto max-h-[calc(100vh-140px)] min-h-0">
+
+        {/* Tab Bar — Grid / HTML / PDF Preview */}
+        {!isEditMode && (
+          <div className="flex items-center gap-1 bg-slate-100 border-b border-slate-200 px-3 py-2">
+            {currentDisplayGrid.length > 0 && (
+              <button
+                onClick={() => setActiveTab("grid")}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${activeTab === "grid" ? "bg-amber-500 text-slate-950 shadow" : "bg-white text-slate-600 hover:bg-slate-200 border border-slate-300"}`}
+              >
+                <TableIcon className="w-3.5 h-3.5" /> 📊 तक्ता (Grid)
+              </button>
+            )}
+            {propHtmlContent && (
+              <button
+                onClick={() => setActiveTab("html")}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${activeTab === "html" ? "bg-amber-500 text-slate-950 shadow" : "bg-white text-slate-600 hover:bg-slate-200 border border-slate-300"}`}
+              >
+                <FileText className="w-3.5 h-3.5" /> HTML
+              </button>
+            )}
+            {fileUrl && !fileUrl.startsWith("blob:") && (
+              <button
+                onClick={() => setActiveTab("preview")}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${activeTab === "preview" ? "bg-amber-500 text-slate-950 shadow" : "bg-white text-slate-600 hover:bg-slate-200 border border-slate-300"}`}
+              >
+                <Eye className="w-3.5 h-3.5" /> 📄 मूळ फाईल पहा
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Grid View */}
         {(activeTab === "grid" || isEditMode) && currentDisplayGrid.length > 0 && (
           <table className="w-full table-fixed text-left border-collapse text-slate-900 text-sm font-sans">
             <colgroup>
@@ -1011,16 +1049,74 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
 
         {/* PDF/Document View */}
         {activeTab === "preview" && !isEditMode && fileUrl && (
-          <div className="w-full h-full bg-slate-900">
-            <iframe
-              src={
-                fileUrl.startsWith("blob:") || fileUrl.startsWith("data:") || fileUrl.toLowerCase().includes(".pdf")
-                  ? fileUrl
-                  : `https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`
+          <div className="w-full h-full bg-slate-900 flex items-center justify-center p-4">
+            {fileUrl.startsWith("blob:") ? (
+              <div className="text-center p-8 bg-slate-800 rounded-2xl border border-slate-700 max-w-md shadow-2xl">
+                <div className="w-12 h-12 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-3 text-amber-400 font-bold text-xl">
+                  📊
+                </div>
+                <h3 className="text-amber-400 font-extrabold text-base mb-1">वार्षिक नियोजन तक्ता (Grid View)</h3>
+                <p className="text-slate-300 text-xs mb-5 leading-relaxed">
+                  या फाईलची सर्व माहिती खालील **"तक्ता" (Grid View)** मध्ये सर्व युजर्ससाठी ऑनलाईन उपलब्ध आहे.
+                </p>
+                <button
+                  onClick={() => setActiveTab("grid")}
+                  className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-xs shadow-lg transition-all cursor-pointer transform hover:scale-105"
+                >
+                  📊 ऑनलाईन तक्ता उघडा (View Interactive Table)
+                </button>
+              </div>
+            ) : pdfLoading ? (
+              <div className="flex flex-col items-center gap-3 text-slate-300">
+                <Loader2 className="w-10 h-10 animate-spin text-amber-400" />
+                <span className="text-sm font-semibold">PDF लोड होत आहे...</span>
+              </div>
+            ) : (() => {
+              const resolvedUrl = authenticatedPdfUrl || fileUrl;
+              const isBlob = resolvedUrl.startsWith("blob:") || resolvedUrl.startsWith("data:");
+              const isPdf = resolvedUrl.toLowerCase().includes(".pdf");
+
+              if (!isPdf && !isBlob) {
+                return (
+                  <div className="text-center p-8 bg-slate-800 rounded-2xl border border-slate-700 max-w-md shadow-2xl">
+                    <div className="w-12 h-12 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-3 text-amber-400 font-bold text-xl">
+                      📊
+                    </div>
+                    <h3 className="text-amber-400 font-extrabold text-base mb-1">वार्षिक नियोजन तक्ता (Grid View)</h3>
+                    <p className="text-slate-300 text-xs mb-5 leading-relaxed">
+                      या फाईलची सर्व माहिती खालील **"तक्ता" (Grid View)** मध्ये सर्व युजर्ससाठी ऑनलाईन उपलब्ध आहे.
+                    </p>
+                    <div className="flex flex-wrap items-center justify-center gap-3">
+                      <button
+                        onClick={() => setActiveTab("grid")}
+                        className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-xs shadow-lg transition-all cursor-pointer transform hover:scale-105"
+                      >
+                        📊 ऑनलाईन तक्ता उघडा (View Table)
+                      </button>
+                      {resolvedUrl && (
+                        <a
+                          href={resolvedUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs shadow-lg transition-all cursor-pointer"
+                        >
+                          📥 मूळ फाईल डाऊनलोड करा (Download File)
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                );
               }
-              className="w-full h-full border-0"
-              title="File Preview"
-            />
+
+              return (
+                <iframe
+                  key={resolvedUrl}
+                  src={resolvedUrl}
+                  className="w-full h-full border-0"
+                  title="File Preview"
+                />
+              );
+            })()}
           </div>
         )}
       </div>

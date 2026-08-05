@@ -1186,7 +1186,7 @@ export function AcademicPlanningSystem({
           }
         } catch (e) { }
 
-        // Restore IndexedDB blobs if fileUrl is dead/missing or local blob exists
+        // Restore IndexedDB blobs if local blob exists, otherwise sanitize dead blob URLs & fetch Bunny JSON for all users
         for (const recordKey of Object.keys(filesMap)) {
           const rec = filesMap[recordKey];
           if (!rec.fileUrl || rec.fileUrl.startsWith("blob:")) {
@@ -1194,6 +1194,22 @@ export function AcademicPlanningSystem({
               const localBlob = await getFileFromIndexedDB(recordKey);
               if (localBlob) {
                 rec.fileUrl = URL.createObjectURL(localBlob);
+              } else {
+                rec.fileUrl = rec.bunnyFileUrl || "";
+              }
+            } catch (e) {
+              rec.fileUrl = rec.bunnyFileUrl || "";
+            }
+          }
+
+          // Fetch heavy parsed grid/HTML from Bunny CDN if missing inline for other teachers
+          if ((!rec.parsedHtml || !rec.parsedGrid || rec.parsedGrid.length === 0) && rec.bunnyParsedJsonUrl) {
+            try {
+              const bunnyPath = rec.bunnyParsedJsonUrl.replace(/^https?:\/\/[^\/]+\//, "");
+              const parsedData = await fetchJsonFromBunny(bunnyPath);
+              if (parsedData) {
+                if (parsedData.parsedHtml && !rec.parsedHtml) rec.parsedHtml = parsedData.parsedHtml;
+                if (parsedData.parsedGrid && (!rec.parsedGrid || rec.parsedGrid.length === 0)) rec.parsedGrid = parsedData.parsedGrid;
               }
             } catch (e) { }
           }
@@ -1645,7 +1661,7 @@ export function AcademicPlanningSystem({
         subjectId: selectedSubject,
         planningType: uploadingType,
         fileName: selectedFile.name,
-        fileUrl: fileUrl,
+        fileUrl: (fileUrl && !fileUrl.startsWith("blob:")) ? fileUrl : (bunnyFileUrl || ""),
         fileSize: fileSizeDisplay,
         fileType: selectedFile.type || "application/pdf",
         uploadedBy: mode,
@@ -1654,9 +1670,9 @@ export function AcademicPlanningSystem({
         ...(excelRawHeaders.length > 0 && { rawHeaders: excelRawHeaders }),
         ...(bunnyFileUrl && { bunnyFileUrl }),
         ...(bunnyParsedJsonUrl && { bunnyParsedJsonUrl }),
-        // Include inline html/grid ONLY if very small (<5KB)
-        ...((parsedHtml && parsedHtml.length < 5000) && { parsedHtml }),
-        ...((parsedGrid && parsedGrid.length < 30) && { parsedGrid }),
+        // Include inline html/grid for instant access on all PCs
+        ...(parsedHtml && { parsedHtml }),
+        ...(parsedGrid && parsedGrid.length > 0 && { parsedGrid }),
       };
 
       // 5. Save lightweight metadata to Firestore
@@ -1703,12 +1719,20 @@ export function AcademicPlanningSystem({
 
   // Helper to trigger VIEW preview (checks IndexedDB for persistent blob across page refreshes)
   const handleViewFile = async (rec: PlanningFileRecord) => {
-    if (!rec) return;
     let targetUrl = rec.fileUrl;
 
     const blobFromDb = await getFileFromIndexedDB(rec.id);
     if (blobFromDb) {
+      // Own PC with IndexedDB blob → use local blob URL
       targetUrl = URL.createObjectURL(blobFromDb);
+    } else if (!targetUrl || targetUrl.startsWith("blob:")) {
+      // Other PC or expired blob → fall back to Bunny CDN URL (proxy will serve it)
+      targetUrl = rec.bunnyFileUrl || "";
+    }
+
+    // Last resort: if still empty but bunnyFileUrl exists, use it
+    if (!targetUrl && rec.bunnyFileUrl) {
+      targetUrl = rec.bunnyFileUrl;
     }
 
     if (!targetUrl) {
@@ -1917,7 +1941,10 @@ export function AcademicPlanningSystem({
     const blobFromDb = await getFileFromIndexedDB(rec.id);
     if (blobFromDb) {
       targetUrl = URL.createObjectURL(blobFromDb);
+    } else if (!targetUrl || targetUrl.startsWith("blob:")) {
+      targetUrl = rec.bunnyFileUrl || "";
     }
+    if (!targetUrl && rec.bunnyFileUrl) targetUrl = rec.bunnyFileUrl;
 
     if (!targetUrl) {
       toast.error("अद्याप फाईल उपलब्ध नाही, कृपया फाईल निवडून पुन्हा अपलोड करा.");
@@ -1952,6 +1979,8 @@ export function AcademicPlanningSystem({
     const blobFromDb = await getFileFromIndexedDB(rec.id);
     if (blobFromDb) {
       targetUrl = URL.createObjectURL(blobFromDb);
+    } else if (targetUrl && targetUrl.startsWith("blob:")) {
+      targetUrl = rec.bunnyFileUrl || "";
     }
 
     if (!targetUrl) {

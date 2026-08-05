@@ -8,11 +8,9 @@
 // Configuration defaults (Overridden by environment variables)
 const STORAGE_ZONE_NAME = import.meta.env.VITE_BUNNY_STORAGE_ZONE || "sgkbrainova";
 const ACCESS_KEY = import.meta.env.VITE_BUNNY_STORAGE_API_KEY || "";
-const PULL_ZONE_URL = import.meta.env.DEV
-  ? "/api/bunny-cdn"
-  : (import.meta.env.VITE_BUNNY_STORAGE_CDN_HOSTNAME 
-    ? `https://${import.meta.env.VITE_BUNNY_STORAGE_CDN_HOSTNAME}`
-    : "https://sgkbrainova.b-cdn.net").replace(/\/$/, "");
+const PULL_ZONE_URL = (import.meta.env.VITE_BUNNY_STORAGE_CDN_HOSTNAME 
+  ? `https://${import.meta.env.VITE_BUNNY_STORAGE_CDN_HOSTNAME}`
+  : "https://sgkbrainova.b-cdn.net").replace(/\/$/, "");
 const STORAGE_REGION_HOST = import.meta.env.VITE_BUNNY_STORAGE_HOST || "storage.bunnycdn.com";
 
 /**
@@ -23,7 +21,7 @@ const STORAGE_REGION_HOST = import.meta.env.VITE_BUNNY_STORAGE_HOST || "storage.
  * @returns The public CDN URL for accessing the uploaded file
  */
 export async function uploadBlobToBunny(filePath: string, blob: Blob): Promise<string> {
-  const cleanPath = filePath.startsWith("/") ? filePath.slice(1) : filePath;
+  const cleanPath = filePath.replace(/^\/?api\/bunny-cdn\/?/i, "").replace(/^\/+/, "");
   const uploadUrl = `https://${STORAGE_REGION_HOST}/${STORAGE_ZONE_NAME}/${cleanPath}`;
 
   // Force application/pdf header when uploading .pdf files to Bunny Storage
@@ -56,7 +54,7 @@ export async function uploadBlobToBunny(filePath: string, blob: Blob): Promise<s
  * Saves a JSON object directly to Bunny Storage Zone via REST API and caches it in localStorage.
  */
 export async function saveJsonToBunny(filePath: string, data: any): Promise<string> {
-  const cleanPath = filePath.startsWith("/") ? filePath.slice(1) : filePath;
+  const cleanPath = filePath.replace(/^\/?api\/bunny-cdn\/?/i, "").replace(/^\/+/, "");
   const jsonString = JSON.stringify(data);
   const blob = new Blob([jsonString], { type: "application/json" });
   
@@ -73,7 +71,8 @@ export async function saveJsonToBunny(filePath: string, data: any): Promise<stri
  * Fetches a JSON object from Bunny Storage CDN / Pull Zone URL with local cache fallback.
  */
 export async function fetchJsonFromBunny<T = any>(filePath: string): Promise<T | null> {
-  const cleanPath = filePath.startsWith("/") ? filePath.slice(1) : filePath;
+  // Strip origin or proxy prefixes to get exact relative path
+  let cleanPath = filePath.replace(/^https?:\/\/[^\/]+\//i, "").replace(/^\/?api\/bunny-cdn\/?/i, "").replace(/^\/+/, "");
   const cacheKey = `bunny_cache_${cleanPath.replace(/[^a-zA-Z0-9_]/g, "_")}`;
   
   // Try fetching from Bunny CDN
