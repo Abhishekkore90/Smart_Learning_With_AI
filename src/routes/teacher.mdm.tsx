@@ -842,11 +842,12 @@ function TeacherMDMPage() {
         ? `दैनंदिन-तांदूळ-खर्च-नोंदवही-${monthShort}-${monthlyMdmReportMonth.includes('2026') ? '2026' : '2027'}.pdf`
         : `मासिक_अहवाल_${monthlyMdmReportMonth.replace(/\s+/g, '_')}.pdf`;
       const opt = {
-        margin: isPoshanReport ? [3, 3, 3, 3] : [2, 2, 2, 2],
+        margin: isPoshanReport ? [2, 3, 2, 3] : [2, 2, 2, 2],
         filename,
         image: { type: "jpeg", quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, letterRendering: true, backgroundColor: "#ffffff" },
         jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
+        pagebreak: { mode: ['css'], avoid: 'tr' }
       };
       await html2pdfFn().set(opt).from(element).save();
       toast.success("PDF यशस्वीपणे डाऊनलोड झाली!");
@@ -5145,7 +5146,7 @@ const handleDemandReportPdfDownload = async () => {
                     </h2>
 
                     {/* Card 1: Information Banner */}
-                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-2">
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-0">
                       <h3 className="text-base font-bold text-slate-900">
                         अनुदान सेटिंग
                       </h3>
@@ -5157,7 +5158,7 @@ const handleDemandReportPdfDownload = async () => {
                     </div>
 
                     {/* Card 2: Effective Date Card */}
-                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-2">
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-0">
                       <label className="text-sm font-bold text-slate-800 block">
                         लागू दिनांक (Effective from) *
                       </label>
@@ -5438,7 +5439,7 @@ const handleDemandReportPdfDownload = async () => {
                 {activeTab === "opening-stock" && (
                   <div className="space-y-6">
                     {/* Learnify Yellow Notice Banner */}
-                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-amber-900 space-y-2 shadow-sm">
+                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-amber-900 space-y-0 shadow-sm">
                       <h3 className="font-extrabold text-base text-amber-950 flex items-center gap-2">
                         <span>प्रारंभिक साठा (Initial stock)</span>
                       </h3>
@@ -6345,7 +6346,7 @@ const handleDemandReportPdfDownload = async () => {
                           <div className="border border-slate-200 rounded-lg p-3 bg-white max-h-[380px] overflow-y-auto">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                               {/* Column 1 */}
-                              <div className="space-y-2">
+                              <div className="space-y-0">
                                 {[
                                   "Rice",
                                   "Turdal",
@@ -6385,7 +6386,7 @@ const handleDemandReportPdfDownload = async () => {
                               </div>
 
                               {/* Column 2 */}
-                              <div className="space-y-2">
+                              <div className="space-y-0">
                                 {[
                                   "Mugdal",
                                   "Masurdal",
@@ -6643,7 +6644,7 @@ const handleDemandReportPdfDownload = async () => {
                       {/* Left Column: Form Controls (5 cols) */}
                       <div className="lg:col-span-5 space-y-4">
                         {/* Entry Date Card */}
-                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-2">
+                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-0">
                           <label className="text-xs font-semibold text-slate-600 block">
                             Entry date
                           </label>
@@ -6777,7 +6778,7 @@ const handleDemandReportPdfDownload = async () => {
                           </p>
 
                           {/* Auto Ingredient Calculation Cards */}
-                          <div className="space-y-2 pt-1">
+                          <div className="space-y-0 pt-1">
                             <span className="text-xs font-bold text-slate-800 block">
                               Automatic ingredient calculation <span className="text-slate-400 font-medium">(kg)</span>
                             </span>
@@ -6793,7 +6794,7 @@ const handleDemandReportPdfDownload = async () => {
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               {/* Green Card: Veggies */}
-                              <div className="bg-emerald-50/60 border border-emerald-200 rounded-xl p-3.5 space-y-2">
+                              <div className="bg-emerald-50/60 border border-emerald-200 rounded-xl p-3.5 space-y-0">
                                 <span className="text-xs font-bold text-emerald-900 block">भाजीपाला</span>
                                 <span className="text-sm text-emerald-700 block">
                                   नोंदवहीसाठी — स्टॉक किंवा Calculation वर परिणाम होत नाही
@@ -6811,7 +6812,7 @@ const handleDemandReportPdfDownload = async () => {
                               </div>
 
                               {/* Blue Card: Fuel & Veg Allowance */}
-                              <div className="bg-blue-50/60 border border-blue-200 rounded-xl p-3.5 space-y-2 relative flex flex-col justify-between">
+                              <div className="bg-blue-50/60 border border-blue-200 rounded-xl p-3.5 space-y-0 relative flex flex-col justify-between">
                                 <div>
                                   <span className="text-xs font-bold text-blue-900 block">इंधन व भाजीपाला अनुदान</span>
                                   <span className="text-sm text-blue-700 block">
@@ -7806,7 +7807,7 @@ const handleDemandReportPdfDownload = async () => {
 
                       {/* Dropdowns Row */}
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-2 text-slate-800 w-full">
-                        <div className="space-y-2">
+                        <div className="space-y-0">
                           <label className="text-sm font-bold block text-slate-800">
                             {t("वर्ष:", "Year:")}
                           </label>
@@ -7826,7 +7827,7 @@ const handleDemandReportPdfDownload = async () => {
                           </select>
                         </div>
 
-                        <div className="space-y-2">
+                        <div className="space-y-0">
                           <label className="text-sm font-bold block text-slate-800">
                             {t("महिना:", "Month:")}
                           </label>
@@ -7909,7 +7910,7 @@ const handleDemandReportPdfDownload = async () => {
                           </select>
                         </div>
 
-                        <div className="space-y-2">
+                        <div className="space-y-0">
                           <label className="text-sm font-bold block text-slate-800">
                             {t("इयत्ता:", "Class:")}
                           </label>
@@ -8871,7 +8872,7 @@ const handleDemandReportPdfDownload = async () => {
 
                           <div className="flex justify-end pt-1">
                             <div className="text-center space-y-3">
-                              <p className="font-extrabold text-xs text-slate-900">मुख्याध्यापक/सचिव<br/><span className="text-sm text-slate-600">शालेय पोषण आहार समिती</span></p>
+                              <p className="font-extrabold text-xs text-slate-900">मुख्याध्यापक<br/><span className="text-sm text-slate-600">शालेय पोषण आहार समिती</span></p>
                             </div>
                           </div>
                         </div>
@@ -9172,15 +9173,11 @@ const handleDemandReportPdfDownload = async () => {
                         </button>
                       </div>
 
-                      {/* Informational Banner text matching Screenshot 2 */}
-                      <p className="text-sm font-medium text-slate-600 leading-snug pt-1 border-t border-slate-100">
-                        Download PDF. उत्तर वर क्लिक करून प्रिंट काढताना मध्ये <span className="font-bold text-slate-800">Save as PDF निवडा.</span>
-                      </p>
                     </div>
 
                     {/* Official Monthly MDM Report Container matching Screenshot 2 */}
                     <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-300 shadow-sm space-y-3 print:p-0 print:border-none print:shadow-none">
-                      <div id="monthly-mdm-report-print" className="space-y-2 bg-white p-2 text-slate-900 font-sans">
+                      <div id="monthly-mdm-report-print" className="space-y-0 bg-white p-2 text-slate-900 font-sans">
                         {/* === DAILY TANDUL EXPENSE REGISTER (BHAG 1) — EXACT PDF 5.pdf & SCREENSHOT FORMAT === */}
                         {monthlyMdmReportType === "daily_tandul_register" && (() => {
                           const monthName = monthlyMdmReportMonth.split(' ')[0];
@@ -9417,7 +9414,7 @@ const handleDemandReportPdfDownload = async () => {
                                   <p>Date : {new Date().toLocaleDateString('en-GB')}</p>
                                 </div>
                                 <div className="text-center">
-                                  <p className="font-black">मुख्याध्यापक / सचिव</p>
+                                  <p className="font-black">मुख्याध्यापक</p>
                                   <p className="text-xs text-slate-600 mt-0.5">{schoolName}</p>
                                 </div>
                               </div>
@@ -9475,7 +9472,7 @@ const handleDemandReportPdfDownload = async () => {
                             });
 
                             return (
-                              <div key={`page-${startDay}`} className="mb-6 w-full">
+                              <div key={`page-${startDay}`} className={`w-full ${isFirstPage ? "mb-6 print:mb-0" : "html2pdf__page-break print:break-before-page"}`}>
                                 {isFirstPage && (
                                   <div className="text-center mb-4 space-y-1">
                                     <h2 className="text-sm md:text-base font-black text-slate-900 tracking-tight uppercase">प्रधानमंत्री पोषण शक्ती निर्माण योजना — पोषण आहार दैनंदिन नोंदी</h2>
@@ -9489,13 +9486,13 @@ const handleDemandReportPdfDownload = async () => {
                                       <div className="p-2">जिल्हा<br/><span className="font-black text-slate-900">{profile?.district || ""}</span></div>
                                       <div className="p-2">पिन कोड<br/><span className="font-black text-slate-900">{profile?.pinCode || profile?.pincode || ""}</span></div>
                                     </div>
-                                    <div className="mt-2 border border-slate-700 text-xs font-bold text-left p-2 bg-amber-50/50 rounded-lg">
+                                    <div className="mt-1 border border-slate-700 text-xs font-bold text-left p-1 bg-amber-50/50 rounded-lg">
                                       <span className="font-black">मागील शिल्लक :</span> तांदूळ — <span className="font-black text-slate-900">{prevRiceStock.toFixed(4)}</span> kg
                                     </div>
                                   </div>
                                 )}
 
-                                <div className="text-xs md:text-sm font-black text-slate-900 mb-2 text-left border-b-2 border-slate-500 pb-1">
+                                <div className="text-xs md:text-sm font-black text-slate-900 mb-0.5 text-left border-b border-slate-500 pb-0.5">
                                   {monthYearStr} — दिनांक {isFirstPage ? "१–१५" : `१६–${daysInMonth}`}
                                 </div>
 
@@ -9504,7 +9501,7 @@ const handleDemandReportPdfDownload = async () => {
                                     <thead>
                                       <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-700">
                                         {colHeaders.map((h, idx) => (
-                                          <th key={idx} className="border-r border-slate-700 px-2 py-1.5 leading-tight font-bold whitespace-pre-wrap text-xs bg-slate-100" style={{minWidth: idx < 3 ? '65px' : '48px'}}>
+                                          <th key={idx} className="border-r border-slate-700 px-1 py-0 leading-tight font-bold whitespace-pre-wrap text-[11px] bg-slate-100" style={{minWidth: idx < 3 ? '65px' : '48px'}}>
                                             {h}
                                           </th>
                                         ))}
@@ -9519,17 +9516,17 @@ const handleDemandReportPdfDownload = async () => {
                                         }
 
                                         return (
-                                          <tr key={day} className={`border-b border-slate-700 h-8 text-xs ${isSunday || daily.isHoliday ? "bg-red-50/70" : rowIdx % 2 === 0 ? "bg-white" : "bg-slate-50/40"}`}>
-                                            <td className="border-r border-slate-700 px-1 py-1 text-xs font-bold">{rowIdx + 1}</td>
-                                            <td className="border-r border-slate-700 px-1 py-1 text-xs font-semibold">{String(day).padStart(2,'0')}/{String(monthNum).padStart(2,'0')}</td>
-                                            <td className={`border-r border-slate-700 px-1 py-1 text-xs font-semibold ${isSunday || daily.isHoliday ? "text-red-600 font-bold" : ""}`}>{weekday}</td>
-                                            <td className="border-r border-slate-700 px-1 py-1 font-semibold">{daily.isHoliday || !daily.enrolled ? "" : daily.enrolled}</td>
-                                            <td className="border-r border-slate-700 px-1 py-1 font-bold">{daily.isHoliday || bene === 0 ? "" : bene}</td>
-                                            <td className="border-r border-slate-700 px-1 py-1 font-bold">{daily.isHoliday || bene === 0 ? "" : bene}</td>
+                                          <tr key={day} className={`border-b border-slate-700 h-[20px] text-xs ${isSunday || daily.isHoliday ? "bg-red-50/70" : rowIdx % 2 === 0 ? "bg-white" : "bg-slate-50/40"}`}>
+                                            <td className="border-r border-slate-700 px-1 py-0.5 text-xs font-bold">{rowIdx + 1}</td>
+                                            <td className="border-r border-slate-700 px-1 py-0.5 text-xs font-semibold">{String(day).padStart(2,'0')}/{String(monthNum).padStart(2,'0')}</td>
+                                            <td className={`border-r border-slate-700 px-1 py-0.5 text-xs font-semibold ${isSunday || daily.isHoliday ? "text-red-600 font-bold" : ""}`}>{weekday}</td>
+                                            <td className="border-r border-slate-700 px-1 py-0.5 font-semibold">{daily.isHoliday || !daily.enrolled ? "" : daily.enrolled}</td>
+                                            <td className="border-r border-slate-700 px-1 py-0.5 font-bold">{daily.isHoliday || bene === 0 ? "" : bene}</td>
+                                            <td className="border-r border-slate-700 px-1 py-0.5 font-bold">{daily.isHoliday || bene === 0 ? "" : bene}</td>
                                             {itemKeysOrder.map((itemKey) => {
-                                              if (daily.isHoliday || bene === 0) return <td key={itemKey} className="border-r border-slate-700 px-1 py-1"></td>;
+                                              if (daily.isHoliday || bene === 0) return <td key={itemKey} className="border-r border-slate-700 px-1 py-0.5"></td>;
                                               const wasSelected = daily.selectedItems ? !!daily.selectedItems[itemKey] : true;
-                                              if (!wasSelected) return <td key={itemKey} className="border-r border-slate-700 px-1 py-1"></td>;
+                                              if (!wasSelected) return <td key={itemKey} className="border-r border-slate-700 px-1 py-0.5"></td>;
                                               const rule = quantityRules.find(r => r.item.toLowerCase() === itemKey.toLowerCase());
                                               const qStr = rule ? rule.qty15 : "0.02";
                                               const qVal = parseFloat(qStr) || 0;
@@ -9537,32 +9534,32 @@ const handleDemandReportPdfDownload = async () => {
                                               const usedKg = qKg * bene;
                                               if (itemKey === "Rice") monthlyTotalRiceUsed += usedKg;
                                               return (
-                                                <td key={itemKey} className="border-r border-slate-700 px-1 py-1 text-xs font-medium">
+                                                <td key={itemKey} className="border-r border-slate-700 px-1 py-0.5 text-xs font-medium">
                                                   {usedKg > 0 ? usedKg.toFixed(3) : ""}
                                                 </td>
                                               );
                                             })}
-                                            <td className="border-r border-slate-700 px-1 py-1"></td>
-                                            <td className="border-r border-slate-700 px-1 py-1"></td>
-                                            <td className="border-r border-slate-700 px-1 py-1"></td>
-                                            <td className="border-r border-slate-700 px-1 py-1 text-xs font-semibold">{bene > 0 ? (bene * 0.01).toFixed(2) : ""}</td>
-                                            <td className="border-r border-slate-700 px-1 py-1 text-xs">{bene > 0 ? "अंडी/केळी" : ""}</td>
-                                            <td className="border-r border-slate-700 px-1 py-1 text-xs font-bold">{bene > 0 ? (bene * (parseFloat(primaryRate) || 5.45)).toFixed(2) : ""}</td>
+                                            <td className="border-r border-slate-700 px-1 py-0.5"></td>
+                                            <td className="border-r border-slate-700 px-1 py-0.5"></td>
+                                            <td className="border-r border-slate-700 px-1 py-0.5"></td>
+                                            <td className="border-r border-slate-700 px-1 py-0.5 text-xs font-semibold">{bene > 0 ? (bene * 0.01).toFixed(2) : ""}</td>
+                                            <td className="border-r border-slate-700 px-1 py-0.5 text-xs">{bene > 0 ? "अंडी/केळी" : ""}</td>
+                                            <td className="border-r border-slate-700 px-1 py-0.5 text-xs font-bold">{bene > 0 ? (bene * (parseFloat(primaryRate) || 5.45)).toFixed(2) : ""}</td>
                                           </tr>
                                         );
                                       })}
 
                                       {!isFirstPage && (
-                                        <tr className="border-b border-slate-700 bg-amber-100/80 font-black text-xs h-9">
+                                        <tr className="border-b border-slate-700 bg-amber-100/80 font-black text-xs h-[22px]">
                                           <td className="border-r border-slate-700 px-2 py-1.5 font-black text-left" colSpan={3}>एकूण</td>
-                                          <td className="border-r border-slate-700 px-1 py-1.5"></td>
-                                          <td className="border-r border-slate-700 px-1 py-1.5 font-black">{monthlyTotalTat}</td>
-                                          <td className="border-r border-slate-700 px-1 py-1.5 font-black">{monthlyTotalTat}</td>
-                                          <td className="border-r border-slate-700 px-1 py-1.5 font-black">{monthlyTotalRiceUsed.toFixed(3)}</td>
+                                          <td className="border-r border-slate-700 px-1 py-0.5.5"></td>
+                                          <td className="border-r border-slate-700 px-1 py-0.5.5 font-black">{monthlyTotalTat}</td>
+                                          <td className="border-r border-slate-700 px-1 py-0.5.5 font-black">{monthlyTotalTat}</td>
+                                          <td className="border-r border-slate-700 px-1 py-0.5.5 font-black">{monthlyTotalRiceUsed.toFixed(3)}</td>
                                           {Array.from({length: 23}, (_, ci) => (
-                                            <td key={ci} className="border-r border-slate-700 px-1 py-1.5"></td>
+                                            <td key={ci} className="border-r border-slate-700 px-1 py-0.5.5"></td>
                                           ))}
-                                          <td className="border-r border-slate-700 px-1 py-1.5 font-black">{monthlyTotalGrant.toFixed(2)}</td>
+                                          <td className="border-r border-slate-700 px-1 py-0.5.5 font-black">{monthlyTotalGrant.toFixed(2)}</td>
                                         </tr>
                                       )}
                                     </tbody>
@@ -9570,9 +9567,9 @@ const handleDemandReportPdfDownload = async () => {
                                 </div>
 
                                 {!isFirstPage && (
-                                  <div className="mt-4 space-y-4">
+                                  <div className="mt-1 space-y-1">
                                     {/* Yellow Summary Card */}
-                                    <div className="border border-amber-300/90 bg-[#fffef0] p-4 rounded-2xl space-y-3 font-sans text-xs shadow-xs">
+                                    <div className="border border-amber-300/90 bg-[#fffef0] px-2 py-1 rounded-xl space-y-0.5 font-sans text-[11px] shadow-xs">
                                       <div className="flex items-center gap-2">
                                         <span className="font-bold text-slate-900">महिन्यातील एकूण ताटांची संख्या</span>
                                         <span className="bg-emerald-100/90 text-emerald-900 border border-emerald-300 font-extrabold px-3 py-0.5 rounded-md text-xs">
@@ -9587,7 +9584,7 @@ const handleDemandReportPdfDownload = async () => {
                                         </span>
                                       </div>
 
-                                      <div className="text-[11px] font-medium text-slate-500 pl-0.5">
+                                      <div className="text-[10px] font-medium text-slate-500 pl-0.5">
                                         (दैनंदिन नोंदवही — वापरलेली ताटे × प्रति ताट अनुदान)
                                       </div>
 
@@ -9596,36 +9593,34 @@ const handleDemandReportPdfDownload = async () => {
                                           <span className="font-bold text-slate-900">स्वयंपाकी तथा मदतनीस मानधन रु.</span>
                                           <span className="inline-block border-b border-slate-700 w-44"></span>
                                         </div>
-                                        <div className="text-[11px] font-medium text-slate-500 pl-0.5">
+                                        <div className="text-[10px] font-medium text-slate-500 pl-0.5">
                                           (ताटांची संख्या × दर) (शासनस्तरावरून निश्चित केल्यानुसार)
                                         </div>
                                       </div>
 
-                                      <div className="border-t border-dashed border-amber-300/80 my-2 pt-2">
-                                        <p className="font-extrabold text-slate-900 text-xs">
+                                      <div className="border-t border-dashed border-amber-300/80 my-0.5 pt-0.5">
+                                        <p className="font-extrabold text-slate-900 text-[10px]">
                                           प्रमाणित करण्यात येते, की वर नमूद केलेली माहिती दैनंदिन नोंदवहीवरून घेतलेली आहे. ती तपासली आहे व बरोबर आहे.
                                         </p>
                                       </div>
                                     </div>
 
                                     {/* Footer Signatures */}
-                                    <div className="flex items-end justify-between pt-6 text-xs font-bold px-2">
-                                      <div className="space-y-6">
+                                    <div className="flex items-end justify-between pt-0 text-[11px] font-bold px-2">
+                                      <div className="space-y-0">
                                         <p className="font-extrabold text-slate-900">Date</p>
                                         <p className="text-slate-500 font-semibold">—</p>
                                       </div>
-                                      <div className="text-center space-y-6">
+                                      <div className="text-center space-y-0">
                                         <div>
-                                          <p className="font-extrabold text-slate-900">मुख्याध्यापक/सचिव</p>
+                                          <p className="font-extrabold text-slate-900">मुख्याध्यापक</p>
                                           <p className="font-bold text-slate-800">शालेय व्यवस्थापन समिती</p>
                                         </div>
                                         <div className="border-b border-slate-800 w-36 mx-auto"></div>
                                       </div>
                                     </div>
 
-                                    <p className="text-[10px] text-center text-slate-400 font-normal pt-2">
-                                      This report is generated by Learnify Academy MDM Portal
-                                    </p>
+
                                   </div>
                                 )}
                               </div>
@@ -9635,7 +9630,7 @@ const handleDemandReportPdfDownload = async () => {
                           return (
                             <div className="space-y-0">
                               {renderPage(1, 15, true)}
-                              <div className="border-t-2 border-dashed border-slate-300 my-4 print:border-none" />
+                              <div className="border-t-2 border-dashed border-slate-300 my-4 print:hidden" />
                               {renderPage(16, daysInMonth, false)}
                             </div>
                           );
@@ -9678,7 +9673,7 @@ const handleDemandReportPdfDownload = async () => {
                           const pudheManagi = Math.max(0, parseFloat(((labharthi > 0 ? labharthi : pat) * 0.1 * 20 - shillakTandul).toFixed(1)));
 
                           return (
-                            <div className="space-y-2">
+                            <div className="space-y-0">
                               <div className="text-center space-y-0.5 mb-2">
                                 <p className="text-xs font-bold text-slate-700">पंचायत समिती {profile?.taluka || ""} ( शिक्षण विभाग {profile?.district || ""} )</p>
                                 <h2 className="text-sm font-black text-slate-900 tracking-tight uppercase">प्रधानमंत्री पोषण शक्ती निर्माण योजना तांदूळ शिजवून दिल्याचा अहवाल (सन {year}/{String(year+1).slice(-2)})</h2>
@@ -9700,28 +9695,28 @@ const handleDemandReportPdfDownload = async () => {
                               <div className="overflow-x-auto w-full">
                                 <table className="min-w-[900px] w-full border-collapse border border-slate-700 text-center text-xs font-medium">
                                   <thead>
-                                    <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-700 text-xs">
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold" rowSpan={2}>अ.न.<br/><span className="font-normal">1</span></th>
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold" rowSpan={2}>शाळेचे नाव<br/><span className="font-normal">2</span></th>
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold" rowSpan={2}>पट<br/><span className="font-normal">3</span></th>
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold" rowSpan={2}>लाभार्थी<br/><span className="font-normal">4</span></th>
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold bg-blue-50" colSpan={4}>तांदूळ स्थिती (KG)<br/><span className="font-normal">5</span></th>
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold" rowSpan={2}>या महिन्यात शिजवून दिलेला तांदूळ (KG)<br/><span className="font-normal">9</span></th>
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold" rowSpan={2}>उसना परत केलेला तांदूळ (KG)<br/><span className="font-normal">10</span></th>
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold" rowSpan={2}>शिल्लक तांदूळ (KG)<br/><span className="font-normal">11</span></th>
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold bg-green-50" colSpan={3}>शा.पो.आ. शिजवण्यासाठी चालू महिन्याचा खर्च</th>
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold" rowSpan={2}>कामाचे दिवस<br/><span className="font-normal">15</span></th>
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold" rowSpan={2}>प्रत्यक्ष शा.पो.आ. शिजवून दिल्याचे दिवस<br/><span className="font-normal">16</span></th>
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold" rowSpan={2}>पुढील मागणी (KG)<br/><span className="font-normal">17</span></th>
+                                    <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-700 text-xs h-[50px]">
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100" rowSpan={2}>अ.न.<br/><span className="font-normal">1</span></th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100" rowSpan={2}>शाळेचे नाव<br/><span className="font-normal">2</span></th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100" rowSpan={2}>पट<br/><span className="font-normal">3</span></th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100" rowSpan={2}>लाभार्थी<br/><span className="font-normal">4</span></th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-blue-50" colSpan={4}>तांदूळ स्थिती (KG)<br/><span className="font-normal">5</span></th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100" rowSpan={2}>या महिन्यात शिजवून दिलेला तांदूळ (KG)<br/><span className="font-normal">9</span></th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100" rowSpan={2}>उसना परत केलेला तांदूळ (KG)<br/><span className="font-normal">10</span></th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100" rowSpan={2}>शिल्लक तांदूळ (KG)<br/><span className="font-normal">11</span></th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-green-50" colSpan={3}>शा.पो.आ. शिजवण्यासाठी चालू महिन्याचा खर्च</th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100" rowSpan={2}>कामाचे दिवस<br/><span className="font-normal">15</span></th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100" rowSpan={2}>प्रत्यक्ष शा.पो.आ. शिजवून दिल्याचे दिवस<br/><span className="font-normal">16</span></th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100" rowSpan={2}>पुढील मागणी (KG)<br/><span className="font-normal">17</span></th>
                                     </tr>
-                                    <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-700 text-xs">
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold bg-blue-50">मागील शिल्लक तांदूळ<br/><span className="font-normal">6</span></th>
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold bg-blue-50">प्राप्त तांदूळ<br/><span className="font-normal">7</span></th>
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold bg-blue-50">उसना घेतलेला तांदूळ<br/><span className="font-normal">8</span></th>
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold bg-blue-50">एकूण तांदूळ<br/><span className="font-normal">(6+7+8)</span></th>
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold bg-green-50">केंद्र हिस्सा<br/>1.56<br/><span className="font-normal">12</span></th>
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold bg-green-50">राज्य हिस्सा<br/>1.03<br/><span className="font-normal">13</span></th>
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold bg-green-50">2.59<br/><span className="font-normal">14</span></th>
+                                    <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-700 text-xs h-[50px]">
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-blue-50">मागील शिल्लक तांदूळ<br/><span className="font-normal">6</span></th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-blue-50">प्राप्त तांदूळ<br/><span className="font-normal">7</span></th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-blue-50">उसना घेतलेला तांदूळ<br/><span className="font-normal">8</span></th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-blue-50">एकूण तांदूळ<br/><span className="font-normal">(6+7+8)</span></th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-green-50">केंद्र हिस्सा<br/>1.56<br/><span className="font-normal">12</span></th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-green-50">राज्य हिस्सा<br/>1.03<br/><span className="font-normal">13</span></th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-green-50">2.59<br/><span className="font-normal">14</span></th>
                                     </tr>
                                   </thead>
                                   <tbody>
@@ -9776,7 +9771,7 @@ const handleDemandReportPdfDownload = async () => {
                                   <p className="text-xs text-slate-400 mt-0.5">{schoolName}</p>
                                 </div>
                               </div>
-                              <p className="text-xs text-center text-slate-400 font-semibold">This report is generated by Learnify Academy MDM Portal</p>
+
                             </div>
                           );
                         })()}
@@ -9840,7 +9835,7 @@ const handleDemandReportPdfDownload = async () => {
                           const ekunGrant = vegCost + fuelCost;
 
                           return (
-                            <div className="space-y-2">
+                            <div className="space-y-0">
                               <div className="text-center space-y-0.5 mb-2">
                                 <h2 className="text-[12px] font-black text-slate-900 tracking-tight">
                                   प्रधानमंत्री पोषण शक्ती निर्माण योजना : प्रपत्र (ब)
@@ -9912,19 +9907,24 @@ const handleDemandReportPdfDownload = async () => {
                                 मागणी नोंदवताना शाळेकडे वीस दिवसांचा साठा शिल्लक राहील याची दक्षता घेवून मागणी नोंदवावी, जास्त साठा करून धान्य खराब होणार नाही याची दक्षता घ्यावी.
                               </p>
 
-                              <div className="border border-slate-400 divide-y divide-slate-400 bg-amber-50/20 text-slate-900 text-xs font-bold">
-                                <div className="grid grid-cols-3 divide-x divide-slate-400 p-2.5 text-center">
-                                  <div></div>
+                              <div className="border border-black text-slate-900 text-xs font-bold bg-white mt-1">
+                                <div className="flex w-full divide-x divide-black text-center border-b border-black">
+                                  <div className="w-[35%] p-1.5 text-left pl-3">महिन्यातील ताटांची संख्या</div>
+                                  <div className="w-[15%] p-1.5 font-black">{labharthi || ""}</div>
+                                  <div className="w-[35%] p-1.5 text-left pl-3">भाजीपाला (0.98 पै.)</div>
+                                  <div className="w-[15%] p-1.5 font-black">{labharthi ? `₹${(labharthi * 0.98).toFixed(2)}` : ""}</div>
                                 </div>
-                                <div className="grid grid-cols-3 divide-x divide-slate-400 p-2.5 text-center">
-                                  <div>खर्च केलेले एकूण अनुदान रु. : <strong className="font-black">{ekunGrant > 0 ? `₹${ekunGrant.toFixed(2)}` : '—'}</strong></div>
-                                  <div>इंधन ({parseFloat(fuelPercent) || 30}%) : <strong className="font-black">{fuelCost > 0 ? `₹${fuelCost.toFixed(2)}` : '—'}</strong></div>
-                                  <div></div>
+                                <div className="flex w-full divide-x divide-black text-center border-b border-black">
+                                  <div className="w-[35%] p-1.5 text-left pl-3">खर्च केलेले एकूण अनुदान रु.</div>
+                                  <div className="w-[15%] p-1.5 font-black">{labharthi ? `₹${(labharthi * 2.59).toFixed(2)}` : ""}</div>
+                                  <div className="w-[35%] p-1.5 text-left pl-3">इंधन (0.88 पै.)</div>
+                                  <div className="w-[15%] p-1.5 font-black">{labharthi ? `₹${(labharthi * 0.88).toFixed(2)}` : ""}</div>
                                 </div>
-                                <div className="grid grid-cols-3 divide-x divide-slate-400 p-2.5 text-center">
-                                  <div>स्वयंपाकी तथा मदतनीस मानधन रु. : <strong className="font-black">{helpers.length > 0 ? `₹${(helpers.length * 1000).toFixed(2)}` : '—'}</strong></div>
-                                  <div>पूरक आहार ({parseFloat(vegPercent) || 70}%) : <strong className="font-black">{vegCost > 0 ? `₹${vegCost.toFixed(2)}` : '—'}</strong></div>
-                                  <div></div>
+                                <div className="flex w-full divide-x divide-black text-center">
+                                  <div className="w-[35%] p-1.5 text-left pl-3">स्वयंपाकी तथा मदतनीस मानधन रु.</div>
+                                  <div className="w-[15%] p-1.5 font-black">{(labharthi > 0 && helpers.length > 0) ? `₹${(helpers.length * 1000).toFixed(2)}` : ""}</div>
+                                  <div className="w-[35%] p-1.5 text-left pl-3">पूरक आहार (0.73 पै.)</div>
+                                  <div className="w-[15%] p-1.5 font-black">{labharthi ? `₹${(labharthi * 0.73).toFixed(2)}` : ""}</div>
                                 </div>
                               </div>
 
@@ -9936,7 +9936,7 @@ const handleDemandReportPdfDownload = async () => {
                                   <p className="text-xs text-slate-500 mt-0.5">{schoolName}</p>
                                 </div>
                               </div>
-                              <p className="text-xs text-center text-slate-400 font-semibold">This report is generated by Learnify Academy MDM Portal</p>
+
                             </div>
                           );
                         })()}
@@ -9982,7 +9982,7 @@ const handleDemandReportPdfDownload = async () => {
                           const kamacheDivs = dailyData.filter(d => d.labharthi > 0).length;
 
                           return (
-                            <div className="space-y-2">
+                            <div className="space-y-0">
                               {/* Title */}
                               <div className="text-center space-y-0.5 mb-2">
                                 <p className="text-xs font-bold text-slate-700">पंचायत समिती _______________ ( शिक्षण विभाग _______________ )</p>
@@ -10010,19 +10010,19 @@ const handleDemandReportPdfDownload = async () => {
                                 <table className="min-w-[900px] w-full border-collapse border border-slate-700 text-center text-xs font-medium">
                                   <thead>
                                     <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-700 text-xs">
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold" rowSpan={2}>अ.न.</th>
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold" rowSpan={2}>वार</th>
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold" rowSpan={2}>दिनांक</th>
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold" rowSpan={2}>पटसंख्या</th>
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold" rowSpan={2}>एकूण<br/>लाभार्थी</th>
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold" rowSpan={2}>शासन दर<br/>(2.59 रु.)</th>
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold bg-green-50" colSpan={2}>अनुदान वर्गीकरण</th>
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold" rowSpan={2}>एकूण अनुदान<br/>(2.59 रु.)</th>
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold" rowSpan={2}>शेरा</th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100" rowSpan={2}>अ.न.</th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100" rowSpan={2}>वार</th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100" rowSpan={2}>दिनांक</th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100" rowSpan={2}>पटसंख्या</th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100" rowSpan={2}>एकूण<br/>लाभार्थी</th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100" rowSpan={2}>शासन दर<br/>(2.59 रु.)</th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-green-50" colSpan={2}>अनुदान वर्गीकरण</th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100" rowSpan={2}>एकूण अनुदान<br/>(2.59 रु.)</th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100" rowSpan={2}>शेरा</th>
                                     </tr>
                                     <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-700 text-xs">
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold bg-green-50">केंद्र हिस्सा<br/>1.56</th>
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold bg-green-50">राज्य हिस्सा<br/>1.03</th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-green-50">केंद्र हिस्सा<br/>1.56</th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-green-50">राज्य हिस्सा<br/>1.03</th>
                                     </tr>
                                   </thead>
                                   <tbody>
@@ -10031,12 +10031,12 @@ const handleDemandReportPdfDownload = async () => {
                                         <td className="border-r border-slate-700 px-2 py-1.5 text-xs">{d.day}</td>
                                         <td className="border-r border-slate-700 px-2 py-1.5 text-xs font-semibold">{d.weekday}</td>
                                         <td className="border-r border-slate-700 px-2 py-1.5 text-xs">{d.date}</td>
-                                        <td className="border-r border-slate-700 px-2 py-1.5 font-bold">{d.pat > 0 ? d.pat : ""}</td>
-                                        <td className="border-r border-slate-700 px-2 py-1.5 font-bold">{d.labharthi > 0 ? d.labharthi : ""}</td>
+                                        <td className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100">{d.pat > 0 ? d.pat : ""}</td>
+                                        <td className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100">{d.labharthi > 0 ? d.labharthi : ""}</td>
                                         <td className="border-r border-slate-700 px-2 py-1.5">{shasDar}</td>
                                         <td className="border-r border-slate-700 px-2 py-1.5">{d.kendra > 0 ? d.kendra.toFixed(2) : "0"}</td>
                                         <td className="border-r border-slate-700 px-2 py-1.5">{d.rajya > 0 ? d.rajya.toFixed(2) : "0"}</td>
-                                        <td className="border-r border-slate-700 px-2 py-1.5 font-bold">{d.ekun > 0 ? d.ekun.toFixed(2) : "0"}</td>
+                                        <td className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100">{d.ekun > 0 ? d.ekun.toFixed(2) : "0"}</td>
                                         <td className="border-r border-slate-700 px-2 py-1.5"></td>
                                       </tr>
                                     ))}
@@ -10072,7 +10072,7 @@ const handleDemandReportPdfDownload = async () => {
                                   <p className="text-xs text-slate-500 mt-0.5">{schoolName}</p>
                                 </div>
                               </div>
-                              <p className="text-xs text-center text-slate-400 font-semibold">This report is generated by Learnify Academy MDM Portal</p>
+
                             </div>
                           );
                         })()}
@@ -10090,111 +10090,14 @@ const handleDemandReportPdfDownload = async () => {
                     <div className={`w-full ${isMonthlyReportGenerated ? 'max-w-full' : 'max-w-[800px]'} space-y-10`}>
                       <div className="text-center py-4">
                         <h2 className="text-2xl font-bold text-[#004C99]">
-                          {t("मासिक अहवाल", "Monthly Report", "मासिक रिपोर्ट")}
+                          {t("प्रमाणपत्र", "Certificate", "प्रमाणपत्र")}
                         </h2>
                       </div>
 
                       <div className="space-y-6">
-                          {/* Top Controls Card matching Learnify Academy reports-mdm.php exactly */}
-                          <div className="bg-[#f8fafc] p-4 rounded-xl border border-slate-200/80 shadow-xs space-y-2 print:hidden">
-                            <div className="flex flex-wrap items-center gap-3 text-xs font-extrabold text-slate-800">
-                              <span className="text-slate-900 font-extrabold whitespace-nowrap">मासिक अहवाल प्रकार निवडा</span>
-                              <select
-                                value={selectedReportCategory || "tandul_bhag1"}
-                                onChange={(e) => {
-                                  setSelectedReportCategory(e.target.value as any);
-                                  setIsMonthlyReportGenerated(true);
-                                }}
-                                className="bg-white border-2 border-[#8b5cf6] rounded-full px-4 py-1.5 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-400 cursor-pointer shadow-xs"
-                              >
-                                <option value="tandul_bhag1">दैनंदिन तांदूळ खर्च नोंदवही (भाग १)</option>
-                                <option value="dhanyadi_bhag2">धान्यादी माल (भाग २)</option>
-                                <option value="masik_goshwara">मासिक 'ब' प्रपत्र</option>
-                                <option value="anudan_report">इंधन व भाजीपाला अनुदान</option>
-                                <option value="purak_ahar_report">पूरक आहार अहवाल</option>
-                              </select>
 
-                              <span className="text-slate-900 font-extrabold whitespace-nowrap ml-2">महिना</span>
-                              <select
-                                value={monthlyReportMonth || "April"}
-                                onChange={(e) => {
-                                  setMonthlyReportMonth(e.target.value);
-                                  setIsMonthlyReportGenerated(true);
-                                }}
-                                className="bg-white border border-slate-300 rounded-full px-4 py-1.5 text-xs font-bold text-slate-900 focus:outline-none cursor-pointer shadow-xs"
-                              >
-                                {[
-                                  { id: "April", nameMr: "एप्रिल" },
-                                  { id: "May", nameMr: "मे" },
-                                  { id: "June", nameMr: "जून" },
-                                  { id: "July", nameMr: "जुलै" },
-                                  { id: "August", nameMr: "ऑगस्ट" },
-                                  { id: "September", nameMr: "सप्टेंबर" },
-                                  { id: "October", nameMr: "ऑक्टोबर" },
-                                  { id: "November", nameMr: "नोव्हेंबर" },
-                                  { id: "December", nameMr: "डिसेंबर" },
-                                  { id: "January", nameMr: "जानेवारी" },
-                                  { id: "February", nameMr: "फेब्रुवारी" },
-                                  { id: "March", nameMr: "मार्च" },
-                                ].map((m) => (
-                                  <option key={m.id} value={m.id}>
-                                    {m.nameMr}
-                                  </option>
-                                ))}
-                              </select>
 
-                              <button
-                                onClick={() => setIsMonthlyReportGenerated(true)}
-                                className="bg-[#4f46e5] hover:bg-[#4338ca] text-white px-5 py-1.5 rounded-full font-bold shadow-xs transition-colors cursor-pointer"
-                              >
-                                View report
-                              </button>
 
-                              <button
-                                onClick={() => window.print()}
-                                className="bg-[#334155] hover:bg-[#1e293b] text-white px-5 py-1.5 rounded-full font-bold shadow-xs transition-colors cursor-pointer"
-                              >
-                                Download PDF
-                              </button>
-                            </div>
-
-                            <p className="text-sm text-slate-600 font-normal pt-1">
-                              Download PDF. उत्तर वर क्लिक करून प्रिंट काढताना मध्ये <span className="font-bold text-slate-900">Save as PDF</span> निवडा.
-                            </p>
-                          </div>
-
-                          {/* Monthly Report Sub-tabs Selector (1-5, 6-8, 1-8) */}
-                          <div className="flex justify-center border-b border-slate-200 print:hidden mt-1">
-                            <nav className="-mb-px flex space-x-6" aria-label="Tabs">
-                              <button
-                                onClick={() => setMonthlySubTab("1-5")}
-                                className={`shrink-0 border-b-2 py-3 px-2 text-xs font-bold transition-all ${monthlySubTab === "1-5"
-                                  ? "border-[#047857] text-[#047857]"
-                                  : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700"
-                                  }`}
-                              >
-                                {lang === "mr" ? "इयत्ता १ ते ५" : "Class 1 to 5"}
-                              </button>
-                              <button
-                                onClick={() => setMonthlySubTab("6-8")}
-                                className={`shrink-0 border-b-2 py-3 px-2 text-xs font-bold transition-all ${monthlySubTab === "6-8"
-                                  ? "border-[#047857] text-[#047857]"
-                                  : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700"
-                                  }`}
-                              >
-                                {lang === "mr" ? "इयत्ता ६ ते ८" : "Class 6 to 8"}
-                              </button>
-                              <button
-                                onClick={() => setMonthlySubTab("1-8")}
-                                className={`shrink-0 border-b-2 py-3 px-2 text-xs font-bold transition-all ${monthlySubTab === "1-8"
-                                  ? "border-[#047857] text-[#047857]"
-                                  : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700"
-                                  }`}
-                              >
-                                {lang === "mr" ? "इयत्ता १ ते ८ (एकत्रित)" : "Class 1 to 8 (Combined)"}
-                              </button>
-                            </nav>
-                          </div>
 
                           <div id="monthly-report-print" className="bg-slate-100 p-6 space-y-8 w-full overflow-x-auto print:p-0 print:bg-white print:space-y-0">
                             {(() => {
@@ -10211,14 +10114,19 @@ const handleDemandReportPdfDownload = async () => {
                                 { key: "Rice", nameMr: "तांदूळ", unit: "कि.ग्रॅ.", qty15: "0.100 कि.ग्रॅ.", qty68: "0.150 कि.ग्रॅ." },
                                 { key: "Mugdal", nameMr: "मूगडाळ", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
                                 { key: "Turdal", nameMr: "तूरडाळ", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
-{ key: "Moong", nameMr: "मूग", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
-                                { key: "Cumin", nameMr: "जिरे", unit: "कि.ग्रॅ.", qty15: "0.0002 कि.ग्रॅ.", qty68: "0.0003 कि.ग्रॅ." },
-                                { key: "Mustard", nameMr: "मोहरी", unit: "कि.ग्रॅ.", qty15: "0.0004 कि.ग्रॅ.", qty68: "0.0006 कि.ग्रॅ." },
+                                { key: "Matki", nameMr: "मटकी", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
+                                { key: "Chavali", nameMr: "चवळी", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
+                                { key: "Masurdal", nameMr: "मसूरडाळ", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
+                                { key: "Vatana", nameMr: "वाटाणा", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
+                                { key: "Harbhara", nameMr: "हरभरा", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
+                                { key: "Moong", nameMr: "मूग", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
+                                { key: "Cumin", nameMr: "जिरे", unit: "कि.ग्रॅ.", qty15: "0.0005 कि.ग्रॅ.", qty68: "0.0007 कि.ग्रॅ." },
+                                { key: "Mustard", nameMr: "मोहरी", unit: "कि.ग्रॅ.", qty15: "0.0005 कि.ग्रॅ.", qty68: "0.0007 कि.ग्रॅ." },
                                 { key: "Turmeric", nameMr: "हळद", unit: "कि.ग्रॅ.", qty15: "0.0004 कि.ग्रॅ.", qty68: "0.0006 कि.ग्रॅ." },
-                                { key: "Onion Garlic Masala", nameMr: "कांदा लसूण मसाला", unit: "कि.ग्रॅ.", qty15: "0.0004 कि.ग्रॅ.", qty68: "0.0007 कि.ग्रॅ." },
-                                { key: "Salt", nameMr: "मीठ", unit: "कि.ग्रॅ.", qty15: "0.0034 कि.ग्रॅ.", qty68: "0.0050 कि.ग्रॅ." },
+                                { key: "Onion Garlic Masala", nameMr: "कांदा लसूण मसाला", unit: "कि.ग्रॅ.", qty15: "0.0004 कि.ग्रॅ.", qty68: "0.0006 कि.ग्रॅ." },
+                                { key: "Salt", nameMr: "मीठ", unit: "कि.ग्रॅ.", qty15: "0.004 कि.ग्रॅ.", qty68: "0.006 कि.ग्रॅ." },
                                 { key: "Chili", nameMr: "मिरची पावडर", unit: "कि.ग्रॅ.", qty15: "0.0004 कि.ग्रॅ.", qty68: "0.0006 कि.ग्रॅ." },
-                                { key: "Oil", nameMr: "सोयाबीन खाद्यतेल", unit: "ली.", qty15: "0.0054 ली.", qty68: "0.0075 ली." },
+                                { key: "Oil", nameMr: "सोयाबीन खाद्यतेल", unit: "ली.", qty15: "0.0054 ली.", qty68: "0.0082 ली." },
                                 { key: "Garam Masala", nameMr: "गरम मसाला", unit: "कि.ग्रॅ.", qty15: "0.0004 कि.ग्रॅ.", qty68: "0.0006 कि.ग्रॅ." },
                                 { key: "Soyabean Wadi", nameMr: "सोया वडी", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." }
                               ];
@@ -10480,7 +10388,7 @@ const handleDemandReportPdfDownload = async () => {
                                             {/* Row 9 */}
                                             <tr className="bg-slate-50 font-bold">
                                               <td className="border border-black p-0.5">9</td>
-                                              <td className="border border-black p-0.5 text-left pl-1 leading-tight">महिना अखेर शिल्लक तांदूळ व धान्यादी माल कि. ग्रॅ. (कॉलम नं. 4 - 7)</td>
+                                              <td className="border border-black p-0.5 text-left pl-1 leading-tight">महिना अखेर शिल्लक तांदूळ व धान्यादी माल कि. ग्रॅ. (कॉलम नं. 4 - 7 - 8)</td>
                                               {B_FORM_ITEMS.map((item) => {
                                                 const data = getBFormStockData(item.key, cls);
                                                 return (
@@ -10524,7 +10432,7 @@ const handleDemandReportPdfDownload = async () => {
                                           </div>
                                           <div className="text-center">
                                             <p className="pb-8">मुख्याध्यापक सही व शिक्का</p>
-                                            <p className="border-t border-black pt-0.5">मुख्याध्यापक / सचिव</p>
+                                            <p className="border-t border-black pt-0.5">मुख्याध्यापक</p>
                                           </div>
                                         </div>
                                       </div>
@@ -10996,7 +10904,7 @@ const handleDemandReportPdfDownload = async () => {
                                           <h3 className="text-xs font-bold">माहे: {marathiMonthName} {toMarathiNumbers(reportYear.toString())}</h3>
                                         </div>
 
-                                        <div className="text-justify text-sm leading-[1.8rem] space-y-2 px-4 font-normal text-black">
+                                        <div className="text-justify text-sm leading-[1.8rem] space-y-0 px-4 font-normal text-black">
                                           <p>
                                             अध्यक्ष/ सचिव शाळा व्यवस्थापन समिती <span className="font-bold border-b border-dotted border-black px-3">{reportPrincipalName || "________________________"}</span> कडून प्रमाणित करणेत येते की,
                                             जिल्हा परिषद शाळा <span className="font-bold border-b border-dotted border-black px-3">{reportSchoolName || "________________________"}</span> या शाळेतील{" "}
@@ -11279,34 +11187,7 @@ const handleDemandReportPdfDownload = async () => {
                                 </button>
                               </div>
                             </div>
-
-                            {/* Class Group Sub-tabs */}
-                            <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
-                              <button
-                                onClick={() => setAnnualSubTab("1-5")}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all ${
-                                  annualSubTab === "1-5" ? "bg-emerald-700 text-white shadow-xs" : "text-slate-700 hover:bg-white"
-                                }`}
-                              >
-                                {lang === "mr" ? "प्राथमिक (१ ते ५)" : "Primary (1-5)"}
-                              </button>
-                              <button
-                                onClick={() => setAnnualSubTab("6-8")}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all ${
-                                  annualSubTab === "6-8" ? "bg-emerald-700 text-white shadow-xs" : "text-slate-700 hover:bg-white"
-                                }`}
-                              >
-                                {lang === "mr" ? "उच्च प्राथमिक (६ ते ८)" : "Upper Primary (6-8)"}
-                              </button>
-                              <button
-                                onClick={() => setAnnualSubTab("1-8")}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all ${
-                                  annualSubTab === "1-8" ? "bg-emerald-700 text-white shadow-xs" : "text-slate-700 hover:bg-white"
-                                }`}
-                              >
-                                {lang === "mr" ? "एकत्रित (१ ते ८)" : "Combined (1-8)"}
-                              </button>
-                            </div>
+                            {/* Class Group Sub-tabs (Removed as requested) */}
                           </div>
 
                           <p className="text-xs text-slate-500 font-medium border-t border-slate-100 pt-3">
@@ -11321,7 +11202,7 @@ const handleDemandReportPdfDownload = async () => {
                         >
                           {/* Header Block */}
                           {!annualReportType.includes("धान्याची") && (
-                          <div className="border border-slate-300 rounded-xl p-4 bg-white text-center space-y-2">
+                          <div className="border border-slate-300 rounded-xl p-4 bg-white text-center space-y-0">
                             <div className="flex justify-between items-center px-4">
                               <div className="w-16 h-16 flex items-center justify-center">
                                 <Utensils className="w-12 h-12 text-amber-600" />
@@ -11593,9 +11474,7 @@ const handleDemandReportPdfDownload = async () => {
 
                                     {/* Footer mimicking browser print */}
                                     <div className="flex justify-between items-end mt-8 text-[11px] text-black font-sans">
-                                      <div>
-                                        {partIdx === 4 ? "This report is generated by Learnify Academy MDM Portal" : ""}
-                                      </div>
+                                      <div></div>
                                       <div className="text-right">
                                         {partIdx + 1}/5
                                       </div>
@@ -11777,7 +11656,7 @@ const handleDemandReportPdfDownload = async () => {
                             <div>
                               <p className="text-slate-500 font-normal">This report is generated by Smart Learning With AI MDM Portal</p>
                             </div>
-                            <div className="text-center space-y-2">
+                            <div className="text-center space-y-0">
                               <p className="font-extrabold text-slate-900">मुख्याध्यापक स्वाक्षरी व शिक्का</p>
                               <p className="text-slate-400 font-normal">( Headmaster Signature & Stamp )</p>
                             </div>
