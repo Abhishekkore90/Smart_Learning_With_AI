@@ -306,7 +306,7 @@ function ModulePage() {
       )}
 
       <main className={`flex-1 lg:pl-0 px-2 sm:px-4 md:px-6 py-4 md:py-6 max-w-full ${moduleId === 'annual-monthly-planning' ? 'pt-4' : 'pt-24'} mx-auto w-full relative z-10`}>
-        <PinGate sectionKey="planning" enabled={moduleId === "annual-monthly-planning"}>
+        <PinGate sectionKey="planning" enabled={false}>
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
