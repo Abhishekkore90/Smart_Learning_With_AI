@@ -71,11 +71,7 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: "Forbidden: Only Bunny CDN URLs are allowed" });
   }
 
-  const apiKey = process.env.BUNNY_STORAGE_API_KEY || process.env.VITE_BUNNY_STORAGE_API_KEY;
-  if (!apiKey) {
-    console.error("No Bunny API key found in environment variables.");
-    return res.status(500).json({ error: "Server configuration error: Missing API key" });
-  }
+  const apiKey = process.env.BUNNY_STORAGE_API_KEY || process.env.VITE_BUNNY_STORAGE_API_KEY || "a2ca9aa3-f0a9-4d69-a1789c6cfac3-789f-4318";
 
   const storageZone = process.env.BUNNY_STORAGE_ZONE || process.env.VITE_BUNNY_STORAGE_ZONE || "sgkbrainova";
 

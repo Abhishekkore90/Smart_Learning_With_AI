@@ -69,25 +69,38 @@ export function useAuthenticatedPdf(originalUrl: string | null) {
       setError(null);
 
       try {
-        // Get the correct proxy URL (DEV: vite proxy, PROD: /api/pdf-proxy)
-        const proxyUrl = getBunnyStorageUrl(originalUrl);
+        // Step 1: Attempt direct CDN fetch (works for public Pull Zone URLs on b-cdn.net)
+        try {
+          const directRes = await fetch(originalUrl);
+          if (directRes.ok) {
+            const blob = await directRes.blob();
+            if (!blob.type.includes("text/html")) {
+              if (active) {
+                const pdfBlob = new Blob([blob], { type: blob.type || "application/pdf" });
+                localUrl = URL.createObjectURL(pdfBlob);
+                setPdfBlobUrl(localUrl);
+                setLoading(false);
+                return;
+              }
+            }
+          }
+        } catch (directErr) {
+          console.warn("Direct CDN fetch notice, trying proxy:", directErr);
+        }
 
-        // In DEV mode we still need AccessKey header (Vite proxy just forwards it)
+        // Step 2: Fallback to Serverless / Vite Proxy URL
+        const proxyUrl = getBunnyStorageUrl(originalUrl);
         const headers: Record<string, string> = {};
         if (import.meta.env.DEV) {
           headers["AccessKey"] = import.meta.env.VITE_BUNNY_STORAGE_API_KEY || "";
         }
-        // In PROD: no header needed — the Vercel function adds AccessKey server-side
 
         const response = await fetch(proxyUrl, { headers });
-
         if (!response.ok) {
           throw new Error(`Failed to download PDF (Status ${response.status})`);
         }
 
         const blob = await response.blob();
-
-        // Safety check: Make sure we got a PDF, not an HTML error page
         if (blob.type.includes("text/html")) {
           const text = await blob.text();
           if (text.trim().startsWith("<!DOCTYPE") || text.trim().startsWith("<html")) {
@@ -101,11 +114,11 @@ export function useAuthenticatedPdf(originalUrl: string | null) {
           setPdfBlobUrl(localUrl);
         }
       } catch (err: any) {
-        console.error("PDF proxy fetch error:", err);
+        console.warn("PDF proxy fetch notice, falling back to originalUrl:", err);
         if (active) {
-          setError(err.message || "Failed to load PDF");
-          // Last resort fallback: try Google Docs Viewer with the original CDN URL
-          setPdfBlobUrl(null);
+          // Direct fallback to originalUrl so native PDF browser viewer can load
+          setPdfBlobUrl(originalUrl);
+          setError(null);
         }
       } finally {
         if (active) {
