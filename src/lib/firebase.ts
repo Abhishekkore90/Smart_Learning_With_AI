@@ -1,5 +1,5 @@
 import { FirebaseApp, initializeApp, getApps, getApp } from "firebase/app";
-import { Analytics, getAnalytics } from "firebase/analytics";
+import { Analytics, getAnalytics, isSupported } from "firebase/analytics";
 import { Auth, getAuth } from "firebase/auth";
 import { Firestore, getFirestore } from "firebase/firestore";
 import { getFunctions, httpsCallable, connectFunctionsEmulator } from "firebase/functions";
@@ -47,13 +47,18 @@ if (import.meta.env.DEV && import.meta.env.VITE_USE_FIREBASE_EMULATOR === "true"
 // Pre-bind the Firebase Callable Function wrapper
 export const generateAIResponseCallable = httpsCallable(functions, "generateAIResponse");
 
+
+
 export let analytics: Analytics | null = null;
 
-if (typeof window !== "undefined") {
-  // Analytics can fail in certain network environments (e.g. firewalls/VPNs)
+if (typeof window !== "undefined" && app) {
   try {
-    analytics = getAnalytics(app);
+    isSupported().then((supported) => {
+      if (supported) {
+        analytics = getAnalytics(app);
+      }
+    }).catch(() => {});
   } catch (analyticsError) {
-    console.warn("Firebase Analytics failed to initialize:", analyticsError);
+    console.warn("Firebase Analytics notice:", analyticsError);
   }
 }

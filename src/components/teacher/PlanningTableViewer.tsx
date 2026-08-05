@@ -1011,16 +1011,34 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
 
         {/* PDF/Document View */}
         {activeTab === "preview" && !isEditMode && fileUrl && (
-          <div className="w-full h-full bg-slate-900">
-            <iframe
-              src={
-                fileUrl.startsWith("blob:") || fileUrl.startsWith("data:") || fileUrl.toLowerCase().includes(".pdf")
-                  ? fileUrl
-                  : `https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`
-              }
-              className="w-full h-full border-0"
-              title="File Preview"
-            />
+          <div className="w-full h-full bg-slate-900 flex items-center justify-center p-4">
+            {fileUrl.startsWith("blob:") ? (
+              <div className="text-center p-8 bg-slate-800 rounded-2xl border border-slate-700 max-w-md shadow-2xl">
+                <div className="w-12 h-12 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-3 text-amber-400 font-bold text-xl">
+                  📊
+                </div>
+                <h3 className="text-amber-400 font-extrabold text-base mb-1">वार्षिक नियोजन तक्ता (Grid View)</h3>
+                <p className="text-slate-300 text-xs mb-5 leading-relaxed">
+                  या फाईलची सर्व माहिती खालील **"तक्ता" (Grid View)** मध्ये सर्व युजर्ससाठी ऑनलाईन उपलब्ध आहे.
+                </p>
+                <button
+                  onClick={() => setActiveTab("grid")}
+                  className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-xs shadow-lg transition-all cursor-pointer transform hover:scale-105"
+                >
+                  📊 ऑनलाईन तक्ता उघडा (View Interactive Table)
+                </button>
+              </div>
+            ) : (
+              <iframe
+                src={
+                  fileUrl.startsWith("data:") || fileUrl.toLowerCase().includes(".pdf")
+                    ? fileUrl
+                    : `https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`
+                }
+                className="w-full h-full border-0"
+                title="File Preview"
+              />
+            )}
           </div>
         )}
       </div>
