@@ -13,7 +13,7 @@ const firebaseConfig = {
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "education-89c54.firebasestorage.app",
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "292663641725",
   appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:292663641725:web:076b161074bb891513d314",
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-S4WJTJZ4XC",
+  ...(import.meta.env.VITE_FIREBASE_MEASUREMENT_ID && { measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID }),
 };
 
 // Initialize Firebase safely to avoid duplicate app errors in HMR/SSR
@@ -47,11 +47,9 @@ if (import.meta.env.DEV && import.meta.env.VITE_USE_FIREBASE_EMULATOR === "true"
 // Pre-bind the Firebase Callable Function wrapper
 export const generateAIResponseCallable = httpsCallable(functions, "generateAIResponse");
 
-
-
 export let analytics: Analytics | null = null;
 
-if (typeof window !== "undefined" && app) {
+if (typeof window !== "undefined" && app && import.meta.env.VITE_FIREBASE_MEASUREMENT_ID) {
   try {
     isSupported().then((supported) => {
       if (supported) {

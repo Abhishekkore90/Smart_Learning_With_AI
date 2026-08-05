@@ -1670,9 +1670,9 @@ export function AcademicPlanningSystem({
         ...(excelRawHeaders.length > 0 && { rawHeaders: excelRawHeaders }),
         ...(bunnyFileUrl && { bunnyFileUrl }),
         ...(bunnyParsedJsonUrl && { bunnyParsedJsonUrl }),
-        // Include inline html/grid ONLY if very small (<5KB)
-        ...((parsedHtml && parsedHtml.length < 5000) && { parsedHtml }),
-        ...((parsedGrid && parsedGrid.length < 30) && { parsedGrid }),
+        // Include inline html/grid for instant access on all PCs
+        ...(parsedHtml && { parsedHtml }),
+        ...(parsedGrid && parsedGrid.length > 0 && { parsedGrid }),
       };
 
       // 5. Save lightweight metadata to Firestore
