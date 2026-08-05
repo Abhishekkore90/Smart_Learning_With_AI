@@ -765,6 +765,38 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
 
       {/* Fullscreen Table Viewport */}
       <div className="w-full flex-1 bg-white rounded-xl shadow-2xl border border-slate-700 overflow-auto max-h-[calc(100vh-140px)] min-h-0">
+
+        {/* Tab Bar — Grid / HTML / PDF Preview */}
+        {!isEditMode && (
+          <div className="flex items-center gap-1 bg-slate-100 border-b border-slate-200 px-3 py-2">
+            {currentDisplayGrid.length > 0 && (
+              <button
+                onClick={() => setActiveTab("grid")}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${activeTab === "grid" ? "bg-amber-500 text-slate-950 shadow" : "bg-white text-slate-600 hover:bg-slate-200 border border-slate-300"}`}
+              >
+                <TableIcon className="w-3.5 h-3.5" /> 📊 तक्ता (Grid)
+              </button>
+            )}
+            {propHtmlContent && (
+              <button
+                onClick={() => setActiveTab("html")}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${activeTab === "html" ? "bg-amber-500 text-slate-950 shadow" : "bg-white text-slate-600 hover:bg-slate-200 border border-slate-300"}`}
+              >
+                <FileText className="w-3.5 h-3.5" /> HTML
+              </button>
+            )}
+            {fileUrl && !fileUrl.startsWith("blob:") && (
+              <button
+                onClick={() => setActiveTab("preview")}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${activeTab === "preview" ? "bg-amber-500 text-slate-950 shadow" : "bg-white text-slate-600 hover:bg-slate-200 border border-slate-300"}`}
+              >
+                <Eye className="w-3.5 h-3.5" /> 📄 मूळ फाईल पहा
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Grid View */}
         {(activeTab === "grid" || isEditMode) && currentDisplayGrid.length > 0 && (
           <table className="w-full table-fixed text-left border-collapse text-slate-900 text-sm font-sans">
             <colgroup>

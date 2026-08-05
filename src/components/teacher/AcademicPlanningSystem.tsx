@@ -1723,9 +1723,16 @@ export function AcademicPlanningSystem({
 
     const blobFromDb = await getFileFromIndexedDB(rec.id);
     if (blobFromDb) {
+      // Own PC with IndexedDB blob → use local blob URL
       targetUrl = URL.createObjectURL(blobFromDb);
-    } else if (targetUrl && targetUrl.startsWith("blob:")) {
+    } else if (!targetUrl || targetUrl.startsWith("blob:")) {
+      // Other PC or expired blob → fall back to Bunny CDN URL (proxy will serve it)
       targetUrl = rec.bunnyFileUrl || "";
+    }
+
+    // Last resort: if still empty but bunnyFileUrl exists, use it
+    if (!targetUrl && rec.bunnyFileUrl) {
+      targetUrl = rec.bunnyFileUrl;
     }
 
     if (!targetUrl) {
@@ -1934,9 +1941,10 @@ export function AcademicPlanningSystem({
     const blobFromDb = await getFileFromIndexedDB(rec.id);
     if (blobFromDb) {
       targetUrl = URL.createObjectURL(blobFromDb);
-    } else if (targetUrl && targetUrl.startsWith("blob:")) {
+    } else if (!targetUrl || targetUrl.startsWith("blob:")) {
       targetUrl = rec.bunnyFileUrl || "";
     }
+    if (!targetUrl && rec.bunnyFileUrl) targetUrl = rec.bunnyFileUrl;
 
     if (!targetUrl) {
       toast.error("अद्याप फाईल उपलब्ध नाही, कृपया फाईल निवडून पुन्हा अपलोड करा.");
