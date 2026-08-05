@@ -18,6 +18,7 @@ import {
   BookOpen,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuthenticatedPdf } from "@/lib/bunny-auth-pdf";
 
 export interface MonthlyPlanningViewerProps {
   htmlContent?: string;
@@ -207,6 +208,11 @@ export const MonthlyPlanningViewer: React.FC<MonthlyPlanningViewerProps> = ({
   const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<"grid" | "html" | "preview">("grid");
+
+  // Authenticated PDF fetch for Bunny CDN URLs (fixes CORS/X-Frame-Options on other PCs)
+  const isBunnyUrl = !!(fileUrl && (fileUrl.includes("b-cdn.net") || fileUrl.includes("bunny") || fileUrl.includes("storage.bunnycdn")));
+  const bunnyPdfUrl = isBunnyUrl ? fileUrl || null : null;
+  const { pdfBlobUrl: authenticatedPdfUrl, loading: pdfLoading, error: pdfError } = useAuthenticatedPdf(bunnyPdfUrl);
 
   useEffect(() => {
     if (propGridData && propGridData.length > 0) {
@@ -663,7 +669,59 @@ const splitGridByMonthBlocks = (grid: ParsedTableCell[][]): MonthBlock[] => {
         </div>
       )}
 
+      {/* Tab Bar: Grid | PDF Preview */}
+      {fileUrl && !fileUrl.startsWith("blob:") && (
+        <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 p-2 rounded-xl">
+          <button
+            onClick={() => setActiveTab("grid")}
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${activeTab === "grid" ? "bg-amber-500 text-slate-950 shadow" : "bg-slate-800 text-slate-300 hover:bg-slate-700"}`}
+          >
+            <TableIcon className="w-3.5 h-3.5" />
+            <span>📊 तक्ता (Grid)</span>
+          </button>
+          <button
+            onClick={() => setActiveTab("preview")}
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${activeTab === "preview" ? "bg-amber-500 text-slate-950 shadow" : "bg-slate-800 text-slate-300 hover:bg-slate-700"}`}
+          >
+            <Eye className="w-3.5 h-3.5" />
+            <span>📄 मूळ फाईल पहा</span>
+          </button>
+        </div>
+      )}
+
+      {/* PDF/Original File Preview Tab */}
+      {activeTab === "preview" && fileUrl && !fileUrl.startsWith("blob:") && (
+        <div className="w-full flex-1 bg-slate-900 rounded-xl border border-slate-700 overflow-hidden flex items-center justify-center min-h-[500px]">
+          {pdfLoading ? (
+            <div className="flex flex-col items-center gap-3 text-slate-300">
+              <Loader2 className="w-10 h-10 animate-spin text-amber-400" />
+              <span className="text-sm font-semibold">PDF लोड होत आहे...</span>
+            </div>
+          ) : (() => {
+            const resolvedUrl = authenticatedPdfUrl || fileUrl;
+            const isBlob = resolvedUrl.startsWith("blob:") || resolvedUrl.startsWith("data:");
+            const isPdf = resolvedUrl.toLowerCase().includes(".pdf");
+            // If proxy failed → fallback to Google Docs Viewer
+            const iframeSrc = pdfError && !authenticatedPdfUrl
+              ? `https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`
+              : isBlob || isPdf
+                ? resolvedUrl
+                : `https://docs.google.com/viewer?url=${encodeURIComponent(resolvedUrl)}&embedded=true`;
+
+            return (
+              <iframe
+                key={iframeSrc}
+                src={iframeSrc}
+                className="w-full h-full border-0 min-h-[500px]"
+                title="मासिक नियोजन फाईल"
+              />
+            );
+          })()}
+        </div>
+      )}
+
       {/* Main Excel Structure Container */}
+      {activeTab !== "preview" && (
       <div className="w-full flex-1 bg-white rounded-xl shadow-2xl border border-slate-300 overflow-auto p-4 text-slate-900 max-h-[calc(100vh-160px)] min-h-0">
         {/* 1. Main Header Title Banner */}
         <div className="bg-indigo-900 text-white text-center font-bold text-base md:text-lg py-2.5 px-4 rounded-t-lg shadow-sm">
@@ -799,6 +857,7 @@ const splitGridByMonthBlocks = (grid: ParsedTableCell[][]): MonthBlock[] => {
           <div>मुख्याध्यापक</div>
         </div>
       </div>
+      )}
     </div>
   );
 };

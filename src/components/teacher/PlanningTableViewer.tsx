@@ -21,6 +21,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuthenticatedPdf } from "@/lib/bunny-auth-pdf";
 
 interface PlanningTableViewerProps {
   parsedData?: ParsedTableResult | null;
@@ -177,6 +178,11 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
   const [activeTab, setActiveTab] = useState<"html" | "grid" | "preview">(
     (tableData.length > 0 || workingData.length > 0 || propGridData.length > 0) ? "grid" : propHtmlContent ? "html" : "preview"
   );
+
+  // Authenticated PDF fetch for Bunny CDN URLs (fixes CORS/X-Frame-Options on other PCs)
+  const isBunnyUrl = !!(fileUrl && (fileUrl.includes("b-cdn.net") || fileUrl.includes("bunny") || fileUrl.includes("storage.bunnycdn")));
+  const bunnyPdfUrl = isBunnyUrl ? fileUrl || null : null;
+  const { pdfBlobUrl: authenticatedPdfUrl, loading: pdfLoading, error: pdfError } = useAuthenticatedPdf(bunnyPdfUrl);
 
   // Enter Edit Mode: Deep clone tableData into workingData (On-demand cell rendering)
   const handleEnterEditMode = () => {
@@ -1028,17 +1034,32 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
                   📊 ऑनलाईन तक्ता उघडा (View Interactive Table)
                 </button>
               </div>
-            ) : (
-              <iframe
-                src={
-                  fileUrl.startsWith("data:") || fileUrl.toLowerCase().includes(".pdf")
-                    ? fileUrl
-                    : `https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`
-                }
-                className="w-full h-full border-0"
-                title="File Preview"
-              />
-            )}
+            ) : pdfLoading ? (
+              <div className="flex flex-col items-center gap-3 text-slate-300">
+                <Loader2 className="w-10 h-10 animate-spin text-amber-400" />
+                <span className="text-sm font-semibold">PDF लोड होत आहे...</span>
+              </div>
+            ) : (() => {
+              // Determine the best URL to use for the iframe
+              const resolvedUrl = authenticatedPdfUrl || fileUrl;
+              const isBlob = resolvedUrl.startsWith("blob:") || resolvedUrl.startsWith("data:");
+              const isPdf = resolvedUrl.toLowerCase().includes(".pdf");
+              // If proxy failed → fallback to Google Docs Viewer
+              const iframeSrc = pdfError && !authenticatedPdfUrl
+                ? `https://docs.google.com/viewer?url=${encodeURIComponent(fileUrl)}&embedded=true`
+                : isBlob || isPdf
+                  ? resolvedUrl
+                  : `https://docs.google.com/viewer?url=${encodeURIComponent(resolvedUrl)}&embedded=true`;
+
+              return (
+                <iframe
+                  key={iframeSrc}
+                  src={iframeSrc}
+                  className="w-full h-full border-0"
+                  title="File Preview"
+                />
+              );
+            })()}
           </div>
         )}
       </div>
