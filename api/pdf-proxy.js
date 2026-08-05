@@ -46,7 +46,7 @@ export default async function handler(req, res) {
   // CDN URL format: https://sgkbrainova.b-cdn.net/path/file.pdf
   // Storage URL format: https://storage.bunnycdn.com/sgkbrainova/path/file.pdf
   let fetchUrl = targetUrl;
-  const storageZone = process.env.BUNNY_STORAGE_ZONE || "sgkbrainova";
+  const storageZone = process.env.BUNNY_STORAGE_ZONE || process.env.VITE_BUNNY_STORAGE_ZONE || "sgkbrainova";
 
   if (targetUrl.includes("b-cdn.net")) {
     try {
@@ -59,9 +59,10 @@ export default async function handler(req, res) {
     }
   }
 
-  const apiKey = process.env.BUNNY_STORAGE_API_KEY;
+  // Support both BUNNY_STORAGE_API_KEY (server-only) and VITE_BUNNY_STORAGE_API_KEY (also available server-side in Vercel)
+  const apiKey = process.env.BUNNY_STORAGE_API_KEY || process.env.VITE_BUNNY_STORAGE_API_KEY;
   if (!apiKey) {
-    console.error("BUNNY_STORAGE_API_KEY environment variable is not set on Vercel.");
+    console.error("Neither BUNNY_STORAGE_API_KEY nor VITE_BUNNY_STORAGE_API_KEY is set on Vercel.");
     return res.status(500).json({ error: "Server configuration error: Missing API key" });
   }
 
