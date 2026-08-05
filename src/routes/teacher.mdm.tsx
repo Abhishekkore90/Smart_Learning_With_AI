@@ -352,7 +352,9 @@ function TeacherMDMPage() {
     const element = document.getElementById("annual-report-print");
     if (!element) return;
     setIsExporting(true);
+    let toastId: string | undefined;
     try {
+      toastId = toast.loading("PDF डाऊनलोड होत आहे...");
       const { default: html2pdf } = await import("html2pdf.js");
       let html2pdfFn = html2pdf;
       // @ts-ignore
@@ -366,16 +368,20 @@ function TeacherMDMPage() {
         throw new Error("html2pdf library is not loaded properly.");
       }
 
+      const isGrainReport = annualReportType.includes("धान्याची");
+      const filename = isGrainReport
+        ? `MDM_Grain_Annual_Report_${annualReportYear || "2026-27"}.pdf`
+        : `MDM_Rice_Annual_Report_${annualReportYear || "2026-27"}.pdf`;
+
       const opt = {
-        margin: 10,
-        filename: `MDM_Annual_Report_${annualReportYear || "Year"}.pdf`,
+        margin: [3, 3, 3, 3],
+        filename,
         image: { type: "jpeg" as const, quality: 0.98 },
         html2canvas: {
           scale: 2,
           useCORS: true,
           logging: false,
           onclone: (clonedDoc: any) => {
-            // Reset body/html styles to prevent parent offsets
             clonedDoc.body.style.margin = "0";
             clonedDoc.body.style.padding = "0";
             clonedDoc.documentElement.style.margin = "0";
@@ -383,7 +389,6 @@ function TeacherMDMPage() {
 
             const reportEl = clonedDoc.getElementById("annual-report-print");
             if (reportEl) {
-              // Reset all parents to prevent centering and negative offsets
               let parent = reportEl.parentElement;
               while (parent && parent !== clonedDoc.body) {
                 parent.style.margin = "0";
@@ -397,88 +402,206 @@ function TeacherMDMPage() {
                 parent = parent.parentElement;
               }
 
-              // 1046px is the exact width for A4 landscape with 10mm margins at 96 DPI
-              reportEl.style.width = "1046px";
-              reportEl.style.minWidth = "1046px";
-              reportEl.style.maxWidth = "1046px";
-              reportEl.style.padding = "20px 10px";
+              // Printable width for A4 landscape
+              const printWidth = isGrainReport ? "1020px" : "1040px";
+              reportEl.style.width = printWidth;
+              reportEl.style.minWidth = printWidth;
+              reportEl.style.maxWidth = printWidth;
+              reportEl.style.padding = "2px 4px";
               reportEl.style.boxSizing = "border-box";
               reportEl.style.backgroundColor = "#ffffff";
               reportEl.style.border = "none";
-              reportEl.style.margin = "0px";
+              reportEl.style.margin = "0px auto";
               reportEl.style.position = "relative";
-              reportEl.style.left = "0";
-              reportEl.style.top = "0";
 
-              // Reset scroll position on container and inner scrollable tables
               reportEl.scrollLeft = 0;
               reportEl.scrollTop = 0;
               const scrollable = reportEl.querySelectorAll(".overflow-x-auto, .overflow-auto");
               scrollable.forEach((s: any) => {
                 s.scrollLeft = 0;
                 s.scrollTop = 0;
-                s.style.overflow = "visible"; // expand fully
+                s.style.overflow = "visible";
               });
 
-              // Apply table sizing to fit all columns inside the 1046px width without scroll overflow
-              const table = reportEl.querySelector("table");
-              if (table) {
-                table.style.width = "100%";
-                table.style.minWidth = "100%";
-                table.style.maxWidth = "100%";
-                table.style.tableLayout = "fixed"; // enforce column widths strictly
-
-                // Insert colgroup to define column widths
-                // Printable width = 1046px - 20px padding = 1026px
-                // Column 1 (Sr. No.): 25px
-                // Column 2 (Details/Tapasheel): 170px
-                // Columns 3-20 (18 item columns): 46px each (Total = 25 + 170 + 18 * 46 = 1023px)
-                const colgroup = clonedDoc.createElement("colgroup");
-
-                const col1 = clonedDoc.createElement("col");
-                col1.style.width = "25px";
-                colgroup.appendChild(col1);
-
-                const col2 = clonedDoc.createElement("col");
-                col2.style.width = "170px";
-                colgroup.appendChild(col2);
-
-                for (let i = 0; i < 18; i++) {
-                  const colItem = clonedDoc.createElement("col");
-                  colItem.style.width = "46px";
-                  colgroup.appendChild(colItem);
+              // Compact Header Block for PDF so Header + Rice Table fit 100% on Page 1
+              const headerBlock = reportEl.querySelector(".border.border-slate-300.rounded-xl");
+              if (headerBlock) {
+                if (isGrainReport) {
+                  headerBlock.style.padding = "6px 12px";
+                  headerBlock.style.marginBottom = "16px"; // Give proper space in header for Grain report
+                } else {
+                  headerBlock.style.padding = "3px 8px";
+                  headerBlock.style.marginBottom = "3px";
                 }
+              }
 
-                table.insertBefore(colgroup, table.firstChild);
-
-                // Set small padding, font sizes and wrap properties on cells
-                const cells = table.querySelectorAll("th, td");
-                cells.forEach((cell: any) => {
-                  cell.style.padding = "2px 1px";
-                  cell.style.fontSize = "8px";
-                  cell.style.lineHeight = "1.1";
-                  cell.style.wordBreak = "break-all";
-                });
-
-                // Adjust vertical writing headers styling to ensure they fit correctly
-                const verticalDivs = table.querySelectorAll(".writing-vertical");
-                verticalDivs.forEach((div: any) => {
-                  div.style.padding = "4px 1px";
-                  div.style.fontSize = "8px";
-                  div.style.height = "75px";
-                  div.style.lineHeight = "1";
+              const metaBar = reportEl.querySelector(".grid.grid-cols-2, .grid.grid-cols-5");
+              if (metaBar) {
+                metaBar.style.paddingTop = "2px";
+                metaBar.style.marginTop = "2px";
+                metaBar.style.gap = "3px";
+                const metaItems = metaBar.querySelectorAll(".bg-slate-50");
+                metaItems.forEach((item: any) => {
+                  item.style.padding = "1.5px 4px";
                 });
               }
+
+              const logoContainer = reportEl.querySelector(".w-16.h-16");
+              if (logoContainer) {
+                logoContainer.style.width = "26px";
+                logoContainer.style.height = "26px";
+              }
+
+              const sectionTitles = reportEl.querySelectorAll(".border-l-4");
+              sectionTitles.forEach((st: any) => {
+                st.style.padding = "1.5px 5px";
+                st.style.marginBottom = "2px";
+              });
+
+              // Style tables
+              const tables = reportEl.querySelectorAll("table");
+              tables.forEach((table: any) => {
+                table.style.width = "100%";
+                table.style.borderCollapse = "collapse";
+                table.style.tableLayout = "fixed";
+
+                let existingColgroup = table.querySelector("colgroup");
+                if (existingColgroup) existingColgroup.remove();
+
+                const colgroup = clonedDoc.createElement("colgroup");
+                if (!isGrainReport) {
+                  const colWidths = [
+                    "3.5%", "7.5%", "5%", "5%", "5.5%", "4.5%", "7%", 
+                    "5.5%", "6.5%", "6.5%", "5%", "5.5%", "5.5%", "5%", "5.5%", "6%", "5.5%", "6.5%"
+                  ];
+                  colWidths.forEach((w: string) => {
+                    const col = clonedDoc.createElement("col");
+                    col.style.width = w;
+                    colgroup.appendChild(col);
+                  });
+                } else {
+                  const col1 = clonedDoc.createElement("col");
+                  col1.style.width = "3%";
+                  colgroup.appendChild(col1);
+
+                  const col2 = clonedDoc.createElement("col");
+                  col2.style.width = "7%";
+                  colgroup.appendChild(col2);
+
+                  for (let i = 0; i < 21; i++) {
+                    const colItem = clonedDoc.createElement("col");
+                    colItem.style.width = "4.28%";
+                    colgroup.appendChild(colItem);
+                  }
+                }
+                table.insertBefore(colgroup, table.firstChild);
+              });
+
+              // Ensure tr rows do not break inside and have compact height
+              const trRows = reportEl.querySelectorAll("tr");
+              trRows.forEach((r: any) => {
+                r.style.pageBreakInside = "avoid";
+                r.style.breakInside = "avoid";
+                if (!isGrainReport) {
+                  r.style.height = "20px";
+                } else {
+                  // Make Grain report rows taller so table fills the page
+                  r.style.height = "42px";
+                }
+              });
+              
+              // Also reduce the mt-8 margin on the footer inside Grain Report
+              const footers = reportEl.querySelectorAll(".mt-8");
+              footers.forEach((f: any) => {
+                if (isGrainReport) {
+                  // We will let flexbox handle the spacing
+                  f.style.marginTop = "0px";
+                  f.style.paddingBottom = "5px";
+                }
+              });
+              
+              const containers = reportEl.querySelectorAll(".annual-page-container");
+              containers.forEach((c: any) => {
+                if (isGrainReport) {
+                   c.style.height = "715px";
+                   c.style.minHeight = "715px";
+                   c.style.position = "relative";
+                   c.style.display = "flex";
+                   c.style.flexDirection = "column";
+                   c.style.justifyContent = "space-between";
+                   c.style.boxSizing = "border-box";
+                   c.style.padding = "30px 0 20px 0";
+                   
+                   const footer = c.children[c.children.length - 1];
+                   if (footer) {
+                     footer.style.position = "static";
+                     footer.style.marginTop = "0px";
+                     footer.style.padding = "0 10px";
+                   }
+                   
+                   const tableEl = c.querySelector("table");
+                   if (tableEl) {
+                     tableEl.style.marginTop = "0px";
+                     tableEl.style.marginBottom = "0px";
+                   }
+                }
+              });
+
+              // Style TH header cells
+              const thCells = reportEl.querySelectorAll("th");
+              thCells.forEach((cell: any) => {
+                cell.style.position = "relative";
+                cell.style.zIndex = "30";
+                cell.style.backgroundColor = "#f3f4f6";
+                cell.style.color = "#0f172a";
+                cell.style.fontWeight = "bold";
+                cell.style.verticalAlign = "middle";
+                cell.style.textAlign = "center";
+                cell.style.padding = isGrainReport ? "1.5px 0.5px" : "1.5px 0.5px";
+                cell.style.fontSize = isGrainReport ? "6.5pt" : "7.5pt";
+                cell.style.lineHeight = "1.02";
+                cell.style.wordBreak = "normal";
+                cell.style.overflowWrap = "break-word";
+                cell.style.whiteSpace = "normal";
+                cell.style.opacity = "1";
+                cell.style.visibility = "visible";
+
+                const innerDivs = cell.querySelectorAll("div");
+                innerDivs.forEach((d: any) => {
+                  d.style.position = "relative";
+                  d.style.zIndex = "50";
+                  d.style.color = "#0f172a";
+                  d.style.fontWeight = "bold";
+                  d.style.opacity = "1";
+                  d.style.visibility = "visible";
+                });
+              });
+
+              // Style TD cells
+              const tdCells = reportEl.querySelectorAll("td");
+              tdCells.forEach((cell: any) => {
+                cell.style.padding = isGrainReport ? "1.5px 0.5px" : "1.5px 0.5px";
+                cell.style.fontSize = isGrainReport ? "7pt" : "8pt";
+                cell.style.lineHeight = "1.02";
+                cell.style.wordBreak = "normal";
+                cell.style.overflowWrap = "break-word";
+                cell.style.whiteSpace = "normal";
+              });
             }
           }
         },
         jsPDF: { unit: "mm", format: "a4", orientation: "landscape" as const },
-        pagebreak: { mode: ["css", "legacy"] }
+        pagebreak: { 
+          mode: ["legacy"],
+          avoid: ["tr", "thead"]
+        }
       };
 
       await html2pdfFn().set(opt).from(element).save();
+      if (toastId) toast.dismiss(toastId);
       toast.success(t("PDF यशस्वीरित्या डाउनलोड झाली!", "PDF downloaded successfully!", "पीडीएफ सफलतापूर्वक डाउनलोड हो गया!"));
     } catch (err: any) {
+      if (toastId) toast.dismiss(toastId);
       toast.error(t(`PDF डाउनलोड करण्यात अडथळा आला: ${err?.message || String(err)}`, `Error downloading PDF: ${err?.message || String(err)}`, `पीडीएफ डाउनलोड करने में त्रुटि: ${err?.message || String(err)}`));
     } finally {
       setIsExporting(false);
@@ -9447,38 +9570,62 @@ const handleDemandReportPdfDownload = async () => {
                                 </div>
 
                                 {!isFirstPage && (
-                                  <div className="mt-4 space-y-2">
-                                    <div className="text-xs font-bold border border-slate-700 p-2.5 bg-slate-50 rounded-lg">
-                                      <div className="flex justify-between items-center">
-                                        <span>शिल्लक धान्यादी :</span>
-                                        <span className="font-black text-slate-900">तांदूळ — {Math.max(0, prevRiceStock - monthlyTotalRiceUsed).toFixed(3)} kg</span>
+                                  <div className="mt-4 space-y-4">
+                                    {/* Yellow Summary Card */}
+                                    <div className="border border-amber-300/90 bg-[#fffef0] p-4 rounded-2xl space-y-3 font-sans text-xs shadow-xs">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-bold text-slate-900">महिन्यातील एकूण ताटांची संख्या</span>
+                                        <span className="bg-emerald-100/90 text-emerald-900 border border-emerald-300 font-extrabold px-3 py-0.5 rounded-md text-xs">
+                                          {monthlyTotalTat}
+                                        </span>
+                                      </div>
+
+                                      <div className="flex items-center gap-2 pt-1">
+                                        <span className="font-bold text-slate-900">इंधन व भाजीपाल्यासाठी खर्च केलेले अनुदान रु.</span>
+                                        <span className="bg-emerald-100/90 text-emerald-900 border border-emerald-300 font-extrabold px-3 py-0.5 rounded-md text-xs">
+                                          ₹{monthlyTotalGrant.toFixed(2)}
+                                        </span>
+                                      </div>
+
+                                      <div className="text-[11px] font-medium text-slate-500 pl-0.5">
+                                        (दैनंदिन नोंदवही — वापरलेली ताटे × प्रति ताट अनुदान)
+                                      </div>
+
+                                      <div className="space-y-1 pt-1">
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-bold text-slate-900">स्वयंपाकी तथा मदतनीस मानधन रु.</span>
+                                          <span className="inline-block border-b border-slate-700 w-44"></span>
+                                        </div>
+                                        <div className="text-[11px] font-medium text-slate-500 pl-0.5">
+                                          (ताटांची संख्या × दर) (शासनस्तरावरून निश्चित केल्यानुसार)
+                                        </div>
+                                      </div>
+
+                                      <div className="border-t border-dashed border-amber-300/80 my-2 pt-2">
+                                        <p className="font-extrabold text-slate-900 text-xs">
+                                          प्रमाणित करण्यात येते, की वर नमूद केलेली माहिती दैनंदिन नोंदवहीवरून घेतलेली आहे. ती तपासली आहे व बरोबर आहे.
+                                        </p>
                                       </div>
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 text-xs font-bold border border-slate-700 divide-y md:divide-y-0 md:divide-x divide-slate-700 rounded-lg overflow-hidden">
-                                      <div className="p-2.5">महिन्यातील एकूण ताटांची संख्या : <span className="font-black">{monthlyTotalTat}</span></div>
-                                      <div className="p-2.5">इंधन व भाजीपाल्यासाठी खर्च केलेले अनुदान रु. : <span className="font-black">₹{monthlyTotalGrant.toFixed(2)}</span></div>
-                                    </div>
-                                    <div className="text-xs font-semibold border border-slate-700 p-2 bg-slate-50 text-slate-700 rounded-lg">
-                                      (दैनंदिन नोंदवही — वापरलेली ताटे × प्रति ताट अनुदान)
-                                    </div>
-                                    <div className="text-xs font-bold border border-slate-700 p-2.5 rounded-lg">
-                                      स्वयंपाकी तथा मदतनीस मानधन रु. : <span className="font-black">₹{(helpers.length * 1000).toFixed(2)}</span>
-                                      <span className="text-xs font-semibold text-slate-500 ml-2">(ताटांची संख्या × दर) (शासनस्तरावरून निश्चित केल्यानुसार)</span>
-                                    </div>
-                                    <div className="text-xs font-semibold border border-slate-400 p-2.5 bg-amber-50/60 text-slate-800 rounded-lg">
-                                      प्रमाणित करण्यात येते, की वर नमूद केलेली माहिती दैनंदिन नोंदवहीवरून घेतलेली आहे. ती तपासली आहे व बरोबर आहे.
-                                    </div>
-                                    <div className="flex items-end justify-between pt-4 text-xs font-bold">
-                                      <div>
-                                        <p>Date : {new Date().toLocaleDateString('en-GB')}</p>
+
+                                    {/* Footer Signatures */}
+                                    <div className="flex items-end justify-between pt-6 text-xs font-bold px-2">
+                                      <div className="space-y-6">
+                                        <p className="font-extrabold text-slate-900">Date</p>
+                                        <p className="text-slate-500 font-semibold">—</p>
                                       </div>
-                                      <div className="text-center">
-                                        <p className="font-black text-slate-900">मुख्याध्यापक/सचिव</p>
-                                        <p className="text-xs font-semibold text-slate-600">शालेय व्यवस्थापन समिती</p>
-                                        <p className="text-xs text-slate-500 mt-0.5">{schoolName}</p>
+                                      <div className="text-center space-y-6">
+                                        <div>
+                                          <p className="font-extrabold text-slate-900">मुख्याध्यापक/सचिव</p>
+                                          <p className="font-bold text-slate-800">शालेय व्यवस्थापन समिती</p>
+                                        </div>
+                                        <div className="border-b border-slate-800 w-36 mx-auto"></div>
                                       </div>
                                     </div>
-                                    <p className="text-xs text-center text-slate-400 font-semibold pt-1">This report is generated by Learnify Academy MDM Portal</p>
+
+                                    <p className="text-[10px] text-center text-slate-400 font-normal pt-2">
+                                      This report is generated by Learnify Academy MDM Portal
+                                    </p>
                                   </div>
                                 )}
                               </div>
@@ -10692,7 +10839,10 @@ const handleDemandReportPdfDownload = async () => {
 
                                           return (
                                             <div key={partIdx} className="mb-6">
-                                              <p className="text-xs font-bold text-slate-800 mb-1.5 pl-1">{part.partTitle}</p>
+                                              <div className="border-l-4 border-blue-600 bg-[#f1f5f9] p-1.5 px-3 rounded-r-md mb-2 font-bold text-xs text-slate-900 tracking-wide flex items-center justify-between">
+                                      <span>{part.partTitle}</span>
+                                      <span className="text-[10px] text-slate-500 font-normal">MDM Utilization Register</span>
+                                    </div>
                                               <div className="w-full overflow-x-auto">
                                                 <table className="w-full border-collapse border border-black text-center text-[9.5px] font-sans">
                                                   <thead>
@@ -11120,23 +11270,7 @@ const handleDemandReportPdfDownload = async () => {
                                   <span>Download Excel</span>
                                 </button>
                                 <button
-                                  onClick={async () => {
-                                    const el = document.getElementById('annual-report-print');
-                                    if (!el) return;
-                                    try {
-                                      setIsExporting(true);
-                                      const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
-                                      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-                                      const imgData = canvas.toDataURL('image/jpeg', 0.98);
-                                      pdf.addImage(imgData, 'JPEG', 5, 5, 287, 200);
-                                      pdf.save(`Yearly_MDM_Report_${annualReportYear}.pdf`);
-                                      toast.success("PDF यशस्वीरित्या डाउनलोड झाली!");
-                                    } catch (e: any) {
-                                      toast.error("PDF डाऊनलोड त्रुटी: " + e?.message);
-                                    } finally {
-                                      setIsExporting(false);
-                                    }
-                                  }}
+                                  onClick={handleDownloadAnnualPdf}
                                   disabled={isExporting}
                                   className="px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-black rounded-xl shadow-md flex items-center gap-2 transition-all cursor-pointer"
                                 >
@@ -11186,6 +11320,7 @@ const handleDemandReportPdfDownload = async () => {
                           className="border border-slate-300 bg-white p-6 rounded-2xl shadow-xs font-sans text-xs space-y-4 overflow-x-auto print:border-none print:shadow-none print:p-0"
                         >
                           {/* Header Block */}
+                          {!annualReportType.includes("धान्याची") && (
                           <div className="border border-slate-300 rounded-xl p-4 bg-white text-center space-y-2">
                             <div className="flex justify-between items-center px-4">
                               <div className="w-16 h-16 flex items-center justify-center">
@@ -11234,11 +11369,12 @@ const handleDemandReportPdfDownload = async () => {
                               </div>
                             </div>
                           </div>
+                          )}
 
                           {/* 12 Months Table */}
                           <div className="overflow-x-auto w-full">
                             {annualReportType.includes("धान्याची") ? (
-                              <div className="space-y-6">
+                              <div className="space-y-0">
                                 {[
                                   {
                                     partTitle: "भाग १/५ — मुग डाळ, तूर डाळ, मसूर डाळ",
@@ -11281,13 +11417,81 @@ const handleDemandReportPdfDownload = async () => {
                                     ],
                                   },
                                 ].map((part, partIdx) => (
-                                  <div key={partIdx} className="mb-6">
-                                    <p className="text-xs font-bold text-slate-800 mb-1.5 pl-1">{part.partTitle}</p>
-                                    <table className="w-full border-collapse border border-black text-center text-sm font-sans">
+                                  <React.Fragment key={partIdx}>
+                                    {partIdx > 0 && <div className="html2pdf__page-break"></div>}
+                                    <div
+                                      className="annual-page-container bg-white w-full"
+                                      style={{
+                                        boxSizing: "border-box",
+                                        margin: 0,
+                                        padding: 0
+                                      }}
+                                    >
+                                    {/* Page 1 Header Card (Matching 9.pdf) */}
+                                    {partIdx === 0 && (
+                                      <div className="border border-slate-300 rounded-xl p-2 bg-white text-center space-y-1 mb-2">
+                                        <div className="flex justify-between items-center px-2">
+                                          <div className="w-8 h-8 flex items-center justify-center">
+                                            <Utensils className="w-6 h-6 text-amber-600" />
+                                          </div>
+                                          <div className="text-center space-y-0.5">
+                                            <p className="text-[10px] font-extrabold text-emerald-800 tracking-wide">
+                                              प्रधानमंत्री पोषण शक्ती निर्माण योजना सन {annualReportYear || "2026-27"}
+                                            </p>
+                                            <h1 className="text-base font-black text-slate-900 tracking-tight">
+                                              वार्षिक उपयोगिता प्रमाणपत्र
+                                            </h1>
+                                            <h2 className="text-xs font-black text-slate-800 uppercase">
+                                              {profile?.schoolName || ""}
+                                            </h2>
+                                            <p className="text-[10px] font-bold text-slate-600">
+                                              {annualReportType} — सन {annualReportYear || "2026-27"} · {annualSubTab === "1-5" ? "प्राथमिक ( इयत्ता १ ते ५ )" : annualSubTab === "6-8" ? "उच्च प्राथमिक ( इयत्ता ६ ते ८ )" : "इयत्ता १ ते ८ (एकत्रित)"}
+                                            </p>
+                                          </div>
+                                          <div className="w-8"></div>
+                                        </div>
+                                        <div className="grid grid-cols-5 gap-1 border-t border-slate-200 pt-1 mt-1 text-left text-[11px]">
+                                          <div className="bg-slate-50 p-1 px-2 rounded border border-slate-200">
+                                            <span className="text-[9px] text-slate-500 font-bold block">UDISE कोड</span>
+                                            <span className="font-extrabold text-slate-900">{getUdise() || ""}</span>
+                                          </div>
+                                          <div className="bg-slate-50 p-1 px-2 rounded border border-slate-200">
+                                            <span className="text-[9px] text-slate-500 font-bold block">केंद्र</span>
+                                            <span className="font-extrabold text-slate-900">{profile?.center || ""}</span>
+                                          </div>
+                                          <div className="bg-slate-50 p-1 px-2 rounded border border-slate-200">
+                                            <span className="text-[9px] text-slate-500 font-bold block">तालुका</span>
+                                            <span className="font-extrabold text-slate-900">{profile?.taluka || ""}</span>
+                                          </div>
+                                          <div className="bg-slate-50 p-1 px-2 rounded border border-slate-200">
+                                            <span className="text-[9px] text-slate-500 font-bold block">जिल्हा</span>
+                                            <span className="font-extrabold text-slate-900">{profile?.district || ""}</span>
+                                          </div>
+                                          <div className="bg-slate-50 p-1 px-2 rounded border border-slate-200">
+                                            <span className="text-[9px] text-slate-500 font-bold block">पिन कोड</span>
+                                            <span className="font-extrabold text-slate-900">{profile?.pincode || ""}</span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Table */}
+                                    <table className="w-full border-collapse border border-black text-center text-xs font-sans table-fixed">
+                                      <colgroup>
+                                        <col style={{ width: '3%' }} />
+                                        <col style={{ width: '7%' }} />
+                                        {Array.from({ length: 21 }).map((_, colIdx) => (
+                                          <col key={colIdx} style={{ width: '4.28%' }} />
+                                        ))}
+                                      </colgroup>
                                       <thead>
                                         <tr className="bg-slate-100 text-slate-900 font-extrabold border-b border-black">
-                                          <th className="border border-black p-1.5 min-w-[35px]" rowSpan={2}>अ.न.</th>
-                                          <th className="border border-black p-1.5 min-w-[85px]" rowSpan={2}>महिना</th>
+                                          <th className="border border-black p-1 bg-slate-100 text-slate-900 font-extrabold align-middle text-center relative z-30" style={{ position: 'relative', zIndex: 30, backgroundColor: '#f1f5f9', color: '#0f172a' }} rowSpan={2}>
+                                            <div style={{ position: 'relative', zIndex: 50, color: '#0f172a', fontWeight: 'bold' }}>अ.न.</div>
+                                          </th>
+                                          <th className="border border-black p-1 bg-slate-100 text-slate-900 font-extrabold align-middle text-center relative z-30" style={{ position: 'relative', zIndex: 30, backgroundColor: '#f1f5f9', color: '#0f172a' }} rowSpan={2}>
+                                            <div style={{ position: 'relative', zIndex: 50, color: '#0f172a', fontWeight: 'bold' }}>महिना</div>
+                                          </th>
                                           {part.items.map((item, i) => (
                                             <th key={i} className="border border-black p-1 text-center font-bold bg-slate-100" colSpan={7}>
                                               {item.nameMr}
@@ -11297,13 +11501,13 @@ const handleDemandReportPdfDownload = async () => {
                                         <tr className="bg-slate-100 text-slate-900 font-extrabold border-b border-black">
                                           {part.items.map((_, i) => (
                                             <React.Fragment key={i}>
-                                              <th className="border border-black p-1 text-xs font-bold min-w-[45px]">मागील शिल्लक</th>
-                                              <th className="border border-black p-1 text-xs font-bold min-w-[45px]">पुरवठा धारकाकडून प्राप्त</th>
-                                              <th className="border border-black p-1 text-xs font-bold min-w-[45px]">लोक सहभागातून प्राप्त</th>
-                                              <th className="border border-black p-1 text-xs font-bold min-w-[45px]">एकूण प्राप्त</th>
-                                              <th className="border border-black p-1 text-xs font-bold min-w-[45px]">शिजवण्यात आलेला माल</th>
-                                              <th className="border border-black p-1 text-xs font-bold min-w-[45px]">खराब झालेने निर्लेखित केलेला माल</th>
-                                              <th className="border border-black p-1 text-xs font-bold min-w-[45px]">महिना अखेरीस शिल्लक माल</th>
+                                              <th className="border border-black px-0.5 py-1 text-[8.5px] font-bold leading-tight align-middle text-center break-normal whitespace-normal tracking-tight">मागील<br/>शिल्लक</th>
+                                              <th className="border border-black px-0.5 py-1 text-[8.5px] font-bold leading-tight align-middle text-center break-normal whitespace-normal tracking-tight">पुरवठा<br/>धारकाकडून<br/>प्राप्त</th>
+                                              <th className="border border-black px-0.5 py-1 text-[8.5px] font-bold leading-tight align-middle text-center break-normal whitespace-normal tracking-tight">लोक<br/>सहभागातून<br/>प्राप्त</th>
+                                              <th className="border border-black px-0.5 py-1 text-[8.5px] font-bold leading-tight align-middle text-center break-normal whitespace-normal tracking-tight">एकूण<br/>प्राप्त</th>
+                                              <th className="border border-black px-0.5 py-1 text-[8.5px] font-bold leading-tight align-middle text-center break-normal whitespace-normal tracking-tight">शिजवण्यात<br/>आलेला<br/>माल</th>
+                                              <th className="border border-black px-0.5 py-1 text-[8.5px] font-bold leading-tight align-middle text-center break-normal whitespace-normal tracking-tight">खराब<br/>झालेने<br/>निर्लेखित<br/>केलेला<br/>माल</th>
+                                              <th className="border border-black px-0.5 py-1 text-[8.5px] font-bold leading-tight align-middle text-center break-normal whitespace-normal tracking-tight">महिना<br/>अखेरीस<br/>शिल्लक<br/>माल</th>
                                             </React.Fragment>
                                           ))}
                                         </tr>
@@ -11323,9 +11527,9 @@ const handleDemandReportPdfDownload = async () => {
                                           };
 
                                           const rows = acadMonths.map((m, idx) => (
-                                            <tr key={idx} className="h-8 hover:bg-slate-50 transition-colors">
-                                              <td className="border border-black p-1 font-bold">{idx + 1}</td>
-                                              <td className="border border-black p-1 font-bold text-left pl-2 whitespace-nowrap">
+                                            <tr key={idx} className="h-7 hover:bg-slate-50 transition-colors">
+                                              <td className="border border-black p-0.5 font-bold text-center">{idx + 1}</td>
+                                              <td className="border border-black p-0.5 font-bold text-left pl-1.5 whitespace-nowrap">
                                                 {monthMrNames[m.month] || m.month} {m.year}
                                               </td>
                                               {part.items.map((it) => {
@@ -11348,13 +11552,13 @@ const handleDemandReportPdfDownload = async () => {
 
                                                 return (
                                                   <React.Fragment key={it.key}>
-                                                    <td className="border border-black p-1 font-mono text-xs">{prev.toFixed(4)}</td>
-                                                    <td className="border border-black p-1 font-mono text-xs">{recSupp.toFixed(4)}</td>
-                                                    <td className="border border-black p-1 font-mono text-xs">{recPub.toFixed(4)}</td>
-                                                    <td className="border border-black p-1 font-mono text-xs font-bold">{totalRec.toFixed(4)}</td>
-                                                    <td className="border border-black p-1 font-mono text-xs font-semibold">{used.toFixed(4)}</td>
-                                                    <td className="border border-black p-1 font-mono text-xs">{damaged.toFixed(4)}</td>
-                                                    <td className="border border-black p-1 font-mono text-xs font-bold text-emerald-800">{closing.toFixed(4)}</td>
+                                                    <td className="border border-black p-0.5 font-sans text-[8.5px] font-medium text-center">{prev.toFixed(4)}</td>
+                                                    <td className="border border-black p-0.5 font-sans text-[8.5px] font-medium text-center">{recSupp.toFixed(4)}</td>
+                                                    <td className="border border-black p-0.5 font-sans text-[8.5px] font-medium text-center">{recPub.toFixed(4)}</td>
+                                                    <td className="border border-black p-0.5 font-sans text-[8.5px] font-medium font-bold text-center">{totalRec.toFixed(4)}</td>
+                                                    <td className="border border-black p-0.5 font-sans text-[8.5px] font-medium font-semibold text-center">{used.toFixed(4)}</td>
+                                                    <td className="border border-black p-0.5 font-sans text-[8.5px] font-medium text-center">{damaged.toFixed(4)}</td>
+                                                    <td className="border border-black p-0.5 font-sans text-[8.5px] font-medium font-bold text-emerald-800 text-center">{closing.toFixed(4)}</td>
                                                   </React.Fragment>
                                                 );
                                               })}
@@ -11364,19 +11568,19 @@ const handleDemandReportPdfDownload = async () => {
                                           return (
                                             <>
                                               {rows}
-                                              <tr className="h-9 bg-[#fbf9e6] font-black text-slate-900 border-t-2 border-black">
-                                                <td className="border border-black p-1 text-center font-bold" colSpan={2}>एकूण</td>
+                                              <tr className="h-8 bg-[#fef3c7] font-black text-slate-900 border-t-2 border-black">
+                                                <td className="border border-black p-0.5 text-center font-bold" colSpan={2}>एकूण</td>
                                                 {part.items.map((it) => {
                                                   const tot = totalsMap[it.key];
                                                   return (
                                                     <React.Fragment key={it.key}>
-                                                      <td className="border border-black p-1 font-mono text-xs font-bold">{tot.prev.toFixed(4)}</td>
-                                                      <td className="border border-black p-1 font-mono text-xs font-bold">{tot.recSupp.toFixed(4)}</td>
-                                                      <td className="border border-black p-1 font-mono text-xs font-bold">{tot.recPub.toFixed(4)}</td>
-                                                      <td className="border border-black p-1 font-mono text-xs font-bold">{tot.totalRec.toFixed(4)}</td>
-                                                      <td className="border border-black p-1 font-mono text-xs font-bold">{tot.used.toFixed(4)}</td>
-                                                      <td className="border border-black p-1 font-mono text-xs font-bold">{tot.damaged.toFixed(4)}</td>
-                                                      <td className="border border-black p-1 font-mono text-xs font-bold text-emerald-800">{tot.closing.toFixed(4)}</td>
+                                                      <td className="border border-black p-0.5 font-sans text-[8.5px] font-medium font-bold text-center">{tot.prev.toFixed(4)}</td>
+                                                      <td className="border border-black p-0.5 font-sans text-[8.5px] font-medium font-bold text-center">{tot.recSupp.toFixed(4)}</td>
+                                                      <td className="border border-black p-0.5 font-sans text-[8.5px] font-medium font-bold text-center">{tot.recPub.toFixed(4)}</td>
+                                                      <td className="border border-black p-0.5 font-sans text-[8.5px] font-medium font-bold text-center">{tot.totalRec.toFixed(4)}</td>
+                                                      <td className="border border-black p-0.5 font-sans text-[8.5px] font-medium font-bold text-center">{tot.used.toFixed(4)}</td>
+                                                      <td className="border border-black p-0.5 font-sans text-[8.5px] font-medium font-bold text-center">{tot.damaged.toFixed(4)}</td>
+                                                      <td className="border border-black p-0.5 font-sans text-[8.5px] font-medium font-bold text-emerald-800 text-center">{tot.closing.toFixed(4)}</td>
                                                     </React.Fragment>
                                                   );
                                                 })}
@@ -11386,25 +11590,52 @@ const handleDemandReportPdfDownload = async () => {
                                         })()}
                                       </tbody>
                                     </table>
+
+                                    {/* Footer mimicking browser print */}
+                                    <div className="flex justify-between items-end mt-8 text-[11px] text-black font-sans">
+                                      <div>
+                                        {partIdx === 4 ? "This report is generated by Learnify Academy MDM Portal" : ""}
+                                      </div>
+                                      <div className="text-right">
+                                        {partIdx + 1}/5
+                                      </div>
+                                    </div>
                                   </div>
+                                  </React.Fragment>
                                 ))}
                               </div>
                             ) : (
                               <table className="w-full border-collapse border border-black text-center text-sm font-sans">
                                 <thead>
                                   <tr className="bg-slate-100 text-slate-900 font-extrabold border-b border-black">
-                                    <th className="border border-black p-2" rowSpan={2}>अ.क्र.</th>
-                                    <th className="border border-black p-2 min-w-[90px]" rowSpan={2}>महिना</th>
-                                    <th className="border border-black p-2" rowSpan={2}>पट संख्या</th>
-                                    <th className="border border-black p-2" rowSpan={2}>कामाचे दिवस</th>
-                                    <th className="border border-black p-2" rowSpan={2}>अन्न शिजवलेले दिवस</th>
-                                    <th className="border border-black p-2" rowSpan={2}>रजा दिवस</th>
-                                    <th className="border border-black p-2" rowSpan={2}>लाभार्थी संख्या/खाणारी संख्या</th>
+                                    <th className="border border-black p-1 bg-slate-100 text-slate-900 font-extrabold align-middle text-center relative z-30" style={{ position: 'relative', zIndex: 30, backgroundColor: '#f1f5f9', color: '#0f172a' }} rowSpan={2}>
+                                      <div style={{ position: 'relative', zIndex: 50, color: '#0f172a', fontWeight: 'bold' }}>अ.क्र.</div>
+                                    </th>
+                                    <th className="border border-black p-1 bg-slate-100 text-slate-900 font-extrabold align-middle text-center relative z-30" style={{ position: 'relative', zIndex: 30, backgroundColor: '#f1f5f9', color: '#0f172a' }} rowSpan={2}>
+                                      <div style={{ position: 'relative', zIndex: 50, color: '#0f172a', fontWeight: 'bold' }}>महिना</div>
+                                    </th>
+                                    <th className="border border-black p-1 bg-slate-100 text-slate-900 font-extrabold align-middle text-center relative z-30" style={{ position: 'relative', zIndex: 30, backgroundColor: '#f1f5f9', color: '#0f172a' }} rowSpan={2}>
+                                      <div style={{ position: 'relative', zIndex: 50, color: '#0f172a', fontWeight: 'bold' }}>पट संख्या</div>
+                                    </th>
+                                    <th className="border border-black p-1 bg-slate-100 text-slate-900 font-extrabold align-middle text-center relative z-30" style={{ position: 'relative', zIndex: 30, backgroundColor: '#f1f5f9', color: '#0f172a' }} rowSpan={2}>
+                                      <div style={{ position: 'relative', zIndex: 50, color: '#0f172a', fontWeight: 'bold' }}>कामाचे दिवस</div>
+                                    </th>
+                                    <th className="border border-black p-1 bg-slate-100 text-slate-900 font-extrabold align-middle text-center relative z-30" style={{ position: 'relative', zIndex: 30, backgroundColor: '#f1f5f9', color: '#0f172a' }} rowSpan={2}>
+                                      <div style={{ position: 'relative', zIndex: 50, color: '#0f172a', fontWeight: 'bold' }}>अन्न शिजवलेले दिवस</div>
+                                    </th>
+                                    <th className="border border-black p-1 bg-slate-100 text-slate-900 font-extrabold align-middle text-center relative z-30" style={{ position: 'relative', zIndex: 30, backgroundColor: '#f1f5f9', color: '#0f172a' }} rowSpan={2}>
+                                      <div style={{ position: 'relative', zIndex: 50, color: '#0f172a', fontWeight: 'bold' }}>रजा दिवस</div>
+                                    </th>
+                                    <th className="border border-black p-1 bg-slate-100 text-slate-900 font-extrabold align-middle text-center relative z-30" style={{ position: 'relative', zIndex: 30, backgroundColor: '#f1f5f9', color: '#0f172a' }} rowSpan={2}>
+                                      <div style={{ position: 'relative', zIndex: 50, color: '#0f172a', fontWeight: 'bold' }}>लाभार्थी संख्या/खाणारी संख्या</div>
+                                    </th>
                                     <th className="border border-black p-2" colSpan={2}>इतर शिजविणे खर्च</th>
                                     <th className="border border-black p-2" colSpan={8}>
                                       तांदूळ
                                     </th>
-                                    <th className="border border-black p-2 min-w-[80px]" rowSpan={2}>मुख्याध्यापक स्वाक्षरी</th>
+                                    <th className="border border-black p-1 bg-slate-100 text-slate-900 font-extrabold align-middle text-center relative z-30" style={{ position: 'relative', zIndex: 30, backgroundColor: '#f1f5f9', color: '#0f172a' }} rowSpan={2}>
+                                      <div style={{ position: 'relative', zIndex: 50, color: '#0f172a', fontWeight: 'bold' }}>मुख्याध्यापक स्वाक्षरी</div>
+                                    </th>
                                   </tr>
                                   <tr className="bg-slate-100 text-slate-900 font-extrabold border-b border-black">
                                     {/* इतर शिजविणे खर्च */}
@@ -11514,7 +11745,7 @@ const handleDemandReportPdfDownload = async () => {
                                       <>
                                         {rows}
                                         {/* Total Row */}
-                                        <tr className="h-9 bg-slate-100 font-black text-slate-900 border-t-2 border-black">
+                                        <tr className="h-8 bg-[#fef3c7] font-black text-slate-900 border-t-2 border-black">
                                           <td className="border border-black p-1 text-center" colSpan={2}>एकूण (Total)</td>
                                           <td className="border border-black p-1">{totalEnrolled}</td>
                                           <td className="border border-black p-1">{totalWorkingDays}</td>
@@ -11542,11 +11773,11 @@ const handleDemandReportPdfDownload = async () => {
                           </div>
 
                           {/* Footer Signatures */}
-                          <div className="flex justify-between items-center border-t border-slate-300 pt-6 mt-6 text-xs text-slate-700 font-bold">
+                          <div className="flex justify-between items-center border-t border-slate-300 pt-3 mt-3 text-xs text-slate-700 font-bold">
                             <div>
                               <p className="text-slate-500 font-normal">This report is generated by Smart Learning With AI MDM Portal</p>
                             </div>
-                            <div className="text-center space-y-8">
+                            <div className="text-center space-y-2">
                               <p className="font-extrabold text-slate-900">मुख्याध्यापक स्वाक्षरी व शिक्का</p>
                               <p className="text-slate-400 font-normal">( Headmaster Signature & Stamp )</p>
                             </div>
