@@ -708,19 +708,40 @@ function TeacherMDMPage() {
       });
 
       const totalRenderWidth = Math.max(maxScrollWidth + 10, 1100);
-      clone.style.position = 'absolute';
-      clone.style.top = '-9999px';
+      clone.style.position = 'fixed';
+      clone.style.top = '0px';
       clone.style.left = '0px';
+      clone.style.zIndex = '999999';
+      clone.style.opacity = '1';
+      clone.style.pointerEvents = 'none';
       clone.style.width = `${totalRenderWidth}px`;
       clone.style.maxWidth = 'none';
       clone.style.minWidth = `${totalRenderWidth}px`;
       clone.style.overflow = 'visible';
       clone.style.background = '#ffffff';
 
-      clone.querySelectorAll('.overflow-x-auto, .overflow-auto, .overflow-x-scroll').forEach((s) => {
-        (s as HTMLElement).style.overflow = 'visible';
-        (s as HTMLElement).style.width = '100%';
+      clone.querySelectorAll('*').forEach((el) => {
+        const s = el as HTMLElement;
+        if (s.style) {
+          s.style.overflow = 'visible';
+          s.style.overflowX = 'visible';
+          s.style.overflowY = 'visible';
+        }
       });
+
+      const hideScrollbarStyle = document.createElement('style');
+      hideScrollbarStyle.innerHTML = `
+        * {
+          scrollbar-width: none !important;
+          -ms-overflow-style: none !important;
+        }
+        *::-webkit-scrollbar {
+          display: none !important;
+          width: 0 !important;
+          height: 0 !important;
+        }
+      `;
+      clone.appendChild(hideScrollbarStyle);
 
       document.body.appendChild(clone);
 
@@ -741,19 +762,49 @@ function TeacherMDMPage() {
         : `मासिक_अहवाल_${monthlyMdmReportMonth.replace(/\s+/g, '_')}.pdf`;
 
       if (isPoshanReport) {
-        const { default: html2pdf } = await import("html2pdf.js");
-        let html2pdfFn = html2pdf;
-        // @ts-ignore
-        if (html2pdfFn && html2pdfFn.default) { html2pdfFn = html2pdfFn.default; }
-        const opt = {
-          margin: [2, 3, 2, 3],
-          filename,
-          image: { type: "jpeg", quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, letterRendering: true, backgroundColor: "#ffffff", windowWidth: totalRenderWidth + 100, width: totalRenderWidth },
-          jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
-          pagebreak: { mode: ['css'], avoid: 'tr' }
-        };
-        await html2pdfFn().set(opt).from(clone).save();
+        const { default: html2canvas } = await import("html2canvas");
+        const { jsPDF } = await import("jspdf");
+
+        const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+        const pageEls = clone.querySelectorAll('.poshan-pdf-page');
+        const elementsToRender = pageEls.length > 0 ? Array.from(pageEls) : [clone];
+
+        for (let i = 0; i < elementsToRender.length; i++) {
+          const pageEl = elementsToRender[i] as HTMLElement;
+          const canvas = await html2canvas(pageEl, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            backgroundColor: "#ffffff",
+            windowWidth: totalRenderWidth,
+            width: totalRenderWidth,
+            scrollY: 0,
+            scrollX: 0,
+          });
+
+          const imgData = canvas.toDataURL("image/jpeg", 0.98);
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = pdf.internal.pageSize.getHeight();
+          const margin = 4;
+          const availWidth = pdfWidth - (margin * 2);
+          const availHeight = pdfHeight - (margin * 2);
+
+          let imgWidth = availWidth;
+          let imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+          if (imgHeight > availHeight) {
+            imgHeight = availHeight;
+            imgWidth = (canvas.width * imgHeight) / canvas.height;
+          }
+
+          const xPos = (pdfWidth - imgWidth) / 2;
+          const yPos = (pdfHeight - imgHeight) / 2;
+
+          if (i > 0) pdf.addPage();
+          pdf.addImage(imgData, "JPEG", xPos, yPos, imgWidth, imgHeight);
+        }
+
+        pdf.save(filename);
       } else {
         const { default: html2canvas } = await import("html2canvas");
         const { jsPDF } = await import("jspdf");
@@ -763,8 +814,10 @@ function TeacherMDMPage() {
           useCORS: true,
           logging: false,
           backgroundColor: "#ffffff",
-          windowWidth: totalRenderWidth + 100,
+          windowWidth: totalRenderWidth,
           width: totalRenderWidth,
+          scrollY: 0,
+          scrollX: 0,
         });
 
         const imgData = canvas.toDataURL("image/jpeg", 0.98);
@@ -1446,25 +1499,27 @@ const handleDemandReportPdfDownload = async () => {
   // Current Stock States
   const [stockYear, setStockYear] = useState("2026");
   const [showStockReportModal, setShowStockReportModal] = useState(false);
-  const [stockRecords, setStockRecords] = useState([
-    { item: "Rice", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0 },
-    { item: "Pease", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0 },
-    { item: "Mugdal", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0 },
-    { item: "Cowpea", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0 },
-    { item: "Gram", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0 },
-    { item: "Masurdal", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0 },
-    { item: "Matki", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0 },
-    { item: "Moong", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0 },
-    { item: "Turdal", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0 },
-    { item: "Soyabean Wadi", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0 },
-    { item: "Turmeric", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0 },
-    { item: "Salt", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0 },
-    { item: "Onion Garlic Masala", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0 },
-    { item: "Cumin", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0 },
-    { item: "Mustard", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0 },
-    { item: "Chili", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0 },
-    { item: "Garam Masala", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0 },
-    { item: "Oil", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0 },
+  const [stockRecords, setStockRecords] = useState<
+    { item: string; prev: number; received: number; cookedDays: number; beneficiary: number; used: number; damaged?: number }[]
+  >([
+    { item: "Rice", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Pease", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Mugdal", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Cowpea", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Gram", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Masurdal", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Matki", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Moong", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Turdal", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Soyabean Wadi", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Turmeric", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Salt", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Onion Garlic Masala", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Cumin", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Mustard", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Chili", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Garam Masala", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Oil", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
   ]);
 
   const handleStockRecordChange = (
@@ -5337,7 +5392,7 @@ const handleDemandReportPdfDownload = async () => {
                           अद्याप कोणतेही दर नोंदलेले नाहीत.
                         </p>
                       ) : (
-                        <div className="w-full overflow-visible">
+                        <div className="w-full overflow-x-auto">
                           <table className="w-full text-left text-xs border-collapse">
                             <thead>
                               <tr className="bg-slate-50 text-slate-800 font-bold border-b border-slate-200">
@@ -5370,7 +5425,7 @@ const handleDemandReportPdfDownload = async () => {
                         प्रणालीचे मूळ दर (GR)
                       </h3>
 
-                      <div className="w-full overflow-visible">
+                      <div className="w-full overflow-x-auto">
                         <table className="w-full text-left text-xs border-collapse">
                           <thead>
                             <tr className="bg-slate-50 text-slate-800 font-bold border-b border-slate-200">
@@ -5468,7 +5523,7 @@ const handleDemandReportPdfDownload = async () => {
                       </div>
 
                       {/* Horizontal Scrollable Table */}
-                      <div className="w-full overflow-visible">
+                      <div className="w-full overflow-x-auto">
                         <table className="w-full text-center text-xs border-collapse min-w-[3200px]">
                           <thead>
                             <tr className="bg-emerald-100/70 border-b border-emerald-300 text-emerald-950 font-bold">
@@ -5717,7 +5772,7 @@ const handleDemandReportPdfDownload = async () => {
                         <h3 className="font-bold text-base text-slate-800 border-b pb-2">
                           {lang === "mr" ? "अलीकडील नोंदी" : "Recent Entries"}
                         </h3>
-                        <div className="w-full overflow-visible">
+                        <div className="w-full overflow-x-auto">
                           <table className="w-full text-left text-xs border-collapse">
                             <thead>
                               <tr className="border-b border-slate-200 bg-slate-50 text-slate-700 font-bold">
@@ -5858,7 +5913,7 @@ const handleDemandReportPdfDownload = async () => {
                         <h3 className="font-bold text-base text-slate-800">
                           {lang === "mr" ? "अलीकडील नोंदी" : "Recent Entries"}
                         </h3>
-                        <div className="w-full overflow-visible">
+                        <div className="w-full overflow-x-auto">
                           <table className="w-full text-left text-xs border-collapse">
                             <thead>
                               <tr className="border-b border-slate-200 bg-slate-50 text-slate-700 font-bold">
@@ -5990,7 +6045,7 @@ const handleDemandReportPdfDownload = async () => {
                         <h3 className="font-bold text-base text-slate-800">
                           {lang === "mr" ? "अलीकडील नोंदी" : "Recent Entries"}
                         </h3>
-                        <div className="w-full overflow-visible">
+                        <div className="w-full overflow-x-auto">
                           <table className="w-full text-left text-xs border-collapse">
                             <thead>
                               <tr className="border-b border-slate-200 bg-slate-50 text-slate-700 font-bold">
@@ -8165,7 +8220,7 @@ const handleDemandReportPdfDownload = async () => {
                           <div className="h-px w-full bg-slate-300" />
 
                           {/* Table Section */}
-                          <div className="w-full overflow-visible">
+                          <div className="w-full overflow-x-auto">
                             <table className="w-full border-collapse border border-black text-slate-900 bg-white">
                               <thead>
                                 <tr className="bg-slate-50 font-bold">
@@ -9033,7 +9088,7 @@ const handleDemandReportPdfDownload = async () => {
                         })()}
 
                         {/* 4. 6-Column Main Demand Table */}
-                        <div className="w-full overflow-visible">
+                        <div className="w-full overflow-x-auto">
                           <table className="w-full border-collapse border border-slate-400 text-center text-xs">
                             <thead>
                               <tr className="bg-slate-100/90 text-slate-900 font-extrabold border-b border-slate-400">
@@ -9585,7 +9640,7 @@ const handleDemandReportPdfDownload = async () => {
                               </div>
 
                               {/* Daily Rice Consumption Table */}
-                              <div className="w-full overflow-visible">
+                              <div className="w-full overflow-x-auto">
                                 <table className="w-full border-collapse border border-slate-700 text-center text-xs font-medium" style={{ tableLayout: 'auto' }}>
                                   <thead>
                                     <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-700 text-xs">
@@ -9724,7 +9779,7 @@ const handleDemandReportPdfDownload = async () => {
                             });
 
                             return (
-                              <div key={`page-${startDay}`} className={`w-full ${isFirstPage ? "mb-6 print:mb-0" : "html2pdf__page-break print:break-before-page"}`}>
+                              <div key={`page-${startDay}`} className={`w-full poshan-pdf-page ${isFirstPage ? "mb-6 print:mb-0" : "html2pdf__page-break print:break-before-page"}`}>
                                 {isFirstPage && (
                                   <div className="text-center mb-4 space-y-1">
                                     <h2 className="text-sm md:text-base font-black text-slate-900 tracking-tight uppercase">प्रधानमंत्री पोषण शक्ती निर्माण योजना — पोषण आहार दैनंदिन नोंदी</h2>
@@ -9748,7 +9803,7 @@ const handleDemandReportPdfDownload = async () => {
                                   {monthYearStr} — दिनांक {isFirstPage ? "१–१५" : `१६–${daysInMonth}`}
                                 </div>
 
-                                <div className="w-full overflow-visible">
+                                <div className="w-full overflow-x-auto">
                                   <table className="min-w-[1400px] w-full border-collapse border border-slate-700 text-center text-xs font-medium">
                                     <thead>
                                       <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-700">
@@ -9946,7 +10001,7 @@ const handleDemandReportPdfDownload = async () => {
                                 </div>
                               </div>
 
-                              <div className="w-full overflow-visible">
+                              <div className="w-full overflow-x-auto">
                                 <table className="min-w-[1250px] w-full border-collapse border border-slate-700 text-center text-xs font-medium">
                                   <thead>
                                     <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-700 text-xs">
@@ -10120,7 +10175,7 @@ const handleDemandReportPdfDownload = async () => {
                                 </div>
                               </div>
 
-                              <div className="w-full overflow-visible">
+                              <div className="w-full overflow-x-auto">
                                 <table className="min-w-[900px] w-full border-collapse border border-slate-700 text-center text-xs font-medium">
                                   <thead>
                                     <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-700 text-xs">
@@ -10262,7 +10317,7 @@ const handleDemandReportPdfDownload = async () => {
                               </div>
 
                               {/* Daily Bill Table */}
-                              <div className="w-full overflow-visible">
+                              <div className="w-full overflow-x-auto">
                                 <table className="min-w-[1000px] w-full border-collapse border border-slate-700 text-center text-xs font-medium">
                                   <thead>
                                     <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-700 text-xs">
@@ -10988,7 +11043,7 @@ const handleDemandReportPdfDownload = async () => {
                                       </p>
 
                                       {/* Main Table */}
-                                      <div className="w-full overflow-visible">
+                                      <div className="w-full overflow-x-auto">
                                         <table className="w-full border-collapse border border-black text-center text-[9.5px] font-sans">
                                           <thead>
                                             <tr className="bg-slate-100 font-extrabold text-slate-900 border-b border-black">
@@ -11173,7 +11228,7 @@ const handleDemandReportPdfDownload = async () => {
                                       <span>{part.partTitle}</span>
                                       <span className="text-[10px] text-slate-500 font-normal">MDM Utilization Register</span>
                                     </div>
-                                              <div className="w-full overflow-visible">
+                                              <div className="w-full overflow-x-auto">
                                                 <table className="w-full border-collapse border border-black text-center text-[9.5px] font-sans">
                                                   <thead>
                                                     <tr className="bg-slate-100 font-extrabold text-slate-900 border-b border-black">
@@ -11613,7 +11668,7 @@ const handleDemandReportPdfDownload = async () => {
                           )}
 
                           {/* 12 Months Table */}
-                          <div className="w-full overflow-visible">
+                          <div className="w-full overflow-x-auto">
                             {annualReportType.includes("धान्याची") ? (
                               <div className="space-y-0">
                                 {[
