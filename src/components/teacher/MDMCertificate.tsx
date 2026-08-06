@@ -11,12 +11,14 @@ export interface MDMCertificateProps {
   upperCookedDays?: number;
   wednesdaysCount?: number;
   certSupplementaryFood?: string;
+  certMonthName?: string;
   certPatPrimary?: string;
   certPatUpper?: string;
   certBeneficiaryPrimary?: string;
   certBeneficiaryUpper?: string;
   certPrimaryCookedDays?: string;
   certUpperCookedDays?: string;
+  certWednesdaysCount?: string;
   primaryEnrolled?: number;
   upperEnrolled?: number;
   primaryBeneficiarySum?: number;
@@ -50,21 +52,23 @@ export const toEnglishNumbers = (str: string | number): string => {
 
 export const MDMCertificate: React.FC<MDMCertificateProps> = ({
   subTab = "1-8",
-  reportYear = 2026,
-  marathiMonthName = "माहे",
-  reportSchoolName = "जि. प. प्राथमिक शाळा",
-  principalName = "मुख्याध्यापक",
-  teacherName = "शिक्षकाचे नाव",
+  reportYear,
+  marathiMonthName = "",
+  reportSchoolName = "",
+  principalName = "",
+  teacherName = "",
   primaryCookedDays = 0,
   upperCookedDays = 0,
   wednesdaysCount = 0,
-  certSupplementaryFood = "पूरक आहार",
+  certSupplementaryFood = "",
+  certMonthName = "",
   certPatPrimary = "",
   certPatUpper = "",
   certBeneficiaryPrimary = "",
   certBeneficiaryUpper = "",
   certPrimaryCookedDays = "",
   certUpperCookedDays = "",
+  certWednesdaysCount = "",
   primaryEnrolled = 0,
   upperEnrolled = 0,
   primaryBeneficiarySum = 0,
@@ -103,6 +107,16 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
     return "इयत्ता १ ते ८";
   };
 
+  const getFormattedMonthYear = () => {
+    if (certMonthName) return certMonthName;
+    if (marathiMonthName && reportYear) {
+      return `${marathiMonthName} ${toMarathiNumbers(reportYear.toString())}`;
+    }
+    if (marathiMonthName) return marathiMonthName;
+    if (reportYear) return toMarathiNumbers(reportYear.toString());
+    return "________";
+  };
+
   return (
     <div className="print-page border border-slate-300 py-6 px-8 bg-white text-black font-sans text-xs relative w-full max-w-full mx-auto shadow-md flex flex-col justify-between print:w-full print:h-auto print:border-none print:shadow-none print:p-0">
       <div>
@@ -112,29 +126,29 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
           <div className="absolute right-0 text-sm font-extrabold">{getHeaderTitle()}</div>
         </div>
         <div className="text-right text-xs font-bold mb-3">
-          माहे : <span className="font-extrabold border-b border-dotted border-black px-4">{marathiMonthName} {toMarathiNumbers(reportYear.toString())}</span>
+          माहे : <span className="font-extrabold border-b border-dotted border-black px-4">{getFormattedMonthYear()}</span>
         </div>
 
         {/* Certificate Text Paragraph */}
         <div className="text-justify text-xs leading-[1.8rem] space-y-2 px-2 font-normal text-black mb-4">
           <p>
-            अध्यक्ष/ सचिव शाळा व्यवस्थापन समिती <span className="font-bold border-b border-dotted border-black px-3">{principalName}</span> कडून प्रमाणित करणेत येते की,
-            जि.प. शाळा <span className="font-bold border-b border-dotted border-black px-3">{reportSchoolName}</span> या शाळेतील{" "}
-            <span className="font-bold border-b border-dotted border-black px-3">{teacherName}</span> यांनी शालेय पोषण आहार अंतर्गत माहे{" "}
-            <span className="font-bold border-b border-dotted border-black px-2">{marathiMonthName} {toMarathiNumbers(reportYear.toString())}</span> मध्ये{" "}
+            अध्यक्ष/ सचिव शाळा व्यवस्थापन समिती <span className="font-bold border-b border-dotted border-black px-3">{principalName || "________"}</span> कडून प्रमाणित करणेत येते की,
+            जि.प. शाळा <span className="font-bold border-b border-dotted border-black px-3">{reportSchoolName || "________"}</span> या शाळेतील{" "}
+            <span className="font-bold border-b border-dotted border-black px-3">{teacherName || "________"}</span> यांनी शालेय पोषण आहार अंतर्गत माहे{" "}
+            <span className="font-bold border-b border-dotted border-black px-2">{getFormattedMonthYear()}</span> मध्ये{" "}
             {showPrimary && (
               <>
-                इ. १ ली ते ५ वी च्या विद्यार्थ्यांसाठी <span className="font-bold border-b border-dotted border-black px-3">{toMarathiNumbers(primaryCookedDays.toString())}</span> दिवस{" "}
+                इ. १ ली ते ५ वी च्या विद्यार्थ्यांसाठी <span className="font-bold border-b border-dotted border-black px-3">{certPrimaryCookedDays ? toMarathiNumbers(certPrimaryCookedDays) : "________"}</span> दिवस{" "}
               </>
             )}
             {showPrimary && showUpper && "आणि "}
             {showUpper && (
               <>
-                इ. ६ वी ते ८ वीच्या विद्यार्थ्यांसाठी एकूण <span className="font-bold border-b border-dotted border-black px-3">{toMarathiNumbers(upperCookedDays.toString())}</span> दिवस{" "}
+                इ. ६ वी ते ८ वीच्या विद्यार्थ्यांसाठी एकूण <span className="font-bold border-b border-dotted border-black px-3">{certUpperCookedDays ? toMarathiNumbers(certUpperCookedDays) : "________"}</span> दिवस{" "}
               </>
             )}
             अन्न शिजवून देणेचे काम केले आहे. तसेच योग्य उष्मांकाचा व चविष्ठ पोषण आहार होणेसाठी दररोज इ. १ ली ते ५ वी साठी ५० ग्रॅम व इ. ६वी ते ८ वी साठी ७५ ग्रॅम प्रमाणे
-            विविध भाज्या वापरल्या आहेत. आणि खोबरे, कांदा, लसून इ. मसाल्यांचा योग्य प्रमाणात वापर केला आहे. सदर महिन्यात दर बुधवारी एकूण <span className="font-bold border-b border-dotted border-black px-3">{toMarathiNumbers(wednesdaysCount.toString())}</span> वेळा <span className="font-bold border-b border-dotted border-black px-3">{certSupplementaryFood}</span> असा पूरक आहार दिलेला आहे. अन्न शिजवून देणेचे व महाराष्ट्र शासन, शालेय शिक्षण व क्रिडा विभागातील शासन निर्णय क्र.शापोआ / २०१०/प्र.क्र.१८/ प्राशि४, दि.२.२.२०११ मधील बाब क्र. ९ नुसार शालेय पोषण आहाराचे सर्व कामकाज पूर्ण केले आहे.
+            विविध भाज्या वापरल्या आहेत. आणि खोबरे, कांदा, लसून इ. मसाल्यांचा योग्य प्रमाणात वापर केला आहे. सदर महिन्यात दर बुधवारी एकूण <span className="font-bold border-b border-dotted border-black px-3">{certWednesdaysCount ? toMarathiNumbers(certWednesdaysCount) : "________"}</span> वेळा <span className="font-bold border-b border-dotted border-black px-3">{certSupplementaryFood || "________"}</span> असा पूरक आहार दिलेला आहे. अन्न शिजवून देणेचे व महाराष्ट्र शासन, शालेय शिक्षण व क्रिडा विभागातील शासन निर्णय क्र.शापोआ / २०१०/प्र.क्र.१८/ प्राशि४, दि.२.२.२०११ मधील बाब क्र. ९ नुसार शालेय पोषण आहाराचे सर्व कामकाज पूर्ण केले आहे.
           </p>
           <p>
             सदर खालीलप्रमाणे पट, लाभार्थी, दिवस यांची माहिती बरोबर असून त्यानुसार इंधन भाजीपाला तसेच स्वयंपाकी तथा मदतनीस मानधन अदा करणेस हरकत नाही म्हणून दिले असे प्रमाणपत्र.
