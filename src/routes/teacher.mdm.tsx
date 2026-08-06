@@ -43,6 +43,7 @@ import { DICTIONARY } from "@/lib/translations";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas-pro";
 import { PinGate } from "@/components/teacher/PinGate";
+import MDMCertificate from "@/components/teacher/MDMCertificate";
 
 export const Route = createFileRoute("/teacher/mdm")({
   validateSearch: (search: Record<string, unknown>): { tab?: string } => ({
@@ -173,7 +174,7 @@ function TeacherMDMPage() {
 
   // Monthly Report States
   const [monthlyReportMonth, setMonthlyReportMonth] = useState<string | null>(null);
-  const [selectedReportCategory, setSelectedReportCategory] = useState<"tandul_bhag1" | "dhanyadi_bhag2" | "masik_goshwara" | "anudan_report" | "purak_ahar_report">("tandul_bhag1");
+  const [selectedReportCategory, setSelectedReportCategory] = useState<"tandul_bhag1" | "dhanyadi_bhag2" | "masik_goshwara" | "anudan_report" | "purak_ahar_report">("masik_goshwara");
   const [reportSchoolName, setReportSchoolName] = useState("");
   const [reportTeacherName, setReportTeacherName] = useState("");
   const [reportPrincipalName, setReportPrincipalName] = useState("");
@@ -10086,20 +10087,100 @@ const handleDemandReportPdfDownload = async () => {
 
                 {/* Certificate Tab */}
                 {activeTab === "monthly-report" && (
-                  <div className="bg-white p-12 border border-slate-300 w-full min-h-[800px] flex flex-col items-center">
-                    <div className={`w-full ${isMonthlyReportGenerated ? 'max-w-full' : 'max-w-[800px]'} space-y-10`}>
-                      <div className="text-center py-4">
-                        <h2 className="text-2xl font-bold text-[#004C99]">
-                          {t("प्रमाणपत्र", "Certificate", "प्रमाणपत्र")}
+                  <div className="bg-white p-4 md:p-8 border border-slate-300 w-full min-h-[800px] flex flex-col items-center">
+                    <div className="w-full max-w-full space-y-6">
+                      <div className="text-center py-2">
+                        <h2 className="text-2xl font-black text-[#004C99]">
+                          Certificate
                         </h2>
                       </div>
 
+                      {/* Top Control Bar matching User Screenshot */}
+                      <div className="bg-[#f8fafc] p-3 md:p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
+                        {/* Month Selector */}
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs font-bold text-slate-700 whitespace-nowrap">
+                            माह :
+                          </label>
+                          <select
+                            value={monthlyReportMonth || "April"}
+                            onChange={(e) => setMonthlyReportMonth(e.target.value)}
+                            className="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none shadow-sm cursor-pointer"
+                          >
+                            <option value="April">एप्रिल</option>
+                            <option value="May">मे</option>
+                            <option value="June">जून</option>
+                            <option value="July">जुलै</option>
+                            <option value="August">ऑगस्ट</option>
+                            <option value="September">सप्टेंबर</option>
+                            <option value="October">ऑक्टोबर</option>
+                            <option value="November">नोव्हेंबर</option>
+                            <option value="December">डिसेंबर</option>
+                            <option value="January">जानेवारी</option>
+                            <option value="February">फेब्रुवारी</option>
+                            <option value="March">मार्च</option>
+                          </select>
+                        </div>
+
+                        {/* Class Subtabs Pill Group */}
+                        <div className="flex items-center bg-slate-200/80 p-1 rounded-xl gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setMonthlySubTab("1-5")}
+                            className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                              monthlySubTab === "1-5"
+                                ? "bg-white text-blue-700 shadow-sm font-extrabold"
+                                : "text-slate-600 hover:text-slate-900"
+                            }`}
+                          >
+                            १ ते ५
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setMonthlySubTab("6-8")}
+                            className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                              monthlySubTab === "6-8"
+                                ? "bg-white text-blue-700 shadow-sm font-extrabold"
+                                : "text-slate-600 hover:text-slate-900"
+                            }`}
+                          >
+                            ६ ते ८
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setMonthlySubTab("1-8")}
+                            className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                              monthlySubTab === "1-8"
+                                ? "bg-white text-blue-700 shadow-sm font-extrabold"
+                                : "text-slate-600 hover:text-slate-900"
+                            }`}
+                          >
+                            १ ते ८ (एकत्रित)
+                          </button>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedReportCategory("masik_goshwara")}
+                            className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-xl shadow-sm transition-all cursor-pointer active:scale-95"
+                          >
+                            मासिक ताळमेळ अहवाल (प्रपत्र ब)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleDownloadPdf}
+                            className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-sm transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+                          >
+                            <Printer className="w-3.5 h-3.5" />
+                            <span>प्रिंट / PDF डाउनलोड</span>
+                          </button>
+                        </div>
+                      </div>
+
                       <div className="space-y-6">
-
-
-
-
-                          <div id="monthly-report-print" className="bg-slate-100 p-6 space-y-8 w-full overflow-x-auto print:p-0 print:bg-white print:space-y-0">
+                        <div id="monthly-report-print" className="bg-slate-100 p-6 space-y-8 w-full overflow-x-auto print:p-0 print:bg-white print:space-y-0">
                             {(() => {
                               const acadMonths = getAcademicYearMonths("2025-26");
                               const selectedMonthObj = acadMonths.find(m => m.month === monthlyReportMonth);
@@ -10400,41 +10481,6 @@ const handleDemandReportPdfDownload = async () => {
                                             </tr>
                                           </tbody>
                                         </table>
-                                      </div>
-
-                                      {/* Vegetable usage table and signatures matching Image 2 */}
-                                      <div className="flex justify-between items-start mt-3 pt-1">
-                                        <div className="w-[32%]">
-                                          <table className="border-collapse border border-black text-center text-xs font-bold w-full">
-                                            <thead>
-                                              <tr className="bg-slate-100 border-b border-black">
-                                                <th className="border-r border-black p-1 w-[45%]">तपशील</th>
-                                                <th className="border-r border-black p-1 w-[35%]">वापर</th>
-                                                <th className="p-1 w-[20%]">युनिट</th>
-                                              </tr>
-                                            </thead>
-                                            <tbody>
-                                              <tr>
-                                                <td className="border-r border-black p-1 font-bold text-left pl-2">भाजीपाला</td>
-                                                <td className="border-r border-black p-1 font-bold text-center">
-                                                  {toMarathiNumbers((beneficiarySum * (isPrimary ? 0.05 : 0.075)).toFixed(3))}
-                                                </td>
-                                                <td className="p-1 font-bold text-center">कि. ग्रॅ.</td>
-                                              </tr>
-                                            </tbody>
-                                          </table>
-                                        </div>
-
-                                        <div className="flex justify-end gap-16 items-end text-sm font-bold text-black pr-6 pt-2">
-                                          <div className="text-center">
-                                            <p className="pb-8">अध्यक्ष सही</p>
-                                            <p className="border-t border-black pt-0.5">अध्यक्ष, शाळा व्यवस्थापन समिती</p>
-                                          </div>
-                                          <div className="text-center">
-                                            <p className="pb-8">मुख्याध्यापक सही व शिक्का</p>
-                                            <p className="border-t border-black pt-0.5">मुख्याध्यापक</p>
-                                          </div>
-                                        </div>
                                       </div>
                                     </div>
                                   </div>
@@ -10895,117 +10941,37 @@ const handleDemandReportPdfDownload = async () => {
                                   {/* View 2: Monthly B-Form / Reconciliation */}
                                   {selectedReportCategory === "masik_goshwara" && (
                                     <>
-                                      {monthlySubTab === "1-8" && (
-                                    <div className="print-page border border-slate-300 py-5 px-8 bg-white text-black font-sans text-xs relative w-[297mm] h-[210mm] mx-auto shadow-md flex flex-col justify-between print:w-full print:h-auto print:border-none print:shadow-none print:p-0">
-                                      <div>
-                                        <div className="text-center space-y-0.5 mb-3 border-b border-black pb-1.5">
-                                          <h2 className="text-sm font-bold border-b border-black pb-1 inline-block px-12 uppercase">- शालेय पोषण आहार मासिक प्रमाणपत्र व अहवाल -</h2>
-                                          <h3 className="text-xs font-bold">इयत्ता १ ते ८ (एकत्रित)</h3>
-                                          <h3 className="text-xs font-bold">माहे: {marathiMonthName} {toMarathiNumbers(reportYear.toString())}</h3>
-                                        </div>
-
-                                        <div className="text-justify text-sm leading-[1.8rem] space-y-0 px-4 font-normal text-black">
-                                          <p>
-                                            अध्यक्ष/ सचिव शाळा व्यवस्थापन समिती <span className="font-bold border-b border-dotted border-black px-3">{reportPrincipalName || "________________________"}</span> कडून प्रमाणित करणेत येते की,
-                                            जिल्हा परिषद शाळा <span className="font-bold border-b border-dotted border-black px-3">{reportSchoolName || "________________________"}</span> या शाळेतील{" "}
-                                            <span className="font-bold border-b border-dotted border-black px-3">{reportTeacherName || "________________________"}</span> यांनी शालेय पोषण आहार अंतर्गत माहे{" "}
-                                            <span className="font-bold border-b border-dotted border-black px-1">{marathiMonthName} {toMarathiNumbers(reportYear.toString())}</span> मध्ये
-                                            इ. १ ली ते ५ वी च्या विद्यार्थ्यांसाठी <span className="font-bold border-b border-dotted border-black px-2">{certPrimaryCookedDays}</span> दिवस आणि इ. ६ वी ते ८ वीच्या विद्यार्थ्यांसाठी एकूण <span className="font-bold border-b border-dotted border-black px-2">{certUpperCookedDays}</span> दिवस अन्न शिजवून देणेचे काम केले आहे. तसेच योग्य उष्मांकाचा व चविष्ठ पोषण आहार होणेसाठी दररोज इ. १ ली ते ५ वी साठी ५० ग्रॅम व इ. ६वी ते ८ वी साठी ७५ ग्रॅम प्रमाणे
-                                            विविध भाज्या वापरल्या आहेत. आणि खोबरे, कांदा, लसून इ. मसाल्यांचा योग्य प्रमाणात वापर केला आहे. सदर महिन्यात दर बुधवारी एकूण <span className="font-bold border-b border-dotted border-black px-2">{certWednesdaysCount}</span> वेळा {certSupplementaryFood} असा पूरक आहार दिलेला आहे.
-                                          </p>
-                                          <p>
-                                            सदर खालीलप्रमाणे पट, लाभार्थी, दिवस यांची माहिती बरोबर असून त्यानुसार इंधन भाजीपाला तसेच स्वयंपाकी तथा मदतनीस मानधन अदा करणेस हरकत नाही म्हणून दिले असे प्रमाणपत्र.
-                                          </p>
-                                        </div>
-
-                                        <div className="mt-4 px-2 w-full">
-                                          <table className="w-full border-collapse border border-black text-center text-sm">
-                                            <thead>
-                                              <tr className="bg-slate-50 font-bold">
-                                                <th className="border border-black p-1">इयत्ता</th>
-                                                <th className="border border-black p-1">पट (Enrollment)</th>
-                                                <th className="border border-black p-1">एकूण लाभार्थी</th>
-                                                <th className="border border-black p-1">शिजवलेले दिवस</th>
-                                                <th className="border border-black p-1">हिस्सा</th>
-                                                <th className="border border-black p-1">दर</th>
-                                                <th className="border border-black p-1">इंधन भाजीपाला देय अनुदान (₹)</th>
-                                                <th className="border border-black p-1">स्वयंपाकी तथा मदतनीस संख्या</th>
-                                                <th className="border border-black p-1">स्वयंपाकी मानधन (₹)</th>
-                                                <th className="border border-black p-1">शेरा</th>
-                                              </tr>
-                                            </thead>
-                                            <tbody>
-                                              {/* Row 1: 1 To 5 */}
-                                              <tr>
-                                                <td className="border border-black p-1 font-bold" rowSpan={2}>१ ते ५ (प्राथमिक)</td>
-                                                <td className="border border-black p-1 font-bold" rowSpan={2}>{certPatPrimary}</td>
-                                                <td className="border border-black p-1 font-bold" rowSpan={2}>{certBeneficiaryPrimary}</td>
-                                                <td className="border border-black p-1 font-bold" rowSpan={2}>{certPrimaryCookedDays}</td>
-                                                <td className="border border-black p-0.5 font-medium">केंद्र (60%)</td>
-                                                <td className="border border-black p-0.5">{toMarathiNumbers("४.०७")}</td>
-                                                <td className="border border-black p-0.5 font-semibold">{toMarathiNumbers(primaryCenterGrant.toFixed(2))}</td>
-                                                <td className="border border-black p-1 font-bold" rowSpan={2}>{certHelperCount}</td>
-                                                <td className="border border-black p-0.5">केंद्र - {toMarathiNumbers(helperCenterPay.toFixed(2))}</td>
-                                                <td className="border border-black p-1 text-emerald-700 font-bold" rowSpan={2}>अचूक नोंदवलेले</td>
-                                              </tr>
-                                              <tr>
-                                                <td className="border border-black p-0.5 font-medium">राज्य (40%)</td>
-                                                <td className="border border-black p-0.5">{toMarathiNumbers("२.७१")}</td>
-                                                <td className="border border-black p-0.5 font-semibold">{toMarathiNumbers(primaryStateGrant.toFixed(2))}</td>
-                                                <td className="border border-black p-0.5">राज्य - {toMarathiNumbers(helperStatePay.toFixed(2))}</td>
-<th className="border border-black p-1" rowSpan={2}>शिजवलेले दिवस</th>
-                                                <th className="border border-black p-0.5 font-medium">केंद्र (60%)</th>
-                                                <th className="border border-black p-0.5">{toMarathiNumbers("६.१०")}</th>
-                                                <th className="border border-black p-0.5 font-semibold">{toMarathiNumbers(upperCenterGrant.toFixed(2))}</th>
-                                                <th className="border border-black p-1 font-bold" rowSpan={2}>{certHelperCount}</th>
-                                                <th className="border border-black p-0.5">केंद्र - {toMarathiNumbers(helperCenterPay.toFixed(2))}</th>
-                                                <th className="border border-black p-1 text-emerald-700 font-bold" rowSpan={2}>अचूक नोंदवलेले</th>
-                                              </tr>
-                                              <tr>
-                                                <td className="border border-black p-0.5 font-medium">राज्य (40%)</td>
-                                                <td className="border border-black p-0.5">{toMarathiNumbers("४.०७")}</td>
-                                                <td className="border border-black p-0.5 font-semibold">{toMarathiNumbers(upperStateGrant.toFixed(2))}</td>
-                                                <td className="border border-black p-0.5">राज्य - {toMarathiNumbers(helperStatePay.toFixed(2))}</td>
-                                              </tr>
-
-                                              {/* Row 3: Total */}
-                                              <tr className="bg-slate-50 font-bold">
-                                                <td className="border border-black p-1">एकूण (१ ते ८)</td>
-                                                <td className="border border-black p-1">
-                                                  {toMarathiNumbers(((parseInt(toEnglishNumbers(certPatPrimary)) || 0) + (parseInt(toEnglishNumbers(certPatUpper)) || 0)).toString())}
-                                                </td>
-                                                <td className="border border-black p-1">
-                                                  {toMarathiNumbers(((parseInt(toEnglishNumbers(certBeneficiaryPrimary)) || 0) + (parseInt(toEnglishNumbers(certBeneficiaryUpper)) || 0)).toString())}
-                                                </td>
-                                                <td className="border border-black p-1">
-                                                  {toMarathiNumbers(((parseInt(toEnglishNumbers(certPrimaryCookedDays)) || 0) + (parseInt(toEnglishNumbers(certUpperCookedDays)) || 0)).toString())}
-                                                </td>
-                                                <td className="border border-black p-1">---</td>
-                                                <td className="border border-black p-1">---</td>
-                                                <td className="border border-black p-1 text-emerald-800">
-                                                  {toMarathiNumbers(totalGrantAll.toFixed(2))}
-                                                </td>
-                                                <td className="border border-black p-1">{toMarathiNumbers(certHelperCount)}</td>
-                                                <td className="border border-black p-1 text-emerald-800">
-                                                  {toMarathiNumbers(helperTotalPay.toFixed(2))}
-                                                </td>
-                                                <td className="border border-black p-1 text-blue-700">प्रमाणित</td>
-                                              </tr>
-                                            </tbody>
-                                          </table>
-                                        </div>
-                                      </div>
-
-                                      <div className="flex justify-between items-end mt-6 px-4 text-xs font-bold text-black select-none">
-                                        <div className="space-y-3 text-[12px]">
-                                          <div>स्थळ - <span className="border-b border-dotted border-black px-4">{profile?.center || ""}</span></div>
-                                          <div>दिनांक - <span className="border-b border-dotted border-black px-4">{toMarathiNumbers(new Date().toLocaleDateString('en-GB'))}</span></div>
-                                        </div>
-                                        <div className="text-center pb-2 text-[12px] font-bold">मुख्याध्यापक तथा सचिव</div>
-                                        <div className="text-center pb-2 text-[12px] font-bold">अध्यक्ष (शाळा व्यवस्थापन समिती)</div>
-                                      </div>
-                                    </div>
-                                  )}
+                                      <MDMCertificate
+                                        subTab={monthlySubTab}
+                                        reportYear={reportYear}
+                                        marathiMonthName={marathiMonthName}
+                                        reportSchoolName={reportSchoolName || profile?.schoolName || ""}
+                                        principalName={reportPrincipalName || ""}
+                                        teacherName={reportTeacherName || ""}
+                                        primaryCookedDays={primaryCookedDays}
+                                        upperCookedDays={upperCookedDays}
+                                        wednesdaysCount={wednesdaysCount}
+                                        certSupplementaryFood={certSupplementaryFood}
+                                        certPatPrimary={certPatPrimary}
+                                        certPatUpper={certPatUpper}
+                                        certBeneficiaryPrimary={certBeneficiaryPrimary}
+                                        certBeneficiaryUpper={certBeneficiaryUpper}
+                                        certPrimaryCookedDays={certPrimaryCookedDays}
+                                        certUpperCookedDays={certUpperCookedDays}
+                                        primaryEnrolled={parseInt(profile?.patPrimary || "0") || 0}
+                                        upperEnrolled={parseInt(profile?.patUpper || "0") || 0}
+                                        primaryBeneficiarySum={primaryBeneficiarySum}
+                                        upperBeneficiarySum={upperBeneficiarySum}
+                                        helperCount={helperCount}
+                                        helperCenterPay={helperCenterPay}
+                                        helperStatePay={helperStatePay}
+                                        helperTotalPay={helperTotalPay}
+                                        primaryCenterGrant={primaryCenterGrant}
+                                        primaryStateGrant={primaryStateGrant}
+                                        upperCenterGrant={upperCenterGrant}
+                                        upperStateGrant={upperStateGrant}
+                                        totalGrantAll={totalGrantAll}
+                                      />
 
                                   {/* 1 to 5 Reconciliation Report View */}
                                   {(monthlySubTab === "1-5" || monthlySubTab === "1-8") && renderBFormPage("1 To 5")}
