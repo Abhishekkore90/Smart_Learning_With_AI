@@ -1,7 +1,5 @@
 
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import html2canvas from "html2canvas";
-import { jsPDF } from "jspdf";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import React, { useState, useEffect } from "react";
@@ -255,8 +253,8 @@ function TeacherMDMPage() {
       const monthName = marathiMonthName || "Report";
       const filename = `MDM_Monthly_Report_${monthName}_${reportYear || ""}.pdf`;
 
-      
-      
+      const { default: html2canvas } = await import("html2canvas");
+      const { jsPDF } = await import("jspdf");
 
       const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
       const pdfWidth = pdf.internal.pageSize.getWidth();
@@ -413,8 +411,8 @@ function TeacherMDMPage() {
         await html2pdfFn().set(opt).from(element).save();
       } else {
         // Direct jsPDF 1-Page Rendering for Rice Annual Utilization Report
-        
-        
+        const { default: html2canvas } = await import("html2canvas");
+        const { jsPDF } = await import("jspdf");
 
         const canvas = await html2canvas(element, {
           scale: 2,
@@ -705,28 +703,39 @@ function TeacherMDMPage() {
     }
   };
 
-      const handleStockDemandPdfDownload = async () => {
-    const element = document.getElementById("stock-demand-report-print");
+      const handleMonthlyMdmPdfDownload = async () => {
+    const element = document.getElementById("monthly-mdm-report-print");
     if (!element) {
       toast.error("अहवाल लोड होत आहे, कृपया थांबा...");
       return;
     }
-    const filename = `तांदूळ-धान्य-मागणी-अहवाल-${stockDemandMonth || "सप्टेंबर"}-2026.pdf`;
-    
     let toastId: string | undefined;
     let clone: HTMLElement | null = null;
+
     try {
       toastId = toast.loading("PDF डाऊनलोड होत आहे...");
-      const element = element;
-      if (!element) throw new Error("Element not found");
 
+      // Clone element to body to avoid parent viewport/flex constraints and scrollbars
       clone = element.cloneNode(true) as HTMLElement;
+
+      let maxScrollWidth = element.scrollWidth || 1100;
+      element.querySelectorAll('table').forEach((tbl) => {
+        if (tbl.scrollWidth > maxScrollWidth) {
+          maxScrollWidth = tbl.scrollWidth;
+        }
+      });
+
+      const totalRenderWidth = Math.max(maxScrollWidth + 10, 1100);
       clone.style.position = 'fixed';
       clone.style.top = '0px';
       clone.style.left = '0px';
       clone.style.zIndex = '999999';
       clone.style.opacity = '1';
       clone.style.pointerEvents = 'none';
+      clone.style.width = `${totalRenderWidth}px`;
+      clone.style.maxWidth = 'none';
+      clone.style.minWidth = `${totalRenderWidth}px`;
+      clone.style.overflow = 'visible';
       clone.style.background = '#ffffff';
 
       clone.querySelectorAll('*').forEach((el) => {
@@ -751,58 +760,122 @@ function TeacherMDMPage() {
         }
       `;
       clone.appendChild(hideScrollbarStyle);
+
       document.body.appendChild(clone);
 
-      await document.fonts.ready;
-      await new Promise((resolve) => setTimeout(resolve, 250));
+      const isPoshanReport = monthlyMdmReportType === "poshan_ahar_daily_entry";
+      const isMasikTandul = monthlyMdmReportType === "masik_tandul_report";
+      const isMasikSatha = monthlyMdmReportType === "masik_goshwara";
+      const monthShort = monthlyMdmReportMonth.split(' ')[0];
+      const filename = isPoshanReport
+        ? `पोषण-आहार-दैनंदिन-नोंदी-${monthShort}-${monthlyMdmReportMonth.includes('2026') ? '2026' : '2027'}.pdf`
+        : isMasikTandul
+        ? `मासिक-तांदूळ-अहवाल-${monthShort}-${monthlyMdmReportMonth.includes('2026') ? '2026' : '2027'}.pdf`
+        : isMasikSatha
+        ? `मासिक-साठा-नोंदवही-${monthShort}-${monthlyMdmReportMonth.includes('2026') ? '2026' : '2027'}.pdf`
+        : monthlyMdmReportType === "masik_tandul_bill"
+        ? `मासिक-तांदूळ-शिजवून-दिल्याचे-बिल-${monthShort}-${monthlyMdmReportMonth.includes('2026') ? '2026' : '2027'}.pdf`
+        : monthlyMdmReportType === "daily_tandul_register"
+        ? `दैनंदिन-तांदूळ-खर्च-नोंदवही-${monthShort}-${monthlyMdmReportMonth.includes('2026') ? '2026' : '2027'}.pdf`
+        : `मासिक_अहवाल_${monthlyMdmReportMonth.replace(/\s+/g, '_')}.pdf`;
 
-      const canvas = await html2canvas(clone, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-        backgroundColor: "#ffffff",
-        scrollX: 0,
-        scrollY: 0,
-        x: 0,
-        y: 0,
-      });
+      if (isPoshanReport) {
+        const { default: html2canvas } = await import("html2canvas");
+        const { jsPDF } = await import("jspdf");
 
-      const imgData = canvas.toDataURL("image/jpeg", 0.98);
-      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const margin = 5;
-      const availWidth = pdfWidth - (margin * 2);
-      const availHeight = pdfHeight - (margin * 2);
+        const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+        const pageEls = clone.querySelectorAll('.poshan-pdf-page');
+        const elementsToRender = pageEls.length > 0 ? Array.from(pageEls) : [clone];
 
-      let imgWidth = availWidth;
-      let imgHeight = (canvas.height * imgWidth) / canvas.width;
+        for (let i = 0; i < elementsToRender.length; i++) {
+          const pageEl = elementsToRender[i] as HTMLElement;
+          const canvas = await html2canvas(pageEl, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            backgroundColor: "#ffffff",
+            windowWidth: totalRenderWidth,
+            width: totalRenderWidth,
+            scrollY: 0,
+            scrollX: 0,
+          });
 
-      if (imgHeight > availHeight) {
-        imgHeight = availHeight;
-        imgWidth = (canvas.width * imgHeight) / canvas.height;
+          const imgData = canvas.toDataURL("image/jpeg", 0.98);
+          const pdfWidth = pdf.internal.pageSize.getWidth();
+          const pdfHeight = pdf.internal.pageSize.getHeight();
+          const margin = 4;
+          const availWidth = pdfWidth - (margin * 2);
+          const availHeight = pdfHeight - (margin * 2);
+
+          let imgWidth = availWidth;
+          let imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+          if (imgHeight > availHeight) {
+            imgHeight = availHeight;
+            imgWidth = (canvas.width * imgHeight) / canvas.height;
+          }
+
+          const xPos = (pdfWidth - imgWidth) / 2;
+          const yPos = (pdfHeight - imgHeight) / 2;
+
+          if (i > 0) pdf.addPage('a4', 'l');
+          pdf.addImage(imgData, "JPEG", xPos, yPos, imgWidth, imgHeight);
+        }
+
+        pdf.save(filename);
+      } else {
+        const { default: html2canvas } = await import("html2canvas");
+        const { jsPDF } = await import("jspdf");
+
+        const canvas = await html2canvas(clone, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: "#ffffff",
+          windowWidth: totalRenderWidth,
+          width: totalRenderWidth,
+          scrollY: 0,
+          scrollX: 0,
+        });
+
+        const imgData = canvas.toDataURL("image/jpeg", 0.98);
+        const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+        const pdfWidth = pdf.internal.pageSize.getWidth(); // 297mm
+        const pdfHeight = pdf.internal.pageSize.getHeight(); // 210mm
+
+        const margin = 5;
+        const availWidth = pdfWidth - (margin * 2); // 287mm
+        const availHeight = pdfHeight - (margin * 2); // 200mm
+
+        const imgWidth = availWidth;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+        let finalWidth = imgWidth;
+        let finalHeight = imgHeight;
+
+        if (finalHeight > availHeight) {
+          finalHeight = availHeight;
+          finalWidth = (canvas.width * finalHeight) / canvas.height;
+        }
+
+        const xPos = (pdfWidth - finalWidth) / 2;
+        const yPos = 6;
+
+        pdf.addImage(imgData, "JPEG", xPos, yPos, finalWidth, finalHeight);
+        pdf.save(filename);
       }
-
-      const xPos = (pdfWidth - imgWidth) / 2;
-      const yPos = 5;
-
-      pdf.addImage(imgData, "JPEG", xPos, yPos, imgWidth, imgHeight);
-      pdf.save(filename);
 
       if (toastId) toast.dismiss(toastId);
       toast.success("PDF यशस्वीपणे डाऊनलोड झाली!");
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
       if (toastId) toast.dismiss(toastId);
-      toast.error("PDF डाऊनलोड करताना त्रुटी आली.");
+      toast.error("PDF डाऊनलोड करण्यात त्रुटी आली.");
     } finally {
       if (clone && clone.parentNode) {
         clone.parentNode.removeChild(clone);
       }
-      setIsExporting(false);
     }
-  
   };
 
 const handleStockDemandPdfDownload = async () => {
