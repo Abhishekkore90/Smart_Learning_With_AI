@@ -1,37 +1,25 @@
 /**
  * Vercel Serverless Function: /api/pdf-proxy
  *
- * Proxies PDF files from Bunny Storage with server-side AccessKey authentication.
- * This prevents CORS / X-Frame-Options issues when loading PDFs on any PC/browser.
+ * Proxies PDF files AND JSON data files from Bunny Storage with server-side AccessKey.
+ * Fixes CORS / X-Frame-Options / CDN redirect issues on all devices.
  *
  * Usage:
  *   GET /api/pdf-proxy?url=https://sgkbrainova.b-cdn.net/path/to/file.pdf
- *
- * The AccessKey is stored securely as a Vercel Environment Variable.
+ *   GET /api/pdf-proxy?url=https://sgkbrainova.b-cdn.net/academic_plannings_parsed/record.json
  */
 
-/**
- * Builds a proper Bunny Storage fetch URL from any CDN or storage URL.
- * Handles Marathi/Unicode filenames correctly using encodeURIComponent on each path segment.
- */
 function buildStorageFetchUrl(targetUrl, storageZone) {
   try {
     const urlObj = new URL(targetUrl);
-
-    // Extract path segments and re-encode each one properly for Unicode filenames
     const rawPath = decodeURIComponent(urlObj.pathname).replace(/^\//, "");
 
-    // If it's a CDN URL (b-cdn.net), prepend the storage zone
     if (targetUrl.includes("b-cdn.net")) {
-      // rawPath = "academic_plannings/filename.pdf" → encode each segment
       const segments = rawPath.split("/").map((seg) => encodeURIComponent(seg));
       return `https://storage.bunnycdn.com/${storageZone}/${segments.join("/")}`;
     }
 
-    // If it's already a storage URL, just re-encode the path segments properly
     if (targetUrl.includes("storage.bunnycdn.com")) {
-      // rawPath = "sgkbrainova/academic_plannings/filename.pdf"
-      // Remove leading zone prefix if present
       const pathWithoutZone = rawPath.startsWith(storageZone + "/")
         ? rawPath.slice(storageZone.length + 1)
         : rawPath;
@@ -47,13 +35,11 @@ function buildStorageFetchUrl(targetUrl, storageZone) {
 }
 
 export default async function handler(req, res) {
-  // Allow only GET requests
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
   const { url } = req.query;
-
   if (!url) {
     return res.status(400).json({ error: "Missing 'url' query parameter" });
   }
@@ -65,17 +51,18 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Invalid URL encoding" });
   }
 
-  // Security: Only allow Bunny CDN / Bunny Storage URLs
+  // Security: Only allow Bunny CDN / Storage URLs
   const allowedHosts = ["b-cdn.net", "storage.bunnycdn.com", "bunnycdn.com"];
   if (!allowedHosts.some((host) => targetUrl.includes(host))) {
     return res.status(403).json({ error: "Forbidden: Only Bunny CDN URLs are allowed" });
   }
 
-  const apiKey = process.env.BUNNY_STORAGE_API_KEY || process.env.VITE_BUNNY_STORAGE_API_KEY || "a2ca9aa3-f0a9-4d69-a1789c6cfac3-789f-4318";
+  const apiKey = process.env.BUNNY_STORAGE_API_KEY || process.env.VITE_BUNNY_STORAGE_API_KEY;
+  if (!apiKey) {
+    return res.status(500).json({ error: "Server configuration error: Missing API key" });
+  }
 
   const storageZone = process.env.BUNNY_STORAGE_ZONE || process.env.VITE_BUNNY_STORAGE_ZONE || "sgkbrainova";
-
-  // Build properly encoded storage fetch URL
   const fetchUrl = buildStorageFetchUrl(targetUrl, storageZone);
   console.log(`[pdf-proxy] Fetching: ${fetchUrl}`);
 
@@ -84,12 +71,11 @@ export default async function handler(req, res) {
       method: "GET",
       headers: {
         AccessKey: apiKey,
-        Accept: "application/pdf,application/octet-stream,*/*",
+        Accept: "application/pdf,application/json,application/octet-stream,*/*",
       },
     });
 
     if (!bunnyResponse.ok) {
-      console.error(`[pdf-proxy] Bunny returned ${bunnyResponse.status} for: ${fetchUrl}`);
       return res.status(bunnyResponse.status).json({
         error: `Failed to fetch file from storage (${bunnyResponse.status})`,
         fetchUrl,
@@ -98,14 +84,21 @@ export default async function handler(req, res) {
 
     const arrayBuffer = await bunnyResponse.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+    const contentType = bunnyResponse.headers.get("content-type") || "application/octet-stream";
 
-    // Safety check: reject HTML responses
-    const contentType = bunnyResponse.headers.get("content-type") || "application/pdf";
+    // Reject HTML error pages
     if (contentType.includes("text/html")) {
-      return res.status(502).json({ error: "Received HTML instead of PDF from storage" });
+      return res.status(502).json({ error: "Received HTML instead of file from storage" });
     }
 
-    res.setHeader("Content-Type", "application/pdf");
+    // Detect correct Content-Type
+    const isJson = targetUrl.endsWith(".json") || contentType.includes("json");
+    const isPdf = targetUrl.endsWith(".pdf") || contentType.includes("pdf");
+    const responseContentType = isJson ? "application/json; charset=utf-8"
+      : isPdf ? "application/pdf"
+      : contentType;
+
+    res.setHeader("Content-Type", responseContentType);
     res.setHeader("Content-Length", buffer.length);
     res.setHeader("Content-Disposition", "inline");
     res.setHeader("Cache-Control", "public, max-age=3600, s-maxage=3600");
@@ -116,6 +109,6 @@ export default async function handler(req, res) {
     return res.status(200).send(buffer);
   } catch (err) {
     console.error("[pdf-proxy] Error:", err);
-    return res.status(500).json({ error: "Internal server error while proxying PDF" });
+    return res.status(500).json({ error: "Internal server error while proxying file" });
   }
 }

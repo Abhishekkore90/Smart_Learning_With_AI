@@ -68,34 +68,50 @@ export async function saveJsonToBunny(filePath: string, data: any): Promise<stri
 }
 
 /**
- * Fetches a JSON object from Bunny Storage CDN / Pull Zone URL with local cache fallback.
+ * Fetches a JSON object from Bunny Storage.
+ * - In DEV: fetches via Vite proxy with AccessKey header
+ * - In PROD: fetches via /api/pdf-proxy (server-side key, bypasses CDN redirect)
+ * Falls back to localStorage cache if network fails.
  */
 export async function fetchJsonFromBunny<T = any>(filePath: string): Promise<T | null> {
-  // Strip origin or proxy prefixes to get exact relative path
-  let cleanPath = filePath.replace(/^https?:\/\/[^\/]+\//i, "").replace(/^\/?api\/bunny-cdn\/?/i, "").replace(/^\/+/, "");
+  let cleanPath = filePath
+    .replace(/^https?:\/\/[^\/]+\//i, "")
+    .replace(/^\/?api\/bunny-cdn\/?/i, "")
+    .replace(/^\/+/, "");
+
   const cacheKey = `bunny_cache_${cleanPath.replace(/[^a-zA-Z0-9_]/g, "_")}`;
-  
-  // Try fetching from Bunny CDN
+
   try {
-    const cdnUrl = `${PULL_ZONE_URL}/${cleanPath}?t=${Date.now()}`;
-    const res = await fetch(cdnUrl);
+    let fetchUrl: string;
+    const fetchOptions: RequestInit = {};
+
+    if (import.meta.env.DEV) {
+      // DEV: use Vite proxy → storage.bunnycdn.com with AccessKey header
+      fetchUrl = `/api/bunny-storage/${STORAGE_ZONE_NAME}/${cleanPath}?t=${Date.now()}`;
+      fetchOptions.headers = { AccessKey: ACCESS_KEY };
+    } else {
+      // PROD: use secure Vercel serverless proxy (avoids CDN redirect to Vercel SPA)
+      const cdnUrl = `${PULL_ZONE_URL}/${cleanPath}`;
+      fetchUrl = `/api/pdf-proxy?url=${encodeURIComponent(cdnUrl)}`;
+    }
+
+    const res = await fetch(fetchUrl, fetchOptions);
+
     if (res.ok) {
       const data = await res.json();
-      try {
-        localStorage.setItem(cacheKey, JSON.stringify(data));
-      } catch (e) {}
+      try { localStorage.setItem(cacheKey, JSON.stringify(data)); } catch (e) {}
       return data as T;
     }
+
+    console.warn(`[fetchJsonFromBunny] ${res.status} for ${cleanPath}, trying cache...`);
   } catch (err) {
-    console.warn(`Could not fetch ${cleanPath} from Bunny CDN, trying cache...`, err);
+    console.warn(`[fetchJsonFromBunny] Network error for ${cleanPath}, trying cache...`, err);
   }
 
-  // Fallback to local cache
+  // Fallback to localStorage cache
   try {
     const cached = localStorage.getItem(cacheKey);
-    if (cached) {
-      return JSON.parse(cached) as T;
-    }
+    if (cached) return JSON.parse(cached) as T;
   } catch (e) {}
 
   return null;

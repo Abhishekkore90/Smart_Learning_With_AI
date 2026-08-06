@@ -1189,16 +1189,28 @@ export function AcademicPlanningSystem({
         // Restore IndexedDB blobs if local blob exists, otherwise sanitize dead blob URLs & fetch Bunny JSON for all users
         for (const recordKey of Object.keys(filesMap)) {
           const rec = filesMap[recordKey];
-          if (!rec.fileUrl || rec.fileUrl.startsWith("blob:")) {
+
+          // CRITICAL FIX: Replace any blob: URLs with bunnyFileUrl (blob URLs are local-only and expire)
+          if (!rec.fileUrl || rec.fileUrl.startsWith("blob:") || rec.fileUrl.startsWith("http://localhost")) {
             try {
               const localBlob = await getFileFromIndexedDB(recordKey);
               if (localBlob) {
+                // Own PC — can use IndexedDB blob
                 rec.fileUrl = URL.createObjectURL(localBlob);
               } else {
+                // Other PC — use Bunny CDN URL (proxy will serve it securely)
                 rec.fileUrl = rec.bunnyFileUrl || "";
               }
             } catch (e) {
               rec.fileUrl = rec.bunnyFileUrl || "";
+            }
+
+            // Auto-fix corrupt Firestore records with blob URLs — update to bunnyFileUrl
+            if (rec.bunnyFileUrl && !rec.bunnyFileUrl.startsWith("blob:")) {
+              setDoc(doc(db, "academic_plannings", recordKey), {
+                fileUrl: rec.bunnyFileUrl,
+                bunnyFileUrl: rec.bunnyFileUrl,
+              }, { merge: true }).catch(() => {});
             }
           }
 
@@ -1543,16 +1555,33 @@ export function AcademicPlanningSystem({
         return;
       }
 
-      // 2. Direct upload to Bunny Storage Zone (CDN) with Firebase Storage fallback
+      // 2. Direct upload to Bunny Storage Zone (CDN) with retry + Firebase Storage fallback
       try {
         setUploadProgress(60);
         const bunnyPath = `academic_plannings/${recordKey}_${Date.now()}.${ext}`;
-        bunnyFileUrl = await uploadBlobToBunny(bunnyPath, finalFileBlob);
+
+        // Attempt Bunny upload with 1 automatic retry
+        let bunnyAttempt = 0;
+        while (bunnyAttempt < 2 && !bunnyFileUrl) {
+          try {
+            bunnyFileUrl = await uploadBlobToBunny(bunnyPath, finalFileBlob);
+          } catch (e) {
+            bunnyAttempt++;
+            if (bunnyAttempt < 2) {
+              await new Promise((r) => setTimeout(r, 1500)); // wait 1.5s before retry
+            }
+          }
+        }
+
         if (bunnyFileUrl) {
           fileUrl = bunnyFileUrl;
+          toast.success("☁️ फाईल Bunny CDN वर यशस्वीरित्या अपलोड झाली!");
+        } else {
+          throw new Error("Bunny upload failed after 2 attempts");
         }
       } catch (bunnyErr) {
-        console.warn("Bunny Storage upload notice, falling back to Firebase / Local Blob:", bunnyErr);
+        console.warn("Bunny Storage upload failed, trying Firebase Storage:", bunnyErr);
+        toast.info("⚡ Firebase Storage वर अपलोड होत आहे...");
         if (storage) {
           try {
             const storageRef = ref(storage, cleanStoragePath);
@@ -1561,14 +1590,15 @@ export function AcademicPlanningSystem({
               const uploadSnapshot = await uploadBytes(storageRef, finalFileBlob);
               return await getDownloadURL(uploadSnapshot.ref);
             })();
-
             const timeoutPromise = new Promise<string>((_, reject) =>
-              setTimeout(() => reject(new Error("Firebase storage response timeout")), 2500)
+              setTimeout(() => reject(new Error("Firebase storage timeout")), 8000)
             );
-
-            fileUrl = await Promise.race([storageUploadPromise, timeoutPromise]);
+            const fbUrl = await Promise.race([storageUploadPromise, timeoutPromise]);
+            fileUrl = fbUrl;
+            bunnyFileUrl = fbUrl; // treat Firebase URL as persistent URL too
           } catch (fbErr) {
-            console.warn("Firebase Storage upload notice, using local blob:", fbErr);
+            console.warn("Firebase Storage upload also failed:", fbErr);
+            // fileUrl remains as blobUrl — Firestore will NOT get blob URL (see firestoreRecord below)
           }
         }
       }
@@ -1654,6 +1684,17 @@ export function AcademicPlanningSystem({
       };
 
       // Lightweight Firestore Record (strictly under ~30 KB document limit)
+      // CRITICAL: NEVER store blob: URLs in Firestore — they are local-only and expire
+      const persistentFileUrl = (bunnyFileUrl && !bunnyFileUrl.startsWith("blob:"))
+        ? bunnyFileUrl
+        : (fileUrl && !fileUrl.startsWith("blob:"))
+          ? fileUrl
+          : "";
+
+      if (!persistentFileUrl) {
+        toast.warning("⚠️ फाईल CDN वर अपलोड होऊ शकली नाही. तुमच्या PC वर local preview चालेल, पण इतर users ला PDF दिसणार नाही. कृपया पुन्हा upload करा.", { duration: 8000 });
+      }
+
       const firestoreRecord: PlanningFileRecord = {
         id: recordKey,
         classId: selectedClass,
@@ -1661,14 +1702,14 @@ export function AcademicPlanningSystem({
         subjectId: selectedSubject,
         planningType: uploadingType,
         fileName: selectedFile.name,
-        fileUrl: (fileUrl && !fileUrl.startsWith("blob:")) ? fileUrl : (bunnyFileUrl || ""),
+        fileUrl: persistentFileUrl,
         fileSize: fileSizeDisplay,
         fileType: selectedFile.type || "application/pdf",
         uploadedBy: mode,
         uploadedAt: new Date().toISOString(),
         tableRows: rowsToSave,
         ...(excelRawHeaders.length > 0 && { rawHeaders: excelRawHeaders }),
-        ...(bunnyFileUrl && { bunnyFileUrl }),
+        ...(persistentFileUrl && { bunnyFileUrl: persistentFileUrl }),
         ...(bunnyParsedJsonUrl && { bunnyParsedJsonUrl }),
         // Include inline html/grid for instant access on all PCs
         ...(parsedHtml && { parsedHtml }),
@@ -1714,6 +1755,73 @@ export function AcademicPlanningSystem({
       setUploading(false);
       setUploadProgress(0);
       setCompressing(false);
+    }
+  };
+
+  // ── Admin Fix Tool: Repair all Firestore records with blob/localhost fileUrls ─────────
+  const [isFixingRecords, setIsFixingRecords] = useState(false);
+  const handleFixCorruptRecords = async () => {
+    if (mode !== "admin") return;
+    setIsFixingRecords(true);
+    toast.info("🔧 Firestore मधील corrupt records fix होत आहेत...", { duration: 3000 });
+
+    let fixedCount = 0;
+    let skippedCount = 0;
+
+    for (const [recordKey, rec] of Object.entries(planningFiles)) {
+      const isCorrupt = !rec.fileUrl || rec.fileUrl.startsWith("blob:") || rec.fileUrl.startsWith("http://localhost");
+      const hasBunnyUrl = rec.bunnyFileUrl && !rec.bunnyFileUrl.startsWith("blob:");
+
+      if (isCorrupt && hasBunnyUrl) {
+        try {
+          await setDoc(doc(db, "academic_plannings", recordKey), {
+            fileUrl: rec.bunnyFileUrl,
+            bunnyFileUrl: rec.bunnyFileUrl,
+          }, { merge: true });
+          setPlanningFiles((prev) => ({
+            ...prev,
+            [recordKey]: { ...prev[recordKey], fileUrl: rec.bunnyFileUrl! },
+          }));
+          fixedCount++;
+        } catch (e) {
+          console.warn("Fix record error for", recordKey, e);
+          skippedCount++;
+        }
+      } else if (isCorrupt && !hasBunnyUrl) {
+        // Try to re-upload from IndexedDB
+        try {
+          const blob = await getFileFromIndexedDB(recordKey);
+          if (blob) {
+            const ext = rec.fileName?.split(".").pop()?.toLowerCase() || "pdf";
+            const bunnyPath = `academic_plannings/${recordKey}_reupload.${ext}`;
+            const newBunnyUrl = await uploadBlobToBunny(bunnyPath, blob);
+            if (newBunnyUrl) {
+              await setDoc(doc(db, "academic_plannings", recordKey), {
+                fileUrl: newBunnyUrl,
+                bunnyFileUrl: newBunnyUrl,
+              }, { merge: true });
+              setPlanningFiles((prev) => ({
+                ...prev,
+                [recordKey]: { ...prev[recordKey], fileUrl: newBunnyUrl, bunnyFileUrl: newBunnyUrl },
+              }));
+              fixedCount++;
+            } else {
+              skippedCount++;
+            }
+          } else {
+            skippedCount++;
+          }
+        } catch (reuploadErr) {
+          skippedCount++;
+        }
+      }
+    }
+
+    setIsFixingRecords(false);
+    if (fixedCount > 0) {
+      toast.success(`✅ ${fixedCount} records fix झाले! आता सर्व users ला PDF दिसेल.`);
+    } else {
+      toast.info(`सर्व records आधीच correct आहेत. (${skippedCount} skipped)`);
     }
   };
 
@@ -2024,6 +2132,21 @@ export function AcademicPlanningSystem({
               <span className="px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-400/30 text-[10px] font-black uppercase tracking-wider">
                 {mode === "admin" ? "ADMIN MANAGEMENT" : "TEACHER SECTION"}
               </span>
+              {/* Admin Fix Tool — repairs Firestore records with blob/localhost URLs */}
+              {mode === "admin" && (
+                <button
+                  onClick={handleFixCorruptRecords}
+                  disabled={isFixingRecords}
+                  title="Firestore मधील blob: URLs fix करा — सर्व users ला PDF दिसेल"
+                  className="px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 border border-rose-400/30 text-[10px] font-black uppercase tracking-wider hover:bg-rose-500/40 transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                >
+                  {isFixingRecords ? (
+                    <><Loader2 className="w-3 h-3 animate-spin" /> Fixing...</>
+                  ) : (
+                    <>🔧 Fix All PDF URLs</>
+                  )}
+                </button>
+              )}
             </div>
             <h1 className="text-xl md:text-2xl font-black tracking-tight flex items-center gap-2 mt-1">
               <BookCheck className="size-6 text-amber-400" />
