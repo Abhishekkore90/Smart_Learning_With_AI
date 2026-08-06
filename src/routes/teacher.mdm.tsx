@@ -321,7 +321,7 @@ function TeacherMDMPage() {
         const xPos = (pdfWidth - imgWidth) / 2;
         const yPos = (pdfHeight - imgHeight) / 2;
 
-        if (i > 0) pdf.addPage();
+        if (i > 0) pdf.addPage('a4', 'l');
         pdf.addImage(imgData, "JPEG", xPos, yPos, imgWidth, imgHeight);
       }
 
@@ -329,7 +329,7 @@ function TeacherMDMPage() {
       toast.success(t("PDF यशस्वीरित्या डाउनलोड झाली!", "PDF downloaded successfully!", "पीडीएफ सफलतापूर्वक डाउनलोड हो गया!"));
 
       try {
-        const pdfBlob = (await worker.output("blob")) as Blob;
+        const pdfBlob = (await pdf.output("blob")) as Blob;
         const folderPath = `mdm/monthly_reports/${getUdise() || ""}`;
         const fileName = `MDM_Monthly_${monthlyReportMonth}_${Date.now()}.pdf`;
         const cdnUrl = await uploadBlobToBunny(`${folderPath}/${fileName}`, pdfBlob);
@@ -818,7 +818,7 @@ function TeacherMDMPage() {
           const xPos = (pdfWidth - imgWidth) / 2;
           const yPos = (pdfHeight - imgHeight) / 2;
 
-          if (i > 0) pdf.addPage();
+          if (i > 0) pdf.addPage('a4', 'l');
           pdf.addImage(imgData, "JPEG", xPos, yPos, imgWidth, imgHeight);
         }
 
