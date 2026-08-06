@@ -464,7 +464,7 @@ function TeacherMDMPage() {
         }
 
         const xPos = (pdfWidth - finalWidth) / 2;
-        const yPos = (pdfHeight - finalHeight) / 2;
+        const yPos = 8;
 
         pdf.addImage(imgData, "JPEG", xPos, yPos, finalWidth, finalHeight);
         pdf.save(filename);
@@ -691,12 +691,9 @@ function TeacherMDMPage() {
       toast.error("अहवाल लोड होत आहे, कृपया थांबा...");
       return;
     }
+    let toastId: string | undefined;
     try {
-      toast.loading("PDF डाऊनलोड होत आहे...");
-      const { default: html2pdf } = await import("html2pdf.js");
-      let html2pdfFn = html2pdf;
-      // @ts-ignore
-      if (html2pdfFn && html2pdfFn.default) { html2pdfFn = html2pdfFn.default; }
+      toastId = toast.loading("PDF डाऊनलोड होत आहे...");
       const isPoshanReport = monthlyMdmReportType === "poshan_ahar_daily_entry";
       const isMasikTandul = monthlyMdmReportType === "masik_tandul_report";
       const isMasikSatha = monthlyMdmReportType === "masik_goshwara";
@@ -712,18 +709,64 @@ function TeacherMDMPage() {
         : monthlyMdmReportType === "daily_tandul_register"
         ? `दैनंदिन-तांदूळ-खर्च-नोंदवही-${monthShort}-${monthlyMdmReportMonth.includes('2026') ? '2026' : '2027'}.pdf`
         : `मासिक_अहवाल_${monthlyMdmReportMonth.replace(/\s+/g, '_')}.pdf`;
-      const opt = {
-        margin: isPoshanReport ? [2, 3, 2, 3] : [2, 2, 2, 2],
-        filename,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, letterRendering: true, backgroundColor: "#ffffff" },
-        jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
-        pagebreak: { mode: ['css'], avoid: 'tr' }
-      };
-      await html2pdfFn().set(opt).from(element).save();
+
+      if (isPoshanReport) {
+        const { default: html2pdf } = await import("html2pdf.js");
+        let html2pdfFn = html2pdf;
+        // @ts-ignore
+        if (html2pdfFn && html2pdfFn.default) { html2pdfFn = html2pdfFn.default; }
+        const opt = {
+          margin: [2, 3, 2, 3],
+          filename,
+          image: { type: "jpeg", quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, letterRendering: true, backgroundColor: "#ffffff" },
+          jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
+          pagebreak: { mode: ['css'], avoid: 'tr' }
+        };
+        await html2pdfFn().set(opt).from(element).save();
+      } else {
+        const { default: html2canvas } = await import("html2canvas");
+        const { jsPDF } = await import("jspdf");
+
+        const canvas = await html2canvas(element, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: "#ffffff",
+        });
+
+        const imgData = canvas.toDataURL("image/jpeg", 0.98);
+        const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+        const pdfWidth = pdf.internal.pageSize.getWidth(); // 297mm
+        const pdfHeight = pdf.internal.pageSize.getHeight(); // 210mm
+
+        const margin = 3;
+        const availWidth = pdfWidth - (margin * 2); // 291mm
+        const availHeight = pdfHeight - (margin * 2); // 204mm
+
+        const imgWidth = availWidth;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+        let finalWidth = imgWidth;
+        let finalHeight = imgHeight;
+
+        if (finalHeight > availHeight) {
+          finalHeight = availHeight;
+          finalWidth = (canvas.width * finalHeight) / canvas.height;
+        }
+
+        const xPos = (pdfWidth - finalWidth) / 2;
+        const yPos = 8;
+
+        pdf.addImage(imgData, "JPEG", xPos, yPos, finalWidth, finalHeight);
+        pdf.save(filename);
+      }
+
+      if (toastId) toast.dismiss(toastId);
       toast.success("PDF यशस्वीपणे डाऊनलोड झाली!");
     } catch (err) {
       console.error(err);
+      if (toastId) toast.dismiss(toastId);
       toast.error("PDF डाऊनलोड करण्यात त्रुटी आली.");
     }
   };
@@ -9440,85 +9483,85 @@ const handleDemandReportPdfDownload = async () => {
                           const totalPat = profile?.totalPat || patPrimary;
 
                           return (
-                            <div className="space-y-3 font-sans text-slate-900">
+                            <div className="space-y-1.5 font-sans text-slate-900">
                               {/* Title Header */}
-                              <div className="text-center space-y-0.5 mb-1">
-                                <h1 className="text-base md:text-lg font-black text-[#056e38] tracking-wide">
+                              <div className="text-center space-y-0 mb-0.5">
+                                <h1 className="text-sm md:text-base font-black text-[#056e38] tracking-wide">
                                   प्रधानमंत्री पोषण शक्ती निर्माण योजना
                                 </h1>
-                                <h2 className="text-xs md:text-sm font-extrabold text-[#056e38]">
+                                <h2 className="text-xs font-extrabold text-[#056e38]">
                                   दैनंदिन तांदूळ खर्च नोंदवही (भाग १)
                                 </h2>
                               </div>
 
                               {/* Info Grid Box */}
-                              <div className="border border-slate-700 text-sm md:text-sm font-medium bg-white">
+                              <div className="border border-slate-700 text-xs font-medium bg-white">
                                 <div className="grid grid-cols-1 md:grid-cols-6 divide-y md:divide-y-0 md:divide-x divide-slate-700 border-b border-slate-700">
-                                  <div className="p-1.5 md:col-span-2">
+                                  <div className="p-1 md:col-span-2">
                                     शाळेचे नाव : <span className="font-bold text-slate-900">{schoolName}</span>
                                   </div>
-                                  <div className="p-1.5">
+                                  <div className="p-1">
                                     इयत्ता गट : <span className="font-bold text-slate-900">प्राथमिक ( इयत्ता १ ते ५ )</span>
                                   </div>
-                                  <div className="p-1.5">
+                                  <div className="p-1">
                                     केंद्र : <span className="font-bold text-slate-900">{kendra}</span>
                                   </div>
-                                  <div className="p-1.5">
+                                  <div className="p-1">
                                     बीट : <span className="font-bold text-slate-900">{beat}</span>
                                   </div>
-                                  <div className="p-1.5 flex gap-2">
+                                  <div className="p-1 flex gap-2">
                                     <span>ता. : <strong className="font-bold">{taluka}</strong></span>
                                     <span>जिल्हा : <strong className="font-bold">{district}</strong></span>
                                   </div>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-700 border-b border-slate-700">
-                                  <div className="p-1.5">
+                                  <div className="p-1">
                                     महिना : <span className="font-bold text-slate-900">{monthlyMdmReportMonth}</span>
                                   </div>
-                                  <div className="p-1.5">
+                                  <div className="p-1">
                                     पटसंख्या (१ ते ५) : <span className="font-bold text-slate-900">{patPrimary}</span>
                                   </div>
-                                  <div className="p-1.5">
+                                  <div className="p-1">
                                     एकूण पटसंख्या : <span className="font-bold text-slate-900">{totalPat}</span>
                                   </div>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-700">
-                                  <div className="p-1.5">
+                                  <div className="p-1">
                                     एकूण कामाचे दिवस : <span className="font-bold text-slate-900">{totalWorkingDays}</span>
                                   </div>
-                                  <div className="p-1.5">
+                                  <div className="p-1">
                                     तांदूळ दिलेले दिवस : <span className="font-bold text-slate-900">{totalRiceDistributedDays}</span>
                                   </div>
-                                  <div className="p-1.5">
+                                  <div className="p-1">
                                     तांदूळ प्राप्त दिनांक : <span className="font-bold text-slate-900">{riceReceivedDateStr}</span>
                                   </div>
                                 </div>
                               </div>
 
                               {/* Sub-header counter text */}
-                              <div className="text-sm md:text-sm font-bold text-slate-800">
+                              <div className="text-xs font-bold text-slate-800">
                                 {recordedDaysCount} / {daysInMonth} दिवसांची नोंद या महिन्यासाठी.
                               </div>
 
                               {/* Daily Rice Consumption Table */}
                               <div className="overflow-x-auto w-full">
-                                <table className="w-full border-collapse border border-slate-700 text-center text-sm md:text-sm font-medium" style={{ tableLayout: 'auto' }}>
+                                <table className="w-full border-collapse border border-slate-700 text-center text-xs font-medium" style={{ tableLayout: 'auto' }}>
                                   <thead>
-                                    <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-700 text-sm md:text-sm">
-                                      <th className="border-r border-slate-700 p-1 min-w-[32px]">अ.नं.</th>
-                                      <th className="border-r border-slate-700 p-1 min-w-[85px]">दिनांक</th>
-                                      <th className="border-r border-slate-700 p-1 min-w-[65px]">वार</th>
-                                      <th className="border-r border-slate-700 p-1 min-w-[100px]">मागील शिल्लक<br/>(KG)</th>
-                                      <th className="border-r border-slate-700 p-1 min-w-[80px]">प्राप्त<br/>(KG)</th>
-                                      <th className="border-r border-slate-700 p-1 min-w-[105px]">एकूण तांदूळ (4+5)<br/>(KG)</th>
-                                      <th className="border-r border-slate-700 p-1 min-w-[65px]">लाभार्थी</th>
-                                      <th className="border-r border-slate-700 p-1 min-w-[95px]">खर्च तांदूळ<br/>(KG)</th>
-                                      <th className="border-r border-slate-700 p-1 min-w-[105px]">शिल्लक तांदूळ (6-8)<br/>(KG)</th>
-                                      <th className="border-r border-slate-700 p-1 min-w-[65px]">सही</th>
+                                    <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-700 text-xs">
+                                      <th className="border-r border-slate-700 py-0.5 px-1 min-w-[32px]">अ.नं.</th>
+                                      <th className="border-r border-slate-700 py-0.5 px-1 min-w-[85px]">दिनांक</th>
+                                      <th className="border-r border-slate-700 py-0.5 px-1 min-w-[65px]">वार</th>
+                                      <th className="border-r border-slate-700 py-0.5 px-1 min-w-[100px]">मागील शिल्लक<br/>(KG)</th>
+                                      <th className="border-r border-slate-700 py-0.5 px-1 min-w-[80px]">प्राप्त<br/>(KG)</th>
+                                      <th className="border-r border-slate-700 py-0.5 px-1 min-w-[105px]">एकूण तांदूळ (4+5)<br/>(KG)</th>
+                                      <th className="border-r border-slate-700 py-0.5 px-1 min-w-[65px]">लाभार्थी</th>
+                                      <th className="border-r border-slate-700 py-0.5 px-1 min-w-[95px]">खर्च तांदूळ<br/>(KG)</th>
+                                      <th className="border-r border-slate-700 py-0.5 px-1 min-w-[105px]">शिल्लक तांदूळ (6-8)<br/>(KG)</th>
+                                      <th className="border-r border-slate-700 py-0.5 px-1 min-w-[65px]">सही</th>
                                     </tr>
-                                    <tr className="bg-slate-200/80 text-slate-800 font-bold border-b border-slate-700 text-xs md:text-sm">
+                                    <tr className="bg-slate-200/80 text-slate-800 font-bold border-b border-slate-700 text-xs">
                                       <th className="border-r border-slate-700 p-0.5">1</th>
                                       <th className="border-r border-slate-700 p-0.5">2</th>
                                       <th className="border-r border-slate-700 p-0.5">3</th>
@@ -9537,7 +9580,7 @@ const handleDemandReportPdfDownload = async () => {
                                       return (
                                         <tr
                                           key={r.sr}
-                                          className={`border-b border-slate-700 h-6 text-sm md:text-sm ${
+                                          className={`border-b border-slate-700 text-xs ${
                                             isSundayOrHoliday
                                               ? "bg-[#fce8e6]"
                                               : r.sr % 2 === 0
@@ -9545,32 +9588,32 @@ const handleDemandReportPdfDownload = async () => {
                                               : "bg-white"
                                           }`}
                                         >
-                                          <td className="border-r border-slate-700 p-1 font-bold">{r.sr}</td>
-                                          <td className={`border-r border-slate-700 p-1 ${isSundayOrHoliday ? "text-red-700 font-semibold" : ""}`}>
+                                          <td className="border-r border-slate-700 py-0.5 px-1 font-bold">{r.sr}</td>
+                                          <td className={`border-r border-slate-700 py-0.5 px-1 ${isSundayOrHoliday ? "text-red-700 font-semibold" : ""}`}>
                                             {r.dateFormatted}
                                           </td>
-                                          <td className={`border-r border-slate-700 p-1 ${isSundayOrHoliday ? "text-red-700 font-semibold" : ""}`}>
+                                          <td className={`border-r border-slate-700 py-0.5 px-1 ${isSundayOrHoliday ? "text-red-700 font-semibold" : ""}`}>
                                             {r.weekday}
                                           </td>
-                                          <td className="border-r border-slate-700 p-1">
+                                          <td className="border-r border-slate-700 py-0.5 px-1">
                                             {r.magilShillak.toFixed(4)}
                                           </td>
-                                          <td className="border-r border-slate-700 p-1">
+                                          <td className="border-r border-slate-700 py-0.5 px-1">
                                             {r.prapt > 0 ? r.prapt.toFixed(4) : ""}
                                           </td>
-                                          <td className="border-r border-slate-700 p-1">
+                                          <td className="border-r border-slate-700 py-0.5 px-1">
                                             {r.ekunTandul.toFixed(4)}
                                           </td>
-                                          <td className="border-r border-slate-700 p-1 font-bold">
+                                          <td className="border-r border-slate-700 py-0.5 px-1 font-bold">
                                             {r.bene > 0 ? r.bene : ""}
                                           </td>
-                                          <td className="border-r border-slate-700 p-1 font-semibold">
+                                          <td className="border-r border-slate-700 py-0.5 px-1 font-semibold">
                                             {r.kharch > 0 ? r.kharch.toFixed(4) : ""}
                                           </td>
-                                          <td className="border-r border-slate-700 p-1 font-bold">
+                                          <td className="border-r border-slate-700 py-0.5 px-1 font-bold">
                                             {r.shillakTandul.toFixed(4)}
                                           </td>
-                                          <td className="border-r border-slate-700 p-1"></td>
+                                          <td className="border-r border-slate-700 py-0.5 px-1"></td>
                                         </tr>
                                       );
                                     })}
@@ -9579,7 +9622,7 @@ const handleDemandReportPdfDownload = async () => {
                               </div>
 
                               {/* Bottom Signatures */}
-                              <div className="flex items-end justify-between pt-6 text-sm md:text-sm font-bold">
+                              <div className="flex items-end justify-between pt-2 text-xs font-bold">
                                <div>
                                   <p>Date : {new Date().toLocaleDateString('en-GB')}</p>
                                 </div>
@@ -9844,7 +9887,7 @@ const handleDemandReportPdfDownload = async () => {
 
                           return (
                             <div className="space-y-0">
-                              <div className="text-center space-y-0.5 mb-2">
+                              <div className="text-center space-y-0.5 mb-3 pt-1">
                                 <p className="text-xs font-bold text-slate-700">पंचायत समिती {profile?.taluka || ""} ( शिक्षण विभाग {profile?.district || ""} )</p>
                                 <h2 className="text-sm font-black text-slate-900 tracking-tight uppercase">प्रधानमंत्री पोषण शक्ती निर्माण योजना तांदूळ शिजवून दिल्याचा अहवाल (सन {year}/{String(year+1).slice(-2)})</h2>
                               </div>
