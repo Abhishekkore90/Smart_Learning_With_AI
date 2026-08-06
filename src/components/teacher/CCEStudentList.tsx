@@ -143,9 +143,20 @@ export function CCEStudentList({
     return stored === "semi" ? "semi" : "marathi";
   });
 
-  // Subscribe to students list
+  // Subscribe to students list (with 0ms local cache hydration)
   useEffect(() => {
-    setLoading(true);
+    const cacheKey = `cce_students_cache_${selectedClass}_${selectedMedium}`;
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setStudents(parsed);
+          setLoading(false);
+        }
+      }
+    } catch (e) {}
+
     const q = query(
       collection(db, "users"),
       where("role", "==", "student")
@@ -158,6 +169,9 @@ export function CCEStudentList({
       list.sort((a, b) => parseInt(a.rollNo || "999") - parseInt(b.rollNo || "999"));
       setStudents(list);
       setLoading(false);
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(list));
+      } catch (e) {}
     });
     return () => unsub();
   }, [selectedClass, selectedMedium, teacherId]);
@@ -266,7 +280,7 @@ export function CCEStudentList({
             value={name}
             onChange={setName}
             required
-            placeholder="उदा. समृद्धी सचिन साळुंखे पाटील"
+            placeholder=""
           />
 
           <FloatInput

@@ -7,7 +7,7 @@
 
 // Configuration defaults (Overridden by environment variables)
 const STORAGE_ZONE_NAME = import.meta.env.VITE_BUNNY_STORAGE_ZONE || "sgkbrainova";
-const ACCESS_KEY = import.meta.env.VITE_BUNNY_STORAGE_API_KEY || "";
+const ACCESS_KEY = import.meta.env.VITE_BUNNY_STORAGE_API_KEY || "a2ca9aa3-f0a9-4d69-a1789c6cfac3-789f-4318";
 const PULL_ZONE_URL = (import.meta.env.VITE_BUNNY_STORAGE_CDN_HOSTNAME 
   ? `https://${import.meta.env.VITE_BUNNY_STORAGE_CDN_HOSTNAME}`
   : "https://sgkbrainova.b-cdn.net").replace(/\/$/, "");

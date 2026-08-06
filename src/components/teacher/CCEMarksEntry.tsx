@@ -144,15 +144,30 @@ export function CCEMarksEntry({
     setEditingSubject(null);
   }, [activeSemester]);
 
-  // Instant real-time listener for students
+  // Instant real-time listener for students (with 0ms local cache hydration)
   useEffect(() => {
+    const cacheKey = `cce_students_cache_${selectedClass}_${selectedMedium}`;
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setStudents(parsed);
+        }
+      }
+    } catch (e) {}
+
     const q = query(collection(db, "users"), where("role", "==", "student"));
     const unsub = onSnapshot(q, (snap) => {
       const raw = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as (Student & { medium?: string; isSemiEnglish?: boolean })[];
       const filtered = raw.filter((s) => {
         return matchStudentClassAndMedium(s, selectedClass, selectedMedium);
       });
-      setStudents(filtered.sort((a, b) => parseInt(a.rollNo || "999") - parseInt(b.rollNo || "999")));
+      const sorted = filtered.sort((a, b) => parseInt(a.rollNo || "999") - parseInt(b.rollNo || "999"));
+      setStudents(sorted);
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(sorted));
+      } catch (e) {}
     });
     return () => unsub();
   }, [selectedClass, selectedMedium]);

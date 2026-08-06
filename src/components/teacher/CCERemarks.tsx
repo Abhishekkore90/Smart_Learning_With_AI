@@ -343,20 +343,23 @@ export function CCERemarks({
 
   useEffect(() => {
     let isMounted = true;
-    let newMedium: Medium | null = null;
+
+    // 1. Honor propMedium directly if passed from parent (prevents infinite loop between propMedium & Firestore config)
     if (propMedium === "semi" || propMedium === "marathi") {
-      newMedium = propMedium as Medium;
-    } else {
-      const stored = localStorage.getItem("cce_selected_medium") || localStorage.getItem("selectedMedium");
-      if (stored === "semi" || stored === "marathi") {
-        newMedium = stored as Medium;
+      if (selectedMedium !== propMedium) {
+        setSelectedMedium(propMedium as Medium);
       }
-    }
-    if (newMedium && newMedium !== selectedMedium) {
-      setSelectedMedium(newMedium);
       return;
     }
 
+    // 2. Fallback to localStorage
+    const stored = localStorage.getItem("cce_selected_medium") || localStorage.getItem("selectedMedium");
+    if ((stored === "semi" || stored === "marathi") && stored !== selectedMedium) {
+      setSelectedMedium(stored as Medium);
+      return;
+    }
+
+    // 3. Fallback to Firestore school_data config only if propMedium is missing
     async function checkSchoolConfig() {
       try {
         const udise = localStorage.getItem("teacher_udise") || localStorage.getItem("udiseNumber");
@@ -379,7 +382,7 @@ export function CCERemarks({
     return () => {
       isMounted = false;
     };
-  }, [propMedium, selectedClass, selectedMedium]);
+  }, [propMedium, selectedClass]);
 
   // Load master remarks for the standard
   useEffect(() => {
@@ -455,16 +458,22 @@ export function CCERemarks({
     };
   }, [selectedClass, academicYear, selectedMedium]);
 
-  // Load student roster for selectedClass and selectedMedium
+  // Load student roster for selectedClass and selectedMedium (Instant local cache + real-time Firestore sync)
   useEffect(() => {
     let isMounted = true;
-    const isStudentSemi = (s: any) => {
-      if (s.isSemiEnglish === true) return true;
-      if (s.isSemiEnglish === false) return false;
-      if (!s.medium) return false;
-      const m = String(s.medium).toLowerCase();
-      return m.includes("semi") || m.includes("सेमी");
-    };
+    const cacheKey = `cce_students_cache_${selectedClass}_${selectedMedium}`;
+
+    // Instant 0ms cache load
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setStudents(parsed);
+          setLoading(false);
+        }
+      }
+    } catch (e) {}
 
     const q = query(
       collection(db, "users"),
@@ -476,8 +485,13 @@ export function CCERemarks({
       const filtered = raw.filter((s: any) => {
         return matchStudentClassAndMedium(s, selectedClass, selectedMedium);
       });
+      const sorted = filtered.sort((a, b) => parseInt(a.rollNo || "999") - parseInt(b.rollNo || "999"));
 
-      setStudents(filtered.sort((a, b) => parseInt(a.rollNo || "999") - parseInt(b.rollNo || "999")));
+      setStudents(sorted);
+      setLoading(false);
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(sorted));
+      } catch (e) {}
     });
     return () => {
       isMounted = false;

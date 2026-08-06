@@ -1197,6 +1197,22 @@ export function AcademicPlanningSystem({
               if (localBlob) {
                 // Own PC — can use IndexedDB blob
                 rec.fileUrl = URL.createObjectURL(localBlob);
+
+                // Auto-upload local blob to Bunny CDN in background if Firestore is missing persistent CDN URL
+                if (!rec.bunnyFileUrl || rec.bunnyFileUrl.startsWith("blob:")) {
+                  const ext = rec.fileName?.split(".").pop()?.toLowerCase() || "pdf";
+                  const bunnyPath = `academic_plannings/${recordKey}_auto.${ext}`;
+                  uploadBlobToBunny(bunnyPath, localBlob).then((newBunnyUrl) => {
+                    if (newBunnyUrl) {
+                      rec.bunnyFileUrl = newBunnyUrl;
+                      rec.fileUrl = newBunnyUrl;
+                      setDoc(doc(db, "academic_plannings", recordKey), {
+                        fileUrl: newBunnyUrl,
+                        bunnyFileUrl: newBunnyUrl,
+                      }, { merge: true }).catch(() => {});
+                    }
+                  }).catch(() => {});
+                }
               } else {
                 // Other PC — use Bunny CDN URL (proxy will serve it securely)
                 rec.fileUrl = rec.bunnyFileUrl || "";
