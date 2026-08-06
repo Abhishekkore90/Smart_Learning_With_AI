@@ -251,20 +251,32 @@ function TeacherMDMPage() {
       const marathiMonthName = monthIndex !== -1 ? marathiMonths[monthIndex] : "";
 
       const monthName = marathiMonthName || "Report";
-      const opt = {
-        margin: [2, 2, 2, 2],
-        filename: `MDM_Monthly_Report_${monthName}_${reportYear || ""}.pdf`,
-        image: { type: "jpeg" as const, quality: 0.98 },
-        html2canvas: {
+      const filename = `MDM_Monthly_Report_${monthName}_${reportYear || ""}.pdf`;
+
+      const { default: html2canvas } = await import("html2canvas");
+      const { jsPDF } = await import("jspdf");
+
+      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const margin = 4;
+      const availWidth = pdfWidth - (margin * 2);
+      const availHeight = pdfHeight - (margin * 2);
+
+      for (let i = 0; i < pages.length; i++) {
+        const pageEl = pages[i];
+        const totalWidth = Math.max(pageEl.scrollWidth, 1100);
+
+        const canvas = await html2canvas(pageEl, {
           scale: 2,
           useCORS: true,
           logging: false,
+          backgroundColor: "#ffffff",
+          windowWidth: totalWidth,
+          width: totalWidth,
+          scrollY: 0,
+          scrollX: 0,
           onclone: (clonedDoc: any) => {
-            clonedDoc.body.style.margin = "0";
-            clonedDoc.body.style.padding = "0";
-            clonedDoc.documentElement.style.margin = "0";
-            clonedDoc.documentElement.style.padding = "0";
-
             const rowSpanCells = clonedDoc.querySelectorAll("th[rowspan]");
             rowSpanCells.forEach((cell: any) => {
               cell.style.position = "relative";
@@ -295,19 +307,25 @@ function TeacherMDMPage() {
               }
             });
           }
-        },
-        jsPDF: { unit: "mm", format: "a4", orientation: "landscape" as const }
-      };
+        });
 
-      // Render each .print-page onto its own independent PDF page
-      let worker: any = html2pdfFn().set(opt).from(pages[0]);
-      for (let i = 1; i < pages.length; i++) {
-        worker = worker.toContainer().toCanvas().toPdf().get('pdf').then((pdf: any) => {
-          pdf.addPage();
-        }).from(pages[i]).toContainer().toCanvas().toPdf();
+        const imgData = canvas.toDataURL("image/jpeg", 0.98);
+        let imgWidth = availWidth;
+        let imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+        if (imgHeight > availHeight) {
+          imgHeight = availHeight;
+          imgWidth = (canvas.width * imgHeight) / canvas.height;
+        }
+
+        const xPos = (pdfWidth - imgWidth) / 2;
+        const yPos = (pdfHeight - imgHeight) / 2;
+
+        if (i > 0) pdf.addPage();
+        pdf.addImage(imgData, "JPEG", xPos, yPos, imgWidth, imgHeight);
       }
 
-      await worker.save();
+      pdf.save(filename);
       toast.success(t("PDF यशस्वीरित्या डाउनलोड झाली!", "PDF downloaded successfully!", "पीडीएफ सफलतापूर्वक डाउनलोड हो गया!"));
 
       try {
