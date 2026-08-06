@@ -1,0 +1,267 @@
+import React from "react";
+
+export interface MDMCertificateProps {
+  subTab?: "1-5" | "6-8" | "1-8";
+  reportYear?: number;
+  marathiMonthName?: string;
+  reportSchoolName?: string;
+  principalName?: string;
+  teacherName?: string;
+  primaryCookedDays?: number;
+  upperCookedDays?: number;
+  wednesdaysCount?: number;
+  certSupplementaryFood?: string;
+  certPatPrimary?: string;
+  certPatUpper?: string;
+  certBeneficiaryPrimary?: string;
+  certBeneficiaryUpper?: string;
+  certPrimaryCookedDays?: string;
+  certUpperCookedDays?: string;
+  primaryEnrolled?: number;
+  upperEnrolled?: number;
+  primaryBeneficiarySum?: number;
+  upperBeneficiarySum?: number;
+  helperCount?: number;
+  helperCenterPay?: number;
+  helperStatePay?: number;
+  helperTotalPay?: number;
+  primaryCenterGrant?: number;
+  primaryStateGrant?: number;
+  upperCenterGrant?: number;
+  upperStateGrant?: number;
+  totalGrantAll?: number;
+}
+
+// Marathi number converter helper
+export const toMarathiNumbers = (str: string | number): string => {
+  if (str === undefined || str === null) return "";
+  const numStr = str.toString();
+  const marathiDigits = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
+  return numStr.replace(/[0-9]/g, (digit) => marathiDigits[parseInt(digit, 10)]);
+};
+
+// English number converter helper
+export const toEnglishNumbers = (str: string | number): string => {
+  if (str === undefined || str === null) return "";
+  const numStr = str.toString();
+  const marathiDigits = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
+  return numStr.replace(/[०-९]/g, (digit) => marathiDigits.indexOf(digit).toString());
+};
+
+export const MDMCertificate: React.FC<MDMCertificateProps> = ({
+  subTab = "1-8",
+  reportYear = 2026,
+  marathiMonthName = "माहे",
+  reportSchoolName = "जि. प. प्राथमिक शाळा",
+  principalName = "मुख्याध्यापक",
+  teacherName = "शिक्षकाचे नाव",
+  primaryCookedDays = 0,
+  upperCookedDays = 0,
+  wednesdaysCount = 0,
+  certSupplementaryFood = "पूरक आहार",
+  certPatPrimary = "",
+  certPatUpper = "",
+  certBeneficiaryPrimary = "",
+  certBeneficiaryUpper = "",
+  certPrimaryCookedDays = "",
+  certUpperCookedDays = "",
+  primaryEnrolled = 0,
+  upperEnrolled = 0,
+  primaryBeneficiarySum = 0,
+  upperBeneficiarySum = 0,
+  helperCount = 0,
+  helperCenterPay = 0,
+  helperStatePay = 0,
+  helperTotalPay = 0,
+  primaryCenterGrant = 0,
+  primaryStateGrant = 0,
+  upperCenterGrant = 0,
+  upperStateGrant = 0,
+  totalGrantAll = 0,
+}) => {
+  const showPrimary = subTab === "1-5" || subTab === "1-8";
+  const showUpper = subTab === "6-8" || subTab === "1-8";
+
+  const totalPrimaryGrant = primaryCenterGrant + primaryStateGrant;
+  const totalUpperGrant = upperCenterGrant + upperStateGrant;
+
+  const currentTotalGrant =
+    subTab === "1-5"
+      ? totalPrimaryGrant
+      : subTab === "6-8"
+      ? totalUpperGrant
+      : totalGrantAll;
+
+  const currentHelperTotalPay =
+    subTab === "1-5" || subTab === "6-8"
+      ? helperTotalPay
+      : helperTotalPay;
+
+  const getHeaderTitle = () => {
+    if (subTab === "1-5") return "इयत्ता १ ते ५";
+    if (subTab === "6-8") return "इयत्ता ६ ते ८";
+    return "इयत्ता १ ते ८";
+  };
+
+  return (
+    <div className="print-page border border-slate-300 py-6 px-8 bg-white text-black font-sans text-xs relative w-full max-w-full mx-auto shadow-md flex flex-col justify-between print:w-full print:h-auto print:border-none print:shadow-none print:p-0">
+      <div>
+        {/* Header */}
+        <div className="relative flex justify-center items-center font-bold text-sm mb-3 border-b-2 border-black pb-2">
+          <div className="text-base font-extrabold text-center">- प्रमाणपत्र -</div>
+          <div className="absolute right-0 text-sm font-extrabold">{getHeaderTitle()}</div>
+        </div>
+        <div className="text-right text-xs font-bold mb-3">
+          माहे : <span className="font-extrabold border-b border-dotted border-black px-4">{marathiMonthName} {toMarathiNumbers(reportYear.toString())}</span>
+        </div>
+
+        {/* Certificate Text Paragraph */}
+        <div className="text-justify text-xs leading-[1.8rem] space-y-2 px-2 font-normal text-black mb-4">
+          <p>
+            अध्यक्ष/ सचिव शाळा व्यवस्थापन समिती <span className="font-bold border-b border-dotted border-black px-3">{principalName}</span> कडून प्रमाणित करणेत येते की,
+            जि.प. शाळा <span className="font-bold border-b border-dotted border-black px-3">{reportSchoolName}</span> या शाळेतील{" "}
+            <span className="font-bold border-b border-dotted border-black px-3">{teacherName}</span> यांनी शालेय पोषण आहार अंतर्गत माहे{" "}
+            <span className="font-bold border-b border-dotted border-black px-2">{marathiMonthName} {toMarathiNumbers(reportYear.toString())}</span> मध्ये{" "}
+            {showPrimary && (
+              <>
+                इ. १ ली ते ५ वी च्या विद्यार्थ्यांसाठी <span className="font-bold border-b border-dotted border-black px-3">{toMarathiNumbers(primaryCookedDays.toString())}</span> दिवस{" "}
+              </>
+            )}
+            {showPrimary && showUpper && "आणि "}
+            {showUpper && (
+              <>
+                इ. ६ वी ते ८ वीच्या विद्यार्थ्यांसाठी एकूण <span className="font-bold border-b border-dotted border-black px-3">{toMarathiNumbers(upperCookedDays.toString())}</span> दिवस{" "}
+              </>
+            )}
+            अन्न शिजवून देणेचे काम केले आहे. तसेच योग्य उष्मांकाचा व चविष्ठ पोषण आहार होणेसाठी दररोज इ. १ ली ते ५ वी साठी ५० ग्रॅम व इ. ६वी ते ८ वी साठी ७५ ग्रॅम प्रमाणे
+            विविध भाज्या वापरल्या आहेत. आणि खोबरे, कांदा, लसून इ. मसाल्यांचा योग्य प्रमाणात वापर केला आहे. सदर महिन्यात दर बुधवारी एकूण <span className="font-bold border-b border-dotted border-black px-3">{toMarathiNumbers(wednesdaysCount.toString())}</span> वेळा <span className="font-bold border-b border-dotted border-black px-3">{certSupplementaryFood}</span> असा पूरक आहार दिलेला आहे. अन्न शिजवून देणेचे व महाराष्ट्र शासन, शालेय शिक्षण व क्रिडा विभागातील शासन निर्णय क्र.शापोआ / २०१०/प्र.क्र.१८/ प्राशि४, दि.२.२.२०११ मधील बाब क्र. ९ नुसार शालेय पोषण आहाराचे सर्व कामकाज पूर्ण केले आहे.
+          </p>
+          <p>
+            सदर खालीलप्रमाणे पट, लाभार्थी, दिवस यांची माहिती बरोबर असून त्यानुसार इंधन भाजीपाला तसेच स्वयंपाकी तथा मदतनीस मानधन अदा करणेस हरकत नाही म्हणून दिले असे प्रमाणपत्र.
+          </p>
+        </div>
+
+        {/* 10-Column Data Table */}
+        <div className="mt-4 w-full overflow-x-auto">
+          <table className="w-full border-collapse border border-black text-center text-xs font-sans">
+            <thead>
+              <tr className="bg-slate-100 font-bold border-b border-black text-xs">
+                <th className="border border-black p-1">इयत्ता</th>
+                <th className="border border-black p-1">पट</th>
+                <th className="border border-black p-1">प्रोग्रेसिव्ह लाभार्थी</th>
+                <th className="border border-black p-1">शिजवलेले दिवस</th>
+                <th className="border border-black p-1">हिस्सा</th>
+                <th className="border border-black p-1">दर</th>
+                <th className="border border-black p-1">इंधन भाजीपाला देय अनुदान</th>
+                <th className="border border-black p-1">स्वयंपाकी तथा मदतनीस संख्या</th>
+                <th className="border border-black p-1">स्वयंपाकी तथा मदतनीस मानधन</th>
+                <th className="border border-black p-1">शेरा</th>
+              </tr>
+            </thead>
+            <tbody>
+              {/* Row 1: 1 To 5 */}
+              {showPrimary && (
+                <>
+                  <tr>
+                    <td className="border border-black p-1 font-bold" rowSpan={2}>१ ते ५</td>
+                    <td className="border border-black p-1 font-bold" rowSpan={2}>{certPatPrimary || toMarathiNumbers(primaryEnrolled.toString())}</td>
+                    <td className="border border-black p-1 font-bold" rowSpan={2}>{certBeneficiaryPrimary || toMarathiNumbers(primaryBeneficiarySum.toString())}</td>
+                    <td className="border border-black p-1 font-bold" rowSpan={2}>{certPrimaryCookedDays || toMarathiNumbers(primaryCookedDays.toString())}</td>
+                    <td className="border border-black p-1 font-medium">केंद्र</td>
+                    <td className="border border-black p-1">{toMarathiNumbers("४.०७")}</td>
+                    <td className="border border-black p-1 font-semibold">{toMarathiNumbers(primaryCenterGrant.toFixed(2))}</td>
+                    <td className="border border-black p-1 font-bold" rowSpan={2}>{toMarathiNumbers(helperCount.toString())}</td>
+                    <td className="border border-black p-1 font-medium">केंद्र - {toMarathiNumbers(helperCenterPay.toFixed(2))}</td>
+                    <td className="border border-black p-1 font-bold text-emerald-700" rowSpan={2}>अचूक नोंदवलेले</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-black p-1 font-medium">राज्य</td>
+                    <td className="border border-black p-1">{toMarathiNumbers("२.७१")}</td>
+                    <td className="border border-black p-1 font-semibold">{toMarathiNumbers(primaryStateGrant.toFixed(2))}</td>
+                    <td className="border border-black p-1 font-medium">राज्य - {toMarathiNumbers(helperStatePay.toFixed(2))}</td>
+                  </tr>
+                </>
+              )}
+
+              {/* Row 2: 6 To 8 */}
+              {showUpper && (
+                <>
+                  <tr>
+                    <td className="border border-black p-1 font-bold" rowSpan={2}>६ ते ८</td>
+                    <td className="border border-black p-1 font-bold" rowSpan={2}>{certPatUpper || toMarathiNumbers(upperEnrolled.toString())}</td>
+                    <td className="border border-black p-1 font-bold" rowSpan={2}>{certBeneficiaryUpper || toMarathiNumbers(upperBeneficiarySum.toString())}</td>
+                    <td className="border border-black p-1 font-bold" rowSpan={2}>{certUpperCookedDays || toMarathiNumbers(upperCookedDays.toString())}</td>
+                    <td className="border border-black p-1 font-medium">केंद्र</td>
+                    <td className="border border-black p-1">{toMarathiNumbers("६.१०")}</td>
+                    <td className="border border-black p-1 font-semibold">{toMarathiNumbers(upperCenterGrant.toFixed(2))}</td>
+                    <td className="border border-black p-1 font-bold" rowSpan={2}>{toMarathiNumbers(helperCount.toString())}</td>
+                    <td className="border border-black p-1 font-medium">केंद्र - {toMarathiNumbers(helperCenterPay.toFixed(2))}</td>
+                    <td className="border border-black p-1 font-bold text-emerald-700" rowSpan={2}>अचूक नोंदवलेले</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-black p-1 font-medium">राज्य</td>
+                    <td className="border border-black p-1">{toMarathiNumbers("४.०७")}</td>
+                    <td className="border border-black p-1 font-semibold">{toMarathiNumbers(upperStateGrant.toFixed(2))}</td>
+                    <td className="border border-black p-1 font-medium">राज्य - {toMarathiNumbers(helperStatePay.toFixed(2))}</td>
+                  </tr>
+                </>
+              )}
+
+              {/* Row 3: Total */}
+              <tr className="bg-slate-50 font-bold">
+                <td className="border border-black p-1">एकूण</td>
+                <td className="border border-black p-1">
+                  {subTab === "1-5"
+                    ? (certPatPrimary || toMarathiNumbers(primaryEnrolled.toString()))
+                    : subTab === "6-8"
+                    ? (certPatUpper || toMarathiNumbers(upperEnrolled.toString()))
+                    : toMarathiNumbers(((parseInt(toEnglishNumbers(certPatPrimary)) || primaryEnrolled) + (parseInt(toEnglishNumbers(certPatUpper)) || upperEnrolled)).toString())}
+                </td>
+                <td className="border border-black p-1">
+                  {subTab === "1-5"
+                    ? (certBeneficiaryPrimary || toMarathiNumbers(primaryBeneficiarySum.toString()))
+                    : subTab === "6-8"
+                    ? (certBeneficiaryUpper || toMarathiNumbers(upperBeneficiarySum.toString()))
+                    : toMarathiNumbers((primaryBeneficiarySum + upperBeneficiarySum).toString())}
+                </td>
+                <td className="border border-black p-1">
+                  {subTab === "1-5"
+                    ? (certPrimaryCookedDays || toMarathiNumbers(primaryCookedDays.toString()))
+                    : subTab === "6-8"
+                    ? (certUpperCookedDays || toMarathiNumbers(upperCookedDays.toString()))
+                    : toMarathiNumbers((primaryCookedDays + upperCookedDays).toString())}
+                </td>
+                <td className="border border-black p-1">---</td>
+                <td className="border border-black p-1">---</td>
+                <td className="border border-black p-1 text-emerald-800">
+                  {toMarathiNumbers(currentTotalGrant.toFixed(2))}
+                </td>
+                <td className="border border-black p-1">{toMarathiNumbers(helperCount.toString())}</td>
+                <td className="border border-black p-1 text-emerald-800">
+                  {toMarathiNumbers(currentHelperTotalPay.toFixed(2))}
+                </td>
+                <td className="border border-black p-1 text-blue-700">प्रमाणित</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Footer Signatures */}
+      <div className="flex justify-between items-end mt-12 px-6 text-xs font-bold text-black select-none">
+        <div className="space-y-4 text-xs font-bold">
+          <div>स्थळ --------------------</div>
+          <div>दि. --------------------</div>
+        </div>
+        <div className="text-center pb-2 text-xs font-bold">
+          <p>मुख्याध्यापक तथा सचिव</p>
+        </div>
+        <div className="text-center pb-2 text-xs font-bold">
+          <p>अध्यक्ष</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default MDMCertificate;
