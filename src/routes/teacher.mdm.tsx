@@ -277,6 +277,12 @@ function TeacherMDMPage() {
           scrollY: 0,
           scrollX: 0,
           onclone: (clonedDoc: any, element: HTMLElement) => {
+            // Copy main document styles into cloned document head for Vercel production CSS bundles
+            const styleNodes = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'));
+            styleNodes.forEach((node) => {
+              clonedDoc.head.appendChild(node.cloneNode(true));
+            });
+
             const targetEl = element || clonedDoc.querySelector(".print-page") || clonedDoc.body.firstElementChild;
             if (targetEl) {
               targetEl.style.width = `${exactContentWidth}px`;
@@ -285,11 +291,24 @@ function TeacherMDMPage() {
               targetEl.style.boxSizing = "border-box";
             }
 
-            const rowSpanCells = clonedDoc.querySelectorAll("th[rowspan]");
+            // Explicitly force table borders and cell border styles
+            const tables = clonedDoc.querySelectorAll("table");
+            tables.forEach((tbl: any) => {
+              tbl.style.borderCollapse = "collapse";
+              tbl.style.border = "1px solid #000000";
+            });
+
+            const cells = clonedDoc.querySelectorAll("th, td");
+            cells.forEach((cell: any) => {
+              cell.style.borderColor = "#000000";
+              cell.style.borderStyle = "solid";
+              cell.style.borderWidth = "1px";
+            });
+
+            const rowSpanCells = clonedDoc.querySelectorAll("th[rowspan], td[rowspan]");
             rowSpanCells.forEach((cell: any) => {
               cell.style.position = "relative";
               cell.style.zIndex = "30";
-              cell.style.backgroundColor = "#f1f5f9";
               cell.style.verticalAlign = "middle";
             });
 
