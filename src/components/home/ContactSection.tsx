@@ -31,19 +31,18 @@ export function ContactPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background text-text dark:bg-transparent dark:text-slate-100 relative border-t border-border">
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 overflow-hidden">
         <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-gradient-to-b from-slate-50 to-white" />
-          <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-teal-50/50 rounded-full -translate-y-1/2 translate-x-1/3 opacity-50" />
+          <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-primary/10 rounded-full -translate-y-1/2 translate-x-1/3 opacity-50 blur-[120px] pointer-events-none" />
         </div>
 
-        <div className="max-w-7xl mx-auto px-6 relative z-10 text-center">
+        <div className="max-w-7xl mx-auto px-6 relative z-10 text-center text-text dark:text-white">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900/5 border border-slate-900/10 text-teal-600 text-[10px] font-black uppercase tracking-[0.3em] mb-8"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-feature-purple border border-border text-primary dark:bg-indigo-950/50 dark:border-indigo-900/50 dark:text-teal-400 text-[10px] font-black uppercase tracking-[0.3em] mb-8"
           >
             <Sparkles className="size-4 animate-pulse" />
             <span>{t.contact_badge}</span>
@@ -52,11 +51,11 @@ export function ContactPage() {
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-5xl md:text-7xl font-black tracking-tighter text-slate-900 mb-6 leading-none"
+            className="text-5xl md:text-7xl font-black tracking-tighter text-heading dark:text-white mb-6 leading-none"
           >
             {(t.contact_hero_title || "").split(" ").slice(0, -1).join(" ")}{" "}
             <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 via-indigo-600 to-teal-600 animate-gradient-x">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary-light to-primary dark:from-teal-400 dark:via-indigo-400 dark:to-teal-400 animate-gradient-x">
               {(t.contact_hero_title || "").split(" ").slice(-1)}
             </span>
           </motion.h1>
@@ -65,7 +64,7 @@ export function ContactPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="max-w-2xl mx-auto text-lg text-slate-500 font-medium leading-relaxed"
+            className="max-w-2xl mx-auto text-lg text-text dark:text-slate-300 font-medium leading-relaxed"
           >
             {t.contact_hero_subtitle}
           </motion.p>
@@ -81,17 +80,17 @@ export function ContactPage() {
               initial={{ opacity: 0, x: -30 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              className="bg-white p-8 md:p-12 rounded-[3rem] border border-slate-100 shadow-premium"
+              className="bg-card-bg dark:bg-slate-900/60 backdrop-blur-md p-8 md:p-12 rounded-[3rem] border border-border dark:border-white/10 shadow-premium text-text dark:text-white"
             >
               <div className="flex items-center gap-4 mb-10">
-                <div className="size-12 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center">
+                <div className="size-12 rounded-2xl bg-feature-purple border border-border text-primary dark:bg-teal-950/50 dark:border-teal-900/30 dark:text-teal-400 flex items-center justify-center">
                   <MessageSquare className="size-6" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-black text-slate-900">
+                  <h2 className="text-xl font-black text-heading dark:text-white">
                     {t.contact_form_title}
                   </h2>
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
+                  <p className="text-xs font-bold text-light-text dark:text-slate-300 uppercase tracking-widest mt-1">
                     {t.contact_form_badge}
                   </p>
                 </div>
@@ -100,56 +99,56 @@ export function ContactPage() {
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-light-text dark:text-slate-300 ml-2">
                       {t.contact_form_name}
                     </label>
                     <input
                       required
                       type="text"
                       placeholder="John Doe"
-                      className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-teal-500/30 focus:bg-white transition-all outline-none text-slate-900 font-bold"
+                      className="w-full px-6 py-4 bg-slate-50 border border-border rounded-2xl focus:border-primary/50 focus:bg-white focus:text-slate-900 dark:bg-slate-900/50 dark:border-white/10 dark:focus:bg-slate-900 dark:focus:border-teal-500/30 dark:focus:text-white transition-all outline-none text-text dark:text-white font-bold placeholder:text-slate-400 dark:placeholder:text-slate-500"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-light-text dark:text-slate-300 ml-2">
                       {t.contact_form_email}
                     </label>
                     <input
                       required
                       type="email"
                       placeholder="john@example.com"
-                      className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-teal-500/30 focus:bg-white transition-all outline-none text-slate-900 font-bold"
+                      className="w-full px-6 py-4 bg-slate-50 border border-border rounded-2xl focus:border-primary/50 focus:bg-white focus:text-slate-900 dark:bg-slate-900/50 dark:border-white/10 dark:focus:bg-slate-900 dark:focus:border-teal-500/30 dark:focus:text-white transition-all outline-none text-text dark:text-white font-bold placeholder:text-slate-400 dark:placeholder:text-slate-500"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-2">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-light-text dark:text-slate-300 ml-2">
                     {t.contact_form_type}
                   </label>
-                  <select className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-teal-500/30 focus:bg-white transition-all outline-none text-slate-900 font-bold appearance-none">
-                    <option>{t.contact_type_general}</option>
-                    <option>{t.contact_type_partners}</option>
-                    <option>{t.contact_type_support}</option>
-                    <option>{t.contact_type_careers}</option>
+                  <select className="w-full px-6 py-4 bg-slate-50 border border-border rounded-2xl focus:border-primary/50 focus:bg-white focus:text-slate-900 dark:bg-slate-900/50 dark:border-white/10 dark:focus:bg-slate-900 dark:focus:border-teal-500/30 dark:focus:text-white transition-all outline-none text-text dark:text-white font-bold appearance-none">
+                    <option className="bg-white text-slate-900 dark:bg-slate-950 dark:text-white">{t.contact_type_general}</option>
+                    <option className="bg-white text-slate-900 dark:bg-slate-950 dark:text-white">{t.contact_type_partners}</option>
+                    <option className="bg-white text-slate-900 dark:bg-slate-950 dark:text-white">{t.contact_type_support}</option>
+                    <option className="bg-white text-slate-900 dark:bg-slate-950 dark:text-white">{t.contact_type_careers}</option>
                   </select>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 ml-2">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-light-text dark:text-slate-300 ml-2">
                     {t.contact_form_message}
                   </label>
                   <textarea
                     required
                     placeholder="..."
                     rows={5}
-                    className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:border-teal-500/30 focus:bg-white transition-all outline-none text-slate-900 font-bold resize-none"
+                    className="w-full px-6 py-4 bg-slate-50 border border-border rounded-2xl focus:border-primary/50 focus:bg-white focus:text-slate-900 dark:bg-slate-900/50 dark:border-white/10 dark:focus:bg-slate-900 dark:focus:border-teal-500/30 dark:focus:text-white transition-all outline-none text-text dark:text-white font-bold resize-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
                   />
                 </div>
 
                 <button
                   disabled={loading}
-                  className="w-full py-6 bg-slate-900 text-white font-black text-[10px] uppercase tracking-[0.3em] rounded-2xl hover:bg-teal-600 hover:scale-[1.02] transition-all shadow-xl disabled:opacity-50 flex items-center justify-center gap-3"
+                  className="w-full py-6 bg-button-gradient text-white font-black text-[10px] uppercase tracking-[0.3em] rounded-2xl hover:bg-button-hover hover:scale-[1.02] transition-all shadow-xl disabled:opacity-50 flex items-center justify-center gap-3"
                 >
                   {loading ? (
                     t.contact_form_sending
@@ -172,10 +171,10 @@ export function ContactPage() {
                 className="space-y-8"
               >
                 <div>
-                  <h3 className="text-3xl font-black text-slate-900 mb-4 tracking-tighter">
+                  <h3 className="text-3xl font-black text-heading dark:text-white mb-4 tracking-tighter">
                     {t.contact_info_title}
                   </h3>
-                  <p className="text-slate-500 font-medium leading-relaxed">
+                  <p className="text-text dark:text-slate-300 font-medium leading-relaxed">
                     {t.contact_info_desc}
                   </p>
                 </div>
@@ -206,17 +205,17 @@ export function ContactPage() {
                       whileHover={{ x: 10 }}
                       className="flex items-start gap-6 group"
                     >
-                      <div className="size-14 rounded-3xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-900 group-hover:bg-slate-900 group-hover:text-white transition-all duration-500 shrink-0 shadow-sm">
+                      <div className="size-14 rounded-3xl bg-stats-icon-bg border border-border flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white dark:bg-white/5 dark:border-white/10 dark:text-white transition-all duration-500 shrink-0 shadow-sm">
                         <item.icon className="size-6" />
                       </div>
                       <div>
-                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">
+                        <p className="text-[10px] font-black text-light-text dark:text-slate-300 uppercase tracking-widest mb-1">
                           {item.title}
                         </p>
-                        <p className="text-lg font-bold text-slate-900 leading-none mb-1">
+                        <p className="text-lg font-bold text-heading dark:text-white leading-tight mb-1">
                           {item.detail}
                         </p>
-                        <p className="text-xs text-slate-400 font-medium">
+                        <p className="text-xs text-light-text dark:text-slate-300 font-medium">
                           {item.sub}
                         </p>
                       </div>
@@ -229,19 +228,19 @@ export function ContactPage() {
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                className="p-8 bg-slate-900 rounded-[3rem] text-white relative overflow-hidden group shadow-2xl"
+                className="p-8 bg-gradient-to-br from-feature-blue to-feature-purple dark:from-indigo-950 dark:to-purple-950 border border-border dark:border-indigo-900/50 rounded-[3rem] text-text dark:text-white relative overflow-hidden group shadow-2xl dark:shadow-none"
               >
                 <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform">
                   <Globe className="size-32" />
                 </div>
                 <div className="relative z-10">
-                  <h4 className="text-2xl font-black mb-4">
+                  <h4 className="text-2xl font-black text-heading dark:text-white mb-4">
                     {t.contact_enterprise_title}
                   </h4>
-                  <p className="text-slate-400 text-sm font-medium mb-8 leading-relaxed">
+                  <p className="text-text dark:text-slate-400 text-sm font-medium mb-8 leading-relaxed">
                     {t.contact_enterprise_desc}
                   </p>
-                  <button className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-teal-400 hover:text-white transition-colors group">
+                  <button className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary hover:text-primary-dark dark:text-teal-400 dark:hover:text-white transition-colors group">
                     {t.contact_enterprise_btn}{" "}
                     <ArrowRight className="size-4 group-hover:translate-x-2 transition-transform" />
                   </button>
@@ -249,12 +248,12 @@ export function ContactPage() {
               </motion.div>
 
               <div className="flex items-center gap-6 px-4">
-                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-300">
+                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-300">
                   <ShieldCheck className="size-4" />
                   {t.contact_gdpr}
                 </div>
-                <div className="size-1 rounded-full bg-slate-200" />
-                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-300">
+                <div className="size-1 rounded-full bg-slate-300 dark:bg-slate-700" />
+                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-300">
                   <Globe className="size-4" />
                   {t.contact_support}
                 </div>

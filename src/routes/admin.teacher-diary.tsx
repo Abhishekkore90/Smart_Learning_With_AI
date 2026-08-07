@@ -14,7 +14,6 @@ import {
   Sparkles,
   RefreshCw,
   FileText,
-  Download,
   Eye,
   ArrowRight,
 } from "lucide-react";
@@ -29,9 +28,6 @@ import { format } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { splitPdf } from "@/lib/pdf-splitter";
-import { useDiaryProcessing } from "@/contexts/DiaryProcessingContext";
-import { useAuthenticatedPdf } from "@/lib/bunny-auth-pdf";
-import { convertDocxToPdf, convertExcelToPdf, convertDocToPdf } from "@/lib/file-converter";
 
 export const Route = createFileRoute("/admin/teacher-diary")({
   head: () => ({ meta: [{ title: "Teacher Diary Redesigned — Super Admin" }] }),
@@ -48,34 +44,13 @@ interface ExistingDiaryInfo {
 
 function TeacherDiaryAdmin() {
   const navigate = useNavigate();
-  const { activeJobs, failedJobs, retryJob } = useDiaryProcessing();
 
-  // Selected state with localStorage persistence
-  const [selectedClass, setSelectedClass] = useState<string>(() => {
-    return localStorage.getItem("admin_diary_class") || "Class 1";
-  });
-  const [selectedMedium, setSelectedMedium] = useState<string>(() => {
-    return localStorage.getItem("admin_diary_medium") || "Marathi";
-  });
+  // Selected state
+  const [selectedClass, setSelectedClass] = useState<string>("Class 1");
+  const [selectedMedium, setSelectedMedium] = useState<string>("Marathi");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-
-  const activeJob = activeJobs[`${selectedClass}_${selectedMedium}`];
-  const failedJob = failedJobs[`${selectedClass}_${selectedMedium}`];
-  const isJobProcessing = activeJob && activeJob.status !== "completed" && activeJob.status !== "failed";
-  const [prevJobWasProcessing, setPrevJobWasProcessing] = useState(false);
-  const [docHtmlPreview, setDocHtmlPreview] = useState<string | null>(null);
-
-  // Fetch the authenticated PDF preview URL to display in the iframe
-  const [existingPreviewUrl, setExistingPreviewUrl] = useState<string | null>(null);
-  const { pdfBlobUrl: authenticatedPreviewUrl, loading: loadingPreview } = useAuthenticatedPdf(existingPreviewUrl);
-
-  // Sync selections to localStorage
-  useEffect(() => {
-    if (selectedClass) localStorage.setItem("admin_diary_class", selectedClass);
-    if (selectedMedium) localStorage.setItem("admin_diary_medium", selectedMedium);
-  }, [selectedClass, selectedMedium]);
 
   // Upload/Processing state
   const [uploading, setUploading] = useState(false);
@@ -118,41 +93,12 @@ function TeacherDiaryAdmin() {
     }
   }, [navigate]);
 
-  const [existingDocs, setExistingDocs] = useState<any[]>([]);
-
-  // Check for existing diary when selections change, or when a background job starts/completes
+  // Check for existing diary when standard selections change
   useEffect(() => {
     if (selectedClass && selectedMedium) {
       fetchExistingDiaryInfo(selectedClass, selectedMedium);
     }
   }, [selectedClass, selectedMedium]);
-
-  // Auto-refresh when background processing finishes
-  useEffect(() => {
-    if (isJobProcessing) {
-      setPrevJobWasProcessing(true);
-    } else if (prevJobWasProcessing && !isJobProcessing) {
-      setPrevJobWasProcessing(false);
-      if (selectedClass && selectedMedium) {
-        fetchExistingDiaryInfo(selectedClass, selectedMedium);
-      }
-    }
-  }, [isJobProcessing, prevJobWasProcessing, selectedClass, selectedMedium]);
-
-  // Update PDF preview whenever date selected in Admin panel changes
-  useEffect(() => {
-    if (startDate && existingDocs.length > 0) {
-      const targetDateStr = format(startDate, "yyyy-MM-dd");
-      const matched = existingDocs.find(
-        (d) => d.id === targetDateStr || d.diaryDate === targetDateStr
-      );
-      if (matched) {
-        const rawUrl = matched.pageUrl || matched.pageURL || "";
-        const sanitizedUrl = rawUrl.replace(/vz-7a00d099-4a8\.b-cdn\.net/g, "sgkbrainova.b-cdn.net");
-        setExistingPreviewUrl(sanitizedUrl || null);
-      }
-    }
-  }, [startDate, existingDocs]);
 
   const fetchExistingDiaryInfo = async (cls: string, med: string) => {
     setCheckingExisting(true);
@@ -167,25 +113,11 @@ function TeacherDiaryAdmin() {
 
         // Sort by page number to find order
         docs.sort((a, b) => a.pageNumber - b.pageNumber);
-        setExistingDocs(docs);
 
         const total = docs.length;
         const startD = docs[0].id; // document ID is date YYYY-MM-DD
         const endD = docs[total - 1].id;
         const uploaded = docs[0].timestamp || 0;
-
-        // Auto pre-fill Start Date from existing diary
-        const parts = startD.split("-");
-        if (parts.length === 3) {
-          const year = parseInt(parts[0], 10);
-          const month = parseInt(parts[1], 10) - 1;
-          const day = parseInt(parts[2], 10);
-          setStartDate(new Date(year, month, day));
-        }
-
-        const rawUrl = docs[0]?.pageUrl || docs[0]?.pageURL || "";
-        const sanitizedUrl = rawUrl.replace(/vz-7a00d099-4a8\.b-cdn\.net/g, "sgkbrainova.b-cdn.net");
-        setExistingPreviewUrl(sanitizedUrl || null);
 
         setExistingDiary({
           exists: true,
@@ -195,8 +127,6 @@ function TeacherDiaryAdmin() {
           uploadedAt: uploaded,
         });
       } else {
-        setExistingDocs([]);
-        setExistingPreviewUrl(null);
         setExistingDiary({
           exists: false,
           totalPages: 0,
@@ -212,90 +142,35 @@ function TeacherDiaryAdmin() {
     }
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const ext = file.name.split(".").pop()?.toLowerCase();
-      
-      if (ext === "pdf") {
-        setSelectedFile(file);
-        setDocHtmlPreview(null);
-        if (localPreviewUrl && localPreviewUrl !== "doc-html-preview") URL.revokeObjectURL(localPreviewUrl);
-        setLocalPreviewUrl(URL.createObjectURL(file));
-      } else if (ext === "docx" || ext === "doc" || ext === "xlsx" || ext === "xls") {
-        setSelectedFile(file);
-        if (localPreviewUrl && localPreviewUrl !== "doc-html-preview") URL.revokeObjectURL(localPreviewUrl);
-        
-        setUploading(true);
-        setUploadStatus("Rendering document preview...");
-
-        try {
-          const arrayBuffer = await file.arrayBuffer();
-
-          if (ext === "docx" || ext === "doc") {
-            // Convert Word to HTML using mammoth for direct visual preview
-            const mammoth = await import("mammoth");
-            const result = await mammoth.convertToHtml({ arrayBuffer });
-            if (result.value && result.value.trim().length > 0) {
-              setDocHtmlPreview(result.value);
-              setLocalPreviewUrl("doc-html-preview");
-              toast.success("Document preview loaded!");
-            } else {
-              // Fallback: show file info card
-              setDocHtmlPreview(`<div style="text-align:center;padding:40px;"><h3>📄 ${file.name}</h3><p>Size: ${(file.size / 1024 / 1024).toFixed(2)} MB</p><p style="color:#888;">This .doc file cannot be previewed directly. It will be processed after upload.</p></div>`);
-              setLocalPreviewUrl("doc-html-preview");
-              toast.info("File selected. Preview not available for this format, but upload will work.");
-            }
-          } else {
-            // Excel: Convert to HTML table using SheetJS
-            const XLSX = await import("xlsx");
-            const workbook = XLSX.read(arrayBuffer, { type: "array" });
-            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const htmlTable = XLSX.utils.sheet_to_html(firstSheet, { editable: false });
-            setDocHtmlPreview(htmlTable);
-            setLocalPreviewUrl("doc-html-preview");
-            toast.success("Excel preview loaded!");
-          }
-        } catch (err: any) {
-          console.error("Error rendering preview:", err);
-          // Show file info as fallback
-          setDocHtmlPreview(`<div style="text-align:center;padding:40px;"><h3>📄 ${file.name}</h3><p>Size: ${(file.size / 1024 / 1024).toFixed(2)} MB</p><p style="color:#888;">Preview could not be generated, but the file can still be uploaded.</p></div>`);
-          setLocalPreviewUrl("doc-html-preview");
-        } finally {
-          setUploading(false);
-          setUploadStatus("");
-        }
-      } else {
-        toast.error("Unsupported file type. Please upload PDF, Word (.docx, .doc) or Excel (.xlsx, .xls) files.");
+      if (file.type !== "application/pdf") {
+        toast.error("Please upload a PDF file.");
+        return;
       }
+      setSelectedFile(file);
+      // Revoke old URL if exists
+      if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
+      setLocalPreviewUrl(URL.createObjectURL(file));
     }
   };
 
   const deleteExistingDiary = async (cls: string, med: string) => {
-    try {
-      const collectionRef = collection(db, "teacher_diaries", cls, med);
-      const snapshot = await getDocs(collectionRef);
-      if (snapshot.empty) return;
+    const collectionRef = collection(db, "teacher_diaries", cls, med);
+    const snapshot = await getDocs(collectionRef);
+    if (snapshot.empty) return;
 
-      // 1. Delete Firestore docs instantly in a single Write Batch commit (~50ms)
-      const batch = writeBatch(db);
-      snapshot.docs.forEach((docSnap) => {
-        batch.delete(docSnap.ref);
-      });
-      await batch.commit();
-
-      // 2. Non-blocking asynchronous storage cleanup (fire & forget, never hangs UI)
-      snapshot.docs.forEach((docSnap) => {
-        const data = docSnap.data();
-        if (data.storagePath && storage) {
-          try {
-            const fileRef = ref(storage, data.storagePath);
-            deleteObject(fileRef).catch(() => {});
-          } catch (e) {}
-        }
-      });
-    } catch (err) {
-      console.warn("Fast clear warning:", err);
+    // Delete files in Storage first
+    for (const firestoreDoc of snapshot.docs) {
+      const data = firestoreDoc.data();
+      if (data.storagePath) {
+        const fileRef = ref(storage, data.storagePath);
+        await deleteObject(fileRef).catch((err) =>
+          console.warn("Storage deletion warning (might be already deleted):", err)
+        );
+      }
+      await deleteDoc(firestoreDoc.ref);
     }
   };
 
@@ -323,58 +198,117 @@ function TeacherDiaryAdmin() {
       toast.error("Please select a Teaching Diary PDF file.");
       return;
     }
+    if (!startDate) {
+      toast.error("Please select a Start Date.");
+      return;
+    }
 
     setUploading(true);
-    setUploadProgress(10);
-    setUploadStatus("Uploading Original PDF...");
+    setUploadProgress(0);
+    setUploadStatus("Splitting PDF into individual pages...");
 
     try {
-      // Default start date if admin didn't select one
-      const effectiveStartDate = startDate || new Date(2026, 6, 1);
+      const arrayBuffer = await selectedFile.arrayBuffer();
+      // Split the PDF
+      const pageBlobs = await splitPdf(arrayBuffer);
+      const total = pageBlobs.length;
+      setTotalPages(total);
 
-      // Upload the single master Teaching Diary PDF file directly to Bunny Storage
-      const result = await uploadFileWithProgress(selectedFile, {
-        folderPath: `teacher-diaries/${selectedClass.toLowerCase().replace(/\s+/g, "-")}/${selectedMedium.toLowerCase().replace(/\s+/g, "-")}`,
-        maxSizeBytes: 50 * 1024 * 1024,
-        preferredProvider: "bunny",
-        onProgress: (pct) => {
-          setUploadProgress(10 + Math.round(pct * 0.90));
-        },
-      });
+      if (total === 0) {
+        throw new Error("The uploaded PDF does not contain any readable pages.");
+      }
+
+      // If a diary exists, clear it first (Replace / Upload new version)
+      if (existingDiary.exists) {
+        setUploadStatus("Replacing existing diary. Clearing old pages...");
+        await deleteExistingDiary(selectedClass, selectedMedium);
+      }
+
+      setUploadStatus(`Uploading pages (0/${total})...`);
+
+      const start = new Date(startDate);
+      const concurrencyLimit = 10;
+      const runningPromises: Map<number, Promise<void>> = new Map();
+      let completedCount = 0;
+
+      const uploadPageTask = async (i: number) => {
+        const pageNum = i + 1;
+        const currentDate = new Date(start);
+        currentDate.setDate(start.getDate() + i);
+        const dateStr = format(currentDate, "yyyy-MM-dd");
+
+        const blob = pageBlobs[i];
+        const pageFile = new File([blob], `${dateStr}.pdf`, { type: "application/pdf" });
+
+        let attempts = 3;
+        let downloadURL = "";
+        while (attempts > 0) {
+          try {
+            const result = await uploadFileWithProgress(pageFile, {
+              folderPath: `teacher-diaries/${selectedClass.toLowerCase().replace(/\s+/g, "-")}/${selectedMedium.toLowerCase().replace(/\s+/g, "-")}`,
+              maxSizeBytes: 15 * 1024 * 1024,
+            });
+            downloadURL = result.url;
+            break;
+          } catch (storageErr) {
+            attempts--;
+            if (attempts === 0) {
+              console.error(`Upload Failed for page ${pageNum}:`, storageErr);
+              throw storageErr;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+          }
+        }
+
+        const docRef = doc(db, "teacher_diaries", selectedClass, selectedMedium, dateStr);
+        await setDoc(docRef, {
+          pageUrl: downloadURL,
+          pageURL: downloadURL,
+          pageNumber: pageNum,
+          storagePath: `teacher-diaries/${selectedClass.toLowerCase().replace(/\s+/g, "-")}/${selectedMedium.toLowerCase().replace(/\s+/g, "-")}/${dateStr}.pdf`,
+          timestamp: Date.now(),
+        });
+      };
+
+      for (let i = 0; i < total; i++) {
+        const promise = uploadPageTask(i)
+          .then(() => {
+            completedCount++;
+            const percent = Math.round((completedCount / total) * 100);
+            setUploadProgress(percent);
+            setUploadStatus(`Uploading pages (${completedCount}/${total})...`);
+            runningPromises.delete(i);
+          })
+          .catch((err) => {
+            console.error(`Failed at page task ${i + 1}:`, err);
+            throw err;
+          });
+
+        runningPromises.set(i, promise);
+
+        if (runningPromises.size >= concurrencyLimit) {
+          await Promise.race(runningPromises.values());
+        }
+      }
+
+      await Promise.all(runningPromises.values());
+
+      setLastUploadedDate(format(new Date(), "dd/MM/yyyy HH:mm"));
+      setUploadStatus("Success");
+      toast.success(`Redesigned Teacher Diary uploaded successfully! (${total} pages matched).`);
       
-      const masterPdfUrl = result.url;
-
-      // 1. Wipe out any old split/corrupted Firestore documents for this class and medium
-      await deleteExistingDiary(selectedClass, selectedMedium);
-
-      // 2. Save directly to Firestore teacher_diaries as master_diary (no splitting needed!)
-      const diaryDocRef = doc(db, "teacher_diaries", selectedClass, selectedMedium, "master_diary");
-      await setDoc(diaryDocRef, {
-        pageUrl: masterPdfUrl,
-        masterPdfUrl: masterPdfUrl,
-        fileName: selectedFile.name,
-        uploadedAt: Date.now(),
-        startDate: format(effectiveStartDate, "yyyy-MM-dd"),
-        className: selectedClass,
-        medium: selectedMedium,
-        pageNumber: 1,
-      });
-
-      toast.success("Document uploaded successfully! Direct preview available on teacher dashboard.");
-
-      setUploadProgress(100);
-      setUploadStatus("Upload complete!");
-      await fetchExistingDiaryInfo(selectedClass, selectedMedium);
-      
-      // Clean up selected file state
+      // Clean up selected file
       setSelectedFile(null);
       if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
       setLocalPreviewUrl(null);
+      setStartDate(undefined);
 
+      // Refresh database status
+      await fetchExistingDiaryInfo(selectedClass, selectedMedium);
     } catch (err: any) {
-      console.error("Upload initialization error:", err);
+      console.error("Process/Upload error:", err);
       setUploadStatus("Error");
-      toast.error(err.message || "Failed to upload diary PDF.");
+      toast.error(err.message || "Failed to split and upload diary PDF.");
     } finally {
       setUploading(false);
     }
@@ -416,35 +350,10 @@ function TeacherDiaryAdmin() {
                 <h2 className="text-lg font-bold text-gray-900">Upload Control Flow</h2>
               </div>
 
-              {/* Step 1: Select Medium */}
+              {/* Step 1: Select Class */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <span className="flex items-center justify-center size-5 rounded-full bg-indigo-50 text-indigo-600 text-xs font-black">1</span>
-                  <label className="text-xs font-extrabold text-gray-600 uppercase tracking-wider">Select Medium</label>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  {mediums.map((med) => (
-                    <button
-                      key={med}
-                      type="button"
-                      disabled={uploading}
-                      onClick={() => setSelectedMedium(med)}
-                      className={`py-3 px-6 rounded-xl text-sm font-bold border transition-all text-center ${
-                        selectedMedium === med
-                          ? "bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-100"
-                          : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
-                      }`}
-                    >
-                      {med}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Step 2: Select Class */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className="flex items-center justify-center size-5 rounded-full bg-indigo-50 text-indigo-600 text-xs font-black">2</span>
                   <label className="text-xs font-extrabold text-gray-600 uppercase tracking-wider">Select Class</label>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -466,17 +375,42 @@ function TeacherDiaryAdmin() {
                 </div>
               </div>
 
+              {/* Step 2: Select Medium */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="flex items-center justify-center size-5 rounded-full bg-indigo-50 text-indigo-600 text-xs font-black">2</span>
+                  <label className="text-xs font-extrabold text-gray-600 uppercase tracking-wider">Select Medium</label>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {mediums.map((med) => (
+                    <button
+                      key={med}
+                      type="button"
+                      disabled={uploading}
+                      onClick={() => setSelectedMedium(med)}
+                      className={`py-3 px-6 rounded-xl text-sm font-bold border transition-all text-center ${
+                        selectedMedium === med
+                          ? "bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-100"
+                          : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
+                      }`}
+                    >
+                      {med}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Step 3: Upload Diary */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <span className="flex items-center justify-center size-5 rounded-full bg-indigo-50 text-indigo-600 text-xs font-black">3</span>
-                  <label className="text-xs font-extrabold text-gray-600 uppercase tracking-wider">Upload Teaching Diary (PDF, Word or Excel)</label>
+                  <label className="text-xs font-extrabold text-gray-600 uppercase tracking-wider">Upload Teaching Diary PDF</label>
                 </div>
                 
                 <div className="relative border-2 border-dashed border-gray-200 hover:border-indigo-500 bg-gray-50 hover:bg-indigo-50/20 rounded-2xl p-6 text-center cursor-pointer transition-all">
                   <input
                     type="file"
-                    accept=".pdf,.docx,.doc,.xlsx,.xls"
+                    accept=".pdf"
                     disabled={uploading}
                     onChange={handleFileChange}
                     className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
@@ -494,9 +428,9 @@ function TeacherDiaryAdmin() {
                       </div>
                     ) : (
                       <div className="space-y-1">
-                        <p className="text-xs font-bold text-gray-700">Click or drag file here</p>
+                        <p className="text-xs font-bold text-gray-700">Click or drag PDF diary here</p>
                         <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">
-                          PDF, Word (.docx) or Excel (.xlsx) files
+                          PDF files only
                         </p>
                       </div>
                     )}
@@ -504,26 +438,24 @@ function TeacherDiaryAdmin() {
                 </div>
               </div>
 
-              {/* Step 4: Start Date (Optional) */}
+              {/* Step 4: Select Start Date */}
               <div className="space-y-3">
-                <label className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center justify-between">
-                  <span>4. Select Start Date (Optional)</span>
-                  <span className="text-[10px] text-gray-400 font-normal">Defaults to Academic Year Start if left blank</span>
-                </label>
+                <div className="flex items-center gap-2">
+                  <span className="flex items-center justify-center size-5 rounded-full bg-indigo-50 text-indigo-600 text-xs font-black">4</span>
+                  <label className="text-xs font-extrabold text-gray-600 uppercase tracking-wider">Select Start Date</label>
+                </div>
                 <Popover>
                   <PopoverTrigger asChild>
                     <button
                       type="button"
                       disabled={uploading}
-                      className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100/80 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 transition-colors cursor-pointer"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-800 hover:bg-gray-100 flex items-center justify-between cursor-pointer outline-none"
                     >
-                      <span>
-                        {startDate ? format(startDate, "dd/MM/yyyy") : "Auto / Select Start Date..."}
-                      </span>
-                      <Calendar className="size-4 text-gray-400" />
+                      <span>{startDate ? format(startDate, "dd/MM/yyyy") : "Select Start Date..."}</span>
+                      <Calendar className="size-4 text-gray-500" />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 z-50 bg-white shadow-xl rounded-2xl border border-gray-100" align="start">
+                  <PopoverContent className="w-auto p-0 z-50">
                     <CalendarComponent
                       mode="single"
                       selected={startDate}
@@ -540,7 +472,7 @@ function TeacherDiaryAdmin() {
                   <button
                     type="button"
                     onClick={handleUpload}
-                    disabled={uploading || !selectedFile}
+                    disabled={uploading || !selectedFile || !startDate}
                     className="flex-1 py-3.5 px-6 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-100 disabled:to-gray-100 disabled:text-gray-400 text-white rounded-xl text-sm font-bold shadow-md shadow-indigo-100 hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {uploading && uploadStatus.includes("Uploading") ? (
@@ -571,57 +503,24 @@ function TeacherDiaryAdmin() {
                 </div>
 
                 {/* Real-time upload progress details */}
-                {(uploading || activeJob) && (
+                {uploading && (
                   <div className="bg-indigo-50/50 border border-indigo-100/50 rounded-2xl p-4 space-y-3">
                     <div className="flex justify-between items-center text-xs font-bold text-indigo-700">
-                      <span className="animate-pulse">
-                        {activeJob ? `Background Job: ${activeJob.status.replace("_", " ").toUpperCase()}` : uploadStatus}
-                      </span>
-                      <span>
-                        {activeJob ? Math.round((activeJob.processedPages / (activeJob.totalPages || 1)) * 100) : uploadProgress}%
-                      </span>
+                      <span className="animate-pulse">{uploadStatus}</span>
+                      <span>{uploadProgress}%</span>
                     </div>
                     <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
                       <div
                         className="bg-gradient-to-r from-indigo-600 to-purple-600 h-full transition-all duration-300 rounded-full"
-                        style={{ width: `${activeJob ? Math.round((activeJob.processedPages / (activeJob.totalPages || 1)) * 100) : uploadProgress}%` }}
+                        style={{ width: `${uploadProgress}%` }}
                       />
                     </div>
-                    {(totalPages > 0 || (activeJob && activeJob.totalPages > 0)) && (
+                    {totalPages > 0 && (
                       <div className="flex justify-between text-[10px] font-black text-indigo-500 uppercase tracking-wider">
-                        <span>Total Pages: {activeJob ? activeJob.totalPages : totalPages}</span>
-                        <span>{activeJob ? `Processed: ${activeJob.processedPages}` : "Consecutive Mapping Running"}</span>
+                        <span>Total Pages: {totalPages}</span>
+                        <span>Consecutive Mapping Running</span>
                       </div>
                     )}
-                  </div>
-                )}
-
-                {failedJob && !activeJob && (
-                  <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 space-y-3">
-                    <div className="flex items-center gap-3 text-rose-800">
-                      <AlertTriangle className="size-5 shrink-0 text-rose-600" />
-                      <div className="flex-1 space-y-0.5">
-                        <h4 className="text-xs font-black uppercase tracking-wider">Background Processing Failed</h4>
-                        <p className="text-[10px] font-bold text-rose-600/80">
-                          The PDF download/splitting process encountered a network or CORS issue.
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          try {
-                            const jobId = `${selectedClass}_${selectedMedium}`;
-                            await retryJob(jobId);
-                            toast.success("Job retry triggered.");
-                          } catch (err: any) {
-                            toast.error("Failed to trigger job retry.");
-                          }
-                        }}
-                        className="py-1.5 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm shadow-rose-100"
-                      >
-                        <RefreshCw className="size-3" /> Retry
-                      </button>
-                    </div>
                   </div>
                 )}
               </div>
@@ -670,29 +569,19 @@ function TeacherDiaryAdmin() {
             </div>
           </div>
 
-          {/* Right Column - Large File Preview Card */}
+          {/* Right Column - Large PDF Preview Card */}
           <div className="lg:col-span-5">
             <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm sticky top-6 space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-                <span className="text-xs font-extrabold text-gray-600 uppercase tracking-wider">File Preview / तपशील</span>
-                {selectedFile ? (
+                <span className="text-xs font-extrabold text-gray-600 uppercase tracking-wider">Large PDF Preview</span>
+                {selectedFile && (
                   <span className="px-2.5 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-wider">
-                    New File Selected
+                    PDF Loaded
                   </span>
-                ) : existingPreviewUrl ? (
-                  <span className="px-2.5 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-wider">
-                    Active Diary Preview
-                  </span>
-                ) : null}
+                )}
               </div>
 
-              {localPreviewUrl === "doc-html-preview" && docHtmlPreview ? (
-                <div
-                  className="w-full rounded-2xl border border-indigo-100 bg-white p-4 overflow-y-auto scrollbar-thin prose prose-sm max-w-none"
-                  style={{ height: "550px" }}
-                  dangerouslySetInnerHTML={{ __html: docHtmlPreview }}
-                />
-              ) : localPreviewUrl ? (
+              {localPreviewUrl ? (
                 <div className="w-full rounded-2xl overflow-hidden border border-gray-200 bg-gray-50" style={{ height: "550px" }}>
                   <iframe
                     src={`${localPreviewUrl}#view=FitH`}
@@ -700,58 +589,15 @@ function TeacherDiaryAdmin() {
                     className="w-full h-full border-none"
                   />
                 </div>
-              ) : existingPreviewUrl ? (
-                <div className="space-y-2">
-                  <div className="w-full rounded-2xl overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center relative p-6" style={{ minHeight: "450px", height: "530px" }}>
-                    {loadingPreview ? (
-                      <div className="flex flex-col items-center gap-3 text-slate-400">
-                        <Loader2 className="size-8 animate-spin text-indigo-600" />
-                        <span className="text-[10px] font-bold uppercase tracking-wider">Syncing preview page...</span>
-                      </div>
-                    ) : existingPreviewUrl.match(/\.(docx?|xlsx?)$/i) ? (
-                      <div className="flex flex-col items-center justify-center p-8 text-center space-y-4 bg-white rounded-2xl border border-indigo-100 shadow-sm max-w-sm w-full">
-                        <div className="size-16 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-md">
-                          <FileText className="size-8" />
-                        </div>
-                        <div className="space-y-1">
-                          <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider">Active Word / Excel Diary</h4>
-                          <p className="text-xs text-slate-500 font-bold">Document is active for {selectedClass} ({selectedMedium})</p>
-                        </div>
-                        <a
-                          href={existingPreviewUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl uppercase tracking-wider transition-colors shadow-sm cursor-pointer"
-                        >
-                          <Download className="size-4" /> Download / View File
-                        </a>
-                      </div>
-                    ) : authenticatedPreviewUrl ? (
-                      <iframe
-                        src={`${authenticatedPreviewUrl}#view=FitH`}
-                        title="Existing Active Diary Preview"
-                        className="w-full h-full border-none"
-                      />
-                    ) : (
-                      <div className="flex flex-col items-center text-center p-6 text-slate-400">
-                        <AlertTriangle className="size-8 text-amber-500 mb-2" />
-                        <span className="text-xs font-bold">Failed to load preview PDF</span>
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-[10px] text-center text-slate-500 font-bold uppercase tracking-wider">
-                    Active Saved Diary ({existingDiary.startDateStr})
-                  </p>
-                </div>
               ) : (
                 <div className="w-full aspect-[3/4] rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/50 flex flex-col items-center justify-center text-center p-8 space-y-3">
                   <div className="size-12 rounded-full bg-white flex items-center justify-center text-gray-400 shadow-sm">
                     <FileText className="size-6" />
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs font-bold text-gray-700">No file selected</p>
+                    <p className="text-xs font-bold text-gray-700">No PDF selected</p>
                     <p className="text-[10px] text-gray-400 max-w-[200px]">
-                      Select a Teaching Diary PDF, Word or Excel file in Step 3 to see preview here.
+                      Select a Teaching Diary PDF file in Step 3 to see page preview here.
                     </p>
                   </div>
                 </div>

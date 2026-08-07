@@ -468,7 +468,7 @@ export function CCEStudentInfo({
             onChange={setNewName}
             required
             icon={User}
-            placeholder=""
+            placeholder="उदा. समृद्धी सचिन साळुंखे पाटील"
           />
           <FloatInput
             label="हजेरी क्रमांक (Roll No.)"

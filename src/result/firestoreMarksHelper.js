@@ -34,10 +34,10 @@ export const isStudentSemiEnglish = (s) => {
 export const matchStudentClassAndMedium = (student, targetClass, targetMedium, currentTeacherId = null) => {
   if (!student) return false;
 
-  // If currentTeacherId is supplied, enforce teacher isolation with fallback
+  // If currentTeacherId is supplied or in localStorage, enforce teacher isolation
   const tId = currentTeacherId || (typeof localStorage !== "undefined" ? localStorage.getItem("current_teacher_id") : null);
   const sTeacherId = student.teacherId || student.createdById || student.userId;
-  if (tId && tId !== "default_teacher" && sTeacherId && sTeacherId !== "default_teacher") {
+  if (tId) {
     if (sTeacherId !== tId) return false;
   }
 

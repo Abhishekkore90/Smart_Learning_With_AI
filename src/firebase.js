@@ -18,10 +18,4 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-let analytics = null;
-if (typeof window !== "undefined" && import.meta.env.VITE_FIREBASE_MEASUREMENT_ID) {
-  try {
-    analytics = getAnalytics(app);
-  } catch (e) {}
-}
-export { app, analytics };
+const analytics = getAnalytics(app);

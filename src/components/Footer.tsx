@@ -9,7 +9,7 @@ export function Footer() {
   const t = DICTIONARY[lang] as any;
 
   return (
-    <footer className="bg-slate-950 text-slate-300 py-16 px-6 relative overflow-hidden">
+    <footer className="bg-footer-bg text-footer-text py-16 px-6 relative overflow-hidden border-t border-white/10">
       <div className="max-w-7xl mx-auto relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
           {/* Brand */}
@@ -23,15 +23,15 @@ export function Footer() {
                 />
               </div>
               <div className="flex flex-col">
-                <span className="font-black text-xl tracking-tighter text-white leading-none">
+                <span className="font-black text-xl tracking-tighter text-footer-heading leading-none">
                   SGK Brainova
                 </span>
-                <span className="text-[8px] font-bold tracking-[0.2em] text-primary uppercase mt-1">
+                <span className="text-[8px] font-bold tracking-[0.2em] text-primary-light uppercase mt-1">
                   Smart Learning With AI
                 </span>
               </div>
             </Link>
-            <p className="text-sm text-slate-400 leading-relaxed max-w-xs">
+            <p className="text-sm text-footer-text opacity-85 leading-relaxed max-w-xs">
               {t.footer_desc}
             </p>
             <div className="flex items-center gap-4">
@@ -39,7 +39,7 @@ export function Footer() {
                 <a
                   key={i}
                   href="#"
-                  className="size-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-primary hover:border-primary hover:text-white transition-all text-slate-400"
+                  className="size-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-primary-light hover:border-primary-light hover:text-white transition-all text-footer-text"
                 >
                   <Icon className="size-4" />
                 </a>
@@ -49,7 +49,7 @@ export function Footer() {
 
           {/* Quick Links */}
           <div className="space-y-6">
-            <h4 className="text-sm font-black text-white uppercase tracking-widest">
+            <h4 className="text-sm font-black text-footer-heading uppercase tracking-widest">
               {t.footer_platform}
             </h4>
             <ul className="space-y-3">
@@ -62,7 +62,7 @@ export function Footer() {
                 <li key={i}>
                   <Link
                     to={link.to}
-                    className="text-sm text-slate-400 hover:text-primary transition-colors"
+                    className="text-sm text-footer-text hover:text-primary-light transition-colors"
                   >
                     {link.label}
                   </Link>
@@ -73,20 +73,20 @@ export function Footer() {
 
           {/* Contact */}
           <div className="space-y-6">
-            <h4 className="text-sm font-black text-white uppercase tracking-widest">
+            <h4 className="text-sm font-black text-footer-heading uppercase tracking-widest">
               {t.footer_contact_title}
             </h4>
             <ul className="space-y-4">
-              <li className="flex items-start gap-3 text-sm text-slate-400">
-                <MapPin className="size-5 text-primary shrink-0" />
+              <li className="flex items-start gap-3 text-sm text-footer-text opacity-90">
+                <MapPin className="size-5 text-primary-light shrink-0" />
                 <span>145/A, 194/A/2, PL NO 100, SHREE CAPITAL-2, WARNALI, WILLINGDON COLLEGE SANGLI, MIRAJ, SANGLI, MAHARASHTRA - 416415</span>
               </li>
-              <li className="flex items-center gap-3 text-sm text-slate-400">
-                <Phone className="size-5 text-primary shrink-0" />
+              <li className="flex items-center gap-3 text-sm text-footer-text opacity-90">
+                <Phone className="size-5 text-primary-light shrink-0" />
                 <span>9422778992</span>
               </li>
-              <li className="flex items-center gap-3 text-sm text-slate-400">
-                <Mail className="size-5 text-primary shrink-0" />
+              <li className="flex items-center gap-3 text-sm text-footer-text opacity-90">
+                <Mail className="size-5 text-primary-light shrink-0" />
                 <span>brgkendre86@gmail.com</span>
               </li>
             </ul>
@@ -94,36 +94,36 @@ export function Footer() {
 
           {/* Newsletter */}
           <div className="space-y-6">
-            <h4 className="text-sm font-black text-white uppercase tracking-widest">
+            <h4 className="text-sm font-black text-footer-heading uppercase tracking-widest">
               {t.footer_newsletter}
             </h4>
-            <p className="text-sm text-slate-400">{t.footer_newsletter_desc}</p>
+            <p className="text-sm text-footer-text opacity-90">{t.footer_newsletter_desc}</p>
             <div className="flex items-center gap-2">
               <input
                 type="email"
                 placeholder={t.footer_email_placeholder}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary transition-colors"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-primary-light transition-colors"
               />
-              <button className="bg-primary text-white px-4 py-3 rounded-xl font-bold hover:bg-primary/90 transition-colors">
+              <button className="bg-button-gradient text-white px-4 py-3 rounded-xl font-bold hover:bg-button-hover transition-colors">
                 <Sparkles className="size-5" />
               </button>
             </div>
           </div>
         </div>
 
-        <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-500 font-medium">
+        <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-footer-text opacity-60 font-medium">
           <p>
             © {new Date().getFullYear()} SGK Brainova Smart Learning With AI.{" "}
             {t.footer_copyright}
           </p>
           <div className="flex items-center gap-6">
-            <a href="#" className="hover:text-white transition-colors">
+            <a href="#" className="hover:text-footer-heading transition-colors">
               {t.footer_privacy}
             </a>
-            <a href="#" className="hover:text-white transition-colors">
+            <a href="#" className="hover:text-footer-heading transition-colors">
               {t.footer_terms}
             </a>
-            <a href="#" className="hover:text-white transition-colors">
+            <a href="#" className="hover:text-footer-heading transition-colors">
               {t.footer_cookies}
             </a>
           </div>

@@ -101,7 +101,7 @@ export const DICTIONARY = {
     title1: "Smart Learning ",
     title2: "With AI.",
     subtitle:
-      "Master next-generation skills through our immersive, industry-led digital learning ecosystem. The most advanced institutional platform is here.",
+      "AI-powered learning and teaching solutions that make education interactive, personalized and effective.",
     btnEnter: "Enter Portal",
     btnLearn: "Learn More",
     c1_title: "Study",
@@ -441,7 +441,7 @@ export const DICTIONARY = {
     title1: "Smart Learning ",
     title2: "With AI.",
     subtitle:
-      "आमच्या आधुनिक आणि डिजिटल शिक्षण प्रणालीद्वारे नवीन कौशल्ये आत्मसात करा. सर्वात प्रगत शैक्षणिक प्लॅटफॉर्म येथे आहे.",
+      "एआय-संचालित शिक्षण आणि अध्यापन उपाय जे शिक्षण परस्परसंवादी, वैयक्तिकृत आणि प्रभावी बनवतात.",
     btnEnter: "पोर्टल उघडा",
     btnLearn: "अधिक माहिती",
     c1_title: "अभ्यास",
@@ -782,7 +782,7 @@ export const DICTIONARY = {
     title1: "Smart Learning ",
     title2: "With AI.",
     subtitle:
-      "हमारे आधुनिक और डिजिटल लर्निंग इकोसिस्टम के माध्यम से नई पीढ़ी के कौशल में महारत हासिल करें। सबसे उन्नत शैक्षिक मंच यहाँ है।",
+      "एआई-संचालित शिक्षण और अध्यापन समाधान जो शिक्षा को इंटरैक्टिव, व्यक्तिगत और प्रभावी बनाते हैं।",
     btnEnter: "पोर्टल खोलें",
     btnLearn: "अधिक जानें",
     c1_title: "अभ्यास",

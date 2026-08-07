@@ -19,7 +19,7 @@ import {
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 // @ts-ignore
-import { matchStudentClassAndMedium, fetchStudentsForClass } from "@/result/firestoreMarksHelper";
+import { matchStudentClassAndMedium } from "@/result/firestoreMarksHelper";
 // @ts-ignore
 import { getTeacherId, matchStudentTeacherClassAndMedium } from "@/lib/teacherIsolationHelper";
 import { useState, useMemo, useEffect } from "react";
@@ -194,46 +194,20 @@ function TeacherResultsPage() {
 
   const teacherId = getTeacherId(user, profile);
 
-  // Real-time student count sync for selected class AND medium (isolated by teacherId & local cache)
+  // Real-time student count sync for selected class AND medium (isolated by teacherId)
   useEffect(() => {
-    let isMounted = true;
-    const cacheKey = `cce_students_cache_${selectedClass}_${selectedMedium}`;
-
-    // Instant 0ms cache count
-    try {
-      const cached = localStorage.getItem(cacheKey);
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed)) {
-          setStudentsCount(parsed.length);
-        }
-      }
-    } catch (e) {}
-
-    const qUsers = query(collection(db, "users"), where("role", "==", "student"));
-    const unsubUsers = onSnapshot(qUsers, async (snapshot) => {
-      if (!isMounted) return;
-      const raw = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-
-      let filtered = raw.filter((s: any) => matchStudentClassAndMedium(s, selectedClass, selectedMedium));
-
-      if (filtered.length === 0) {
-        try {
-          const studentsList = await fetchStudentsForClass(selectedClass, selectedMedium, teacherId);
-          if (isMounted && studentsList && studentsList.length > 0) {
-            setStudentsCount(studentsList.length);
-            return;
-          }
-        } catch (e) {}
-      }
-
+    const q = query(
+      collection(db, "users"),
+      where("role", "==", "student")
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const raw = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      const filtered = raw.filter((s: any) => {
+        return matchStudentTeacherClassAndMedium(s, teacherId, selectedClass, selectedMedium);
+      });
       setStudentsCount(filtered.length);
     });
-
-    return () => {
-      isMounted = false;
-      unsubUsers();
-    };
+    return () => unsubscribe();
   }, [selectedClass, selectedMedium, teacherId]);
 
   // Custom File Uploader List States

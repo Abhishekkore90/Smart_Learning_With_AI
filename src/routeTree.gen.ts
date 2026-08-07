@@ -13,6 +13,7 @@ import { Route as UploadRouteImport } from './routes/upload'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as ResourcesRouteImport } from './routes/resources'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as ProductsRouteImport } from './routes/products'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as MentorsRouteImport } from './routes/mentors'
 import { Route as LoginRouteImport } from './routes/login'
@@ -114,6 +115,11 @@ const ResourcesRoute = ResourcesRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProductsRoute = ProductsRouteImport.update({
+  id: '/products',
+  path: '/products',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PricingRoute = PricingRouteImport.update({
@@ -550,6 +556,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/mentors': typeof MentorsRoute
   '/pricing': typeof PricingRoute
+  '/products': typeof ProductsRoute
   '/profile': typeof ProfileRoute
   '/resources': typeof ResourcesRoute
   '/signup': typeof SignupRoute
@@ -637,6 +644,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/mentors': typeof MentorsRoute
   '/pricing': typeof PricingRoute
+  '/products': typeof ProductsRoute
   '/profile': typeof ProfileRoute
   '/resources': typeof ResourcesRoute
   '/signup': typeof SignupRoute
@@ -726,6 +734,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/mentors': typeof MentorsRoute
   '/pricing': typeof PricingRoute
+  '/products': typeof ProductsRoute
   '/profile': typeof ProfileRoute
   '/resources': typeof ResourcesRoute
   '/signup': typeof SignupRoute
@@ -816,6 +825,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/mentors'
     | '/pricing'
+    | '/products'
     | '/profile'
     | '/resources'
     | '/signup'
@@ -903,6 +913,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/mentors'
     | '/pricing'
+    | '/products'
     | '/profile'
     | '/resources'
     | '/signup'
@@ -991,6 +1002,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/mentors'
     | '/pricing'
+    | '/products'
     | '/profile'
     | '/resources'
     | '/signup'
@@ -1080,6 +1092,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   MentorsRoute: typeof MentorsRoute
   PricingRoute: typeof PricingRoute
+  ProductsRoute: typeof ProductsRoute
   ProfileRoute: typeof ProfileRoute
   ResourcesRoute: typeof ResourcesRoute
   SignupRoute: typeof SignupRoute
@@ -1170,6 +1183,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/products': {
+      id: '/products'
+      path: '/products'
+      fullPath: '/products'
+      preLoaderRoute: typeof ProductsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pricing': {
@@ -1822,6 +1842,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   MentorsRoute: MentorsRoute,
   PricingRoute: PricingRoute,
+  ProductsRoute: ProductsRoute,
   ProfileRoute: ProfileRoute,
   ResourcesRoute: ResourcesRoute,
   SignupRoute: SignupRoute,

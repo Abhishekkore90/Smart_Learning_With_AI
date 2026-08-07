@@ -41,23 +41,16 @@ export const getTeacherDocId = (teacherId, key) => {
 export const matchStudentTeacherClassAndMedium = (student, currentTeacherId, selectedClass, selectedMedium) => {
   if (!student) return false;
 
-  // 1. Teacher ID Isolation (with fallback for unbound / general students)
+  // 1. Strict Teacher ID Isolation
   const sTeacherId = student.teacherId || student.createdById || student.userId;
-  if (
-    currentTeacherId &&
-    currentTeacherId !== "default_teacher" &&
-    sTeacherId &&
-    sTeacherId !== "default_teacher"
-  ) {
-    if (sTeacherId !== currentTeacherId) return false;
-  }
+  if (sTeacherId !== currentTeacherId) return false;
 
   // 2. Class Normalization Matching
   const stdClass = normalizeClassKey(student.class || student.currentClass || student.className);
   const tgtClass = normalizeClassKey(selectedClass);
   if (stdClass !== tgtClass) return false;
 
-  // 3. Medium Isolation Matching (Strict Semi vs Marathi)
+  // 3. Medium Matching
   const isSemi = isStudentSemiEnglish(student);
   const targetIsSemi = String(selectedMedium || "marathi").toLowerCase().trim() === "semi";
   return targetIsSemi ? isSemi : !isSemi;

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from "framer-motion";
 import {
   Sparkles,
   GraduationCap,
@@ -11,6 +11,7 @@ import {
   FileText,
   MapPin,
   CheckCircle2,
+  Check,
   Cpu,
   Database,
   LineChart,
@@ -249,6 +250,65 @@ const OFFER_ICONS = [
   Target
 ];
 
+const OFFER_CARDS_STYLE = [
+  {
+    leafBg: "bg-gradient-to-br from-icon-blue to-[#4d7eff]", // Custom Blue
+    textColor: "group-hover:text-icon-blue dark:group-hover:text-blue-400",
+    glowColor: "group-hover:shadow-[0_20px_50px_rgba(91,140,255,0.12)]",
+    badgeText: "+ AI Assistant Live",
+    badgeBg: "bg-feature-blue text-icon-blue border-border",
+    particleBg: "bg-icon-blue/15 text-icon-blue",
+  },
+  {
+    leafBg: "bg-gradient-to-br from-icon-purple to-primary", // Custom Purple
+    textColor: "group-hover:text-icon-purple dark:group-hover:text-purple-400",
+    glowColor: "group-hover:shadow-[0_20px_50px_rgba(122,90,248,0.12)]",
+    badgeText: "",
+    badgeBg: "",
+    particleBg: "bg-icon-purple/15 text-icon-purple",
+  },
+  {
+    leafBg: "bg-gradient-to-br from-icon-green to-[#2dbb71]", // Custom Green
+    textColor: "group-hover:text-icon-green dark:group-hover:text-green-400",
+    glowColor: "group-hover:shadow-[0_20px_50px_rgba(57,201,122,0.12)]",
+    badgeText: "",
+    badgeBg: "",
+    particleBg: "bg-icon-green/15 text-icon-green",
+  },
+  {
+    leafBg: "bg-gradient-to-br from-icon-pink to-[#ff5b9b]", // Custom Pink
+    textColor: "group-hover:text-icon-pink dark:group-hover:text-pink-400",
+    glowColor: "group-hover:shadow-[0_20px_50px_rgba(255,109,170,0.12)]",
+    badgeText: "",
+    badgeBg: "",
+    particleBg: "bg-icon-pink/15 text-icon-pink",
+  },
+  {
+    leafBg: "bg-gradient-to-br from-icon-orange to-[#ffa545]", // Custom Orange
+    textColor: "group-hover:text-icon-orange dark:group-hover:text-orange-400",
+    glowColor: "group-hover:shadow-[0_20px_50px_rgba(255,154,60,0.12)]",
+    badgeText: "Track progress now",
+    badgeBg: "bg-feature-orange text-icon-orange border-border",
+    particleBg: "bg-icon-orange/15 text-icon-orange",
+  },
+  {
+    leafBg: "bg-gradient-to-br from-icon-blue to-[#4d7eff]", // Custom Blue
+    textColor: "group-hover:text-icon-blue dark:group-hover:text-blue-400",
+    glowColor: "group-hover:shadow-[0_20px_50px_rgba(91,140,255,0.12)]",
+    badgeText: "Diverse course catalogue",
+    badgeBg: "bg-feature-blue text-icon-blue border-border",
+    particleBg: "bg-icon-blue/15 text-icon-blue",
+  },
+  {
+    leafBg: "bg-gradient-to-br from-icon-purple to-primary", // Custom Purple
+    textColor: "group-hover:text-icon-purple dark:group-hover:text-purple-400",
+    glowColor: "group-hover:shadow-[0_20px_50px_rgba(122,90,248,0.12)]",
+    badgeText: "",
+    badgeBg: "",
+    particleBg: "bg-icon-purple/15 text-icon-purple",
+  },
+];
+
 export function AboutPage() {
   const { lang } = useLanguage();
   // Safe fallback to 'en' if lang is not en/mr/hi
@@ -259,17 +319,50 @@ export function AboutPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalImage, setModalImage] = useState<string | null>(null);
 
+  // Motion values for the 3D tilt effect on the Key Focus Areas card
+  const cardX = useMotionValue(0.5);
+  const cardY = useMotionValue(0.5);
+  
+  const springConfig = { damping: 25, stiffness: 200, mass: 0.5 };
+  const cardXSpring = useSpring(cardX, springConfig);
+  const cardYSpring = useSpring(cardY, springConfig);
+  
+  const rotateX = useTransform(cardYSpring, [0, 1], [8, -8]);
+  const rotateY = useTransform(cardXSpring, [0, 1], [-8, 8]);
+
+  const [glarePos, setGlarePos] = useState({ x: 0, y: 0 });
+  const [isHovered, setIsHovered] = useState(false);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    cardX.set(mouseX / rect.width);
+    cardY.set(mouseY / rect.height);
+    setGlarePos({ x: mouseX, y: mouseY });
+  };
+
+  const handleMouseLeave = () => {
+    cardX.set(0.5);
+    cardY.set(0.5);
+    setIsHovered(false);
+  };
+
+  const handleMouseEnter = () => {
+    setIsHovered(true);
+  };
+
   const openImageModal = (imgSrc: string) => {
     setModalImage(imgSrc);
     setIsModalOpen(true);
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 overflow-x-hidden w-full font-sans antialiased selection:bg-teal-500/30 selection:text-teal-200">
+    <div className="min-h-screen bg-section-bg/70 text-text dark:bg-transparent dark:text-slate-100 overflow-x-hidden w-full font-sans antialiased selection:bg-primary/20 selection:text-primary relative border-t border-border">
       {/* Background Decorative Gradients */}
-      <div className="absolute top-0 left-0 right-0 h-[500px] bg-gradient-to-b from-indigo-500/10 via-teal-500/5 to-transparent pointer-events-none z-0" />
-      <div className="absolute top-[30%] -left-1/4 w-[600px] h-[600px] bg-teal-600/10 rounded-full blur-[150px] pointer-events-none" />
-      <div className="absolute top-[60%] -right-1/4 w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[150px] pointer-events-none" />
+      <div className="absolute top-0 left-0 right-0 h-[500px] bg-gradient-to-b from-primary-light/10 via-blue/5 to-transparent pointer-events-none z-0" />
+      <div className="absolute top-[30%] -left-1/4 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[150px] pointer-events-none" />
+      <div className="absolute top-[60%] -right-1/4 w-[600px] h-[600px] bg-blue/10 rounded-full blur-[150px] pointer-events-none" />
 
       {/* Hero Section */}
       <section className="relative pt-32 pb-16 md:pt-40 md:pb-24 px-4 sm:px-6 max-w-7xl mx-auto z-10">
@@ -278,9 +371,9 @@ export function AboutPage() {
             <motion.div
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-300 text-xs font-bold uppercase tracking-[0.2em] shadow-inner"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-feature-purple border border-border dark:bg-primary/10 dark:border-primary/20 text-primary dark:text-purple text-xs font-bold uppercase tracking-[0.2em] shadow-inner"
             >
-              <Sparkles className="size-4 animate-pulse text-teal-400" />
+              <Sparkles className="size-4 animate-pulse text-primary dark:text-orange" />
               <span>{t.badge}</span>
             </motion.div>
 
@@ -288,10 +381,10 @@ export function AboutPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight leading-tight text-white"
+              className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight leading-tight text-heading dark:text-white"
             >
               {t.hero_title.split(" ").slice(0, -3).join(" ")}{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 via-emerald-300 to-indigo-400">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary-light to-orange">
                 {t.hero_title.split(" ").slice(-3).join(" ")}
               </span>
             </motion.h1>
@@ -300,7 +393,7 @@ export function AboutPage() {
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="text-lg text-slate-300 max-w-2xl font-medium leading-relaxed"
+              className="text-lg text-text dark:text-slate-300 max-w-2xl font-medium leading-relaxed"
             >
               {t.hero_subtitle}
             </motion.p>
@@ -314,14 +407,14 @@ export function AboutPage() {
               className="relative group p-4"
             >
               {/* Glowing ring under logo */}
-              <div className="absolute inset-0 bg-gradient-to-tr from-teal-500 to-indigo-600 rounded-full blur-[30px] opacity-30 group-hover:opacity-50 transition-opacity duration-500" />
+              <div className="absolute inset-0 bg-gradient-to-tr from-[#FB6C00] to-[#E73F1E] rounded-full blur-[30px] opacity-30 group-hover:opacity-50 transition-opacity duration-500" />
               
               {/* Outer Glassmorphic border */}
-              <div className="relative rounded-full p-2 bg-gradient-to-b from-white/10 to-white/5 border border-white/20 backdrop-blur-xl shadow-2xl">
+              <div className="relative rounded-full p-2 bg-gradient-to-b from-white/90 to-white/60 border border-slate-200/60 dark:from-white/10 dark:to-white/5 dark:border-white/20 backdrop-blur-xl shadow-2xl">
                 <img
                   src={sgkLogo}
                   alt="SGK Brainova Logo"
-                  className="size-64 md:size-80 rounded-full object-cover border-2 border-slate-700/50 shadow-inner group-hover:scale-[1.02] transition-transform duration-500"
+                  className="size-64 md:size-80 rounded-full object-cover border-2 border-slate-100 dark:border-slate-700/50 shadow-inner group-hover:scale-[1.02] transition-transform duration-500"
                 />
               </div>
             </motion.div>
@@ -330,32 +423,30 @@ export function AboutPage() {
       </section>
 
       {/* Tabs Navigation */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 mb-12">
-        <div className="flex justify-center border-b border-slate-800">
-          <nav className="flex space-x-8" aria-label="Tabs">
-            {[
-              { id: "about", label: t.about_title, icon: GraduationCap },
-              { id: "offerings", label: t.offer_title, icon: Award },
-              { id: "corporate", label: t.company_info_title, icon: Building }
-            ].map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center gap-2 py-4 px-1 border-b-2 font-bold text-sm transition-all duration-300 ${
-                    isActive
-                      ? "border-teal-500 text-teal-400"
-                      : "border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700"
-                  }`}
-                >
-                  <Icon className={`size-4 ${isActive ? "text-teal-400" : "text-slate-500"}`} />
-                  <span>{tab.label}</span>
-                </button>
-              );
-            })}
-          </nav>
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 mb-16 flex justify-center">
+        <div className="bg-slate-200/50 dark:bg-white/5 border border-slate-300/60 dark:border-white/10 backdrop-blur-md rounded-full p-1.5 flex gap-1 sm:gap-2 shadow-lg max-w-max">
+          {[
+            { id: "about", label: t.about_title, icon: GraduationCap },
+            { id: "offerings", label: t.offer_title, icon: Award },
+            { id: "corporate", label: t.company_info_title, icon: Building }
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`flex items-center gap-2 py-2.5 px-4 sm:px-6 rounded-full text-[12px] sm:text-sm font-black uppercase tracking-widest transition-all duration-300 ${
+                  isActive
+                    ? "bg-white text-slate-950 shadow-[0_4px_12px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_12px_rgba(255,255,255,0.15)] scale-[1.02]"
+                    : "text-slate-500 hover:text-slate-800 hover:bg-slate-200/40 dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5"
+                }`}
+              >
+                <Icon className="size-4 shrink-0" />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -374,95 +465,235 @@ export function AboutPage() {
               {/* Introduction Story */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-stretch">
                 <div className="lg:col-span-8 space-y-6">
-                  <h2 className="text-3xl font-extrabold text-white flex items-center gap-3">
-                    <span className="h-8 w-1.5 rounded-full bg-teal-500" />
+                  <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white flex items-center gap-3">
+                    <span className="h-8 w-1.5 rounded-full bg-[#E73F1E]" />
                     {t.about_title}
                   </h2>
-                  <div className="space-y-5 text-slate-300 text-base sm:text-lg leading-relaxed font-normal">
+                  <div className="space-y-5 text-slate-600 dark:text-slate-300 text-base sm:text-lg leading-relaxed font-normal">
                     <p>{t.about_desc1}</p>
                     <p>{t.about_desc2}</p>
                     <p>{t.about_desc3}</p>
                   </div>
                 </div>
 
-                {/* Interactive Fast Facts / Highlights */}
-                <div className="lg:col-span-4 flex flex-col justify-between p-6 sm:p-8 rounded-3xl bg-slate-800/40 border border-slate-700/50 backdrop-blur-md shadow-premium relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-teal-500/10 to-transparent rounded-bl-full pointer-events-none" />
-                  
-                  <div className="space-y-6">
-                    <h3 className="text-xs font-bold text-teal-400 uppercase tracking-widest flex items-center gap-2">
-                      <Sparkles className="size-4 text-teal-400" />
-                      Key Focus Areas
+                {/* Key Focus Areas Card */}
+                <motion.div
+                  style={{
+                    rotateX,
+                    rotateY,
+                    transformStyle: "preserve-3d",
+                    perspective: 1000,
+                    border: '1px solid rgba(255, 221, 156, 0.4)'
+                  }}
+                  onMouseMove={handleMouseMove}
+                  onMouseEnter={handleMouseEnter}
+                  onMouseLeave={handleMouseLeave}
+                  className="lg:col-span-4 bg-orange-50/10 dark:bg-orange-950/15 backdrop-blur-[16px] rounded-[32px] p-8 shadow-[0_30px_60px_-15px_rgba(231,63,30,0.15)] dark:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.6)] border-primary-light/20 dark:border-primary-light/30 relative overflow-hidden space-y-6 hover:border-primary-light/85 transition-all duration-300 group flex flex-col justify-between"
+                >
+                  {/* Glare spotlight reflection */}
+                  <div 
+                    className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10"
+                    style={{
+                      background: `radial-gradient(circle 250px at ${glarePos.x}px ${glarePos.y}px, rgba(255, 221, 156, 0.25), transparent 80%)`
+                    }}
+                  />
+
+                  {/* Soft Background Accent Glows */}
+                  <div className="absolute top-[-20%] left-[-20%] w-[180px] h-[180px] rounded-full bg-primary-light/20 blur-[50px] pointer-events-none z-0" />
+                  <div className="absolute bottom-[-10%] right-[-10%] w-[150px] h-[150px] rounded-full bg-primary/15 blur-[40px] pointer-events-none z-0" />
+
+                  <div className="space-y-6 relative z-20">
+                    <h3 className="text-base font-black tracking-widest text-slate-905 dark:text-slate-50 uppercase flex items-center gap-2 mb-6">
+                      <Sparkles className="size-4 text-primary dark:text-orange animate-pulse" />
+                      <span>KEY FOCUS AREAS</span>
                     </h3>
                     
-                    <ul className="space-y-4">
-                      {[
-                        { title: "AI Integration", desc: "Intelligent study bots and personalized telemetry." },
-                        { title: "Digital Management", desc: "Simplifying school/college administrative systems." },
-                        { title: "Empowerment", desc: "Enabling teachers to deliver high impact classrooms." }
-                      ].map((item, index) => (
-                        <li key={index} className="flex gap-3">
-                          <CheckCircle2 className="size-5 text-teal-400 shrink-0 mt-0.5" />
-                          <div>
-                            <h4 className="font-bold text-sm text-slate-200">{item.title}</h4>
-                            <p className="text-xs text-slate-400">{item.desc}</p>
-                          </div>
-                        </li>
-                      ))}
+                    <ul className="space-y-5">
+                      {/* Row 1 - AI Integration */}
+                      <li className="flex gap-4 items-center group/item hover:translate-x-1 transition-transform duration-300">
+                        <motion.div
+                          whileHover={{ scale: 1.15, rotate: 12 }}
+                          className="bg-gradient-to-br from-primary-dark to-slate-900 border border-primary-light/60 text-[#F9B637] p-3.5 rounded-2xl shadow-lg shadow-primary/30 flex items-center justify-center shrink-0 transition-transform cursor-pointer"
+                        >
+                          <Cpu className="size-5" />
+                        </motion.div>
+                        <div>
+                          <h4 className="font-extrabold text-slate-900 dark:text-slate-50 text-base">AI Integration</h4>
+                          <p className="text-slate-800 dark:text-slate-200 font-semibold text-sm mt-0.5 leading-relaxed">Intelligent study bots and personalized telemetry.</p>
+                        </div>
+                      </li>
+
+                      {/* Row 2 - Digital Management */}
+                      <li className="flex gap-4 items-center group/item hover:translate-x-1 transition-transform duration-300">
+                        <motion.div
+                          whileHover={{ scale: 1.15, rotate: -12 }}
+                          className="bg-gradient-to-br from-primary-dark to-slate-900 border border-yellow/60 text-[#FFDD9C] p-3.5 rounded-2xl shadow-lg shadow-primary/30 flex items-center justify-center shrink-0 transition-transform cursor-pointer"
+                        >
+                          <Database className="size-5" />
+                        </motion.div>
+                        <div>
+                          <h4 className="font-extrabold text-slate-900 dark:text-slate-50 text-base">Digital Management</h4>
+                          <p className="text-slate-800 dark:text-slate-200 font-semibold text-sm mt-0.5 leading-relaxed">Simplifying school/college administrative systems.</p>
+                        </div>
+                      </li>
+
+                      {/* Row 3 - Empowerment */}
+                      <li className="flex gap-4 items-center group/item hover:translate-x-1 transition-transform duration-300">
+                        <motion.div
+                          whileHover={{ scale: 1.15, rotate: 12 }}
+                          className="bg-gradient-to-br from-primary-dark to-slate-900 border border-primary-light/60 text-[#F9B637] p-3.5 rounded-2xl shadow-lg shadow-primary/30 flex items-center justify-center shrink-0 transition-transform cursor-pointer"
+                        >
+                          <GraduationCap className="size-5" />
+                        </motion.div>
+                        <div>
+                          <h4 className="font-extrabold text-slate-900 dark:text-slate-50 text-base">Empowerment</h4>
+                          <p className="text-slate-800 dark:text-slate-200 font-semibold text-sm mt-0.5 leading-relaxed">Enabling teachers to deliver high impact classrooms.</p>
+                        </div>
+                      </li>
                     </ul>
                   </div>
 
-                  <div className="pt-6 border-t border-slate-700/50 mt-6">
-                    <div className="flex items-center gap-3">
-                      <div className="p-3 bg-teal-500/10 rounded-2xl border border-teal-500/20 text-teal-400">
-                        <ShieldCheck className="size-6" />
+                  <div className="space-y-4 relative z-20">
+                    {/* Separator Line */}
+                    <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-white/20 to-transparent my-4" />
+
+                    {/* Bottom Nested Card (Trust & Compliance) */}
+                    <div className="bg-white/5 dark:bg-slate-950/20 border border-white/20 dark:border-white/10 rounded-2xl p-4 flex items-center gap-4 shadow-[inset_0_2px_4px_rgba(255,255,255,0.1)] hover:bg-white/15 dark:hover:bg-slate-900/30 transition-all duration-300 group/sub">
+                      <div className="bg-gradient-to-br from-slate-900 to-primary-dark border border-primary-light/50 text-[#FB6C00] p-3 rounded-xl shadow-md shadow-primary/20">
+                        <ShieldCheck className="size-5 text-primary-light" />
                       </div>
                       <div>
-                        <h4 className="font-extrabold text-sm text-white">Trust & Compliance</h4>
-                        <p className="text-xs text-slate-400">Incorporated under MCA India.</p>
+                        <h4 className="font-extrabold text-slate-900 dark:text-slate-50 text-sm">Trust & Compliance</h4>
+                        <p className="text-sm text-slate-800 dark:text-slate-200 font-semibold mt-0.5">Incorporated under MCA India.</p>
                       </div>
                     </div>
                   </div>
+                </motion.div>
+              </div>
+
+              {/* Vision, Mission & Commitment Section */}
+              <motion.div
+                variants={{
+                  hidden: {},
+                  show: { transition: { staggerChildren: 0.15 } }
+                }}
+                initial="hidden"
+                whileInView="show"
+                viewport={{ once: true, margin: "-100px" }}
+                className="relative overflow-hidden py-16 px-4 max-w-6xl mx-auto text-white w-full"
+              >
+                {/* Ambient Glows */}
+                <div className="w-96 h-96 bg-[#FB6C00]/10 rounded-full blur-[120px] absolute -top-10 -left-10 pointer-events-none" />
+                <div className="w-96 h-96 bg-[#FFDD9C]/10 rounded-full blur-[120px] absolute top-10 -right-10 pointer-events-none" />
+                <div className="w-[500px] h-[500px] bg-[#E73F1E]/10 rounded-full blur-[140px] absolute -bottom-10 left-1/2 -translate-x-1/2 pointer-events-none" />
+
+                {/* Top Row: Vision & Mission */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8 relative z-10">
+                  
+                  {/* Our Vision Card */}
+                  <motion.div
+                    variants={{
+                      hidden: { opacity: 0, y: 20 },
+                      show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100, damping: 15 } }
+                    }}
+                    whileHover={{ y: -6 }}
+                    className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-[#FB6C00]/20 dark:border-[#FB6C00]/30 rounded-3xl p-8 shadow-2xl shadow-[#E73F1E]/5 dark:shadow-[#E73F1E]/20 hover:border-[#FB6C00]/80 hover:shadow-[#FB6C00]/20 transition-all duration-300 relative group overflow-hidden"
+                  >
+                    {/* Top Neon Accent Bar */}
+                    <div className="h-1.5 w-24 bg-gradient-to-r from-[#FB6C00] to-[#E73F1E] rounded-full mb-6 shadow-sm shadow-primary/50" />
+                    
+                    {/* Icon Pod */}
+                    <div className="bg-gradient-to-br from-[#FB6C00] to-[#E73F1E] text-white p-4 rounded-2xl shadow-lg shadow-primary/40 mb-5 inline-block group-hover:scale-105 transition-transform">
+                      <Target className="size-6" />
+                    </div>
+
+                    <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white mb-3">
+                      {t.vision_title}
+                    </h3>
+                    <p className="text-slate-600 dark:text-slate-300 text-base leading-relaxed">
+                      {t.vision_desc}
+                    </p>
+                  </motion.div>
+
+                  {/* Our Mission Card */}
+                  <motion.div
+                    variants={{
+                      hidden: { opacity: 0, y: 20 },
+                      show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100, damping: 15 } }
+                    }}
+                    whileHover={{ y: -6 }}
+                    className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-[#F9B637]/20 dark:border-[#F9B637]/30 rounded-3xl p-8 shadow-2xl shadow-[#E73F1E]/5 dark:shadow-[#E73F1E]/20 hover:border-[#F9B637]/80 hover:shadow-[#F9B637]/20 transition-all duration-300 relative group overflow-hidden"
+                  >
+                    {/* Top Neon Accent Bar */}
+                    <div className="h-1.5 w-24 bg-gradient-to-r from-[#F9B637] to-[#FB6C00] rounded-full mb-6 shadow-sm shadow-primary/50" />
+
+                    <div className="flex items-center gap-3 mb-5">
+                      {/* Icon Pod */}
+                      <div className="bg-gradient-to-br from-[#F9B637] to-[#E73F1E] text-white p-3.5 rounded-2xl shadow-lg shadow-primary/40 inline-block group-hover:scale-105 transition-transform">
+                        <Zap className="size-5.5" />
+                      </div>
+                      <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white align-middle">
+                        {t.mission_title}
+                      </h3>
+                    </div>
+
+                    {/* List Items */}
+                    <ul className="space-y-2.5 mt-5">
+                      {t.mission_items.map((item, index) => (
+                        <li
+                          key={index}
+                          className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-[#F9B637]/10 dark:bg-slate-800/50 dark:border-[#F9B637]/20 text-slate-700 dark:text-slate-200 text-base font-medium hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:border-[#F9B637]/40 transition-colors"
+                        >
+                          <div className="w-5 h-5 rounded-full bg-[#E73F1E] dark:bg-[#FB6C00] text-white dark:text-slate-950 flex items-center justify-center shrink-0 shadow-sm shadow-primary/50">
+                            <Check className="size-3" strokeWidth={3.5} />
+                          </div>
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </motion.div>
                 </div>
-              </div>
 
-              {/* Vision & Mission Stack */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8">
-                {/* Vision Card */}
-                <motion.div
-                  whileHover={{ y: -5 }}
-                  className="p-8 rounded-[2rem] bg-gradient-to-b from-slate-800/80 to-slate-800/40 border border-slate-700/60 shadow-xl relative overflow-hidden group"
-                >
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-teal-500/5 to-transparent rounded-bl-full pointer-events-none" />
-                  <div className="size-14 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 mb-6 group-hover:bg-teal-500 group-hover:text-slate-900 transition-all duration-300">
-                    <Target className="size-7" />
-                  </div>
-                  <h3 className="text-2xl font-extrabold text-white mb-4">{t.vision_title}</h3>
-                  <p className="text-slate-300 text-lg leading-relaxed font-medium">
-                    {t.vision_desc}
-                  </p>
-                </motion.div>
+                {/* Bottom Row: Commitment Card */}
+                <div className="w-full relative z-10">
+                  <motion.div
+                    variants={{
+                      hidden: { opacity: 0, y: 20 },
+                      show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100, damping: 15 } }
+                    }}
+                    whileHover={{ y: -6 }}
+                    className="w-full bg-gradient-to-r from-[#FFF5EC]/70 via-white/80 to-[#FFF9EC]/70 dark:from-[#210702]/40 dark:via-slate-900/80 dark:to-[#110300]/40 backdrop-blur-xl border border-[#E73F1E]/20 dark:border-[#E73F1E]/30 rounded-3xl p-8 md:p-10 shadow-2xl shadow-primary/5 dark:shadow-primary/20 hover:border-[#FB6C00]/60 transition-all duration-300 text-center relative overflow-hidden group"
+                  >
+                    {/* Background Glow Sheen */}
+                    <div className="bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#E73F1E]/10 via-transparent to-transparent absolute inset-0 pointer-events-none" />
 
-                {/* Mission Card */}
-                <motion.div
-                  whileHover={{ y: -5 }}
-                  className="p-8 rounded-[2rem] bg-gradient-to-b from-slate-800/80 to-slate-800/40 border border-slate-700/60 shadow-xl relative overflow-hidden group"
-                >
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-indigo-500/5 to-transparent rounded-bl-full pointer-events-none" />
-                  <div className="size-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-6 group-hover:bg-indigo-500 group-hover:text-white transition-all duration-300">
-                    <Zap className="size-7" />
-                  </div>
-                  <h3 className="text-2xl font-extrabold text-white mb-4">{t.mission_title}</h3>
-                  <ul className="space-y-3">
-                    {t.mission_items.map((item, index) => (
-                      <li key={index} className="flex items-start gap-3 text-slate-300 text-base font-medium">
-                        <CheckCircle2 className="size-5 text-teal-400 shrink-0 mt-0.5" />
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </motion.div>
-              </div>
+                    {/* Icon Pod */}
+                    <div className="bg-gradient-to-br from-[#FB6C00] to-[#F9B637] text-slate-950 p-4 rounded-2xl shadow-lg shadow-primary/40 mb-4 inline-block group-hover:scale-105 transition-transform">
+                      <Globe className="size-6 text-slate-950" />
+                    </div>
+
+                    <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-4 tracking-tight">
+                      {t.commitment_title}
+                    </h3>
+                    
+                    <p className="text-slate-600 dark:text-slate-300 text-base md:text-lg max-w-3xl mx-auto leading-relaxed mb-6 font-medium">
+                      {t.commitment_desc}
+                    </p>
+
+                    {/* Trust Pills */}
+                    <div className="flex items-center justify-center gap-4 flex-wrap">
+                      <div className="bg-slate-100 border border-slate-200/80 text-slate-600 dark:bg-slate-800/80 dark:border-slate-700 dark:text-slate-300 text-xs font-semibold px-4 py-2 rounded-full shadow-inner flex items-center gap-2">
+                        <ShieldCheck className="size-3.5 text-[#E73F1E] dark:text-[#FB6C00]" />
+                        <span>GDPR Compliant</span>
+                      </div>
+                      <div className="bg-slate-100 border border-slate-200/80 text-slate-600 dark:bg-slate-800/80 dark:border-slate-700 dark:text-slate-300 text-xs font-semibold px-4 py-2 rounded-full shadow-inner flex items-center gap-2">
+                        <Globe className="size-3.5 text-[#FB6C00] dark:text-[#F9B637]" />
+                        <span>Global Support</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                </div>
+              </motion.div>
             </motion.div>
           )}
 
@@ -476,8 +707,8 @@ export function AboutPage() {
               className="space-y-12"
             >
               <div className="text-center max-w-3xl mx-auto space-y-4">
-                <h2 className="text-3xl font-extrabold text-white">{t.offer_title}</h2>
-                <p className="text-slate-400 text-base">
+                <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white">{t.offer_title}</h2>
+                <p className="text-slate-600 dark:text-slate-400 text-base">
                   Empowering the entire educational lifecycle with AI and smart technology.
                 </p>
               </div>
@@ -486,26 +717,36 @@ export function AboutPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {t.offer_items.map((item, idx) => {
                   const Icon = OFFER_ICONS[idx % OFFER_ICONS.length] || BookOpen;
+                  const style = OFFER_CARDS_STYLE[idx % OFFER_CARDS_STYLE.length] || OFFER_CARDS_STYLE[0];
                   return (
                     <motion.div
                       key={idx}
                       whileHover={{ y: -6, scale: 1.01 }}
-                      className="p-6 rounded-3xl bg-slate-800/30 border border-slate-700/40 hover:bg-slate-800/60 hover:border-teal-500/30 transition-all duration-300 flex flex-col justify-between group shadow-lg"
+                      className={`relative overflow-hidden p-6 md:p-8 rounded-3xl bg-white/70 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 backdrop-blur-xl flex flex-col justify-between group shadow-lg dark:shadow-none transition-all duration-500 min-h-[220px] ${style.glowColor} ${idx === 6 ? "md:col-span-2 lg:col-span-1 lg:col-start-2" : ""}`}
                     >
-                      <div className="space-y-4">
-                        <div className="size-12 rounded-2xl bg-teal-500/10 border border-teal-500/20 text-teal-400 flex items-center justify-center group-hover:bg-teal-500/20 group-hover:text-teal-300 transition-colors">
-                          <Icon className="size-6" />
-                        </div>
-                        <h3 className="text-lg font-bold text-white group-hover:text-teal-400 transition-colors">
-                          {item.title}
-                        </h3>
-                        <p className="text-sm text-slate-400 leading-relaxed">
-                          {item.desc}
-                        </p>
+                      <div className={`absolute top-0 left-0 w-[4.5rem] h-[4.5rem] ${style.leafBg} rounded-tl-3xl rounded-br-[2rem] flex items-center justify-center text-white z-10 shadow-sm transition-transform duration-500 group-hover:scale-105`}>
+                        <Icon className="size-6" />
                       </div>
-                      <div className="pt-4 flex items-center gap-1 text-teal-400 text-xs font-bold uppercase opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span>Learn More</span>
-                        <ChevronRight className="size-3" />
+
+                      <div className={`absolute top-6 right-6 size-6 rounded-full flex items-center justify-center ${style.particleBg} opacity-65`}>
+                        <Sparkles className="size-3" />
+                      </div>
+
+                      <div className="space-y-4 pt-14 flex-grow flex flex-col justify-between">
+                        <div>
+                          <h3 className={`text-base sm:text-lg font-black text-slate-800 dark:text-white ${style.textColor} transition-colors tracking-tight mb-2`}>
+                            {item.title}
+                          </h3>
+                          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+                            {item.desc}
+                          </p>
+                        </div>
+
+                        {style.badgeText && (
+                          <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black tracking-wider uppercase border ${style.badgeBg} mt-4 shadow-sm max-w-max`}>
+                            {style.badgeText}
+                          </div>
+                        )}
                       </div>
                     </motion.div>
                   );
@@ -525,22 +766,22 @@ export function AboutPage() {
             >
               {/* Detailed Registration Grid */}
               <div className="lg:col-span-7 space-y-6">
-                <h2 className="text-3xl font-extrabold text-white flex items-center gap-3">
+                <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white flex items-center gap-3">
                   <span className="h-8 w-1.5 rounded-full bg-indigo-500" />
                   {t.company_info_title}
                 </h2>
 
-                <div className="rounded-3xl bg-slate-800/40 border border-slate-700/50 divide-y divide-slate-700/50 overflow-hidden shadow-xl">
+                <div className="rounded-3xl bg-white/70 border border-slate-200/80 divide-y divide-slate-200/80 overflow-hidden shadow-xl dark:bg-slate-800/40 dark:border-slate-700/50 dark:divide-slate-700/50">
                   {/* Company Name */}
                   <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <span className="text-sm font-bold text-slate-400 uppercase tracking-wider">{t.company_name}</span>
-                    <span className="text-base font-extrabold text-white text-right">{t.badge}</span>
+                    <span className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t.company_name}</span>
+                    <span className="text-base font-extrabold text-slate-800 dark:text-white text-right">{t.badge}</span>
                   </div>
 
                   {/* CIN */}
                   <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <span className="text-sm font-bold text-slate-400 uppercase tracking-wider">{t.cin}</span>
-                    <span className="text-base font-mono font-extrabold text-teal-400 bg-teal-500/5 border border-teal-500/10 px-3 py-1 rounded-md">
+                    <span className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t.cin}</span>
+                    <span className="text-base font-mono font-extrabold text-teal-650 bg-teal-50 border border-teal-100 dark:text-teal-400 dark:bg-teal-500/5 dark:border-teal-500/10 px-3 py-1 rounded-md">
                       U85499PN2026PTC256078
                     </span>
                   </div>
@@ -548,43 +789,43 @@ export function AboutPage() {
                   {/* PAN & TAN */}
                   <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t.pan}</span>
-                      <span className="text-sm font-mono font-bold text-slate-200">ABTCS8869A</span>
+                      <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t.pan}</span>
+                      <span className="text-sm font-mono font-bold text-slate-800 dark:text-slate-200">ABTCS8869A</span>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t.tan}</span>
-                      <span className="text-sm font-mono font-bold text-slate-200">KLPS18427D</span>
+                      <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t.tan}</span>
+                      <span className="text-sm font-mono font-bold text-slate-800 dark:text-slate-200">KLPS18427D</span>
                     </div>
                   </div>
 
                   {/* Registered Address */}
                   <div className="p-5 space-y-4">
                     <div className="flex items-start gap-3">
-                      <MapPin className="size-5 text-indigo-400 shrink-0 mt-0.5" />
+                      <MapPin className="size-5 text-indigo-500 dark:text-indigo-400 shrink-0 mt-0.5" />
                       <div>
-                        <span className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-1">
+                        <span className="block text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
                           {t.reg_address}
                         </span>
-                        <p className="text-slate-300 text-sm leading-relaxed font-medium">
+                        <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed font-medium">
                           145/A, 194/A/2, Plot No. 100, Shree Capital-2,<br />
                           Warnali, Willingdon College Road,<br />
-                          Miraj, Sangli – 416415, Maharashtra, India.
+                          Miraj, Sangli - 416415, Maharashtra, India.
                         </p>
                       </div>
                     </div>
 
                     {/* Address verification snippet inline */}
-                    <div className="mt-3 p-3 bg-slate-900/60 rounded-2xl border border-slate-700/50 flex flex-col md:flex-row gap-4 items-center justify-between">
+                    <div className="mt-3 p-3 bg-slate-100/70 border border-slate-200/80 dark:bg-slate-900/60 rounded-2xl dark:border-slate-700/50 flex flex-col md:flex-row gap-4 items-center justify-between">
                       <div className="flex items-center gap-3">
                         <FileText className="size-5 text-slate-500 shrink-0" />
                         <div>
-                          <h4 className="text-xs font-extrabold text-slate-300">{t.address_snippet}</h4>
+                          <h4 className="text-xs font-extrabold text-slate-700 dark:text-slate-300">{t.address_snippet}</h4>
                           <p className="text-[10px] text-slate-500">Government Registry Matching</p>
                         </div>
                       </div>
                       <button
                         onClick={() => openImageModal(addressSnippetImg)}
-                        className="shrink-0 p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 border border-slate-700/60 flex items-center gap-1 transition-colors text-[10px] font-bold"
+                        className="shrink-0 p-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 hover:text-slate-900 border border-slate-350/80 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-400 dark:hover:text-slate-200 dark:border-slate-700/60 flex items-center gap-1 transition-colors text-[10px] font-bold"
                       >
                         <Maximize2 className="size-3" />
                         <span>Inspect</span>
@@ -596,15 +837,15 @@ export function AboutPage() {
 
               {/* Incorporation Certificate Side Card */}
               <div className="lg:col-span-5 space-y-4">
-                <h3 className="text-lg font-extrabold text-white flex items-center gap-2 px-1">
-                  <ShieldCheck className="size-5 text-teal-400" />
+                <h3 className="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2 px-1">
+                  <ShieldCheck className="size-5 text-teal-500 dark:text-teal-400" />
                   {t.inc_cert}
                 </h3>
 
-                <div className="p-4 rounded-3xl bg-slate-800/40 border border-slate-700/50 shadow-xl space-y-4">
+                <div className="p-4 rounded-3xl bg-white/70 border border-slate-200/80 dark:bg-slate-800/40 dark:border-slate-700/50 shadow-xl space-y-4">
                   <div
                     onClick={() => openImageModal(certificateImg)}
-                    className="relative rounded-2xl overflow-hidden cursor-pointer group aspect-[3/4] border border-slate-700 bg-slate-950/60"
+                    className="relative rounded-2xl overflow-hidden cursor-pointer group aspect-[3/4] border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-950/60"
                   >
                     <img
                       src={certificateImg}
@@ -629,27 +870,6 @@ export function AboutPage() {
         </AnimatePresence>
       </main>
 
-      {/* Commitment Section (Footer Banner) */}
-      <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pb-24">
-        <div className="p-8 sm:p-12 md:p-16 rounded-[2.5rem] bg-gradient-to-r from-indigo-950/80 to-teal-950/80 border border-slate-700/40 relative overflow-hidden shadow-2xl">
-          <div className="absolute top-0 right-0 w-80 h-80 bg-teal-400/5 rounded-full blur-[80px] pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-80 h-80 bg-indigo-500/5 rounded-full blur-[80px] pointer-events-none" />
-          
-          <div className="max-w-4xl mx-auto text-center space-y-6">
-            <div className="inline-flex size-14 rounded-full bg-teal-500/10 border border-teal-500/20 items-center justify-center text-teal-400 mx-auto">
-              <Globe className="size-7" />
-            </div>
-
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white">
-              {t.commitment_title}
-            </h2>
-
-            <p className="text-slate-300 text-base sm:text-lg leading-relaxed max-w-3xl mx-auto font-medium">
-              {t.commitment_desc}
-            </p>
-          </div>
-        </div>
-      </section>
 
       {/* Lightbox / Certificate Image Modal */}
       <AnimatePresence>

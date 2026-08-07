@@ -233,13 +233,51 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialT
         const bunnyMarksSec = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_marks_second.json`);
         const bunnyMarksFirst = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_marks_first.json`);
 
-        const marksSnapSem1 = await getDoc(doc(db, "cce_marks_v2", `${selectedClass}_${academicYear}_sem1`));
-        const marksSnapSem2 = await getDoc(doc(db, "cce_marks_v2", `${selectedClass}_${academicYear}_sem2`));
-        const marksSnapGen = await getDoc(doc(db, "cce_marks_v2", docId));
+        const loadDocData = async (docIds) => {
+          for (const dId of docIds) {
+            try {
+              const snap = await getDoc(doc(db, "cce_marks_v2", dId));
+              if (snap.exists()) {
+                const data = snap.data();
+                return data.records || data.marksData || data.marks || data;
+              }
+            } catch (e) {}
+          }
+          return {};
+        };
 
-        const fsSem1 = marksSnapSem1.exists() ? (marksSnapSem1.data().records || marksSnapSem1.data()) : {};
-        const fsSem2 = marksSnapSem2.exists() ? (marksSnapSem2.data().records || marksSnapSem2.data()) : {};
-        const fsGen = marksSnapGen.exists() ? (marksSnapGen.data().records || marksSnapGen.data().marksData || marksSnapGen.data()) : {};
+        const currentTeacherId = getTeacherId();
+        const docIdsSem1 = [
+          ...(currentTeacherId ? [
+            `${currentTeacherId}_${selectedClass}_${selectedMedium}_${academicYear}_sem1`,
+            `${currentTeacherId}_${selectedClass}_${academicYear}_sem1`,
+          ] : []),
+          `${selectedClass}_${selectedMedium}_${academicYear}_sem1`,
+          `${selectedClass}_${academicYear}_sem1`,
+        ];
+
+        const docIdsSem2 = [
+          ...(currentTeacherId ? [
+            `${currentTeacherId}_${selectedClass}_${selectedMedium}_${academicYear}_sem2`,
+            `${currentTeacherId}_${selectedClass}_${academicYear}_sem2`,
+          ] : []),
+          `${selectedClass}_${selectedMedium}_${academicYear}_sem2`,
+          `${selectedClass}_${academicYear}_sem2`,
+        ];
+
+        const docIdsGen = [
+          ...(currentTeacherId ? [
+            `${currentTeacherId}_${selectedClass}_${selectedMedium}_${academicYear}`,
+            `${currentTeacherId}_${selectedClass}_${academicYear}`,
+          ] : []),
+          `${selectedClass}_${selectedMedium}_${academicYear}`,
+          `${selectedClass}_${academicYear}`,
+          `${selectedClass}`,
+        ];
+
+        const fsSem1 = await loadDocData(docIdsSem1);
+        const fsSem2 = await loadDocData(docIdsSem2);
+        const fsGen = await loadDocData(docIdsGen);
 
         const bunnyFirst = bunnyMarksFirst || {};
         const bunnySec = bunnyMarksSec || {};
@@ -330,7 +368,6 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialT
           }
           return recs;
         };
-
         const sem1Recs = await loadSemesterRemarks("sem1");
         const sem2Recs = await loadSemesterRemarks("sem2");
 
@@ -353,6 +390,15 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialT
         if (sem1Recs) mergeStudentRecords(sem1Recs, "sem1");
         if (sem2Recs) mergeStudentRecords(sem2Recs, "sem2");
 
+        // Bunny CDN fallback
+        try {
+          const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
+          const bunnyRemarks = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_remarks.json`);
+          if (bunnyRemarks && typeof bunnyRemarks === "object") {
+            mergeStudentRecords(bunnyRemarks, null);
+          }
+        } catch (e) {}
+
         setRemarksData(mergedRemarks);
       } catch (e) {
         console.error("Error fetching remarks:", e);
@@ -361,30 +407,89 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialT
       // 5. Attendance Data
       const attendanceMap = {};
       try {
-        const monthlySnap = await getDoc(doc(db, "cce_attendance", `${selectedClass}_${academicYear}_monthly`));
-        if (monthlySnap.exists()) {
-          const monthlyRecords = monthlySnap.data().records || {};
-          Object.keys(monthlyRecords).forEach((stdId) => {
-            if (!attendanceMap[stdId]) attendanceMap[stdId] = {};
-            const stdMonths = monthlyRecords[stdId] || {};
-            Object.keys(stdMonths).forEach((mK) => {
-              const val = stdMonths[mK];
-              if (val !== undefined && val !== null) {
-                attendanceMap[stdId][mK.toLowerCase()] = Number(val);
-              }
-            });
-          });
-        }
-      } catch (e) {}
+        // A. Fetch custom working days
+        try {
+          const wDaysSnap = await getDoc(doc(db, "cce_attendance", `${selectedClass}_${academicYear}_working_days`));
+          if (wDaysSnap.exists()) {
+            setWorkingDaysData(wDaysSnap.data().workingDays || {});
+          }
+        } catch (e) {}
 
-      setAttendanceData(attendanceMap);
+        // B. Fetch general attendance docs from Firestore & Bunny CDN
+        try {
+          const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
+          const bunnyAtt = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_attendance.json`);
+          const attSnap = await getDoc(doc(db, "cce_attendance", `${selectedClass}_${academicYear}_attendance`));
+          const attFsData = attSnap.exists() ? (attSnap.data().attendanceData || attSnap.data()) : {};
+
+          if (attFsData && typeof attFsData === "object") {
+            Object.keys(attFsData).forEach((stdId) => {
+              if (!attendanceMap[stdId]) attendanceMap[stdId] = {};
+              Object.assign(attendanceMap[stdId], attFsData[stdId]);
+            });
+          }
+          if (bunnyAtt && typeof bunnyAtt === "object") {
+            Object.keys(bunnyAtt).forEach((stdId) => {
+              if (!attendanceMap[stdId]) attendanceMap[stdId] = {};
+              Object.assign(attendanceMap[stdId], bunnyAtt[stdId]);
+            });
+          }
+        } catch (e) {}
+
+        // C. Fetch daily attendance documents for all 12 months
+        const monthKeys = ["june", "july", "august", "september", "october", "november", "december", "january", "february", "march", "april", "may"];
+        for (const mKey of monthKeys) {
+          try {
+            const mSnap = await getDoc(doc(db, "cce_attendance", `${selectedClass}_${academicYear}_${mKey}`));
+            if (mSnap.exists()) {
+              const records = mSnap.data().records || {};
+              Object.keys(records).forEach((stdId) => {
+                const stdRecords = records[stdId] || {};
+                let presentCount = 0;
+                if (typeof stdRecords === "object" && stdRecords !== null) {
+                  Object.values(stdRecords).forEach((status) => {
+                    if (status === "P" || status === "present" || status === "1" || status === 1) {
+                      presentCount++;
+                    }
+                  });
+                } else if (typeof stdRecords === "number") {
+                  presentCount = stdRecords;
+                }
+                if (!attendanceMap[stdId]) attendanceMap[stdId] = {};
+                attendanceMap[stdId][mKey] = presentCount;
+              });
+            }
+          } catch (e) {}
+        }
+
+        // D. Fetch explicit student-wise monthly summary attendance (HIGHEST PRIORITY)
+        try {
+          const monthlySnap = await getDoc(doc(db, "cce_attendance", `${selectedClass}_${academicYear}_monthly`));
+          if (monthlySnap.exists()) {
+            const monthlyRecords = monthlySnap.data().records || {};
+            Object.keys(monthlyRecords).forEach((stdId) => {
+              if (!attendanceMap[stdId]) attendanceMap[stdId] = {};
+              const stdMonths = monthlyRecords[stdId] || {};
+              Object.keys(stdMonths).forEach((mK) => {
+                const val = stdMonths[mK];
+                if (val !== undefined && val !== null) {
+                  attendanceMap[stdId][mK.toLowerCase()] = Number(val);
+                }
+              });
+            });
+          }
+        } catch (e) {}
+
+        setAttendanceData(attendanceMap);
+      } catch (e) {
+        console.error("Error fetching attendance data:", e);
+      }
     } catch (err) {
       console.error("Error loading ProgressSheet data:", err);
     }
     setLoading(false);
   };
 
-  // PDF Export Function
   const handleDownloadPdf = async () => {
     if (!printRef.current) return;
     setDownloading(true);

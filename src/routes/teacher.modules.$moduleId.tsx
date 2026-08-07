@@ -249,64 +249,62 @@ function ModulePage() {
         <div className="absolute -bottom-64 left-1/4 size-[800px] bg-[#D6B97A]/10 rounded-full blur-[100px] animate-blob animation-delay-2000" />
       </div>
 
-      {moduleId !== "annual-monthly-planning" && (
-        <header className="bg-white/40 backdrop-blur-2xl border-b border-[#E8DFD1]/50 fixed top-0 left-0 right-0 h-16 z-30 px-4 md:px-8 flex items-center">
-          <div className="max-w-full w-full mx-auto flex items-center justify-between relative z-10">
-            <div className="flex items-center gap-3 md:gap-8">
-              <button
-                onClick={() => window.history.back()}
-                className="size-10 md:size-12 flex items-center justify-center bg-white/50 hover:bg-white rounded-xl md:rounded-2xl transition-all border border-[#E8DFD1]/50 text-[#D6B97A] shadow-sm hover:shadow-md"
+      <header className="bg-white/40 backdrop-blur-2xl border-b border-[#E8DFD1]/50 fixed top-0 left-0 right-0 h-16 z-30 px-4 md:px-8 flex items-center">
+        <div className="max-w-full w-full mx-auto flex items-center justify-between relative z-10">
+          <div className="flex items-center gap-3 md:gap-8">
+            <button
+              onClick={() => window.history.back()}
+              className="size-10 md:size-12 flex items-center justify-center bg-white/50 hover:bg-white rounded-xl md:rounded-2xl transition-all border border-[#E8DFD1]/50 text-[#D6B97A] shadow-sm hover:shadow-md"
+            >
+              <ChevronLeft className="size-5 md:size-6" />
+            </button>
+            <div className="flex items-center gap-3 md:gap-6">
+              <div
+                className={`size-10 md:size-14 ${config.color} rounded-xl md:rounded-[1.5rem] flex items-center justify-center text-white shadow-2xl shadow-[#D6B97A]/20 ring-4 ring-white/50`}
               >
-                <ChevronLeft className="size-5 md:size-6" />
-              </button>
-              <div className="flex items-center gap-3 md:gap-6">
-                <div
-                  className={`size-10 md:size-14 ${config.color} rounded-xl md:rounded-[1.5rem] flex items-center justify-center text-white shadow-2xl shadow-[#D6B97A]/20 ring-4 ring-white/50`}
-                >
-                  <config.icon className="size-5 md:size-7" />
-                </div>
-                <div>
-                  <h1 className="font-black text-[#1A1A1A] text-lg md:text-2xl tracking-tight leading-none">
-                    {config.m}
-                  </h1>
-                  <p className="text-[8px] md:text-[11px] font-bold text-[#D6B97A] uppercase tracking-[0.3em] mt-1 md:mt-2">
-                    {config.e}
-                  </p>
-                </div>
+                <config.icon className="size-5 md:size-7" />
+              </div>
+              <div>
+                <h1 className="font-black text-[#1A1A1A] text-lg md:text-2xl tracking-tight leading-none">
+                  {config.m}
+                </h1>
+                <p className="text-[8px] md:text-[11px] font-bold text-[#D6B97A] uppercase tracking-[0.3em] mt-1 md:mt-2">
+                  {config.e}
+                </p>
               </div>
             </div>
-
-            <div className="flex items-center gap-2 md:gap-4">
-              {moduleId === "teacher-statistics" && (
-                <button
-                  onClick={() => window.dispatchEvent(new Event("download-teacher-portfolio-pdf"))}
-                  className="group flex items-center gap-2 md:gap-4 px-6 md:px-12 py-3 md:py-5 bg-white text-slate-800 text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] rounded-full hover:bg-[#D6B97A] hover:text-white hover:border-[#D6B97A] border border-slate-200 transition-all duration-700 shadow-xl cursor-pointer"
-                >
-                  <Download className="size-3 md:size-4 text-[#D6B97A] group-hover:text-white" />
-                  <span className="hidden sm:inline">Download PDF</span>
-                  <span className="sm:hidden">PDF</span>
-                </button>
-              )}
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="group flex items-center gap-2 md:gap-4 px-6 md:px-12 py-3 md:py-5 bg-[#1A1A1A] text-white text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] rounded-full hover:bg-[#D6B97A] transition-all duration-700 shadow-2xl disabled:opacity-50"
-              >
-                {saving ? (
-                  <Loader2 className="size-3 md:size-4 animate-spin" />
-                ) : (
-                  <Save className="size-3 md:size-4 group-hover:rotate-12 transition-transform text-[#D6B97A] group-hover:text-white" />
-                )}
-                <span className="hidden sm:inline">Commit Sync</span>
-                <span className="sm:hidden">Save</span>
-              </button>
-            </div>
           </div>
-        </header>
-      )}
 
-      <main className={`flex-1 lg:pl-0 px-2 sm:px-4 md:px-6 py-4 md:py-6 max-w-full ${moduleId === 'annual-monthly-planning' ? 'pt-4' : 'pt-24'} mx-auto w-full relative z-10`}>
-        <PinGate sectionKey="planning" enabled={false}>
+          <div className="flex items-center gap-2 md:gap-4">
+            {moduleId === "teacher-statistics" && (
+              <button
+                onClick={() => window.dispatchEvent(new Event("download-teacher-portfolio-pdf"))}
+                className="group flex items-center gap-2 md:gap-4 px-6 md:px-12 py-3 md:py-5 bg-white text-slate-800 text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] rounded-full hover:bg-[#D6B97A] hover:text-white hover:border-[#D6B97A] border border-slate-200 transition-all duration-700 shadow-xl cursor-pointer"
+              >
+                <Download className="size-3 md:size-4 text-[#D6B97A] group-hover:text-white" />
+                <span className="hidden sm:inline">Download PDF</span>
+                <span className="sm:hidden">PDF</span>
+              </button>
+            )}
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="group flex items-center gap-2 md:gap-4 px-6 md:px-12 py-3 md:py-5 bg-[#1A1A1A] text-white text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] rounded-full hover:bg-[#D6B97A] transition-all duration-700 shadow-2xl disabled:opacity-50"
+            >
+              {saving ? (
+                <Loader2 className="size-3 md:size-4 animate-spin" />
+              ) : (
+                <Save className="size-3 md:size-4 group-hover:rotate-12 transition-transform text-[#D6B97A] group-hover:text-white" />
+              )}
+              <span className="hidden sm:inline">Commit Sync</span>
+              <span className="sm:hidden">Save</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="flex-1 lg:pl-0 px-2 sm:px-4 md:px-6 py-4 md:py-6 max-w-full pt-24 mx-auto w-full relative z-10">
+        <PinGate sectionKey="planning" enabled={moduleId === "annual-monthly-planning"}>
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -5443,7 +5441,6 @@ function TeachingDiaryManager({
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   
   const [pageData, setPageData] = useState<any>(null);
-  const [diaryRecords, setDiaryRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -5461,14 +5458,14 @@ function TeachingDiaryManager({
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
-  // Sync date selection with Firestore Query (diaryDate <= selectedDate, ordered ascending)
+  // Sync date selection
   useEffect(() => {
     if (selectedClass && selectedMedium && selectedDate) {
-      fetchDiaryRecords(selectedClass, selectedMedium, selectedDate);
+      fetchDiaryPage(selectedClass, selectedMedium, selectedDate);
     }
   }, [selectedClass, selectedMedium, selectedDate]);
 
-  // Automatically select start date of uploaded diary when class and medium are selected
+  // Automatically select standard start date of standard uploaded diary when standard standard class and medium are selected
   useEffect(() => {
     if (selectedClass && selectedMedium) {
       const fetchEarliestDate = async () => {
@@ -5496,67 +5493,22 @@ function TeachingDiaryManager({
     }
   }, [selectedClass, selectedMedium]);
 
-  /**
-   * Firestore Query implementation for Module View:
-   * Queries teacher_diaries/{class}/{medium} where diaryDate <= selectedDate (ascending order).
-   * Only fetches records up to selectedDate (no future dates).
-   */
-  const fetchDiaryRecords = async (cls: string, med: string, targetDate: Date) => {
-    const today = new Date();
-    today.setHours(23, 59, 59, 999);
-    if (targetDate > today) {
-      setPageData(null);
-      setDiaryRecords([]);
-      return;
-    }
-
+  const fetchDiaryPage = async (cls: string, med: string, date: Date) => {
     setLoading(true);
     setError(null);
     try {
-      const { collection, getDocs } = await import("firebase/firestore");
-      const selectedDateStr = format(targetDate, "yyyy-MM-dd");
-      const collectionRef = collection(db, "teacher_diaries", cls, med);
-
-      const querySnapshot = await getDocs(collectionRef);
-
-      if (!querySnapshot.empty) {
-        const allDocs = querySnapshot.docs.map((docSnap) => {
-          const data = docSnap.data();
-          const rawUrl = data.pageUrl || data.pageURL || "";
-          const sanitizedUrl = rawUrl.replace(/vz-7a00d099-4a8\.b-cdn\.net/g, "sgkbrainova.b-cdn.net");
-          const dateKey = data.diaryDate || docSnap.id;
-          return {
-            id: docSnap.id,
-            diaryDate: dateKey,
-            pageNumber: data.pageNumber || 1,
-            pageUrl: sanitizedUrl,
-            ...data,
-          };
-        });
-
-        // Filter records where diaryDate / doc ID <= selectedDateStr
-        const validRecords = allDocs.filter(
-          (r) => (r.diaryDate && r.diaryDate <= selectedDateStr) || r.id <= selectedDateStr
-        );
-        validRecords.sort((a, b) => (a.diaryDate || a.id).localeCompare(b.diaryDate || b.id));
-
-        setDiaryRecords(validRecords);
-
-        // Match selectedDate if split pages exist, otherwise fallback to master_diary or uploaded file
-        const exactMatch = validRecords.find(
-          (r) => r.diaryDate === selectedDateStr || r.id === selectedDateStr
-        );
-        const masterFallback = allDocs.find((r) => r.id === "master_diary" || r.pageUrl) || allDocs[0];
-        setPageData(exactMatch || masterFallback || null);
+      const dateStr = format(date, "yyyy-MM-dd");
+      // Since doc/getDoc are imported at the top, we can use them directly
+      const docRef = doc(db, "teacher_diaries", cls, med, dateStr);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setPageData(docSnap.data());
       } else {
-        setDiaryRecords([]);
         setPageData(null);
       }
     } catch (err: any) {
       console.error("Error loading diary page:", err);
       setError("Failed to load page details.");
-      setDiaryRecords([]);
-      setPageData(null);
     } finally {
       setLoading(false);
     }
@@ -5627,44 +5579,8 @@ function TeachingDiaryManager({
   return (
     <div className="space-y-6 font-sans">
       <AnimatePresence mode="wait">
-        {/* Step 1: Select Medium */}
-        {!selectedMedium && (
-          <motion.div
-            key="medium-select"
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -15 }}
-            className="space-y-6"
-          >
-            <div className="text-center space-y-1">
-              <h3 className="text-2xl font-black text-slate-800">Select Medium / माध्यम निवडा</h3>
-              <p className="text-xs font-bold text-indigo-600 uppercase tracking-wider">Step 1: Medium Selection</p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl mx-auto w-full">
-              {mediums.map((med) => (
-                <button
-                  key={med.id}
-                  onClick={() => {
-                    setSelectedMedium(med.id);
-                    setSelectedClass(null);
-                  }}
-                  className="group p-8 rounded-2xl border text-left transition-all shadow-sm hover:shadow-md cursor-pointer relative overflow-hidden flex items-start gap-4 bg-gradient-to-br from-indigo-600 to-purple-700 text-white border-indigo-500/30"
-                >
-                  <div className="size-10 rounded-full flex items-center justify-center border border-white/20 bg-white/10 backdrop-blur-sm text-white font-black text-sm shrink-0">
-                    {med.badge}
-                  </div>
-                  <div>
-                    <h4 className="font-black text-lg text-white">{med.mr}</h4>
-                    <p className="text-[9px] font-black uppercase tracking-wider text-indigo-200">{med.title} Medium</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </motion.div>
-        )}
-
-        {/* Step 2: Select Class */}
-        {selectedMedium && !selectedClass && (
+        {/* Step 1: Select Class */}
+        {!selectedClass && (
           <motion.div
             key="class-select"
             initial={{ opacity: 0, y: 15 }}
@@ -5674,9 +5590,7 @@ function TeachingDiaryManager({
           >
             <div className="text-center space-y-1">
               <h3 className="text-2xl font-black text-slate-800">Select Class / वर्ग निवडा</h3>
-              <p className="text-xs font-bold text-indigo-600 uppercase tracking-wider">
-                Step 2: Class Selection | Medium Selected: {selectedMedium === "Marathi" ? "मराठी" : "सेमी इंग्रजी"}
-              </p>
+              <p className="text-xs font-bold text-indigo-600 uppercase tracking-wider">Step 1: Standard Selection</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto w-full">
               {classes.map((cls) => (
@@ -5684,6 +5598,7 @@ function TeachingDiaryManager({
                   key={cls.id}
                   onClick={() => {
                     setSelectedClass(cls.id);
+                    setSelectedMedium(null);
                   }}
                   className={`group p-6 rounded-2xl border text-center transition-all shadow-sm hover:shadow-md bg-gradient-to-br ${cls.color} text-white border-black/5 cursor-pointer relative overflow-hidden flex flex-col items-center gap-3`}
                 >
@@ -5697,12 +5612,45 @@ function TeachingDiaryManager({
                 </button>
               ))}
             </div>
+          </motion.div>
+        )}
+
+        {/* Step 2: Select Medium */}
+        {selectedClass && !selectedMedium && (
+          <motion.div
+            key="medium-select"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            className="space-y-6"
+          >
+            <div className="text-center space-y-1">
+              <h3 className="text-2xl font-black text-slate-800">Select Medium / माध्यम निवडा</h3>
+              <p className="text-xs font-bold text-indigo-600 uppercase tracking-wider">Class Selected: {selectedClass}</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl mx-auto w-full">
+              {mediums.map((med) => (
+                <button
+                  key={med.id}
+                  onClick={() => setSelectedMedium(med.id)}
+                  className="group p-8 rounded-2xl border text-left transition-all shadow-sm hover:shadow-md cursor-pointer relative overflow-hidden flex items-start gap-4 bg-gradient-to-br from-indigo-600 to-purple-700 text-white border-indigo-500/30"
+                >
+                  <div className="size-10 rounded-full flex items-center justify-center border border-white/20 bg-white/10 backdrop-blur-sm text-white font-black text-sm shrink-0">
+                    {med.badge}
+                  </div>
+                  <div>
+                    <h4 className="font-black text-lg text-white">{med.mr}</h4>
+                    <p className="text-[9px] font-black uppercase tracking-wider text-indigo-200">{med.title} Medium</p>
+                  </div>
+                </button>
+              ))}
+            </div>
             <div className="flex justify-center">
               <button
-                onClick={() => setSelectedMedium(null)}
+                onClick={() => setSelectedClass(null)}
                 className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-900 text-xs font-black uppercase tracking-wider cursor-pointer"
               >
-                <ArrowLeft className="size-3.5" /> Back to Mediums / माध्यम बदला
+                <ArrowLeft className="size-3.5" /> Back to Classes
               </button>
             </div>
           </motion.div>
@@ -5721,12 +5669,12 @@ function TeachingDiaryManager({
             <div className="flex flex-wrap items-center justify-between gap-3 bg-white border border-slate-200/60 rounded-2xl p-3.5 shadow-sm">
               <button
                 onClick={() => {
-                  setSelectedClass(null);
+                  setSelectedMedium(null);
                   setPageData(null);
                 }}
                 className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-700 font-bold text-[10px] uppercase tracking-wider cursor-pointer"
               >
-                <ArrowLeft className="size-3.5" /> Change Class / इयत्ता बदला
+                <ArrowLeft className="size-3.5" /> Back
               </button>
 
               <div className="flex flex-wrap items-center gap-2">
@@ -5815,38 +5763,6 @@ function TeachingDiaryManager({
               </div>
             </div>
 
-            {/* Available Fetched Dates <= selectedDate */}
-            {diaryRecords.length > 0 && (
-              <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider shrink-0">
-                  Available Dates (≤ {format(selectedDate, "dd/MM/yyyy")}):
-                </span>
-                {diaryRecords.map((record) => {
-                  const isSelected = pageData?.id === record.id || pageData?.diaryDate === record.diaryDate;
-                  const parts = (record.diaryDate || record.id).split("-");
-                  const formattedPillDate = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : record.id;
-                  return (
-                    <button
-                      key={record.id}
-                      onClick={() => {
-                        setPageData(record);
-                        if (parts.length === 3) {
-                          setSelectedDate(new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10)));
-                        }
-                      }}
-                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold transition-all border shrink-0 cursor-pointer ${
-                        isSelected
-                          ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
-                          : "bg-white text-slate-600 border-slate-200 hover:border-indigo-300"
-                      }`}
-                    >
-                      {formattedPillDate}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
             {/* Preview Frame */}
             <div
               ref={viewerRef}
@@ -5880,9 +5796,9 @@ function TeachingDiaryManager({
                     <FileText className="size-6" />
                   </div>
                   <div className="space-y-1">
-                    <h4 className="text-sm font-bold text-slate-800 font-sans">No Teaching Diary Available.</h4>
+                    <h4 className="text-sm font-bold text-slate-800 font-sans">No Page Found</h4>
                     <p className="text-[11px] text-slate-400">
-                      There is no teaching diary page mapped to <strong className="text-slate-600">{format(selectedDate, "dd/MM/yyyy")}</strong> or previous dates.
+                      No diary page uploaded for <strong className="text-slate-600">{format(selectedDate, "dd/MM/yyyy")}</strong>.
                     </p>
                   </div>
                 </div>
