@@ -84,6 +84,7 @@ export const fetchStudentsForClass = async (selectedClass, medium, teacherId = n
           dob: d.dob || d.birthDate || "",
           caste: d.caste || d.category || "",
           studentId: d.studentId || docSnap.id,
+          photoUrl: d.photoUrl || d.photoURL || d.photo || d.studentPhoto || d.profilePhoto || d.avatarUrl || d.image || "",
         });
       }
     });
@@ -113,6 +114,7 @@ export const fetchStudentsForClass = async (selectedClass, medium, teacherId = n
             dob: d.dob || d.birthDate || "",
             caste: d.caste || d.category || "",
             studentId: d.studentId || docSnap.id,
+            photoUrl: d.photoUrl || d.photoURL || d.photo || d.studentPhoto || d.profilePhoto || d.avatarUrl || d.image || "",
           });
         }
       });
@@ -152,6 +154,7 @@ export const fetchStudentsForClass = async (selectedClass, medium, teacherId = n
         aparId: det.aparId || "",
         height: det.height || "",
         weight: det.weight || "",
+        photoUrl: det.photoUrl || det.photoURL || det.photo || det.studentPhoto || det.profilePhoto || det.avatarUrl || det.image || s.photoUrl || "",
       };
       const key = s.rollNo ? `${s.rollNo}_${s.name}` : s.name;
       if (!uniqueMap.has(key)) uniqueMap.set(key, mergedStudent);
@@ -181,17 +184,34 @@ export const fetchFirestoreMarks = async (selectedClass, academicYear, term = "f
   let mergedMarks = {};
 
   const loadDocData = async (examKey) => {
+    const docIdsToTry = [];
     if (activeTeacherId) {
+      if (examKey) {
+        docIdsToTry.push(`${activeTeacherId}_${selectedClass}_${academicYear}_${examKey}`);
+      }
+      docIdsToTry.push(`${activeTeacherId}_${selectedClass}_${academicYear}`);
+    }
+    if (examKey) {
+      docIdsToTry.push(`${selectedClass}_${academicYear}_${examKey}`);
+    }
+    docIdsToTry.push(`${selectedClass}_${academicYear}`);
+
+    for (const dId of docIdsToTry) {
       try {
-        const snap = await getDoc(doc(db, "cce_marks_v2", `${activeTeacherId}_${selectedClass}_${academicYear}_${examKey}`));
-        if (snap.exists()) return snap.data().records || snap.data().marksData || snap.data();
+        const snap = await getDoc(doc(db, "cce_marks_v2", dId));
+        if (snap.exists()) {
+          const data = snap.data();
+          if (examKey) {
+            const altKey = examKey === "sem1" ? "semester1" : "semester2";
+            if (data[examKey]) return data[examKey].records || data[examKey].marksData || data[examKey];
+            if (data[altKey]) return data[altKey].records || data[altKey].marksData || data[altKey];
+          }
+          if (data.records || data.marksData || data.data) {
+            return data.records || data.marksData || data.data;
+          }
+        }
       } catch (e) {}
     }
-    // Fallback if no activeTeacherId or for legacy
-    try {
-      const snap = await getDoc(doc(db, "cce_marks_v2", `${selectedClass}_${academicYear}_${examKey}`));
-      if (snap.exists()) return snap.data().records || snap.data().marksData || snap.data();
-    } catch (e) {}
     return {};
   };
 

@@ -27,6 +27,8 @@ const Result5th8th = safeLazy(() => import("@/result/Result5th8th"));
 const ResultSSC = safeLazy(() => import("@/result/ResultSSC"));
 // @ts-ignore
 const ResultHSC = safeLazy(() => import("@/result/ResultHSC"));
+// @ts-ignore
+const AnnualResultRegister = safeLazy(() => import("@/result/AnnualResultRegister"));
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -109,6 +111,7 @@ export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
   selectedClass: string; academicYear: string; onBack: () => void;
 }) {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [selectedSemester, setSelectedSemester] = useState<"sem1" | "sem2">("sem2");
 
   const renderLoading = () => (
     <div className="flex flex-col items-center justify-center min-h-[350px] text-slate-500">
@@ -117,19 +120,50 @@ export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
     </div>
   );
 
+  const SemesterToggle = () => (
+    <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl border border-slate-200 shadow-inner">
+      <button
+        onClick={() => setSelectedSemester("sem1")}
+        className={`px-3.5 py-1.5 text-xs font-black rounded-xl transition-all cursor-pointer ${
+          selectedSemester === "sem1"
+            ? "bg-blue-600 text-white shadow-md shadow-blue-200"
+            : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
+        }`}
+      >
+        📘 प्रथम सत्र (Sem 1)
+      </button>
+      <button
+        onClick={() => setSelectedSemester("sem2")}
+        className={`px-3.5 py-1.5 text-xs font-black rounded-xl transition-all cursor-pointer ${
+          selectedSemester === "sem2"
+            ? "bg-blue-600 text-white shadow-md shadow-blue-200"
+            : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
+        }`}
+      >
+        📙 द्वितीय सत्र (Sem 2)
+      </button>
+    </div>
+  );
+
   if (selectedOption === "cce_register") {
     return (
       <div className="bg-white text-slate-800 rounded-[2.5rem] border border-slate-200 shadow-2xl p-6 min-h-[600px] flex flex-col font-sans">
-        <div className="flex items-center gap-4 pb-4 border-b border-slate-100 mb-6">
-          <button onClick={() => setSelectedOption(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors cursor-pointer text-slate-600">
-            <ArrowLeft className="size-5" />
-          </button>
-          <h2 className="text-lg font-bold text-slate-800">CCE मूल्यांकन नोंदवही PDF</h2>
+        <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-6 flex-wrap gap-3">
+          <div className="flex items-center gap-4">
+            <button onClick={() => setSelectedOption(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors cursor-pointer text-slate-600">
+              <ArrowLeft className="size-5" />
+            </button>
+            <div>
+              <h2 className="text-lg font-bold text-slate-800">CCE मूल्यांकन नोंदवही PDF</h2>
+              <p className="text-xs text-blue-600 font-bold">{selectedSemester === "sem1" ? "प्रथम सत्र (Sem 1)" : "द्वितीय सत्र (Sem 2)"}</p>
+            </div>
+          </div>
+          <SemesterToggle />
         </div>
         <div className="flex-1 overflow-x-auto">
           <PdfErrorBoundary title="CCE मूल्यांकन नोंदवही">
             <Suspense fallback={renderLoading()}>
-              <BoardResult initialClass={selectedClass} initialYear={academicYear} />
+              <BoardResult initialClass={selectedClass} initialYear={academicYear} initialTerm={selectedSemester} key={`${selectedClass}_${academicYear}_${selectedSemester}`} />
             </Suspense>
           </PdfErrorBoundary>
         </div>
@@ -140,16 +174,22 @@ export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
   if (selectedOption === "learning_outcomes") {
     return (
       <div className="bg-white text-slate-800 rounded-[2.5rem] border border-slate-200 shadow-2xl p-6 min-h-[600px] flex flex-col font-sans">
-        <div className="flex items-center gap-4 pb-4 border-b border-slate-100 mb-6">
-          <button onClick={() => setSelectedOption(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors cursor-pointer text-slate-600">
-            <ArrowLeft className="size-5" />
-          </button>
-          <h2 className="text-lg font-bold text-slate-800">अध्ययन निष्पतीनिहाय संपादणूक प्रगतीदर्शक नोंदतक्ता</h2>
+        <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-6 flex-wrap gap-3">
+          <div className="flex items-center gap-4">
+            <button onClick={() => setSelectedOption(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors cursor-pointer text-slate-600">
+              <ArrowLeft className="size-5" />
+            </button>
+            <div>
+              <h2 className="text-lg font-bold text-slate-800">अध्ययन निष्पतीनिहाय संपादणूक प्रगतीदर्शक नोंदतक्ता</h2>
+              <p className="text-xs text-blue-600 font-bold">{selectedSemester === "sem1" ? "प्रथम सत्र (Sem 1)" : "द्वितीय सत्र (Sem 2)"}</p>
+            </div>
+          </div>
+          <SemesterToggle />
         </div>
         <div className="flex-1 overflow-x-auto">
           <PdfErrorBoundary title="अध्ययन निष्पती प्रगतीदर्शक">
             <Suspense fallback={renderLoading()}>
-              <SubjectWiseResult initialClass={selectedClass} initialYear={academicYear} />
+              <SubjectWiseResult initialClass={selectedClass} initialYear={academicYear} initialTerm={selectedSemester} key={`${selectedClass}_${academicYear}_${selectedSemester}`} />
             </Suspense>
           </PdfErrorBoundary>
         </div>
@@ -160,16 +200,22 @@ export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
   if (selectedOption === "progress_card") {
     return (
       <div className="bg-white text-slate-800 rounded-[2.5rem] border border-slate-200 shadow-2xl p-6 min-h-[600px] flex flex-col font-sans">
-        <div className="flex items-center gap-4 pb-4 border-b border-slate-100 mb-6">
-          <button onClick={() => setSelectedOption(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors cursor-pointer text-slate-600">
-            <ArrowLeft className="size-5" />
-          </button>
-          <h2 className="text-lg font-bold text-slate-800">प्रगती पत्रक PDF</h2>
+        <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-6 flex-wrap gap-3">
+          <div className="flex items-center gap-4">
+            <button onClick={() => setSelectedOption(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors cursor-pointer text-slate-600">
+              <ArrowLeft className="size-5" />
+            </button>
+            <div>
+              <h2 className="text-lg font-bold text-slate-800">प्रगती पत्रक PDF</h2>
+              <p className="text-xs text-blue-600 font-bold">{selectedSemester === "sem1" ? "प्रथम सत्र (Sem 1)" : "द्वितीय सत्र (Sem 2)"}</p>
+            </div>
+          </div>
+          <SemesterToggle />
         </div>
         <div className="flex-1 overflow-x-auto">
           <PdfErrorBoundary title="प्रगती पत्रक">
             <Suspense fallback={renderLoading()}>
-              <ProgressSheet initialClass={selectedClass} initialYear={academicYear} onBack={() => setSelectedOption(null)} />
+              <ProgressSheet initialClass={selectedClass} initialYear={academicYear} initialTerm={selectedSemester} key={`${selectedClass}_${academicYear}_${selectedSemester}`} onBack={() => setSelectedOption(null)} />
             </Suspense>
           </PdfErrorBoundary>
         </div>
@@ -180,22 +226,22 @@ export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
   if (selectedOption === "annual_result") {
     return (
       <div className="bg-white text-slate-800 rounded-[2.5rem] border border-slate-200 shadow-2xl p-6 min-h-[600px] flex flex-col font-sans">
-        <div className="flex items-center gap-4 pb-4 border-b border-slate-100 mb-6">
-          <button onClick={() => setSelectedOption(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors cursor-pointer text-slate-600">
-            <ArrowLeft className="size-5" />
-          </button>
-          <h2 className="text-lg font-bold text-slate-800">वार्षिक निकाल पत्रक PDF</h2>
+        <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-6 flex-wrap gap-3">
+          <div className="flex items-center gap-4">
+            <button onClick={() => setSelectedOption(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors cursor-pointer text-slate-600">
+              <ArrowLeft className="size-5" />
+            </button>
+            <div>
+              <h2 className="text-lg font-bold text-slate-800">वार्षिक निकाल पत्रक PDF</h2>
+              <p className="text-xs text-blue-600 font-bold">{selectedSemester === "sem1" ? "प्रथम सत्र (Sem 1)" : "द्वितीय सत्र (Sem 2)"}</p>
+            </div>
+          </div>
+          <SemesterToggle />
         </div>
         <div className="flex-1 overflow-x-auto">
           <PdfErrorBoundary title="वार्षिक निकाल पत्रक">
             <Suspense fallback={renderLoading()}>
-              {["5th", "8th"].includes(selectedClass) ? (
-                <Result5th8th initialClass={selectedClass} initialYear={academicYear} />
-              ) : selectedClass === "12th" ? (
-                <ResultHSC initialClass={selectedClass} initialYear={academicYear} />
-              ) : (
-                <GradeWise initialClass={selectedClass} initialYear={academicYear} onBack={() => setSelectedOption(null)} />
-              )}
+              <AnnualResultRegister initialClass={selectedClass} initialYear={academicYear} onBack={() => setSelectedOption(null)} />
             </Suspense>
           </PdfErrorBoundary>
         </div>
@@ -206,16 +252,22 @@ export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
   if (selectedOption === "grade_result") {
     return (
       <div className="bg-white text-slate-800 rounded-[2.5rem] border border-slate-200 shadow-2xl p-6 min-h-[600px] flex flex-col font-sans">
-        <div className="flex items-center gap-4 pb-4 border-b border-slate-100 mb-6">
-          <button onClick={() => setSelectedOption(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors cursor-pointer text-slate-600">
-            <ArrowLeft className="size-5" />
-          </button>
-          <h2 className="text-lg font-bold text-slate-800">श्रेणीनिहाय-निकाल-संकलन-प्रपत्र PDF</h2>
+        <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-6 flex-wrap gap-3">
+          <div className="flex items-center gap-4">
+            <button onClick={() => setSelectedOption(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors cursor-pointer text-slate-600">
+              <ArrowLeft className="size-5" />
+            </button>
+            <div>
+              <h2 className="text-lg font-bold text-slate-800">श्रेणीनिहाय-निकाल-संकलन-प्रपत्र PDF</h2>
+              <p className="text-xs text-blue-600 font-bold">{selectedSemester === "sem1" ? "प्रथम सत्र (Sem 1)" : "द्वितीय सत्र (Sem 2)"}</p>
+            </div>
+          </div>
+          <SemesterToggle />
         </div>
         <div className="flex-1 overflow-x-auto">
           <PdfErrorBoundary title="श्रेणीनिहाय निकाल संकलन प्रपत्र">
             <Suspense fallback={renderLoading()}>
-              <GradeWise initialClass={selectedClass} initialYear={academicYear} onBack={() => setSelectedOption(null)} />
+              <GradeWise initialClass={selectedClass} initialYear={academicYear} initialTerm={selectedSemester} key={`${selectedClass}_${academicYear}_${selectedSemester}`} onBack={() => setSelectedOption(null)} />
             </Suspense>
           </PdfErrorBoundary>
         </div>
@@ -225,18 +277,22 @@ export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
 
   return (
     <div className="bg-white text-slate-800 rounded-[2.5rem] border border-slate-200 shadow-2xl min-h-[600px] flex flex-col font-sans select-none overflow-hidden" style={{ fontFamily: "'Inter', 'Noto Sans Devanagari', sans-serif" }}>
-      {/* Header */}
-      <div className="flex items-center gap-4 px-6 py-5 border-b border-slate-100 bg-slate-50 flex-shrink-0">
-        <button
-          onClick={onBack}
-          className="p-2 hover:bg-white rounded-full transition-colors cursor-pointer text-slate-600 flex items-center justify-center shadow-sm"
-        >
-          <ArrowLeft className="size-5" />
-        </button>
-        <div>
-          <h2 className="text-lg font-bold tracking-tight text-slate-800">PDF निर्मिती</h2>
-          <p className="text-[11px] text-blue-600 font-bold uppercase tracking-wider">{selectedClass} • {academicYear}</p>
+      {/* Header with Semester Selection */}
+      <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-slate-50 flex-wrap gap-3 flex-shrink-0">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={onBack}
+            className="p-2 hover:bg-white rounded-full transition-colors cursor-pointer text-slate-600 flex items-center justify-center shadow-sm"
+          >
+            <ArrowLeft className="size-5" />
+          </button>
+          <div>
+            <h2 className="text-lg font-bold tracking-tight text-slate-800">PDF निर्मिती (सत्र निवडा)</h2>
+            <p className="text-[11px] text-blue-600 font-bold uppercase tracking-wider">{selectedClass} • {academicYear}</p>
+          </div>
         </div>
+
+        <SemesterToggle />
       </div>
 
       {/* PDF Options List */}

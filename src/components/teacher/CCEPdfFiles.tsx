@@ -22,6 +22,8 @@ const ProgressSheet = safeLazy(() => import("@/result/ProgressSheet"));
 const GradeWise = safeLazy(() => import("@/result/GradeWise"));
 // @ts-ignore
 const Result5th8th = safeLazy(() => import("@/result/Result5th8th"));
+// @ts-ignore
+const AnnualResultRegister = safeLazy(() => import("@/result/AnnualResultRegister"));
 
 // Custom Red/Green PDF File Icon SVG
 function PdfIcon({ className = "w-9 h-11" }: { className?: string }) {
@@ -182,11 +184,7 @@ export function CCEPdfFiles({
           <h2 className="text-base font-bold text-slate-800">वार्षिक निकाल पत्रक - इयत्ता {activeClass}</h2>
         </div>
         <Suspense fallback={renderLoading()}>
-          {["5th", "8th"].includes(activeClass) ? (
-            <Result5th8th initialClass={activeClass} initialYear={academicYear} />
-          ) : (
-            <GradeWise initialClass={activeClass} initialYear={academicYear} onBack={() => setViewingReportId(null)} />
-          )}
+          <AnnualResultRegister initialClass={activeClass} initialYear={academicYear} onBack={() => setViewingReportId(null)} />
         </Suspense>
       </div>
     );

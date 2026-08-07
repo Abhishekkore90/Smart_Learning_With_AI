@@ -385,10 +385,24 @@ export function CCERemarks({
   }, [propMedium, selectedClass]);
 
   // Load master remarks for the standard
+  // Load master remarks for the standard (Sync with Firestore real-time & Bunny CDN)
   useEffect(() => {
     let isMounted = true;
     const masterData = getClassRemarks(selectedClass, selectedMedium);
     setCustomClassRemarks(masterData);
+
+    const docId = `${selectedClass}_${selectedMedium}`;
+    const unsubDoc = onSnapshot(doc(db, "cce_admin_remarks", docId), (docSnap) => {
+      if (!isMounted) return;
+      if (docSnap.exists() && docSnap.data().remarks) {
+        const remoteData = docSnap.data().remarks;
+        setCustomClassRemarks((prev) => ({
+          ...masterData,
+          ...prev,
+          ...remoteData,
+        }));
+      }
+    });
 
     async function fetchCustomAdminRemarks() {
       try {
@@ -412,6 +426,7 @@ export function CCERemarks({
     fetchCustomAdminRemarks();
     return () => {
       isMounted = false;
+      unsubDoc();
     };
   }, [selectedClass, selectedMedium]);
 

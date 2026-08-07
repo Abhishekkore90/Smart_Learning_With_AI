@@ -17,6 +17,8 @@ import { toast } from "sonner";
 // @ts-ignore
 import { matchStudentClassAndMedium } from "@/result/firestoreMarksHelper";
 import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
+// @ts-ignore
+import { getTeacherId } from "@/lib/teacherIsolationHelper";
 
 const EXAMS_SEM1 = [
   { key: "test1", label: "चाचणी १" },
@@ -175,16 +177,82 @@ export function CCEMarksEntry({
   // Instant real-time listener for subjects and marks
   useEffect(() => {
     setLoading(true);
+    const currentTeacherId = getTeacherId();
+
     const unsubSettings = onSnapshot(doc(db, "cce_settings", `${selectedClass}_${academicYear}`), (snap) => {
       if (snap.exists() && snap.data().subjects) {
         setSubjects(snap.data().subjects);
       } else {
-        setSubjects(getDefaultSubjectsForClass(selectedClass));
+        setSubjects(getDefaultSubjectsForClass(selectedClass, selectedMedium));
       }
     });
 
-    const unsubMarks = onSnapshot(doc(db, "cce_marks_v2", `${selectedClass}_${academicYear}_${selectedExamKey}`), (snap) => {
-      setAllMarks(snap.exists() ? snap.data().records || {} : {});
+    const primaryDocId = `${selectedClass}_${academicYear}_${activeSemester}`;
+    const teacherDocId = currentTeacherId ? `${currentTeacherId}_${selectedClass}_${academicYear}_${activeSemester}` : primaryDocId;
+    const generalDocId = `${selectedClass}_${academicYear}`;
+
+    const unsubMarks = onSnapshot(doc(db, "cce_marks_v2", primaryDocId), async (snap) => {
+      let recs: Record<string, Record<string, SubjectMarks>> = {};
+      if (snap.exists()) {
+        const d = snap.data();
+        recs = d.records || d.marksData || d.data || {};
+      }
+      
+      if (!recs || Object.keys(recs).length === 0) {
+        try {
+          if (currentTeacherId) {
+            const tSnap = await getDoc(doc(db, "cce_marks_v2", teacherDocId));
+            if (tSnap.exists()) {
+              const td = tSnap.data();
+              recs = td.records || td.marksData || td.data || {};
+            }
+          }
+        } catch (e) {}
+
+        // Check general doc for term-nested property or student-nested term property
+        if (!recs || Object.keys(recs).length === 0) {
+          try {
+            const genSnap = await getDoc(doc(db, "cce_marks_v2", generalDocId));
+            if (genSnap.exists()) {
+              const gd = genSnap.data();
+              const semData = gd[activeSemester] || gd[activeSemester === "sem1" ? "semester1" : "semester2"];
+              if (semData && typeof semData === "object") {
+                recs = semData.records || semData.marksData || semData;
+              } else if (gd.records && typeof gd.records === "object") {
+                const extracted: Record<string, Record<string, SubjectMarks>> = {};
+                for (const [sKey, sVal] of Object.entries(gd.records)) {
+                  if (sVal && typeof sVal === "object") {
+                    if ((sVal as any)[activeSemester]) {
+                      extracted[sKey] = (sVal as any)[activeSemester];
+                    } else if ((sVal as any)[activeSemester === "sem1" ? "semester1" : "semester2"]) {
+                      extracted[sKey] = (sVal as any)[activeSemester === "sem1" ? "semester1" : "semester2"];
+                    }
+                  }
+                }
+                if (Object.keys(extracted).length > 0) recs = extracted;
+              }
+            }
+          } catch (e) {}
+        }
+
+        // Fallback: Bunny CDN
+        if (!recs || Object.keys(recs).length === 0) {
+          try {
+            const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
+            const bunnyFile = activeSemester === "sem1" 
+              ? `cce_results/${selectedClass}_${academicYear}_marks_first.json`
+              : `cce_results/${selectedClass}_${academicYear}_marks_second.json`;
+            const bunnySemFile = `cce_results/${selectedClass}_${academicYear}_marks_${activeSemester}.json`;
+
+            const bData = (await fetchJsonFromBunny(bunnySemFile)) || (await fetchJsonFromBunny(bunnyFile));
+            if (bData && typeof bData === "object") {
+              recs = bData;
+            }
+          } catch (e) {}
+        }
+      }
+
+      setAllMarks(recs || {});
       setLoading(false);
     });
 
@@ -192,7 +260,7 @@ export function CCEMarksEntry({
       unsubSettings();
       unsubMarks();
     };
-  }, [selectedClass, academicYear, selectedExamKey]);
+  }, [selectedClass, academicYear, activeSemester, selectedMedium]);
 
   useEffect(() => {
     const unsubWeightage = onSnapshot(doc(db, "cce_weightage_v2", `${selectedClass}_${academicYear}`), (snap) => {
@@ -324,25 +392,184 @@ export function CCEMarksEntry({
   const saveMarks = async () => {
     setSaving(true);
     try {
+      const currentTeacherId = getTeacherId();
+
+      // 1. Save to Bunny CDN Storage separately for activeSemester
       try {
         const { saveJsonToBunny } = await import("@/lib/bunnyStorage");
         await saveJsonToBunny(
-          `cce_results/${selectedClass}_${academicYear}_marks_${selectedExamKey}.json`,
+          `cce_results/${selectedClass}_${academicYear}_marks_${activeSemester}.json`,
           allMarks
         );
+        const aliasBunnyFile = activeSemester === "sem1" 
+          ? `cce_results/${selectedClass}_${academicYear}_marks_first.json`
+          : `cce_results/${selectedClass}_${academicYear}_marks_second.json`;
+        await saveJsonToBunny(aliasBunnyFile, allMarks);
       } catch (e) {}
 
+      // 2. Save to Firestore cce_marks_v2 separately for activeSemester
+      const docData = {
+        class: selectedClass,
+        academicYear,
+        semester: activeSemester,
+        exam: activeSemester,
+        records: allMarks,
+        updatedAt: new Date().toISOString(),
+      };
+
+      const docIdsToSave = [
+        `${selectedClass}_${academicYear}_${activeSemester}`,
+        `${selectedClass}_${selectedMedium}_${academicYear}_${activeSemester}`,
+      ];
+
+      if (currentTeacherId) {
+        docIdsToSave.push(`${currentTeacherId}_${selectedClass}_${academicYear}_${activeSemester}`);
+        docIdsToSave.push(`${currentTeacherId}_${selectedClass}_${selectedMedium}_${academicYear}_${activeSemester}`);
+      }
+
+      for (const dId of docIdsToSave) {
+        await setDoc(doc(db, "cce_marks_v2", dId), docData, { merge: true });
+      }
+
+      // Also merge term-nested data into general document for legacy compatibility
       await setDoc(
-        doc(db, "cce_marks_v2", `${selectedClass}_${academicYear}_${selectedExamKey}`),
-        { class: selectedClass, academicYear, exam: selectedExamKey, records: allMarks, updatedAt: new Date().toISOString() },
+        doc(db, "cce_marks_v2", `${selectedClass}_${academicYear}`),
+        {
+          class: selectedClass,
+          academicYear,
+          [activeSemester]: allMarks,
+          [activeSemester === "sem1" ? "semester1" : "semester2"]: allMarks,
+          updatedAt: new Date().toISOString(),
+        },
         { merge: true }
       );
-      toast.success("गुण यशस्वीरीत्या जतन झाले!");
+
+      toast.success(`${activeSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"} चे गुण यशस्वीरीत्या जतन झाले!`);
     } catch (err: any) {
       toast.error("जतन अयशस्वी: " + err.message);
     }
     setSaving(false);
   };
+
+  // ── SUBJECT-WISE MARKS EDITOR ──
+  if (editingSubject) {
+    const subject = editingSubject;
+
+    return (
+      <div
+        className="bg-white text-slate-800 rounded-[2.5rem] border border-slate-200/90 shadow-2xl min-h-[600px] flex flex-col relative select-none overflow-hidden font-sans"
+      >
+        {/* Top Header Banner */}
+        <div className="bg-gradient-to-r from-purple-700 via-indigo-700 to-blue-800 text-white px-6 py-4 shadow-lg flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setEditingSubject(null)}
+              className="p-2.5 bg-white/10 hover:bg-white/20 active:scale-95 rounded-2xl transition-all cursor-pointer text-white flex items-center justify-center backdrop-blur-md"
+            >
+              <ArrowLeft className="size-5" />
+            </button>
+            <div>
+              <h2 className="text-lg font-black tracking-tight text-white flex items-center gap-2">
+                <BookOpen className="size-5 text-purple-200" />
+                विषयनिहाय गुण नोंदणी - {subject} ({activeSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"})
+              </h2>
+              <p className="text-xs text-purple-200 font-medium">इयत्ता {selectedClass} • सर्व विद्यार्थ्यांचे गुण</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Subject Nav Tabs */}
+        <div className="bg-slate-100 p-2 border-b border-slate-200 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          {subjects.map((sub) => (
+            <button
+              key={sub}
+              onClick={() => setEditingSubject(sub)}
+              className={`px-4 py-2.5 rounded-xl font-extrabold text-xs whitespace-nowrap transition-all cursor-pointer ${
+                editingSubject === sub
+                  ? "bg-purple-600 text-white shadow-md shadow-purple-500/20"
+                  : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+              }`}
+            >
+              {sub}
+            </button>
+          ))}
+        </div>
+
+        {/* Roster of Students for this Subject */}
+        <div className="flex-1 overflow-y-auto px-6 py-6 pb-28 space-y-4">
+          {students.map((student, idx) => {
+            const sm = getSubjectMarks(student.id, subject);
+            const activeCols = getActiveColsForStudent(student.rollNo || "", subject);
+
+            const akarikCols = activeCols.filter((c) => c.type === "akarik");
+            const sankalitCols = activeCols.filter((c) => c.type === "sankalit");
+
+            const akarikTotal = akarikCols.reduce((sum, c) => sum + (sm[c.key] || 0), 0);
+            const akarikMax = akarikCols.reduce((sum, c) => sum + c.max, 0);
+
+            const sankalitTotal = sankalitCols.reduce((sum, c) => sum + (sm[c.key] || 0), 0);
+            const sankalitMax = sankalitCols.reduce((sum, c) => sum + c.max, 0);
+
+            const grandTotal = akarikTotal + sankalitTotal;
+            const grandMax = akarikMax + sankalitMax;
+
+            return (
+              <div
+                key={student.id}
+                className="bg-slate-50/80 p-4.5 rounded-3xl border border-slate-200 shadow-sm space-y-3"
+              >
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2.5 flex-wrap gap-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-purple-600 text-white font-black text-xs flex items-center justify-center shadow-md">
+                      {student.rollNo || idx + 1}
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-slate-900">{student.fullName || student.name}</h4>
+                      <p className="text-[11px] text-slate-500 font-bold">हजेरी क्र. {student.rollNo || idx + 1}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black text-purple-700 bg-purple-100/80 px-3 py-1 rounded-xl border border-purple-200">
+                      एकूण गुण: {grandTotal} / {grandMax}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Inputs for this student */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                  {activeCols.map((col) => (
+                    <div key={col.key} className="space-y-1">
+                      <label className="text-[11px] font-extrabold text-slate-600 truncate block" title={col.label}>
+                        {col.label}
+                      </label>
+                      <MarksInput
+                        value={sm[col.key] || 0}
+                        max={col.max}
+                        onChange={(val) => setSubjectMark(student.id, subject, col.key, val)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Sticky glassmorphic bottom bar */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-slate-200 z-30 flex items-center gap-3">
+          <button
+            onClick={saveMarks}
+            disabled={saving}
+            className="flex-1 py-4 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white font-extrabold text-sm rounded-2xl shadow-xl flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <Save className="size-4" />
+            <span>{saving ? "जतन होत आहे..." : `गुण जतन करा (Save Marks for ${subject})`}</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // ── STUDENT MARKS EDITOR ──
   if (editingStudent) {
