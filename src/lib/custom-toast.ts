@@ -63,15 +63,33 @@ function getOrCreateContainer(): HTMLDivElement | null {
   return container;
 }
 
+function dismissLoadingToasts() {
+  if (typeof document === "undefined") return;
+  const container = document.getElementById("custom-toast-container");
+  if (!container) return;
+  const loadingToasts = container.querySelectorAll("[data-toast-type='loading']");
+  loadingToasts.forEach((el: Element) => {
+    const htmlEl = el as HTMLElement;
+    htmlEl.style.opacity = "0";
+    htmlEl.style.transform = "translateY(-12px) scale(0.95)";
+    setTimeout(() => htmlEl.remove(), 350);
+  });
+}
+
 function createDOMToast(message: string, type: ToastType = "success"): string {
   const container = getOrCreateContainer();
   if (!container) return "";
+
+  if (type !== "loading") {
+    dismissLoadingToasts();
+  }
 
   const toastId = Math.random().toString(36).substring(2, 9);
   const colors = TOAST_COLORS[type];
 
   const toast = document.createElement("div");
   toast.id = `custom-toast-${toastId}`;
+  toast.dataset.toastType = type;
   toast.style.cssText = `
     background: ${colors.bg};
     color: ${colors.text};

@@ -844,7 +844,7 @@ const TEMPLATE_CONFIGS: Record<string, any> = {
                                 ? "सृजनात्मक स्टूडियो"
                                 : "Creative Studio"}
                           </h2>
-                          <p className="text-slate-400 text-xs font-black uppercase tracking-widest mt-1">
+                          <p className="text-slate-500 text-xs font-bold mt-1">
                             {lang === "mr"
                               ? "थेट सानुकूलन इंजिन"
                               : lang === "hi"
@@ -855,7 +855,7 @@ const TEMPLATE_CONFIGS: Record<string, any> = {
 
                         <div className="space-y-8">
                           <div className="space-y-2 group">
-                            <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">
+                            <label className="text-xs font-bold text-slate-700 ml-1">
                               {lang === "mr"
                                 ? "विद्यार्थ्याचे पूर्ण नाव"
                                 : lang === "hi"
@@ -876,7 +876,7 @@ const TEMPLATE_CONFIGS: Record<string, any> = {
                           </div>
 
                           <div className="space-y-2 group">
-                            <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">
+                            <label className="text-xs font-bold text-slate-700 ml-1">
                               {isAnnual ? (
                                 lang === "mr" ? "कामगिरीची भूमिका" : lang === "hi" ? "प्रदर्शन की भूमिका" : "Performance Role"
                               ) : isCultural ? (
@@ -918,7 +918,7 @@ const TEMPLATE_CONFIGS: Record<string, any> = {
                           </div>
 
                           <div className="space-y-2 group">
-                            <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">
+                            <label className="text-xs font-bold text-slate-700 ml-1">
                               {lang === "mr" ? "कार्ड मथळा (Title)" : lang === "hi" ? "कार्ड का शीर्षक" : "Card Title"}
                             </label>
                             <div className="bg-slate-50 rounded-[2rem] flex items-center gap-4 px-8 border-2 border-transparent focus-within:bg-white focus-within:border-indigo-500/20 transition-all shadow-inner">
@@ -933,7 +933,7 @@ const TEMPLATE_CONFIGS: Record<string, any> = {
                           </div>
 
                           <div className="space-y-2 group">
-                            <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">
+                            <label className="text-xs font-bold text-slate-700 ml-1">
                               {lang === "mr" ? "शुभेच्छा संदेश (Quote)" : lang === "hi" ? "शुभकामना संदेश (Quote)" : "Wishing Message / Quote"}
                             </label>
                             <div className="bg-slate-50 rounded-[2.5rem] flex items-start gap-4 px-8 py-4 border-2 border-transparent focus-within:bg-white focus-within:border-indigo-500/20 transition-all shadow-inner">
@@ -949,7 +949,7 @@ const TEMPLATE_CONFIGS: Record<string, any> = {
 
                           {/* Optional Parent WhatsApp Phone Number Field */}
                           <div className="space-y-2 group">
-                            <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">
+                            <label className="text-xs font-bold text-slate-700 ml-1">
                               {lang === "mr" ? "पालकांचा/विद्यार्थ्याचा WhatsApp नंबर (ऐच्छिक / Direct Forward)" : "Parent WhatsApp Mobile (Optional Direct Forward)"}
                             </label>
                             <div className="bg-slate-50 rounded-[2rem] flex items-center gap-4 px-8 border-2 border-transparent focus-within:bg-white focus-within:border-emerald-500/20 transition-all shadow-inner">
@@ -966,7 +966,7 @@ const TEMPLATE_CONFIGS: Record<string, any> = {
 
                           {/* Photo Upload Option */}
                           <div className="space-y-2 group">
-                            <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">
+                            <label className="text-xs font-bold text-slate-700 ml-1">
                               {lang === "mr" ? "विद्यार्थ्याचा फोटो जोडा" : lang === "hi" ? "छात्र का फोटो जोड़ें" : "Add Student Photo"}
                             </label>
                             <div className="flex gap-4 items-center">

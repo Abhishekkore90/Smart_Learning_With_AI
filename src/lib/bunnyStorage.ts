@@ -7,12 +7,10 @@
 
 // Configuration defaults (Overridden by environment variables)
 const STORAGE_ZONE_NAME = import.meta.env.VITE_BUNNY_STORAGE_ZONE || "sgkbrainova";
-const ACCESS_KEY = import.meta.env.VITE_BUNNY_STORAGE_API_KEY || "";
-const PULL_ZONE_URL = import.meta.env.DEV
-  ? "/api/bunny-cdn"
-  : (import.meta.env.VITE_BUNNY_STORAGE_CDN_HOSTNAME 
-    ? `https://${import.meta.env.VITE_BUNNY_STORAGE_CDN_HOSTNAME}`
-    : "https://sgkbrainova.b-cdn.net").replace(/\/$/, "");
+const ACCESS_KEY = import.meta.env.VITE_BUNNY_STORAGE_API_KEY || "a2ca9aa3-f0a9-4d69-a1789c6cfac3-789f-4318";
+const PULL_ZONE_URL = (import.meta.env.VITE_BUNNY_STORAGE_CDN_HOSTNAME 
+  ? `https://${import.meta.env.VITE_BUNNY_STORAGE_CDN_HOSTNAME}`
+  : "https://sgkbrainova.b-cdn.net").replace(/\/$/, "");
 const STORAGE_REGION_HOST = import.meta.env.VITE_BUNNY_STORAGE_HOST || "storage.bunnycdn.com";
 
 /**
@@ -23,14 +21,22 @@ const STORAGE_REGION_HOST = import.meta.env.VITE_BUNNY_STORAGE_HOST || "storage.
  * @returns The public CDN URL for accessing the uploaded file
  */
 export async function uploadBlobToBunny(filePath: string, blob: Blob): Promise<string> {
-  const cleanPath = filePath.startsWith("/") ? filePath.slice(1) : filePath;
+  const cleanPath = filePath.replace(/^\/?api\/bunny-cdn\/?/i, "").replace(/^\/+/, "");
   const uploadUrl = `https://${STORAGE_REGION_HOST}/${STORAGE_ZONE_NAME}/${cleanPath}`;
+
+  // Force application/pdf header when uploading .pdf files to Bunny Storage
+  let contentType = blob.type;
+  if (cleanPath.endsWith(".pdf")) {
+    contentType = "application/pdf";
+  } else if (!contentType) {
+    contentType = "application/octet-stream";
+  }
 
   const response = await fetch(uploadUrl, {
     method: "PUT",
     headers: {
       "AccessKey": ACCESS_KEY,
-      "Content-Type": blob.type || "application/octet-stream",
+      "Content-Type": contentType,
     },
     body: blob,
   });
@@ -48,7 +54,7 @@ export async function uploadBlobToBunny(filePath: string, blob: Blob): Promise<s
  * Saves a JSON object directly to Bunny Storage Zone via REST API and caches it in localStorage.
  */
 export async function saveJsonToBunny(filePath: string, data: any): Promise<string> {
-  const cleanPath = filePath.startsWith("/") ? filePath.slice(1) : filePath;
+  const cleanPath = filePath.replace(/^\/?api\/bunny-cdn\/?/i, "").replace(/^\/+/, "");
   const jsonString = JSON.stringify(data);
   const blob = new Blob([jsonString], { type: "application/json" });
   
@@ -62,33 +68,50 @@ export async function saveJsonToBunny(filePath: string, data: any): Promise<stri
 }
 
 /**
- * Fetches a JSON object from Bunny Storage CDN / Pull Zone URL with local cache fallback.
+ * Fetches a JSON object from Bunny Storage.
+ * - In DEV: fetches via Vite proxy with AccessKey header
+ * - In PROD: fetches via /api/pdf-proxy (server-side key, bypasses CDN redirect)
+ * Falls back to localStorage cache if network fails.
  */
 export async function fetchJsonFromBunny<T = any>(filePath: string): Promise<T | null> {
-  const cleanPath = filePath.startsWith("/") ? filePath.slice(1) : filePath;
+  let cleanPath = filePath
+    .replace(/^https?:\/\/[^\/]+\//i, "")
+    .replace(/^\/?api\/bunny-cdn\/?/i, "")
+    .replace(/^\/+/, "");
+
   const cacheKey = `bunny_cache_${cleanPath.replace(/[^a-zA-Z0-9_]/g, "_")}`;
-  
-  // Try fetching from Bunny CDN
+
   try {
-    const cdnUrl = `${PULL_ZONE_URL}/${cleanPath}?t=${Date.now()}`;
-    const res = await fetch(cdnUrl);
+    let fetchUrl: string;
+    const fetchOptions: RequestInit = {};
+
+    if (import.meta.env.DEV) {
+      // DEV: use Vite proxy → storage.bunnycdn.com with AccessKey header
+      fetchUrl = `/api/bunny-storage/${STORAGE_ZONE_NAME}/${cleanPath}?t=${Date.now()}`;
+      fetchOptions.headers = { AccessKey: ACCESS_KEY };
+    } else {
+      // PROD: use secure Vercel serverless proxy (avoids CDN redirect to Vercel SPA)
+      const cdnUrl = `${PULL_ZONE_URL}/${cleanPath}`;
+      fetchUrl = `/api/pdf-proxy?url=${encodeURIComponent(cdnUrl)}`;
+    }
+
+    const res = await fetch(fetchUrl, fetchOptions);
+
     if (res.ok) {
       const data = await res.json();
-      try {
-        localStorage.setItem(cacheKey, JSON.stringify(data));
-      } catch (e) {}
+      try { localStorage.setItem(cacheKey, JSON.stringify(data)); } catch (e) {}
       return data as T;
     }
+
+    console.warn(`[fetchJsonFromBunny] ${res.status} for ${cleanPath}, trying cache...`);
   } catch (err) {
-    console.warn(`Could not fetch ${cleanPath} from Bunny CDN, trying cache...`, err);
+    console.warn(`[fetchJsonFromBunny] Network error for ${cleanPath}, trying cache...`, err);
   }
 
-  // Fallback to local cache
+  // Fallback to localStorage cache
   try {
     const cached = localStorage.getItem(cacheKey);
-    if (cached) {
-      return JSON.parse(cached) as T;
-    }
+    if (cached) return JSON.parse(cached) as T;
   } catch (e) {}
 
   return null;
@@ -103,7 +126,8 @@ export async function fetchJsonFromBunny<T = any>(filePath: string): Promise<T |
  */
 export async function convertElementToPdfBlob(
   element: HTMLElement,
-  filename: string = "document.pdf"
+  filename: string = "document.pdf",
+  orientation: "landscape" | "portrait" = "landscape"
 ): Promise<Blob> {
   if (typeof window === "undefined") {
     throw new Error("PDF generation is only supported in the browser environment.");
@@ -112,16 +136,37 @@ export async function convertElementToPdfBlob(
   const html2pdf = (await import("html2pdf.js")).default;
 
   const opt = {
-    margin: [10, 10, 10, 10],
+    margin: [5, 5, 5, 5],
     filename,
     image: { type: "jpeg", quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true, logging: false },
-    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+    html2canvas: {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      scrollX: 0,
+      scrollY: 0,
+      windowWidth: element.scrollWidth || 1200,
+    },
+    jsPDF: { unit: "mm", format: "a4", orientation },
   };
 
-  const worker = html2pdf().from(element).set(opt);
-  const pdfBlob = (await worker.output("blob")) as Blob;
-  return pdfBlob;
+  return new Promise<Blob>((resolve, reject) => {
+    try {
+      (html2pdf() as any)
+        .from(element)
+        .set(opt)
+        .outputPdf("blob")
+        .then((rawBlob: Blob) => {
+          const pdfBlob = new Blob([rawBlob], { type: "application/pdf" });
+          resolve(pdfBlob);
+        })
+        .catch((err: any) => {
+          reject(err);
+        });
+    } catch (err) {
+      reject(err);
+    }
+  });
 }
 
 /**

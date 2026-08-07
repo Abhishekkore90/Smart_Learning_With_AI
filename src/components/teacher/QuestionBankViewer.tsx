@@ -21,7 +21,7 @@ import {
   QuestionBankFlatRow,
   QuestionBankGroupItem,
 } from "@/lib/questionBankParser";
-import { convertElementToPdfBlob } from "@/lib/bunnyStorage";
+import { convertElementToPdfBlob, uploadBlobToBunny } from "@/lib/bunnyStorage";
 
 interface QuestionBankViewerProps {
   data: QuestionBankTargetSchema;
@@ -33,6 +33,7 @@ export const QuestionBankViewer: React.FC<QuestionBankViewerProps> = ({ data, on
   const [selectedUnit, setSelectedUnit] = useState<string>("ALL");
   const [selectedObjective, setSelectedObjective] = useState<string>("ALL");
   const [downloading, setDownloading] = useState(false);
+  const [showPdfModal, setShowPdfModal] = useState(false);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -163,19 +164,53 @@ export const QuestionBankViewer: React.FC<QuestionBankViewerProps> = ({ data, on
     setDownloading(true);
     toast.info("📄 PDF तक्ता तयार करून डाऊनलोड होत आहे...");
     try {
-      const cleanSubj = (metadata.subject || "Question_Bank").replace(/[^a-zA-Z0-9_\-]/g, "_");
+      // Extract clean Class and Subject names for official Marathi PDF filename (Filter noise words like semi, ok, bhavika)
+      let rawClass = (metadata.standard_class || "इयत्ता")
+        .replace(/^इयत्त्ता\s*[:\-–]?\s*/i, "")
+        .replace(/^इयत्ता\s*[:\-–]?\s*/i, "")
+        .replace(/^Class\s*[:\-–]?\s*/i, "")
+        .replace(/^Std\.?\s*[:\-–]?\s*/i, "")
+        .replace(/\b(semi|english|medium|ok|bhavika|bhavik|margdarshak|prapatra|08|07|06|05|04|03|02|01)\b/gi, "")
+        .replace(/[()\[\]]/g, " ")
+        .trim();
+
+      let rawSubj = (metadata.subject || "विषय")
+        .replace(/^विषय\s*[:\-–]?\s*/i, "")
+        .replace(/^Subject\s*[:\-–]?\s*/i, "")
+        .replace(/\b(semi|english|medium|ok|bhavika|bhavik|margdarshak|prapatra|08|07|06|05|04|03|02|01)\b/gi, "")
+        .replace(/[()\[\]]/g, " ")
+        .trim();
+
+      rawClass = rawClass.replace(/\s+/g, "_").replace(/_+/g, "_").replace(/^_+|_+$/g, "");
+      rawSubj = rawSubj.replace(/\s+/g, "_").replace(/_+/g, "_").replace(/^_+|_+$/g, "");
+
+      if (!rawClass) rawClass = "इयत्ता";
+      if (!rawSubj) rawSubj = "विषय";
+
+      const pdfFileName = `${rawClass}_प्रश्नपेढी_${rawSubj}.pdf`.replace(/[\/\\:*?"<>|]/g, "_");
+
       const pdfBlob = await convertElementToPdfBlob(
         containerRef.current,
-        `Question_Bank_${cleanSubj}.pdf`
+        pdfFileName,
+        "landscape"
       );
+
+      // Async upload generated PDF binary to Bunny Storage Zone with application/pdf Content-Type
+      uploadBlobToBunny(`question_banks/${pdfFileName}`, pdfBlob).catch((err: any) => {
+        console.warn("Bunny Storage PDF upload notice:", err);
+      });
+
       const url = URL.createObjectURL(pdfBlob);
       const a = document.createElement("a");
+      a.style.display = "none";
       a.href = url;
-      a.download = `Question_Bank_Table_${cleanSubj}.pdf`;
+      a.download = pdfFileName;
       document.body.appendChild(a);
       a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      setTimeout(() => {
+        a.remove();
+        URL.revokeObjectURL(url);
+      }, 10000);
       toast.success("🎉 PDF तक्ता यशस्वीरित्या डाऊनलोड झाला!");
     } catch (pdfErr) {
       console.warn("PDF generation notice, falling back to window print:", pdfErr);
@@ -208,8 +243,15 @@ export const QuestionBankViewer: React.FC<QuestionBankViewerProps> = ({ data, on
             </h1>
           </div>
 
-          {/* PDF Download Button */}
+          {/* PDF Action Buttons */}
           <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setShowPdfModal(true)}
+              className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black transition-all flex items-center gap-2 shadow-md cursor-pointer"
+            >
+              <ExternalLink className="size-4" />
+              <span>👁️ PDF प्रीव्ह्यू उघडा (View PDF Preview)</span>
+            </button>
             <button
               onClick={handleDownloadPdfTable}
               disabled={downloading}
@@ -272,15 +314,15 @@ export const QuestionBankViewer: React.FC<QuestionBankViewerProps> = ({ data, on
           {/* 9 COLUMNS HEADER (Exact reference titles & light yellow bg #fef3c7) */}
           <thead>
             <tr className="bg-amber-100 text-slate-900 font-black border-b-2 border-slate-900 text-center" style={{ backgroundColor: "#fef3c7" }}>
-              <th className="p-3 border border-slate-400 font-extrabold w-[6%]">{headers[0]}</th>
-              <th className="p-3 border border-slate-400 font-extrabold w-[13%]">{headers[1]}</th>
-              <th className="p-3 border border-slate-400 font-extrabold text-left w-[33%]">{headers[2]}</th>
-              <th className="p-3 border border-slate-400 font-extrabold w-[5%]">{headers[3]}</th>
-              <th className="p-3 border border-slate-400 font-extrabold w-[8%]">{headers[4]}</th>
-              <th className="p-3 border border-slate-400 font-extrabold w-[9%]">{headers[5]}</th>
-              <th className="p-3 border border-slate-400 font-extrabold w-[9%]">{headers[6]}</th>
-              <th className="p-3 border border-slate-400 font-extrabold w-[9%]">{headers[7]}</th>
-              <th className="p-3 border border-slate-400 font-extrabold w-[8%]">{headers[8]}</th>
+              <th className="p-3 border border-slate-400 font-extrabold w-[6%]" style={{ width: "6%" }}>{headers[0]}</th>
+              <th className="p-3 border border-slate-400 font-extrabold w-[12%]" style={{ width: "12%" }}>{headers[1]}</th>
+              <th className="p-3 border border-slate-400 font-extrabold text-left w-[38%]" style={{ width: "38%" }}>{headers[2]}</th>
+              <th className="p-3 border border-slate-400 font-extrabold w-[5%]" style={{ width: "5%" }}>{headers[3]}</th>
+              <th className="p-3 border border-slate-400 font-extrabold w-[9%]" style={{ width: "9%" }}>{headers[4]}</th>
+              <th className="p-3 border border-slate-400 font-extrabold w-[10%]" style={{ width: "10%" }}>{headers[5]}</th>
+              <th className="p-3 border border-slate-400 font-extrabold w-[8%]" style={{ width: "8%" }}>{headers[6]}</th>
+              <th className="p-3 border border-slate-400 font-extrabold w-[7%]" style={{ width: "7%" }}>{headers[7]}</th>
+              <th className="p-3 border border-slate-400 font-extrabold w-[5%]" style={{ width: "5%" }}>{headers[8]}</th>
             </tr>
           </thead>
 
@@ -373,6 +415,49 @@ export const QuestionBankViewer: React.FC<QuestionBankViewerProps> = ({ data, on
           <div>✍️ मुख्याध्यापक स्वाक्षरी</div>
         </div>
       </div>
+
+      {/* ── 5. FULLSCREEN INTERACTIVE PDF PREVIEW MODAL ───────────────────────── */}
+      {showPdfModal && (
+        <div className="fixed inset-0 z-[200] bg-slate-950/90 backdrop-blur-md p-4 md:p-8 flex flex-col gap-4 overflow-hidden">
+          <div className="flex items-center justify-between bg-slate-900 px-6 py-3 rounded-2xl border border-slate-800 text-white shadow-xl">
+            <div className="flex items-center gap-3">
+              <span className="text-xl">📄</span>
+              <h2 className="text-base font-extrabold text-amber-300">
+                {metadata.standard_class} | {metadata.subject} — ऑनलाईन PDF प्रीव्ह्यू (PDF Preview)
+              </h2>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleDownloadPdfTable}
+                disabled={downloading}
+                className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
+              >
+                <FileDown className="size-4" />
+                <span>डाऊनलोड (Download PDF)</span>
+              </button>
+              <button
+                onClick={() => window.print()}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
+              >
+                <span>🖨️ प्रिंंट (Print)</span>
+              </button>
+              <button
+                onClick={() => setShowPdfModal(false)}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md"
+              >
+                ✖ बंद करा (Close)
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-1 bg-white rounded-2xl border border-slate-300 overflow-auto p-6 text-slate-900 shadow-2xl">
+            <div
+              className="prose max-w-none text-slate-900"
+              dangerouslySetInnerHTML={{ __html: containerRef.current?.innerHTML || "" }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

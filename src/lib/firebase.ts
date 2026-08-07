@@ -1,5 +1,5 @@
 import { FirebaseApp, initializeApp, getApps, getApp } from "firebase/app";
-import { Analytics, getAnalytics } from "firebase/analytics";
+import { Analytics, getAnalytics, isSupported } from "firebase/analytics";
 import { Auth, getAuth } from "firebase/auth";
 import { Firestore, getFirestore } from "firebase/firestore";
 import { getFunctions, httpsCallable, connectFunctionsEmulator } from "firebase/functions";
@@ -13,7 +13,7 @@ const firebaseConfig = {
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "education-89c54.firebasestorage.app",
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "292663641725",
   appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:292663641725:web:076b161074bb891513d314",
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-S4WJTJZ4XC",
+  ...(import.meta.env.VITE_FIREBASE_MEASUREMENT_ID && { measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID }),
 };
 
 // Initialize Firebase safely to avoid duplicate app errors in HMR/SSR
@@ -49,11 +49,14 @@ export const generateAIResponseCallable = httpsCallable(functions, "generateAIRe
 
 export let analytics: Analytics | null = null;
 
-if (typeof window !== "undefined") {
-  // Analytics can fail in certain network environments (e.g. firewalls/VPNs)
+if (typeof window !== "undefined" && app && import.meta.env.VITE_FIREBASE_MEASUREMENT_ID) {
   try {
-    analytics = getAnalytics(app);
+    isSupported().then((supported) => {
+      if (supported) {
+        analytics = getAnalytics(app);
+      }
+    }).catch(() => {});
   } catch (analyticsError) {
-    console.warn("Firebase Analytics failed to initialize:", analyticsError);
+    console.warn("Firebase Analytics notice:", analyticsError);
   }
 }

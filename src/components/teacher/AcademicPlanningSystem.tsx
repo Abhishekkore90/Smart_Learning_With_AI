@@ -36,7 +36,16 @@ import {
   Eraser,
   Save,
   RotateCcw,
-  FileUp
+  FileUp,
+  School,
+  Building,
+  Building2,
+  Hash,
+  MapPin,
+  Map,
+  UserCheck,
+  Award,
+  Loader2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -302,6 +311,7 @@ const extractExcelData = async (
 
       const nonEmptyCells = row.map((c: any) => String(c ?? "").trim()).filter((h) => h.length > 0 && !isPdfNoiseLine(h));
       if (nonEmptyCells.length < 2) continue; // Skip single-cell title banners like "अभ्यासक्रमाचे मासिक व घटक नियोजन"
+      if (new Set(nonEmptyCells).size === 1) continue; // Skip merged title banner rows where all cells have identical text!
 
       // Count how many header keywords match in this row
       let matches = 0;
@@ -392,8 +402,11 @@ const extractExcelData = async (
       const strRow: string[] = Array.from({ length: numCols }, (_, ci) =>
         String(row[ci] ?? "").trim()
       );
-      // Skip only completely empty rows or raw PDF stream noise
+      // Skip completely empty rows or raw PDF stream noise
       if (strRow.every((c) => c === "") || isPdfNoiseLine(strRow)) continue;
+      // Skip merged title banner rows where all non-empty cells contain the exact same repeated title
+      const nonBlankVals = strRow.filter((c) => c !== "");
+      if (nonBlankVals.length > 1 && new Set(nonBlankVals).size === 1) continue;
       dataRows.push(strRow);
     }
     if (dataRows.length === 0) return empty;
@@ -565,6 +578,103 @@ export function AcademicPlanningSystem({
   const [selectedClass, setSelectedClass] = useState<string>(initialClass || "5th");
   const [selectedMedium, setSelectedMedium] = useState<string>("marathi");
   const [selectedSubject, setSelectedSubject] = useState<string>("");
+
+  // School Information Form State (First Time Popup & Editable)
+  const [schoolInfo, setSchoolInfo] = useState<{
+    schoolName: string;
+    centerName: string;
+    udiseCode: string;
+    taluka: string;
+    district: string;
+    classTeacherName: string;
+    headmasterName: string;
+    updatedAt?: string;
+  }>(() => {
+    try {
+      const cached = localStorage.getItem("cce_school_profile_info");
+      if (cached) return JSON.parse(cached);
+    } catch (e) {}
+    return {
+      schoolName: "",
+      centerName: "",
+      udiseCode: "",
+      taluka: "",
+      district: "",
+      classTeacherName: "",
+      headmasterName: "",
+    };
+  });
+
+  const [isSchoolInfoModalOpen, setIsSchoolInfoModalOpen] = useState<boolean>(false);
+  const [isSavingSchoolInfo, setIsSavingSchoolInfo] = useState<boolean>(false);
+
+  // Auto-check first time visit to open modal
+  useEffect(() => {
+    const checkSchoolProfile = async () => {
+      try {
+        const cached = localStorage.getItem("cce_school_profile_info");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed && parsed.schoolName) {
+            setSchoolInfo(parsed);
+            return;
+          }
+        }
+        // Fetch from Firestore
+        const docRef = doc(db, "school_profiles", "primary_school_profile");
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data() as any;
+          setSchoolInfo(data);
+          try {
+            localStorage.setItem("cce_school_profile_info", JSON.stringify(data));
+          } catch (e) {}
+        } else {
+          // Open form modal for first time user!
+          setIsSchoolInfoModalOpen(true);
+        }
+      } catch (err) {
+        const cached = localStorage.getItem("cce_school_profile_info");
+        if (!cached) {
+          setIsSchoolInfoModalOpen(true);
+        }
+      }
+    };
+    checkSchoolProfile();
+  }, []);
+
+  const handleSaveSchoolInfo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!schoolInfo.schoolName.trim()) {
+      toast.error("कृपया शाळेचे नाव टाका!");
+      return;
+    }
+
+    try {
+      setIsSavingSchoolInfo(true);
+      const updatedInfo = {
+        ...schoolInfo,
+        updatedAt: new Date().toISOString(),
+      };
+
+      try {
+        localStorage.setItem("cce_school_profile_info", JSON.stringify(updatedInfo));
+      } catch (e) {}
+
+      try {
+        await setDoc(doc(db, "school_profiles", "primary_school_profile"), updatedInfo, { merge: true });
+      } catch (e) {}
+
+      setSchoolInfo(updatedInfo);
+      setIsSchoolInfoModalOpen(false);
+      setIsSavingSchoolInfo(false);
+      toast.success("🎉 शाळेची व शिक्षकाची माहिती यशस्वीरित्या जतन झाली!");
+    } catch (err) {
+      console.error("Save school info error:", err);
+      setIsSavingSchoolInfo(false);
+      toast.error("माहिती सेव्ह करताना त्रुटी आली.");
+    }
+  };
 
   // Real-time planning files map: key -> PlanningFileRecord
   const [planningFiles, setPlanningFiles] = useState<Record<string, PlanningFileRecord>>({});
@@ -1076,14 +1186,58 @@ export function AcademicPlanningSystem({
           }
         } catch (e) { }
 
-        // Restore IndexedDB blobs if fileUrl is dead/missing or local blob exists
+        // Restore IndexedDB blobs if local blob exists, otherwise sanitize dead blob URLs & fetch Bunny JSON for all users
         for (const recordKey of Object.keys(filesMap)) {
           const rec = filesMap[recordKey];
-          if (!rec.fileUrl || rec.fileUrl.startsWith("blob:")) {
+
+          // CRITICAL FIX: Replace any blob: URLs with bunnyFileUrl (blob URLs are local-only and expire)
+          if (!rec.fileUrl || rec.fileUrl.startsWith("blob:") || rec.fileUrl.startsWith("http://localhost")) {
             try {
               const localBlob = await getFileFromIndexedDB(recordKey);
               if (localBlob) {
+                // Own PC — can use IndexedDB blob
                 rec.fileUrl = URL.createObjectURL(localBlob);
+
+                // Auto-upload local blob to Bunny CDN in background if Firestore is missing persistent CDN URL
+                if (!rec.bunnyFileUrl || rec.bunnyFileUrl.startsWith("blob:")) {
+                  const ext = rec.fileName?.split(".").pop()?.toLowerCase() || "pdf";
+                  const bunnyPath = `academic_plannings/${recordKey}_auto.${ext}`;
+                  uploadBlobToBunny(bunnyPath, localBlob).then((newBunnyUrl) => {
+                    if (newBunnyUrl) {
+                      rec.bunnyFileUrl = newBunnyUrl;
+                      rec.fileUrl = newBunnyUrl;
+                      setDoc(doc(db, "academic_plannings", recordKey), {
+                        fileUrl: newBunnyUrl,
+                        bunnyFileUrl: newBunnyUrl,
+                      }, { merge: true }).catch(() => {});
+                    }
+                  }).catch(() => {});
+                }
+              } else {
+                // Other PC — use Bunny CDN URL (proxy will serve it securely)
+                rec.fileUrl = rec.bunnyFileUrl || "";
+              }
+            } catch (e) {
+              rec.fileUrl = rec.bunnyFileUrl || "";
+            }
+
+            // Auto-fix corrupt Firestore records with blob URLs — update to bunnyFileUrl
+            if (rec.bunnyFileUrl && !rec.bunnyFileUrl.startsWith("blob:")) {
+              setDoc(doc(db, "academic_plannings", recordKey), {
+                fileUrl: rec.bunnyFileUrl,
+                bunnyFileUrl: rec.bunnyFileUrl,
+              }, { merge: true }).catch(() => {});
+            }
+          }
+
+          // Fetch heavy parsed grid/HTML from Bunny CDN if missing inline for other teachers
+          if ((!rec.parsedHtml || !rec.parsedGrid || rec.parsedGrid.length === 0) && rec.bunnyParsedJsonUrl) {
+            try {
+              const bunnyPath = rec.bunnyParsedJsonUrl.replace(/^https?:\/\/[^\/]+\//, "");
+              const parsedData = await fetchJsonFromBunny(bunnyPath);
+              if (parsedData) {
+                if (parsedData.parsedHtml && !rec.parsedHtml) rec.parsedHtml = parsedData.parsedHtml;
+                if (parsedData.parsedGrid && (!rec.parsedGrid || rec.parsedGrid.length === 0)) rec.parsedGrid = parsedData.parsedGrid;
               }
             } catch (e) { }
           }
@@ -1417,16 +1571,33 @@ export function AcademicPlanningSystem({
         return;
       }
 
-      // 2. Direct upload to Bunny Storage Zone (CDN) with Firebase Storage fallback
+      // 2. Direct upload to Bunny Storage Zone (CDN) with retry + Firebase Storage fallback
       try {
         setUploadProgress(60);
         const bunnyPath = `academic_plannings/${recordKey}_${Date.now()}.${ext}`;
-        bunnyFileUrl = await uploadBlobToBunny(bunnyPath, finalFileBlob);
+
+        // Attempt Bunny upload with 1 automatic retry
+        let bunnyAttempt = 0;
+        while (bunnyAttempt < 2 && !bunnyFileUrl) {
+          try {
+            bunnyFileUrl = await uploadBlobToBunny(bunnyPath, finalFileBlob);
+          } catch (e) {
+            bunnyAttempt++;
+            if (bunnyAttempt < 2) {
+              await new Promise((r) => setTimeout(r, 1500)); // wait 1.5s before retry
+            }
+          }
+        }
+
         if (bunnyFileUrl) {
           fileUrl = bunnyFileUrl;
+          toast.success("☁️ फाईल Bunny CDN वर यशस्वीरित्या अपलोड झाली!");
+        } else {
+          throw new Error("Bunny upload failed after 2 attempts");
         }
       } catch (bunnyErr) {
-        console.warn("Bunny Storage upload notice, falling back to Firebase / Local Blob:", bunnyErr);
+        console.warn("Bunny Storage upload failed, trying Firebase Storage:", bunnyErr);
+        toast.info("⚡ Firebase Storage वर अपलोड होत आहे...");
         if (storage) {
           try {
             const storageRef = ref(storage, cleanStoragePath);
@@ -1435,14 +1606,15 @@ export function AcademicPlanningSystem({
               const uploadSnapshot = await uploadBytes(storageRef, finalFileBlob);
               return await getDownloadURL(uploadSnapshot.ref);
             })();
-
             const timeoutPromise = new Promise<string>((_, reject) =>
-              setTimeout(() => reject(new Error("Firebase storage response timeout")), 2500)
+              setTimeout(() => reject(new Error("Firebase storage timeout")), 8000)
             );
-
-            fileUrl = await Promise.race([storageUploadPromise, timeoutPromise]);
+            const fbUrl = await Promise.race([storageUploadPromise, timeoutPromise]);
+            fileUrl = fbUrl;
+            bunnyFileUrl = fbUrl; // treat Firebase URL as persistent URL too
           } catch (fbErr) {
-            console.warn("Firebase Storage upload notice, using local blob:", fbErr);
+            console.warn("Firebase Storage upload also failed:", fbErr);
+            // fileUrl remains as blobUrl — Firestore will NOT get blob URL (see firestoreRecord below)
           }
         }
       }
@@ -1528,6 +1700,17 @@ export function AcademicPlanningSystem({
       };
 
       // Lightweight Firestore Record (strictly under ~30 KB document limit)
+      // CRITICAL: NEVER store blob: URLs in Firestore — they are local-only and expire
+      const persistentFileUrl = (bunnyFileUrl && !bunnyFileUrl.startsWith("blob:"))
+        ? bunnyFileUrl
+        : (fileUrl && !fileUrl.startsWith("blob:"))
+          ? fileUrl
+          : "";
+
+      if (!persistentFileUrl) {
+        toast.warning("⚠️ फाईल CDN वर अपलोड होऊ शकली नाही. तुमच्या PC वर local preview चालेल, पण इतर users ला PDF दिसणार नाही. कृपया पुन्हा upload करा.", { duration: 8000 });
+      }
+
       const firestoreRecord: PlanningFileRecord = {
         id: recordKey,
         classId: selectedClass,
@@ -1535,18 +1718,18 @@ export function AcademicPlanningSystem({
         subjectId: selectedSubject,
         planningType: uploadingType,
         fileName: selectedFile.name,
-        fileUrl: fileUrl,
+        fileUrl: persistentFileUrl,
         fileSize: fileSizeDisplay,
         fileType: selectedFile.type || "application/pdf",
         uploadedBy: mode,
         uploadedAt: new Date().toISOString(),
         tableRows: rowsToSave,
         ...(excelRawHeaders.length > 0 && { rawHeaders: excelRawHeaders }),
-        ...(bunnyFileUrl && { bunnyFileUrl }),
+        ...(persistentFileUrl && { bunnyFileUrl: persistentFileUrl }),
         ...(bunnyParsedJsonUrl && { bunnyParsedJsonUrl }),
-        // Include inline html/grid ONLY if very small (<5KB)
-        ...((parsedHtml && parsedHtml.length < 5000) && { parsedHtml }),
-        ...((parsedGrid && parsedGrid.length < 30) && { parsedGrid }),
+        // Include inline html/grid for instant access on all PCs
+        ...(parsedHtml && { parsedHtml }),
+        ...(parsedGrid && parsedGrid.length > 0 && { parsedGrid }),
       };
 
       // 5. Save lightweight metadata to Firestore
@@ -1591,14 +1774,89 @@ export function AcademicPlanningSystem({
     }
   };
 
+  // ── Admin Fix Tool: Repair all Firestore records with blob/localhost fileUrls ─────────
+  const [isFixingRecords, setIsFixingRecords] = useState(false);
+  const handleFixCorruptRecords = async () => {
+    if (mode !== "admin") return;
+    setIsFixingRecords(true);
+    toast.info("🔧 Firestore मधील corrupt records fix होत आहेत...", { duration: 3000 });
+
+    let fixedCount = 0;
+    let skippedCount = 0;
+
+    for (const [recordKey, rec] of Object.entries(planningFiles)) {
+      const isCorrupt = !rec.fileUrl || rec.fileUrl.startsWith("blob:") || rec.fileUrl.startsWith("http://localhost");
+      const hasBunnyUrl = rec.bunnyFileUrl && !rec.bunnyFileUrl.startsWith("blob:");
+
+      if (isCorrupt && hasBunnyUrl) {
+        try {
+          await setDoc(doc(db, "academic_plannings", recordKey), {
+            fileUrl: rec.bunnyFileUrl,
+            bunnyFileUrl: rec.bunnyFileUrl,
+          }, { merge: true });
+          setPlanningFiles((prev) => ({
+            ...prev,
+            [recordKey]: { ...prev[recordKey], fileUrl: rec.bunnyFileUrl! },
+          }));
+          fixedCount++;
+        } catch (e) {
+          console.warn("Fix record error for", recordKey, e);
+          skippedCount++;
+        }
+      } else if (isCorrupt && !hasBunnyUrl) {
+        // Try to re-upload from IndexedDB
+        try {
+          const blob = await getFileFromIndexedDB(recordKey);
+          if (blob) {
+            const ext = rec.fileName?.split(".").pop()?.toLowerCase() || "pdf";
+            const bunnyPath = `academic_plannings/${recordKey}_reupload.${ext}`;
+            const newBunnyUrl = await uploadBlobToBunny(bunnyPath, blob);
+            if (newBunnyUrl) {
+              await setDoc(doc(db, "academic_plannings", recordKey), {
+                fileUrl: newBunnyUrl,
+                bunnyFileUrl: newBunnyUrl,
+              }, { merge: true });
+              setPlanningFiles((prev) => ({
+                ...prev,
+                [recordKey]: { ...prev[recordKey], fileUrl: newBunnyUrl, bunnyFileUrl: newBunnyUrl },
+              }));
+              fixedCount++;
+            } else {
+              skippedCount++;
+            }
+          } else {
+            skippedCount++;
+          }
+        } catch (reuploadErr) {
+          skippedCount++;
+        }
+      }
+    }
+
+    setIsFixingRecords(false);
+    if (fixedCount > 0) {
+      toast.success(`✅ ${fixedCount} records fix झाले! आता सर्व users ला PDF दिसेल.`);
+    } else {
+      toast.info(`सर्व records आधीच correct आहेत. (${skippedCount} skipped)`);
+    }
+  };
+
   // Helper to trigger VIEW preview (checks IndexedDB for persistent blob across page refreshes)
   const handleViewFile = async (rec: PlanningFileRecord) => {
-    if (!rec) return;
     let targetUrl = rec.fileUrl;
 
     const blobFromDb = await getFileFromIndexedDB(rec.id);
     if (blobFromDb) {
+      // Own PC with IndexedDB blob → use local blob URL
       targetUrl = URL.createObjectURL(blobFromDb);
+    } else if (!targetUrl || targetUrl.startsWith("blob:")) {
+      // Other PC or expired blob → fall back to Bunny CDN URL (proxy will serve it)
+      targetUrl = rec.bunnyFileUrl || "";
+    }
+
+    // Last resort: if still empty but bunnyFileUrl exists, use it
+    if (!targetUrl && rec.bunnyFileUrl) {
+      targetUrl = rec.bunnyFileUrl;
     }
 
     if (!targetUrl) {
@@ -1807,7 +2065,10 @@ export function AcademicPlanningSystem({
     const blobFromDb = await getFileFromIndexedDB(rec.id);
     if (blobFromDb) {
       targetUrl = URL.createObjectURL(blobFromDb);
+    } else if (!targetUrl || targetUrl.startsWith("blob:")) {
+      targetUrl = rec.bunnyFileUrl || "";
     }
+    if (!targetUrl && rec.bunnyFileUrl) targetUrl = rec.bunnyFileUrl;
 
     if (!targetUrl) {
       toast.error("अद्याप फाईल उपलब्ध नाही, कृपया फाईल निवडून पुन्हा अपलोड करा.");
@@ -1842,6 +2103,8 @@ export function AcademicPlanningSystem({
     const blobFromDb = await getFileFromIndexedDB(rec.id);
     if (blobFromDb) {
       targetUrl = URL.createObjectURL(blobFromDb);
+    } else if (targetUrl && targetUrl.startsWith("blob:")) {
+      targetUrl = rec.bunnyFileUrl || "";
     }
 
     if (!targetUrl) {
@@ -1885,6 +2148,21 @@ export function AcademicPlanningSystem({
               <span className="px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-400/30 text-[10px] font-black uppercase tracking-wider">
                 {mode === "admin" ? "ADMIN MANAGEMENT" : "TEACHER SECTION"}
               </span>
+              {/* Admin Fix Tool — repairs Firestore records with blob/localhost URLs */}
+              {mode === "admin" && (
+                <button
+                  onClick={handleFixCorruptRecords}
+                  disabled={isFixingRecords}
+                  title="Firestore मधील blob: URLs fix करा — सर्व users ला PDF दिसेल"
+                  className="px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 border border-rose-400/30 text-[10px] font-black uppercase tracking-wider hover:bg-rose-500/40 transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                >
+                  {isFixingRecords ? (
+                    <><Loader2 className="w-3 h-3 animate-spin" /> Fixing...</>
+                  ) : (
+                    <>🔧 Fix All PDF URLs</>
+                  )}
+                </button>
+              )}
             </div>
             <h1 className="text-xl md:text-2xl font-black tracking-tight flex items-center gap-2 mt-1">
               <BookCheck className="size-6 text-amber-400" />
@@ -1959,6 +2237,22 @@ export function AcademicPlanningSystem({
               {step === "subject" && "४. विषय निवडा व नियोजन पहा/एडिट करा (Select Subject & Files)"}
             </p>
           </div>
+        </div>
+
+        {/* School Info Edit Action */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsSchoolInfoModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-black transition-all cursor-pointer shadow-xs active:scale-95"
+          >
+            <School className="size-4 text-indigo-600" />
+            <span>🏫 शाळेची माहिती ({schoolInfo.schoolName ? "सेव्ह आहे" : "भरा"})</span>
+            {schoolInfo.schoolName ? (
+              <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+            ) : (
+              <span className="size-2 rounded-full bg-amber-500 animate-bounce" />
+            )}
+          </button>
         </div>
 
         {/* Step Circles */}
@@ -2738,6 +3032,7 @@ export function AcademicPlanningSystem({
               gridData={viewModalFile.parsedGrid}
               fileUrl={viewModalFile.fileUrl}
               fileName={viewModalFile.fileName}
+              title={`इयत्ता : ${viewModalFile.classId === "1st" ? "पहिली" : viewModalFile.classId === "2nd" ? "दुसरी" : viewModalFile.classId === "3rd" ? "तिसरी" : viewModalFile.classId === "4th" ? "चौथी" : viewModalFile.classId === "5th" ? "पाचवी" : viewModalFile.classId === "6th" ? "सहावी" : viewModalFile.classId === "7th" ? "सातवी" : viewModalFile.classId === "8th" ? "आठवी" : (selectedClass === "1st" ? "पहिली" : selectedClass === "2nd" ? "दुसरी" : selectedClass === "3rd" ? "तिसरी" : selectedClass === "4th" ? "चौथी" : selectedClass === "5th" ? "पाचवी" : selectedClass === "6th" ? "सहावी" : selectedClass === "7th" ? "सातवी" : selectedClass === "8th" ? "आठवी" : selectedClass)} ${viewModalFile.planningType === "annual" ? "वार्षिक नियोजन" : "मासिक घटक नियोजन"} सन :- 2026-27`}
               role={mode === "admin" ? "admin" : "user"}
               recordId={viewModalFile.id}
               onClose={() => setViewModalFile(null)}
@@ -2790,11 +3085,6 @@ export function AcademicPlanningSystem({
                   toast.success("🎉 तुमचे सुधारित बदल तुमच्या अकाऊंटसाठी (User Specific) जतन झाले आहेत!");
                 }
               }}
-              title={`इयत्ता : ${selectedClass} ${
-                selectedPlanningType === "annual"
-                  ? "संपूर्ण वार्षिक नियोजन"
-                  : "प्रश्नपेढी"
-              } सन 2026-27`}
             />
           )}
         </div>
@@ -3125,7 +3415,7 @@ export function AcademicPlanningSystem({
                         <th className="p-2.5 w-[7%] text-center border-r border-slate-800">कामाचे दिवस</th>
                         <th className="p-2.5 w-[7%] text-center border-r border-slate-800">प्राप्त तासिका</th>
                         <th className="p-2.5 w-[42%] border-r border-slate-800">विषय / घटक विवरण</th>
-                        <th className="p-2.5 w-[22%] border-r border-slate-800">अध्ययन निष्पत्ती</th>
+                        <th className="p-2.5 w-[22%] border-r border-slate-800">अध्ययन निष्पत्ती क्रमांक</th>
                         <th className="p-2.5 w-12 text-center">कृती</th>
                       </tr>
                     </thead>
@@ -3273,6 +3563,19 @@ export function AcademicPlanningSystem({
           className="bg-white text-slate-950 font-sans shadow-none"
           style={{ width: "190mm", boxSizing: "border-box", padding: "0px", margin: "0px" }}
         >
+          {/* Top School Information Header Block */}
+          <div className="border-2 border-slate-900 rounded-xl overflow-hidden mb-3 bg-slate-900 text-white p-3 text-center" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+            <h1 className="text-base font-black text-amber-300 uppercase tracking-wide">
+              शाळेचे नाव : {schoolInfo.schoolName || "—"}
+            </h1>
+            <div className="flex flex-wrap items-center justify-between text-xs font-bold text-slate-200 mt-2 pt-2 border-t border-slate-700">
+              <span><b>केंद्र:</b> {schoolInfo.centerName || "—"}</span>
+              <span><b>युडीएस कोड:</b> <span className="font-mono">{schoolInfo.udiseCode || "—"}</span></span>
+              <span><b>तालुका:</b> {schoolInfo.taluka || "—"}</span>
+              <span><b>जिल्हा:</b> {schoolInfo.district || "—"}</span>
+            </div>
+          </div>
+
           <div className="text-center border-b-2 border-slate-900 pb-3 mb-4 space-y-1.5" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
             <h2 className="text-xl font-black tracking-tight text-slate-950 uppercase">
               इयत्ता : {selectedClass === "1st" ? "1ली" : selectedClass === "2nd" ? "2री" : selectedClass === "3rd" ? "3री" : selectedClass === "4th" ? "4थी" : selectedClass === "5th" ? "5वी" : selectedClass === "6th" ? "6वी" : selectedClass === "7th" ? "7वी" : selectedClass === "8th" ? "8वी" : selectedClass} {selectedPlanningType === "annual" ? "संपूर्ण वार्षिक नियोजन (सर्व विषय एकत्र)" : "वार्षिक नियोजन"} सन :- 2026-27
@@ -3400,7 +3703,7 @@ export function AcademicPlanningSystem({
                   <th className="border border-slate-800 p-1.5 text-center" style={{ width: selectedPlanningType === "annual" ? "6%" : "7%" }}>कामाचे दिवस</th>
                   <th className="border border-slate-800 p-1.5 text-center" style={{ width: selectedPlanningType === "annual" ? "6%" : "7%" }}>प्राप्त तासिका</th>
                   <th className="border border-slate-800 p-1.5 text-left" style={{ width: selectedPlanningType === "annual" ? "42%" : "46%" }}>विषय / घटक विवरण</th>
-                  <th className="border border-slate-800 p-1.5 text-left" style={{ width: selectedPlanningType === "annual" ? "24%" : "26%" }}>अध्ययन निष्पत्ती</th>
+                  <th className="border border-slate-800 p-1.5 text-left" style={{ width: selectedPlanningType === "annual" ? "24%" : "26%" }}>अध्ययन निष्पत्ती क्रमांक</th>
                 </tr>
               </thead>
               <tbody>
@@ -3421,9 +3724,24 @@ export function AcademicPlanningSystem({
             </table>
           )}
 
-          <div className="flex justify-between items-center pt-6 mt-4 text-xs font-bold text-slate-900 border-t border-slate-300" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
-            <div>शिक्षक स्वाक्षरी: ___________________</div>
-            <div>मुख्याध्यापक स्वाक्षरी: ___________________</div>
+          {/* Bottom Staff Signatures Block */}
+          <div className="grid grid-cols-2 gap-8 pt-4 mt-6 border-t-2 border-slate-900 text-xs font-bold text-slate-900" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+            <div className="p-3.5 border border-slate-300 rounded-xl bg-slate-50 space-y-2.5">
+              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center">वर्गशिक्षक</div>
+              <div className="text-sm font-black text-indigo-950 text-center">{schoolInfo.classTeacherName || "वर्गशिक्षक"}</div>
+              <div className="pt-3 border-t border-slate-300 text-xs font-bold text-slate-800 flex items-center justify-between gap-2">
+                <span className="whitespace-nowrap font-black">स्वाक्षरी / Sign :</span>
+                <span className="flex-1 border-b-2 border-slate-600 min-h-[16px] block"></span>
+              </div>
+            </div>
+            <div className="p-3.5 border border-slate-300 rounded-xl bg-slate-50 space-y-2.5">
+              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center">मुख्याध्यापक</div>
+              <div className="text-sm font-black text-purple-950 text-center">{schoolInfo.headmasterName || "मुख्याध्यापक"}</div>
+              <div className="pt-3 border-t border-slate-300 text-xs font-bold text-slate-800 flex items-center justify-between gap-2">
+                <span className="whitespace-nowrap font-black">स्वाक्षरी / Sign :</span>
+                <span className="flex-1 border-b-2 border-slate-600 min-h-[16px] block"></span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -3447,6 +3765,176 @@ export function AcademicPlanningSystem({
             <div className="flex-1 overflow-y-auto">
               <QuestionBankViewer data={questionBankViewerData} onClose={() => setIsQbViewerOpen(false)} />
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🏫 FIRST-TIME SCHOOL PROFILE SETUP MODAL */}
+      {isSchoolInfoModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-8">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-800 p-6 text-white relative">
+              <button
+                type="button"
+                onClick={() => setIsSchoolInfoModalOpen(false)}
+                className="absolute top-5 right-5 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+              >
+                <X className="size-5" />
+              </button>
+              <div className="flex items-center gap-3">
+                <div className="size-12 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center text-amber-300">
+                  <School className="size-6" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black tracking-tight">
+                    🏫 शाळेची व शिक्षकाची माहिती (School Information Form)
+                  </h3>
+                  <p className="text-xs text-indigo-100/90 font-medium mt-0.5">
+                    नियोजन पत्रकावर दाखवण्यासाठी खालील ७ मुख्य माहिती भरा.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Form Body */}
+            <form onSubmit={handleSaveSchoolInfo} className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* 1. School Name */}
+                <div className="md:col-span-2 space-y-1">
+                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                    <Building2 className="size-3.5 text-indigo-600" />
+                    <span>१. शाळेचे नाव (School Name) <span className="text-rose-500">*</span></span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="उदा. जि. प. प्राथमिक शाळा..."
+                    value={schoolInfo.schoolName}
+                    onChange={(e) => setSchoolInfo({ ...schoolInfo, schoolName: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+                  />
+                </div>
+
+                {/* 2. Center Name */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                    <Building className="size-3.5 text-indigo-600" />
+                    <span>२. केंद्राचे नाव (Center Name)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="उदा. केंद्र..."
+                    value={schoolInfo.centerName}
+                    onChange={(e) => setSchoolInfo({ ...schoolInfo, centerName: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+                  />
+                </div>
+
+                {/* 3. UDISE Code */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                    <Hash className="size-3.5 text-indigo-600" />
+                    <span>३. युडीएस कोड (UDISE Code)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="उदा. 2719..."
+                    value={schoolInfo.udiseCode}
+                    onChange={(e) => setSchoolInfo({ ...schoolInfo, udiseCode: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-none transition-all font-mono"
+                  />
+                </div>
+
+                {/* 4. Taluka */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                    <MapPin className="size-3.5 text-indigo-600" />
+                    <span>४. तालुका (Taluka)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="उदा. तालुका..."
+                    value={schoolInfo.taluka}
+                    onChange={(e) => setSchoolInfo({ ...schoolInfo, taluka: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+                  />
+                </div>
+
+                {/* 5. District */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                    <Map className="size-3.5 text-indigo-600" />
+                    <span>५. जिल्हा (District)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="उदा. जिल्हा..."
+                    value={schoolInfo.district}
+                    onChange={(e) => setSchoolInfo({ ...schoolInfo, district: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+                  />
+                </div>
+
+                {/* 6. Class Teacher Name */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                    <UserCheck className="size-3.5 text-indigo-600" />
+                    <span>६. वर्गशिक्षकाचे नाव (Class Teacher)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="उदा. श्री / श्रीमती..."
+                    value={schoolInfo.classTeacherName}
+                    onChange={(e) => setSchoolInfo({ ...schoolInfo, classTeacherName: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+                  />
+                </div>
+
+                {/* 7. Headmaster Name */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                    <Award className="size-3.5 text-indigo-600" />
+                    <span>७. मुख्याध्यापकाचे नाव (Headmaster)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="उदा. श्री / श्रीमती..."
+                    value={schoolInfo.headmasterName}
+                    onChange={(e) => setSchoolInfo({ ...schoolInfo, headmasterName: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Form Actions */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setIsSchoolInfoModalOpen(false)}
+                  className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-100 text-xs font-bold transition-all cursor-pointer"
+                >
+                  नंतर भरा (Later)
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingSchoolInfo}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-xs font-black transition-all cursor-pointer shadow-lg shadow-indigo-500/20 flex items-center gap-2"
+                >
+                  {isSavingSchoolInfo ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />
+                      <span>जतन होत आहे...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="size-4" />
+                      <span>माहिती जतन करा (Save Info)</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
