@@ -1257,6 +1257,12 @@ const handleDemandReportPdfDownload = async () => {
     Cumin: false,
     Mustard: false,
     Oil: false,
+    "Milk-Milk Powder": false,
+    "Sugar-Jaggery": false,
+    "Ragi Satva": false,
+    "Garam Masala": false,
+    Chili: false,
+    Vegetables: false,
   });
 
   const [recipeIngredientsMap, setRecipeIngredientsMap] = useState<
@@ -1290,7 +1296,8 @@ const handleDemandReportPdfDownload = async () => {
           Oil: false,
           "Milk-Milk Powder": false,
           "Ragi Satva": false,
-          "Sugar-Jaggery": false
+          "Sugar-Jaggery": false,
+          Vegetables: false
         });
       }
     } else {
@@ -1704,7 +1711,7 @@ const handleDemandReportPdfDownload = async () => {
   const [openingStockBorrowed, setOpeningStockBorrowed] = useState<Record<string, string>>({});
   const [openingStockSpent, setOpeningStockSpent] = useState<Record<string, string>>({});
   const [formulaSource, setFormulaSource] = useState<"admin" | "custom">("admin");
-  const [formulaRecipe, setFormulaRecipe] = useState<string>("मूग-डाळ खिचडी");
+  const [formulaRecipe, setFormulaRecipe] = useState<string>("Vegetable Pulav");
 
   const toggleOpeningStockSign = (itemKey: string) => {
     setOpeningStockSigns((prev) => ({
@@ -2290,6 +2297,7 @@ const handleDemandReportPdfDownload = async () => {
     { item: "Chili", qty15: "0.0004", qty68: "0.0006" },
     { item: "Garam Masala", qty15: "0.0004", qty68: "0.0006" },
     { item: "Oil", qty15: "0.005495", qty68: "0.008242" },
+    { item: "Vegetables", qty15: "0.05", qty68: "0.05" },
   ];
 
   const [quantityRules, setQuantityRules] = useState(
@@ -4695,7 +4703,8 @@ const handleDemandReportPdfDownload = async () => {
     { key: "Salt", nameMr: "मीठ", unit: "kg" },
     { key: "Milk-Milk Powder", nameMr: "दूध / दूध पावडर", unit: "liter" },
     { key: "Sugar-Jaggery", nameMr: "साखर / गूळ", unit: "kg" },
-    { key: "Ragi Satva", nameMr: "नाचणी सत्व", unit: "kg" }
+    { key: "Ragi Satva", nameMr: "नाचणी सत्व", unit: "kg" },
+    { key: "Vegetables", nameMr: "भाजीपाला", unit: "kg" }
   ];
 
   // ---- End Dynamic Report Helpers ----
@@ -6232,16 +6241,23 @@ const handleDemandReportPdfDownload = async () => {
                             onChange={(e) => setFormulaRecipe(e.target.value)}
                             className="w-full h-10 px-3.5 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                           >
-                            <option value="व्हेजिटेबल पुलाव">व्हेजिटेबल पुलाव</option>
-                            <option value="मूग-डाळ खिचडी">मूग-डाळ खिचडी</option>
-                            <option value="चणा/हरभरा पुलाव">चणा/हरभरा पुलाव</option>
-                            <option value="चवळी खिचडी">चवळी खिचडी</option>
-                            <option value="मोड आलेल्या मटकीची उसळ व साधा शिजवलेला भात">मोड आलेल्या मटकीची उसळ व साधा शिजवलेला भात</option>
-                            <option value="मसाले भात">मसाले भात</option>
-                            <option value="सोयाबीन पुलाव">सोयाबीन पुलाव</option>
-                            <option value="मसुरी पुलाव">मसुरी पुलाव</option>
-                            <option value="मूग/तूर शेवग्याचे वरण आणि भात">मूग/तूर शेवग्याचे वरण आणि भात</option>
-                            <option value="मटार/वाटाणा पुलाव">मटार/वाटाणा पुलाव</option>
+                            <option value="Select Recipe">{getTranslatedMenu("Select Menu")}</option>
+                            <option value="Vegetable Pulav">{getTranslatedMenu("Vegetable Pulav")}</option>
+                            <option value="Masala Rice">{getTranslatedMenu("Masala Rice")}</option>
+                            <option value="Matar Pulav">{getTranslatedMenu("Matar Pulav")}</option>
+                            <option value="Mungdal Khichadi">{getTranslatedMenu("Mungdal Khichadi")}</option>
+                            <option value="Cowpea Khichadi">{getTranslatedMenu("Cowpea Khichadi")}</option>
+                            <option value="Chana Pulav">{getTranslatedMenu("Chana Pulav")}</option>
+                            <option value="Soyabin Pulav">{getTranslatedMenu("Soyabin Pulav")}</option>
+                            <option value="Masuri Pulav">{getTranslatedMenu("Masuri Pulav")}</option>
+                            <option value="Egg Pulav">{getTranslatedMenu("Egg Pulav")}</option>
+                            <option value="Sprouted Matki Usal">{getTranslatedMenu("Sprouted Matki Usal")}</option>
+                            <option value="Sweet Khichadi">{getTranslatedMenu("Sweet Khichadi")}</option>
+                            <option value="Mug Shevaga Varan Bhat">{getTranslatedMenu("Mug Shevaga Varan Bhat")}</option>
+                            <option value="Rice pudding">{getTranslatedMenu("Rice pudding")}</option>
+                            <option value="ragi porridge">{getTranslatedMenu("ragi porridge")}</option>
+                            <option value="Sprouted pulses">{getTranslatedMenu("Sprouted pulses")}</option>
+                            <option value="Other">{getTranslatedMenu("Other")}</option>
                           </select>
                         </div>
 
@@ -6264,6 +6280,13 @@ const handleDemandReportPdfDownload = async () => {
                         </div>
                       </div>
 
+                      {/* Info Sub-banner when recipe is selected */}
+                      {formulaRecipe && formulaRecipe !== "Select Recipe" && (
+                        <p className="text-xs font-medium text-emerald-800 bg-emerald-50/80 border border-emerald-200/80 p-2.5 rounded-xl">
+                          <span className="font-bold">{getTranslatedMenu(formulaRecipe)}</span> साठी वापरले जाणारे साहित्य दाखवत आहे. बदल करण्यासाठी 'Edit ingredients' वर क्लिक करा.
+                        </p>
+                      )}
+
                       {/* Ingredients Table */}
                       <div className="overflow-x-auto border-t border-slate-100 pt-3">
                         <table className="w-full text-xs border-collapse">
@@ -6276,58 +6299,87 @@ const handleDemandReportPdfDownload = async () => {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
-                            {quantityRules.map((row) => (
-                              <tr key={row.item} className="hover:bg-slate-50/80 transition-colors">
-                                <td className="p-3 text-left font-semibold text-slate-900 text-xs">
-                                  {getTranslatedItem(row.item)}
-                                </td>
-                                <td className="p-3 text-center text-slate-500 font-medium">
-                                  gm
-                                </td>
-                                <td className="p-2 text-right">
-                                  <div className="flex justify-end">
-                                    <input
-                                      type="number"
-                                      step="0.1"
-                                      disabled={formulaSource === "admin"}
-                                      value={row.qty15}
-                                      onChange={(e) => {
-                                        const val = e.target.value;
-                                        setQuantityRules((prev) =>
-                                          prev.map((r) => (r.item === row.item ? { ...r, qty15: val } : r))
-                                        );
-                                      }}
-                                      className={`w-28 h-9 text-center border rounded-lg font-bold text-xs shadow-2xs transition-all ${
-                                        formulaSource === "admin"
-                                          ? "bg-slate-100/70 border-slate-200 text-slate-600 cursor-not-allowed"
-                                          : "bg-white border-slate-300 text-slate-900 focus:ring-2 focus:ring-emerald-500"
-                                      }`}
-                                    />
-                                  </div>
-                                </td>
-                                <td className="p-2 text-right">
-                                  <div className="flex justify-end">
-                                    <input
-                                      type="number"
-                                      step="0.1"
-                                      disabled={formulaSource === "admin"}
-                                      value={row.qty68}
-                                      onChange={(e) => {
-                                        const val = e.target.value;
-                                        setQuantityRules((prev) =>
-                                          prev.map((r) => (r.item === row.item ? { ...r, qty68: val } : r))
-                                        );
-                                      }}
-                                      className={`w-28 h-9 text-center border rounded-lg font-bold text-xs shadow-2xs transition-all ${
-                                        formulaSource === "admin"
-                                          ? "bg-slate-100/70 border-slate-200 text-slate-600 cursor-not-allowed"
-                                          : "bg-white border-slate-300 text-slate-900 focus:ring-2 focus:ring-emerald-500"
-                                      }`}
-                                    />
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
+                            {(() => {
+                              const activeSelectedMap = recipeIngredientsMap[formulaRecipe] || (formulaRecipe === menuType ? selectedMenuItems : null);
+                              const filteredRules = formulaRecipe && formulaRecipe !== "Select Recipe" && activeSelectedMap
+                                ? quantityRules.filter((row) => !!activeSelectedMap[row.item])
+                                : quantityRules;
+
+                              if (filteredRules.length === 0) {
+                                return (
+                                  <tr>
+                                    <td colSpan={4} className="p-8 text-center text-slate-500 font-medium bg-slate-50/50 rounded-xl">
+                                      <p className="text-sm font-semibold text-slate-700">
+                                        {getTranslatedMenu(formulaRecipe)} साठी अजून कोणतेही घटक साहित्य निवडलेले नाहीत.
+                                      </p>
+                                      <p className="text-xs text-slate-500 mt-1">
+                                        कृपया प्रथम{" "}
+                                        <button
+                                          onClick={() => setActiveTab("menu")}
+                                          className="text-emerald-600 font-bold underline cursor-pointer"
+                                        >
+                                          रेसिपी साहित्य (Recipe Ingredients)
+                                        </button>{" "}
+                                        टॅबमध्ये जाऊन या रेसिपीचे साहित्य निवडा.
+                                      </p>
+                                    </td>
+                                  </tr>
+                                );
+                              }
+
+                              return filteredRules.map((row) => (
+                                <tr key={row.item} className="hover:bg-slate-50/80 transition-colors">
+                                  <td className="p-3 text-left font-semibold text-slate-900 text-xs">
+                                    {getTranslatedItem(row.item)}
+                                  </td>
+                                  <td className="p-3 text-center text-slate-500 font-medium">
+                                    gm
+                                  </td>
+                                  <td className="p-2 text-right">
+                                    <div className="flex justify-end">
+                                      <input
+                                        type="number"
+                                        step="0.1"
+                                        disabled={formulaSource === "admin"}
+                                        value={row.qty15}
+                                        onChange={(e) => {
+                                          const val = e.target.value;
+                                          setQuantityRules((prev) =>
+                                            prev.map((r) => (r.item === row.item ? { ...r, qty15: val } : r))
+                                          );
+                                        }}
+                                        className={`w-28 h-9 text-center border rounded-lg font-bold text-xs shadow-2xs transition-all ${
+                                          formulaSource === "admin"
+                                            ? "bg-slate-100/70 border-slate-200 text-slate-600 cursor-not-allowed"
+                                            : "bg-white border-slate-300 text-slate-900 focus:ring-2 focus:ring-emerald-500"
+                                        }`}
+                                      />
+                                    </div>
+                                  </td>
+                                  <td className="p-2 text-right">
+                                    <div className="flex justify-end">
+                                      <input
+                                        type="number"
+                                        step="0.1"
+                                        disabled={formulaSource === "admin"}
+                                        value={row.qty68}
+                                        onChange={(e) => {
+                                          const val = e.target.value;
+                                          setQuantityRules((prev) =>
+                                            prev.map((r) => (r.item === row.item ? { ...r, qty68: val } : r))
+                                          );
+                                        }}
+                                        className={`w-28 h-9 text-center border rounded-lg font-bold text-xs shadow-2xs transition-all ${
+                                          formulaSource === "admin"
+                                            ? "bg-slate-100/70 border-slate-200 text-slate-600 cursor-not-allowed"
+                                            : "bg-white border-slate-300 text-slate-900 focus:ring-2 focus:ring-emerald-500"
+                                        }`}
+                                      />
+                                    </div>
+                                  </td>
+                                </tr>
+                              ));
+                            })()}
                           </tbody>
                         </table>
                       </div>
@@ -6523,7 +6575,8 @@ const handleDemandReportPdfDownload = async () => {
                                   "Onion Garlic Masala",
                                   "Chili",
                                   "Oil",
-                                  "Milk-Milk Powder"
+                                  "Milk-Milk Powder",
+                                  "Vegetables"
                                 ].map((item) => {
                                   const isChecked = !!selectedMenuItems[item];
                                   return (
@@ -9189,8 +9242,13 @@ const handleDemandReportPdfDownload = async () => {
                                   { key: "Turmeric", name: "हळद (kg)", qtyP: 0.0004, qtyU: 0.0006 },
                                   { key: "Onion Garlic Masala", name: "तिखट मसाला/कांदा लसूण मसाला (kg)", qtyP: 0.0008, qtyU: 0.0012 },
                                   { key: "Salt", name: "मीठ (kg)", qtyP: 0.004, qtyU: 0.006 },
+                                  { key: "Chili", name: "मिरची पावडर (kg)", qtyP: 0.0004, qtyU: 0.0006 },
+                                  { key: "Garam Masala", name: "गरम मसाला (kg)", qtyP: 0.0004, qtyU: 0.0006 },
                                   { key: "Oil", name: "तेल (kg)", qtyP: 0.005, qtyU: 0.0075 },
-                                  { key: "Vegetables", name: "भाजीपाला (kg)", qtyP: 0.000, qtyU: 0.000 },
+                                  { key: "Milk-Milk Powder", name: "दूध / दूध पावडर (liter)", qtyP: 0.000, qtyU: 0.000 },
+                                  { key: "Sugar-Jaggery", name: "साखर / गूळ (kg)", qtyP: 0.000, qtyU: 0.000 },
+                                  { key: "Ragi Satva", name: "नाचणी सत्व (kg)", qtyP: 0.000, qtyU: 0.000 },
+                                  { key: "Vegetables", name: "भाजीपाला (kg)", qtyP: 0.050, qtyU: 0.050 },
                                 ];
 
                                 const marToEngMonth: Record<string, string> = {
@@ -9610,7 +9668,11 @@ const handleDemandReportPdfDownload = async () => {
                               bene = daily?.beneficiary || 0;
                               if (bene > 0) {
                                 totalRiceDistributedDays++;
-                                kharch = bene * 0.100;
+                                const riceRule = quantityRules.find((r) => r.item.toLowerCase() === "rice");
+                                const riceQtyStr = riceRule ? riceRule.qty15 : "0.100";
+                                const ricePerStudent = parseFloat(riceQtyStr) || 0.100;
+                                const riceRateKg = ricePerStudent;
+                                kharch = bene * riceRateKg;
                                 totalBeneficiaries += bene;
                                 totalRiceConsumed += kharch;
                               }
@@ -9820,7 +9882,8 @@ const handleDemandReportPdfDownload = async () => {
                             "Rice", "Mugdal", "Turdal", "Masurdal", "Matki",
                             "Moong", "Cowpea", "Gram", "Pease", "Soyabean Wadi",
                             "Cumin", "Mustard", "Turmeric", "Onion Garlic Masala",
-                            "Salt", "Chili", "Garam Masala", "Oil"
+                            "Salt", "Chili", "Garam Masala", "Oil",
+                            "Sugar-Jaggery", "Milk-Milk Powder", "Ragi Satva", "Vegetables"
                           ];
 
                           const prevRiceStock = getOpeningStock(engMonthNames[monthNum], year.toString(), "1 To 5", "Rice");
@@ -10138,7 +10201,7 @@ const handleDemandReportPdfDownload = async () => {
                                 <div><p>Date : {new Date().toLocaleDateString('en-GB')}</p></div>
                                 <div className="text-center">
                                   <p className="font-black">मुख्याध्यापक</p>
-                                  <p className="text-xs text-slate-400 mt-0.5">{schoolName}</p>
+                                  <p className="text-xs text-slate-500 mt-0.5">{schoolName}</p>
                                 </div>
                               </div>
 
@@ -10159,42 +10222,42 @@ const handleDemandReportPdfDownload = async () => {
                           const year = monthNum >= 6 ? 2026 : 2027;
                           const schoolName = profile?.schoolName || "";
 
-                          const itemDefs = [
-                            { sr: 1,  key: "Rice", name: "तांदूळ" },
-                            { sr: 2,  key: "Mugdal", name: "मूगडाळ" },
-                            { sr: 3,  key: "Turdal", name: "तूरडाळ" },
-                            { sr: 4,  key: "Masurdal", name: "मसूरडाळ" },
-                            { sr: 5,  key: "Matki", name: "मटकी" },
-                            { sr: 6,  key: "Moong", name: "अख्खा मूग" },
-                            { sr: 7,  key: "Cowpea", name: "चवळी" },
-                            { sr: 8,  key: "Gram", name: "हरभरा" },
-                            { sr: 9,  key: "Pease", name: "वाटाणा" },
-                            { sr: 10, key: "Soyabean Wadi", name: "सोयाबीन वडी" },
-                            { sr: 11, key: "Cumin", name: "जिरे" },
-                            { sr: 12, key: "Mustard", name: "मोहरी" },
-                            { sr: 13, key: "Turmeric", name: "हळद" },
-                            { sr: 14, key: "Onion Garlic Masala", name: "तिखट मसाला/कांदा लसूण मसाला" },
-                            { sr: 15, key: "Salt", name: "मीठ" },
-                            { sr: 16, key: "Chili", name: "मिरची पावडर" },
-                            { sr: 17, key: "Garam Masala", name: "गरम मसाला" },
-                            { sr: 18, key: "Oil", name: "तेल" },
-                            { sr: 19, key: "Sugar", name: "गूळ / साखर" },
-                            { sr: 20, key: "Milk", name: "दूध पावडर" },
-                            { sr: 21, key: "Ragi", name: "नाचणी सत्त्व" },
-                            { sr: 22, key: "Vegetables", name: "भाजीपाला" },
-                          ];
+                          const B_FORM_ITEMS = [
+                                 { key: "Rice", nameMr: "तांदूळ", unit: "कि.ग्रॅ.", qty15: "0.100 कि.ग्रॅ.", qty68: "0.150 कि.ग्रॅ." },
+                                 { key: "Mugdal", nameMr: "मूगडाळ", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
+                                 { key: "Turdal", nameMr: "तूरडाळ", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
+                                 { key: "Matki", nameMr: "मटकी", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
+                                 { key: "Cowpea", nameMr: "चवळी", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
+                                 { key: "Masurdal", nameMr: "मसूरडाळ", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
+                                 { key: "Pease", nameMr: "वाटाणा", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
+                                 { key: "Gram", nameMr: "हरभरा", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
+                                 { key: "Moong", nameMr: "मूग", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
+                                 { key: "Cumin", nameMr: "जिरे", unit: "कि.ग्रॅ.", qty15: "0.0005 कि.ग्रॅ.", qty68: "0.0007 कि.ग्रॅ." },
+                                 { key: "Mustard", nameMr: "मोहरी", unit: "कि.ग्रॅ.", qty15: "0.0005 कि.ग्रॅ.", qty68: "0.0007 कि.ग्रॅ." },
+                                 { key: "Turmeric", nameMr: "हळद", unit: "कि.ग्रॅ.", qty15: "0.0004 कि.ग्रॅ.", qty68: "0.0006 कि.ग्रॅ." },
+                                 { key: "Onion Garlic Masala", nameMr: "कांदा लसूण मसाला", unit: "कि.ग्रॅ.", qty15: "0.0004 कि.ग्रॅ.", qty68: "0.0006 कि.ग्रॅ." },
+                                 { key: "Salt", nameMr: "मीठ", unit: "कि.ग्रॅ.", qty15: "0.004 कि.ग्रॅ.", qty68: "0.006 कि.ग्रॅ." },
+                                 { key: "Chili", nameMr: "मिरची पावडर", unit: "कि.ग्रॅ.", qty15: "0.0004 कि.ग्रॅ.", qty68: "0.0006 कि.ग्रॅ." },
+                                 { key: "Oil", nameMr: "सोयाबीन खाद्यतेल", unit: "ली.", qty15: "0.0054 ली.", qty68: "0.0082 ली." },
+                                 { key: "Garam Masala", nameMr: "गरम मसाला", unit: "कि.ग्रॅ.", qty15: "0.0004 कि.ग्रॅ.", qty68: "0.0006 कि.ग्रॅ." },
+                                 { key: "Soyabean Wadi", nameMr: "सोया वडी", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
+                                 { key: "Sugar-Jaggery", nameMr: "साखर / गूळ", unit: "कि.ग्रॅ.", qty15: "—", qty68: "—" },
+                                 { key: "Milk-Milk Powder", nameMr: "दूध / दूध पावडर", unit: "ली.", qty15: "—", qty68: "—" },
+                                 { key: "Ragi Satva", nameMr: "नाचणी सत्व", unit: "कि.ग्रॅ.", qty15: "—", qty68: "—" },
+                                 { key: "Vegetables", nameMr: "भाजीपाला", unit: "कि.ग्रॅ.", qty15: "0.050 कि.ग्रॅ.", qty68: "0.050 कि.ग्रॅ." }
+                               ];
 
                           const riceData = getStockDataForItem("Rice", engMonthNames[monthNum], year, "1 To 5");
                           const labharthi = riceData.beneficiary;
                           const registerData = getRegisterDataForMonth(engMonthNames[monthNum], year, "1 To 5");
                           const enrolledPat = registerData.enrolled || labharthi || 0;
 
-                          const items = itemDefs.map(def => {
+                          const items = B_FORM_ITEMS.map((def, idx) => {
                             const prev = getOpeningStock(engMonthNames[monthNum], year.toString(), "1 To 5", def.key);
                             const rec = getIncomingForItem(def.key, engMonthNames[monthNum], year, "1 To 5");
                             const used = getUsedForMonth(engMonthNames[monthNum], year.toString(), "1 To 5", def.key);
                             const demand = Math.max(0, (enrolledPat * 0.02 * 20) - (prev + rec - used));
-                            return { sr: def.sr, name: def.name, prev, rec, used, demand: parseFloat(demand.toFixed(2)) };
+                            return { sr: idx + 1, name: def.nameMr, prev, rec, used, demand: parseFloat(demand.toFixed(2)) };
                           });
 
                           const cookedDays = riceData.cookedDays;
