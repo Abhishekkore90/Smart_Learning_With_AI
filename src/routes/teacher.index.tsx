@@ -88,10 +88,10 @@ const MODULE_CARDS = [
   },
   {
     labelKey: "teachingRecord",
-    fallbackLabel: "टाचनवही",
+    fallbackLabel: "टाचणवही अहवाल (Teaching Diary)",
     to: "/teacher/teaching-record",
     icon: Notebook,
-    description: "शिक्षकांची दैनिक अध्यापन टाचनवही (Teaching Diary) नोंदी.",
+    description: "शिक्षकांची दैनिक अध्यापन टाचनवही आणि शासकीय अहवाल नोंदी (Teaching Diary Report).",
   },
 
   {

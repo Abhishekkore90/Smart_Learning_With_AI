@@ -95,14 +95,15 @@ const adminModules = [
     trend: "Month-Wise",
   },
   {
-    title: "Teacher Diary Uploader",
-    desc: "Upload and manage official teaching diaries and lesson guidelines by class and month.",
+    title: "Teaching Diary Management",
+    desc: "Upload and manage official teaching diaries by Medium, Class (1-8), and Date to Bunny Storage.",
     icon: CloudUpload,
     to: "/admin/teacher-diary",
     color: "from-violet-600 to-indigo-700",
     glow: "bg-violet-400/20",
     stats: "Teaching Diaries",
     trend: "Live Sync",
+    status: "Active",
   },
   {
     title: "Timetable Uploader",
