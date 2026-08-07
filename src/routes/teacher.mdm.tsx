@@ -1400,6 +1400,86 @@ function TeacherMDMPage() {
     return `${baseOffset + dayNum}. ${dayName}`;
   };
 
+  const getRecipeItemsByName = (recipeName: string): Record<string, boolean> => {
+    if (!recipeName || recipeName === "No Menu Available" || recipeName === "— Select recipe —" || recipeName === "Select Menu") {
+      return {};
+    }
+
+    const nameLower = recipeName.toLowerCase();
+    
+    // Default base items used in savory MDM cooked recipes
+    const items: Record<string, boolean> = {
+      Rice: true,
+      Salt: true,
+      Oil: true,
+      Turmeric: true,
+      Cumin: true,
+      Mustard: true,
+    };
+
+    if (nameLower.includes("तूर") || nameLower.includes("turdal") || nameLower.includes("वरण")) {
+      items["Turdal"] = true;
+    }
+    if (nameLower.includes("मूग") || nameLower.includes("mung") || nameLower.includes("moong")) {
+      if (nameLower.includes("उसळ") || nameLower.includes("अख्खा")) {
+        items["Moong"] = true;
+      } else {
+        items["Mugdal"] = true;
+      }
+    }
+    if (nameLower.includes("मटकी") || nameLower.includes("matki")) {
+      items["Matki"] = true;
+    }
+    if (nameLower.includes("चवळी") || nameLower.includes("cowpea")) {
+      items["Cowpea"] = true;
+    }
+    if (nameLower.includes("चणा") || nameLower.includes("हरभरा") || nameLower.includes("chana") || nameLower.includes("gram")) {
+      items["Gram"] = true;
+      items["Onion Garlic Masala"] = true;
+      items["Garam Masala"] = true;
+    }
+    if (nameLower.includes("वाटाणा") || nameLower.includes("मटार") || nameLower.includes("pease") || nameLower.includes("matar")) {
+      items["Pease"] = true;
+    }
+    if (nameLower.includes("सोयाबीन") || nameLower.includes("soyabean") || nameLower.includes("वडी")) {
+      items["Soyabean Wadi"] = true;
+      items["Onion Garlic Masala"] = true;
+    }
+    if (nameLower.includes("मसूर") || nameLower.includes("masur")) {
+      items["Masurdal"] = true;
+      items["Onion Garlic Masala"] = true;
+    }
+    if (nameLower.includes("मसाला") || nameLower.includes("masala") || nameLower.includes("पुलाव") || nameLower.includes("pulav") || nameLower.includes("खिचडी") || nameLower.includes("khichadi")) {
+      if (!nameLower.includes("वरण") && !nameLower.includes("खीर") && !nameLower.includes("लापशी")) {
+        items["Onion Garlic Masala"] = true;
+      }
+    }
+    if (nameLower.includes("व्हेज") || nameLower.includes("vegetable")) {
+      items["Vegetables"] = true;
+    }
+
+    if (nameLower.includes("गोड") || nameLower.includes("खीर") || nameLower.includes("लापशी") || nameLower.includes("kheer") || nameLower.includes("pudding")) {
+      return {
+        Rice: true,
+        "Sugar-Jaggery": true,
+        "Milk-Milk Powder": true,
+      };
+    }
+    if (nameLower.includes("नाचणी") || nameLower.includes("ragi") || nameLower.includes("page")) {
+      return {
+        "Ragi Satva": true,
+        "Sugar-Jaggery": true,
+        "Milk-Milk Powder": true,
+      };
+    }
+
+    if (nameLower.includes("खिचडी") || nameLower.includes("khichadi")) {
+      items["Mugdal"] = true;
+    }
+
+    return items;
+  };
+
   const getMenuForRegisterDate = (dateStr: string, classStr = registerClass) => {
     if (!dateStr) return "No Menu Available";
 
@@ -1407,12 +1487,41 @@ function TeacherMDMPage() {
     const savedRecord = registerRecords ? registerRecords[dateStr] : undefined;
     if (savedRecord) {
       const classRecord = savedRecord[classStr] || (classStr === "1 To 5" ? savedRecord : null);
-      if (classRecord && classRecord.menu) {
+      if (classRecord && classRecord.menu && classRecord.menu !== "No Menu Available" && classRecord.menu !== "Select Menu") {
         return classRecord.menu;
       }
     }
 
-    // 2. Fall back to weekly configured menu
+    // 2. Check Monthly Calendar Records (monthlyCalendarRecords or calEntries)
+    if (dateStr) {
+      const parts = dateStr.split("-");
+      if (parts.length === 3) {
+        const y = parts[0];
+        const m = parseInt(parts[1], 10);
+        const calSectionKey = classStr === "6 To 8" ? "6-8" : "1-5";
+        
+        const keysToTry = [
+          `${y}_${m}_${calSectionKey}`,
+          `${y}_${m}_1-5`,
+          `${y}_${m}_6-8`
+        ];
+
+        if (monthlyCalendarRecords) {
+          for (const k of keysToTry) {
+            const calRec = monthlyCalendarRecords[k];
+            if (calRec && calRec[dateStr] && calRec[dateStr].menu && calRec[dateStr].menu !== "— Select recipe —" && calRec[dateStr].menu !== "Select Menu") {
+              return calRec[dateStr].menu;
+            }
+          }
+        }
+
+        if (calEntries && calEntries[dateStr] && calEntries[dateStr].menu && calEntries[dateStr].menu !== "— Select recipe —" && calEntries[dateStr].menu !== "Select Menu") {
+          return calEntries[dateStr].menu;
+        }
+      }
+    }
+
+    // 3. Fall back to weekly configured menu
     const dayKey = getDayOfWeekKeyForDate(dateStr);
     if (
       dayKey &&
@@ -1424,7 +1533,7 @@ function TeacherMDMPage() {
       return menuRecords[dayKey].menu;
     }
 
-    // 3. Fall back to simple day search
+    // 4. Fall back to simple day search
     const d = new Date(dateStr);
     if (!isNaN(d.getTime())) {
       const days = [
@@ -1460,41 +1569,30 @@ function TeacherMDMPage() {
     const savedRecord = registerRecords ? registerRecords[dateStr] : undefined;
     if (savedRecord) {
       const classRecord = savedRecord[classStr] || (classStr === "1 To 5" ? savedRecord : null);
-      if (classRecord && classRecord.selectedItems) {
+      if (classRecord && classRecord.selectedItems && Object.values(classRecord.selectedItems).some(Boolean)) {
         return classRecord.selectedItems;
       }
     }
 
-    // 2. Fall back to weekly configured menu
+    // 2. Derive items from menu set in Monthly Calendar or Master Menu
+    const currentMenu = getMenuForRegisterDate(dateStr, classStr);
+    if (currentMenu && currentMenu !== "No Menu Available" && currentMenu !== "— Select recipe —") {
+      const recipeItems = getRecipeItemsByName(currentMenu);
+      if (recipeItems && Object.values(recipeItems).some(Boolean)) {
+        return recipeItems;
+      }
+    }
+
+    // 3. Fall back to weekly configured menu
     const dayKey = getDayOfWeekKeyForDate(dateStr);
     if (
       dayKey &&
       menuRecords &&
       menuRecords[dayKey] &&
-      menuRecords[dayKey].selectedItems
+      menuRecords[dayKey].selectedItems &&
+      Object.values(menuRecords[dayKey].selectedItems).some(Boolean)
     ) {
       return menuRecords[dayKey].selectedItems;
-    }
-
-    // 3. Fall back to simple day search
-    const d = new Date(dateStr);
-    if (!isNaN(d.getTime())) {
-      const days = [
-        "Sunday",
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday",
-      ];
-      const dayName = days[d.getDay()];
-      const matchKey = Object.keys(menuRecords || {}).find((key) =>
-        key.toLowerCase().endsWith(dayName.toLowerCase()),
-      );
-      if (matchKey && menuRecords && menuRecords[matchKey].selectedItems) {
-        return menuRecords[matchKey].selectedItems;
-      }
     }
 
     return null;
@@ -2798,8 +2896,9 @@ function TeacherMDMPage() {
       if (bene === 0) return;
 
       // Only count this item if it was actively selected/used that day
-      const wasSelected = classRecord.selectedItems
-        ? !!classRecord.selectedItems[itemName]
+      const selectedItems = classRecord.selectedItems || getSelectedItemsForRegisterDate(dateStr, classStr);
+      const wasSelected = selectedItems
+        ? !!selectedItems[itemName]
         : false;
       if (!wasSelected) return;
 
@@ -2932,8 +3031,9 @@ function TeacherMDMPage() {
       const bene = Number(classRecord.beneficiary) || 0;
       if (bene === 0) return;
 
-      const wasSelected = classRecord.selectedItems
-        ? !!classRecord.selectedItems[itemName]
+      const selectedItems = classRecord.selectedItems || getSelectedItemsForRegisterDate(dateStr, prevClass);
+      const wasSelected = selectedItems
+        ? !!selectedItems[itemName]
         : false;
       if (!wasSelected) return;
 
@@ -3022,8 +3122,9 @@ function TeacherMDMPage() {
           }
 
           // Only count this item if it was used this day
-          const wasSelected = classRecord.selectedItems
-            ? !!classRecord.selectedItems[item.item]
+          const selectedItems = classRecord.selectedItems || getSelectedItemsForRegisterDate(dateStr, stockClass);
+          const wasSelected = selectedItems
+            ? !!selectedItems[item.item]
             : false;
           if (!wasSelected || bene === 0) return;
 
@@ -4415,8 +4516,9 @@ function TeacherMDMPage() {
           benefSum += bene;
         }
 
-        const wasSelected = classRecord.selectedItems
-          ? !!classRecord.selectedItems[itemName]
+        const selectedItems = classRecord.selectedItems || getSelectedItemsForRegisterDate(dateStr, cls);
+        const wasSelected = selectedItems
+          ? !!selectedItems[itemName]
           : false;
         if (!wasSelected || bene === 0) return;
 
@@ -7286,37 +7388,39 @@ function TeacherMDMPage() {
 
                                   const absentSt = (enrNum > 0 && presNum >= 0) ? Math.max(0, enrNum - presNum).toString() : "—";
 
-                                  const riceKg = beneNum > 0 ? (beneNum * (registerClass === "6 To 8" ? 0.15 : 0.1)).toFixed(2) : "—";
-                                  const moongKg = beneNum > 0 ? (beneNum * 0.02).toFixed(2) : "—";
-                                  const turKg = beneNum > 0 ? (beneNum * 0.02).toFixed(2) : "—";
-                                  const masurKg = beneNum > 0 && recipeName.includes("मसूर") ? (beneNum * 0.02).toFixed(2) : (classData?.masurKg || "—");
-                                  const matkiKg = beneNum > 0 && (recipeName.includes("मटकी") || recipeName.includes("उसळ")) ? (beneNum * 0.02).toFixed(2) : (classData?.matkiKg || "—");
-                                  const moongAkkhaKg = beneNum > 0 && recipeName.includes("मूग") ? (beneNum * 0.02).toFixed(2) : (classData?.moongAkkhaKg || "—");
-                                  const chawliKg = beneNum > 0 && recipeName.includes("चवळी") ? (beneNum * 0.02).toFixed(2) : (classData?.chawliKg || "—");
-                                  const harbharaKg = beneNum > 0 && (recipeName.includes("हरभरा") || recipeName.includes("चना")) ? (beneNum * 0.02).toFixed(2) : (classData?.harbharaKg || "—");
-                                  const vatanaKg = beneNum > 0 && recipeName.includes("वाटाणा") ? (beneNum * 0.02).toFixed(2) : (classData?.vatanaKg || "—");
-                                  const soyabeanKg = beneNum > 0 && (recipeName.includes("सोयाबीन") || recipeName.includes("वडी")) ? (beneNum * 0.015).toFixed(2) : (classData?.soyabeanKg || "—");
+                                  const selectedForDay = dayOfWeek === 0 ? null : (classData?.selectedItems || getSelectedItemsForRegisterDate(fullDateKey, registerClass));
 
-                                  const jireKgVal = beneNum > 0 && dayOfWeek !== 0 ? (classData?.jireKg || (beneNum * 0.0005).toFixed(3)) : "—";
-                                  const mohariKgVal = beneNum > 0 && dayOfWeek !== 0 ? (classData?.mohariKg || (beneNum * 0.0005).toFixed(3)) : "—";
-                                  const haladKgVal = beneNum > 0 && dayOfWeek !== 0 ? (classData?.haladKg || (beneNum * 0.001).toFixed(3)) : "—";
-                                  const tikhatMasalaKgVal = beneNum > 0 && dayOfWeek !== 0 ? (classData?.tikhatMasalaKg || (beneNum * 0.002).toFixed(3)) : "—";
-                                  const meethKgVal = beneNum > 0 && dayOfWeek !== 0 ? (classData?.meethKg || (beneNum * 0.003).toFixed(3)) : "—";
-                                  const mirchiPowderKgVal = beneNum > 0 && dayOfWeek !== 0 ? (classData?.mirchiPowderKg || (beneNum * 0.0015).toFixed(3)) : "—";
-                                  const garamMasalaKgVal = beneNum > 0 && dayOfWeek !== 0 ? (classData?.garamMasalaKg || (beneNum * 0.001).toFixed(3)) : "—";
-                                  const telKgVal = beneNum > 0 && dayOfWeek !== 0 ? (classData?.telKg || (beneNum * 0.005).toFixed(3)) : "—";
+                                  const riceKg = beneNum > 0 && (!selectedForDay || selectedForDay["Rice"] !== false) ? (beneNum * (registerClass === "6 To 8" ? 0.15 : 0.1)).toFixed(2) : "—";
+                                  const moongKg = beneNum > 0 && (selectedForDay ? selectedForDay["Mugdal"] : recipeName.includes("मूग")) ? (beneNum * 0.02).toFixed(2) : "—";
+                                  const turKg = beneNum > 0 && (selectedForDay ? selectedForDay["Turdal"] : recipeName.includes("तूर") || recipeName.includes("वरण")) ? (beneNum * 0.02).toFixed(2) : "—";
+                                  const masurKg = beneNum > 0 && (selectedForDay ? selectedForDay["Masurdal"] : recipeName.includes("मसूर")) ? (beneNum * 0.02).toFixed(2) : (classData?.masurKg || "—");
+                                  const matkiKg = beneNum > 0 && (selectedForDay ? selectedForDay["Matki"] : (recipeName.includes("मटकी") || recipeName.includes("उसळ"))) ? (beneNum * 0.02).toFixed(2) : (classData?.matkiKg || "—");
+                                  const moongAkkhaKg = beneNum > 0 && (selectedForDay ? selectedForDay["Moong"] : recipeName.includes("मूग")) ? (beneNum * 0.02).toFixed(2) : (classData?.moongAkkhaKg || "—");
+                                  const chawliKg = beneNum > 0 && (selectedForDay ? selectedForDay["Cowpea"] : recipeName.includes("चवळी")) ? (beneNum * 0.02).toFixed(2) : (classData?.chawliKg || "—");
+                                  const harbharaKg = beneNum > 0 && (selectedForDay ? selectedForDay["Gram"] : (recipeName.includes("हरभरा") || recipeName.includes("चना"))) ? (beneNum * 0.02).toFixed(2) : (classData?.harbharaKg || "—");
+                                  const vatanaKg = beneNum > 0 && (selectedForDay ? selectedForDay["Pease"] : recipeName.includes("वाटाणा")) ? (beneNum * 0.02).toFixed(2) : (classData?.vatanaKg || "—");
+                                  const soyabeanKg = beneNum > 0 && (selectedForDay ? selectedForDay["Soyabean Wadi"] : (recipeName.includes("सोयाबीन") || recipeName.includes("वडी"))) ? (beneNum * 0.015).toFixed(2) : (classData?.soyabeanKg || "—");
+
+                                  const jireKgVal = beneNum > 0 && dayOfWeek !== 0 && (!selectedForDay || selectedForDay["Cumin"] !== false) ? (classData?.jireKg || (beneNum * 0.0005).toFixed(3)) : "—";
+                                  const mohariKgVal = beneNum > 0 && dayOfWeek !== 0 && (!selectedForDay || selectedForDay["Mustard"] !== false) ? (classData?.mohariKg || (beneNum * 0.0005).toFixed(3)) : "—";
+                                  const haladKgVal = beneNum > 0 && dayOfWeek !== 0 && (!selectedForDay || selectedForDay["Turmeric"] !== false) ? (classData?.haladKg || (beneNum * 0.001).toFixed(3)) : "—";
+                                  const tikhatMasalaKgVal = beneNum > 0 && dayOfWeek !== 0 && (selectedForDay ? selectedForDay["Onion Garlic Masala"] : true) ? (classData?.tikhatMasalaKg || (beneNum * 0.002).toFixed(3)) : "—";
+                                  const meethKgVal = beneNum > 0 && dayOfWeek !== 0 && (!selectedForDay || selectedForDay["Salt"] !== false) ? (classData?.meethKg || (beneNum * 0.003).toFixed(3)) : "—";
+                                  const mirchiPowderKgVal = beneNum > 0 && dayOfWeek !== 0 && (selectedForDay ? selectedForDay["Chili"] : false) ? (classData?.mirchiPowderKg || (beneNum * 0.0015).toFixed(3)) : "—";
+                                  const garamMasalaKgVal = beneNum > 0 && dayOfWeek !== 0 && (selectedForDay ? selectedForDay["Garam Masala"] : false) ? (classData?.garamMasalaKg || (beneNum * 0.001).toFixed(3)) : "—";
+                                  const telKgVal = beneNum > 0 && dayOfWeek !== 0 && (!selectedForDay || selectedForDay["Oil"] !== false) ? (classData?.telKg || (beneNum * 0.005).toFixed(3)) : "—";
 
                                   const gulKgVal = isCurrentSelectedDate
-                                    ? (classData?.gulKg || (recipeName.includes("गोड") || recipeName.includes("खीर") || recipeName.includes("लापशी") ? (beneNum > 0 ? (beneNum * 0.015).toFixed(2) : "—") : "—"))
-                                    : (classData?.gulKg || (recipeName.includes("गोड") || recipeName.includes("खीर") || recipeName.includes("लापशी") ? (beneNum > 0 ? (beneNum * 0.015).toFixed(2) : "—") : "—"));
+                                    ? (classData?.gulKg || ((selectedForDay ? selectedForDay["Sugar-Jaggery"] : (recipeName.includes("गोड") || recipeName.includes("खीर") || recipeName.includes("लापशी"))) ? (beneNum > 0 ? (beneNum * 0.015).toFixed(2) : "—") : "—"))
+                                    : (classData?.gulKg || ((selectedForDay ? selectedForDay["Sugar-Jaggery"] : (recipeName.includes("गोड") || recipeName.includes("खीर") || recipeName.includes("लापशी"))) ? (beneNum > 0 ? (beneNum * 0.015).toFixed(2) : "—") : "—"));
 
                                   const doodhKgVal = isCurrentSelectedDate
-                                    ? (classData?.doodhKg || (recipeName.includes("दूध") || recipeName.includes("खीर") || recipeName.includes("नाचणी") ? (beneNum > 0 ? (beneNum * 0.01).toFixed(2) : "—") : "—"))
-                                    : (classData?.doodhKg || (recipeName.includes("दूध") || recipeName.includes("खीर") || recipeName.includes("नाचणी") ? (beneNum > 0 ? (beneNum * 0.01).toFixed(2) : "—") : "—"));
+                                    ? (classData?.doodhKg || ((selectedForDay ? selectedForDay["Milk-Milk Powder"] : (recipeName.includes("दूध") || recipeName.includes("खीर") || recipeName.includes("नाचणी"))) ? (beneNum > 0 ? (beneNum * 0.01).toFixed(2) : "—") : "—"))
+                                    : (classData?.doodhKg || ((selectedForDay ? selectedForDay["Milk-Milk Powder"] : (recipeName.includes("दूध") || recipeName.includes("खीर") || recipeName.includes("नाचणी"))) ? (beneNum > 0 ? (beneNum * 0.01).toFixed(2) : "—") : "—"));
 
                                   const nachniKgVal = isCurrentSelectedDate
-                                    ? (classData?.nachniKg || (recipeName.includes("नाचणी") ? (beneNum > 0 ? (beneNum * 0.015).toFixed(2) : "—") : "—"))
-                                    : (classData?.nachniKg || (recipeName.includes("नाचणी") ? (beneNum > 0 ? (beneNum * 0.015).toFixed(2) : "—") : "—"));
+                                    ? (classData?.nachniKg || ((selectedForDay ? selectedForDay["Ragi Satva"] : recipeName.includes("नाचणी")) ? (beneNum > 0 ? (beneNum * 0.015).toFixed(2) : "—") : "—"))
+                                    : (classData?.nachniKg || ((selectedForDay ? selectedForDay["Ragi Satva"] : recipeName.includes("नाचणी")) ? (beneNum > 0 ? (beneNum * 0.015).toFixed(2) : "—") : "—"));
 
                                   const bhajiKgVal = isCurrentSelectedDate
                                     ? (veggieKg || classData?.veggieKg || (beneNum > 0 ? (beneNum * (registerClass === "6 To 8" ? 0.05 : 0.03)).toFixed(2) : "—"))
