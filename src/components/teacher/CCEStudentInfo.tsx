@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 // @ts-ignore
 import { matchStudentClassAndMedium } from "@/result/firestoreMarksHelper";
@@ -28,11 +28,18 @@ import {
   Phone,
   CreditCard,
   MapPin,
-  Heart,
   Save,
   Users,
-  CheckCircle2,
   Upload,
+  Hash,
+  Activity,
+  Globe,
+  Home,
+  Shield,
+  Printer,
+  Eye,
+  FileText,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -49,29 +56,29 @@ interface StudentRecord {
   role: string;
 }
 
-interface StudentDetails {
-  registrationNo: string;
-  dob: string;
-  address: string;
-  phone: string;
-  aadhar: string;
-  studentId: string;
-  aparId: string;
-  height: string;
-  weight: string;
-  religion: string;
-  caste: string;
+export interface StudentDetails {
+  registrationNo: string; // 1. नोंदणी क्रमांक
+  dob: string; // 2. जन्मतारीख
+  address: string; // 3. पत्ता
+  phone: string; // 4. फोन नंबर / मोबाईल
+  aadhar: string; // 5. आधार कार्ड नं.
+  studentId: string; // 6. स्टुडंट आयडी (SARAL)
+  aparId: string; // 7. अपार आयडी (APAAR ID)
+  height: string; // 8. उंची (cm)
+  weight: string; // 9. वजन (kg)
+  religion: string; // 10. धर्म
+  caste: string; // 11. जात / संवर्ग
   sickCount: string;
-  motherName: string;
-  motherEducation: string;
-  motherOccupation: string;
-  fatherName: string;
-  fatherEducation: string;
-  fatherOccupation: string;
+  motherName: string; // 12. आईचे नाव
+  motherEducation: string; // आईचे शिक्षण
+  motherOccupation: string; // आईचा व्यवसाय
+  fatherName: string; // 13. वडिलांचे नाव
+  fatherEducation: string; // वडिलांचे शिक्षण
+  fatherOccupation: string; // वडिलांचा व्यवसाय
   siblingsCount: string;
   siblingsAge: string;
-  motherTongue: string;
-  regionType: "ग्रामीण" | "शहरी";
+  motherTongue: string; // 14. मातृभाषा
+  regionType: "ग्रामीण" | "शहरी"; // 15. प्रदेश प्रकार
 }
 
 const emptyDetails = (): StudentDetails => ({
@@ -98,19 +105,6 @@ const emptyDetails = (): StudentDetails => ({
   motherTongue: "",
   regionType: "ग्रामीण",
 });
-
-const classMarathiMap: Record<string, string> = {
-  "1st": "पहिली",
-  "2nd": "दुसरी",
-  "3rd": "तिसरी",
-  "4th": "चौथी",
-  "5th": "पाचवी",
-  "6th": "सहावी",
-  "7th": "सातवी",
-  "8th": "आठवी",
-  "9th": "नववी",
-  "10th": "दहावी",
-};
 
 // Floating label input component
 function FloatInput({
@@ -182,39 +176,6 @@ function FloatInput({
   );
 }
 
-// Plain input
-function PlainInput({
-  value,
-  onChange,
-  placeholder,
-  type = "text",
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  placeholder: string;
-  type?: string;
-}) {
-  const [focused, setFocused] = useState(false);
-  return (
-    <div className="mb-4">
-      <input
-        type={type}
-        value={value || ""}
-        onChange={(e) => onChange(e.target.value)}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        placeholder={placeholder}
-        className="w-full px-4 py-4 rounded-2xl text-slate-800 text-sm font-semibold outline-none transition-all"
-        style={{
-          background: focused ? "#f8fafc" : "#ffffff",
-          border: `1.5px solid ${focused ? "#3b82f6" : "#cbd5e1"}`,
-          boxShadow: focused ? "0 0 0 4px rgba(59, 130, 246, 0.12)" : "none",
-        }}
-      />
-    </div>
-  );
-}
-
 // Image upload box
 function ImageBox({
   label,
@@ -269,9 +230,13 @@ export function CCEStudentInfo({
   onBack: () => void;
 }) {
   const [students, setStudents] = useState<StudentRecord[]>([]);
+  const [studentDetailsMap, setStudentDetailsMap] = useState<Record<string, StudentDetails>>({});
+  const [selectedStudent, setSelectedStudent] = useState<StudentRecord | null>(null);
+  const [studentPageTab, setStudentPageTab] = useState<"view" | "edit">("view");
+
   const [loading, setLoading] = useState(true);
-  const [editingStudent, setEditingStudent] = useState<StudentRecord | null>(null);
   const [details, setDetails] = useState<StudentDetails>(emptyDetails());
+  const [newDetails, setNewDetails] = useState<StudentDetails>(emptyDetails());
   const [saving, setSaving] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -288,6 +253,8 @@ export function CCEStudentInfo({
   const [editGender, setEditGender] = useState("Male");
   const [editPhotoUrl, setEditPhotoUrl] = useState("");
 
+  const printRef = useRef<HTMLDivElement>(null);
+
   const [selectedMedium, setSelectedMedium] = useState<"marathi" | "semi">(() => {
     const stored = localStorage.getItem("cce_selected_medium");
     return stored === "semi" ? "semi" : "marathi";
@@ -296,11 +263,15 @@ export function CCEStudentInfo({
   const set = <K extends keyof StudentDetails>(key: K, val: StudentDetails[K]) =>
     setDetails((prev) => ({ ...prev, [key]: val }));
 
+  const setNew = <K extends keyof StudentDetails>(key: K, val: StudentDetails[K]) =>
+    setNewDetails((prev) => ({ ...prev, [key]: val }));
+
   const academicYear = localStorage.getItem("cce_academic_year") || "2025-2026";
 
   // Load students
   useEffect(() => {
     setLoading(true);
+    const currentTeacherId = getTeacherId();
     const q = query(
       collection(db, "users"),
       where("role", "==", "student")
@@ -319,16 +290,30 @@ export function CCEStudentInfo({
           class: dd.class || selectedClass,
           medium: dd.medium,
           isSemiEnglish: dd.isSemiEnglish,
+          teacherId: dd.teacherId || dd.createdById,
           academicYear: dd.academicYear || academicYear,
           role: "student",
-        } as StudentRecord & { medium?: string; isSemiEnglish?: boolean; class?: string };
+        } as StudentRecord & { medium?: string; isSemiEnglish?: boolean; class?: string; teacherId?: string };
       });
-      data.sort((a, b) => parseInt(a.rollNo || "999") - parseInt(b.rollNo || "999"));
-      setStudents(data);
+      const filtered = data.filter((s) => matchStudentClassAndMedium(s, selectedClass, selectedMedium, currentTeacherId));
+      filtered.sort((a, b) => parseInt(a.rollNo || "999") - parseInt(b.rollNo || "999"));
+      setStudents(filtered);
       setLoading(false);
     });
     return () => unsub();
   }, [selectedClass, academicYear]);
+
+  // Load student_details for all students in real-time
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, "student_details"), (snap) => {
+      const map: Record<string, StudentDetails> = {};
+      snap.docs.forEach((d) => {
+        map[d.id] = { ...emptyDetails(), ...d.data() } as StudentDetails;
+      });
+      setStudentDetailsMap(map);
+    });
+    return () => unsub();
+  }, []);
 
   const { user, profile } = useAuth();
   const teacherId = getTeacherId(user, profile);
@@ -347,8 +332,10 @@ export function CCEStudentInfo({
     );
   }, [students, searchQuery, selectedClass, selectedMedium, teacherId]);
 
-  const openEdit = async (student: StudentRecord) => {
-    setEditingStudent(student);
+  // Open dedicated separate page for selected student
+  const openStudentPage = async (student: StudentRecord, mode: "view" | "edit" = "view") => {
+    setSelectedStudent(student);
+    setStudentPageTab(mode);
     setEditName(student.name || student.fullName || "");
     setEditRollNo(student.rollNo || "");
     setEditGender(student.gender || "Male");
@@ -388,12 +375,25 @@ export function CCEStudentInfo({
         role: "student",
         createdAt: new Date().toISOString(),
       });
-      toast.success(`विद्यार्थी (${selectedMedium === "semi" ? "सेमी-इंग्रजी" : "मराठी"}) जोडला गेला!`);
+
+      // Save all 15 student details fields to student_details collection
+      await setDoc(
+        doc(db, "student_details", docRef.id),
+        {
+          ...newDetails,
+          fatherName: newDetails.fatherName || (newName.trim().split(" ").length > 1 ? newName.trim().split(" ").slice(1).join(" ") : ""),
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+
+      toast.success(`विद्यार्थी (${selectedMedium === "semi" ? "सेमी-इंग्रजी" : "मराठी"}) व संपूर्ण माहिती जोडली गेली!`);
       setIsAdding(false);
       setNewName("");
       setNewRollNo("");
       setNewGender("Male");
       setNewPhotoUrl("");
+      setNewDetails(emptyDetails());
     } catch (err: any) {
       toast.error("विद्यार्थी जोडणे अयशस्वी: " + err.message);
     }
@@ -405,6 +405,7 @@ export function CCEStudentInfo({
     if (!confirm(`तुम्हाला नक्की ${name} ची नोंद हटवायची आहे का?`)) return;
     try {
       await deleteDoc(doc(db, "users", id));
+      await deleteDoc(doc(db, "student_details", id));
       toast.success("विद्यार्थी हटवला!");
     } catch (err: any) {
       toast.error("हटवणे अयशस्वी: " + err.message);
@@ -412,10 +413,10 @@ export function CCEStudentInfo({
   };
 
   const saveDetails = async () => {
-    if (!editingStudent) return;
+    if (!selectedStudent) return;
     setSaving(true);
     try {
-      await updateDoc(doc(db, "users", editingStudent.id), {
+      await updateDoc(doc(db, "users", selectedStudent.id), {
         fullName: editName.trim(),
         name: editName.trim(),
         rollNo: editRollNo.trim(),
@@ -426,18 +427,114 @@ export function CCEStudentInfo({
       });
 
       await setDoc(
-        doc(db, "student_details", editingStudent.id),
+        doc(db, "student_details", selectedStudent.id),
         { ...details, updatedAt: new Date().toISOString() },
         { merge: true }
       );
 
-      toast.success("विद्यार्थ्याची माहिती जतन झाली!");
-      setEditingStudent(null);
+      toast.success("विद्यार्थ्याची संपूर्ण माहिती जतन झाली!");
+      setStudentPageTab("view");
     } catch (err: any) {
       toast.error("जतन अयशस्वी: " + err.message);
     }
     setSaving(false);
   };
+
+  const handlePrintProfile = () => {
+    window.print();
+  };
+
+  // Helper render function for Student Details Form Sections
+  const renderDetailsFormSections = (
+    currentDetails: StudentDetails,
+    updateFn: <K extends keyof StudentDetails>(key: K, val: StudentDetails[K]) => void
+  ) => (
+    <>
+      {/* 1. नोंदणी व शासकीय ओळखपत्र माहिती */}
+      <div className="bg-slate-50/70 p-5 rounded-3xl border border-slate-200/80 space-y-2">
+        <h3 className="text-xs font-black text-slate-600 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+          <CreditCard className="size-4 text-blue-600" /> नोंदणी व ओळख क्रमांक (IDs)
+        </h3>
+        <FloatInput label="General Register No. (नोंदणी क्रमांक)" value={currentDetails.registrationNo} onChange={(v) => updateFn("registrationNo", v)} icon={Hash} placeholder="उदा. 1042" />
+        <FloatInput label="जन्म तारीख (Birthdate)" value={currentDetails.dob} onChange={(v) => updateFn("dob", v)} placeholder="DD/MM/YYYY" icon={Calendar} />
+        <FloatInput label="Student ID (सरल आयडी)" value={currentDetails.studentId} onChange={(v) => updateFn("studentId", v)} icon={CreditCard} placeholder="उदा. 201827..." />
+        <FloatInput label="APAR ID (अपार आयडी)" value={currentDetails.aparId} onChange={(v) => updateFn("aparId", v)} icon={Shield} placeholder="उदा. APAAR-890..." />
+        <FloatInput label="आधार क्रमांक (Aadhaar No)" value={currentDetails.aadhar} onChange={(v) => updateFn("aadhar", v)} icon={CreditCard} placeholder="उदा. 1234 5678 9012" />
+      </div>
+
+      {/* 2. वैयक्तिक, सामाजिक व शारीरिक माहिती */}
+      <div className="bg-slate-50/70 p-5 rounded-3xl border border-slate-200/80 space-y-3">
+        <h3 className="text-xs font-black text-slate-600 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+          <Activity className="size-4 text-blue-600" /> धर्म, जात, शारीरिक व इतर माहिती
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          <FloatInput label="धर्म (Religion)" value={currentDetails.religion} onChange={(v) => updateFn("religion", v)} placeholder="उदा. हिंदू" />
+          <FloatInput label="जात / संवर्ग (Caste)" value={currentDetails.caste} onChange={(v) => updateFn("caste", v)} placeholder="उदा. मराठा / OBC" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          <FloatInput label="मातृभाषा (Mother Tongue)" value={currentDetails.motherTongue} onChange={(v) => updateFn("motherTongue", v)} icon={Globe} placeholder="उदा. मराठी" />
+          <div>
+            <label className="text-xs font-black text-slate-600 uppercase tracking-wider block mb-2">प्रदेश प्रकार (Area Type)</label>
+            <div className="flex items-center gap-3">
+              {[
+                { label: "🌾 ग्रामीण", value: "ग्रामीण" },
+                { label: "🏙️ शहरी", value: "शहरी" },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => updateFn("regionType", opt.value as "ग्रामीण" | "शहरी")}
+                  className={`flex-1 py-3.5 px-3 rounded-2xl font-bold text-xs border cursor-pointer transition-all ${
+                    currentDetails.regionType === opt.value
+                      ? "bg-blue-50 border-blue-500 text-blue-700 shadow-sm"
+                      : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3 pt-1">
+          <FloatInput label="उंची (Height cm)" value={currentDetails.height} onChange={(v) => updateFn("height", v)} type="number" placeholder="उदा. 120" />
+          <FloatInput label="वजन (Weight kg)" value={currentDetails.weight} onChange={(v) => updateFn("weight", v)} type="number" placeholder="उदा. 22" />
+        </div>
+      </div>
+
+      {/* 3. संपर्क व घरचा पत्ता */}
+      <div className="bg-slate-50/70 p-5 rounded-3xl border border-slate-200/80 space-y-2">
+        <h3 className="text-xs font-black text-slate-600 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+          <MapPin className="size-4 text-blue-600" /> संपर्क व पत्ता
+        </h3>
+        <FloatInput label="मोबाईल नंबर (Phone No)" value={currentDetails.phone} onChange={(v) => updateFn("phone", v)} type="tel" icon={Phone} placeholder="उदा. 9876543210" />
+        <FloatInput label="पूर्ण पत्ता (Full Address)" value={currentDetails.address} onChange={(v) => updateFn("address", v)} icon={Home} placeholder="उदा. मु. पो. तासगाव, जि. सांगली" />
+      </div>
+
+      {/* 4. आई व वडिलांची माहिती */}
+      <div className="bg-slate-50/70 p-5 rounded-3xl border border-slate-200/80 space-y-4">
+        <h3 className="text-xs font-black text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
+          <Users className="size-4 text-blue-600" /> आई-वडिल व पालक तपशील
+        </h3>
+        <div className="space-y-2">
+          <p className="text-xs font-extrabold text-blue-900 flex items-center gap-1">👩 आईची माहिती</p>
+          <FloatInput label="आईचे नाव (Mother Name)" value={currentDetails.motherName} onChange={(v) => updateFn("motherName", v)} placeholder="उदा. सुनिता" />
+          <div className="grid grid-cols-2 gap-2">
+            <FloatInput label="शिक्षण" value={currentDetails.motherEducation} onChange={(v) => updateFn("motherEducation", v)} placeholder="उदा. B.A." />
+            <FloatInput label="व्यवसाय" value={currentDetails.motherOccupation} onChange={(v) => updateFn("motherOccupation", v)} placeholder="उदा. गृहिणी" />
+          </div>
+        </div>
+        <div className="space-y-2 pt-3 border-t border-slate-200">
+          <p className="text-xs font-extrabold text-blue-900 flex items-center gap-1">👨 वडिलांची माहिती</p>
+          <FloatInput label="वडिलांचे नाव (Father Name)" value={currentDetails.fatherName} onChange={(v) => updateFn("fatherName", v)} placeholder="उदा. सचिन साळुंखे" />
+          <div className="grid grid-cols-2 gap-2">
+            <FloatInput label="शिक्षण" value={currentDetails.fatherEducation} onChange={(v) => updateFn("fatherEducation", v)} placeholder="उदा. B.Com" />
+            <FloatInput label="व्यवसाय" value={currentDetails.fatherOccupation} onChange={(v) => updateFn("fatherOccupation", v)} placeholder="उदा. शेतकरी / नोकरी" />
+          </div>
+        </div>
+      </div>
+    </>
+  );
 
   // ─── ADD STUDENT VIEW ───
   if (isAdding) {
@@ -456,115 +553,47 @@ export function CCEStudentInfo({
             </button>
             <div>
               <h2 className="text-xl font-black tracking-tight text-white">नवीन विद्यार्थी जोडा</h2>
-              <p className="text-xs text-blue-200 font-medium">इयत्ता {selectedClass} साठी विद्यार्थी तपशील भरा</p>
+              <p className="text-xs text-blue-200 font-medium">इयत्ता {selectedClass} साठी विद्यार्थी संपूर्ण तपशील भरा</p>
             </div>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
-          <FloatInput
-            label="विद्यार्थ्याचे पूर्ण नाव"
-            value={newName}
-            onChange={setNewName}
-            required
-            icon={User}
-            placeholder="उदा. समृद्धी सचिन साळुंखे पाटील"
-          />
-          <FloatInput
-            label="हजेरी क्रमांक (Roll No.)"
-            value={newRollNo}
-            onChange={setNewRollNo}
-            type="number"
-            icon={Calendar}
-            placeholder="1"
-          />
-
-          <div>
-            <label className="text-xs font-black text-slate-600 uppercase tracking-wider block mb-2">लिंग</label>
-            <div className="flex items-center gap-4">
-              {[
-                { label: "👦 मुलगा (Boy)", value: "Male" },
-                { label: "👧 मुलगी (Girl)", value: "Female" },
-              ].map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setNewGender(opt.value)}
-                  className={`flex-1 py-3.5 px-4 rounded-2xl font-bold text-sm border cursor-pointer transition-all ${
-                    newGender === opt.value
-                      ? "bg-blue-50 border-blue-500 text-blue-700 shadow-sm"
-                      : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <ImageBox label="विद्यार्थ्याचा फोटो (Photo)" value={newPhotoUrl} onChange={setNewPhotoUrl} />
-
-          <div className="pt-4">
-            <button
-              onClick={handleAddStudent}
-              disabled={saving}
-              className="w-full py-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-extrabold text-base rounded-2xl transition-all cursor-pointer shadow-xl shadow-blue-500/25 flex items-center justify-center gap-2"
-            >
-              {saving ? "जोडले जात आहे..." : "विद्यार्थी जोडा"}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ─── EDIT STUDENT PROFILE VIEW ───
-  if (editingStudent) {
-    return (
-      <div
-        className="bg-white text-slate-800 rounded-[2.5rem] border border-slate-200/90 shadow-2xl min-h-[600px] flex flex-col font-sans overflow-hidden relative select-none"
-        style={{ fontFamily: "'Inter', 'Noto Sans Devanagari', sans-serif" }}
-      >
-        <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-800 text-white px-6 py-5 shadow-lg flex items-center justify-between">
-          <div className="flex items-center gap-3.5">
-            <button
-              onClick={() => setEditingStudent(null)}
-              className="p-2.5 bg-white/10 hover:bg-white/20 active:scale-95 rounded-2xl transition-all cursor-pointer text-white flex items-center justify-center backdrop-blur-md"
-            >
-              <ArrowLeft className="size-5" />
-            </button>
-            <div>
-              <h2 className="text-xl font-black tracking-tight text-white">{editingStudent.name}</h2>
-              <p className="text-xs text-blue-200 font-medium">विद्यार्थी प्रोफाईल व सर्व माहिती संपादन</p>
-            </div>
-          </div>
-          <span className="w-10 h-10 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center text-white font-black text-sm border border-white/20">
-            {editRollNo || "—"}
-          </span>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-6 py-6 pb-24 space-y-6">
+        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 pb-28">
           {/* मूलभूत माहिती */}
           <div className="bg-slate-50/70 p-5 rounded-3xl border border-slate-200/80 space-y-2">
             <h3 className="text-xs font-black text-slate-600 uppercase tracking-wider mb-3 flex items-center gap-1.5">
               <User className="size-4 text-blue-600" /> मूलभूत माहिती
             </h3>
-            <FloatInput label="विद्यार्थ्याचे नाव" value={editName} onChange={setEditName} required icon={User} />
-            <FloatInput label="हजेरी क्र." value={editRollNo} onChange={setEditRollNo} type="number" icon={Calendar} />
+            <FloatInput
+              label="विद्यार्थ्याचे पूर्ण नाव"
+              value={newName}
+              onChange={setNewName}
+              required
+              icon={User}
+              placeholder="उदा. समृद्धी सचिन साळुंखे पाटील"
+            />
+            <FloatInput
+              label="हजेरी क्रमांक (Roll No.)"
+              value={newRollNo}
+              onChange={setNewRollNo}
+              type="number"
+              icon={Calendar}
+              placeholder="1"
+            />
 
             <div>
               <label className="text-xs font-black text-slate-600 uppercase tracking-wider block mb-2">लिंग</label>
               <div className="flex items-center gap-4">
                 {[
-                  { label: "👦 मुलगा", value: "Male" },
-                  { label: "👧 मुलगी", value: "Female" },
+                  { label: "👦 मुलगा (Boy)", value: "Male" },
+                  { label: "👧 मुलगी (Girl)", value: "Female" },
                 ].map((opt) => (
                   <button
                     key={opt.value}
                     type="button"
-                    onClick={() => setEditGender(opt.value)}
-                    className={`flex-1 py-3 px-4 rounded-2xl font-bold text-xs border cursor-pointer transition-all ${
-                      editGender === opt.value
+                    onClick={() => setNewGender(opt.value)}
+                    className={`flex-1 py-3.5 px-4 rounded-2xl font-bold text-sm border cursor-pointer transition-all ${
+                      newGender === opt.value
                         ? "bg-blue-50 border-blue-500 text-blue-700 shadow-sm"
                         : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                     }`}
@@ -574,67 +603,278 @@ export function CCEStudentInfo({
                 ))}
               </div>
             </div>
+
+            <ImageBox label="विद्यार्थ्याचा फोटो (Photo)" value={newPhotoUrl} onChange={setNewPhotoUrl} />
           </div>
 
-          {/* नोंदणी व ओळखपत्र माहिती */}
-          <div className="bg-slate-50/70 p-5 rounded-3xl border border-slate-200/80 space-y-2">
-            <h3 className="text-xs font-black text-slate-600 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-              <CreditCard className="size-4 text-blue-600" /> ओळख व नोंदणी क्रमांक
-            </h3>
-            <FloatInput label="General Register No." value={details.registrationNo} onChange={(v) => set("registrationNo", v)} />
-            <FloatInput label="Student ID (सरल आयडी)" value={details.studentId} onChange={(v) => set("studentId", v)} />
-            <FloatInput label="APAR ID" value={details.aparId} onChange={(v) => set("aparId", v)} />
-            <FloatInput label="आधार क्रमांक" value={details.aadhar} onChange={(v) => set("aadhar", v)} icon={CreditCard} />
-            <FloatInput label="जन्म तारीख" value={details.dob} onChange={(v) => set("dob", v)} placeholder="DD/MM/YYYY" icon={Calendar} />
-          </div>
-
-          {/* संपर्क व घरचा पत्ता */}
-          <div className="bg-slate-50/70 p-5 rounded-3xl border border-slate-200/80 space-y-2">
-            <h3 className="text-xs font-black text-slate-600 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-              <MapPin className="size-4 text-blue-600" /> संपर्क व पत्ता
-            </h3>
-            <FloatInput label="मोबाईल नंबर" value={details.phone} onChange={(v) => set("phone", v)} type="tel" icon={Phone} />
-            <FloatInput label="पूर्ण पत्ता" value={details.address} onChange={(v) => set("address", v)} icon={MapPin} />
-          </div>
-
-          {/* आईची व वडिलांची माहिती */}
-          <div className="bg-slate-50/70 p-5 rounded-3xl border border-slate-200/80 space-y-4">
-            <h3 className="text-xs font-black text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
-              <Users className="size-4 text-blue-600" /> पालक तपशील
-            </h3>
-            <div className="space-y-2">
-              <p className="text-xs font-extrabold text-blue-900">आईची माहिती</p>
-              <FloatInput label="आईचे नाव" value={details.motherName} onChange={(v) => set("motherName", v)} />
-              <FloatInput label="शिक्षण" value={details.motherEducation} onChange={(v) => set("motherEducation", v)} />
-              <FloatInput label="व्यवसाय" value={details.motherOccupation} onChange={(v) => set("motherOccupation", v)} />
-            </div>
-            <div className="space-y-2 pt-2 border-t border-slate-200">
-              <p className="text-xs font-extrabold text-blue-900">वडिलांची माहिती</p>
-              <FloatInput label="वडिलांचे नाव" value={details.fatherName} onChange={(v) => set("fatherName", v)} required />
-              <FloatInput label="शिक्षण" value={details.fatherEducation} onChange={(v) => set("fatherEducation", v)} />
-              <FloatInput label="व्यवसाय" value={details.fatherOccupation} onChange={(v) => set("fatherOccupation", v)} />
-            </div>
-          </div>
-
-          <ImageBox label="विद्यार्थ्याचा फोटो" value={editPhotoUrl} onChange={setEditPhotoUrl} />
+          {/* extended 15 details sections */}
+          {renderDetailsFormSections(newDetails, setNew)}
         </div>
 
-        {/* Sticky glassmorphism save bar */}
         <div className="absolute bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-slate-200 z-30">
           <button
-            onClick={saveDetails}
+            onClick={handleAddStudent}
             disabled={saving}
             className="w-full py-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-extrabold text-base rounded-2xl transition-all cursor-pointer shadow-xl flex items-center justify-center gap-2"
           >
-            <Save className="size-5" />
-            <span>{saving ? "जतन होत आहे..." : "जतन करा"}</span>
+            <Plus className="size-5" />
+            <span>{saving ? "जोडले जात आहे..." : "विद्यार्थी जोडा (माहिती जतन करा)"}</span>
           </button>
         </div>
       </div>
     );
   }
 
-  // ─── LIST VIEW ───
+  // ─── DEDICATED SEPARATE FULL PAGE FOR SELECTED STUDENT DETAILS ───
+  if (selectedStudent) {
+    return (
+      <div
+        className="bg-white text-slate-800 rounded-[2.5rem] border border-slate-200/90 shadow-2xl min-h-[650px] flex flex-col font-sans overflow-hidden relative select-none"
+        style={{ fontFamily: "'Inter', 'Noto Sans Devanagari', sans-serif" }}
+      >
+        {/* Banner Top */}
+        <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-800 text-white px-6 py-5 shadow-lg flex items-center justify-between">
+          <div className="flex items-center gap-3.5">
+            <button
+              onClick={() => setSelectedStudent(null)}
+              className="p-2.5 bg-white/10 hover:bg-white/20 active:scale-95 rounded-2xl transition-all cursor-pointer text-white flex items-center justify-center backdrop-blur-md border border-white/10"
+            >
+              <ArrowLeft className="size-5" />
+            </button>
+            <div>
+              <h2 className="text-xl font-black tracking-tight text-white flex items-center gap-2">
+                <span>{selectedStudent.name}</span>
+                <span className="text-xs px-2.5 py-0.5 bg-white/20 rounded-full font-bold">
+                  {selectedStudent.gender === "Male" ? "👦 मुलगा" : "👧 मुलगी"}
+                </span>
+              </h2>
+              <p className="text-xs text-blue-200 font-medium">इयत्ता {selectedClass} • सविस्तर विद्यार्थी नोंद माहिती पत्रक</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center bg-white/15 backdrop-blur-md p-1 rounded-2xl border border-white/20">
+              <button
+                onClick={() => setStudentPageTab("view")}
+                className={`px-3.5 py-1.5 rounded-xl font-extrabold text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
+                  studentPageTab === "view" ? "bg-white text-blue-900 shadow-md" : "text-blue-100 hover:text-white"
+                }`}
+              >
+                <Eye className="size-3.5" /> सविस्तर पत्रक
+              </button>
+              <button
+                onClick={() => setStudentPageTab("edit")}
+                className={`px-3.5 py-1.5 rounded-xl font-extrabold text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
+                  studentPageTab === "edit" ? "bg-white text-blue-900 shadow-md" : "text-blue-100 hover:text-white"
+                }`}
+              >
+                <Edit2 className="size-3.5" /> माहिती संपादन
+              </button>
+            </div>
+            <button
+              onClick={handlePrintProfile}
+              className="p-2.5 bg-white/10 hover:bg-white/20 active:scale-95 rounded-2xl transition-all cursor-pointer text-white flex items-center justify-center border border-white/10"
+              title="माहिती पत्रक प्रिंट करा"
+            >
+              <Printer className="size-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* View Profile Sheet Tab */}
+        {studentPageTab === "view" && (
+          <div ref={printRef} className="flex-1 overflow-y-auto px-6 py-6 space-y-6 pb-20">
+            {/* Student Header Card */}
+            <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-950 text-white p-6 rounded-3xl shadow-lg border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-5">
+                <div className="w-20 h-20 rounded-2xl bg-white/10 border-2 border-white/20 overflow-hidden flex items-center justify-center shrink-0">
+                  {selectedStudent.photoUrl ? (
+                    <img src={selectedStudent.photoUrl} alt={selectedStudent.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="size-10 text-white/50" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black text-white tracking-tight">{selectedStudent.name}</h3>
+                  <p className="text-xs text-blue-300 font-bold mt-1 flex items-center gap-3">
+                    <span>इयत्ता: <b>{selectedClass}</b></span>
+                    <span>हजेरी क्र.: <b>{selectedStudent.rollNo || "—"}</b></span>
+                    <span>सत्र: <b>द्वितीय सत्र</b></span>
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setStudentPageTab("edit")}
+                  className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Edit2 className="size-4" /> माहिती बदला
+                </button>
+              </div>
+            </div>
+
+            {/* 15 Fields Clean Grid Display */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Card 1: 📜 नोंदणी व शासकीय ओळख आयडी */}
+              <div className="bg-slate-50/80 p-5 rounded-3xl border border-slate-200 shadow-xs space-y-3">
+                <h4 className="text-xs font-black text-slate-600 uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-200 pb-2">
+                  <CreditCard className="size-4 text-blue-600" /> १. नोंदणी व शासकीय आयडी (IDs)
+                </h4>
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between py-1.5 border-b border-slate-200/60">
+                    <span className="text-slate-500 font-bold">1. General Register No. (नोंदणी क्र.):</span>
+                    <span className="font-black text-blue-900">{details.registrationNo || "—"}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-200/60">
+                    <span className="text-slate-500 font-bold">2. जन्मतारीख (DOB):</span>
+                    <span className="font-black text-slate-800">{details.dob || "—"}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-200/60">
+                    <span className="text-slate-500 font-bold">3. Student ID (सरल आयडी):</span>
+                    <span className="font-black text-slate-800">{details.studentId || "—"}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-200/60">
+                    <span className="text-slate-500 font-bold">4. APAR ID (अपार आयडी):</span>
+                    <span className="font-black text-slate-800">{details.aparId || "—"}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5">
+                    <span className="text-slate-500 font-bold">5. आधार कार्ड क्रमांक:</span>
+                    <span className="font-black text-slate-800">{details.aadhar || "—"}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: 🕉️ धर्म, जात व शारीरिक माहिती */}
+              <div className="bg-slate-50/80 p-5 rounded-3xl border border-slate-200 shadow-xs space-y-3">
+                <h4 className="text-xs font-black text-slate-600 uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-200 pb-2">
+                  <Activity className="size-4 text-blue-600" /> २. धर्म, जात व शारीरिक माहिती
+                </h4>
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between py-1.5 border-b border-slate-200/60">
+                    <span className="text-slate-500 font-bold">6. धर्म (Religion):</span>
+                    <span className="font-black text-slate-800">{details.religion || "—"}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-200/60">
+                    <span className="text-slate-500 font-bold">7. जात / संवर्ग (Caste):</span>
+                    <span className="font-black text-slate-800">{details.caste || "—"}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-200/60">
+                    <span className="text-slate-500 font-bold">8. मातृभाषा (Mother Tongue):</span>
+                    <span className="font-black text-slate-800">{details.motherTongue || "—"}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5 border-b border-slate-200/60">
+                    <span className="text-slate-500 font-bold">9. प्रदेश प्रकार (Area Type):</span>
+                    <span className="font-black text-blue-900">{details.regionType || "ग्रामीण"}</span>
+                  </div>
+                  <div className="flex justify-between py-1.5">
+                    <span className="text-slate-500 font-bold">10. उंची व वजन:</span>
+                    <span className="font-black text-slate-800">
+                      {details.height || details.weight ? `${details.height || "—"} cm | ${details.weight || "—"} kg` : "—"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 3: 📞 संपर्क व पत्ता */}
+              <div className="bg-slate-50/80 p-5 rounded-3xl border border-slate-200 shadow-xs space-y-3">
+                <h4 className="text-xs font-black text-slate-600 uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-200 pb-2">
+                  <MapPin className="size-4 text-blue-600" /> ३. संपर्क व घरचा पत्ता
+                </h4>
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between py-1.5 border-b border-slate-200/60">
+                    <span className="text-slate-500 font-bold">11. मोबाईल नंबर:</span>
+                    <span className="font-black text-blue-900">{details.phone || "—"}</span>
+                  </div>
+                  <div className="py-1.5">
+                    <span className="text-slate-500 font-bold block mb-1">12. पूर्ण पत्ता:</span>
+                    <span className="font-bold text-slate-900 bg-white p-2.5 rounded-xl border border-slate-200 block leading-relaxed">
+                      {details.address || "पत्ता भरलेला नाही"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 4: 👨‍👩‍👧 पालक माहिती */}
+              <div className="bg-slate-50/80 p-5 rounded-3xl border border-slate-200 shadow-xs space-y-3">
+                <h4 className="text-xs font-black text-slate-600 uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-200 pb-2">
+                  <Users className="size-4 text-blue-600" /> ४. पालक तपशील
+                </h4>
+                <div className="space-y-3 text-xs">
+                  <div className="bg-white p-3 rounded-2xl border border-slate-200 space-y-1">
+                    <span className="font-black text-blue-900 block">13. 👩 आईची माहिती</span>
+                    <p className="text-slate-800 font-bold">नाव: <b>{details.motherName || "—"}</b></p>
+                    <p className="text-slate-500">शिक्षण: {details.motherEducation || "—"} | व्यवसाय: {details.motherOccupation || "—"}</p>
+                  </div>
+                  <div className="bg-white p-3 rounded-2xl border border-slate-200 space-y-1">
+                    <span className="font-black text-blue-900 block">14. 👨 वडिलांची माहिती</span>
+                    <p className="text-slate-800 font-bold">नाव: <b>{details.fatherName || "—"}</b></p>
+                    <p className="text-slate-500">शिक्षण: {details.fatherEducation || "—"} | व्यवसाय: {details.fatherOccupation || "—"}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Profile Tab */}
+        {studentPageTab === "edit" && (
+          <div className="flex-1 overflow-y-auto px-6 py-6 pb-28 space-y-6">
+            {/* मूलभूत माहिती */}
+            <div className="bg-slate-50/70 p-5 rounded-3xl border border-slate-200/80 space-y-2">
+              <h3 className="text-xs font-black text-slate-600 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <User className="size-4 text-blue-600" /> मूलभूत माहिती
+              </h3>
+              <FloatInput label="विद्यार्थ्याचे नाव" value={editName} onChange={setEditName} required icon={User} />
+              <FloatInput label="हजेरी क्र." value={editRollNo} onChange={setEditRollNo} type="number" icon={Calendar} />
+
+              <div>
+                <label className="text-xs font-black text-slate-600 uppercase tracking-wider block mb-2">लिंग</label>
+                <div className="flex items-center gap-4">
+                  {[
+                    { label: "👦 मुलगा", value: "Male" },
+                    { label: "👧 मुलगी", value: "Female" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setEditGender(opt.value)}
+                      className={`flex-1 py-3 px-4 rounded-2xl font-bold text-xs border cursor-pointer transition-all ${
+                        editGender === opt.value
+                          ? "bg-blue-50 border-blue-500 text-blue-700 shadow-sm"
+                          : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <ImageBox label="विद्यार्थ्याचा फोटो" value={editPhotoUrl} onChange={setEditPhotoUrl} />
+            </div>
+
+            {/* Extended 15 Details Sections */}
+            {renderDetailsFormSections(details, set)}
+          </div>
+        )}
+
+        {/* Sticky glassmorphic save bar when editing */}
+        {studentPageTab === "edit" && (
+          <div className="absolute bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-slate-200 z-30">
+            <button
+              onClick={saveDetails}
+              disabled={saving}
+              className="w-full py-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-extrabold text-base rounded-2xl transition-all cursor-pointer shadow-xl flex items-center justify-center gap-2"
+            >
+              <Save className="size-5" />
+              <span>{saving ? "जतन होत आहे..." : "सर्व बदल जतन करा"}</span>
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ─── MAIN STUDENT ROSTER VIEW ───
   return (
     <div
       className="bg-white text-slate-800 rounded-[2.5rem] border border-slate-200/90 shadow-2xl min-h-[600px] flex flex-col relative select-none overflow-hidden"
@@ -730,49 +970,59 @@ export function CCEStudentInfo({
             <p className="text-slate-400 font-bold text-sm">कोणताही विद्यार्थी सापडला नाही</p>
           </div>
         ) : (
-          filteredStudents.map((student, idx) => (
-            <div
-              key={student.id}
-              onClick={() => openEdit(student)}
-              className="group flex items-center justify-between p-4 bg-white hover:bg-blue-50/40 rounded-2xl border border-slate-200 hover:border-blue-300 shadow-sm hover:shadow-md transition-all cursor-pointer"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-black text-sm flex items-center justify-center shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform">
-                  {student.rollNo || idx + 1}
+          filteredStudents.map((student, idx) => {
+            return (
+              <div
+                key={student.id}
+                onClick={() => openStudentPage(student, "view")}
+                className="group flex items-center justify-between p-4 bg-white hover:bg-blue-50/40 rounded-2xl border border-slate-200 hover:border-blue-300 shadow-sm hover:shadow-md transition-all cursor-pointer"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-black text-sm flex items-center justify-center shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform shrink-0">
+                    {student.rollNo || idx + 1}
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 group-hover:text-blue-700 transition-colors flex items-center gap-2">
+                      <span>{student.name}</span>
+                    </h4>
+                    <p className="text-[11px] text-slate-500 font-medium flex items-center gap-2 mt-0.5">
+                      <span>इयत्ता: {selectedClass}</span>
+                      {student.gender && (
+                        <span className="px-2 py-0.5 bg-slate-100 rounded-md text-[10px] font-bold text-slate-600">
+                          {student.gender === "Male" ? "👦 मुलगा" : "👧 मुलगी"}
+                        </span>
+                      )}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="text-sm font-bold text-slate-900 group-hover:text-blue-700 transition-colors">
-                    {student.name}
-                  </h4>
-                  <p className="text-[11px] text-slate-500 font-medium flex items-center gap-2 mt-0.5">
-                    <span>इयत्ता: {selectedClass}</span>
-                    {student.gender && (
-                      <span className="px-2 py-0.5 bg-slate-100 rounded-md text-[10px] font-bold text-slate-600">
-                        {student.gender === "Male" ? "👦 मुलगा" : "👧 मुलगी"}
-                      </span>
-                    )}
-                  </p>
-                </div>
-              </div>
 
-              <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                <button
-                  onClick={() => openEdit(student)}
-                  className="p-2 text-blue-600 hover:bg-blue-100 rounded-xl transition-colors cursor-pointer"
-                  title="संपादित करा"
-                >
-                  <Edit2 className="size-4" />
-                </button>
-                <button
-                  onClick={(e) => handleDeleteStudent(e, student.id, student.name)}
-                  className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
-                  title="हटवा"
-                >
-                  <Trash2 className="size-4" />
-                </button>
+                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={() => openStudentPage(student, "view")}
+                    className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs rounded-xl border border-blue-200 transition-colors cursor-pointer flex items-center gap-1.5"
+                    title="सविस्तर माहिती पाहा"
+                  >
+                    <Eye className="size-3.5" />
+                    <span>सविस्तर माहिती</span>
+                  </button>
+                  <button
+                    onClick={() => openStudentPage(student, "edit")}
+                    className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                    title="माहिती संपादन"
+                  >
+                    <Edit2 className="size-4" />
+                  </button>
+                  <button
+                    onClick={(e) => handleDeleteStudent(e, student.id, student.name)}
+                    className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                    title="हटवा"
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 

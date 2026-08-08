@@ -1,4 +1,3 @@
-// CCE Register BoardResult Component
 import React, { useState, useEffect, useRef } from "react";
 import { db } from "../lib/firebase";
 import { doc, getDoc, collection, getDocs, query, where } from "firebase/firestore";
@@ -26,28 +25,84 @@ const getGrade = (percentage) => {
   if (percentage >= 61) return "ब-2";
   if (percentage >= 51) return "क-1";
   if (percentage >= 41) return "क-2";
-  if (percentage >= 33) return "ड-1";
-  if (percentage >= 21) return "ड-2";
-  return "इ-1";
+  if (percentage >= 33) return "ड";
+  if (percentage >= 21) return "इ-1";
+  return "इ-2";
 };
 
-const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTerm = "sem2", onBack }) => {
+const GRADE_KEYS = ["a1", "a2", "b1", "b2", "c1", "c2", "d", "i1", "i2"];
+const GRADE_LABELS = {
+  a1: "अ-1",
+  a2: "अ-2",
+  b1: "ब-1",
+  b2: "ब-2",
+  c1: "क-1",
+  c2: "क-2",
+  d: "ड",
+  i1: "इ-1",
+  i2: "इ-2",
+};
+
+const getGradeKeyFromScore = (score, max = 100) => {
+  const pct = (score / max) * 100;
+  if (pct >= 91) return "a1";
+  if (pct >= 81) return "a2";
+  if (pct >= 71) return "b1";
+  if (pct >= 61) return "b2";
+  if (pct >= 51) return "c1";
+  if (pct >= 41) return "c2";
+  if (pct >= 33) return "d";
+  if (pct >= 21) return "i1";
+  return "i2";
+};
+
+const CASTE_CATEGORIES = [
+  { key: "sc", label: "अनुसूचित जाती" },
+  { key: "st", label: "अनुसूचित जमाती" },
+  { key: "vjnt", label: "वि.जा.भ. जमाती" },
+  { key: "obc", label: "इतर मागास" },
+  { key: "open", label: "बिगर मागास" },
+];
+
+const isGirlStudent = (student) => {
+  if (!student) return false;
+  const g = String(student?.gender || student?.ling || student?.sex || "").trim().toLowerCase();
+  return (
+    g.includes("girl") ||
+    g.includes("female") ||
+    g.includes("मुलगी") ||
+    g.includes("मुली") ||
+    g.includes("स्त्री") ||
+    g === "f" ||
+    g === "2"
+  );
+};
+
+const isBoyStudent = (student) => {
+  if (!student) return false;
+  if (isGirlStudent(student)) return false;
+  return true;
+};
+
+const getStudentCasteCategory = (student) => {
+  if (!student) return "open";
+  const c = String(student?.caste || student?.category || student?.jaat || student?.castCategory || "").trim().toLowerCase();
+  if (c.includes("sc") || c.includes("अनुसूचित जाती")) return "sc";
+  if (c.includes("st") || c.includes("अनुसूचित जमाती")) return "st";
+  if (c.includes("vj") || c.includes("nt") || c.includes("वि.जा") || c.includes("भ.ज") || c.includes("विजा") || c.includes("भज")) return "vjnt";
+  if (c.includes("obc") || c.includes("sbc") || c.includes("इतर मागास") || c.includes("ओबीसी")) return "obc";
+  return "open";
+};
+
+const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) => {
   const [selectedClass, setSelectedClass] = useState(initialClass || "1st");
   const [academicYear, setAcademicYear] = useState(initialYear || "2025-26");
-  const [selectedTerm, setSelectedTerm] = useState(initialTerm || "sem2");
   const [division, setDivision] = useState("1");
   const [pageMode, setPageMode] = useState("2pages");
   const [showLayoutModal, setShowLayoutModal] = useState(true);
   const [selectedMedium, setSelectedMedium] = useState("marathi");
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
-
-  // Sync initialTerm when prop updates
-  useEffect(() => {
-    if (initialTerm && initialTerm !== selectedTerm) {
-      setSelectedTerm(initialTerm);
-    }
-  }, [initialTerm]);
 
   // User's School & Teacher Settings (No hardcoded sample names)
   const [schoolData, setSchoolData] = useState({
@@ -66,13 +121,13 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
   const [marksData, setMarksData] = useState({});
   const [remarksData, setRemarksData] = useState({});
   const [attendanceData, setAttendanceData] = useState({});
-  const [weightages, setWeightages] = useState(null);
+  const [weightageData, setWeightageData] = useState({});
 
   const printRef = useRef(null);
 
   useEffect(() => {
     loadUserFirestoreData();
-  }, [selectedClass, academicYear, selectedMedium, selectedTerm]);
+  }, [selectedClass, academicYear, selectedMedium]);
 
   const loadUserFirestoreData = async () => {
     setLoading(true);
@@ -136,24 +191,29 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
       // 2. Fetch User's Real Students for this selected class & medium (Isolated by teacherId)
       const currentTeacherId = getTeacherId();
       const loadedStudents = await fetchStudentsForClass(selectedClass, selectedMedium, currentTeacherId);
-      setStudents(loadedStudents);
 
-      // Fetch Weightages (cce_weightage_v2) for Dynamic Max Marks
+      // Merge student_details collection for accurate gender, caste, religion, etc.
       try {
-        const ref = doc(db, "cce_weightage_v2", `${selectedClass}_${academicYear}`);
-        const snap = await getDoc(ref);
-        if (snap.exists()) {
-          const docData = snap.data();
-          setWeightages(docData.data || docData);
-        } else {
-          const oldRef = doc(db, "cce_weightage", `${selectedClass}_${academicYear}`);
-          const oldSnap = await getDoc(oldRef);
-          if (oldSnap.exists()) {
-            setWeightages(oldSnap.data());
-          }
-        }
+        const detailsMap = new Map();
+        const detailsSnap = await getDocs(collection(db, "student_details"));
+        detailsSnap.forEach((docSnap) => {
+          detailsMap.set(docSnap.id, docSnap.data());
+        });
+
+        const mergedStudents = loadedStudents.map((s) => {
+          const det = detailsMap.get(s.id) || detailsMap.get(s.name) || detailsMap.get(s.fullName) || {};
+          return {
+            ...s,
+            gender: det.gender || s.gender || s.ling || s.sex || "",
+            caste: det.caste || s.caste || s.category || det.category || s.jaat || "",
+            religion: det.religion || s.religion || "",
+            dob: det.dob || s.dob || "",
+            phone: det.phone || s.phone || s.mobile || "",
+          };
+        });
+        setStudents(mergedStudents);
       } catch (e) {
-        console.error("Error loading weightages:", e);
+        setStudents(loadedStudents);
       }
 
       // 3. Fetch User's Entered Marks for this Class & Year (Merging all exam docs & Bunny CDN)
@@ -179,9 +239,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
           return null;
         };
 
-        const examKeys = selectedTerm === "sem1"
-          ? ["sem1", "test1", "oral1", "pratyakshik1", "general", "sem2"]
-          : ["sem2", "sem1", "test2", "oral2", "pratyakshik2", "general"];
+        const examKeys = ["sem2", "sem1", "test1", "test2", "oral1", "oral2", "pratyakshik1", "pratyakshik2", "general"];
 
         for (const exKey of examKeys) {
           const exData = await loadMarksDoc(exKey);
@@ -206,17 +264,12 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
         // Bunny CDN fallback
         try {
           const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
-          const bunnyFiles = selectedTerm === "sem1"
-            ? [
-                `cce_results/${selectedClass}_${academicYear}_marks_first.json`,
-                `cce_results/${selectedClass}_${academicYear}_marks_sem1.json`,
-                `cce_results/${selectedClass}_${academicYear}_marks_second.json`,
-              ]
-            : [
-                `cce_results/${selectedClass}_${academicYear}_marks_second.json`,
-                `cce_results/${selectedClass}_${academicYear}_marks_sem2.json`,
-                `cce_results/${selectedClass}_${academicYear}_marks_first.json`,
-              ];
+          const bunnyFiles = [
+            `cce_results/${selectedClass}_${academicYear}_marks_second.json`,
+            `cce_results/${selectedClass}_${academicYear}_marks_first.json`,
+            `cce_results/${selectedClass}_${academicYear}_marks_sem2.json`,
+            `cce_results/${selectedClass}_${academicYear}_marks_sem1.json`,
+          ];
           for (const file of bunnyFiles) {
             const bData = await fetchJsonFromBunny(file);
             if (bData && typeof bData === "object") {
@@ -247,7 +300,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
 
         const loadSemesterRemarks = async (sem) => {
           let recs = null;
-          const mediumsToTry = [selectedMedium, "marathi", "semi", "english"];
+          const mediumsToTry = [selectedMedium];
           for (const med of mediumsToTry) {
             const cacheKey = `cce_remarks_cache_${selectedClass}_${academicYear}_${sem}_${med}`;
             try {
@@ -264,12 +317,10 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
 
           if (!recs) {
             const docIds = [
-              `${selectedClass}_${academicYear}_${sem}_${selectedMedium}`,
-              `${selectedClass}_${academicYear}_${sem}_marathi`,
-              `${selectedClass}_${academicYear}_${sem}`,
-              `class_${selectedClass}_${selectedMedium}_remarks`,
               `${currentTeacherId}_${selectedClass}_${academicYear}_${sem}_${selectedMedium}`,
               `${currentTeacherId}_${selectedClass}_${academicYear}_${sem}`,
+              `${selectedClass}_${academicYear}_${sem}_${selectedMedium}`,
+              `${selectedClass}_${academicYear}_${sem}`,
             ];
             for (const dId of docIds) {
               try {
@@ -291,127 +342,139 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
         const sem1Recs = await loadSemesterRemarks("sem1");
         const sem2Recs = await loadSemesterRemarks("sem2");
 
-        const mergeStudentRemarksObj = (target, source) => {
-          if (!source || typeof source !== "object") return;
-          for (const [sKey, sVal] of Object.entries(source)) {
-            if (!sVal) continue;
-            if (!target[sKey]) {
-              target[sKey] = typeof sVal === "object" ? { ...sVal } : sVal;
-            } else if (typeof target[sKey] === "object" && typeof sVal === "object") {
-              target[sKey] = { ...target[sKey], ...sVal };
-            }
-          }
-        };
-
-        if (selectedTerm === "sem1") {
-          mergeStudentRemarksObj(mergedRemarks, sem1Recs);
-          mergeStudentRemarksObj(mergedRemarks, sem2Recs);
-        } else {
-          mergeStudentRemarksObj(mergedRemarks, sem2Recs);
-          mergeStudentRemarksObj(mergedRemarks, sem1Recs);
-        }
-
-        try {
-          const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
-          const bunnyRemarks = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_remarks.json`);
-          if (bunnyRemarks && typeof bunnyRemarks === "object") {
-            mergeStudentRemarksObj(mergedRemarks, bunnyRemarks);
-          }
-        } catch (e) {}
+        if (sem1Recs && typeof sem1Recs === "object") Object.assign(mergedRemarks, sem1Recs);
+        if (sem2Recs && typeof sem2Recs === "object") Object.assign(mergedRemarks, sem2Recs);
 
         setRemarksData(mergedRemarks);
       } catch (e) {
         console.error("Error fetching remarks:", e);
       }
 
-      // 5. Fetch Attendance Data (Bunny Storage CDN first, Firestore fallback)
+      // 5. Fetch Attendance Data from _monthly doc and per-month docs (matching CCEAttendance save structure)
       try {
-        const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
-        const bunnyAtt = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_attendance.json`);
-        if (bunnyAtt && Object.keys(bunnyAtt).length > 0) {
-          setAttendanceData(bunnyAtt);
-        } else {
-          const attSnap = await getDoc(doc(db, "cce_attendance", docId));
-          if (attSnap.exists()) {
-            setAttendanceData(attSnap.data().attendanceData || attSnap.data());
-          } else {
-            setAttendanceData({});
+        let attMap = {};
+
+        // 5a. Try loading from _monthly summary doc first (primary source)
+        const monthlyDocId = `${selectedClass}_${academicYear}_monthly`;
+        try {
+          const monthlySnap = await getDoc(doc(db, "cce_attendance", monthlyDocId));
+          if (monthlySnap.exists()) {
+            const recs = monthlySnap.data().records || monthlySnap.data();
+            if (recs && typeof recs === "object") {
+              // Structure: { studentId: { jun: 20, jul: 22, ... }, ... }
+              Object.entries(recs).forEach(([stdKey, stdVal]) => {
+                if (!attMap[stdKey]) attMap[stdKey] = {};
+                if (typeof stdVal === "object" && stdVal !== null) {
+                  Object.assign(attMap[stdKey], stdVal);
+                } else if (typeof stdVal === "number") {
+                  attMap[stdKey] = { total: stdVal };
+                }
+              });
+            }
+          }
+        } catch (e) {}
+
+        // 5b. Try localStorage cache if no Firestore data
+        if (Object.keys(attMap).length === 0) {
+          try {
+            const cached = localStorage.getItem(`cce_monthly_attendance_${selectedClass}_${academicYear}`);
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              if (parsed && typeof parsed === "object") {
+                Object.entries(parsed).forEach(([stdKey, stdVal]) => {
+                  if (!attMap[stdKey]) attMap[stdKey] = {};
+                  if (typeof stdVal === "object" && stdVal !== null) {
+                    Object.assign(attMap[stdKey], stdVal);
+                  } else if (typeof stdVal === "number") {
+                    attMap[stdKey] = { total: stdVal };
+                  }
+                });
+              }
+            }
+          } catch (e) {}
+        }
+
+        // 5c. Also try Bunny CDN fallback
+        if (Object.keys(attMap).length === 0) {
+          try {
+            const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
+            const bunnyAtt = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_attendance.json`);
+            if (bunnyAtt && typeof bunnyAtt === "object" && Object.keys(bunnyAtt).length > 0) {
+              Object.entries(bunnyAtt).forEach(([stdKey, stdVal]) => {
+                if (!attMap[stdKey]) attMap[stdKey] = {};
+                if (typeof stdVal === "object" && stdVal !== null) {
+                  Object.assign(attMap[stdKey], stdVal);
+                } else if (typeof stdVal === "number") {
+                  attMap[stdKey] = { total: stdVal };
+                }
+              });
+            }
+          } catch (e) {}
+        }
+
+        // 5d. Also try legacy docId fallback
+        if (Object.keys(attMap).length === 0) {
+          try {
+            const attSnap = await getDoc(doc(db, "cce_attendance", docId));
+            if (attSnap.exists()) {
+              const data = attSnap.data().attendanceData || attSnap.data();
+              if (data && typeof data === "object") {
+                Object.entries(data).forEach(([stdKey, stdVal]) => {
+                  if (!attMap[stdKey]) attMap[stdKey] = {};
+                  if (typeof stdVal === "object" && stdVal !== null) {
+                    Object.assign(attMap[stdKey], stdVal);
+                  } else if (typeof stdVal === "number") {
+                    attMap[stdKey] = { total: stdVal };
+                  }
+                });
+              }
+            }
+          } catch (e) {}
+        }
+
+        setAttendanceData(attMap);
+      } catch (e) {
+        setAttendanceData({});
+      }
+
+      // 6. Fetch Weightage Data (cce_weightage_v2 & local cache)
+      try {
+        let weightageMap = {};
+        const cacheKey = `cce_weightage_cache_${selectedClass}_${academicYear}`;
+        try {
+          const cached = localStorage.getItem(cacheKey);
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (parsed && typeof parsed === "object") weightageMap = parsed;
+          }
+        } catch (e) {}
+
+        if (Object.keys(weightageMap).length === 0) {
+          const docIdsToTry = [
+            `${currentTeacherId}_${selectedClass}_${academicYear}`,
+            `${selectedClass}_${academicYear}`,
+          ];
+          for (const dId of docIdsToTry) {
+            try {
+              const snap = await getDoc(doc(db, "cce_weightage_v2", dId));
+              if (snap.exists()) {
+                const d = snap.data();
+                weightageMap = d.data || d;
+                break;
+              }
+            } catch (e) {}
           }
         }
-      } catch (e) { }
+
+        setWeightageData(weightageMap);
+      } catch (e) {
+        console.error("Error fetching weightage:", e);
+      }
 
     } catch (err) {
       console.error("Error loading CCE Register data:", err);
     }
     setLoading(false);
-  };
-
-  // Helper to extract student subject mark and grade from all Firestore & Bunny sources
-  const getStudentSubjectMark = (student, subjectName, term = "sem2") => {
-    if (!student || !marksData) return { grade: "-", mark: null };
-    const stdKeys = [student.id, student.rollNo, String(student.rollNo), student.name, student.fullName, student.studentId];
-
-    for (const key of stdKeys) {
-      if (!key) continue;
-      const sMarks = marksData[key];
-      if (sMarks) {
-        const termMarks = sMarks[term] || sMarks.sem2 || sMarks.second || sMarks.semester2 || sMarks.sem1 || sMarks;
-        if (termMarks && typeof termMarks === "object") {
-          const matchedKey = Object.keys(termMarks).find(
-            (k) => k.toLowerCase() === subjectName.toLowerCase() || k.includes(subjectName) || subjectName.includes(k)
-          );
-          if (matchedKey && termMarks[matchedKey] !== undefined && termMarks[matchedKey] !== null) {
-            const val = termMarks[matchedKey];
-
-            if (typeof val === "object") {
-              const numMark = Number(val.mark || val.total || val.score);
-              const g = val.grade || (!isNaN(numMark) && numMark > 0 ? getGrade(numMark) : "-");
-              return { grade: g, mark: !isNaN(numMark) && numMark > 0 ? numMark : null };
-            }
-
-            if (typeof val === "number") {
-              return { grade: getGrade(val), mark: val };
-            }
-
-            if (typeof val === "string" && val.trim().length > 0) {
-              const num = Number(val);
-              if (!isNaN(num) && num > 0) {
-                return { grade: getGrade(num), mark: num };
-              }
-              return { grade: val.trim(), mark: null };
-            }
-          }
-        }
-      }
-    }
-    return { grade: "-", mark: null };
-  };
-
-  // Compute real grade distribution count per subject for Page 9 Table
-  const getSubjectGradeDistribution = (subjectName, term = "sem2") => {
-    const counts = {
-      "अ-1": 0,
-      "अ-2": 0,
-      "ब-1": 0,
-      "ब-2": 0,
-      "क-1": 0,
-      "क-2": 0,
-      "ड": 0,
-      "इ-1": 0,
-      "इ-2": 0,
-    };
-
-    students.forEach((student) => {
-      const { grade } = getStudentSubjectMark(student, subjectName, term);
-      const normalizedGrade = grade && grade !== "-" ? grade.replace("ड-1", "ड").replace("ड-2", "इ-1") : "अ-1";
-      if (counts[normalizedGrade] !== undefined) {
-        counts[normalizedGrade]++;
-      } else {
-        counts["अ-1"]++;
-      }
-    });
-
-    return counts;
   };
 
   const handleDownloadPdf = async () => {
@@ -527,30 +590,6 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
           </div>
         </div>
 
-
-        {/* Semester Switcher */}
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
-          <button
-            onClick={() => setSelectedTerm("sem1")}
-            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-              selectedTerm === "sem1"
-                ? "bg-blue-600 text-white shadow-xs"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            <span>📘 प्रथम सत्र</span>
-          </button>
-          <button
-            onClick={() => setSelectedTerm("sem2")}
-            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-              selectedTerm === "sem2"
-                ? "bg-blue-600 text-white shadow-xs"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            <span>📙 द्वितीय सत्र</span>
-          </button>
-        </div>
 
         {/* Page Mode Switcher */}
         <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
@@ -725,59 +764,21 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
         {/* -------------------- STUDENT PAGES -------------------- */}
         {students.map((student, sIdx) => {
           const studentId = student.id || student.name;
-          const findStudentMarks = (std) => {
-            if (!std || !marksData) return {};
-            const stdKeys = [
-              std.id,
-              std.rollNo,
-              String(std.rollNo),
-              std.name,
-              std.fullName,
-              std.studentId,
-            ];
+          const studentMarks = marksData[student.id]
+            || marksData[student.rollNo]
+            || marksData[student.name]
+            || marksData[student.fullName]
+            || marksData[String(student.rollNo)]
+            || marksData[studentId]
+            || {};
 
-            for (const k of stdKeys) {
-              if (k && marksData[k]) return marksData[k];
-            }
-
-            const allKeys = Object.keys(marksData);
-            for (const k of stdKeys) {
-              if (!k) continue;
-              const targetNorm = String(k).toLowerCase().replace(/\s+/g, "");
-              const matchK = allKeys.find((mk) => String(mk).toLowerCase().replace(/\s+/g, "") === targetNorm);
-              if (matchK && marksData[matchK]) return marksData[matchK];
-            }
-            return {};
-          };
-
-          const studentMarks = findStudentMarks(student);
-
-          const findStudentRemarks = (std) => {
-            if (!std || !remarksData) return {};
-            const stdKeys = [
-              std.id,
-              std.rollNo,
-              String(std.rollNo),
-              std.name,
-              std.fullName,
-              std.studentId,
-            ];
-
-            for (const k of stdKeys) {
-              if (k && remarksData[k]) return remarksData[k];
-            }
-
-            const allKeys = Object.keys(remarksData);
-            for (const k of stdKeys) {
-              if (!k) continue;
-              const targetNorm = String(k).toLowerCase().replace(/\s+/g, "");
-              const matchK = allKeys.find((rk) => String(rk).toLowerCase().replace(/\s+/g, "") === targetNorm);
-              if (matchK && remarksData[matchK]) return remarksData[matchK];
-            }
-            return {};
-          };
-
-          const studentRemarks = findStudentRemarks(student);
+          const studentRemarks = remarksData[student.id]
+            || remarksData[student.rollNo]
+            || remarksData[student.name]
+            || remarksData[student.fullName]
+            || remarksData[String(student.rollNo)]
+            || remarksData[studentId]
+            || {};
 
           return (
             <React.Fragment key={student.id}>
@@ -795,7 +796,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                     <span>इयत्ता - <b>{selectedClass}</b></span>
                     <span>तुकडी - <b>{division}</b></span>
                     <span>हजेरी क्र. <b>{student.rollNo}</b></span>
-                    <span>{selectedTerm === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
+                    <span>द्वितीय सत्र</span>
                   </div>
 
                   {/* Marks Table */}
@@ -912,125 +913,121 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
 
                       <tbody>
                         {subjects.map((subjectName, subIdx) => {
-                          const getSubjectWeightageForStudent = (std, subName) => {
-                            if (!weightages) return null;
-                            
-                            const getArr = (v) => (Array.isArray(v) && v.length > 0 ? v : []);
-                            const termItems = selectedTerm === "sem1" ? getArr(weightages.semester1) : getArr(weightages.semester2);
-                            const rowsItems = getArr(weightages.rows || weightages.data);
-                            
-                            const primaryItems = termItems.length > 0 ? termItems : rowsItems;
-                            if (primaryItems.length === 0) return null;
-
-                            const rollNo = Number(std.rollNo);
-                            const stdIdStr = String(std.id || std.rollNo || "").trim().toLowerCase();
-
-                            let item = primaryItems.find((it) => {
-                              if (!it.studentIds || !Array.isArray(it.studentIds)) return false;
-                              return it.studentIds.some((id) => Number(id) === rollNo || String(id).trim().toLowerCase() === stdIdStr);
-                            });
-
-                            if (!item) item = primaryItems[0];
-                            if (!item || !item.subjects) return null;
-
-                            if (item.subjects[subName]) return item.subjects[subName];
-
-                            const lower = String(subName).toLowerCase();
-                            for (const [sKey, sVal] of Object.entries(item.subjects)) {
-                              if (!sVal) continue;
-                              const skLower = sKey.toLowerCase();
-                              if (lower.includes("मराठी") && (skLower.includes("marathi") || skLower.includes("मराठी"))) return sVal;
-                              if (lower.includes("इंग्रजी") && (skLower.includes("english") || skLower.includes("इंग्रजी"))) return sVal;
-                              if (lower.includes("गणित") && (skLower.includes("math") || skLower.includes("गणित"))) return sVal;
-                              if (lower.includes("कला") && (skLower.includes("kala") || skLower.includes("art") || skLower.includes("कला"))) return sVal;
-                              if (lower.includes("कार्यानुभव") && (skLower.includes("karyanubhav") || skLower.includes("work") || skLower.includes("कार्यानुभव"))) return sVal;
-                              if (lower.includes("शारीरिक") && (skLower.includes("sharirik") || skLower.includes("pe") || skLower.includes("शारीरिक"))) return sVal;
-                            }
-                            return null;
-                          };
-
                           const getSubData = (subName) => {
-                            if (!studentMarks) return {};
                             if (studentMarks[subName]) return studentMarks[subName];
                             const lower = String(subName).toLowerCase();
-                            if (lower.includes("मराठी")) return studentMarks["marathi"] || studentMarks["prathambhasha"] || studentMarks["प्रथम भाषा : मराठी"] || studentMarks["प्रथम भाषा: मराठी"] || {};
-                            if (lower.includes("इंग्रजी")) return studentMarks["english"] || studentMarks["dvitiybhasha"] || studentMarks["द्वितीय भाषा : इंग्रजी"] || studentMarks["तृतीय भाषा: इंग्रजी"] || studentMarks["तृतीय भाषा : इंग्रजी"] || {};
-                            if (lower.includes("गणित")) return studentMarks["math"] || studentMarks["maths"] || studentMarks["ganit"] || studentMarks["गणित"] || {};
-                            if (lower.includes("परिसर")) return studentMarks["parisar"] || studentMarks["parisar1"] || studentMarks["parisar2"] || studentMarks["परिसर अभ्यास"] || {};
+                            if (lower.includes("मराठी")) return studentMarks["marathi"] || studentMarks["प्रथम भाषा : मराठी"] || studentMarks["प्रथम भाषा: मराठी"] || {};
+                            if (lower.includes("इंग्रजी")) return studentMarks["english"] || studentMarks["द्वितीय भाषा : इंग्रजी"] || studentMarks["तृतीय भाषा: इंग्रजी"] || studentMarks["तृतीय भाषा : इंग्रजी"] || {};
+                            if (lower.includes("गणित")) return studentMarks["math"] || studentMarks["maths"] || studentMarks["गणित"] || {};
                             if (lower.includes("कला")) return studentMarks["kala"] || studentMarks["कला"] || {};
                             if (lower.includes("कार्यानुभव")) return studentMarks["karyanubhav"] || studentMarks["कार्यानुभव"] || {};
                             if (lower.includes("शारीरिक")) return studentMarks["sharirik"] || studentMarks["शारीरिक शिक्षण"] || {};
                             return {};
                           };
 
-                          const subData = getSubData(subjectName);
-                          const sw = getSubjectWeightageForStudent(student, subjectName);
-                          const isPracticalSub = subjectName.includes("कला") || subjectName.includes("कार्यानुभव") || subjectName.includes("शारीरिक");
+                          const getSubjectWeightage = (subName, stdId) => {
+                            if (!weightageData) return {};
 
-                          const getSwVal = (swObj, ...keys) => {
-                            if (!swObj || typeof swObj !== "object") return undefined;
-                            for (const k of keys) {
-                              if (swObj[k] !== undefined && swObj[k] !== null && String(swObj[k]).trim() !== "") return String(swObj[k]);
-                            }
-                            return undefined;
+                            const findInList = (list) => {
+                              if (!Array.isArray(list) || list.length === 0) return null;
+                              if (stdId) {
+                                const stdMatch = list.find((i) => i.studentIds && Array.isArray(i.studentIds) && i.studentIds.includes(stdId));
+                                if (stdMatch && stdMatch.subjects) {
+                                  if (stdMatch.subjects[subName]) return stdMatch.subjects[subName];
+                                  const lower = String(subName).toLowerCase();
+                                  for (const [sKey, sVal] of Object.entries(stdMatch.subjects)) {
+                                    const sLower = String(sKey).toLowerCase();
+                                    if (
+                                      (lower.includes("मराठी") && sLower.includes("मराठी")) ||
+                                      (lower.includes("इंग्रजी") && sLower.includes("इंग्रजी")) ||
+                                      (lower.includes("गणित") && sLower.includes("गणित")) ||
+                                      (lower.includes("कला") && sLower.includes("कला")) ||
+                                      (lower.includes("कार्यानुभव") && sLower.includes("कार्यानुभव")) ||
+                                      (lower.includes("शारीरिक") && sLower.includes("शारीरिक"))
+                                    ) {
+                                      return sVal;
+                                    }
+                                  }
+                                }
+                              }
+                              for (const item of list) {
+                                if (item && item.subjects) {
+                                  if (item.subjects[subName]) return item.subjects[subName];
+                                  const lower = String(subName).toLowerCase();
+                                  for (const [sKey, sVal] of Object.entries(item.subjects)) {
+                                    const sLower = String(sKey).toLowerCase();
+                                    if (
+                                      (lower.includes("मराठी") && sLower.includes("मराठी")) ||
+                                      (lower.includes("इंग्रजी") && sLower.includes("इंग्रजी")) ||
+                                      (lower.includes("गणित") && sLower.includes("गणित")) ||
+                                      (lower.includes("कला") && sLower.includes("कला")) ||
+                                      (lower.includes("कार्यानुभव") && sLower.includes("कार्यानुभव")) ||
+                                      (lower.includes("शारीरिक") && sLower.includes("शारीरिक"))
+                                    ) {
+                                      return sVal;
+                                    }
+                                  }
+                                }
+                              }
+                              return null;
+                            };
+
+                            const sem2 = weightageData.semester2 || (weightageData.data ? weightageData.data.semester2 : null);
+                            const sem1 = weightageData.semester1 || (weightageData.data ? weightageData.data.semester1 : null);
+                            const rows = weightageData.rows || (weightageData.data ? weightageData.data.rows : null);
+
+                            const matchSem2 = findInList(sem2);
+                            if (matchSem2) return matchSem2;
+                            const matchSem1 = findInList(sem1);
+                            if (matchSem1) return matchSem1;
+                            const matchRows = findInList(rows);
+                            if (matchRows) return matchRows;
+
+                            return {};
                           };
 
-                          const swTondi = getSwVal(sw, "tondiKaam", "tondi", "oral");
-                          const swPratyakshik = getSwVal(sw, "pratyakshikPrayog", "pratyakshik", "practical");
-                          const swUpakram = getSwVal(sw, "upakramKriti", "upakram", "kriti", "project");
-                          const swPrakalpa = getSwVal(sw, "prakalpa", "prakalp");
-                          const swChaachani = getSwVal(sw, "chaachaniLekhi", "chaachani", "test", "written");
-                          const swSwadhyay = getSwVal(sw, "swadhyayVargakarya", "swadhyay", "vargakarya", "homework");
-                          const swItar = getSwVal(sw, "itar", "other");
+                          const subData = getSubData(subjectName);
+                          const sw = getSubjectWeightage(subjectName, student.id);
+                          const isPracticalSub = subjectName.includes("कला") || subjectName.includes("कार्यानुभव") || subjectName.includes("शारीरिक");
 
-                          const swSankalitTondi = getSwVal(sw, "sankalitTondi", "semOral", "sankalitOral");
-                          const swSankalitPratyakshik = getSwVal(sw, "sankalitPratyakshik", "sankalitPractical", "semPractical");
-                          const swSankalitLekhi = getSwVal(sw, "sankalitLekhi", "sankalitWritten", "semWritten", "lekhi");
-
-                          const tondiKaamObt = subData.tondiKaam ?? subData.oral ?? subData.oralKaam ?? "";
-                          const pratyakshikPrayogObt = subData.pratyakshikPrayog ?? subData.practical ?? subData.pratyakshik ?? "";
-                          const upakramKritiObt = subData.upakramKriti ?? subData.upakram ?? subData.kriti ?? subData.project ?? "";
+                          const tondiKaamObt = subData.tondiKaam ?? subData.oral ?? "";
+                          const pratyakshikPrayogObt = subData.pratyakshikPrayog ?? subData.practical ?? subData.activity ?? "";
+                          const upakramKritiObt = subData.upakramKriti ?? subData.project ?? "";
                           const prakalpaObt = subData.prakalp ?? subData.prakalpa ?? "";
-                          const chaachaniLekhiObt = subData.chaachaniLekhi ?? subData.chaachani ?? subData.test ?? "";
-                          const swadhyayVargakaryaObt = subData.swadhyayVargakarya ?? subData.swadhyay ?? subData.vargakarya ?? subData.homework ?? "";
+                          const chaachaniLekhiObt = subData.chaachaniLekhi ?? subData.test ?? "";
+                          const swadhyayVargakaryaObt = subData.swadhyayVargakarya ?? subData.homework ?? "";
                           const itarObt = subData.itar ?? subData.other ?? "";
 
                           const sankalitTondiObt = subData.sankalitTondi ?? subData.semesterOral ?? "";
                           const sankalitPratyakshikObt = subData.sankalitPratyakshik ?? subData.semesterPractical ?? "";
                           const sankalitLekhiObt = subData.sankalitLekhi ?? subData.semesterWritten ?? "";
 
-                          const tondiKaamMax = sw ? (swTondi !== undefined ? swTondi : "0") : "0";
-                          const pratyakshikPrayogMax = sw ? (swPratyakshik !== undefined ? swPratyakshik : "0") : "0";
-                          const upakramKritiMax = sw ? (swUpakram !== undefined ? swUpakram : "0") : "0";
-                          const prakalpaMax = sw ? (swPrakalpa !== undefined ? swPrakalpa : "0") : "0";
-                          const chaachaniLekhiMax = sw ? (swChaachani !== undefined ? swChaachani : "0") : "0";
-                          const swadhyayVargakaryaMax = sw ? (swSwadhyay !== undefined ? swSwadhyay : "0") : "0";
-                          const itarMax = sw ? (swItar !== undefined ? swItar : "0") : "0";
+                          const tondiKaamMax = (sw.tondiKaam !== undefined && sw.tondiKaam !== "") ? String(sw.tondiKaam) : (subData.tondiKaamMax || (isPracticalSub ? "20" : "10"));
+                          const pratyakshikPrayogMax = (sw.pratyakshikPrayog !== undefined && sw.pratyakshikPrayog !== "") ? String(sw.pratyakshikPrayog) : (subData.pratyakshikPrayogMax || (isPracticalSub ? "20" : "10"));
+                          const upakramKritiMax = (sw.upakramKriti !== undefined && sw.upakramKriti !== "") ? String(sw.upakramKriti) : (subData.upakramKritiMax || (isPracticalSub ? "20" : "10"));
+                          const prakalpaMax = isPracticalSub ? "0" : ((sw.prakalpa !== undefined && sw.prakalpa !== "") ? String(sw.prakalpa) : (subData.prakalpaMax || "0"));
+                          const chaachaniLekhiMax = isPracticalSub ? "0" : ((sw.chaachaniLekhi !== undefined && sw.chaachaniLekhi !== "") ? String(sw.chaachaniLekhi) : (subData.chaachaniLekhiMax || "20"));
+                          const swadhyayVargakaryaMax = (sw.swadhyayVargakarya !== undefined && sw.swadhyayVargakarya !== "") ? String(sw.swadhyayVargakarya) : (subData.swadhyayVargakaryaMax || "10");
+                          const itarMax = (sw.itar !== undefined && sw.itar !== "") ? String(sw.itar) : (subData.itarMax !== undefined && subData.itarMax !== "" ? String(subData.itarMax) : "0");
 
-                          const sankalitTondiMax = sw ? (swSankalitTondi !== undefined ? swSankalitTondi : "0") : "0";
-                          const sankalitPratyakshikMax = sw ? (swSankalitPratyakshik !== undefined ? swSankalitPratyakshik : "0") : "0";
-                          const sankalitLekhiMax = sw ? (swSankalitLekhi !== undefined ? swSankalitLekhi : "0") : "0";
+                          const sankalitTondiMax = isPracticalSub ? "0" : ((sw.sankalitTondi !== undefined && sw.sankalitTondi !== "") ? String(sw.sankalitTondi) : (subData.sankalitTondiMax || "10"));
+                          const sankalitPratyakshikMax = (sw.sankalitPratyakshik !== undefined && sw.sankalitPratyakshik !== "") ? String(sw.sankalitPratyakshik) : (subData.sankalitPratyakshikMax || "0");
+                          const sankalitLekhiMax = isPracticalSub ? "0" : ((sw.sankalitLekhi !== undefined && sw.sankalitLekhi !== "") ? String(sw.sankalitLekhi) : (subData.sankalitLekhiMax || "20"));
 
                           const hasFormative = tondiKaamObt !== "" || pratyakshikPrayogObt !== "" || upakramKritiObt !== "" || prakalpaObt !== "" || chaachaniLekhiObt !== "" || swadhyayVargakaryaObt !== "" || itarObt !== "";
-                          const formTotalObt = hasFormative ? ((Number(tondiKaamObt) || 0) + (Number(pratyakshikPrayogObt) || 0) + (Number(upakramKritiObt) || 0) + (Number(prakalpaObt) || 0) + (Number(chaachaniLekhiObt) || 0) + (Number(swadhyayVargakaryaObt) || 0) + (Number(itarObt) || 0)) : (sw ? 0 : "0");
-                          const formTotalMax = (Number(tondiKaamMax) || 0) + (Number(pratyakshikPrayogMax) || 0) + (Number(upakramKritiMax) || 0) + (Number(prakalpaMax) || 0) + (Number(chaachaniLekhiMax) || 0) + (Number(swadhyayVargakaryaMax) || 0) + (Number(itarMax) || 0);
+                          const formTotalObt = hasFormative ? ((Number(tondiKaamObt) || 0) + (Number(pratyakshikPrayogObt) || 0) + (Number(upakramKritiObt) || 0) + (Number(prakalpaObt) || 0) + (Number(chaachaniLekhiObt) || 0) + (Number(swadhyayVargakaryaObt) || 0) + (Number(itarObt) || 0)) : "";
+                          const formTotalMax = (Number(tondiKaamMax) || 0) + (Number(pratyakshikPrayogMax) || 0) + (Number(upakramKritiMax) || 0) + (Number(prakalpaMax) || 0) + (Number(chaachaniLekhiMax) || 0) + (Number(swadhyayVargakaryaMax) || 0) + (Number(itarMax) || 0) || (isPracticalSub ? 100 : 70);
 
                           const hasSummative = sankalitTondiObt !== "" || sankalitPratyakshikObt !== "" || sankalitLekhiObt !== "";
-                          const semTotalObt = hasSummative ? ((Number(sankalitTondiObt) || 0) + (Number(sankalitPratyakshikObt) || 0) + (Number(sankalitLekhiObt) || 0)) : (sw ? 0 : "0");
-                          const semTotalMax = isPracticalSub ? 0 : ((Number(sankalitTondiMax) || 0) + (Number(sankalitPratyakshikMax) || 0) + (Number(sankalitLekhiMax) || 0));
+                          const semTotalObt = hasSummative ? ((Number(sankalitTondiObt) || 0) + (Number(sankalitPratyakshikObt) || 0) + (Number(sankalitLekhiObt) || 0)) : "";
+                          const semTotalMax = isPracticalSub ? "" : ((Number(sankalitTondiMax) || 0) + (Number(sankalitPratyakshikMax) || 0) + (Number(sankalitLekhiMax) || 0) || 30);
 
                           const hasGrand = formTotalObt !== "" || semTotalObt !== "";
-                          const grandTotalObt = hasGrand ? ((Number(formTotalObt) || 0) + (Number(semTotalObt) || 0)) : 0;
-                          const grandMax = formTotalMax + semTotalMax;
-                          const grade = (grandTotalObt > 0 && grandMax > 0) ? getGrade((Number(grandTotalObt) / grandMax) * 100) : "0";
+                          const grandTotalObt = hasGrand ? ((Number(formTotalObt) || 0) + (Number(semTotalObt) || 0)) : "";
+                          const grandMax = 100;
+                          const grade = grandTotalObt !== "" ? getGrade((Number(grandTotalObt) / grandMax) * 100) : "";
 
                           const cellPad = pageMode === "1page" ? "p-0.5 text-[8px]" : "p-1 text-xs";
-
-                          const getObtValDisp = (obt, maxStr) => {
-                            if (obt !== "" && obt !== undefined && obt !== null) return String(obt);
-                            if (maxStr === "0" || maxStr === 0 || !sw) return "0";
-                            return "";
-                          };
 
                           return (
                             <React.Fragment key={subjectName}>
@@ -1048,7 +1045,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                                 <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{itarMax}</td>
                                 <td className={`border border-[#0080ff] ${cellPad} font-extrabold align-middle text-center bg-white`}>{formTotalMax}</td>
                                 {isPracticalSub ? (
-                                  <td colSpan={4} rowSpan={2} className="border border-[#0080ff] bg-slate-50 align-middle"></td>
+                                  <td colSpan={4} rowSpan={2} className="border border-[#0080ff] bg-slate-100/80 align-middle text-center"></td>
                                 ) : (
                                   <>
                                     <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{sankalitTondiMax}</td>
@@ -1058,29 +1055,29 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                                   </>
                                 )}
                                 <td className={`border border-[#0080ff] ${cellPad} font-extrabold align-middle text-center bg-white`}>{grandMax}</td>
-                                <td rowSpan={2} className={`border border-[#0080ff] ${cellPad} font-extrabold text-slate-900 align-middle text-center text-xs`}>{grade}</td>
+                                <td rowSpan={2} className={`border border-[#0080ff] ${cellPad} font-extrabold text-slate-900 align-middle text-center text-xs`}>{grade || "-"}</td>
                               </tr>
 
                               {/* Row 2: प्राप्त */}
                               <tr className="bg-white text-slate-900 font-bold border-b-2 border-[#0080ff]">
                                 <td className={`border border-[#0080ff] ${cellPad} text-slate-800 font-bold bg-white align-middle text-center`}>प्राप्त</td>
-                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{getObtValDisp(tondiKaamObt, tondiKaamMax)}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{getObtValDisp(pratyakshikPrayogObt, pratyakshikPrayogMax)}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{getObtValDisp(upakramKritiObt, upakramKritiMax)}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{getObtValDisp(prakalpaObt, prakalpaMax)}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{getObtValDisp(chaachaniLekhiObt, chaachaniLekhiMax)}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{getObtValDisp(swadhyayVargakaryaObt, swadhyayVargakaryaMax)}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{getObtValDisp(itarObt, itarMax)}</td>
-                                <td className={`border border-[#0080ff] ${cellPad} font-extrabold align-middle text-center bg-white`}>{formTotalObt !== "" ? formTotalObt : 0}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{tondiKaamObt !== "" ? tondiKaamObt : ""}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{pratyakshikPrayogObt !== "" ? pratyakshikPrayogObt : ""}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{upakramKritiObt !== "" ? upakramKritiObt : ""}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{prakalpaObt !== "" ? prakalpaObt : ""}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{chaachaniLekhiObt !== "" ? chaachaniLekhiObt : ""}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{swadhyayVargakaryaObt !== "" ? swadhyayVargakaryaObt : ""}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{itarObt !== "" ? itarObt : ""}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} font-extrabold align-middle text-center bg-white`}>{formTotalObt !== "" ? formTotalObt : ""}</td>
                                 {!isPracticalSub && (
                                   <>
-                                    <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{getObtValDisp(sankalitTondiObt, sankalitTondiMax)}</td>
-                                    <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{getObtValDisp(sankalitPratyakshikObt, sankalitPratyakshikMax)}</td>
-                                    <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{getObtValDisp(sankalitLekhiObt, sankalitLekhiMax)}</td>
-                                    <td className={`border border-[#0080ff] ${cellPad} font-extrabold align-middle text-center bg-white`}>{semTotalObt !== "" ? semTotalObt : 0}</td>
+                                    <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{sankalitTondiObt !== "" ? sankalitTondiObt : ""}</td>
+                                    <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{sankalitPratyakshikObt !== "" ? sankalitPratyakshikObt : ""}</td>
+                                    <td className={`border border-[#0080ff] ${cellPad} align-middle text-center`}>{sankalitLekhiObt !== "" ? sankalitLekhiObt : ""}</td>
+                                    <td className={`border border-[#0080ff] ${cellPad} font-extrabold align-middle text-center bg-white`}>{semTotalObt !== "" ? semTotalObt : ""}</td>
                                   </>
                                 )}
-                                <td className={`border border-[#0080ff] ${cellPad} font-extrabold align-middle text-center bg-white`}>{grandTotalObt !== "" ? grandTotalObt : 0}</td>
+                                <td className={`border border-[#0080ff] ${cellPad} font-extrabold align-middle text-center bg-white`}>{grandTotalObt !== "" ? grandTotalObt : ""}</td>
                               </tr>
                             </React.Fragment>
                           );
@@ -1184,61 +1181,38 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                       {(() => {
                         const getFormattedRemark = (remarksObj, labelOrKey) => {
                           if (!remarksObj || typeof remarksObj !== "object") return "-";
-                          const targetObj = remarksObj.sem2 || remarksObj.sem1 || remarksObj.second || remarksObj;
-                          let val = targetObj[labelOrKey] || remarksObj[labelOrKey];
+                          let val = remarksObj[labelOrKey];
 
                           if (!val) {
                             const lower = String(labelOrKey).toLowerCase();
-
-                            const searchObj = (obj) => {
-                              if (!obj || typeof obj !== "object") return null;
-                              for (const [k, v] of Object.entries(obj)) {
-                                if (!v) continue;
-                                const kLower = k.toLowerCase();
-                                if (lower.includes("मराठी") || lower.includes("prathambhasha")) {
-                                  if (kLower.includes("marathi") || kLower.includes("prathambhasha") || kLower.includes("मराठी") || kLower.includes("भाषा")) return v;
-                                }
-                                if (lower.includes("इंग्रजी") || lower.includes("dvitiybhasha")) {
-                                  if (kLower.includes("english") || kLower.includes("dvitiybhasha") || kLower.includes("इंग्रजी")) return v;
-                                }
-                                if (lower.includes("गणित") || lower.includes("ganit")) {
-                                  if (kLower.includes("ganit") || kLower.includes("math") || kLower.includes("गणित")) return v;
-                                }
-                                if (lower.includes("परिसर") || lower.includes("parisar")) {
-                                  if (kLower.includes("parisar") || kLower.includes("परिसर")) return v;
-                                }
-                                if (lower.includes("कला") || lower.includes("kala")) {
-                                  if (kLower.includes("kala") || kLower.includes("कला") || kLower.includes("art")) return v;
-                                }
-                                if (lower.includes("कार्यानुभव") || lower.includes("karyanubhav")) {
-                                  if (kLower.includes("karyanubhav") || kLower.includes("कार्यानुभव") || kLower.includes("work")) return v;
-                                }
-                                if (lower.includes("शारीरिक") || lower.includes("sharirik")) {
-                                  if (kLower.includes("sharirik") || kLower.includes("शारीरिक") || kLower.includes("pe") || kLower.includes("health")) return v;
-                                }
-                                if (lower.includes("विशेष") || lower.includes("visheshpragati")) {
-                                  if (kLower.includes("vishesh") || kLower.includes("विशेष")) return v;
-                                }
-                                if (lower.includes("सुधारणा") || lower.includes("sudharna")) {
-                                  if (kLower.includes("sudharn") || kLower.includes("sudhar") || kLower.includes("सुधारणा")) return v;
-                                }
-                                if (lower.includes("आवड") || lower.includes("aavad")) {
-                                  if (kLower.includes("aavad") || kLower.includes("आवड") || kLower.includes("hobby")) return v;
-                                }
-                                if (lower.includes("व्यक्तिमत्त्व") || lower.includes("vyaktimatva")) {
-                                  if (kLower.includes("vyaktimatva") || kLower.includes("व्यक्तिमत्त्व") || kLower.includes("व्यक्तिमत्व")) return v;
-                                }
-                              }
-                              return null;
-                            };
-
-                            val = searchObj(targetObj) || searchObj(remarksObj);
+                            if (lower.includes("मराठी") || lower.includes("prathambhasha")) {
+                              val = remarksObj["prathambhasha"] || remarksObj["marathi"] || remarksObj["प्रथम भाषा : मराठी"] || remarksObj["प्रथम भाषा: मराठी"];
+                            } else if (lower.includes("इंग्रजी") || lower.includes("dvitiybhasha")) {
+                              val = remarksObj["dvitiybhasha"] || remarksObj["english"] || remarksObj["द्वितीय भाषा : इंग्रजी"] || remarksObj["तृतीय भाषा: इंग्रजी"] || remarksObj["तृतीय भाषा : इंग्रजी"];
+                            } else if (lower.includes("गणित") || lower.includes("ganit")) {
+                              val = remarksObj["ganit"] || remarksObj["math"] || remarksObj["गणित"];
+                            } else if (lower.includes("परिसर") || lower.includes("parisar")) {
+                              val = remarksObj["parisar"] || remarksObj["parisar1"] || remarksObj["parisar2"] || remarksObj["परिसर अभ्यास"];
+                            } else if (lower.includes("कला") || lower.includes("kala")) {
+                              val = remarksObj["kala"] || remarksObj["कला"];
+                            } else if (lower.includes("कार्यानुभव") || lower.includes("karyanubhav")) {
+                              val = remarksObj["karyanubhav"] || remarksObj["कार्यानुभव"];
+                            } else if (lower.includes("शारीरिक") || lower.includes("sharirik")) {
+                              val = remarksObj["sharirik"] || remarksObj["शारीरिक शिक्षण"];
+                            } else if (lower.includes("विशेष") || lower.includes("visheshpragati")) {
+                              val = remarksObj["visheshpragati"] || remarksObj["vishesh"] || remarksObj["विशेष प्रगती"];
+                            } else if (lower.includes("सुधारणा") || lower.includes("sudharna")) {
+                              val = remarksObj["sudharna"] || remarksObj["sudharana"] || remarksObj["सुधारणा आवश्यक"];
+                            } else if (lower.includes("आवड") || lower.includes("aavad")) {
+                              val = remarksObj["aavad"] || remarksObj["आवड / छंद"];
+                            } else if (lower.includes("व्यक्तिमत्त्व") || lower.includes("vyaktimatva")) {
+                              val = remarksObj["vyaktimatva"] || remarksObj["व्यक्तिमत्त्व गुणविशेष"] || remarksObj["व्यक्तिमत्व गुणविशेष"];
+                            }
                           }
 
                           if (!val) return "-";
                           if (Array.isArray(val)) {
-                            const validStr = val.filter(Boolean).map(s => String(s).trim()).filter(s => s.length > 0);
-                            return validStr.length > 0 ? validStr.join(" ") : "-";
+                            return val.length > 0 ? val.join(" ") : "-";
                           }
                           return String(val).trim() || "-";
                         };
@@ -1293,6 +1267,670 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
             </React.Fragment>
           );
         })}
+
+        {/* -------------------- DYNAMIC CALCULATIONS FOR FINAL 3 PAGES -------------------- */}
+        {(() => {
+          const getStudentMarksObj = (student) => {
+            if (!student) return {};
+            const sId = String(student.id || "");
+            const sRoll = String(student.rollNo || "");
+            const sName = String(student.name || "").toLowerCase();
+            const sFullName = String(student.fullName || "").toLowerCase();
+
+            if (marksData[sId]) return marksData[sId];
+            if (sRoll && marksData[sRoll]) return marksData[sRoll];
+            if (sName && marksData[sName]) return marksData[sName];
+            if (sFullName && marksData[sFullName]) return marksData[sFullName];
+
+            for (const [mKey, mVal] of Object.entries(marksData)) {
+              const lowerKey = mKey.toLowerCase();
+              if (
+                (sId && lowerKey === sId.toLowerCase()) ||
+                (sRoll && lowerKey === sRoll.toLowerCase()) ||
+                (sName && lowerKey.includes(sName)) ||
+                (sFullName && lowerKey.includes(sFullName))
+              ) {
+                return mVal;
+              }
+            }
+            return {};
+          };
+
+          const getStudentSubjectStats = (student, subjectName) => {
+            let studentMarks = getStudentMarksObj(student);
+            if (studentMarks && studentMarks.subjects && typeof studentMarks.subjects === "object") {
+              studentMarks = studentMarks.subjects;
+            } else if (studentMarks && studentMarks.records && typeof studentMarks.records === "object") {
+              studentMarks = studentMarks.records;
+            }
+
+            const lower = String(subjectName).toLowerCase();
+
+            let subData = {};
+            if (studentMarks[subjectName]) {
+              subData = studentMarks[subjectName];
+            } else if (lower.includes("मराठी")) {
+              subData = studentMarks["marathi"] || studentMarks["prathambhasha"] || studentMarks["प्रथम भाषा : मराठी"] || studentMarks["प्रथम भाषा: मराठी"] || studentMarks["मराठी"] || {};
+            } else if (lower.includes("इंग्रजी")) {
+              subData = studentMarks["english"] || studentMarks["dvitiybhasha"] || studentMarks["द्वितीय भाषा : इंग्रजी"] || studentMarks["तृतीय भाषा: इंग्रजी"] || studentMarks["तृतीय भाषा : इंग्रजी"] || studentMarks["इंग्रजी"] || {};
+            } else if (lower.includes("गणित")) {
+              subData = studentMarks["ganit"] || studentMarks["math"] || studentMarks["maths"] || studentMarks["गणित"] || {};
+            } else if (lower.includes("परिसर")) {
+              subData = studentMarks["parisar"] || studentMarks["parisar1"] || studentMarks["parisar2"] || studentMarks["परिसर अभ्यास"] || {};
+            } else if (lower.includes("कला")) {
+              subData = studentMarks["kala"] || studentMarks["कला"] || {};
+            } else if (lower.includes("कार्यानुभव")) {
+              subData = studentMarks["karyanubhav"] || studentMarks["कार्यानुभव"] || {};
+            } else if (lower.includes("शारीरिक")) {
+              subData = studentMarks["sharirik"] || studentMarks["शारीरिक शिक्षण"] || {};
+            }
+
+            if (!subData || Object.keys(subData).length === 0) {
+              for (const [k, v] of Object.entries(studentMarks)) {
+                const kLower = String(k).toLowerCase();
+                if (
+                  (lower.includes("मराठी") && kLower.includes("मराठी")) ||
+                  (lower.includes("इंग्रजी") && kLower.includes("इंग्रजी")) ||
+                  (lower.includes("गणित") && kLower.includes("गणित")) ||
+                  (lower.includes("कला") && kLower.includes("कला")) ||
+                  (lower.includes("कार्यानुभव") && kLower.includes("कार्यानुभव")) ||
+                  (lower.includes("शारीरिक") && kLower.includes("शारीरिक")) ||
+                  (lower.includes("परिसर") && kLower.includes("परिसर")) ||
+                  kLower === lower
+                ) {
+                  subData = v;
+                  break;
+                }
+              }
+            }
+
+            const isPracticalSub = lower.includes("कला") || lower.includes("कार्यानुभव") || lower.includes("शारीरिक");
+
+            const tondiKaamObt = Number(subData.tondiKaam ?? subData.oral ?? 0);
+            const pratyakshikPrayogObt = Number(subData.pratyakshikPrayog ?? subData.practical ?? subData.activity ?? 0);
+            const upakramKritiObt = Number(subData.upakramKriti ?? subData.project ?? 0);
+            const prakalpaObt = Number(subData.prakalp ?? subData.prakalpa ?? 0);
+            const chaachaniLekhiObt = Number(subData.chaachaniLekhi ?? subData.test ?? 0);
+            const swadhyayVargakaryaObt = Number(subData.swadhyayVargakarya ?? subData.homework ?? 0);
+            const itarObt = Number(subData.itar ?? subData.other ?? 0);
+
+            const sankalitTondiObt = Number(subData.sankalitTondi ?? subData.semesterOral ?? 0);
+            const sankalitPratyakshikObt = Number(subData.sankalitPratyakshik ?? subData.semesterPractical ?? 0);
+            const sankalitLekhiObt = Number(subData.sankalitLekhi ?? subData.semesterWritten ?? 0);
+
+            const formTotal = tondiKaamObt + pratyakshikPrayogObt + upakramKritiObt + prakalpaObt + chaachaniLekhiObt + swadhyayVargakaryaObt + itarObt;
+            const semTotal = isPracticalSub ? 0 : (sankalitTondiObt + sankalitPratyakshikObt + sankalitLekhiObt);
+            const grandTotal = formTotal + semTotal;
+
+            return {
+              formTotal,
+              semTotal,
+              grandTotal,
+              gradeStr: getGrade(grandTotal),
+              isPracticalSub
+            };
+          };
+
+          const getStudentAttendanceDays = (student) => {
+            if (!student) return 0;
+            const sId = String(student.id || "");
+            const sRoll = String(student.rollNo || "");
+            const sName = String(student.name || "").toLowerCase();
+
+            let rec = attendanceData[sId] || attendanceData[sRoll] || attendanceData[student.name] || attendanceData[student.fullName] || {};
+
+            if (!rec || (typeof rec === "object" && Object.keys(rec).length === 0)) {
+              for (const [aKey, aVal] of Object.entries(attendanceData)) {
+                const lowerKey = aKey.toLowerCase();
+                if (
+                  (sId && lowerKey === sId.toLowerCase()) ||
+                  (sRoll && lowerKey === sRoll.toLowerCase()) ||
+                  (sName && lowerKey.includes(sName))
+                ) {
+                  rec = aVal;
+                  break;
+                }
+              }
+            }
+
+            if (typeof rec === "number") return rec;
+            if (typeof rec === "object" && rec !== null) {
+              let total = 0;
+              Object.values(rec).forEach((v) => {
+                if (typeof v === "number") total += v;
+                else if (typeof v === "string" && !isNaN(Number(v))) total += Number(v);
+              });
+              return total > 0 ? total : (Number(rec.total) || Number(rec.attendance) || 0);
+            }
+            return 0;
+          };
+
+          return (
+            <>
+              {/* ========================================================================= */}
+              {/* PAGE 1: श्रेणी निहाय संकलन तक्ता (वर्गस्तर)                                */}
+              {/* ========================================================================= */}
+              <div className="pdf-page bg-white p-6 border border-slate-200 rounded-3xl min-h-[285mm] overflow-hidden shadow-sm flex flex-col justify-between mb-4" style={{ pageBreakAfter: "always", breakAfter: "page" }}>
+                <div>
+                  <h2 className="text-xl font-black text-slate-900 text-center mb-4 tracking-tight">श्रेणी निहाय संकलन तक्ता (वर्गस्तर)</h2>
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-800 border-b border-slate-300 pb-2 mb-4">
+                    <span>शाळा: <b>{schoolData.schoolName || "जिल्हा परिषद शाळा धोंडेवाडी(पेड)ता.तासगाव जि.सांगली"}</b></span>
+                    <span>इयत्ता: <b>{selectedClass}</b></span>
+                    <span>तुकडी: <b>{division}</b></span>
+                    <span>द्वितीय सत्र</span>
+                    <span>सन: <b>{academicYear}</b></span>
+                  </div>
+
+                  {/* Table 1: Overall Grade Counts */}
+                  <div className="mb-6">
+                    <table className="w-full border-collapse border border-amber-500 text-xs text-center font-medium">
+                      <thead>
+                        <tr className="bg-amber-100 text-slate-900 font-bold border-b border-amber-500">
+                          <th className="border border-amber-500 p-2 w-10">अ. क्र.</th>
+                          <th className="border border-amber-500 p-2 text-left w-48">विषय</th>
+                          <th className="border border-amber-500 p-2 w-14">संख्या</th>
+                          <th className="border border-amber-500 p-2 w-14">उपस्थिती</th>
+                          {GRADE_KEYS.map((g) => (
+                            <th key={g} className="border border-amber-500 p-2">{GRADE_LABELS[g]}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {subjects.map((sub, idx) => {
+                          const gradeCounts = { a1: 0, a2: 0, b1: 0, b2: 0, c1: 0, c2: 0, d: 0, i1: 0, i2: 0 };
+                          let presentCount = 0;
+                          students.forEach((std) => {
+                            const stats = getStudentSubjectStats(std, sub);
+                            gradeCounts[getGradeKeyFromScore(stats.grandTotal)]++;
+                            if (stats.grandTotal > 0 || getStudentAttendanceDays(std) > 0) presentCount++;
+                          });
+                          // If no data found at all, default to total students count
+                          const displayPresent = presentCount > 0 ? presentCount : students.length;
+
+                          return (
+                            <tr key={sub} className="border-b border-amber-400 hover:bg-amber-50/40">
+                              <td className="border border-amber-500 p-2 font-bold">{idx + 1}</td>
+                              <td className="border border-amber-500 p-2 text-left font-bold text-slate-900">{sub}</td>
+                              <td className="border border-amber-500 p-2 font-bold">{students.length}</td>
+                              <td className="border border-amber-500 p-2 font-bold">{displayPresent}</td>
+                              {GRADE_KEYS.map((g) => (
+                                <td key={g} className="border border-amber-500 p-2 font-bold">
+                                  {gradeCounts[g]}
+                                </td>
+                              ))}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Table 2: Gender-wise Grade Counts */}
+                  <div>
+                    <table className="w-full border-collapse border border-amber-500 text-xs text-center font-medium">
+                      <thead>
+                        <tr className="bg-amber-100 text-slate-900 font-bold border-b border-amber-500">
+                          <th className="border border-amber-500 p-2 w-10" rowSpan={2}>अ. क्र.</th>
+                          <th className="border border-amber-500 p-2 text-left w-48" rowSpan={2}>विषय</th>
+                          <th className="border border-amber-500 p-2 w-14" rowSpan={2}>संख्या</th>
+                          <th className="border border-amber-500 p-2 w-14" rowSpan={2}>उपस्थिती</th>
+                          {GRADE_KEYS.map((g) => (
+                            <th key={g} className="border border-amber-500 p-1" colSpan={2}>{GRADE_LABELS[g]}</th>
+                          ))}
+                        </tr>
+                        <tr className="bg-amber-100 text-slate-900 font-bold border-b border-amber-500">
+                          {GRADE_KEYS.map((g) => (
+                            <React.Fragment key={g}>
+                              <th className="border border-amber-500 p-1 text-[11px]">मुले</th>
+                              <th className="border border-amber-500 p-1 text-[11px]">मुली</th>
+                            </React.Fragment>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {subjects.map((sub, idx) => {
+                          const boyCounts = { a1: 0, a2: 0, b1: 0, b2: 0, c1: 0, c2: 0, d: 0, i1: 0, i2: 0 };
+                          const girlCounts = { a1: 0, a2: 0, b1: 0, b2: 0, c1: 0, c2: 0, d: 0, i1: 0, i2: 0 };
+                          let presentCount = 0;
+
+                          students.forEach((std) => {
+                            const stats = getStudentSubjectStats(std, sub);
+                            const gKey = getGradeKeyFromScore(stats.grandTotal);
+                            if (isBoyStudent(std)) {
+                              boyCounts[gKey]++;
+                            } else {
+                              girlCounts[gKey]++;
+                            }
+                            if (stats.grandTotal > 0 || getStudentAttendanceDays(std) > 0) presentCount++;
+                          });
+                          const displayPresent2 = presentCount > 0 ? presentCount : students.length;
+
+                          return (
+                            <tr key={sub} className="border-b border-amber-400 hover:bg-amber-50/40">
+                              <td className="border border-amber-500 p-2 font-bold">{idx + 1}</td>
+                              <td className="border border-amber-500 p-2 text-left font-bold text-slate-900">{sub}</td>
+                              <td className="border border-amber-500 p-2 font-bold">{students.length}</td>
+                              <td className="border border-amber-500 p-2 font-bold">{displayPresent2}</td>
+                              {GRADE_KEYS.map((g) => (
+                                <React.Fragment key={g}>
+                                  <td className="border border-amber-500 p-1 font-bold">{boyCounts[g]}</td>
+                                  <td className="border border-amber-500 p-1 font-bold">{girlCounts[g]}</td>
+                                </React.Fragment>
+                              ))}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-6 border-t border-slate-200 mt-6 text-xs font-bold text-slate-800">
+                  <div className="text-center">
+                    <p className="font-extrabold">{schoolData.teacherName || "वर्गशिक्षक"}</p>
+                    <p className="text-[11px] text-slate-500 font-medium">वर्गशिक्षक</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="font-extrabold">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
+                    <p className="text-[11px] text-slate-500 font-medium">मुख्याध्यापक</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* ========================================================================= */}
+              {/* PAGE 2: जातनिहाय व विषयनिहाय एकूण तेरीज पत्रक                                */}
+              {/* ========================================================================= */}
+              <div className="pdf-page bg-white p-6 border border-slate-200 rounded-3xl min-h-[285mm] overflow-hidden shadow-sm flex flex-col justify-between mb-4" style={{ pageBreakAfter: "always", breakAfter: "page" }}>
+                <div>
+                  <h2 className="text-xl font-black text-slate-900 text-center mb-4 tracking-tight">जातनिहाय व विषयनिहाय एकूण तेरीज पत्रक</h2>
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-800 border-b border-slate-300 pb-2 mb-4">
+                    <span>शाळा: <b>{schoolData.schoolName || "जिल्हा परिषद शाळा धोंडेवाडी(पेड)ता.तासगाव जि.सांगली"}</b></span>
+                    <span>इयत्ता: <b>{selectedClass}</b></span>
+                    <span>तुकडी: <b>{division}</b></span>
+                    <span>द्वितीय सत्र</span>
+                    <span>सन: <b>{academicYear}</b></span>
+                  </div>
+
+                  <table className="w-full border-collapse border border-amber-500 text-[11px] text-center font-medium">
+                    <thead>
+                      <tr className="bg-amber-100 text-slate-900 font-bold border-b border-amber-500">
+                        <th className="border border-amber-500 p-1.5 w-28" rowSpan={2}>विषय</th>
+                        <th className="border border-amber-500 p-1.5 w-32" rowSpan={2}>जात संवर्ग</th>
+                        <th className="border border-amber-500 p-1" colSpan={3}>संख्या</th>
+                        {GRADE_KEYS.map((g) => (
+                          <th key={g} className="border border-amber-500 p-1" colSpan={3}>{GRADE_LABELS[g]}</th>
+                        ))}
+                      </tr>
+                      <tr className="bg-amber-100 text-slate-900 font-bold border-b border-amber-500">
+                        <th className="border border-amber-500 p-1 text-[10px]">मुले</th>
+                        <th className="border border-amber-500 p-1 text-[10px]">मुली</th>
+                        <th className="border border-amber-500 p-1 text-[10px]">एकूण</th>
+                        {GRADE_KEYS.map((g) => (
+                          <React.Fragment key={g}>
+                            <th className="border border-amber-500 p-0.5 text-[10px]">मुले</th>
+                            <th className="border border-amber-500 p-0.5 text-[10px]">मुली</th>
+                            <th className="border border-amber-500 p-0.5 text-[10px]">एकूण</th>
+                          </React.Fragment>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {subjects.map((sub) => {
+                        const categoryData = {};
+                        CASTE_CATEGORIES.forEach((c) => {
+                          categoryData[c.key] = {
+                            countBoys: 0, countGirls: 0, countTotal: 0,
+                            grades: { a1: { b: 0, g: 0, t: 0 }, a2: { b: 0, g: 0, t: 0 }, b1: { b: 0, g: 0, t: 0 }, b2: { b: 0, g: 0, t: 0 }, c1: { b: 0, g: 0, t: 0 }, c2: { b: 0, g: 0, t: 0 }, d: { b: 0, g: 0, t: 0 }, i1: { b: 0, g: 0, t: 0 }, i2: { b: 0, g: 0, t: 0 } }
+                          };
+                        });
+                        const totalCategoryData = {
+                          countBoys: 0, countGirls: 0, countTotal: 0,
+                          grades: { a1: { b: 0, g: 0, t: 0 }, a2: { b: 0, g: 0, t: 0 }, b1: { b: 0, g: 0, t: 0 }, b2: { b: 0, g: 0, t: 0 }, c1: { b: 0, g: 0, t: 0 }, c2: { b: 0, g: 0, t: 0 }, d: { b: 0, g: 0, t: 0 }, i1: { b: 0, g: 0, t: 0 }, i2: { b: 0, g: 0, t: 0 } }
+                        };
+
+                        students.forEach((std) => {
+                          const cKey = getStudentCasteCategory(std);
+                          const stats = getStudentSubjectStats(std, sub);
+                          const gKey = getGradeKeyFromScore(stats.grandTotal);
+                          const boy = isBoyStudent(std);
+
+                          if (categoryData[cKey]) {
+                            if (boy) {
+                              categoryData[cKey].countBoys++;
+                              categoryData[cKey].grades[gKey].b++;
+                              totalCategoryData.countBoys++;
+                              totalCategoryData.grades[gKey].b++;
+                            } else {
+                              categoryData[cKey].countGirls++;
+                              categoryData[cKey].grades[gKey].g++;
+                              totalCategoryData.countGirls++;
+                              totalCategoryData.grades[gKey].g++;
+                            }
+                            categoryData[cKey].countTotal++;
+                            categoryData[cKey].grades[gKey].t++;
+                            totalCategoryData.countTotal++;
+                            totalCategoryData.grades[gKey].t++;
+                          }
+                        });
+
+                        return (
+                          <React.Fragment key={sub}>
+                            {CASTE_CATEGORIES.map((cat, cIdx) => {
+                              const rowData = categoryData[cat.key];
+                              return (
+                                <tr key={cat.key} className="border-b border-amber-300 hover:bg-amber-50/30">
+                                  {cIdx === 0 && (
+                                    <td rowSpan={6} className="border border-amber-500 p-2 font-bold text-slate-900 align-middle text-center bg-amber-50/50">{sub}</td>
+                                  )}
+                                  <td className="border border-amber-500 p-1.5 text-left font-bold text-slate-800">{cat.label}</td>
+                                  <td className="border border-amber-500 p-1 font-bold">{rowData.countBoys}</td>
+                                  <td className="border border-amber-500 p-1 font-bold">{rowData.countGirls}</td>
+                                  <td className="border border-amber-500 p-1 font-extrabold text-blue-800">{rowData.countTotal}</td>
+                                  {GRADE_KEYS.map((g) => (
+                                    <React.Fragment key={g}>
+                                      <td className="border border-amber-500 p-0.5 font-bold">{rowData.grades[g].b}</td>
+                                      <td className="border border-amber-500 p-0.5 font-bold">{rowData.grades[g].g}</td>
+                                      <td className="border border-amber-500 p-0.5 font-extrabold text-slate-900">{rowData.grades[g].t}</td>
+                                    </React.Fragment>
+                                  ))}
+                                </tr>
+                              );
+                            })}
+                            {/* Total Row for Subject */}
+                            <tr className="bg-amber-100/70 font-black border-b-2 border-amber-600">
+                              <td className="border border-amber-500 p-1.5 text-left font-black text-slate-900">एकूण</td>
+                              <td className="border border-amber-500 p-1 font-black">{totalCategoryData.countBoys}</td>
+                              <td className="border border-amber-500 p-1 font-black">{totalCategoryData.countGirls}</td>
+                              <td className="border border-amber-500 p-1 font-black text-blue-900">{totalCategoryData.countTotal}</td>
+                              {GRADE_KEYS.map((g) => (
+                                <React.Fragment key={g}>
+                                  <td className="border border-amber-500 p-0.5 font-black">{totalCategoryData.grades[g].b}</td>
+                                  <td className="border border-amber-500 p-0.5 font-black">{totalCategoryData.grades[g].g}</td>
+                                  <td className="border border-amber-500 p-0.5 font-black text-slate-900">{totalCategoryData.grades[g].t}</td>
+                                </React.Fragment>
+                              ))}
+                            </tr>
+                          </React.Fragment>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="flex items-center justify-between pt-6 border-t border-slate-200 mt-6 text-xs font-bold text-slate-800">
+                  <div className="text-center">
+                    <p className="font-extrabold">{schoolData.teacherName || "वर्गशिक्षक"}</p>
+                    <p className="text-[11px] text-slate-500 font-medium">वर्गशिक्षक</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="font-extrabold">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
+                    <p className="text-[11px] text-slate-500 font-medium">मुख्याध्यापक</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* ========================================================================= */}
+              {/* PAGE 3: सातत्यपूर्ण सर्वंकष मूल्यांकन: निकाल पत्रक                      */}
+              {/* ========================================================================= */}
+              <div className="pdf-page bg-white p-6 border border-slate-200 rounded-3xl min-h-[285mm] overflow-hidden shadow-sm flex flex-col justify-between">
+                <div>
+                  <h2 className="text-xl font-black text-lime-900 text-center mb-2 tracking-tight">सातत्यपूर्ण सर्वंकष मूल्यांकन: निकाल पत्रक</h2>
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-800 border-b border-lime-300 pb-2 mb-3">
+                    <span>शाळा: <b>{schoolData.schoolName || "जिल्हा परिषद शाळा धोंडेवाडी(पेड)ता.तासगाव जि.सांगली"}</b></span>
+                    <span>इयत्ता: <b>{selectedClass}</b></span>
+                    <span>तुकडी: <b>{division}</b></span>
+                    <span>द्वितीय सत्र</span>
+                    <span>सन: <b>{academicYear}</b></span>
+                  </div>
+
+                  {(() => {
+                    const halfIdx = Math.ceil(subjects.length / 2);
+                    const subjectsPart1 = subjects.slice(0, halfIdx);
+                    const subjectsPart2 = subjects.slice(halfIdx);
+
+                    return (
+                      <div className="space-y-4">
+                        {/* PART 1 TABLE */}
+                        <div>
+                          <div className="text-[11px] font-black text-lime-900 mb-1">भाग १ : प्रथम व द्वितीय भाषा, गणित</div>
+                          <table className="w-full border-collapse border border-lime-600 text-xs text-center font-medium">
+                            <thead>
+                              <tr className="bg-lime-200 text-slate-900 font-extrabold border-b border-lime-600">
+                                <th className="border border-lime-600 p-1.5 w-10" rowSpan={3}>अ. क्र.</th>
+                                <th className="border border-lime-600 p-1.5 text-left w-48" rowSpan={3}>विद्यार्थ्याचे नाव</th>
+                                {subjectsPart1.map((sub) => {
+                                  const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
+                                  return (
+                                    <th key={sub} className="border border-lime-600 p-1" colSpan={isPractical ? 3 : 4}>
+                                      {sub}
+                                    </th>
+                                  );
+                                })}
+                              </tr>
+                              <tr className="bg-lime-200 text-slate-900 font-extrabold border-b border-lime-600">
+                                {subjectsPart1.map((sub) => {
+                                  const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
+                                  return isPractical ? (
+                                    <React.Fragment key={sub}>
+                                      <th className="border border-lime-600 p-1 text-[11px]" rowSpan={2}>अ<br/><span className="text-[9px] font-normal">आकारिक</span></th>
+                                      <th className="border border-lime-600 p-1 text-[11px]" rowSpan={2}>एकूण</th>
+                                      <th className="border border-lime-600 p-1 text-[11px]" rowSpan={2}>श्रेणी</th>
+                                    </React.Fragment>
+                                  ) : (
+                                    <React.Fragment key={sub}>
+                                      <th className="border border-lime-600 p-1 text-[11px]">अ</th>
+                                      <th className="border border-lime-600 p-1 text-[11px]">ब</th>
+                                      <th className="border border-lime-600 p-1 text-[11px]" rowSpan={2}>एकूण</th>
+                                      <th className="border border-lime-600 p-1 text-[11px]" rowSpan={2}>श्रेणी</th>
+                                    </React.Fragment>
+                                  );
+                                })}
+                              </tr>
+                              <tr className="bg-lime-200 text-slate-900 font-extrabold border-b border-lime-600">
+                                {subjectsPart1.map((sub) => {
+                                  const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
+                                  if (isPractical) return null;
+                                  return (
+                                    <React.Fragment key={sub}>
+                                      <th className="border border-lime-600 p-0.5 text-[9px] font-normal">आकारिक</th>
+                                      <th className="border border-lime-600 p-0.5 text-[9px] font-normal">संकलित</th>
+                                    </React.Fragment>
+                                  );
+                                })}
+                              </tr>
+                              {/* Sub-Header Row: Max Marks */}
+                              <tr className="bg-lime-100 text-slate-900 font-black border-b border-lime-600 text-[10px]">
+                                <td className="border border-lime-600 p-1"></td>
+                                <td className="border border-lime-600 p-1 text-left font-black">पैकी</td>
+                                {subjectsPart1.map((sub) => {
+                                  const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
+                                  return isPractical ? (
+                                    <React.Fragment key={sub}>
+                                      <td className="border border-lime-600 p-1">100</td>
+                                      <td className="border border-lime-600 p-1">100</td>
+                                      <td className="border border-lime-600 p-1"></td>
+                                    </React.Fragment>
+                                  ) : (
+                                    <React.Fragment key={sub}>
+                                      <td className="border border-lime-600 p-1">70</td>
+                                      <td className="border border-lime-600 p-1">30</td>
+                                      <td className="border border-lime-600 p-1">100</td>
+                                      <td className="border border-lime-600 p-1"></td>
+                                    </React.Fragment>
+                                  );
+                                })}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {students.map((student, idx) => {
+                                return (
+                                  <tr key={student.id} className="border-b border-lime-300 hover:bg-lime-50/40">
+                                    <td className="border border-lime-600 p-1.5 font-bold">{idx + 1}</td>
+                                    <td className="border border-lime-600 p-1.5 text-left font-bold text-slate-900">{student.name}</td>
+                                    {subjectsPart1.map((sub) => {
+                                      const stats = getStudentSubjectStats(student, sub);
+                                      return stats.isPracticalSub ? (
+                                        <React.Fragment key={sub}>
+                                          <td className="border border-lime-600 p-1 font-bold">{stats.formTotal || "-"}</td>
+                                          <td className="border border-lime-600 p-1 font-extrabold text-blue-900">{stats.grandTotal || "-"}</td>
+                                          <td className="border border-lime-600 p-1 font-bold text-emerald-800">{stats.gradeStr}</td>
+                                        </React.Fragment>
+                                      ) : (
+                                        <React.Fragment key={sub}>
+                                          <td className="border border-lime-600 p-1 font-bold">{stats.formTotal || "-"}</td>
+                                          <td className="border border-lime-600 p-1 font-bold">{stats.semTotal || "-"}</td>
+                                          <td className="border border-lime-600 p-1 font-extrabold text-blue-900">{stats.grandTotal || "-"}</td>
+                                          <td className="border border-lime-600 p-1 font-bold text-emerald-800">{stats.gradeStr}</td>
+                                        </React.Fragment>
+                                      );
+                                    })}
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* PART 2 TABLE */}
+                        <div>
+                          <div className="text-[11px] font-black text-lime-900 mb-1">भाग २ : इतर विषय व अंतिम निकाल</div>
+                          <table className="w-full border-collapse border border-lime-600 text-xs text-center font-medium">
+                            <thead>
+                              <tr className="bg-lime-200 text-slate-900 font-extrabold border-b border-lime-600">
+                                <th className="border border-lime-600 p-1.5 w-10" rowSpan={3}>अ. क्र.</th>
+                                <th className="border border-lime-600 p-1.5 text-left w-48" rowSpan={3}>विद्यार्थ्याचे नाव</th>
+                                {subjectsPart2.map((sub) => {
+                                  const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
+                                  return (
+                                    <th key={sub} className="border border-lime-600 p-1" colSpan={isPractical ? 3 : 4}>
+                                      {sub}
+                                    </th>
+                                  );
+                                })}
+                                <th className="border border-lime-600 p-1.5 w-16" rowSpan={3}>उपस्थिती</th>
+                                <th className="border border-lime-600 p-1.5 w-16" rowSpan={3}>एकूण गुण</th>
+                                <th className="border border-lime-600 p-1.5 w-16" rowSpan={3}>टक्केवारी</th>
+                                <th className="border border-lime-600 p-1.5 w-16" rowSpan={3}>अंतिम श्रेणी</th>
+                              </tr>
+                              <tr className="bg-lime-200 text-slate-900 font-extrabold border-b border-lime-600">
+                                {subjectsPart2.map((sub) => {
+                                  const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
+                                  return isPractical ? (
+                                    <React.Fragment key={sub}>
+                                      <th className="border border-lime-600 p-1 text-[11px]" rowSpan={2}>अ<br/><span className="text-[9px] font-normal">आकारिक</span></th>
+                                      <th className="border border-lime-600 p-1 text-[11px]" rowSpan={2}>एकूण</th>
+                                      <th className="border border-lime-600 p-1 text-[11px]" rowSpan={2}>श्रेणी</th>
+                                    </React.Fragment>
+                                  ) : (
+                                    <React.Fragment key={sub}>
+                                      <th className="border border-lime-600 p-1 text-[11px]">अ</th>
+                                      <th className="border border-lime-600 p-1 text-[11px]">ब</th>
+                                      <th className="border border-lime-600 p-1 text-[11px]" rowSpan={2}>एकूण</th>
+                                      <th className="border border-lime-600 p-1 text-[11px]" rowSpan={2}>श्रेणी</th>
+                                    </React.Fragment>
+                                  );
+                                })}
+                              </tr>
+                              <tr className="bg-lime-200 text-slate-900 font-extrabold border-b border-lime-600">
+                                {subjectsPart2.map((sub) => {
+                                  const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
+                                  if (isPractical) return null;
+                                  return (
+                                    <React.Fragment key={sub}>
+                                      <th className="border border-lime-600 p-0.5 text-[9px] font-normal">आकारिक</th>
+                                      <th className="border border-lime-600 p-0.5 text-[9px] font-normal">संकलित</th>
+                                    </React.Fragment>
+                                  );
+                                })}
+                              </tr>
+                              {/* Sub-Header Row: Max Marks */}
+                              <tr className="bg-lime-100 text-slate-900 font-black border-b border-lime-600 text-[10px]">
+                                <td className="border border-lime-600 p-1"></td>
+                                <td className="border border-lime-600 p-1 text-left font-black">पैकी</td>
+                                {subjectsPart2.map((sub) => {
+                                  const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
+                                  return isPractical ? (
+                                    <React.Fragment key={sub}>
+                                      <td className="border border-lime-600 p-1">100</td>
+                                      <td className="border border-lime-600 p-1">100</td>
+                                      <td className="border border-lime-600 p-1"></td>
+                                    </React.Fragment>
+                                  ) : (
+                                    <React.Fragment key={sub}>
+                                      <td className="border border-lime-600 p-1">70</td>
+                                      <td className="border border-lime-600 p-1">30</td>
+                                      <td className="border border-lime-600 p-1">100</td>
+                                      <td className="border border-lime-600 p-1"></td>
+                                    </React.Fragment>
+                                  );
+                                })}
+                                <td className="border border-lime-600 p-1">140</td>
+                                <td className="border border-lime-600 p-1">{subjects.length * 100}</td>
+                                <td className="border border-lime-600 p-1">100%</td>
+                                <td className="border border-lime-600 p-1"></td>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {students.map((student, idx) => {
+                                let grandObtainedTotal = 0;
+                                subjects.forEach((sub) => {
+                                  const stats = getStudentSubjectStats(student, sub);
+                                  grandObtainedTotal += stats.grandTotal;
+                                });
+                                const totalMaxMarks = subjects.length * 100;
+                                const attDays = getStudentAttendanceDays(student) || 140;
+
+                                return (
+                                  <tr key={student.id} className="border-b border-lime-300 hover:bg-lime-50/40">
+                                    <td className="border border-lime-600 p-1.5 font-bold">{idx + 1}</td>
+                                    <td className="border border-lime-600 p-1.5 text-left font-bold text-slate-900">{student.name}</td>
+                                    {subjectsPart2.map((sub) => {
+                                      const stats = getStudentSubjectStats(student, sub);
+                                      return stats.isPracticalSub ? (
+                                        <React.Fragment key={sub}>
+                                          <td className="border border-lime-600 p-1 font-bold">{stats.formTotal || "-"}</td>
+                                          <td className="border border-lime-600 p-1 font-extrabold text-blue-900">{stats.grandTotal || "-"}</td>
+                                          <td className="border border-lime-600 p-1 font-bold text-emerald-800">{stats.gradeStr}</td>
+                                        </React.Fragment>
+                                      ) : (
+                                        <React.Fragment key={sub}>
+                                          <td className="border border-lime-600 p-1 font-bold">{stats.formTotal || "-"}</td>
+                                          <td className="border border-lime-600 p-1 font-bold">{stats.semTotal || "-"}</td>
+                                          <td className="border border-lime-600 p-1 font-extrabold text-blue-900">{stats.grandTotal || "-"}</td>
+                                          <td className="border border-lime-600 p-1 font-bold text-emerald-800">{stats.gradeStr}</td>
+                                        </React.Fragment>
+                                      );
+                                    })}
+                                    <td className="border border-lime-600 p-1.5 font-bold">{attDays}</td>
+                                    <td className="border border-lime-600 p-1.5 font-black text-blue-900">{grandObtainedTotal}</td>
+                                    <td className="border border-lime-600 p-1.5 font-black text-blue-900">{((grandObtainedTotal / totalMaxMarks) * 100).toFixed(2)}%</td>
+                                    <td className="border border-lime-600 p-1.5 font-black text-emerald-900">{getGrade((grandObtainedTotal / totalMaxMarks) * 100)}</td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                <div className="flex items-center justify-between pt-6 border-t border-slate-200 mt-6 text-xs font-bold text-slate-800">
+                  <div className="text-center">
+                    <p className="font-extrabold">{schoolData.teacherName || "वर्गशिक्षक"}</p>
+                    <p className="text-[11px] text-slate-500 font-medium">वर्गशिक्षक</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="font-extrabold">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
+                    <p className="text-[11px] text-slate-500 font-medium">मुख्याध्यापक</p>
+                  </div>
+                </div>
+              </div>
+            </>
+          );
+        })()}
+
       </div>
     </div>
   );

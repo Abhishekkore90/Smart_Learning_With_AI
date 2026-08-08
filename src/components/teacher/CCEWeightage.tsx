@@ -112,7 +112,13 @@ const getSankalitTotal = (w: SubjectWeightage) => {
   );
 };
 
-const getExpectedMarks = (selectedClass: string) => {
+const getExpectedMarks = (selectedClass: string, subjectName?: string) => {
+  if (subjectName) {
+    const lower = subjectName.toLowerCase();
+    if (lower.includes("कला") || lower.includes("कार्यानुभव") || lower.includes("शारीरिक")) {
+      return { akarik: 100, sankalit: 0 };
+    }
+  }
   if (["1st", "2nd"].includes(selectedClass)) return { akarik: 70, sankalit: 30 };
   if (["3rd", "4th"].includes(selectedClass)) return { akarik: 60, sankalit: 40 };
   if (["5th", "6th"].includes(selectedClass)) return { akarik: 50, sankalit: 50 };
@@ -198,8 +204,12 @@ export function CCEWeightage({
           setDynamicSubjects(loadedSubjects);
         }
 
-        const ref = doc(db, "cce_weightage_v2", `${selectedClass}_${academicYear}`);
-        const snap = await getDoc(ref);
+        const teacherId = getTeacherId();
+        let snap = await getDoc(doc(db, "cce_weightage_v2", `${teacherId}_${selectedClass}_${academicYear}`));
+        if (!snap.exists()) {
+          snap = await getDoc(doc(db, "cce_weightage_v2", `${selectedClass}_${academicYear}`));
+        }
+
         if (snap.exists()) {
           const docData = snap.data();
           const loadedData = (docData.data || docData) as WeightageData;
@@ -282,18 +292,32 @@ export function CCEWeightage({
   const save = async () => {
     setSaving(true);
     try {
-      await setDoc(
-        doc(db, "cce_weightage_v2", `${selectedClass}_${academicYear}`),
-        {
-          class: selectedClass,
-          academicYear,
-          data,
-          semester1: data.semester1,
-          semester2: data.semester2,
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true }
-      );
+      const teacherId = getTeacherId();
+      const weightageDoc = {
+        class: selectedClass,
+        academicYear,
+        teacherId,
+        data,
+        semester1: data.semester1,
+        semester2: data.semester2,
+        updatedAt: new Date().toISOString(),
+      };
+
+      try {
+        localStorage.setItem(`cce_weightage_cache_${selectedClass}_${academicYear}`, JSON.stringify(data));
+      } catch (e) {}
+
+      const docIds = [
+        `${selectedClass}_${academicYear}`,
+      ];
+      if (teacherId) {
+        docIds.push(`${teacherId}_${selectedClass}_${academicYear}`);
+      }
+
+      for (const dId of docIds) {
+        await setDoc(doc(db, "cce_weightage_v2", dId), weightageDoc, { merge: true });
+      }
+
       toast.success("भारांश जतन झाला!");
     } catch (err: any) {
       toast.error("जतन अयशस्वी: " + err.message);
@@ -327,6 +351,27 @@ export function CCEWeightage({
     setSubjectIndex(0);
   };
 
+  const saveWeightageDocs = async (updatedData: WeightageData) => {
+    const teacherId = getTeacherId();
+    const docData = {
+      class: selectedClass,
+      academicYear,
+      data: updatedData,
+      semester1: updatedData.semester1,
+      semester2: updatedData.semester2,
+      updatedAt: new Date().toISOString(),
+    };
+
+    const targetDocIds = [`${selectedClass}_${academicYear}`];
+    if (teacherId) {
+      targetDocIds.push(`${teacherId}_${selectedClass}_${academicYear}`);
+    }
+
+    for (const dId of targetDocIds) {
+      await setDoc(doc(db, "cce_weightage_v2", dId), docData, { merge: true });
+    }
+  };
+
   const duplicateItem = async (item: WeightageItem) => {
     const clonedSubjects = JSON.parse(JSON.stringify(item.subjects || {}));
     const newItem: WeightageItem = {
@@ -343,18 +388,7 @@ export function CCEWeightage({
 
     setSaving(true);
     try {
-      await setDoc(
-        doc(db, "cce_weightage_v2", `${selectedClass}_${academicYear}`),
-        {
-          class: selectedClass,
-          academicYear,
-          data: updatedData,
-          semester1: updatedData.semester1,
-          semester2: updatedData.semester2,
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true }
-      );
+      await saveWeightageDocs(updatedData);
       toast.success("प्रत तयार झाली आणि जतन केली!");
     } catch (err: any) {
       toast.error("प्रत तयार करणे अयशस्वी: " + err.message);
@@ -372,18 +406,7 @@ export function CCEWeightage({
 
     setSaving(true);
     try {
-      await setDoc(
-        doc(db, "cce_weightage_v2", `${selectedClass}_${academicYear}`),
-        {
-          class: selectedClass,
-          academicYear,
-          data: updatedData,
-          semester1: updatedData.semester1,
-          semester2: updatedData.semester2,
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true }
-      );
+      await saveWeightageDocs(updatedData);
       toast.success("भारांश यशस्वीरित्या हटवला!");
     } catch (err: any) {
       toast.error("हटवणे अयशस्वी: " + err.message);
@@ -423,7 +446,8 @@ export function CCEWeightage({
       });
     };
 
-    const expectedMarks = getExpectedMarks(selectedClass);
+    const currSub = dynamicSubjects[subjectIndex] || "";
+    const expectedMarks = getExpectedMarks(selectedClass, currSub);
     const akarikSum = getAkarikTotal(sw);
     const sankalitSum = getSankalitTotal(sw);
 
@@ -444,18 +468,7 @@ export function CCEWeightage({
 
       setSaving(true);
       try {
-        await setDoc(
-          doc(db, "cce_weightage_v2", `${selectedClass}_${academicYear}`),
-          {
-            class: selectedClass,
-            academicYear,
-            data: updatedData,
-            semester1: updatedData.semester1,
-            semester2: updatedData.semester2,
-            updatedAt: new Date().toISOString(),
-          },
-          { merge: true }
-        );
+        await saveWeightageDocs(updatedData);
         toast.success("भारांश यशस्वीरित्या जतन करण्यात आला!");
       } catch (err: any) {
         toast.error("जतन अयशस्वी: " + err.message);
@@ -542,13 +555,14 @@ export function CCEWeightage({
           {/* Akarik Section */}
           <div className="bg-slate-50 p-5 rounded-3xl border border-slate-200 space-y-4">
             <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider">आकारिक मूल्यमापन घटक (Akarik)</h4>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               <WeightageInput label="तोंडी काम" value={sw.tondiKaam} onChange={(v) => updateField("tondiKaam", v)} />
               <WeightageInput label="प्रात्यक्षिक / प्रयोग" value={sw.pratyakshikPrayog} onChange={(v) => updateField("pratyakshikPrayog", v)} />
               <WeightageInput label="उपक्रम / कृती" value={sw.upakramKriti} onChange={(v) => updateField("upakramKriti", v)} />
               <WeightageInput label="प्रकल्प" value={sw.prakalpa} onChange={(v) => updateField("prakalpa", v)} />
               <WeightageInput label="चाचणी (लेखी)" value={sw.chaachaniLekhi} onChange={(v) => updateField("chaachaniLekhi", v)} />
               <WeightageInput label="स्वाध्याय / वर्गकार्य" value={sw.swadhyayVargakarya} onChange={(v) => updateField("swadhyayVargakarya", v)} />
+              <WeightageInput label="इतर" value={sw.itar} onChange={(v) => updateField("itar", v)} />
             </div>
           </div>
 
@@ -686,7 +700,7 @@ export function CCEWeightage({
                     <div key={sub} className="p-3 bg-slate-50/80 rounded-2xl border border-slate-100 text-xs font-bold text-slate-700">
                       <p className="text-blue-900 font-extrabold mb-1">{sub}</p>
                       <p className="text-[11px] text-slate-600 font-medium leading-relaxed">
-                        <span className="font-bold text-slate-800">आकारिक ({aTot}):</span> नोंदी: {sw.tondiKaam || 0}, प्रात्याक्षिक: {sw.pratyakshikPrayog || 0}, उपक्रम: {sw.upakramKriti || 0}, प्रकल्प: {sw.prakalpa || 0}, चाचणी: {sw.chaachaniLekhi || 0}, स्वाध्याय: {sw.swadhyayVargakarya || 0}
+                        <span className="font-bold text-slate-800">आकारिक ({aTot}):</span> तोंडी: {sw.tondiKaam || 0}, प्रात्याक्षिक: {sw.pratyakshikPrayog || 0}, उपक्रम: {sw.upakramKriti || 0}, प्रकल्प: {sw.prakalpa || 0}, चाचणी: {sw.chaachaniLekhi || 0}, स्वाध्याय: {sw.swadhyayVargakarya || 0}, इतर: {sw.itar || 0}
                       </p>
                       <p className="text-[11px] text-slate-600 font-medium leading-relaxed mt-0.5">
                         <span className="font-bold text-slate-800">संकलित ({sTot}):</span> तोंडी: {sw.sankalitTondi || 0}, प्रात्यक्षिक: {sw.sankalitPratyakshik || 0}, लेखी: {sw.sankalitLekhi || 0}

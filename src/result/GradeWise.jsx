@@ -3,7 +3,7 @@ import { ArrowLeft, Download, Printer, Loader2, RefreshCw } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { matchStudentClassAndMedium } from "./firestoreMarksHelper";
-import { getTeacherId } from "../lib/teacherIsolationHelper";
+import { getTeacherId } from "@/lib/teacherIsolationHelper";
 import { toast } from "sonner";
 
 // Default Class Definitions
@@ -144,6 +144,7 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
 
       // 3. Query all students from Firestore
       try {
+        const currentTeacherId = getTeacherId();
         const uSnap = await getDocs(query(collection(db, "users"), where("role", "==", "student")));
         const studentsByClass = {};
 
@@ -154,7 +155,7 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
           const idx = getClassIndex(rawClass);
           if (idx >= 0 && idx < INITIAL_CLASSES.length) {
             const classId = INITIAL_CLASSES[idx].id; // e.g., "1st", "2nd"
-            if (matchStudentClassAndMedium({ id: docSnap.id, ...sData }, classId, currentMedium)) {
+            if (matchStudentClassAndMedium({ id: docSnap.id, ...sData }, classId, currentMedium, currentTeacherId)) {
               if (!studentsByClass[idx]) studentsByClass[idx] = [];
               studentsByClass[idx].push({ id: docSnap.id, ...sData });
             }
@@ -187,27 +188,17 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
           // 1. Bunny storage marks
           try {
             const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
-            const aliasBunnyFile = termKey === "sem1" ? "first" : "second";
-            const b1 = await fetchJsonFromBunny(`cce_results/${clsObj.id}_${academicYear}_marks_${termKey}.json`);
+            const b1 = await fetchJsonFromBunny(`cce_results/${clsObj.id}_${academicYear}_${termKey}.json`);
             mergeDoc(b1);
-            const bAlias = await fetchJsonFromBunny(`cce_results/${clsObj.id}_${academicYear}_marks_${aliasBunnyFile}.json`);
-            mergeDoc(bAlias);
             const bGen = await fetchJsonFromBunny(`cce_results/${clsObj.id}_${academicYear}_marks.json`);
             mergeDoc(bGen);
           } catch (e) {}
 
           // 2. Firestore cce_marks_v2 documents to try
-          const currentTeacherId = getTeacherId();
           const docsToTry = [
-            ...(currentTeacherId ? [
-              `${currentTeacherId}_${clsObj.id}_${currentMedium}_${academicYear}_${termKey}`,
-              `${currentTeacherId}_${clsObj.id}_${academicYear}_${termKey}`,
-              `${currentTeacherId}_${clsObj.id}_${academicYear}`,
-            ] : []),
-            `${clsObj.id}_${currentMedium}_${academicYear}_${termKey}`,
             `${clsObj.id}_${academicYear}_${termKey}`,
-            `${clsObj.id}_${termKey}`,
             `${clsObj.id}_${academicYear}`,
+            `${clsObj.id}_${termKey}`,
             `${clsObj.id}`,
           ];
 
@@ -244,56 +235,28 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
 
             let totalObtained = 0;
             let totalMax = 0;
-            let hasAnyValidMarks = false;
 
             Object.entries(stdRecord).forEach(([subKey, subVal]) => {
               if (subVal && typeof subVal === "object") {
                 let obtained = 0;
-                let max = 100;
-                let subHasMarks = false;
-
-                const tv = subVal[termKey] || subVal[termKey === "sem1" ? "semester1" : "semester2"] || subVal;
-
-                if (typeof tv === "object") {
-                  if (tv.total !== undefined || tv.obtained !== undefined || tv.mark !== undefined || tv.score !== undefined) {
-                    obtained = Number(tv.total !== undefined ? tv.total : tv.obtained !== undefined ? tv.obtained : tv.mark !== undefined ? tv.mark : tv.score) || 0;
-                    max = Number(tv.outOf || tv.max || tv.totalMax || 100) || 100;
-                    if (obtained > 0) subHasMarks = true;
-                  } else {
-                    const markKeys = ["tondiKaam", "pratyakshikPrayog", "upakramKriti", "prakalpa", "chaachaniLekhi", "swadhyayVargakarya", "itar", "sankalitTondi", "sankalitPratyakshik", "sankalitLekhi"];
-                    markKeys.forEach((mk) => {
-                      if (tv[mk] !== undefined && tv[mk] !== null && tv[mk] !== "") {
-                        const n = Number(tv[mk]);
-                        if (!isNaN(n)) {
-                          obtained += n;
-                          if (n > 0) subHasMarks = true;
-                        }
-                      }
-                    });
-                    max = Number(tv.outOf || tv.max || tv.totalMax || 100) || 100;
-                  }
-                } else if (typeof tv === "number" || (typeof tv === "string" && !isNaN(tv))) {
-                  obtained = Number(tv);
-                  max = 100;
-                  if (obtained > 0) subHasMarks = true;
+                let max = 0;
+                if (subVal[termKey]) {
+                  const tv = subVal[termKey];
+                  obtained = Number(tv.total !== undefined ? tv.total : tv.obtained !== undefined ? tv.obtained : (Number(tv.formative || 0) + Number(tv.summative || 0))) || 0;
+                  max = Number(tv.outOf || tv.max || 100) || 100;
+                } else {
+                  obtained = Number(subVal.total !== undefined ? subVal.total : subVal.obtained !== undefined ? subVal.obtained : (Number(subVal.formative || 0) + Number(subVal.summative || 0))) || 0;
+                  max = Number(subVal.outOf || subVal.max || subVal.totalMax || 100) || 100;
                 }
-
-                if (subHasMarks) {
-                  hasAnyValidMarks = true;
-                  totalObtained += obtained;
-                  totalMax += max;
-                }
+                totalObtained += obtained;
+                totalMax += max;
               } else if (typeof subVal === "number" || (typeof subVal === "string" && !isNaN(subVal))) {
-                const num = Number(subVal);
-                if (num > 0) {
-                  hasAnyValidMarks = true;
-                  totalObtained += num;
-                  totalMax += 100;
-                }
+                totalObtained += Number(subVal);
+                totalMax += 100;
               }
             });
 
-            if (hasAnyValidMarks && totalMax > 0 && totalObtained > 0) {
+            if (totalMax > 0 && totalObtained > 0) {
               const percent = (totalObtained / totalMax) * 100;
               const gradeCat = getGradeCategory(percent);
               newMatrix[idx][gradeCat][genderKey] += 1;

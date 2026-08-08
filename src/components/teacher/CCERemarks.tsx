@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 // @ts-ignore
 import { matchStudentClassAndMedium } from "@/result/firestoreMarksHelper";
+// @ts-ignore
+import { getTeacherId } from "@/lib/teacherIsolationHelper";
 import { db } from "@/lib/firebase";
 import {
   collection,
@@ -481,6 +483,7 @@ export function CCERemarks({
       return m.includes("semi") || m.includes("सेमी");
     };
 
+    const currentTeacherId = getTeacherId();
     const q = query(
       collection(db, "users"),
       where("role", "==", "student")
@@ -489,7 +492,7 @@ export function CCERemarks({
       if (!isMounted) return;
       const raw = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Student[];
       const filtered = raw.filter((s: any) => {
-        return matchStudentClassAndMedium(s, selectedClass, selectedMedium);
+        return matchStudentClassAndMedium(s, selectedClass, selectedMedium, currentTeacherId);
       });
 
       setStudents(filtered.sort((a, b) => parseInt(a.rollNo || "999") - parseInt(b.rollNo || "999")));
@@ -520,13 +523,18 @@ export function CCERemarks({
 
     const loadAllRemarks = async () => {
       let merged: Record<string, StudentRemarks> = {};
+      const teacherId = getTeacherId();
 
+      const teacherDocId = `${teacherId}_${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`;
       const primaryDocId = `${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`;
       const fallbackDocId = `${selectedClass}_${academicYear}_${activeSemester}_marathi`;
       const genericDocId = `${selectedClass}_${academicYear}_${activeSemester}`;
 
       try {
-        let sSnap = await getDoc(doc(db, "cce_remarks_v2", primaryDocId));
+        let sSnap = teacherId ? await getDoc(doc(db, "cce_remarks_v2", teacherDocId)) : null;
+        if (!sSnap || !sSnap.exists()) {
+          sSnap = await getDoc(doc(db, "cce_remarks_v2", primaryDocId));
+        }
         if (!sSnap.exists() && selectedMedium === "semi") {
           sSnap = await getDoc(doc(db, "cce_remarks_v2", fallbackDocId));
         }
@@ -545,17 +553,18 @@ export function CCERemarks({
         }
       } catch (e) {}
 
-      if (isMounted && Object.keys(merged).length > 0) {
-        setAllRemarks((prev) => ({ ...merged, ...prev }));
+      if (isMounted) {
+        setAllRemarks(merged);
         setLoading(false);
       }
     };
 
-    const primaryRef = doc(
-      db,
-      "cce_remarks_v2",
-      `${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`
-    );
+    const teacherId = getTeacherId();
+    const activeDocId = teacherId
+      ? `${teacherId}_${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`
+      : `${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`;
+
+    const primaryRef = doc(db, "cce_remarks_v2", activeDocId);
     const unsub = onSnapshot(
       primaryRef,
       (snap) => {
@@ -645,7 +654,7 @@ export function CCERemarks({
       rawRemarks.parisar = [...new Set([...existingParisar, ...sciList])];
     }
 
-    setExpandedSubject("prathambhasha");
+    setExpandedSubject(null);
     setWriteText("");
     setRemarkSearchQuery("");
     
@@ -761,27 +770,67 @@ export function CCERemarks({
 
     // 4. Background Async Firestore Sync (non-blocking)
     try {
-      const ref = doc(
-        db,
-        "cce_remarks_v2",
-        `${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`
-      );
-      setDoc(
-        ref,
-        {
-          class: selectedClass,
-          academicYear,
-          semester: activeSemester,
-          medium: selectedMedium,
-          records: updated,
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true }
-      ).catch((err) => {
-        console.warn("Background Firestore save warning:", err);
-      });
+      const teacherId = getTeacherId();
+      const docIdsToSave = [
+        `${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`,
+      ];
+      if (teacherId) {
+        docIdsToSave.push(`${teacherId}_${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`);
+      }
+
+      for (const dId of docIdsToSave) {
+        setDoc(
+          doc(db, "cce_remarks_v2", dId),
+          {
+            class: selectedClass,
+            academicYear,
+            semester: activeSemester,
+            medium: selectedMedium,
+            teacherId,
+            records: updated,
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true }
+        ).catch((err) => {
+          console.warn("Background Firestore save warning:", err);
+        });
+      }
     } catch (err: any) {
       console.warn("Background save failed:", err);
+    }
+  };
+
+  const saveAndNextSubject = async () => {
+    if (!editingStudent) return;
+    await saveStudentRemarks(false);
+
+    if (expandedSubject) {
+      const currSubIdx = availableSubjectKeys.indexOf(expandedSubject);
+      if (currSubIdx >= 0 && currSubIdx < availableSubjectKeys.length - 1) {
+        const nextSubKey = availableSubjectKeys[currSubIdx + 1];
+        setExpandedSubject(nextSubKey);
+        setRemarkSearchQuery("");
+        setTimeout(() => {
+          document.getElementById(`subject-accordion-${nextSubKey}`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }, 100);
+        return;
+      }
+    }
+
+    if (!expandedSubject && availableSubjectKeys.length > 0) {
+      const firstSubKey = availableSubjectKeys[0];
+      setExpandedSubject(firstSubKey);
+      setRemarkSearchQuery("");
+      setTimeout(() => {
+        document.getElementById(`subject-accordion-${firstSubKey}`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }, 100);
+    } else {
+      const currIdx = students.findIndex((s) => s.id === editingStudent.id);
+      if (currIdx >= 0 && currIdx < students.length - 1) {
+        openStudent(students[currIdx + 1]);
+      } else {
+        setEditingStudent(null);
+      }
     }
   };
 
@@ -899,6 +948,7 @@ export function CCERemarks({
     const currentStudentIdx = students.findIndex((s) => s.id === editingStudent.id);
     const hasPrev = currentStudentIdx > 0;
     const hasNext = currentStudentIdx < students.length - 1;
+    const isLastSubject = expandedSubject ? availableSubjectKeys.indexOf(expandedSubject) === availableSubjectKeys.length - 1 : false;
 
     return (
       <div
@@ -1026,6 +1076,7 @@ export function CCERemarks({
             return (
               <div
                 key={subKey}
+                id={`subject-accordion-${subKey}`}
                 className={`rounded-2xl transition-all duration-200 border shadow-xs overflow-hidden ${
                   isExpanded
                     ? "bg-white border-blue-300 ring-2 ring-blue-500/10 shadow-lg"
@@ -1035,8 +1086,14 @@ export function CCERemarks({
                 {/* Accordion Header */}
                 <button
                   onClick={() => {
-                    setExpandedSubject(isExpanded ? null : subKey);
+                    const isOpening = !isExpanded;
+                    setExpandedSubject(isOpening ? subKey : null);
                     setRemarkSearchQuery("");
+                    if (isOpening) {
+                      setTimeout(() => {
+                        document.getElementById(`subject-accordion-${subKey}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                      }, 50);
+                    }
                   }}
                   className="w-full flex items-center justify-between px-4 py-3.5 text-left cursor-pointer transition-colors"
                 >
@@ -1238,12 +1295,18 @@ export function CCERemarks({
           </button>
 
           <button
-            onClick={() => saveStudentRemarks(true)}
+            onClick={saveAndNextSubject}
             disabled={saving}
-            className="flex-1 max-w-md py-3.5 px-6 bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-700 hover:from-blue-700 hover:to-violet-800 active:scale-[0.99] text-white font-black text-sm rounded-2xl transition-all cursor-pointer shadow-lg shadow-blue-900/20 disabled:opacity-50 flex items-center justify-center gap-2"
+            className="flex-1 max-w-md py-3.5 px-6 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 active:scale-[0.99] text-white font-black text-sm rounded-full transition-all cursor-pointer shadow-lg shadow-orange-900/20 disabled:opacity-50 flex items-center justify-center gap-2"
           >
             <Save className="size-4" />
-            <span>{saving ? "जतन होत आहे..." : "जतन करा व पुढील विद्यार्थी →"}</span>
+            <span>
+              {saving
+                ? "जतन होत आहे..."
+                : isLastSubject
+                ? "जतन करा व पुढील विद्यार्थी →"
+                : "जतन करा व पुढील विषय →"}
+            </span>
           </button>
 
           <button

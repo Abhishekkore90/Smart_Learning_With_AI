@@ -1,3 +1,14 @@
+/* Hide spinner arrows (up/down scroll buttons) on number inputs */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 .parent-container {
     display: flex;         /* Or grid */
     flex-direction: column;
