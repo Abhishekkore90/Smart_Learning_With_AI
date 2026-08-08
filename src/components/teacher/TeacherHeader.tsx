@@ -9,19 +9,23 @@ import {
   Settings,
   Globe,
   ChevronDown,
+  ArrowLeft,
 } from "lucide-react";
 import { showToast as toast } from "@/lib/custom-toast";
 import { useLanguage } from "@/hooks/use-language";
 import { DICTIONARY } from "@/lib/translations";
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Link } from "@tanstack/react-router";
+import { Link, useLocation } from "@tanstack/react-router";
 
 export function TeacherHeader() {
   const { user } = useAuth();
   const { lang, setLang } = useLanguage();
+  const location = useLocation();
   const t = DICTIONARY[lang];
   const [langOpen, setLangOpen] = useState(false);
+
+  const isDashboard = location.pathname === "/teacher" || location.pathname === "/teacher/";
 
   const handleSignOut = async () => {
     try {
@@ -36,7 +40,7 @@ export function TeacherHeader() {
 
   return (
     <header className="bg-white/80 backdrop-blur-2xl border-b border-slate-200/60 text-slate-800 h-16 fixed top-0 left-0 right-0 z-[60] px-4 md:px-6 flex items-center justify-between shadow-[0_4px_30px_rgba(0,0,0,0.03)] transition-all">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 sm:gap-4">
         <button
           onClick={() =>
             window.dispatchEvent(new CustomEvent("toggle-teacher-sidebar"))
@@ -83,6 +87,18 @@ export function TeacherHeader() {
             </span>
           </div>
         </Link>
+
+        {/* Universal Back Button for sub-sections */}
+        {!isDashboard && (
+          <Link
+            to="/teacher"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 text-indigo-700 hover:text-indigo-900 border border-indigo-200/80 rounded-xl text-xs font-black transition-all shadow-sm active:scale-95 cursor-pointer ml-1 sm:ml-2"
+            title="मुख्य डॅशबोर्डवर मागे जा (Back to Teacher Dashboard)"
+          >
+            <ArrowLeft className="size-4 shrink-0" />
+            <span className="font-bold">मागे जा (Back)</span>
+          </Link>
+        )}
       </div>
 
       <div className="flex items-center gap-2 sm:gap-3">

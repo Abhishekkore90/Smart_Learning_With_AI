@@ -241,7 +241,7 @@ function AchievementTemplatesPage() {
                       style={{ background: template.accent }}
                     />
 
-                    <p className="text-[10px] font-black uppercase tracking-[0.8em] text-white/50 mb-3 leading-none">
+                    <p className="text-xs font-black uppercase tracking-normal text-white/80 mb-3">
                       {lang === "mr"
                         ? "यशस्वी संपादन पुरस्कार"
                         : lang === "hi"
@@ -249,7 +249,7 @@ function AchievementTemplatesPage() {
                           : "Achievement Award"}
                     </p>
                     <h5
-                      className="text-4xl md:text-5xl font-black text-white tracking-tighter leading-none px-4"
+                      className="text-4xl md:text-5xl font-black text-white tracking-normal leading-tight py-1 px-4"
                       style={{
                         backgroundImage: template.accent,
                         WebkitBackgroundClip: "text",
@@ -261,7 +261,7 @@ function AchievementTemplatesPage() {
                     </h5>
 
                     <div className="mt-10 px-12 py-5 rounded-3xl bg-black/30 backdrop-blur-xl border border-white/10 shadow-2xl">
-                      <span className="text-xs font-black text-white uppercase tracking-[0.3em] italic">
+                      <span className="text-xs font-black text-white uppercase tracking-wider italic">
                         {achievementType}
                       </span>
                     </div>

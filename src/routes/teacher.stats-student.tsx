@@ -1,5 +1,5 @@
 import React from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import { useState } from "react";
@@ -9,6 +9,7 @@ import {
   Camera,
   ChevronLeft,
   ChevronRight,
+  ArrowLeft,
 } from "lucide-react";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas-pro";
@@ -2755,6 +2756,15 @@ function StudentPortfolioPage() {
                 विद्यार्थी संचिका - Vidyarthi Sanchika
               </h2>
             </div>
+            <Link
+              to="/teacher"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#f5d060]/10 hover:bg-[#f5d060]/20 text-[#f5d060] border border-[#c9a227]/50 rounded-xl text-xs font-black transition-all shadow-sm active:scale-95 cursor-pointer ml-1 sm:ml-2"
+              style={{ fontFamily: "'Noto Sans Devanagari', sans-serif" }}
+              title="मुख्य डॅशबोर्डवर मागे जा (Back to Teacher Dashboard)"
+            >
+              <ArrowLeft className="size-4 shrink-0" />
+              <span>मागे जा (Dashboard)</span>
+            </Link>
           </div>
 
           <div className="flex items-center gap-2 md:gap-3">

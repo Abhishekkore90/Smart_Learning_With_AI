@@ -242,7 +242,7 @@ function SportsTemplatesPage() {
                       style={{ background: template.accent }}
                     />
 
-                    <p className="text-[8px] font-black uppercase tracking-[0.6em] text-white/50 mb-2 leading-none">
+                    <p className="text-xs font-black uppercase tracking-normal text-white/80 mb-2">
                       {template.type === "Invitation"
                         ? lang === "mr"
                           ? "अधिकृत क्रीडा स्पर्धा"
@@ -256,7 +256,7 @@ function SportsTemplatesPage() {
                             : "Award of Excellence"}
                     </p>
                     <h5
-                      className="text-3xl md:text-4xl font-black text-white tracking-tighter leading-none px-4"
+                      className="text-3xl md:text-4xl font-black text-white tracking-normal leading-tight py-1 px-4"
                       style={{
                         backgroundImage: template.accent,
                         WebkitBackgroundClip: "text",
@@ -268,7 +268,7 @@ function SportsTemplatesPage() {
                     </h5>
 
                     <div className="mt-8 px-10 py-4 rounded-3xl bg-black/20 backdrop-blur-xl border border-white/10 shadow-2xl">
-                      <span className="text-[10px] font-black text-white uppercase tracking-[0.2em] italic">
+                      <span className="text-xs font-black text-white uppercase tracking-wider italic">
                         {eventName}
                       </span>
                     </div>

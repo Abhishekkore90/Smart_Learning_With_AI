@@ -5,6 +5,7 @@ export interface UploadOptions {
   folderPath?: string;
   onProgress?: (percent: number) => void;
   maxSizeBytes?: number;
+  preferredProvider?: "bunny" | "firebase";
 }
 
 export interface UploadResult {
