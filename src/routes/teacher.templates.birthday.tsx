@@ -228,11 +228,11 @@ function BirthdayTemplatesPage() {
                       className="h-0.5 w-10 bg-white/30 rounded-full mb-4"
                       style={{ background: template.accent }}
                     />
-                    <p className="text-[8px] font-black uppercase tracking-[0.4em] text-white/40 mb-1">
+                    <p className="text-xs font-black uppercase tracking-normal text-white/80 mb-1">
                       {lang === "mr" ? "नाव" : lang === "hi" ? "नाम" : "Presented To"}
                     </p>
                     <h5
-                      className="text-2xl font-black text-white tracking-tighter leading-none"
+                      className="text-2xl font-black text-white tracking-normal leading-tight py-1"
                       style={{
                         backgroundImage: template.accent,
                         WebkitBackgroundClip: "text",
@@ -242,7 +242,7 @@ function BirthdayTemplatesPage() {
                       {studentName}
                     </h5>
                     <div className="mt-4 px-6 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/10">
-                      <span className="text-[8px] font-black text-white uppercase tracking-widest">
+                      <span className="text-xs font-black text-white uppercase tracking-wider">
                         {studentClass}
                       </span>
                     </div>

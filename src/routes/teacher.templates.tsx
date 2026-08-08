@@ -1,8 +1,8 @@
-import { createFileRoute, Outlet, useNavigate, useLocation } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useNavigate, useLocation, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
-import { Star, GraduationCap, Trophy, Music, Sparkles, Award, ArrowRight } from "lucide-react";
+import { Star, GraduationCap, Trophy, Music, Sparkles, Award, ArrowRight, ArrowLeft } from "lucide-react";
 import { useLanguage } from "@/hooks/use-language";
 import { DICTIONARY } from "@/lib/translations";
 
@@ -89,6 +89,14 @@ function TemplatesLayout() {
 
         <main className="lg:pl-0 pt-16 min-h-screen">
           <div className="p-6 md:p-10 max-w-full mx-auto space-y-8 flex flex-col justify-center min-h-[calc(100vh-8rem)]">
+            <div className="flex items-center justify-between gap-4 max-w-4xl mx-auto w-full">
+              <Link
+                to="/teacher"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
+              >
+                <ArrowLeft className="size-4" /> मुख्य डॅशबोर्डवर मागे जा (Back to Dashboard)
+              </Link>
+            </div>
             <div className="text-center space-y-2">
               <h2 className="text-3xl font-black text-slate-900 tracking-tight">Select Template Category / वर्ग निवडा</h2>
               <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest">Choose a template type to view and download</p>

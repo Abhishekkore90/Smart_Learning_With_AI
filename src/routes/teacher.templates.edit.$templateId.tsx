@@ -839,7 +839,7 @@ function TemplateEditorPage() {
 
               <div className="space-y-8">
                 <div className="space-y-2 group">
-                  <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">
+                  <label className="text-xs sm:text-sm font-extrabold text-slate-700 ml-1 tracking-normal block">
                     {lang === "mr"
                       ? "विद्यार्थ्याचे पूर्ण नाव"
                       : lang === "hi"
@@ -860,7 +860,7 @@ function TemplateEditorPage() {
                 </div>
 
                 <div className="space-y-2 group">
-                  <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">
+                  <label className="text-xs sm:text-sm font-extrabold text-slate-700 ml-1 tracking-normal block">
                     {isAnnual ? (
                       lang === "mr" ? "कामगिरीची भूमिका" : lang === "hi" ? "प्रदर्शन की भूमिका" : "Performance Role"
                     ) : isCultural ? (
@@ -902,7 +902,7 @@ function TemplateEditorPage() {
                 </div>
 
                 <div className="space-y-2 group">
-                  <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">
+                  <label className="text-xs sm:text-sm font-extrabold text-slate-700 ml-1 tracking-normal block">
                     {lang === "mr" ? "कार्ड मथळा (Title)" : lang === "hi" ? "कार्ड का शीर्षक" : "Card Title"}
                   </label>
                   <div className="bg-slate-50 rounded-[2rem] flex items-center gap-4 px-8 border-2 border-transparent focus-within:bg-white focus-within:border-indigo-500/20 transition-all shadow-inner">
@@ -917,7 +917,7 @@ function TemplateEditorPage() {
                 </div>
 
                 <div className="space-y-2 group">
-                  <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">
+                  <label className="text-xs sm:text-sm font-extrabold text-slate-700 ml-1 tracking-normal block">
                     {lang === "mr" ? "शुभेच्छा संदेश (Quote)" : lang === "hi" ? "शुभकामना संदेश (Quote)" : "Wishing Message / Quote"}
                   </label>
                   <div className="bg-slate-50 rounded-[2.5rem] flex items-start gap-4 px-8 py-4 border-2 border-transparent focus-within:bg-white focus-within:border-indigo-500/20 transition-all shadow-inner">
@@ -933,7 +933,7 @@ function TemplateEditorPage() {
 
                 {/* Photo Upload Option */}
                 <div className="space-y-2 group">
-                  <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 ml-1">
+                  <label className="text-xs sm:text-sm font-extrabold text-slate-700 ml-1 tracking-normal block">
                     {lang === "mr" ? "विद्यार्थ्याचा फोटो जोडा" : lang === "hi" ? "छात्र का फोटो जोड़ें" : "Add Student Photo"}
                   </label>
                   <div className="flex gap-4 items-center">
@@ -1093,7 +1093,7 @@ function TemplateEditorPage() {
                     key={configToUse.title}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="text-5xl font-black text-white tracking-tighter mb-4 italic drop-shadow-2xl"
+                    className="text-5xl font-black text-white tracking-normal py-1 mb-4 italic drop-shadow-2xl"
                   >
                     {configToUse.title}
                   </motion.h1>
@@ -1106,14 +1106,14 @@ function TemplateEditorPage() {
                   />
 
                   <div className="space-y-4 mb-10">
-                    <p className="text-white/40 font-black uppercase tracking-[0.8em] text-[10px]">
+                    <p className="text-white/80 font-black uppercase tracking-normal text-xs sm:text-sm">
                       {lang === "mr" ? "नाव" : lang === "hi" ? "नाम" : "Presented To"}
                     </p>
                     <motion.h2
                       key={studentName}
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      className="text-5xl md:text-6xl font-black tracking-tighter leading-none"
+                      className="text-5xl md:text-6xl font-black tracking-normal leading-tight py-1"
                       style={{
                         backgroundImage: isDownloading ? "none" : configToUse.accent,
                         WebkitBackgroundClip: isDownloading ? "unset" : "text",
@@ -1151,7 +1151,7 @@ function TemplateEditorPage() {
                     ) : (
                       <GraduationCap className="size-5 text-white/70" />
                     )}
-                    <span className="text-white font-black text-sm tracking-[0.2em] uppercase italic">
+                    <span className="text-white font-black text-sm tracking-wider uppercase italic">
                       {studentClass}
                     </span>
                   </motion.div>
@@ -1179,7 +1179,7 @@ function TemplateEditorPage() {
               <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 to-white/0 pointer-events-none group-hover:translate-x-full transition-transform duration-1500 ease-in-out" />
             </motion.div>
 
-            <p className="mt-8 text-slate-400 text-[10px] font-black uppercase tracking-[0.4em] flex items-center justify-center gap-3">
+            <p className="mt-8 text-slate-600 font-extrabold text-xs sm:text-sm tracking-normal flex items-center justify-center gap-3">
               <PartyPopper className="size-4 text-pink-500" /> {lang === "mr" ? "अल्ट्रा-प्रीमियम डिजिटल कार्ड" : lang === "hi" ? "अल्ट्रा-प्रीमियम डिजिटल एसेट" : "Ultra-Premium Digital Asset"}
             </p>
           </div>

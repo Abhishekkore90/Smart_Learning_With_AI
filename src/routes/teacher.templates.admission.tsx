@@ -287,7 +287,7 @@ function AdmissionTemplatesPage() {
                       style={{ background: template.accent }}
                     />
 
-                    <p className="text-[8px] font-black uppercase tracking-[0.6em] text-white/50 mb-2 leading-none">
+                    <p className="text-xs font-black uppercase tracking-normal text-white/80 mb-2">
                       {lang === "mr"
                         ? "शाळेत आपले स्वागत आहे"
                         : lang === "hi"
@@ -295,7 +295,7 @@ function AdmissionTemplatesPage() {
                           : "Welcome to the Academy"}
                     </p>
                     <h5
-                      className="text-3xl md:text-4xl font-black text-white tracking-tighter leading-none px-4"
+                      className="text-3xl md:text-4xl font-black text-white tracking-normal leading-tight py-1 px-4"
                       style={{
                         backgroundImage: template.accent,
                         WebkitBackgroundClip: "text",

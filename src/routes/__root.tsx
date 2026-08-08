@@ -144,6 +144,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
 import { AuthProvider } from "@/hooks/use-auth";
 import { Toaster } from "@/components/ui/sonner";
 import { Header } from "@/components/Header";
+import { DiaryProcessingProvider } from "@/contexts/DiaryProcessingContext";
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
@@ -151,21 +152,23 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        {/* Global Corner Glowing Ambient Orbs - Green-Yellow Nature Theme */}
-        <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none">
-          {/* Top Left - Deep Dark Green (#063B00) */}
-          <div className="absolute -top-48 -left-48 w-[400px] h-[400px] sm:w-[500px] sm:h-[500px] rounded-full bg-[#063B00]/20 dark:bg-[#063B00]/40 blur-[100px] sm:blur-[130px]" />
-          {/* Top Right - Forest Green (#266210) */}
-          <div className="absolute -top-48 -right-48 w-[400px] h-[400px] sm:w-[500px] sm:h-[500px] rounded-full bg-[#266210]/20 dark:bg-[#266210]/30 blur-[100px] sm:blur-[130px]" />
-          {/* Bottom Left - Lime Green (#90B800) */}
-          <div className="absolute -bottom-48 -left-48 w-[400px] h-[400px] sm:w-[500px] sm:h-[500px] rounded-full bg-[#90B800]/15 dark:bg-[#90B800]/20 blur-[100px] sm:blur-[130px]" />
-          {/* Bottom Right - Yellow (#E1E100) */}
-          <div className="absolute -bottom-48 -right-48 w-[400px] h-[400px] sm:w-[500px] sm:h-[500px] rounded-full bg-[#E1E100]/10 dark:bg-[#E1E100]/15 blur-[100px] sm:blur-[130px]" />
-        </div>
+        <DiaryProcessingProvider>
+          {/* Global Corner Glowing Ambient Orbs - Green-Yellow Nature Theme */}
+          <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none">
+            {/* Top Left - Deep Dark Green (#063B00) */}
+            <div className="absolute -top-48 -left-48 w-[400px] h-[400px] sm:w-[500px] sm:h-[500px] rounded-full bg-[#063B00]/20 dark:bg-[#063B00]/40 blur-[100px] sm:blur-[130px]" />
+            {/* Top Right - Forest Green (#266210) */}
+            <div className="absolute -top-48 -right-48 w-[400px] h-[400px] sm:w-[500px] sm:h-[500px] rounded-full bg-[#266210]/20 dark:bg-[#266210]/30 blur-[100px] sm:blur-[130px]" />
+            {/* Bottom Left - Lime Green (#90B800) */}
+            <div className="absolute -bottom-48 -left-48 w-[400px] h-[400px] sm:w-[500px] sm:h-[500px] rounded-full bg-[#90B800]/15 dark:bg-[#90B800]/20 blur-[100px] sm:blur-[130px]" />
+            {/* Bottom Right - Yellow (#E1E100) */}
+            <div className="absolute -bottom-48 -right-48 w-[400px] h-[400px] sm:w-[500px] sm:h-[500px] rounded-full bg-[#E1E100]/10 dark:bg-[#E1E100]/15 blur-[100px] sm:blur-[130px]" />
+          </div>
 
-        <Header />
-        <Outlet />
-        <Toaster position="top-center" richColors />
+          <Header />
+          <Outlet />
+          <Toaster position="top-center" richColors />
+        </DiaryProcessingProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
