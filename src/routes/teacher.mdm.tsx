@@ -37,6 +37,8 @@ import {
   X,
   HelpCircle,
   AlertTriangle,
+  RefreshCw,
+  Download,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
@@ -1732,36 +1734,15 @@ function TeacherMDMPage() {
     Record<string, Record<string, boolean>>
   >({});
 
-  const handleRecipeChange = (recipe: string) => {
-    setMenuType(recipe);
-    if (recipe && recipe !== "Select Menu") {
-      if (recipeIngredientsMap[recipe]) {
-        setSelectedMenuItems(recipeIngredientsMap[recipe]);
+  const handleRecipeChange = (recipeIdOrName: string) => {
+    const rec = resolveRecipe(recipeIdOrName);
+    const targetKey = rec ? rec.id : recipeIdOrName;
+    setMenuType(targetKey);
+    if (rec) {
+      if (recipeIngredientsMap[targetKey]) {
+        setSelectedMenuItems(recipeIngredientsMap[targetKey]);
       } else {
-        setSelectedMenuItems({
-          Rice: false,
-          Pease: false,
-          Mugdal: false,
-          Cowpea: false,
-          Gram: false,
-          Masurdal: false,
-          Matki: false,
-          Moong: false,
-          Turdal: false,
-          "Soyabean Wadi": false,
-          Turmeric: false,
-          Salt: false,
-          "Onion Garlic Masala": false,
-          Cumin: false,
-          Mustard: false,
-          Chili: false,
-          "Garam Masala": false,
-          Oil: false,
-          "Milk-Milk Powder": false,
-          "Ragi Satva": false,
-          "Sugar-Jaggery": false,
-          Vegetables: false
-        });
+        setSelectedMenuItems(rec.defaultIngredients);
       }
     } else {
       setSelectedMenuItems({});
@@ -1830,6 +1811,195 @@ function TeacherMDMPage() {
     return `${baseOffset + dayNum}. ${dayName}`;
   };
 
+  // ─── Single Master Recipe List & Recipe ID Mapping ──────────────────────────────
+  interface MasterRecipe {
+    id: string;
+    name: string;
+    nameEn: string;
+    aliases: string[];
+    defaultIngredients: Record<string, boolean>;
+  }
+
+  const MASTER_RECIPES: MasterRecipe[] = [
+    {
+      id: "recipe_1",
+      name: "व्हेज पुलाव",
+      nameEn: "Vegetable Pulav",
+      aliases: ["व्हेजिटेबल पुलाव", "Vegetable Pulav", "Veg Pulav"],
+      defaultIngredients: {
+        Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
+        Vegetables: true, "Onion Garlic Masala": true
+      }
+    },
+    {
+      id: "recipe_2",
+      name: "चना पुलाव",
+      nameEn: "Chana Pulav",
+      aliases: ["चणा/हरभरा पुलाव", "चना/हरभरा पुलाव", "Chana Pulav", "Chana Pulav"],
+      defaultIngredients: {
+        Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
+        Gram: true, "Onion Garlic Masala": true, "Garam Masala": true
+      }
+    },
+    {
+      id: "recipe_3",
+      name: "मूग शेवगा वरण भात",
+      nameEn: "Moong Drumstick Dal Rice",
+      aliases: ["मूग/तूर शेवग्याचे वरण आणि भात", "Mug Shevaga Varan Bhat", "वरण भात"],
+      defaultIngredients: {
+        Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
+        Moong: true, Turdal: true
+      }
+    },
+    {
+      id: "recipe_4",
+      name: "चवळी खिचडी",
+      nameEn: "Cowpea Khichdi",
+      aliases: ["चवळी खिचडी", "Cowpea Khichadi"],
+      defaultIngredients: {
+        Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
+        Cowpea: true, "Onion Garlic Masala": true
+      }
+    },
+    {
+      id: "recipe_5",
+      name: "मटकी उसळ भात",
+      nameEn: "Matki Usal Rice",
+      aliases: ["मोड आलेल्या मटकीची उसळ व साधा शिजवलेला भात", "Sprouted Matki Usal", "मटकी उसळ"],
+      defaultIngredients: {
+        Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
+        Matki: true, "Onion Garlic Masala": true
+      }
+    },
+    {
+      id: "recipe_6",
+      name: "मसाले भात",
+      nameEn: "Spiced Rice",
+      aliases: ["मसाले भात", "Masala Rice"],
+      defaultIngredients: {
+        Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
+        "Onion Garlic Masala": true, "Garam Masala": true
+      }
+    },
+    {
+      id: "recipe_7",
+      name: "मूग डाळ खिचडी",
+      nameEn: "Moong Dal Khichdi",
+      aliases: ["मूग-डाळ खिचडी", "Mungdal Khichadi", "मूग डाळ खिचडी"],
+      defaultIngredients: {
+        Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
+        Mugdal: true
+      }
+    },
+    {
+      id: "recipe_8",
+      name: "वाटाणा पुलाव",
+      nameEn: "Peas Pulav",
+      aliases: ["मटार/वाटाणा पुलाव", "Matar Pulav", "वाटाणा पुलाव"],
+      defaultIngredients: {
+        Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
+        Pease: true, "Onion Garlic Masala": true
+      }
+    },
+    {
+      id: "recipe_9",
+      name: "वरण भात",
+      nameEn: "Dal Rice",
+      aliases: ["वरण भात", "Dal Rice"],
+      defaultIngredients: {
+        Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
+        Turdal: true
+      }
+    },
+    {
+      id: "recipe_10",
+      name: "सोयाबीन भात",
+      nameEn: "Soyabean Rice",
+      aliases: ["सोयाबीन भात", "Soyabin Pulav"],
+      defaultIngredients: {
+        Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
+        "Soyabean Wadi": true, "Onion Garlic Masala": true
+      }
+    },
+    {
+      id: "recipe_11",
+      name: "गोड लापशी",
+      nameEn: "Sweet Lapshi",
+      aliases: ["गोड लापशी", "Sweet Khichadi"],
+      defaultIngredients: {
+        Rice: true, "Sugar-Jaggery": true, "Milk-Milk Powder": true
+      }
+    },
+    {
+      id: "recipe_12",
+      name: "तांदळाची खीर",
+      nameEn: "Rice Kheer",
+      aliases: ["तांदळाची खीर", "Rice pudding"],
+      defaultIngredients: {
+        Rice: true, "Sugar-Jaggery": true, "Milk-Milk Powder": true
+      }
+    },
+    {
+      id: "recipe_13",
+      name: "नाचणी सत्व",
+      nameEn: "Ragi Porridge",
+      aliases: ["नाचणी सत्व", "ragi porridge"],
+      defaultIngredients: {
+        "Ragi Satva": true, "Sugar-Jaggery": true, "Milk-Milk Powder": true
+      }
+    },
+    {
+      id: "recipe_14",
+      name: "इतर",
+      nameEn: "Other",
+      aliases: ["इतर", "Other"],
+      defaultIngredients: {
+        Rice: true, Salt: true, Oil: true, Turmeric: true
+      }
+    }
+  ];
+
+  const resolveRecipe = (raw: string | undefined | null): MasterRecipe | undefined => {
+    if (!raw || raw === "— Select recipe —" || raw === "Select Menu" || raw === "No Menu Available") return undefined;
+    const byId = MASTER_RECIPES.find((r) => r.id === raw);
+    if (byId) return byId;
+    const cleaned = raw.trim().toLowerCase();
+    return MASTER_RECIPES.find(
+      (r) =>
+        r.name.toLowerCase() === cleaned ||
+        r.nameEn.toLowerCase() === cleaned ||
+        r.aliases.some((a) => a.toLowerCase() === cleaned)
+    );
+  };
+
+  const getRecipeName = (raw: string | undefined | null): string => {
+    const rec = resolveRecipe(raw);
+    return rec ? rec.name : (raw && raw !== "— Select recipe —" ? raw : "— Select recipe —");
+  };
+
+  const getRecipeId = (raw: string | undefined | null): string => {
+    const rec = resolveRecipe(raw);
+    return rec ? rec.id : "";
+  };
+
+  const getRecipeItemsById = (recipeIdOrName: string): Record<string, boolean> => {
+    const rec = resolveRecipe(recipeIdOrName);
+    if (rec) return rec.defaultIngredients;
+    return getRecipeItemsByName(recipeIdOrName);
+  };
+
+  const getRecipeItemRate = (itemName: string, classStr: string): number => {
+    const rule = quantityRules.find(
+      (r) => r.item.toLowerCase() === itemName.toLowerCase(),
+    );
+    if (rule) {
+      const qtyStr = classStr === "6 To 8" ? rule.qty68 : rule.qty15;
+      const qty = Number(qtyStr) || 0;
+      return qty >= 1 ? qty / 1000 : qty;
+    }
+    return 0.05;
+  };
+
   const getRecipeItemsByName = (recipeName: string): Record<string, boolean> => {
     if (!recipeName || recipeName === "No Menu Available" || recipeName === "— Select recipe —" || recipeName === "Select Menu") {
       return {};
@@ -1851,7 +2021,7 @@ function TeacherMDMPage() {
       items["Turdal"] = true;
     }
     if (nameLower.includes("मूग") || nameLower.includes("mung") || nameLower.includes("moong")) {
-      if (nameLower.includes("उसळ") || nameLower.includes("अख्खा")) {
+      if (nameLower.includes("उसळ") || nameLower.includes("अख्खा") || nameLower.includes("शेवगा") || nameLower.includes("तूर")) {
         items["Moong"] = true;
       } else {
         items["Mugdal"] = true;
@@ -2007,7 +2177,7 @@ function TeacherMDMPage() {
     // 2. Derive items from menu set in Monthly Calendar or Master Menu
     const currentMenu = getMenuForRegisterDate(dateStr, classStr);
     if (currentMenu && currentMenu !== "No Menu Available" && currentMenu !== "— Select recipe —") {
-      const recipeItems = getRecipeItemsByName(currentMenu);
+      const recipeItems = getRecipeItemsById(currentMenu);
       if (recipeItems && Object.values(recipeItems).some(Boolean)) {
         return recipeItems;
       }
@@ -2127,6 +2297,28 @@ function TeacherMDMPage() {
 
   // Current Stock States
   const [stockYear, setStockYear] = useState("2026");
+  const [stockAsOnDate, setStockAsOnDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
+
+  const handleStockDateChange = (newDateStr: string) => {
+    setStockAsOnDate(newDateStr);
+    if (newDateStr) {
+      const parts = newDateStr.split("-");
+      if (parts.length === 3) {
+        const year = parts[0];
+        const monthIndex = parseInt(parts[1], 10) - 1;
+        const monthNames = [
+          "January", "February", "March", "April", "May", "June",
+          "July", "August", "September", "October", "November", "December"
+        ];
+        if (monthIndex >= 0 && monthIndex <= 11) {
+          setStockYear(year);
+          setStockMonth(monthNames[monthIndex]);
+        }
+      }
+    }
+  };
   const [showStockReportModal, setShowStockReportModal] = useState(false);
   const [stockRecords, setStockRecords] = useState<
     { item: string; prev: number; received: number; cookedDays: number; beneficiary: number; used: number; damaged?: number }[]
@@ -2400,10 +2592,11 @@ function TeacherMDMPage() {
         },
         { merge: true },
       );
+      const isExistingRecord = !!(openingStockDateMap[openingStockDate]?.values && Object.keys(openingStockDateMap[openingStockDate].values).length > 0);
       toast.success(
         t(
-          `${openingStockDate} साठी आरंभीची शिल्लक यशस्वीरित्या जतन केली!`,
-          `Initial Stock for ${openingStockDate} saved successfully!`
+          `${openingStockDate} साठी आरंभीची शिल्लक यशस्वीरित्या ${isExistingRecord ? 'अद्ययावत' : 'जतन'} केली!`,
+          `Initial Stock for ${openingStockDate} ${isExistingRecord ? 'updated' : 'saved'} successfully!`
         )
       );
     } catch (e) {
@@ -2412,6 +2605,163 @@ function TeacherMDMPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleExportOpeningStockExcel = async () => {
+    try {
+      const XLSX = await import("xlsx");
+      const rows = REPORT_ITEMS.slice(0, 18).map((item, idx) => {
+        const openVal = roundStock(parseFloat(openingStockValues[item.key] || "0"));
+        const borInVal = roundStock(parseFloat(openingStockBorrowedIn[item.key] || "0"));
+        const borOutVal = roundStock(parseFloat(openingStockBorrowedOut[item.key] || "0"));
+        const lokVal = roundStock(parseFloat(openingStockLoksahabhag[item.key] || "0"));
+        const availStock = roundStock(openVal + borInVal + lokVal);
+        const isInvalid = borOutVal > availStock && borOutVal > 0;
+        const totalStock = isInvalid ? 0 : roundStock(availStock - borOutVal);
+
+        return {
+          "अ.क्र.": idx + 1,
+          "साहित्याचे नाव (Item Name)": item.nameMr,
+          "एकक (Unit)": item.unit,
+          "मागील शिल्लक (+)": openVal,
+          "उसना घेतला (+)": borInVal,
+          "उसना दिला (-)": borOutVal,
+          "लोकसहभाग (+)": lokVal,
+          "एकूण शिल्लक साठा": isInvalid ? "Invalid Entry" : totalStock,
+        };
+      });
+
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Opening Stock");
+      XLSX.writeFile(workbook, `MDM_Opening_Stock_${openingStockDate || "2026-08-01"}.xlsx`);
+      toast.success(t("Excel अहवाल यशस्वीरित्या डाऊनलोड झाला!", "Excel report downloaded successfully!"));
+    } catch (err) {
+      console.error("Excel Export Error:", err);
+      toast.error(t("Excel अहवाल डाऊनलोड करताना त्रुटी आली.", "Failed to export Excel report."));
+    }
+  };
+
+  const handleOpeningStockPdfDownload = async () => {
+    const element = document.getElementById("opening-stock-report-print");
+    if (!element) {
+      toast.error("अहवाल लोड होत आहे, कृपया थांबा...");
+      return;
+    }
+    let toastId: string | undefined;
+    try {
+      toastId = toast.loading("PDF डाऊनलोड होत आहे...");
+      const { default: html2canvas } = await import("html2canvas");
+      const { jsPDF } = await import("jspdf");
+
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+      });
+
+      const imgData = canvas.toDataURL("image/jpeg", 0.98);
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const margin = 4;
+      const availWidth = pdfWidth - margin * 2;
+      const imgHeight = (canvas.height * availWidth) / canvas.width;
+
+      pdf.addImage(imgData, "JPEG", margin, margin, availWidth, Math.min(imgHeight, pdfHeight - margin * 2));
+      pdf.save(`MDM_Opening_Stock_${openingStockDate || "2026-08-01"}.pdf`);
+
+      if (toastId) toast.dismiss(toastId);
+      toast.success("PDF यशस्वीपणे डाऊनलोड झाली!");
+    } catch (err) {
+      console.error(err);
+      if (toastId) toast.dismiss(toastId);
+      toast.error("PDF डाऊनलोड करण्यात त्रुटी आली.");
+    }
+  };
+
+  const handleOpeningStockPrint = () => {
+    const element = document.getElementById("opening-stock-report-print");
+    if (!element) {
+      toast.error("अहवाल लोड होत आहे, कृपया थांबा...");
+      return;
+    }
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      toast.error("Popup blocked. Please allow popups for printing.");
+      return;
+    }
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>MDM Opening Stock Report - ${openingStockDate}</title>
+          <style>
+            body { font-family: system-ui, -apple-system, sans-serif; padding: 20px; color: #0f172a; }
+            h2 { color: #065f46; margin-bottom: 4px; text-align: center; }
+            h3 { color: #047857; margin-top: 0; text-align: center; font-size: 14px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+            th, td { border: 1px solid #cbd5e1; padding: 8px 10px; font-size: 12px; text-align: left; }
+            th { background-color: #d1fae5; color: #064e3b; font-weight: bold; }
+            .text-center { text-align: center; }
+            .font-bold { font-weight: bold; }
+            .meta-info { margin-bottom: 15px; padding: 10px; background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; font-size: 12px; display: flex; justify-content: space-between; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h2>${profile?.schoolName || "आरंभीची शिल्लक अहवाल (MDM Opening Stock Report)"}</h2>
+            <h3>माध्यान्ह भोजन योजना • साठा व्यवस्थापन</h3>
+          </div>
+          <div class="meta-info">
+            <span><strong>दिनांक:</strong> ${openingStockDate ? new Date(openingStockDate).toLocaleDateString('mr-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : ""}</span>
+            <span><strong>यू-डायस कोड:</strong> ${getUdise()}</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 40px;" class="text-center">अ.क्र.</th>
+                <th>साहित्याचे नाव (Item Name)</th>
+                <th class="text-center">एकक</th>
+                <th class="text-center">मागील शिल्लक (+)</th>
+                <th class="text-center">उसना घेतला (+)</th>
+                <th class="text-center">उसना दिला (-)</th>
+                <th class="text-center">लोकसहभाग (+)</th>
+                <th class="text-center">एकूण शिल्लक साठा</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${REPORT_ITEMS.slice(0, 18).map((item, idx) => {
+                const openVal = Math.max(0, parseFloat(openingStockValues[item.key] || "0") || 0);
+                const borInVal = Math.max(0, parseFloat(openingStockBorrowedIn[item.key] || "0") || 0);
+                const borOutVal = Math.max(0, parseFloat(openingStockBorrowedOut[item.key] || "0") || 0);
+                const lokVal = Math.max(0, parseFloat(openingStockLoksahabhag[item.key] || "0") || 0);
+                const availStock = openVal + borInVal + lokVal;
+                const isInvalid = borOutVal > availStock && borOutVal > 0;
+                const totalStock = isInvalid ? 0 : availStock - borOutVal;
+                return `
+                  <tr>
+                    <td class="text-center font-bold">${idx + 1}</td>
+                    <td class="font-bold">${item.nameMr} (${item.key})</td>
+                    <td class="text-center">${item.unit}</td>
+                    <td class="text-center">${openVal}</td>
+                    <td class="text-center">${borInVal}</td>
+                    <td class="text-center">${borOutVal}</td>
+                    <td class="text-center">${lokVal}</td>
+                    <td class="text-center font-bold">${isInvalid ? "Invalid Entry" : totalStock.toFixed(3) + " " + item.unit}</td>
+                  </tr>
+                `;
+              }).join("")}
+            </tbody>
+          </table>
+          <script>
+            window.onload = function() { window.print(); window.close(); };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   // Stock Received (साहित्य आवक) States & Logic
@@ -2521,73 +2871,15 @@ function TeacherMDMPage() {
     return rawName;
   };
 
-  // Auto-calculate Received (प्राप्त), Borrowed (उसना), & Spent (खर्च) for selected openingStockDate
-  useEffect(() => {
-    if (!openingStockDate) return;
+  // Reusable Stock Rounding Utility to eliminate JS Floating Point Precision Artifacts (3 decimal places max)
+  const roundStock = (val: number | string | null | undefined): number => {
+    if (val === null || val === undefined || val === "") return 0;
+    const num = typeof val === "number" ? val : parseFloat(val.toString());
+    if (isNaN(num)) return 0;
+    return Math.round((num + Number.EPSILON) * 1000) / 1000;
+  };
 
-    const targetDate = openingStockDate.trim();
 
-    // 1. Calculate Received from incRecords for this date
-    const recMap: Record<string, number> = {};
-    incRecords.forEach((r) => {
-      if (r.date && r.date.trim() === targetDate && r.item && r.qty) {
-        const itemKey = getItemKeyFromName(r.item);
-        recMap[itemKey] = (recMap[itemKey] || 0) + (parseFloat(r.qty) || 0);
-      }
-    });
-
-    // 2. Calculate Borrowed (Usna / Loksahabhag) from lokRecords for this date
-    const borMap: Record<string, number> = {};
-    lokRecords.forEach((r) => {
-      if (r.date && r.date.trim() === targetDate && r.item && r.qty) {
-        const itemKey = getItemKeyFromName(r.item);
-        borMap[itemKey] = (borMap[itemKey] || 0) + (parseFloat(r.qty) || 0);
-      }
-    });
-
-    // 3. Stored date-wise data from Firestore if available
-    const storedDateData = openingStockDateMap[targetDate];
-
-    // Compute for all report items
-    const newReceived: Record<string, string> = {};
-    const newBorrowed: Record<string, string> = {};
-
-    REPORT_ITEMS.forEach((item) => {
-      const recVal = recMap[item.key] ?? (storedDateData?.received?.[item.key] ? parseFloat(storedDateData.received[item.key]) : 0);
-      newReceived[item.key] = recVal.toString();
-
-      const borVal = borMap[item.key] ?? (storedDateData?.borrowed?.[item.key] ? parseFloat(storedDateData.borrowed[item.key]) : 0);
-      newBorrowed[item.key] = borVal.toString();
-    });
-
-    setOpeningStockReceived(newReceived);
-    setOpeningStockBorrowed(newBorrowed);
-
-    if (storedDateData?.values) {
-      setOpeningStockValues(storedDateData.values);
-    }
-    if (storedDateData?.signs) {
-      setOpeningStockSigns(storedDateData.signs);
-    }
-    if (storedDateData?.spent) {
-      setOpeningStockSpent(storedDateData.spent);
-    }
-    if ((storedDateData as any)?.borrowedIn) {
-      setOpeningStockBorrowedIn((storedDateData as any).borrowedIn);
-    } else {
-      setOpeningStockBorrowedIn({});
-    }
-    if ((storedDateData as any)?.borrowedOut) {
-      setOpeningStockBorrowedOut((storedDateData as any).borrowedOut);
-    } else {
-      setOpeningStockBorrowedOut({});
-    }
-    if ((storedDateData as any)?.loksahabhag) {
-      setOpeningStockLoksahabhag((storedDateData as any).loksahabhag);
-    } else {
-      setOpeningStockLoksahabhag({});
-    }
-  }, [openingStockDate, incRecords, lokRecords, openingStockDateMap]);
 
   const handleSaveLoksahabhag = async () => {
     if (!user) return;
@@ -3684,7 +3976,7 @@ function TeacherMDMPage() {
             (Number(prevItem.prev) || 0) +
             (Number(prevItem.received) || 0) -
             (Number(prevItem.used) || 0);
-          return Math.max(0, Number(closing.toFixed(6)));
+          return Math.max(0, roundStock(closing));
         }
       }
       // If no saved history exists, carry forward from previous-previous month recursively or initial stock
@@ -3761,11 +4053,111 @@ function TeacherMDMPage() {
       const qtyKg = qty >= 1 ? qty / 1000 : qty;
       prevUsed += qtyKg * bene;
     });
-    prevUsed = Number(prevUsed.toFixed(6));
+    prevUsed = roundStock(prevUsed);
 
     const closing = prevOpening + prevReceived - prevUsed;
-    return Math.max(0, Number(closing.toFixed(6)));
+    return Math.max(0, roundStock(closing));
   };
+
+  // Auto-calculate Received, Borrowed, Spent, & Auto Carry-Forward Opening Stock for selected openingStockDate
+  useEffect(() => {
+    if (!openingStockDate) return;
+
+    const targetDate = openingStockDate.trim();
+
+    // Parse year and month from openingStockDate (YYYY-MM-DD)
+    const parts = targetDate.split("-");
+    let targetYear = "2026";
+    let targetMonth = "August";
+
+    if (parts.length === 3) {
+      targetYear = parts[0];
+      const monthIdx = parseInt(parts[1], 10) - 1;
+      const monthNames = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+      ];
+      if (monthIdx >= 0 && monthIdx <= 11) {
+        targetMonth = monthNames[monthIdx];
+      }
+    }
+
+    // 1. Calculate Received from incRecords for this date
+    const recMap: Record<string, number> = {};
+    incRecords.forEach((r) => {
+      if (r.date && r.date.trim() === targetDate && r.item && r.qty) {
+        const itemKey = getItemKeyFromName(r.item);
+        recMap[itemKey] = (recMap[itemKey] || 0) + (parseFloat(r.qty) || 0);
+      }
+    });
+
+    // 2. Calculate Borrowed (Usna / Loksahabhag) from lokRecords for this date
+    const borMap: Record<string, number> = {};
+    lokRecords.forEach((r) => {
+      if (r.date && r.date.trim() === targetDate && r.item && r.qty) {
+        const itemKey = getItemKeyFromName(r.item);
+        borMap[itemKey] = (borMap[itemKey] || 0) + (parseFloat(r.qty) || 0);
+      }
+    });
+
+    // 3. Stored date-wise data from Firestore if available
+    const storedDateData = openingStockDateMap[targetDate];
+
+    // Compute for all report items
+    const newReceived: Record<string, string> = {};
+    const newBorrowed: Record<string, string> = {};
+    const newValues: Record<string, string> = {};
+
+    REPORT_ITEMS.forEach((item) => {
+      const recVal = recMap[item.key] ?? (storedDateData?.received?.[item.key] ? parseFloat(storedDateData.received[item.key]) : 0);
+      newReceived[item.key] = recVal.toString();
+
+      const borVal = borMap[item.key] ?? (storedDateData?.borrowed?.[item.key] ? parseFloat(storedDateData.borrowed[item.key]) : 0);
+      newBorrowed[item.key] = borVal.toString();
+
+      // Auto Carry Forward: If user hasn't explicitly saved a custom value for this date, carry forward from previous month
+      if (storedDateData?.values?.[item.key] !== undefined && storedDateData.values[item.key] !== "") {
+        newValues[item.key] = storedDateData.values[item.key];
+      } else {
+        const carriedVal = getOpeningStock(targetMonth, targetYear, "1 To 5", item.key);
+        newValues[item.key] = carriedVal > 0 ? carriedVal.toString() : "0";
+      }
+    });
+
+    setOpeningStockReceived(newReceived);
+    setOpeningStockBorrowed(newBorrowed);
+    setOpeningStockValues(newValues);
+
+    if (storedDateData?.signs) {
+      setOpeningStockSigns(storedDateData.signs);
+    }
+    if (storedDateData?.spent) {
+      setOpeningStockSpent(storedDateData.spent);
+    }
+    if ((storedDateData as any)?.borrowedIn) {
+      setOpeningStockBorrowedIn((storedDateData as any).borrowedIn);
+    } else {
+      setOpeningStockBorrowedIn({});
+    }
+    if ((storedDateData as any)?.borrowedOut) {
+      setOpeningStockBorrowedOut((storedDateData as any).borrowedOut);
+    } else {
+      setOpeningStockBorrowedOut({});
+    }
+    if ((storedDateData as any)?.loksahabhag) {
+      setOpeningStockLoksahabhag((storedDateData as any).loksahabhag);
+    } else {
+      setOpeningStockLoksahabhag({});
+    }
+  }, [
+    openingStockDate,
+    incRecords,
+    lokRecords,
+    openingStockDateMap,
+    registerRecords,
+    stockRecordsHistory,
+    quantityRules
+  ]);
 
   // ─── Reactive Stock Recalculation ─────────────────────────────────────────
   useEffect(() => {
@@ -3782,19 +4174,45 @@ function TeacherMDMPage() {
 
     setStockRecords((prevRecords) => {
       const updated = prevRecords.map((item) => {
-        // ── 1. Received this month (from Incoming Entry + Loksahabhag tabs) ────────────────
-        const incomingQty = Number(incomingData[item.item]) || 0;
-        const lokQty = getLokForMonth(item.item, stockMonth, Number(stockYear) || 2026);
-        const received = incomingQty + lokQty;
-        const damaged = getDamagedForMonth(item.item, stockMonth, Number(stockYear) || 2026);
+        // ── 1. Received this month (from Incoming Entry + Loksahabhag tabs + incRecords) ────────────────
+        let incTabQty = 0;
+        const itemKey = getItemKeyFromName(item.item);
+        incRecords.forEach((r) => {
+          if (!r.date || !r.item || !r.qty) return;
+          if (stockAsOnDate && r.date.trim() > stockAsOnDate.trim()) return;
+          const rKey = getItemKeyFromName(r.item);
+          const isMatch = (rKey && rKey === itemKey) || r.item.toLowerCase().trim() === item.item.toLowerCase().trim();
+          if (isMatch) {
+            const parts = r.date.split("-");
+            if (parts.length === 3) {
+              const recYear = parts[0];
+              const monthIndex = parseInt(parts[1], 10) - 1;
+              const monthNames = [
+                "January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December"
+              ];
+              if (monthIndex >= 0 && monthIndex <= 11) {
+                const recMonth = monthNames[monthIndex];
+                if (recYear === stockYear && recMonth.toLowerCase() === stockMonth.toLowerCase()) {
+                  incTabQty += parseFloat(r.qty) || 0;
+                }
+              }
+            }
+          }
+        });
+
+        const incomingQty = roundStock((Number(incomingData[item.item]) || Number(incomingData[itemKey]) || 0) + incTabQty);
+        const lokQty = roundStock(getLokForMonth(item.item, stockMonth, Number(stockYear) || 2026, stockAsOnDate));
+        const received = roundStock(incomingQty + lokQty);
+        const damaged = roundStock(getDamagedForMonth(item.item, stockMonth, Number(stockYear) || 2026));
 
         // ── 2. Previous month closing stock (carry-forward chain) ───────────
-        const prev = getOpeningStock(
+        const prev = roundStock(getOpeningStock(
           stockMonth,
           stockYear,
           stockClass,
           item.item,
-        );
+        ));
 
         // ── 3. Used this month (from Daily Register + Quantity Rules + Menu) ─
         let totalUsedKg = 0;
@@ -3819,6 +4237,9 @@ function TeacherMDMPage() {
             recMonth.toLowerCase() !== stockMonth.toLowerCase()
           )
             return;
+
+          // Date cutoff filter: ignore register entries after stockAsOnDate
+          if (stockAsOnDate && dateStr.trim() > stockAsOnDate.trim()) return;
 
           const record = registerRecords[dateStr];
           if (!record) return;
@@ -3854,7 +4275,7 @@ function TeacherMDMPage() {
           totalUsedKg += qtyKg * bene;
         });
 
-        const used = Number(totalUsedKg.toFixed(6));
+        const used = roundStock(totalUsedKg);
         const beneficiary = benefSum; // total beneficiaries this month
 
         return {
@@ -3877,6 +4298,8 @@ function TeacherMDMPage() {
     stockYear,
     stockMonth,
     stockClass,
+    stockAsOnDate,
+    incRecords,
     incomingRecords,
     registerRecords,
     quantityRules,
@@ -5249,8 +5672,32 @@ function TeacherMDMPage() {
     ];
 
     return itemsList.map((itemName) => {
-      // 1. Received this month
-      const received = Number(incomingData[itemName]) || 0;
+      // 1. Received this month (Matrix + incRecords)
+      let incTabQty = 0;
+      const itemKey = getItemKeyFromName(itemName);
+      incRecords.forEach((r) => {
+        if (!r.date || !r.item || !r.qty) return;
+        const rKey = getItemKeyFromName(r.item);
+        const isMatch = (rKey && rKey === itemKey) || r.item.toLowerCase().trim() === itemName.toLowerCase().trim();
+        if (isMatch) {
+          const parts = r.date.split("-");
+          if (parts.length === 3) {
+            const recYear = parts[0];
+            const monthIndex = parseInt(parts[1], 10) - 1;
+            const monthNames = [
+              "January", "February", "March", "April", "May", "June",
+              "July", "August", "September", "October", "November", "December"
+            ];
+            if (monthIndex >= 0 && monthIndex <= 11) {
+              const recMonth = monthNames[monthIndex];
+              if (recYear === year && recMonth.toLowerCase() === month.toLowerCase()) {
+                incTabQty += parseFloat(r.qty) || 0;
+              }
+            }
+          }
+        }
+      });
+      const received = (Number(incomingData[itemName]) || Number(incomingData[itemKey]) || 0) + incTabQty;
 
       // 2. Previous month closing stock
       const prev = getOpeningStock(
@@ -5536,15 +5983,17 @@ function TeacherMDMPage() {
     return total;
   };
 
-  const getLokForMonth = (itemName: string, month: string, year: number) => {
+  const getLokForMonth = (itemName: string, month: string, year: number, maxDateStr?: string) => {
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
     const mIdx = monthNames.findIndex(m => m.toLowerCase() === month.toLowerCase());
     if (mIdx === -1) return 0;
     let total = 0;
+    const targetKey = getItemKeyFromName(itemName);
     lokRecords.forEach((rec) => {
+      if (maxDateStr && rec.date && rec.date.trim() > maxDateStr.trim()) return;
       const d = new Date(rec.date);
       if (!isNaN(d.getTime()) && d.getMonth() === mIdx && d.getFullYear() === year) {
-        if (rec.item.toLowerCase() === itemName.toLowerCase()) {
+        if (getItemKeyFromName(rec.item) === targetKey || rec.item.toLowerCase() === itemName.toLowerCase()) {
           total += parseFloat(rec.qty) || 0;
         }
       }
@@ -6061,17 +6510,22 @@ function TeacherMDMPage() {
                                         <td className="py-2.5 px-4">
                                           {calMode === "admin" ? (
                                             <span className="text-xs font-semibold text-slate-800 block truncate py-1">
-                                              {entry.menu || "— Select recipe —"}
+                                              {getRecipeName(entry.menu)}
                                             </span>
                                           ) : (
                                             <select
-                                              value={entry.menu || "— Select recipe —"}
-                                              onChange={(e) => handleCalEntryChange(dateStrKey, "menu", e.target.value)}
+                                              value={getRecipeId(entry.menu) || "— Select recipe —"}
+                                              onChange={(e) => {
+                                                const selectedId = e.target.value;
+                                                const selectedRec = resolveRecipe(selectedId);
+                                                handleCalEntryChange(dateStrKey, "menu", selectedRec ? selectedRec.id : selectedId);
+                                              }}
                                               disabled={entry.isHoliday}
                                               className="w-full max-w-md h-9 px-3 border border-slate-300 rounded-lg text-xs font-semibold bg-white text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500 truncate disabled:bg-slate-50 disabled:text-slate-400"
                                             >
-                                              {learnifyRecipeOptions.map((r) => (
-                                                <option key={r} value={r}>{r}</option>
+                                              <option value="— Select recipe —">— Select recipe —</option>
+                                              {MASTER_RECIPES.map((r) => (
+                                                <option key={r.id} value={r.id}>{r.name}</option>
                                               ))}
                                             </select>
                                           )}
@@ -6512,7 +6966,7 @@ function TeacherMDMPage() {
 
                     {/* Table Container */}
                     <div className="bg-white rounded-2xl border border-emerald-200 shadow-md overflow-hidden">
-                      {/* Header Title with Calendar Date Picker */}
+                      {/* Header Title with Calendar Date Picker & Export Buttons */}
                       <div className="bg-emerald-50/90 px-5 py-4 border-b border-emerald-200 flex flex-col md:flex-row md:items-center justify-between gap-3">
                         <div>
                           <h2 className="font-extrabold text-emerald-900 text-sm md:text-base uppercase tracking-wide">
@@ -6523,18 +6977,51 @@ function TeacherMDMPage() {
                           </p>
                         </div>
 
-                        {/* Calendar Date Selection Control */}
-                        <div className="flex items-center gap-2.5 bg-white px-4 py-2 rounded-xl border border-emerald-300 shadow-xs">
-                          <Calendar className="w-4 h-4 text-emerald-700 shrink-0" />
-                          <span className="text-xs font-extrabold text-slate-800 whitespace-nowrap">
-                            {lang === "mr" ? "तारीख निवडा (Date):" : "Select Date:"}
-                          </span>
-                          <input
-                            type="date"
-                            value={openingStockDate}
-                            onChange={(e) => setOpeningStockDate(e.target.value)}
-                            className="h-8 px-2.5 bg-emerald-50/50 border border-emerald-300 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none cursor-pointer"
-                          />
+                        {/* Calendar & Export Action Controls */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {/* PDF Export Button */}
+                          <button
+                            onClick={handleOpeningStockPdfDownload}
+                            className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                            title="Download PDF Report"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            <span>PDF</span>
+                          </button>
+
+                          {/* Excel Export Button */}
+                          <button
+                            onClick={handleExportOpeningStockExcel}
+                            className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                            title="Download Excel Report"
+                          >
+                            <FileSpreadsheet className="w-3.5 h-3.5" />
+                            <span>Excel</span>
+                          </button>
+
+                          {/* Print Button */}
+                          <button
+                            onClick={handleOpeningStockPrint}
+                            className="px-3 py-1.5 bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                            title="Print Report"
+                          >
+                            <Printer className="w-3.5 h-3.5" />
+                            <span>{lang === "mr" ? "प्रिंट" : "Print"}</span>
+                          </button>
+
+                          {/* Calendar Date Selection Control */}
+                          <div className="flex items-center gap-2 bg-white px-3 py-1 rounded-xl border border-emerald-300 shadow-xs">
+                            <Calendar className="w-4 h-4 text-emerald-700 shrink-0" />
+                            <span className="text-xs font-extrabold text-slate-800 whitespace-nowrap">
+                              {lang === "mr" ? "तारीख निवडा:" : "Select Date:"}
+                            </span>
+                            <input
+                              type="date"
+                              value={openingStockDate}
+                              onChange={(e) => setOpeningStockDate(e.target.value)}
+                              className="h-7 px-2 bg-emerald-50/50 border border-emerald-300 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none cursor-pointer"
+                            />
+                          </div>
                         </div>
                       </div>
 
@@ -6563,14 +7050,14 @@ function TeacherMDMPage() {
                           </thead>
                           <tbody className="divide-y divide-slate-200">
                             {REPORT_ITEMS.slice(0, 18).map((item, idx) => {
-                              const openVal = Math.max(0, parseFloat(openingStockValues[item.key] || "0") || 0);
-                              const borInVal = Math.max(0, parseFloat(openingStockBorrowedIn[item.key] || "0") || 0);
-                              const borOutVal = Math.max(0, parseFloat(openingStockBorrowedOut[item.key] || "0") || 0);
-                              const lokVal = Math.max(0, parseFloat(openingStockLoksahabhag[item.key] || "0") || 0);
+                              const openVal = roundStock(parseFloat(openingStockValues[item.key] || "0"));
+                              const borInVal = roundStock(parseFloat(openingStockBorrowedIn[item.key] || "0"));
+                              const borOutVal = roundStock(parseFloat(openingStockBorrowedOut[item.key] || "0"));
+                              const lokVal = roundStock(parseFloat(openingStockLoksahabhag[item.key] || "0"));
 
-                              const availStock = openVal + borInVal + lokVal;
+                              const availStock = roundStock(openVal + borInVal + lokVal);
                               const isInvalid = borOutVal > availStock && borOutVal > 0;
-                              const totalStock = isInvalid ? 0 : availStock - borOutVal;
+                              const totalStock = isInvalid ? 0 : roundStock(availStock - borOutVal);
 
                               return (
                                 <tr key={item.key} className={`hover:bg-emerald-50/40 transition-colors ${idx % 2 === 0 ? "bg-white" : "bg-slate-50/50"}`}>
@@ -6674,7 +7161,7 @@ function TeacherMDMPage() {
                       </div>
                     </div>
 
-                    {/* Save Button */}
+                    {/* Save / Update Button */}
                     <div className="pt-2 flex items-center justify-end">
                       {(() => {
                         const hasInvalid = REPORT_ITEMS.slice(0, 18).some((item) => {
@@ -6685,6 +7172,8 @@ function TeacherMDMPage() {
                           return borOutVal > (openVal + borInVal + lokVal);
                         });
 
+                        const isExistingRecord = !!(openingStockDateMap[openingStockDate]?.values && Object.keys(openingStockDateMap[openingStockDate].values).length > 0);
+
                         return (
                           <button
                             onClick={handleSaveOpeningStock}
@@ -6692,14 +7181,84 @@ function TeacherMDMPage() {
                             className={`px-6 py-3 font-extrabold text-sm rounded-xl shadow-lg transition-all flex items-center gap-2 ${
                               hasInvalid
                                 ? "bg-slate-300 text-slate-500 cursor-not-allowed"
-                                : "bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white cursor-pointer"
+                                : isExistingRecord
+                                  ? "bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white cursor-pointer"
+                                  : "bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white cursor-pointer"
                             }`}
                           >
-                            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                            <span>Save opening stock (आरंभीची शिल्लक जतन करा)</span>
+                            {saving ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : isExistingRecord ? (
+                              <RefreshCw className="w-4 h-4" />
+                            ) : (
+                              <Save className="w-4 h-4" />
+                            )}
+                            <span>
+                              {isExistingRecord
+                                ? lang === "mr"
+                                  ? "Update Entry (नोंद अद्ययावत करा)"
+                                  : "Update Entry"
+                                : lang === "mr"
+                                  ? "Save Entry (आरंभीची शिल्लक जतन करा)"
+                                  : "Save Entry"}
+                            </span>
                           </button>
                         );
                       })()}
+                    </div>
+
+                    {/* Hidden Printable Container for PDF & Print Export */}
+                    <div id="opening-stock-report-print" className="hidden print:block p-6 bg-white text-slate-900">
+                      <div className="text-center border-b-2 border-emerald-700 pb-3 mb-4">
+                        <h2 className="text-lg font-black text-emerald-900 uppercase">
+                          {profile?.schoolName || "माध्यान्ह भोजन योजना"}
+                        </h2>
+                        <h3 className="text-sm font-bold text-emerald-700 mt-1">
+                          आरंभीची शिल्लक अहवाल (MDM Opening Stock Monthly Report)
+                        </h3>
+                        <p className="text-xs font-semibold text-slate-600 mt-1">
+                          दिनांक: {openingStockDate ? new Date(openingStockDate).toLocaleDateString('mr-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : ""} • UDISE: {getUdise()}
+                        </p>
+                      </div>
+                      <table className="w-full text-xs border-collapse border border-slate-300">
+                        <thead>
+                          <tr className="bg-emerald-100 border-b border-slate-300 text-emerald-950 font-bold">
+                            <th className="p-2 border border-slate-300 text-center">अ.क्र.</th>
+                            <th className="p-2 border border-slate-300 text-left">साहित्याचे नाव</th>
+                            <th className="p-2 border border-slate-300 text-center">एकक</th>
+                            <th className="p-2 border border-slate-300 text-center">मागील शिल्लक (+)</th>
+                            <th className="p-2 border border-slate-300 text-center">उसना घेतला (+)</th>
+                            <th className="p-2 border border-slate-300 text-center">उसना दिला (-)</th>
+                            <th className="p-2 border border-slate-300 text-center">लोकसहभाग (+)</th>
+                            <th className="p-2 border border-slate-300 text-center">एकूण शिल्लक साठा</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {REPORT_ITEMS.slice(0, 18).map((item, idx) => {
+                            const openVal = Math.max(0, parseFloat(openingStockValues[item.key] || "0") || 0);
+                            const borInVal = Math.max(0, parseFloat(openingStockBorrowedIn[item.key] || "0") || 0);
+                            const borOutVal = Math.max(0, parseFloat(openingStockBorrowedOut[item.key] || "0") || 0);
+                            const lokVal = Math.max(0, parseFloat(openingStockLoksahabhag[item.key] || "0") || 0);
+                            const availStock = openVal + borInVal + lokVal;
+                            const isInvalid = borOutVal > availStock && borOutVal > 0;
+                            const totalStock = isInvalid ? 0 : availStock - borOutVal;
+                            return (
+                              <tr key={item.key} className="border-b border-slate-200">
+                                <td className="p-2 border border-slate-300 text-center font-bold">{idx + 1}</td>
+                                <td className="p-2 border border-slate-300 font-bold">{item.nameMr} ({item.key})</td>
+                                <td className="p-2 border border-slate-300 text-center">{item.unit}</td>
+                                <td className="p-2 border border-slate-300 text-center">{openVal}</td>
+                                <td className="p-2 border border-slate-300 text-center">{borInVal}</td>
+                                <td className="p-2 border border-slate-300 text-center">{borOutVal}</td>
+                                <td className="p-2 border border-slate-300 text-center">{lokVal}</td>
+                                <td className="p-2 border border-slate-300 text-center font-black">
+                                  {isInvalid ? "Invalid Entry" : `${totalStock.toFixed(3)} ${item.unit}`}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 )}
@@ -7433,59 +7992,14 @@ function TeacherMDMPage() {
                           Recipe
                         </label>
                         <select
-                          value={menuType}
+                          value={getRecipeId(menuType) || "Select Menu"}
                           onChange={(e) => handleRecipeChange(e.target.value)}
                           className="w-full h-10 px-3.5 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-emerald-600 transition-colors"
                         >
                           <option value="Select Menu">Select Recipe</option>
-                          <option value="Vegetable Pulav">
-                            {getTranslatedMenu("Vegetable Pulav")}
-                          </option>
-                          <option value="Masala Rice">
-                            {getTranslatedMenu("Masala Rice")}
-                          </option>
-                          <option value="Matar Pulav">
-                            {getTranslatedMenu("Matar Pulav")}
-                          </option>
-                          <option value="Mungdal Khichadi">
-                            {getTranslatedMenu("Mungdal Khichadi")}
-                          </option>
-                          <option value="Cowpea Khichadi">
-                            {getTranslatedMenu("Cowpea Khichadi")}
-                          </option>
-                          <option value="Chana Pulav">
-                            {getTranslatedMenu("Chana Pulav")}
-                          </option>
-                          <option value="Soyabin Pulav">
-                            {getTranslatedMenu("Soyabin Pulav")}
-                          </option>
-                          <option value="Masuri Pulav">
-                            {getTranslatedMenu("Masuri Pulav")}
-                          </option>
-                          <option value="Egg Pulav">
-                            {getTranslatedMenu("Egg Pulav")}
-                          </option>
-                          <option value="Sprouted Matki Usal">
-                            {getTranslatedMenu("Sprouted Matki Usal")}
-                          </option>
-                          <option value="Sweet Khichadi">
-                            {getTranslatedMenu("Sweet Khichadi")}
-                          </option>
-                          <option value="Mug Shevaga Varan Bhat">
-                            {getTranslatedMenu("Mug Shevaga Varan Bhat")}
-                          </option>
-                          <option value="Rice pudding">
-                            {getTranslatedMenu("Rice pudding")}
-                          </option>
-                          <option value="ragi porridge">
-                            {getTranslatedMenu("ragi porridge")}
-                          </option>
-                          <option value="Sprouted pulses">
-                            {getTranslatedMenu("Sprouted pulses")}
-                          </option>
-                          <option value="Other">
-                            {getTranslatedMenu("Other")}
-                          </option>
+                          {MASTER_RECIPES.map((r) => (
+                            <option key={r.id} value={r.id}>{r.name}</option>
+                          ))}
                         </select>
                       </div>
 
@@ -8325,8 +8839,8 @@ function TeacherMDMPage() {
                                     : (classData?.nachniKg || ((selectedForDay ? selectedForDay["Ragi Satva"] : recipeName.includes("नाचणी")) ? (beneNum > 0 ? (beneNum * 0.015).toFixed(2) : "—") : "—"));
 
                                   const bhajiKgVal = isCurrentSelectedDate
-                                    ? (veggieKg || classData?.veggieKg || (beneNum > 0 ? (beneNum * (registerClass === "6 To 8" ? 0.05 : 0.03)).toFixed(2) : "—"))
-                                    : (classData?.veggieKg || (beneNum > 0 ? (beneNum * (registerClass === "6 To 8" ? 0.05 : 0.03)).toFixed(2) : "—"));
+                                    ? (veggieKg || classData?.veggieKg || (beneNum > 0 ? (beneNum * getRecipeItemRate("Vegetables", registerClass)).toFixed(3) : "—"))
+                                    : (classData?.veggieKg || (beneNum > 0 ? (beneNum * getRecipeItemRate("Vegetables", registerClass)).toFixed(3) : "—"));
 
                                   const purakStrVal = isCurrentSelectedDate
                                     ? (purakAhar ? (purakAharDetails || "होय") : (classData?.purakAharDetails || (classData?.purakAhar ? "होय" : "—")))
@@ -9223,7 +9737,7 @@ function TeacherMDMPage() {
                       </div>
 
                       {/* Dropdowns Row */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-2 text-slate-800 w-full">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 py-2 text-slate-800 w-full">
                         <div className="space-y-0">
                           <label className="text-sm font-bold block text-slate-800">
                             {t("वर्ष:", "Year:")}
@@ -9348,6 +9862,18 @@ function TeacherMDMPage() {
                               {t("६ ते ८", "6 To 8", "6 से 8")}
                             </option>
                           </select>
+                        </div>
+
+                        <div className="space-y-0">
+                          <label className="text-sm font-bold block text-slate-800">
+                            {t("तारीख (As on Date):", "As on Date:")}
+                          </label>
+                          <input
+                            type="date"
+                            value={stockAsOnDate}
+                            onChange={(e) => handleStockDateChange(e.target.value)}
+                            className="w-full h-10 px-3 bg-white border border-[#ccc] rounded shadow-none text-sm font-normal text-slate-800 outline-none focus:border-slate-400 cursor-pointer"
+                          />
                         </div>
                       </div>
 
