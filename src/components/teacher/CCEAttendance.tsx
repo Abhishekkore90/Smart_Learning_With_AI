@@ -6,6 +6,8 @@ import { toast } from "sonner";
 
 // @ts-ignore
 import { matchStudentClassAndMedium } from "@/result/firestoreMarksHelper";
+// @ts-ignore
+import { getTeacherId } from "@/lib/teacherIsolationHelper";
 
 interface Student {
   id: string;
@@ -64,13 +66,14 @@ export function CCEAttendance({
   // 1. Fetch student roster (Filtered by Class and Medium)
   useEffect(() => {
     const currentMedium = localStorage.getItem("cce_selected_medium") || "marathi";
+    const currentTeacherId = getTeacherId();
     const q = query(
       collection(db, "users"),
       where("role", "==", "student")
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as Student[];
-      const filtered = data.filter((s) => matchStudentClassAndMedium(s, selectedClass, currentMedium));
+      const filtered = data.filter((s) => matchStudentClassAndMedium(s, selectedClass, currentMedium, currentTeacherId));
       setStudents(filtered.sort((a, b) => parseInt(a.rollNo || "999") - parseInt(b.rollNo || "999")));
     });
     return () => unsubscribe();
@@ -322,7 +325,7 @@ export function CCEAttendance({
         </div>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto pb-28">
+        <div className="flex-1 overflow-y-auto no-scrollbar pb-28">
           {/* Student Info Card Banner */}
           <div className="mx-6 mt-5 p-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-lg shadow-blue-500/20 flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -377,17 +380,20 @@ export function CCEAttendance({
 
                   <div className="flex items-center bg-white border border-slate-200 rounded-xl overflow-hidden focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-100 transition-all shadow-inner">
                     <input
-                      type="number"
-                      min="0"
-                      max={totalDays || month.days}
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={attended === 0 ? "" : attended}
                       onChange={(e) => {
+                        const raw = e.target.value.replace(/[^0-9]/g, "");
+                        const num = raw === "" ? 0 : parseInt(raw, 10) || 0;
                         const val = Math.min(
                           totalDays || month.days,
-                          Math.max(0, parseInt(e.target.value) || 0)
+                          Math.max(0, num)
                         );
                         setMonthAttended(month.key, val);
                       }}
+                      onWheel={(e) => (e.target as HTMLElement).blur()}
                       placeholder="0"
                       className="flex-1 px-4 py-3 bg-transparent text-slate-900 text-base font-extrabold outline-none w-0"
                     />
@@ -449,7 +455,7 @@ export function CCEAttendance({
           </button>
         </div>
 
-        <div className="p-6 space-y-2.5 overflow-y-auto flex-1">
+        <div className="p-6 space-y-2.5 overflow-y-auto no-scrollbar flex-1">
           {MONTHS.map((month) => (
             <div
               key={month.key}
@@ -472,19 +478,22 @@ export function CCEAttendance({
                   −
                 </button>
                 <input
-                  type="number"
-                  min="0"
-                  max={month.days}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   value={workingDays[month.key] || 0}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/[^0-9]/g, "");
+                    const num = raw === "" ? 0 : parseInt(raw, 10) || 0;
                     setWorkingDays((prev) => ({
                       ...prev,
                       [month.key]: Math.min(
                         month.days,
-                        Math.max(0, parseInt(e.target.value) || 0)
+                        Math.max(0, num)
                       ),
-                    }))
-                  }
+                    }));
+                  }}
+                  onWheel={(e) => (e.target as HTMLElement).blur()}
                   className="w-16 text-center py-2 bg-white border-2 border-blue-500 rounded-xl text-base text-blue-700 font-black outline-none shadow-xs"
                 />
                 <button
@@ -601,7 +610,7 @@ export function CCEAttendance({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto pb-28 p-6 space-y-3">
+        <div className="flex-1 overflow-y-auto no-scrollbar pb-28 p-6 space-y-3">
           {students.map((student, idx) => {
             const attended = getAttended(student.id);
             return (
@@ -620,14 +629,17 @@ export function CCEAttendance({
 
                 <div className="flex items-center bg-white border border-slate-200 rounded-xl overflow-hidden w-32 h-11 flex-shrink-0 focus-within:border-blue-600 focus-within:ring-2 focus-within:ring-blue-100 transition-all shadow-inner">
                   <input
-                    type="number"
-                    min="0"
-                    max={totalDays}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     value={attended === 0 ? "" : attended}
                     onChange={(e) => {
-                      const val = Math.min(totalDays, Math.max(0, parseInt(e.target.value) || 0));
+                      const raw = e.target.value.replace(/[^0-9]/g, "");
+                      const num = raw === "" ? 0 : parseInt(raw, 10) || 0;
+                      const val = Math.min(totalDays, Math.max(0, num));
                       setAttended(student.id, val);
                     }}
+                    onWheel={(e) => (e.target as HTMLElement).blur()}
                     placeholder="0"
                     className="flex-1 w-0 h-full text-center bg-transparent text-slate-900 text-base font-black outline-none"
                   />
@@ -766,7 +778,7 @@ export function CCEAttendance({
       </div>
 
       {/* Main Content Area */}
-      <div className="p-6 flex-1 overflow-y-auto">
+      <div className="p-6 flex-1 overflow-y-auto no-scrollbar">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <div className="animate-spin rounded-full h-9 w-9 border-b-2 border-blue-600" />

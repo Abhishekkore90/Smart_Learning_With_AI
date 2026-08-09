@@ -112,11 +112,12 @@ export default function AnnualResultRegister({ initialClass, initialYear, onBack
       setSubjects(classSubjects);
 
       // 3. Fetch Students from Firestore
+      const currentTeacherId = getTeacherId();
       const uSnap = await getDocs(query(collection(db, "users"), where("role", "==", "student")));
       const matchedStudents = [];
       uSnap.forEach((docSnap) => {
         const sData = docSnap.data();
-        if (matchStudentClassAndMedium({ id: docSnap.id, ...sData }, selectedClass, selectedMedium)) {
+        if (matchStudentClassAndMedium({ id: docSnap.id, ...sData }, selectedClass, selectedMedium, currentTeacherId)) {
           matchedStudents.push({ id: docSnap.id, ...sData });
         }
       });
@@ -130,8 +131,6 @@ export default function AnnualResultRegister({ initialClass, initialYear, onBack
       setStudents(matchedStudents);
 
       // 4. Fetch Marks for Sem 1 & Sem 2
-      const currentTeacherId = getTeacherId();
-
       const loadSemesterMarks = async (semKey) => {
         let merged = {};
         const aliasBunny = semKey === "sem1" ? "first" : "second";

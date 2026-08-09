@@ -96,9 +96,12 @@ export function useCCEPdfData(currentClass: string, academicYear: string, medium
 
           if (!recs) {
             const docIds = [
+              teacherId ? `${teacherId}_${currentClass}_${academicYear}_${sem}_${medium}` : null,
+              teacherId ? `${teacherId}_${currentClass}_${academicYear}_${sem}` : null,
               `${currentClass}_${academicYear}_${sem}_${medium}`,
               `${currentClass}_${academicYear}_${sem}`,
-            ];
+            ].filter(Boolean) as string[];
+
             for (const dId of docIds) {
               try {
                 const rSnap = await getDoc(doc(db, "cce_remarks_v2", dId));

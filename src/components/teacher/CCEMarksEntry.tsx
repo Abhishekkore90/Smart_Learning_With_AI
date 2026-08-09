@@ -99,14 +99,17 @@ function MarksInput({
   return (
     <div className="flex items-center rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
       <input
-        type="number"
-        min="0"
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
         value={value === 0 ? "" : value}
-        onChange={(e) =>
-          onChange(e.target.value === "" ? 0 : Math.max(0, parseInt(e.target.value) || 0))
-        }
+        onChange={(e) => {
+          const raw = e.target.value.replace(/[^0-9]/g, "");
+          const num = raw === "" ? 0 : parseInt(raw, 10) || 0;
+          onChange(num);
+        }}
         placeholder="0"
-        className="flex-1 px-4 py-3 bg-transparent text-base font-extrabold outline-none w-0 text-slate-900"
+        className="flex-1 px-4 py-3 bg-transparent text-base font-extrabold outline-none w-0 text-slate-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
       />
       <span className="pr-4 text-xs font-bold text-slate-500 whitespace-nowrap">/ {max}</span>
     </div>
@@ -148,11 +151,12 @@ export function CCEMarksEntry({
 
   // Instant real-time listener for students
   useEffect(() => {
+    const currentTeacherId = getTeacherId();
     const q = query(collection(db, "users"), where("role", "==", "student"));
     const unsub = onSnapshot(q, (snap) => {
       const raw = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as (Student & { medium?: string; isSemiEnglish?: boolean })[];
       const filtered = raw.filter((s) => {
-        return matchStudentClassAndMedium(s, selectedClass, selectedMedium);
+        return matchStudentClassAndMedium(s, selectedClass, selectedMedium, currentTeacherId);
       });
       setStudents(filtered.sort((a, b) => parseInt(a.rollNo || "999") - parseInt(b.rollNo || "999")));
     });
@@ -163,6 +167,16 @@ export function CCEMarksEntry({
   useEffect(() => {
     setLoading(true);
     const currentTeacherId = getTeacherId();
+
+    try {
+      const cached = localStorage.getItem(`cce_marks_cache_${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && typeof parsed === "object") {
+          setAllMarks(parsed);
+        }
+      }
+    } catch (e) {}
 
     const unsubSettings = onSnapshot(doc(db, "cce_settings", `${selectedClass}_${academicYear}`), (snap) => {
       if (snap.exists() && snap.data().subjects) {
@@ -248,13 +262,82 @@ export function CCEMarksEntry({
   }, [selectedClass, academicYear, activeSemester, selectedMedium]);
 
   useEffect(() => {
-    const unsubWeightage = onSnapshot(doc(db, "cce_weightage_v2", `${selectedClass}_${academicYear}`), (snap) => {
-      if (snap.exists() && (snap.data().data || snap.data().semester1)) {
-        setWeightages(snap.data().data || snap.data());
+    const currentTeacherId = getTeacherId();
+    const docIds = [
+      `${currentTeacherId}_${selectedClass}_${academicYear}`,
+      `${selectedClass}_${academicYear}`,
+    ];
+
+    let unsub: () => void = () => {};
+
+    const initWeightages = async () => {
+      let loadedDocId = `${selectedClass}_${academicYear}`;
+      for (const dId of docIds) {
+        if (!dId) continue;
+        const snap = await getDoc(doc(db, "cce_weightage_v2", dId));
+        if (snap.exists() && (snap.data().data || snap.data().semester1)) {
+          setWeightages(snap.data().data || snap.data());
+          loadedDocId = dId;
+          break;
+        }
       }
-    });
-    return () => unsubWeightage();
+
+      unsub = onSnapshot(doc(db, "cce_weightage_v2", loadedDocId), (sSnap) => {
+        if (sSnap.exists() && (sSnap.data().data || sSnap.data().semester1)) {
+          setWeightages(sSnap.data().data || sSnap.data());
+        }
+      });
+    };
+
+    initWeightages();
+    return () => unsub();
   }, [selectedClass, academicYear]);
+
+  // Sync subjects directly from Weightage configuration if available
+  useEffect(() => {
+    if (!weightages) return;
+    const semesterKey = activeSemester === "sem1" ? "semester1" : "semester2";
+    const items = weightages[semesterKey] || weightages.data?.[semesterKey] || [];
+    if (items.length > 0 && items[0].subjects) {
+      const weightageSubKeys = Object.keys(items[0].subjects);
+      if (weightageSubKeys.length > 0) {
+        // Sort according to default subject order so tabs appear in correct sequence
+        const defaultOrder = getDefaultSubjectsForClass(selectedClass, selectedMedium);
+        const sorted = [...weightageSubKeys].sort((a, b) => {
+          const idxA = defaultOrder.findIndex((d) => d.toLowerCase() === a.toLowerCase() || a.toLowerCase().includes(d.toLowerCase()) || d.toLowerCase().includes(a.toLowerCase()));
+          const idxB = defaultOrder.findIndex((d) => d.toLowerCase() === b.toLowerCase() || b.toLowerCase().includes(d.toLowerCase()) || d.toLowerCase().includes(b.toLowerCase()));
+          return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
+        });
+        setSubjects(sorted);
+      }
+    }
+  }, [weightages, activeSemester, selectedClass, selectedMedium]);
+
+  const findSubjectWeightage = (subjectsObj: Record<string, any>, subjectName: string) => {
+    if (!subjectsObj) return null;
+    if (subjectsObj[subjectName]) return subjectsObj[subjectName];
+
+    const normTarget = subjectName.toLowerCase().replace(/[^a-z0-9\u0900-\u097F]/g, "");
+    for (const key of Object.keys(subjectsObj)) {
+      const normKey = key.toLowerCase().replace(/[^a-z0-9\u0900-\u097F]/g, "");
+      if (normKey === normTarget || (normKey && normTarget && (normKey.includes(normTarget) || normTarget.includes(normKey)))) {
+        return subjectsObj[key];
+      }
+    }
+
+    const keywords = ["मराठी", "इंग्रजी", "हिंदी", "गणित", "विज्ञान", "परिसर", "सामाजिक", "कला", "कार्यानुभव", "शारीरिक"];
+    const targetKw = keywords.find((kw) => subjectName.includes(kw));
+    if (targetKw) {
+      for (const key of Object.keys(subjectsObj)) {
+        if (key.includes(targetKw)) return subjectsObj[key];
+      }
+    }
+
+    const sKey = getSubjectKey(subjectName);
+    if (subjectsObj[sKey]) return subjectsObj[sKey];
+
+    return null;
+  };
 
   const getSubjectMarks = (student: Student | string, subjectName: string): SubjectMarks => {
     let stdId = typeof student === "string" ? student : student.id;
@@ -300,19 +383,31 @@ export function CCEMarksEntry({
 
   const getActiveColsForStudent = (rollNoStr: string, subjectName: string) => {
     const rollNo = parseInt(rollNoStr);
-    const defaultCols = [
-      { key: "tondiKaam", label: "तोंडीकाम", max: 20, type: "akarik" },
-      { key: "upakramKriti", label: "उपक्रम / कृती", max: 15, type: "akarik" },
-      { key: "chaachaniLekhi", label: "चाचणी (लेखी)", max: 20, type: "akarik" },
-      { key: "swadhyayVargakarya", label: "स्वाध्याय / वर्गकार्य", max: 15, type: "akarik" },
-      { key: "sankalitTondi", label: "तोंडी", max: 10, type: "sankalit" },
-      { key: "sankalitLekhi", label: "लेखी", max: 20, type: "sankalit" },
-    ];
+    const isPracticalSub =
+      subjectName.includes("कला") ||
+      subjectName.includes("कार्यानुभव") ||
+      subjectName.includes("शारीरिक");
+
+    const defaultCols = isPracticalSub
+      ? [
+          { key: "pratyakshikPrayog", label: "प्रात्याक्षिक / प्रयोग", max: 40, type: "akarik" },
+          { key: "upakramKriti", label: "उपक्रम / कृती", max: 20, type: "akarik" },
+          { key: "swadhyayVargakarya", label: "स्वाध्याय / वर्गकार्य", max: 20, type: "akarik" },
+          { key: "itar", label: "इतर", max: 20, type: "akarik" },
+        ]
+      : [
+          { key: "tondiKaam", label: "तोंडीकाम", max: 20, type: "akarik" },
+          { key: "upakramKriti", label: "उपक्रम / कृती", max: 15, type: "akarik" },
+          { key: "chaachaniLekhi", label: "चाचणी (लेखी)", max: 20, type: "akarik" },
+          { key: "swadhyayVargakarya", label: "स्वाध्याय / वर्गकार्य", max: 15, type: "akarik" },
+          { key: "sankalitTondi", label: "तोंडी", max: 10, type: "sankalit" },
+          { key: "sankalitLekhi", label: "लेखी", max: 20, type: "sankalit" },
+        ];
 
     if (!weightages) return defaultCols;
 
     const semesterKey = activeSemester === "sem1" ? "semester1" : "semester2";
-    const items = weightages[semesterKey] || [];
+    const items = weightages[semesterKey] || weightages.data?.[semesterKey] || [];
     let assignedItem = items.find((item: any) => item.studentIds?.includes(rollNo));
 
     if (!assignedItem && items.length > 0) {
@@ -323,10 +418,11 @@ export function CCEMarksEntry({
       return defaultCols;
     }
 
-    const sw = assignedItem.subjects[subjectName] || assignedItem.subjects[getSubjectKey(subjectName)];
+    const sw = findSubjectWeightage(assignedItem.subjects, subjectName);
     if (!sw) {
       return defaultCols;
     }
+
     const allPossibleCols = [
       { key: "tondiKaam", label: "तोंडीकाम", max: parseInt(sw.tondiKaam) || 0, type: "akarik" },
       { key: "pratyakshikPrayog", label: "प्रात्याक्षिक / प्रयोग", max: parseInt(sw.pratyakshikPrayog) || 0, type: "akarik" },
@@ -335,9 +431,13 @@ export function CCEMarksEntry({
       { key: "chaachaniLekhi", label: "चाचणी (लेखी)", max: parseInt(sw.chaachaniLekhi) || 0, type: "akarik" },
       { key: "swadhyayVargakarya", label: "स्वाध्याय / वर्गकार्य", max: parseInt(sw.swadhyayVargakarya) || 0, type: "akarik" },
       { key: "itar", label: "इतर", max: parseInt(sw.itar) || 0, type: "akarik" },
-      { key: "sankalitTondi", label: "तोंडी", max: parseInt(sw.sankalitTondi) || 0, type: "sankalit" },
-      { key: "sankalitPratyakshik", label: "प्रात्यक्षिक", max: parseInt(sw.sankalitPratyakshik) || 0, type: "sankalit" },
-      { key: "sankalitLekhi", label: "लेखी", max: parseInt(sw.sankalitLekhi) || 0, type: "sankalit" },
+      ...(isPracticalSub
+        ? []
+        : [
+            { key: "sankalitTondi", label: "तोंडी", max: parseInt(sw.sankalitTondi) || 0, type: "sankalit" },
+            { key: "sankalitPratyakshik", label: "प्रात्यक्षिक", max: parseInt(sw.sankalitPratyakshik) || 0, type: "sankalit" },
+            { key: "sankalitLekhi", label: "लेखी", max: parseInt(sw.sankalitLekhi) || 0, type: "sankalit" },
+          ]),
     ];
 
     const activeCols = allPossibleCols.filter((col) => col.max > 0);
@@ -375,24 +475,19 @@ export function CCEMarksEntry({
   };
 
   const saveMarks = async () => {
-    setSaving(true);
+    // 1. Instant Local Cache Update (0ms)
+    try {
+      localStorage.setItem(
+        `cce_marks_cache_${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`,
+        JSON.stringify(allMarks)
+      );
+    } catch (e) {}
+
+    toast.success(`${activeSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"} चे गुण जतन झाले!`);
+
+    // 2. Background Non-Blocking Network Sync (Firestore & Bunny CDN)
     try {
       const currentTeacherId = getTeacherId();
-
-      // 1. Save to Bunny CDN Storage separately for activeSemester
-      try {
-        const { saveJsonToBunny } = await import("@/lib/bunnyStorage");
-        await saveJsonToBunny(
-          `cce_results/${selectedClass}_${academicYear}_marks_${activeSemester}.json`,
-          allMarks
-        );
-        const aliasBunnyFile = activeSemester === "sem1" 
-          ? `cce_results/${selectedClass}_${academicYear}_marks_first.json`
-          : `cce_results/${selectedClass}_${academicYear}_marks_second.json`;
-        await saveJsonToBunny(aliasBunnyFile, allMarks);
-      } catch (e) {}
-
-      // 2. Save to Firestore cce_marks_v2 separately for activeSemester
       const docData = {
         class: selectedClass,
         academicYear,
@@ -412,28 +507,39 @@ export function CCEMarksEntry({
         docIdsToSave.push(`${currentTeacherId}_${selectedClass}_${selectedMedium}_${academicYear}_${activeSemester}`);
       }
 
-      for (const dId of docIdsToSave) {
-        await setDoc(doc(db, "cce_marks_v2", dId), docData, { merge: true });
-      }
-
-      // Also merge term-nested data into general document for legacy compatibility
-      await setDoc(
-        doc(db, "cce_marks_v2", `${selectedClass}_${academicYear}`),
-        {
-          class: selectedClass,
-          academicYear,
-          [activeSemester]: allMarks,
-          [activeSemester === "sem1" ? "semester1" : "semester2"]: allMarks,
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true }
-      );
-
-      toast.success(`${activeSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"} चे गुण यशस्वीरीत्या जतन झाले!`);
+      // Fire network saves in parallel in the background without blocking the UI
+      Promise.allSettled([
+        ...docIdsToSave.map((dId) => setDoc(doc(db, "cce_marks_v2", dId), docData, { merge: true })),
+        setDoc(
+          doc(db, "cce_marks_v2", `${selectedClass}_${academicYear}`),
+          {
+            class: selectedClass,
+            academicYear,
+            [activeSemester]: allMarks,
+            [activeSemester === "sem1" ? "semester1" : "semester2"]: allMarks,
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true }
+        ),
+        (async () => {
+          try {
+            const { saveJsonToBunny } = await import("@/lib/bunnyStorage");
+            await saveJsonToBunny(
+              `cce_results/${selectedClass}_${academicYear}_marks_${activeSemester}.json`,
+              allMarks
+            );
+            const aliasBunnyFile = activeSemester === "sem1" 
+              ? `cce_results/${selectedClass}_${academicYear}_marks_first.json`
+              : `cce_results/${selectedClass}_${academicYear}_marks_second.json`;
+            await saveJsonToBunny(aliasBunnyFile, allMarks);
+          } catch (e) {}
+        })(),
+      ]).catch((err) => {
+        console.warn("Background marks save warning:", err);
+      });
     } catch (err: any) {
-      toast.error("जतन अयशस्वी: " + err.message);
+      console.warn("Background save warning:", err);
     }
-    setSaving(false);
   };
 
   // ── SUBJECT-WISE MARKS EDITOR ──
@@ -562,6 +668,7 @@ export function CCEMarksEntry({
     const studentIdx = students.indexOf(student);
     const subject = subjects[subjectIndex];
     const sm = getSubjectMarks(student.id, subject);
+    const isLastSubject = subjectIndex === subjects.length - 1;
 
     const activeCols = getActiveColsForStudent(student.rollNo || "", subject);
     const akarikCols = activeCols.filter((c) => c.type === "akarik");
@@ -584,6 +691,22 @@ export function CCEMarksEntry({
     const handlePrevStudent = () => {
       if (studentIdx > 0) {
         setEditingStudent(students[studentIdx - 1]);
+      }
+    };
+
+    const handleSaveAndNextSubject = async () => {
+      await saveMarks();
+      if (subjectIndex < subjects.length - 1) {
+        setSubjectIndex(subjectIndex + 1);
+        toast.success(`पुढील विषय: ${subjects[subjectIndex + 1]}`);
+      } else {
+        if (studentIdx < students.length - 1) {
+          setEditingStudent(students[studentIdx + 1]);
+          setSubjectIndex(0);
+          toast.success(`पुढील विद्यार्थी: ${students[studentIdx + 1].fullName || students[studentIdx + 1].name}`);
+        } else {
+          toast.success("सर्व विद्यार्थ्यांचे गुण जतन झाले!");
+        }
       }
     };
 
@@ -711,12 +834,18 @@ export function CCEMarksEntry({
         {/* Sticky glassmorphic bottom bar */}
         <div className="absolute bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-slate-200 z-30 flex items-center gap-3">
           <button
-            onClick={saveMarks}
+            onClick={handleSaveAndNextSubject}
             disabled={saving}
-            className="flex-1 py-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white font-extrabold text-sm rounded-2xl shadow-xl flex items-center justify-center gap-2 cursor-pointer"
+            className="flex-1 py-4 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 active:scale-[0.99] text-white font-extrabold text-sm rounded-full shadow-xl flex items-center justify-center gap-2 cursor-pointer transition-all"
           >
             <Save className="size-4" />
-            <span>{saving ? "जतन होत आहे..." : "जतन करा व पुढील विद्यार्थी →"}</span>
+            <span>
+              {saving
+                ? "जतन होत आहे..."
+                : isLastSubject
+                ? "जतन करा व पुढील विद्यार्थी →"
+                : "जतन करा व पुढील विषय →"}
+            </span>
           </button>
         </div>
       </div>
