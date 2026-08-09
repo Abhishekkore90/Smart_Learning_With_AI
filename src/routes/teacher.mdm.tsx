@@ -36,6 +36,7 @@ import {
   Sliders,
   X,
   HelpCircle,
+  AlertTriangle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
@@ -2283,6 +2284,9 @@ function TeacherMDMPage() {
   const [openingStockReceived, setOpeningStockReceived] = useState<Record<string, string>>({});
   const [openingStockBorrowed, setOpeningStockBorrowed] = useState<Record<string, string>>({});
   const [openingStockSpent, setOpeningStockSpent] = useState<Record<string, string>>({});
+  const [openingStockBorrowedIn, setOpeningStockBorrowedIn] = useState<Record<string, string>>({});
+  const [openingStockBorrowedOut, setOpeningStockBorrowedOut] = useState<Record<string, string>>({});
+  const [openingStockLoksahabhag, setOpeningStockLoksahabhag] = useState<Record<string, string>>({});
   const [formulaSource, setFormulaSource] = useState<"admin" | "custom">("admin");
   const [formulaRecipe, setFormulaRecipe] = useState<string>("Vegetable Pulav");
 
@@ -2295,6 +2299,27 @@ function TeacherMDMPage() {
 
   const handleOpeningStockChange = (itemKey: string, val: string) => {
     setOpeningStockValues((prev) => ({
+      ...prev,
+      [itemKey]: val,
+    }));
+  };
+
+  const handleOpeningBorrowedInChange = (itemKey: string, val: string) => {
+    setOpeningStockBorrowedIn((prev) => ({
+      ...prev,
+      [itemKey]: val,
+    }));
+  };
+
+  const handleOpeningBorrowedOutChange = (itemKey: string, val: string) => {
+    setOpeningStockBorrowedOut((prev) => ({
+      ...prev,
+      [itemKey]: val,
+    }));
+  };
+
+  const handleOpeningLoksahabhagChange = (itemKey: string, val: string) => {
+    setOpeningStockLoksahabhag((prev) => ({
       ...prev,
       [itemKey]: val,
     }));
@@ -2323,6 +2348,24 @@ function TeacherMDMPage() {
 
   const handleSaveOpeningStock = async () => {
     if (!user) return;
+    const hasInvalid = REPORT_ITEMS.slice(0, 18).some((item) => {
+      const openVal = Math.max(0, parseFloat(openingStockValues[item.key] || "0") || 0);
+      const borInVal = Math.max(0, parseFloat(openingStockBorrowedIn[item.key] || "0") || 0);
+      const borOutVal = Math.max(0, parseFloat(openingStockBorrowedOut[item.key] || "0") || 0);
+      const lokVal = Math.max(0, parseFloat(openingStockLoksahabhag[item.key] || "0") || 0);
+      return borOutVal > (openVal + borInVal + lokVal);
+    });
+
+    if (hasInvalid) {
+      toast.error(
+        t(
+          "अवैध नोंद: उसना दिलेले प्रमाण उपलब्ध साठ्यापेक्षा जास्त असू शकत नाही.",
+          "Invalid Entry: Borrowed Out quantity cannot be greater than available stock."
+        )
+      );
+      return;
+    }
+
     setSaving(true);
     try {
       const udise = getUdise();
@@ -2334,6 +2377,9 @@ function TeacherMDMPage() {
           received: openingStockReceived,
           borrowed: openingStockBorrowed,
           spent: openingStockSpent,
+          borrowedIn: openingStockBorrowedIn,
+          borrowedOut: openingStockBorrowedOut,
+          loksahabhag: openingStockLoksahabhag,
         },
       };
       setOpeningStockDateMap(updatedDateMap);
@@ -2347,6 +2393,9 @@ function TeacherMDMPage() {
           openingStockReceived,
           openingStockBorrowed,
           openingStockSpent,
+          openingStockBorrowedIn,
+          openingStockBorrowedOut,
+          openingStockLoksahabhag,
           updatedAt: new Date().toISOString(),
         },
         { merge: true },
@@ -2522,6 +2571,21 @@ function TeacherMDMPage() {
     }
     if (storedDateData?.spent) {
       setOpeningStockSpent(storedDateData.spent);
+    }
+    if ((storedDateData as any)?.borrowedIn) {
+      setOpeningStockBorrowedIn((storedDateData as any).borrowedIn);
+    } else {
+      setOpeningStockBorrowedIn({});
+    }
+    if ((storedDateData as any)?.borrowedOut) {
+      setOpeningStockBorrowedOut((storedDateData as any).borrowedOut);
+    } else {
+      setOpeningStockBorrowedOut({});
+    }
+    if ((storedDateData as any)?.loksahabhag) {
+      setOpeningStockLoksahabhag((storedDateData as any).loksahabhag);
+    } else {
+      setOpeningStockLoksahabhag({});
     }
   }, [openingStockDate, incRecords, lokRecords, openingStockDateMap]);
 
@@ -2709,6 +2773,79 @@ function TeacherMDMPage() {
       holidayReason: "",
       menu: "— Select recipe —",
       beneficiary: "0",
+    };
+  };
+
+  const checkIsDateDisabled = (dateStr: string) => {
+    if (!dateStr) return { disabled: false, isSunday: false, isHoliday: false, reason: "" };
+
+    const parts = dateStr.split("-");
+    if (parts.length !== 3) return { disabled: false, isSunday: false, isHoliday: false, reason: "" };
+
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10);
+    const day = parseInt(parts[2], 10);
+
+    const d = new Date(year, month - 1, day);
+    if (isNaN(d.getTime())) return { disabled: false, isSunday: false, isHoliday: false, reason: "" };
+
+    // 1. Sunday check
+    const isSunday = d.getDay() === 0;
+    if (isSunday) {
+      return {
+        disabled: true,
+        isSunday: true,
+        isHoliday: false,
+        reason: "रविवार सुट्टी",
+      };
+    }
+
+    // 2. Fixed Admin / Govt Master Calendar Holiday check
+    const adminInfo = getAdminMasterMenuForDate(dateStr);
+    if (adminInfo?.isHoliday) {
+      return {
+        disabled: true,
+        isSunday: false,
+        isHoliday: true,
+        reason: adminInfo.holidayReason || "शासकीय सुट्टी",
+      };
+    }
+
+    // 3. Monthly Calendar Records Holiday check (for both primary 1-5 and upper 6-8)
+    const key15 = `${year}_${month}_1-5`;
+    const key68 = `${year}_${month}_6-8`;
+    const cal15 = monthlyCalendarRecords?.[key15]?.[dateStr];
+    const cal68 = monthlyCalendarRecords?.[key68]?.[dateStr];
+
+    if (cal15?.isHoliday || cal68?.isHoliday) {
+      const reason = cal15?.holidayReason || cal68?.holidayReason || "नोंदवलेली सुट्टी";
+      return {
+        disabled: true,
+        isSunday: false,
+        isHoliday: true,
+        reason,
+      };
+    }
+
+    // 4. Daily Register Record Holiday check
+    const regRec = registerRecords?.[dateStr];
+    if (regRec) {
+      const classRec = regRec[registerClass] || (registerClass === "1 To 5" ? regRec : null);
+      if (classRec?.isHoliday || regRec?.isHoliday) {
+        return {
+          disabled: true,
+          isSunday: false,
+          isHoliday: true,
+          reason: classRec?.holidayReason || regRec?.holidayReason || "नोंदवलेली सुट्टी",
+        };
+      }
+    }
+
+    return {
+      disabled: false,
+      isSunday: false,
+      isHoliday: false,
+      reason: "",
     };
   };
 
@@ -3743,8 +3880,49 @@ function TeacherMDMPage() {
     incomingRecords,
     registerRecords,
     quantityRules,
-    stockRecordsHistory,
   ]);
+
+  // ─── Low Stock Warning Computation & Auto-Trigger ─────────────────────────
+  const [showLowStockModal, setShowLowStockModal] = useState(false);
+  const [dismissedLowStockHash, setDismissedLowStockHash] = useState("");
+
+  const lowStockItems = React.useMemo(() => {
+    if (!stockRecords || stockRecords.length === 0) return [];
+
+    return stockRecords
+      .map((rec) => {
+        const remaining = Math.max(
+          0,
+          (rec.prev || 0) + (rec.received || 0) - (rec.used || 0) - (rec.damaged || 0)
+        );
+        const isLiter = rec.item.toLowerCase().includes("oil") || rec.item.toLowerCase().includes("milk");
+        const unitStr = isLiter ? "liter" : "kg";
+        const unitMrStr = isLiter ? "लिटर" : "kg";
+        const nameMr = getTranslatedItem(rec.item);
+
+        return {
+          itemKey: rec.item,
+          nameMr,
+          remaining: Number(remaining.toFixed(3)),
+          unit: unitStr,
+          unitMr: unitMrStr,
+          isLow: remaining < 10,
+        };
+      })
+      .filter((it) => it.isLow);
+  }, [stockRecords, lang, t_global]);
+
+  useEffect(() => {
+    if (lowStockItems.length > 0) {
+      const currentHash = JSON.stringify(lowStockItems);
+      if (currentHash !== dismissedLowStockHash) {
+        setShowLowStockModal(true);
+      }
+    } else {
+      setShowLowStockModal(false);
+      setDismissedLowStockHash("");
+    }
+  }, [lowStockItems, dismissedLowStockHash]);
 
   useEffect(() => {
     if (!user) return;
@@ -3976,6 +4154,15 @@ function TeacherMDMPage() {
           }
           if (firestoreData.openingStockSpent) {
             setOpeningStockSpent(firestoreData.openingStockSpent);
+          }
+          if (firestoreData.openingStockBorrowedIn) {
+            setOpeningStockBorrowedIn(firestoreData.openingStockBorrowedIn);
+          }
+          if (firestoreData.openingStockBorrowedOut) {
+            setOpeningStockBorrowedOut(firestoreData.openingStockBorrowedOut);
+          }
+          if (firestoreData.openingStockLoksahabhag) {
+            setOpeningStockLoksahabhag(firestoreData.openingStockLoksahabhag);
           }
           if (firestoreData.formulaSource) {
             setFormulaSource(firestoreData.formulaSource);
@@ -4220,6 +4407,16 @@ function TeacherMDMPage() {
     if (!user) return;
     if (!registerDate) {
       toast.warning(t("कृपया तारीख निवडा.", "Please select a Date first."));
+      return;
+    }
+    const disableCheck = checkIsDateDisabled(registerDate);
+    if (disableCheck.disabled) {
+      toast.error(
+        t(
+          "आज सुट्टी असल्यामुळे हजेरी आणि साठा वजावट नोंदवता येणार नाही.",
+          "Attendance and stock deduction cannot be recorded on Sundays or Holidays."
+        )
+      );
       return;
     }
     setSaving(true);
@@ -5472,9 +5669,20 @@ function TeacherMDMPage() {
                   <p className="text-xs text-emerald-600 font-bold tracking-wide">माध्यान्ह भोजन योजना पोर्टल</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 text-xs font-extrabold text-slate-600 bg-slate-100/80 border border-slate-200 px-4 py-2 rounded-full shadow-inner">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>UDISE: {getUdise()}</span>
+              <div className="flex items-center gap-3 flex-wrap">
+                {lowStockItems.length > 0 && (
+                  <button
+                    onClick={() => setShowLowStockModal(true)}
+                    className="flex items-center gap-2 text-xs font-extrabold text-amber-900 bg-amber-100 border border-amber-300 hover:bg-amber-200 px-3.5 py-1.5 rounded-full shadow-xs transition-all cursor-pointer animate-pulse"
+                  >
+                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>⚠️ {lowStockItems.length} साहित्याचा साठा कमी आहे</span>
+                  </button>
+                )}
+                <div className="flex items-center gap-2 text-xs font-extrabold text-slate-600 bg-slate-100/80 border border-slate-200 px-4 py-2 rounded-full shadow-inner">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span>UDISE: {getUdise()}</span>
+                </div>
               </div>
             </div>
 
@@ -6288,34 +6496,35 @@ function TeacherMDMPage() {
                 {/* INITIAL STOCK (OPENING BALANCE) TAB */}
                 {activeTab === "opening-stock" && (
                   <div className="space-y-6">
-                    {/* Learnify Yellow Notice Banner */}
-                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-amber-900 space-y-0 shadow-sm">
+                    {/* Information Banner */}
+                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-amber-900 space-y-1.5 shadow-xs">
                       <h3 className="font-extrabold text-base text-amber-950 flex items-center gap-2">
-                        <span>प्रारंभिक साठा (Initial stock)</span>
+                        <Package className="w-5 h-5 text-amber-700" />
+                        <span>आरंभीची शिल्लक (Initial / Opening Stock Entry)</span>
                       </h3>
                       <p className="text-xs leading-relaxed font-medium">
-                        ज्या महिन्यापासून रिपोर्ट्स हवे आहेत त्या महिन्याची <span className="font-bold text-emerald-800">आरंभीची शिल्लक (Opening/Initial Stock)</span> हिरव्या "शिल्लक" कॉलममध्ये भरा. प्राथमिक ( इयत्ता १ ते ५ ) गटाच्या साहित्यासाठी तुम्ही शिल्लक भरणार आहात.
+                        तारीख निवडून साहित्याची <span className="font-bold text-emerald-800">आरंभीची शिल्लक</span>, <span className="font-bold text-blue-800">उसना घेतला</span>, <span className="font-bold text-rose-800">उसना दिला</span> व <span className="font-bold text-amber-800">लोकसहभाग</span> प्रविष्ट करा.
                       </p>
-                      <p className="text-xs leading-relaxed font-medium">
-                        जर उसना (लोकसहभाग) साहित्य वापरले असेल आणि शिल्लक <span className="font-bold text-rose-700">negative</span> असेल, तर प्रमाण भरा आणि <span className="font-bold">+ / -</span> बटण दाबून <span className="font-bold text-rose-700">- (minus)</span> निवडा — मोबाईलवर Negative टाईप करण्याची गरज नाही.
+                      <p className="text-xs leading-relaxed font-extrabold text-emerald-800">
+                        सूत्र: एकूण शिल्लक साठा = मागील शिल्लक (+) usna घेतला (+) - usna दिला (-) + लोकसहभाग (+)
                       </p>
                     </div>
 
                     {/* Table Container */}
                     <div className="bg-white rounded-2xl border border-emerald-200 shadow-md overflow-hidden">
                       {/* Header Title with Calendar Date Picker */}
-                      <div className="bg-emerald-50/90 px-5 py-3 border-b border-emerald-200 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                      <div className="bg-emerald-50/90 px-5 py-4 border-b border-emerald-200 flex flex-col md:flex-row md:items-center justify-between gap-3">
                         <div>
                           <h2 className="font-extrabold text-emerald-900 text-sm md:text-base uppercase tracking-wide">
-                            {profile?.schoolName || ""}
+                            {profile?.schoolName || "आरंभीची शिल्लक नोंदवही"}
                           </h2>
                           <p className="text-xs font-bold text-emerald-700 mt-0.5">
-                            आरंभीची शिल्लक • सन 2026-27
+                            साठा व्यवस्थापन • दिनांक {openingStockDate ? new Date(openingStockDate).toLocaleDateString('mr-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : ""}
                           </p>
                         </div>
 
                         {/* Calendar Date Selection Control */}
-                        <div className="flex items-center gap-2.5 bg-white px-3.5 py-1.5 rounded-xl border border-emerald-300 shadow-xs">
+                        <div className="flex items-center gap-2.5 bg-white px-4 py-2 rounded-xl border border-emerald-300 shadow-xs">
                           <Calendar className="w-4 h-4 text-emerald-700 shrink-0" />
                           <span className="text-xs font-extrabold text-slate-800 whitespace-nowrap">
                             {lang === "mr" ? "तारीख निवडा (Date):" : "Select Date:"}
@@ -6329,145 +6538,168 @@ function TeacherMDMPage() {
                         </div>
                       </div>
 
-                      {/* Horizontal Scrollable Table */}
+                      {/* Vertical Items List Table */}
                       <div className="w-full overflow-x-auto">
-                        <table className="w-full text-center text-xs border-collapse min-w-[3200px]">
+                        <table className="w-full text-left text-xs border-collapse min-w-[800px]">
                           <thead>
-                            <tr className="bg-emerald-100/70 border-b border-emerald-300 text-emerald-950 font-bold">
-                              <th className="p-3 border-r border-emerald-300 bg-emerald-100" style={{ minWidth: "180px", width: "180px" }}>साहित्य (Item Name)</th>
-                              {REPORT_ITEMS.slice(0, 18).map((item) => (
-                                <th key={item.key} colSpan={6} className="p-2.5 border-r border-emerald-300 text-center font-extrabold text-emerald-900 bg-emerald-100/80 text-xs">
-                                  {item.nameMr} ({item.unit})
-                                </th>
-                              ))}
-                            </tr>
-                            <tr className="bg-emerald-50 border-b border-emerald-200 text-sm font-bold text-slate-700">
-                              <th className="p-2 border-r border-emerald-200 bg-emerald-100/50" style={{ minWidth: "120px", width: "120px" }}>तपशील</th>
-                              {REPORT_ITEMS.slice(0, 18).map((item) => (
-                                <React.Fragment key={item.key}>
-                                  <th className="p-2 border-r border-emerald-200 bg-emerald-100/80 text-emerald-900 font-black" style={{ minWidth: "130px", width: "130px" }}>शिल्लक</th>
-                                  <th className="p-2 border-r border-slate-200 bg-blue-100/80 text-blue-900 font-extrabold" style={{ minWidth: "120px", width: "120px" }}>प्राप्त</th>
-                                  <th className="p-2 border-r border-slate-200 bg-amber-100/80 text-amber-900 font-extrabold" style={{ minWidth: "120px", width: "120px" }}>उसना</th>
-                                  <th className="p-2 border-r border-slate-200 bg-slate-200/80 text-slate-900 font-black" style={{ minWidth: "120px", width: "120px" }}>एकूण</th>
-                                  <th className="p-2 border-r border-slate-200 bg-rose-100/80 text-rose-900 font-extrabold" style={{ minWidth: "120px", width: "120px" }}>खर्च</th>
-                                  <th className="p-2 border-r border-emerald-300 bg-emerald-200/80 text-emerald-950 font-black" style={{ minWidth: "120px", width: "120px" }}>शिल्लक</th>
-                                </React.Fragment>
-                              ))}
+                            <tr className="bg-emerald-100/90 border-b border-emerald-300 text-emerald-950 font-bold">
+                              <th className="p-3 border-r border-emerald-300 min-w-[200px]">साहित्याचे नाव (Item Name)</th>
+                              <th className="p-3 text-center border-r border-emerald-300 bg-emerald-200/60 min-w-[140px]">
+                                मागील महिन्याची शिल्लक (+)
+                              </th>
+                              <th className="p-3 text-center border-r border-slate-200 bg-blue-100/80 min-w-[130px]">
+                                उसना घेतला (+)
+                              </th>
+                              <th className="p-3 text-center border-r border-slate-200 bg-rose-100/80 min-w-[130px]">
+                                उसना दिला (-)
+                              </th>
+                              <th className="p-3 text-center border-r border-slate-200 bg-amber-100/80 min-w-[130px]">
+                                लोकसहभाग (+)
+                              </th>
+                              <th className="p-3 text-center border-r border-emerald-300 bg-emerald-300/70 font-black text-emerald-950 min-w-[150px]">
+                                एकूण शिल्लक साठा
+                              </th>
                             </tr>
                           </thead>
-                          <tbody>
-                            <tr className="border-b border-slate-200 hover:bg-slate-50">
-                              <td className="p-3 border-r border-emerald-200 font-extrabold text-slate-900 bg-amber-50/50 text-left" style={{ minWidth: "180px", width: "180px" }}>
-                                आरंभीची शिल्लक <br />
-                                <span className="text-sm text-slate-500 font-normal">Opening/Initial Stock</span>
-                              </td>
-                              {REPORT_ITEMS.slice(0, 18).map((item) => {
-                                const isMinus = openingStockSigns[item.key] === "-";
-                                const rawOpening = parseFloat(openingStockValues[item.key] || "0") || 0;
-                                const openingVal = isMinus ? -rawOpening : rawOpening;
-                                const receivedVal = parseFloat(openingStockReceived[item.key] || "0") || 0;
-                                const borrowedVal = parseFloat(openingStockBorrowed[item.key] || "0") || 0;
-                                const totalVal = openingVal + receivedVal + borrowedVal;
-                                const spentVal = parseFloat(openingStockSpent[item.key] || "0") || 0;
-                                const closingVal = totalVal - spentVal;
+                          <tbody className="divide-y divide-slate-200">
+                            {REPORT_ITEMS.slice(0, 18).map((item, idx) => {
+                              const openVal = Math.max(0, parseFloat(openingStockValues[item.key] || "0") || 0);
+                              const borInVal = Math.max(0, parseFloat(openingStockBorrowedIn[item.key] || "0") || 0);
+                              const borOutVal = Math.max(0, parseFloat(openingStockBorrowedOut[item.key] || "0") || 0);
+                              const lokVal = Math.max(0, parseFloat(openingStockLoksahabhag[item.key] || "0") || 0);
 
-                                return (
-                                  <React.Fragment key={item.key}>
-                                    {/* 1. Opening Balance Input */}
-                                    <td className="p-1.5 border-r border-emerald-200 bg-emerald-50/60" style={{ minWidth: "130px", width: "130px" }}>
-                                      <div className="flex items-center gap-1 justify-center w-full">
-                                        <button
-                                          onClick={() => toggleOpeningStockSign(item.key)}
-                                          className={`px-2 py-1 text-xs font-black rounded-lg border cursor-pointer shrink-0 shadow-xs ${
-                                            isMinus ? "bg-rose-600 text-white border-rose-700" : "bg-emerald-600 text-white border-emerald-700"
-                                          }`}
-                                          title="Toggle +/- sign"
-                                        >
-                                          {isMinus ? "-" : "+"}
-                                        </button>
-                                        <input
-                                          type="number"
-                                          step="0.001"
-                                          value={openingStockValues[item.key] || "0"}
-                                          onChange={(e) => handleOpeningStockChange(item.key, e.target.value)}
-                                          className="w-full h-9 text-center border border-emerald-400 rounded-lg font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 bg-white text-xs px-2 shadow-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                        />
+                              const availStock = openVal + borInVal + lokVal;
+                              const isInvalid = borOutVal > availStock && borOutVal > 0;
+                              const totalStock = isInvalid ? 0 : availStock - borOutVal;
+
+                              return (
+                                <tr key={item.key} className={`hover:bg-emerald-50/40 transition-colors ${idx % 2 === 0 ? "bg-white" : "bg-slate-50/50"}`}>
+                                  {/* 1. Item Name */}
+                                  <td className="p-3 border-r border-slate-200 font-extrabold text-slate-900">
+                                    <div className="flex items-center gap-2">
+                                      <span className="size-2 rounded-full bg-emerald-500 shrink-0"></span>
+                                      <div>
+                                        <span className="block text-xs font-black text-slate-900">{item.nameMr}</span>
+                                        <span className="block text-[11px] font-bold text-slate-500">{item.key} ({item.unit})</span>
                                       </div>
-                                    </td>
+                                    </div>
+                                  </td>
 
-                                    {/* 2. Received Input */}
-                                    <td className="p-1.5 border-r border-slate-200 bg-blue-50/30" style={{ minWidth: "120px", width: "120px" }}>
-                                      <input
-                                        type="number"
-                                        step="0.001"
-                                        placeholder="0"
-                                        readOnly
-                                         disabled
-                                         value={openingStockReceived[item.key] || "0"}
-                                        className="w-full h-9 text-center border border-blue-200 rounded-lg font-bold text-blue-950 bg-blue-100/60 text-xs px-2 shadow-xs cursor-not-allowed select-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                      />
-                                    </td>
+                                  {/* 2. मागील महिन्याची शिल्लक (+) */}
+                                  <td className="p-2 border-r border-slate-200 text-center bg-emerald-50/30">
+                                    <input
+                                      type="number"
+                                      step="0.001"
+                                      min="0"
+                                      placeholder="0"
+                                      value={openingStockValues[item.key] || ""}
+                                      onChange={(e) => handleOpeningStockChange(item.key, e.target.value)}
+                                      className="w-full h-9 text-center border border-emerald-300 rounded-lg font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 bg-white text-xs px-2 shadow-2xs outline-none"
+                                    />
+                                  </td>
 
-                                    {/* 3. Borrowed Input */}
-                                    <td className="p-1.5 border-r border-slate-200 bg-amber-50/30" style={{ minWidth: "120px", width: "120px" }}>
-                                      <input
-                                        type="number"
-                                        step="0.001"
-                                        placeholder="0"
-                                        readOnly
-                                         disabled
-                                         value={openingStockBorrowed[item.key] || "0"}
-                                        className="w-full h-9 text-center border border-amber-200 rounded-lg font-bold text-amber-950 bg-amber-100/60 text-xs px-2 shadow-xs cursor-not-allowed select-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                      />
-                                    </td>
+                                  {/* 3. उसना घेतला (+) */}
+                                  <td className="p-2 border-r border-slate-200 text-center bg-blue-50/30">
+                                    <input
+                                      type="number"
+                                      step="0.001"
+                                      min="0"
+                                      placeholder="0"
+                                      value={openingStockBorrowedIn[item.key] || ""}
+                                      onChange={(e) => handleOpeningBorrowedInChange(item.key, e.target.value)}
+                                      className="w-full h-9 text-center border border-blue-300 rounded-lg font-bold text-blue-950 focus:ring-2 focus:ring-blue-500 bg-white text-xs px-2 shadow-2xs outline-none"
+                                    />
+                                  </td>
 
-                                    {/* 4. Total Stock Column (Live Computed) */}
-                                    <td className="p-1.5 border-r border-slate-200 bg-slate-100/60" style={{ minWidth: "120px", width: "120px" }}>
-                                      <div className="w-full h-9 flex items-center justify-center font-black text-slate-950 text-xs px-2 bg-slate-100 rounded-lg border border-slate-300 shadow-inner">
-                                        {toMarathiNumbers(totalVal.toFixed(3))}
-                                      </div>
-                                    </td>
+                                  {/* 4. उसना दिला (-) */}
+                                  <td className="p-2 border-r border-slate-200 text-center bg-rose-50/30">
+                                    <input
+                                      type="number"
+                                      step="0.001"
+                                      min="0"
+                                      placeholder="0"
+                                      value={openingStockBorrowedOut[item.key] || ""}
+                                      onChange={(e) => handleOpeningBorrowedOutChange(item.key, e.target.value)}
+                                      className={`w-full h-9 text-center border rounded-lg font-bold text-xs px-2 shadow-2xs outline-none transition-all ${
+                                        isInvalid
+                                          ? "border-rose-500 bg-rose-100/90 text-rose-900 focus:ring-2 focus:ring-rose-400 font-black"
+                                          : "border-rose-300 text-rose-950 focus:ring-2 focus:ring-rose-500 bg-white"
+                                      }`}
+                                    />
+                                    {isInvalid && (
+                                      <p className="text-[10px] font-extrabold text-rose-600 leading-tight mt-1">
+                                        {lang === "mr"
+                                          ? "उपलब्ध साठ्यापेक्षा जास्त असू शकत नाही"
+                                          : "Cannot exceed available stock"}
+                                      </p>
+                                    )}
+                                  </td>
 
-                                    {/* 5. Spent Input */}
-                                    <td className="p-1.5 border-r border-slate-200 bg-rose-50/30" style={{ minWidth: "120px", width: "120px" }}>
-                                      <input
-                                        type="number"
-                                        step="0.001"
-                                        placeholder="0"
-                                        readOnly
-                                         disabled
-                                         value={openingStockSpent[item.key] || "0"}
-                                        className="w-full h-9 text-center border border-rose-200 rounded-lg font-bold text-rose-950 bg-rose-100/60 text-xs px-2 shadow-xs cursor-not-allowed select-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                      />
-                                    </td>
+                                  {/* 5. लोकसहभाग (+) */}
+                                  <td className="p-2 border-r border-slate-200 text-center bg-amber-50/30">
+                                    <input
+                                      type="number"
+                                      step="0.001"
+                                      min="0"
+                                      placeholder="0"
+                                      value={openingStockLoksahabhag[item.key] || ""}
+                                      onChange={(e) => handleOpeningLoksahabhagChange(item.key, e.target.value)}
+                                      className="w-full h-9 text-center border border-amber-300 rounded-lg font-bold text-amber-950 focus:ring-2 focus:ring-amber-500 bg-white text-xs px-2 shadow-2xs outline-none"
+                                    />
+                                  </td>
 
-                                    {/* 6. Closing Stock Column (Live Computed) */}
-                                    <td className="p-1.5 border-r border-emerald-300 bg-emerald-50" style={{ minWidth: "120px", width: "120px" }}>
-                                      <div className={`w-full h-9 flex items-center justify-center font-black text-xs px-2 rounded-lg border shadow-inner ${
-                                        closingVal < 0 ? "bg-rose-100 text-rose-700 border-rose-400 font-extrabold" : "bg-emerald-100/80 text-emerald-950 border-emerald-300"
-                                      }`}>
-                                        {toMarathiNumbers(closingVal.toFixed(3))}
-                                      </div>
-                                    </td>
-                                  </React.Fragment>
-                                );
-                              })}
-                            </tr>
+                                  {/* 6. एकूण शिल्लक साठा (Read-only / Autocalculated) */}
+                                  <td className="p-2 border-r border-emerald-300 text-center bg-emerald-100/40">
+                                    <input
+                                      type="text"
+                                      disabled
+                                      readOnly
+                                      value={
+                                        isInvalid
+                                          ? (lang === "mr" ? "Invalid Entry" : "Invalid Entry")
+                                          : `${toMarathiNumbers(totalStock.toFixed(3))} ${item.unit}`
+                                      }
+                                      className={`w-full h-9 text-center font-black text-xs px-2 rounded-lg border shadow-inner select-none cursor-not-allowed ${
+                                        isInvalid
+                                          ? "bg-rose-100 text-rose-800 border-rose-400 font-extrabold"
+                                          : "bg-emerald-200/80 text-emerald-950 border-emerald-400"
+                                      }`}
+                                    />
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
                     </div>
 
                     {/* Save Button */}
-                    <div className="pt-2">
-                      <button
-                        onClick={handleSaveOpeningStock}
-                        disabled={saving}
-                        className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm rounded-xl shadow-lg transition-all flex items-center gap-2"
-                      >
-                        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                        <span>Save opening stock (आरंभीची शिल्लक जतन करा)</span>
-                      </button>
+                    <div className="pt-2 flex items-center justify-end">
+                      {(() => {
+                        const hasInvalid = REPORT_ITEMS.slice(0, 18).some((item) => {
+                          const openVal = Math.max(0, parseFloat(openingStockValues[item.key] || "0") || 0);
+                          const borInVal = Math.max(0, parseFloat(openingStockBorrowedIn[item.key] || "0") || 0);
+                          const borOutVal = Math.max(0, parseFloat(openingStockBorrowedOut[item.key] || "0") || 0);
+                          const lokVal = Math.max(0, parseFloat(openingStockLoksahabhag[item.key] || "0") || 0);
+                          return borOutVal > (openVal + borInVal + lokVal);
+                        });
+
+                        return (
+                          <button
+                            onClick={handleSaveOpeningStock}
+                            disabled={saving || hasInvalid}
+                            className={`px-6 py-3 font-extrabold text-sm rounded-xl shadow-lg transition-all flex items-center gap-2 ${
+                              hasInvalid
+                                ? "bg-slate-300 text-slate-500 cursor-not-allowed"
+                                : "bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white cursor-pointer"
+                            }`}
+                          >
+                            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                            <span>Save opening stock (आरंभीची शिल्लक जतन करा)</span>
+                          </button>
+                        );
+                      })()}
                     </div>
                   </div>
                 )}
@@ -6727,7 +6959,6 @@ function TeacherMDMPage() {
                                 <th className="p-2.5">{lang === "mr" ? "दिनांक" : "Date"}</th>
                                 <th className="p-2.5">{lang === "mr" ? "साहित्य" : "Material"}</th>
                                 <th className="p-2.5">{lang === "mr" ? "प्रमाण" : "Quantity"}</th>
-                                 <th className="p-2.5">{lang === "mr" ? "दाताचे नाव" : "Donor"}</th>
                                 <th className="p-2.5">{lang === "mr" ? "टीप" : "Remark"}</th>
                                 <th className="p-2.5 text-right"></th>
                               </tr>
@@ -6735,7 +6966,7 @@ function TeacherMDMPage() {
                             <tbody>
                               {lokRecords.length === 0 ? (
                                 <tr>
-                                  <td colSpan={6} className="p-6 text-center text-slate-400 font-medium">
+                                  <td colSpan={5} className="p-6 text-center text-slate-400 font-medium">
                                     {lang === "mr" ? "कोणतीही लोकसहभाग नोंद उपलब्ध नाही." : "No public contribution records found."}
                                   </td>
                                 </tr>
@@ -6745,7 +6976,6 @@ function TeacherMDMPage() {
                                     <td className="p-2.5 font-medium">{r.date}</td>
                                     <td className="p-2.5 font-bold text-slate-800">{r.item}</td>
                                     <td className="p-2.5 font-bold text-emerald-600">+{r.qty} kg</td>
-                                    <td className="p-2.5 text-slate-700 font-medium">{r.donor || "-"}</td>
                                     <td className="p-2.5 text-slate-500">{r.remark || "-"}</td>
                                     <td className="p-2.5 text-right">
                                       <button
@@ -7604,237 +7834,288 @@ function TeacherMDMPage() {
                         </div>
 
                         {/* Form Panel */}
-                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
-                          {/* Radio: Food cooked today */}
-                          <div className="space-y-1.5 p-3 rounded-lg bg-purple-50/50 border border-purple-100">
-                            <label className="text-xs font-bold text-purple-900 block">
-                              आहार शिजवला आहे की नाही
-                            </label>
-                            <div className="flex items-center gap-6 text-sm font-semibold text-slate-800">
-                              <label className="flex items-center gap-2 cursor-pointer">
-                                <input
-                                  type="radio"
-                                  name="cookedToday"
-                                  value="yes"
-                                  checked={cookedToday === "yes"}
-                                  onChange={(e) => setCookedToday(e.target.value)}
-                                  className="text-purple-600 focus:ring-purple-500"
-                                />
-                                <span>होय</span>
-                              </label>
-                              <label className="flex items-center gap-2 cursor-pointer">
-                                <input
-                                  type="radio"
-                                  name="cookedToday"
-                                  value="no"
-                                  checked={cookedToday === "no"}
-                                  onChange={(e) => setCookedToday(e.target.value)}
-                                  className="text-purple-600 focus:ring-purple-500"
-                                />
-                                <span>नाही</span>
-                              </label>
-                            </div>
-                          </div>
+                        {(() => {
+                          const disableCheck = checkIsDateDisabled(registerDate);
+                          const isRegisterDisabled = disableCheck.disabled;
 
-                          {/* Student Attendance Inputs */}
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
-                            <div className="space-y-1">
-                              <label className="text-sm font-bold text-slate-700 block">
-                                पटसंख्या *
-                              </label>
-                              <input
-                                type="number"
-                                placeholder="एकूण पटसंख्या"
-                                value={totalEnrolled}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  setTotalEnrolled(val);
-                                  setPresentCount(val);
-                                  setRegisterBeneficiary(val);
-                                }}
-                                className="w-full h-10 px-3 bg-white border border-slate-300 rounded-xl text-center text-sm font-bold text-slate-800 placeholder:text-slate-400 placeholder:font-bold focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none"
-                              />
-                              <p className="text-xs font-bold text-emerald-700 mt-1">
-                                Up to 500 students
-                              </p>
-                            </div>
-
-                            <div className="space-y-1">
-                              <label className="text-sm font-bold text-slate-700 block">
-                                हजर विद्यार्थ्यांची संख्या *
-                              </label>
-                              <input
-                                type="number"
-                                placeholder="हजर विद्यार्थ्यांची संख्या"
-                                value={presentCount}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  setPresentCount(val);
-                                  setRegisterBeneficiary(val);
-                                }}
-                                className={`w-full h-10 px-3 bg-white border rounded-xl text-center text-sm font-bold text-slate-800 placeholder:text-slate-400 placeholder:font-bold focus:ring-2 outline-none ${
-                                  Number(presentCount) > Number(totalEnrolled) && totalEnrolled !== ""
-                                    ? "border-red-400 focus:ring-red-200 focus:border-red-500"
-                                    : "border-slate-300 focus:ring-indigo-200 focus:border-indigo-500"
-                                }`}
-                              />
-                              {Number(presentCount) > Number(totalEnrolled) && totalEnrolled !== "" && (
-                                <p className="text-xs font-bold text-red-600 leading-tight">
-                                  हजर विद्यार्थ्यांची संख्या पटसंख्येपेक्षा जास्त असू शकत नाही.
-                                </p>
-                              )}
-                            </div>
-
-                            <div className="space-y-1">
-                              <label className="text-sm font-bold text-slate-700 block">
-                                वापरलेली ताटे *
-                              </label>
-                              <input
-                                type="number"
-                                placeholder="वापरलेली ताटे"
-                                value={registerBeneficiary}
-                                onChange={(e) => setRegisterBeneficiary(e.target.value)}
-                                className={`w-full h-10 px-3 bg-white border rounded-xl text-center text-sm font-bold focus:ring-2 outline-none ${
-                                  Number(registerBeneficiary) > Number(presentCount) && presentCount !== ""
-                                    ? "border-red-400 text-red-600 focus:ring-red-200 focus:border-red-500"
-                                    : "border-slate-300 text-emerald-700 focus:ring-emerald-200 focus:border-emerald-500"
-                                }`}
-                              />
-                              {Number(registerBeneficiary) > Number(presentCount) && presentCount !== "" && (
-                                <p className="text-xs font-bold text-red-600 leading-tight">
-                                  वापरलेली ताटे हजर संख्येपेक्षा जास्त असू शकत नाही.
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                            प्रथम पटसंख्या, नंतर हजर संख्या, नंतर जेवण घेतलेली ताटे · १ विद्यार्थी = १ ताट · ताट हजर संख्येपेक्षा जास्त नसावीत
-                          </p>
-
-                          {/* Auto Ingredient Calculation Cards */}
-                          <div className="space-y-2 pt-1">
-                            <span className="text-xs font-bold text-slate-800 block">
-                              Automatic ingredient calculation <span className="text-slate-400 font-medium">(kg)</span>
-                            </span>
-
-                            {/* Empty Input Helper Banner */}
-                            {!registerBeneficiary && !presentCount && !totalEnrolled && cookedToday !== "no" && (
-                              <div className="p-4 bg-white border border-slate-200 rounded-xl text-center shadow-xs my-2">
-                                <p className="text-xs font-semibold text-slate-500">
-                                  प्रथम पटसंख्या, हजर संख्या, नंतर वापरलेली ताटे प्रविष्ट करा.
-                                </p>
-                              </div>
-                            )}
-
-                            {/* Red Warning Banner when Recipe fails or food not cooked */}
-                            {(cookedToday === "no" || getMenuForRegisterDate(registerDate) === "No Menu Available") && (
-                              <div className="p-4 bg-white border border-red-200 rounded-xl text-center shadow-xs my-2">
-                                <p className="text-xs font-bold text-red-600">
-                                  Recipe does not match this entry. Refresh the page.
-                                </p>
-                              </div>
-                            )}
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                              {/* Green Card: Veggies */}
-                              <div className="bg-emerald-50/60 border border-emerald-200 rounded-xl p-3.5 space-y-0">
-                                <span className="text-xs font-bold text-emerald-900 block">भाजीपाला</span>
-                                <span className="text-sm text-emerald-700 block">
-                                  नोंदवहीसाठी — स्टॉक किंवा Calculation वर परिणाम होत नाही
-                                </span>
-                                <div className="space-y-1 pt-1">
-                                  <label className="text-sm font-bold text-slate-700 block">भाजीपाला (kg)</label>
-                                  <input
-                                    type="text"
-                                    placeholder="867"
-                                    value={veggieKg}
-                                    onChange={(e) => setVeggieKg(e.target.value)}
-                                    className="w-full h-9 px-3 bg-white border border-slate-300 rounded-lg text-sm font-bold text-right text-slate-800 focus:outline-none focus:border-emerald-500"
-                                  />
-                                </div>
-                              </div>
-
-                              {/* Blue Card: Fuel & Veg Allowance */}
-                              <div className="bg-blue-50/60 border border-blue-200 rounded-xl p-3.5 space-y-0 relative flex flex-col justify-between">
-                                <div>
-                                  <span className="text-xs font-bold text-blue-900 block">इंधन व भाजीपाला अनुदान</span>
-                                  <span className="text-sm text-blue-700 block">
-                                    {registerClass === "6 To 8" ? "उच्च प्राथमिक (६ ते ८)" : "प्राथमिक ( इयत्ता १ ते ५ )"} · ₹{registerClass === "6 To 8" ? (Number(upperRate || 5.45)).toFixed(2) : (Number(primaryRate || 2.59)).toFixed(2)} प्रति ताट
-                                  </span>
-                                  <button
-                                    onClick={() => setActiveTab("anudan")}
-                                    className="text-sm font-bold text-blue-600 underline hover:text-blue-800 block mt-0.5"
-                                  >
-                                    अनुदान सेटिंग
-                                  </button>
-                                </div>
-                                <div className="pt-2 border-t border-blue-100">
-                                  <span className="text-sm font-bold text-slate-700 block">एकूण अनुदान (₹)</span>
-                                  <div className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg flex items-center justify-end">
-                                    <span className="text-base font-black text-blue-950">
-                                      ₹{(Number(registerBeneficiary || 0) * (registerClass === "6 To 8" ? Number(upperRate || 5.45) : Number(primaryRate || 2.59))).toFixed(2)}
-                                    </span>
+                          return (
+                            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
+                              {/* Disabled Sunday / Holiday Alert Banner */}
+                              {isRegisterDisabled && (
+                                <div className="bg-rose-50 border-2 border-rose-200 rounded-xl p-4 space-y-1 my-1 flex items-start gap-3 shadow-2xs">
+                                  <Info className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                                  <div>
+                                    <h4 className="font-extrabold text-sm text-rose-900 leading-snug">
+                                      आज सुट्टी असल्यामुळे हजेरी आणि साठा वजावट नोंदवता येणार नाही.
+                                    </h4>
+                                    <p className="text-xs font-bold text-rose-700 mt-0.5">
+                                      कारण: {disableCheck.reason || (disableCheck.isSunday ? "रविवार सुट्टी" : "नोंदवलेली सुट्टी")}
+                                    </p>
                                   </div>
                                 </div>
-                              </div>
-                            </div>
-
-                            {/* Yellow Card: Purak Ahar */}
-                            <div className="p-3.5 bg-amber-50/60 border border-amber-200 rounded-xl space-y-3">
-                              <label className="flex items-start gap-2.5 cursor-pointer select-none">
-                                <input
-                                  type="checkbox"
-                                  checked={purakAhar}
-                                  onChange={(e) => setPurakAhar(e.target.checked)}
-                                  className="size-4 mt-0.5 rounded border-amber-400 text-amber-600 focus:ring-0"
-                                />
-                                <div>
-                                  <span className="text-xs font-bold text-amber-950 block">पूरक आहार (Purak Ahar)</span>
-                                  <span className="text-sm text-amber-800 block">
-                                    नोंदवहीसाठी — स्टॉक किंवा Calculation वर परिणाम होत नाही
-                                  </span>
-                                </div>
-                              </label>
-
-                              {purakAhar && (
-                                <div className="space-y-1 pt-1">
-                                  <label className="text-xs font-bold text-slate-800 block">
-                                    Purak Ahar details
-                                  </label>
-                                  <textarea
-                                    rows={2}
-                                    placeholder="e.g. fruit name, quantity, students served..."
-                                    value={purakAharDetails}
-                                    onChange={(e) => setPurakAharDetails(e.target.value)}
-                                    className="w-full p-2.5 bg-white border border-indigo-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none transition-all shadow-sm"
-                                  />
-                                </div>
                               )}
+
+                              {/* Radio: Food cooked today */}
+                              <div className={`space-y-1.5 p-3 rounded-lg border transition-all ${isRegisterDisabled ? "bg-slate-100/70 border-slate-200 opacity-60 pointer-events-none" : "bg-purple-50/50 border-purple-100"}`}>
+                                <label className="text-xs font-bold text-purple-900 block">
+                                  आहार शिजवला आहे की नाही
+                                </label>
+                                <div className="flex items-center gap-6 text-sm font-semibold text-slate-800">
+                                  <label className={`flex items-center gap-2 ${isRegisterDisabled ? "cursor-not-allowed" : "cursor-pointer"}`}>
+                                    <input
+                                      type="radio"
+                                      name="cookedToday"
+                                      value="yes"
+                                      disabled={isRegisterDisabled}
+                                      checked={cookedToday === "yes"}
+                                      onChange={(e) => setCookedToday(e.target.value)}
+                                      className="text-purple-600 focus:ring-purple-500 disabled:opacity-50"
+                                    />
+                                    <span>होय</span>
+                                  </label>
+                                  <label className={`flex items-center gap-2 ${isRegisterDisabled ? "cursor-not-allowed" : "cursor-pointer"}`}>
+                                    <input
+                                      type="radio"
+                                      name="cookedToday"
+                                      value="no"
+                                      disabled={isRegisterDisabled}
+                                      checked={cookedToday === "no"}
+                                      onChange={(e) => setCookedToday(e.target.value)}
+                                      className="text-purple-600 focus:ring-purple-500 disabled:opacity-50"
+                                    />
+                                    <span>नाही</span>
+                                  </label>
+                                </div>
+                              </div>
+
+                              {/* Student Attendance Inputs */}
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
+                                <div className="space-y-1">
+                                  <label className="text-sm font-bold text-slate-700 block">
+                                    पटसंख्या *
+                                  </label>
+                                  <input
+                                    type="number"
+                                    placeholder="एकूण पटसंख्या"
+                                    disabled={isRegisterDisabled}
+                                    value={totalEnrolled}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      setTotalEnrolled(val);
+                                      setPresentCount(val);
+                                      setRegisterBeneficiary(val);
+                                    }}
+                                    className={`w-full h-10 px-3 border rounded-xl text-center text-sm font-bold text-slate-800 placeholder:text-slate-400 placeholder:font-bold focus:ring-2 outline-none ${
+                                      isRegisterDisabled
+                                        ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                                        : "bg-white border-slate-300 focus:ring-indigo-200 focus:border-indigo-500"
+                                    }`}
+                                  />
+                                  <p className="text-xs font-bold text-emerald-700 mt-1">
+                                    Up to 500 students
+                                  </p>
+                                </div>
+
+                                <div className="space-y-1">
+                                  <label className="text-sm font-bold text-slate-700 block">
+                                    हजर विद्यार्थ्यांची संख्या *
+                                  </label>
+                                  <input
+                                    type="number"
+                                    placeholder="हजर विद्यार्थ्यांची संख्या"
+                                    disabled={isRegisterDisabled}
+                                    value={presentCount}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      setPresentCount(val);
+                                      setRegisterBeneficiary(val);
+                                    }}
+                                    className={`w-full h-10 px-3 border rounded-xl text-center text-sm font-bold placeholder:text-slate-400 placeholder:font-bold focus:ring-2 outline-none ${
+                                      isRegisterDisabled
+                                        ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                                        : Number(presentCount) > Number(totalEnrolled) && totalEnrolled !== ""
+                                        ? "border-red-400 focus:ring-red-200 focus:border-red-500 text-slate-800"
+                                        : "bg-white border-slate-300 focus:ring-indigo-200 focus:border-indigo-500 text-slate-800"
+                                    }`}
+                                  />
+                                  {!isRegisterDisabled && Number(presentCount) > Number(totalEnrolled) && totalEnrolled !== "" && (
+                                    <p className="text-xs font-bold text-red-600 leading-tight">
+                                      हजर विद्यार्थ्यांची संख्या पटसंख्येपेक्षा जास्त असू शकत नाही.
+                                    </p>
+                                  )}
+                                </div>
+
+                                <div className="space-y-1">
+                                  <label className="text-sm font-bold text-slate-700 block">
+                                    वापरलेली ताटे *
+                                  </label>
+                                  <input
+                                    type="number"
+                                    placeholder="वापरलेली ताटे"
+                                    disabled={isRegisterDisabled}
+                                    value={registerBeneficiary}
+                                    onChange={(e) => setRegisterBeneficiary(e.target.value)}
+                                    className={`w-full h-10 px-3 border rounded-xl text-center text-sm font-bold focus:ring-2 outline-none ${
+                                      isRegisterDisabled
+                                        ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                                        : Number(registerBeneficiary) > Number(presentCount) && presentCount !== ""
+                                        ? "border-red-400 text-red-600 focus:ring-red-200 focus:border-red-500"
+                                        : "bg-white border-slate-300 text-emerald-700 focus:ring-emerald-200 focus:border-emerald-500"
+                                    }`}
+                                  />
+                                  {!isRegisterDisabled && Number(registerBeneficiary) > Number(presentCount) && presentCount !== "" && (
+                                    <p className="text-xs font-bold text-red-600 leading-tight">
+                                      वापरलेली ताटे हजर संख्येपेक्षा जास्त असू शकत नाही.
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+
+                              <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                                प्रथम पटसंख्या, नंतर हजर संख्या, नंतर जेवण घेतलेली ताटे · १ विद्यार्थी = १ ताट · ताट हजर संख्येपेक्षा जास्त नसावीत
+                              </p>
+
+                              {/* Auto Ingredient Calculation Cards */}
+                              <div className={`space-y-2 pt-1 ${isRegisterDisabled ? "opacity-60 pointer-events-none" : ""}`}>
+                                <span className="text-xs font-bold text-slate-800 block">
+                                  Automatic ingredient calculation <span className="text-slate-400 font-medium">(kg)</span>
+                                </span>
+
+                                {/* Empty Input Helper Banner */}
+                                {!isRegisterDisabled && !registerBeneficiary && !presentCount && !totalEnrolled && cookedToday !== "no" && (
+                                  <div className="p-4 bg-white border border-slate-200 rounded-xl text-center shadow-xs my-2">
+                                    <p className="text-xs font-semibold text-slate-500">
+                                      प्रथम पटसंख्या, हजर संख्या, नंतर वापरलेली ताटे प्रविष्ट करा.
+                                    </p>
+                                  </div>
+                                )}
+
+                                {/* Red Warning Banner when Recipe fails or food not cooked */}
+                                {!isRegisterDisabled && (cookedToday === "no" || getMenuForRegisterDate(registerDate) === "No Menu Available") && (
+                                  <div className="p-4 bg-white border border-red-200 rounded-xl text-center shadow-xs my-2">
+                                    <p className="text-xs font-bold text-red-600">
+                                      Recipe does not match this entry. Refresh the page.
+                                    </p>
+                                  </div>
+                                )}
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  {/* Green Card: Veggies */}
+                                  <div className="bg-emerald-50/60 border border-emerald-200 rounded-xl p-3.5 space-y-0">
+                                    <span className="text-xs font-bold text-emerald-900 block">भाजीपाला</span>
+                                    <span className="text-sm text-emerald-700 block">
+                                      नोंदवहीसाठी — स्टॉक किंवा Calculation वर परिणाम होत नाही
+                                    </span>
+                                    <div className="space-y-1 pt-1">
+                                      <label className="text-sm font-bold text-slate-700 block">भाजीपाला (kg)</label>
+                                      <input
+                                        type="text"
+                                        placeholder="867"
+                                        disabled={isRegisterDisabled}
+                                        value={veggieKg}
+                                        onChange={(e) => setVeggieKg(e.target.value)}
+                                        className={`w-full h-9 px-3 border rounded-lg text-sm font-bold text-right text-slate-800 focus:outline-none focus:border-emerald-500 ${
+                                          isRegisterDisabled ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed" : "bg-white border-slate-300"
+                                        }`}
+                                      />
+                                    </div>
+                                  </div>
+
+                                  {/* Blue Card: Fuel & Veg Allowance */}
+                                  <div className="bg-blue-50/60 border border-blue-200 rounded-xl p-3.5 space-y-0 relative flex flex-col justify-between">
+                                    <div>
+                                      <span className="text-xs font-bold text-blue-900 block">इंधन व भाजीपाला अनुदान</span>
+                                      <span className="text-sm text-blue-700 block">
+                                        {registerClass === "6 To 8" ? "उच्च प्राथमिक (६ ते ८)" : "प्राथमिक ( इयत्ता १ ते ५ )"} · ₹{registerClass === "6 To 8" ? (Number(upperRate || 5.45)).toFixed(2) : (Number(primaryRate || 2.59)).toFixed(2)} प्रति ताट
+                                      </span>
+                                      <button
+                                        onClick={() => setActiveTab("anudan")}
+                                        disabled={isRegisterDisabled}
+                                        className="text-sm font-bold text-blue-600 underline hover:text-blue-800 block mt-0.5 disabled:text-slate-400 disabled:no-underline"
+                                      >
+                                        अनुदान सेटिंग
+                                      </button>
+                                    </div>
+                                    <div className="pt-2 border-t border-blue-100">
+                                      <span className="text-sm font-bold text-slate-700 block">एकूण अनुदान (₹)</span>
+                                      <div className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg flex items-center justify-end">
+                                        <span className="text-base font-black text-blue-950">
+                                          ₹{(Number(registerBeneficiary || 0) * (registerClass === "6 To 8" ? Number(upperRate || 5.45) : Number(primaryRate || 2.59))).toFixed(2)}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Yellow Card: Purak Ahar */}
+                                <div className="p-3.5 bg-amber-50/60 border border-amber-200 rounded-xl space-y-3">
+                                  <label className={`flex items-start gap-2.5 select-none ${isRegisterDisabled ? "cursor-not-allowed" : "cursor-pointer"}`}>
+                                    <input
+                                      type="checkbox"
+                                      disabled={isRegisterDisabled}
+                                      checked={purakAhar}
+                                      onChange={(e) => setPurakAhar(e.target.checked)}
+                                      className="size-4 mt-0.5 rounded border-amber-400 text-amber-600 focus:ring-0 disabled:opacity-50"
+                                    />
+                                    <div>
+                                      <span className="text-xs font-bold text-amber-950 block">पूरक आहार (Purak Ahar)</span>
+                                      <span className="text-sm text-amber-800 block">
+                                        नोंदवहीसाठी — स्टॉक किंवा Calculation वर परिणाम होत नाही
+                                      </span>
+                                    </div>
+                                  </label>
+
+                                  {purakAhar && (
+                                    <div className="space-y-1 pt-1">
+                                      <label className="text-xs font-bold text-slate-800 block">
+                                        Purak Ahar details
+                                      </label>
+                                      <textarea
+                                        rows={2}
+                                        placeholder="e.g. fruit name, quantity, students served..."
+                                        disabled={isRegisterDisabled}
+                                        value={purakAharDetails}
+                                        onChange={(e) => setPurakAharDetails(e.target.value)}
+                                        className={`w-full p-2.5 border rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 outline-none transition-all shadow-xs ${
+                                          isRegisterDisabled ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed" : "bg-white border-indigo-300"
+                                        }`}
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Remarks */}
+                              <div className="space-y-1">
+                                <label className="text-xs font-bold text-slate-700 block">Remarks</label>
+                                <textarea
+                                  rows={2}
+                                  placeholder="Optional"
+                                  disabled={isRegisterDisabled}
+                                  value={remarks}
+                                  onChange={(e) => setRemarks(e.target.value)}
+                                  className={`w-full p-2.5 border rounded-lg text-xs font-medium focus:outline-none ${
+                                    isRegisterDisabled ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed" : "bg-white border-slate-300 focus:border-slate-400"
+                                  }`}
+                                />
+                              </div>
+
+                              {/* Save Button */}
+                              <button
+                                onClick={handleSaveRegister}
+                                disabled={isRegisterDisabled || saving}
+                                className={`w-full py-2.5 rounded-lg shadow-sm transition-colors flex items-center justify-center gap-2 font-bold text-sm ${
+                                  isRegisterDisabled
+                                    ? "bg-slate-300 text-slate-500 cursor-not-allowed"
+                                    : "bg-[#047857] hover:bg-[#065f46] text-white cursor-pointer"
+                                }`}
+                              >
+                                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                <span>Save entry</span>
+                              </button>
                             </div>
-                          </div>
-
-                          {/* Remarks */}
-                          <div className="space-y-1">
-                            <label className="text-xs font-bold text-slate-700 block">Remarks</label>
-                            <textarea
-                              rows={2}
-                              placeholder="Optional"
-                              value={remarks}
-                              onChange={(e) => setRemarks(e.target.value)}
-                              className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-xs font-medium focus:outline-none focus:border-slate-400"
-                            />
-                          </div>
-
-                          {/* Save Button */}
-                          <button
-                            onClick={handleSaveRegister}
-                            className="w-full py-2.5 bg-[#047857] hover:bg-[#065f46] text-white font-bold text-sm rounded-lg shadow-sm transition-colors flex items-center justify-center gap-2"
-                          >
-                            <Save className="w-4 h-4" />
-                            <span>Save entry</span>
-                          </button>
-                        </div>
+                          );
+                        })()}
                       </div>
 
                       {/* Right Column: Month Register Matrix Table (7 cols) */}
@@ -13011,6 +13292,95 @@ function TeacherMDMPage() {
           </div>
         </PinGate>
       </main>
+
+      {/* Low Stock Warning Modal */}
+      <AnimatePresence>
+        {showLowStockModal && lowStockItems.length > 0 && (
+          <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative w-full max-w-md bg-white rounded-2xl border-2 border-amber-300 shadow-2xl overflow-hidden p-5 sm:p-6 space-y-4"
+            >
+              {/* Header */}
+              <div className="flex items-start gap-3.5 border-b border-amber-100 pb-4">
+                <div className="size-11 rounded-2xl bg-amber-100 border border-amber-200 flex items-center justify-center text-amber-600 shrink-0 shadow-xs">
+                  <AlertTriangle className="size-6 animate-bounce text-amber-600" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base font-black text-amber-950 flex items-center gap-1.5">
+                      <span>⚠️ Low Stock Warning</span>
+                    </h3>
+                    <button
+                      onClick={() => {
+                        setShowLowStockModal(false);
+                        setDismissedLowStockHash(JSON.stringify(lowStockItems));
+                      }}
+                      className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                      aria-label="Close"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <p className="text-xs font-bold text-amber-800 mt-0.5">
+                    शाळेतील खालील साहित्याचा साठा १० किलो/लिटरपेक्षा कमी आहे.
+                  </p>
+                </div>
+              </div>
+
+              {/* Body: Low Stock List */}
+              <div className="space-y-2.5 max-h-[280px] overflow-y-auto pr-1">
+                {lowStockItems.map((item) => (
+                  <div
+                    key={item.itemKey}
+                    className="flex items-center justify-between p-3 rounded-xl bg-amber-50/90 border border-amber-200 text-amber-950 font-sans shadow-2xs"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Package className="w-4.5 h-4.5 text-amber-600 shrink-0" />
+                      <span className="font-extrabold text-sm text-slate-900">
+                        {item.nameMr}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-black text-sm text-amber-950 bg-amber-200/90 px-2.5 py-1 rounded-lg border border-amber-300/60 inline-block">
+                        {item.remaining} {item.unitMr}
+                      </span>
+                      <span className="block text-[11px] font-extrabold text-amber-800 mt-0.5">
+                        शिल्लक आहे
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Footer Actions */}
+              <div className="pt-2 flex flex-col sm:flex-row items-center gap-2.5">
+                <button
+                  onClick={() => {
+                    setShowLowStockModal(false);
+                    setDismissedLowStockHash(JSON.stringify(lowStockItems));
+                  }}
+                  className="w-full sm:flex-1 py-2.5 bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white font-black text-sm rounded-xl shadow-md transition-colors text-center cursor-pointer"
+                >
+                  समजले (Close)
+                </button>
+                <button
+                  onClick={() => {
+                    setShowLowStockModal(false);
+                    setDismissedLowStockHash(JSON.stringify(lowStockItems));
+                    setActiveTab("incoming");
+                  }}
+                  className="w-full sm:flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-sm rounded-xl border border-slate-300 transition-colors text-center cursor-pointer"
+                >
+                  साहित्य आवक नोंदवा
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
