@@ -2649,8 +2649,19 @@ function TeacherMDMPage() {
       return;
     }
     let toastId: string | undefined;
+    const origClass = element.className;
+    const origStyle = element.getAttribute("style") || "";
     try {
       toastId = toast.loading("PDF डाऊनलोड होत आहे...");
+
+      // Temporarily unhide element off-screen for html2canvas
+      element.className = "p-6 bg-white text-slate-900";
+      element.style.position = "absolute";
+      element.style.left = "-9999px";
+      element.style.top = "0px";
+      element.style.width = "900px";
+      element.style.display = "block";
+
       const { default: html2canvas } = await import("html2canvas");
       const { jsPDF } = await import("jspdf");
 
@@ -2659,6 +2670,14 @@ function TeacherMDMPage() {
         useCORS: true,
         logging: false,
         backgroundColor: "#ffffff",
+        onclone: (clonedDoc: any) => {
+          const wrapper = clonedDoc.getElementById("opening-stock-report-print");
+          if (wrapper) {
+            wrapper.style.display = "block";
+            wrapper.style.visibility = "visible";
+            wrapper.style.position = "static";
+          }
+        }
       });
 
       const imgData = canvas.toDataURL("image/jpeg", 0.98);
@@ -2675,9 +2694,16 @@ function TeacherMDMPage() {
       if (toastId) toast.dismiss(toastId);
       toast.success("PDF यशस्वीपणे डाऊनलोड झाली!");
     } catch (err) {
-      console.error(err);
+      console.error("PDF Export Error:", err);
       if (toastId) toast.dismiss(toastId);
       toast.error("PDF डाऊनलोड करण्यात त्रुटी आली.");
+    } finally {
+      element.className = origClass;
+      if (origStyle) {
+        element.setAttribute("style", origStyle);
+      } else {
+        element.removeAttribute("style");
+      }
     }
   };
 
