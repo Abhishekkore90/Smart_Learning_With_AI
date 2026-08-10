@@ -14614,24 +14614,24 @@ function TeacherMDMPage() {
                             ) : (
                               <table className="w-full border-collapse border border-black text-center text-sm font-sans style-table-fixed" style={{ tableLayout: "fixed" }}>
                                 <colgroup>
-                                  <col style={{ width: "2.8%" }} />
-                                  <col style={{ width: "7.2%" }} />
-                                  <col style={{ width: "3.8%" }} />
-                                  <col style={{ width: "3.8%" }} />
-                                  <col style={{ width: "4.2%" }} />
+                                  <col style={{ width: "2.5%" }} />
+                                  <col style={{ width: "6.5%" }} />
+                                  <col style={{ width: "3.5%" }} />
+                                  <col style={{ width: "3.5%" }} />
+                                  <col style={{ width: "4.0%" }} />
                                   <col style={{ width: "3.2%" }} />
-                                  <col style={{ width: "5%" }} />
-                                  <col style={{ width: "6.5%" }} />
-                                  <col style={{ width: "7.5%" }} />
+                                  <col style={{ width: "4.8%" }} />
+                                  <col style={{ width: "6.0%" }} />
+                                  <col style={{ width: "7.0%" }} />
+                                  <col style={{ width: "7.8%" }} />
+                                  <col style={{ width: "4.8%" }} />
+                                  <col style={{ width: "6.2%" }} />
                                   <col style={{ width: "5.5%" }} />
-                                  <col style={{ width: "5%" }} />
-                                  <col style={{ width: "6.5%" }} />
-                                  <col style={{ width: "6.5%" }} />
+                                  <col style={{ width: "5.2%" }} />
+                                  <col style={{ width: "5.8%" }} />
                                   <col style={{ width: "5.5%" }} />
-                                  <col style={{ width: "6.5%" }} />
-                                  <col style={{ width: "6.5%" }} />
-                                  <col style={{ width: "6%" }} />
-                                  <col style={{ width: "8.2%" }} />
+                                  <col style={{ width: "5.5%" }} />
+                                  <col style={{ width: "7.2%" }} />
                                 </colgroup>
                                 <thead>
                                   <tr className="bg-slate-100 text-slate-900 font-extrabold border-b border-black">
@@ -14755,8 +14755,8 @@ function TeacherMDMPage() {
                                           <td className="border border-black p-1 font-semibold">{beneficiary}</td>
                                           <td className="border border-black p-1">{cookHonorarium.toFixed(2)}</td>
                                           <td className="border border-black p-1 font-semibold">{vegGrant.toFixed(2)}</td>
-                                          <td className="border border-black p-1 text-xs">{receivedSupplier > 0 ? "10/07/2026" : "—"}</td>
-                                          <td className="border border-black p-1 font-bold">{prevStock}</td>
+                                          <td className="border border-black p-0.5 text-[10px] font-semibold whitespace-nowrap leading-tight text-center">{receivedSupplier > 0 ? "10/07/2026" : "—"}</td>
+                                          <td className="border border-black p-1 font-bold whitespace-nowrap text-center">{prevStock}</td>
                                           <td className="border border-black p-1">{receivedSupplier}</td>
                                           <td className="border border-black p-1">{receivedPublic}</td>
                                           <td className="border border-black p-1 font-bold">{totalReceived}</td>
