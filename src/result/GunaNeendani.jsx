@@ -276,7 +276,11 @@ const ResultEntry = () => {
     fetchSubjectsForClass(e.target.value);
 
     if (selectedClass) {
-      await fetchDivisionsForClass(selectedClass);
+      try {
+        await fetchDivisionsForClass(selectedClass);
+      } catch (err) {
+        console.error("Error fetching divisions:", err);
+      }
     }
   };
 
@@ -426,8 +430,13 @@ const ResultEntry = () => {
     const marksData = {};
 
     for (const student of selectedStudents) {
-      const studentMarks = await fetchMarksData(student.srNo, academicYear, selectedExamName, subject);
-      marksData[student.srNo] = studentMarks;
+      try {
+        const studentMarks = await fetchMarksData(student.srNo, academicYear, selectedExamName, subject);
+        marksData[student.srNo] = studentMarks;
+      } catch (err) {
+        console.error("Error fetching marks for student:", student.srNo, err);
+        marksData[student.srNo] = {};
+      }
     }
 
     setMarksData(marksData);

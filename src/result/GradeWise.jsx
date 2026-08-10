@@ -391,9 +391,18 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
             onChange={(e) => setAcademicYear(e.target.value)}
             className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
           >
-            <option value="2024-25">2024-25</option>
-            <option value="2025-26">2025-26</option>
-            <option value="2026-27">2026-27</option>
+            {(() => {
+              const curY = new Date().getFullYear();
+              const curM = new Date().getMonth();
+              const refY = curM >= 5 ? curY : curY - 1;
+              const yrs = [];
+              for (let y = refY + 1; y >= 2020; y--) {
+                yrs.push(`${y}-${y + 1}`);
+              }
+              return yrs.map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ));
+            })()}
           </select>
 
           {/* Refresh Button */}

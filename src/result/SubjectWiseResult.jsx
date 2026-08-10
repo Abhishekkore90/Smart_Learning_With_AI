@@ -272,12 +272,27 @@ const OutcomeTable = ({ title, outcomes, subjectName, getUserSelectedLevel, stud
   );
 };
 
-const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) => {
+import { getDefaultSubjectsForClass } from "../data/cceSubjects";
+
+const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", initialSemester = "sem2", onBack }) => {
   const [selectedClass, setSelectedClass] = useState(initialClass || "1st");
   const [academicYear, setAcademicYear] = useState(initialYear || "2025-26");
+  const [selectedSemester, setSelectedSemester] = useState(initialSemester || "sem2");
   const [division, setDivision] = useState("1");
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
+  const [configuredSubjects, setConfiguredSubjects] = useState(() => {
+    const med = localStorage.getItem("cce_selected_medium") || "marathi";
+    const stored = localStorage.getItem(`cce_subjects_${initialClass}_${initialYear}_${med}`) ||
+                   localStorage.getItem(`cce_subjects_${initialClass}_${initialYear}`);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return getDefaultSubjectsForClass(initialClass || "1st", med);
+  });
 
   const [schoolData, setSchoolData] = useState({
     schoolName: "",
@@ -329,6 +344,30 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", onBa
             headmasterName: mergedSettings.principalName || mergedSettings.headmasterName || "",
           });
         }
+
+        // Fetch active configured subjects for this class ("विषय निश्चिती")
+        const currentMed = localStorage.getItem("cce_selected_medium") || "marathi";
+        let activeSubs = [];
+        try {
+          const stored = localStorage.getItem(`cce_subjects_${selectedClass}_${academicYear}_${currentMed}`) || 
+                         localStorage.getItem(`cce_subjects_${selectedClass}_${academicYear}`);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              activeSubs = parsed;
+            }
+          }
+        } catch (e) {}
+
+        if (activeSubs.length === 0 && mergedSettings.subjects && Array.isArray(mergedSettings.subjects)) {
+          activeSubs = mergedSettings.subjects;
+        }
+
+        if (activeSubs.length === 0) {
+          activeSubs = getDefaultSubjectsForClass(selectedClass, currentMed);
+        }
+
+        setConfiguredSubjects(activeSubs);
       } catch (e) { }
 
       // 2. Fetch Students for Selected Class
@@ -464,6 +503,33 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", onBa
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const isSubjectActive = (subName) => {
+    if (!configuredSubjects || configuredSubjects.length === 0) return false;
+    const name = subName.toLowerCase().trim();
+
+    return configuredSubjects.some((s) => {
+      const active = (typeof s === "string" ? s : s.name || s.label || s.title || "").toLowerCase().trim();
+      if (!active) return false;
+
+      if (name.includes("मराठी")) return active.includes("मराठी") || active.includes("प्रथम") || active.includes("marathi");
+      if (name.includes("हिंदी")) return active.includes("हिंदी") || active.includes("hindi");
+      if (name.includes("इंग्रजी")) return active.includes("इंग्रजी") || active.includes("english");
+      if (name.includes("गणित")) return active.includes("गणित") || active.includes("math");
+      if (name === "परिसर अभ्यास १" || name.includes("परिसर १")) {
+        return active.includes("परिसर १") || active.includes("परिसर अभ्यास १") || (active.includes("परिसर अभ्यास") && !active.includes("२") && !active.includes("2"));
+      }
+      if (name === "परिसर अभ्यास २" || name.includes("परिसर २")) {
+        return active.includes("परिसर २") || active.includes("परिसर अभ्यास २");
+      }
+      if (name.includes("परिसर अभ्यास")) return active.includes("परिसर") || active.includes("evs");
+      if (name.includes("सामान्य विज्ञान") || name.includes("विज्ञान")) return active.includes("विज्ञान") || active.includes("science");
+      if (name.includes("इतिहास")) return active.includes("इतिहास") || active.includes("नागरिकशास्त्र") || active.includes("सामाजिक") || active.includes("social");
+      if (name.includes("भूगोल")) return active.includes("भूगोल") || active.includes("सामाजिक") || active.includes("social");
+
+      return active.includes(name) || name.includes(active);
+    });
   };
 
   /**
@@ -640,35 +706,53 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", onBa
                 <span>इयत्ता - <b>{selectedClass}</b></span>
                 <span>तुकडी - <b>{division}</b></span>
                 <span>हजेरी क्र. <b>{student.rollNo}</b></span>
-                <span>द्वितीय सत्र</span>
+                <span>{selectedSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
               </div>
 
               {/* 1. प्रथम भाषा: मराठी Section */}
-              <OutcomeTable title="प्रथम भाषा: मराठी" outcomes={marathiOutcomes} subjectName="मराठी" getUserSelectedLevel={getUserSelectedLevel} student={student} />
+              {isSubjectActive("मराठी") && (
+                <OutcomeTable title="प्रथम भाषा: मराठी" outcomes={marathiOutcomes} subjectName="मराठी" getUserSelectedLevel={getUserSelectedLevel} student={student} />
+              )}
 
               {/* 2. द्वितीय भाषा: हिंदी Section */}
-              <OutcomeTable title="द्वितीय भाषा: हिंदी" outcomes={hindiOutcomes} subjectName="हिंदी" getUserSelectedLevel={getUserSelectedLevel} student={student} />
+              {isSubjectActive("हिंदी") && (
+                <OutcomeTable title="द्वितीय भाषा: हिंदी" outcomes={hindiOutcomes} subjectName="हिंदी" getUserSelectedLevel={getUserSelectedLevel} student={student} />
+              )}
 
               {/* 3. गणित Section */}
-              <OutcomeTable title="गणित" outcomes={mathsOutcomes} subjectName="गणित" getUserSelectedLevel={getUserSelectedLevel} student={student} />
+              {isSubjectActive("गणित") && (
+                <OutcomeTable title="गणित" outcomes={mathsOutcomes} subjectName="गणित" getUserSelectedLevel={getUserSelectedLevel} student={student} />
+              )}
 
               {/* 4. तृतीय भाषा: इंग्रजी Section */}
-              <OutcomeTable title="तृतीय भाषा: इंग्रजी" outcomes={englishOutcomes} subjectName="इंग्रजी" getUserSelectedLevel={getUserSelectedLevel} student={student} />
+              {isSubjectActive("इंग्रजी") && (
+                <OutcomeTable title="तृतीय भाषा: इंग्रजी" outcomes={englishOutcomes} subjectName="इंग्रजी" getUserSelectedLevel={getUserSelectedLevel} student={student} />
+              )}
 
               {/* 5. परिसर अभ्यास १ Section */}
-              <OutcomeTable title="परिसर अभ्यास १" outcomes={evs1Outcomes} subjectName="परिसर अभ्यास १" getUserSelectedLevel={getUserSelectedLevel} student={student} />
+              {isSubjectActive("परिसर अभ्यास १") && (
+                <OutcomeTable title="परिसर अभ्यास १" outcomes={evs1Outcomes} subjectName="परिसर अभ्यास १" getUserSelectedLevel={getUserSelectedLevel} student={student} />
+              )}
 
               {/* 6. परिसर अभ्यास २ Section */}
-              <OutcomeTable title="परिसर अभ्यास २" outcomes={evs2Outcomes} subjectName="परिसर अभ्यास २" getUserSelectedLevel={getUserSelectedLevel} student={student} />
+              {isSubjectActive("परिसर अभ्यास २") && (
+                <OutcomeTable title="परिसर अभ्यास २" outcomes={evs2Outcomes} subjectName="परिसर अभ्यास २" getUserSelectedLevel={getUserSelectedLevel} student={student} />
+              )}
 
               {/* 7. सामान्य विज्ञान Section */}
-              <OutcomeTable title="सामान्य विज्ञान" outcomes={scienceOutcomes} subjectName="सामान्य विज्ञान" getUserSelectedLevel={getUserSelectedLevel} student={student} />
+              {isSubjectActive("सामान्य विज्ञान") && (
+                <OutcomeTable title="सामान्य विज्ञान" outcomes={scienceOutcomes} subjectName="सामान्य विज्ञान" getUserSelectedLevel={getUserSelectedLevel} student={student} />
+              )}
 
               {/* 8. इतिहास व नागरिकशास्त्र Section */}
-              <OutcomeTable title="इतिहास व नागरिकशास्त्र" outcomes={historyOutcomes} subjectName="इतिहास व नागरिकशास्त्र" getUserSelectedLevel={getUserSelectedLevel} student={student} />
+              {isSubjectActive("इतिहास व नागरिकशास्त्र") && (
+                <OutcomeTable title="इतिहास व नागरिकशास्त्र" outcomes={historyOutcomes} subjectName="इतिहास व नागरिकशास्त्र" getUserSelectedLevel={getUserSelectedLevel} student={student} />
+              )}
 
               {/* 9. भूगोल Section */}
-              <OutcomeTable title="भूगोल" outcomes={geographyOutcomes} subjectName="भूगोल" getUserSelectedLevel={getUserSelectedLevel} student={student} />
+              {isSubjectActive("भूगोल") && (
+                <OutcomeTable title="भूगोल" outcomes={geographyOutcomes} subjectName="भूगोल" getUserSelectedLevel={getUserSelectedLevel} student={student} />
+              )}
             </div>
 
             {/* Signatures */}

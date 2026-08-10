@@ -14,6 +14,8 @@ import { CLASS_6_OUTCOMES } from "@/data/class6_outcomes";
 import { CLASS_7_OUTCOMES } from "@/data/class7_outcomes";
 import { CLASS_8_OUTCOMES } from "@/data/class8_outcomes";
 
+import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
+
 type Semester = "sem1" | "sem2";
 interface Student {
   id: string;
@@ -100,8 +102,8 @@ function OutcomeProgressCircle({
           percentage === 100
             ? "text-emerald-600"
             : percentage > 0
-              ? "text-blue-600"
-              : "text-slate-400 group-hover:text-blue-500"
+            ? "text-blue-600"
+            : "text-slate-400"
         }`}
       >
         {percentage > 0 ? `${percentage}%` : "0%"}
@@ -129,6 +131,18 @@ export function CCESubjectWise({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [ratingData, setRatingData] = useState<RatingData>({});
+  const [configuredSubjects, setConfiguredSubjects] = useState<string[]>(() => {
+    const med = localStorage.getItem("cce_selected_medium") || "marathi";
+    const stored = localStorage.getItem(`cce_subjects_${initialClass || "1st"}_${academicYear}_${med}`) ||
+                   localStorage.getItem(`cce_subjects_${initialClass || "1st"}_${academicYear}`);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return getDefaultSubjectsForClass(initialClass || "1st", med);
+  });
 
   // Class-wise dynamic outcomes state per subject
   const [classOutcomes, setClassOutcomes] = useState<Record<string, OutcomeItem[]>>({});
@@ -250,6 +264,72 @@ export function CCESubjectWise({
     loadRatings();
     return () => unsub();
   }, [activeClass, academicYear, activeSemester]);
+
+  // 4. Load active configured subjects for activeClass
+  useEffect(() => {
+    const loadConfigured = async () => {
+      const med = localStorage.getItem("cce_selected_medium") || "marathi";
+      let activeSubs: string[] = [];
+      try {
+        const stored = localStorage.getItem(`cce_subjects_${activeClass}_${academicYear}_${med}`) ||
+                       localStorage.getItem(`cce_subjects_${activeClass}_${academicYear}`);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            activeSubs = parsed;
+          }
+        }
+      } catch (e) {}
+
+      if (activeSubs.length === 0) {
+        try {
+          const ref = doc(db, "cce_settings", `${activeClass}_${academicYear}_${med}`);
+          const snap = await getDoc(ref);
+          if (snap.exists() && snap.data().subjects && Array.isArray(snap.data().subjects)) {
+            activeSubs = snap.data().subjects;
+          }
+        } catch (e) {}
+      }
+
+      if (activeSubs.length === 0) {
+        activeSubs = getDefaultSubjectsForClass(activeClass, med);
+      }
+
+      setConfiguredSubjects(activeSubs);
+    };
+    loadConfigured();
+  }, [activeClass, academicYear]);
+
+  const isSubjectActive = (subject: { key: string; label: string }) => {
+    if (!configuredSubjects || configuredSubjects.length === 0) return true;
+    const key = subject.key.toLowerCase();
+    const label = subject.label.toLowerCase();
+
+    return configuredSubjects.some((s) => {
+      const active = String(s || "").toLowerCase().trim();
+      if (!active) return false;
+
+      if (key === "marathi" || label.includes("मराठी")) return active.includes("मराठी") || active.includes("प्रथम") || active.includes("marathi");
+      if (key === "hindi" || label.includes("हिंदी")) return active.includes("हिंदी") || active.includes("hindi");
+      if (key === "english" || label.includes("इंग्रजी")) return active.includes("इंग्रजी") || active.includes("english");
+      if (key === "math" || label.includes("गणित")) return active.includes("गणित") || active.includes("math");
+      if (key === "evs1" || label.includes("परिसर अभ्यास १")) {
+        return active.includes("परिसर १") || active.includes("परिसर अभ्यास १") || (active.includes("परिसर अभ्यास") && !active.includes("२") && !active.includes("2"));
+      }
+      if (key === "evs2" || label.includes("परिसर अभ्यास २")) {
+        return active.includes("परिसर २") || active.includes("परिसर अभ्यास २");
+      }
+      if (label.includes("परिसर अभ्यास")) return active.includes("परिसर") || active.includes("evs");
+      if (key === "science" || label.includes("विज्ञान")) return active.includes("विज्ञान") || active.includes("science");
+      if (key === "history" || label.includes("इतिहास")) return active.includes("इतिहास") || active.includes("नागरिकशास्त्र") || active.includes("सामाजिक") || active.includes("social");
+      if (key === "geography" || label.includes("भूगोल")) return active.includes("भूगोल") || active.includes("सामाजिक") || active.includes("social");
+      if (key === "kala" || label.includes("कला")) return active.includes("कला") || active.includes("art");
+      if (key === "karyanubhav" || label.includes("कार्यानुभव")) return active.includes("कार्यानुभव") || active.includes("कार्यशिक्षण") || active.includes("work");
+      if (key === "sharirik" || label.includes("शारीरिक")) return active.includes("शारीरिक") || active.includes("आरोग्य") || active.includes("physical");
+
+      return active.includes(key) || active.includes(label) || label.includes(active);
+    });
+  };
 
   // Get outcomes list for a subject (checks dynamic saved outcomes first, then CLASS_1_OUTCOMES fallback if 1st class)
   const getOutcomesForSubject = (subKey: string): OutcomeItem[] => {
@@ -578,7 +658,7 @@ export function CCESubjectWise({
             <span className="text-xs font-bold text-slate-400">माहिती लोड होत आहे...</span>
           </div>
         ) : (
-          SUBJECTS_LIST.map((subject) => {
+          SUBJECTS_LIST.filter((subject) => isSubjectActive(subject)).map((subject) => {
             const isOpen = expandedSubject === subject.key;
             const outcomesList = getOutcomesForSubject(subject.key);
 
