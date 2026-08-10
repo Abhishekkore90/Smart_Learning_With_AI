@@ -1300,7 +1300,7 @@ tbody tr:nth-child(odd) {
       <td colSpan="1"></td>
       <td colSpan="2"><b>{language === "English" ? "Total Marks" : "एकूण गुण"}</b></td>
       <td colSpan="1"><b>{totalMarks} / {totalSubjects * 100}</b></td>
-      <td colSpan="1"><b>{percentage.toFixed(2)}%</b></td>
+      <td colSpan="1"><b>{!isNaN(percentage) && isFinite(percentage) ? percentage.toFixed(2) : "0.00"}%</b></td>
     </tr>
   </>
 )}

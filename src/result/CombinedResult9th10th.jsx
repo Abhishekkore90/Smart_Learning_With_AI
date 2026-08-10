@@ -166,7 +166,11 @@ function SemesterResult9th10th() {
         fetchSubjectsForClass(selectedClass);
 
         if (selectedClass) {
-            await fetchDivisionsForClass(selectedClass);
+            try {
+                await fetchDivisionsForClass(selectedClass);
+            } catch (err) {
+                console.error("Error fetching divisions:", err);
+            }
         }
         const filteredStudents = studentData
             .filter((student) => student.currentClass === selectedClass)

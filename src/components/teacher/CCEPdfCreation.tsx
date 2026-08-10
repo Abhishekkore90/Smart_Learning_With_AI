@@ -22,6 +22,8 @@ const Collectout = safeLazy(() => import("@/result/Collectout"));
 // @ts-ignore
 const GradeWise = safeLazy(() => import("@/result/GradeWise"));
 // @ts-ignore
+const AnnualResultRegister = safeLazy(() => import("@/result/AnnualResultRegister"));
+// @ts-ignore
 const Result5th8th = safeLazy(() => import("@/result/Result5th8th"));
 // @ts-ignore
 const ResultSSC = safeLazy(() => import("@/result/ResultSSC"));
@@ -109,6 +111,7 @@ export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
   selectedClass: string; academicYear: string; onBack: () => void;
 }) {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [selectedSemester, setSelectedSemester] = useState<"sem1" | "sem2">("sem1");
 
   const renderLoading = () => (
     <div className="flex flex-col items-center justify-center min-h-[350px] text-slate-500">
@@ -124,12 +127,12 @@ export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
           <button onClick={() => setSelectedOption(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors cursor-pointer text-slate-600">
             <ArrowLeft className="size-5" />
           </button>
-          <h2 className="text-lg font-bold text-slate-800">CCE मूल्यांकन नोंदवही PDF</h2>
+          <h2 className="text-lg font-bold text-slate-800">CCE मूल्यांकन नोंदवही PDF ({selectedSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"})</h2>
         </div>
         <div className="flex-1 overflow-x-auto">
           <PdfErrorBoundary title="CCE मूल्यांकन नोंदवही">
             <Suspense fallback={renderLoading()}>
-              <BoardResult initialClass={selectedClass} initialYear={academicYear} />
+              <BoardResult initialClass={selectedClass} initialYear={academicYear} initialSemester={selectedSemester} />
             </Suspense>
           </PdfErrorBoundary>
         </div>
@@ -194,7 +197,7 @@ export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
               ) : selectedClass === "12th" ? (
                 <ResultHSC initialClass={selectedClass} initialYear={academicYear} />
               ) : (
-                <GradeWise initialClass={selectedClass} initialYear={academicYear} onBack={() => setSelectedOption(null)} />
+                <AnnualResultRegister initialClass={selectedClass} initialYear={academicYear} onBack={() => setSelectedOption(null)} />
               )}
             </Suspense>
           </PdfErrorBoundary>
@@ -226,16 +229,42 @@ export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
   return (
     <div className="bg-white text-slate-800 rounded-[2.5rem] border border-slate-200 shadow-2xl min-h-[600px] flex flex-col font-sans select-none overflow-hidden" style={{ fontFamily: "'Inter', 'Noto Sans Devanagari', sans-serif" }}>
       {/* Header */}
-      <div className="flex items-center gap-4 px-6 py-5 border-b border-slate-100 bg-slate-50 flex-shrink-0">
-        <button
-          onClick={onBack}
-          className="p-2 hover:bg-white rounded-full transition-colors cursor-pointer text-slate-600 flex items-center justify-center shadow-sm"
-        >
-          <ArrowLeft className="size-5" />
-        </button>
-        <div>
-          <h2 className="text-lg font-bold tracking-tight text-slate-800">PDF निर्मिती</h2>
-          <p className="text-[11px] text-blue-600 font-bold uppercase tracking-wider">{selectedClass} • {academicYear}</p>
+      <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-5 border-b border-slate-100 bg-slate-50 flex-shrink-0">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={onBack}
+            className="p-2 hover:bg-white rounded-full transition-colors cursor-pointer text-slate-600 flex items-center justify-center shadow-sm"
+          >
+            <ArrowLeft className="size-5" />
+          </button>
+          <div>
+            <h2 className="text-lg font-bold tracking-tight text-slate-800">PDF निर्मिती</h2>
+            <p className="text-[11px] text-blue-600 font-bold uppercase tracking-wider">{selectedClass} • {academicYear}</p>
+          </div>
+        </div>
+
+        {/* Semester Selection Switcher */}
+        <div className="flex items-center gap-1.5 bg-slate-200/70 p-1 rounded-2xl border border-slate-300/80">
+          <button
+            onClick={() => setSelectedSemester("sem1")}
+            className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+              selectedSemester === "sem1"
+                ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md"
+                : "text-slate-700 hover:bg-white/60"
+            }`}
+          >
+            प्रथम सत्र (सत्र १)
+          </button>
+          <button
+            onClick={() => setSelectedSemester("sem2")}
+            className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+              selectedSemester === "sem2"
+                ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md"
+                : "text-slate-700 hover:bg-white/60"
+            }`}
+          >
+            द्वितीय सत्र (सत्र २)
+          </button>
         </div>
       </div>
 
