@@ -2119,8 +2119,65 @@ function TeacherMDMPage() {
   const getMenuForRegisterDate = (dateStr: string, classStr = registerClass) => {
     if (!dateStr) return "No Menu Available";
 
-    // 1. Check if saved in daily register record
-    const savedRecord = registerRecords ? registerRecords[dateStr] : undefined;
+    const parts = dateStr.split("-");
+    let normalizedDateStr = dateStr;
+    let yStr = "";
+    let mNum = 0;
+    const calSectionKey = classStr === "6 To 8" ? "6-8" : "1-5";
+
+    if (parts.length === 3) {
+      yStr = parts[0];
+      mNum = parseInt(parts[1], 10);
+      const dNum = parseInt(parts[2], 10);
+      if (!isNaN(mNum) && !isNaN(dNum)) {
+        normalizedDateStr = `${yStr}-${String(mNum).padStart(2, "0")}-${String(dNum).padStart(2, "0")}`;
+      }
+    }
+
+    // 1. Check Monthly Calendar active state (calEntries) if active month & year match
+    if (mNum && yStr && calYear === parseInt(yStr, 10) && calMonth === mNum) {
+      const activeCalEntry = calEntries?.[normalizedDateStr] || calEntries?.[dateStr];
+      if (
+        activeCalEntry &&
+        activeCalEntry.menu &&
+        activeCalEntry.menu !== "— Select recipe —" &&
+        activeCalEntry.menu !== "Select Menu" &&
+        activeCalEntry.menu !== "No Menu Available"
+      ) {
+        return activeCalEntry.menu;
+      }
+    }
+
+    // 2. Check Monthly Calendar Saved Records (monthlyCalendarRecords)
+    if (mNum && yStr && monthlyCalendarRecords) {
+      const keysToTry = [
+        `${yStr}_${mNum}_${calSectionKey}`,
+        `${yStr}_${mNum}_1-5`,
+        `${yStr}_${mNum}_6-8`,
+        `${yStr}_${String(mNum).padStart(2, "0")}_${calSectionKey}`,
+        `${yStr}_${String(mNum).padStart(2, "0")}_1-5`,
+        `${yStr}_${String(mNum).padStart(2, "0")}_6-8`,
+      ];
+
+      for (const k of keysToTry) {
+        const calRec = monthlyCalendarRecords[k];
+        if (calRec) {
+          const entry = calRec[normalizedDateStr] || calRec[dateStr];
+          if (
+            entry &&
+            entry.menu &&
+            entry.menu !== "— Select recipe —" &&
+            entry.menu !== "Select Menu" &&
+            entry.menu !== "No Menu Available"
+          ) {
+            return entry.menu;
+          }
+        }
+      }
+    }
+
+    // 3. Check if saved in daily register record
+    const savedRecord = registerRecords ? (registerRecords[normalizedDateStr] || registerRecords[dateStr]) : undefined;
     if (savedRecord) {
       const classRecord = savedRecord[classStr] || (classStr === "1 To 5" ? savedRecord : null);
       if (classRecord && classRecord.menu && classRecord.menu !== "No Menu Available" && classRecord.menu !== "Select Menu") {
@@ -2128,37 +2185,8 @@ function TeacherMDMPage() {
       }
     }
 
-    // 2. Check Monthly Calendar Records (monthlyCalendarRecords or calEntries)
-    if (dateStr) {
-      const parts = dateStr.split("-");
-      if (parts.length === 3) {
-        const y = parts[0];
-        const m = parseInt(parts[1], 10);
-        const calSectionKey = classStr === "6 To 8" ? "6-8" : "1-5";
-        
-        const keysToTry = [
-          `${y}_${m}_${calSectionKey}`,
-          `${y}_${m}_1-5`,
-          `${y}_${m}_6-8`
-        ];
-
-        if (monthlyCalendarRecords) {
-          for (const k of keysToTry) {
-            const calRec = monthlyCalendarRecords[k];
-            if (calRec && calRec[dateStr] && calRec[dateStr].menu && calRec[dateStr].menu !== "— Select recipe —" && calRec[dateStr].menu !== "Select Menu") {
-              return calRec[dateStr].menu;
-            }
-          }
-        }
-
-        if (calEntries && calEntries[dateStr] && calEntries[dateStr].menu && calEntries[dateStr].menu !== "— Select recipe —" && calEntries[dateStr].menu !== "Select Menu") {
-          return calEntries[dateStr].menu;
-        }
-      }
-    }
-
-    // 3. Fall back to weekly configured menu
-    const dayKey = getDayOfWeekKeyForDate(dateStr);
+    // 4. Fall back to weekly configured menu
+    const dayKey = getDayOfWeekKeyForDate(normalizedDateStr || dateStr);
     if (
       dayKey &&
       menuRecords &&
@@ -2169,8 +2197,8 @@ function TeacherMDMPage() {
       return menuRecords[dayKey].menu;
     }
 
-    // 4. Fall back to simple day search
-    const d = new Date(dateStr);
+    // 5. Fall back to simple day search
+    const d = new Date(normalizedDateStr || dateStr);
     if (!isNaN(d.getTime())) {
       const days = [
         "Sunday",
@@ -2195,7 +2223,6 @@ function TeacherMDMPage() {
       }
     }
 
-    return "No Menu Available";
   };
 
   const getSelectedItemsForRegisterDate = (dateStr: string, classStr = registerClass) => {
@@ -3245,11 +3272,24 @@ function TeacherMDMPage() {
       };
     }
 
-    // 3. Monthly Calendar Records Holiday check (for both primary 1-5 and upper 6-8)
+    // 3. Active Monthly Calendar State Holiday check (if active month/year matches)
+    if (calYear === year && calMonth === month) {
+      const activeEntry = calEntries?.[`${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`] || calEntries?.[dateStr];
+      if (activeEntry?.isHoliday) {
+        return {
+          disabled: true,
+          isSunday: false,
+          isHoliday: true,
+          reason: activeEntry.holidayReason || "नोंदवलेली सुट्टी",
+        };
+      }
+    }
+
+    // 4. Monthly Calendar Records Holiday check (for both primary 1-5 and upper 6-8)
     const key15 = `${year}_${month}_1-5`;
     const key68 = `${year}_${month}_6-8`;
-    const cal15 = monthlyCalendarRecords?.[key15]?.[dateStr];
-    const cal68 = monthlyCalendarRecords?.[key68]?.[dateStr];
+    const cal15 = monthlyCalendarRecords?.[key15]?.[dateStr] || monthlyCalendarRecords?.[key15]?.[`${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`];
+    const cal68 = monthlyCalendarRecords?.[key68]?.[dateStr] || monthlyCalendarRecords?.[key68]?.[`${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`];
 
     if (cal15?.isHoliday || cal68?.isHoliday) {
       const reason = cal15?.holidayReason || cal68?.holidayReason || "नोंदवलेली सुट्टी";
@@ -3261,7 +3301,7 @@ function TeacherMDMPage() {
       };
     }
 
-    // 4. Daily Register Record Holiday check
+    // 5. Daily Register Record Holiday check
     const regRec = registerRecords?.[dateStr];
     if (regRec) {
       const classRec = regRec[registerClass] || (registerClass === "1 To 5" ? regRec : null);
@@ -3387,15 +3427,34 @@ function TeacherMDMPage() {
         [`${calYear}_${calMonth}_${calSection}_mode`]: calMode,
       };
 
+      // Also sync registerRecords for dates in calEntries
+      const updatedRegisterRecords = { ...registerRecords };
+      Object.entries(calEntries).forEach(([dateKey, entry]) => {
+        if (entry.menu && entry.menu !== "— Select recipe —" && entry.menu !== "Select Menu") {
+          const currentRec = updatedRegisterRecords[dateKey] || {};
+          const currentClassRec = currentRec[registerClass] || {};
+          updatedRegisterRecords[dateKey] = {
+            ...currentRec,
+            [registerClass]: {
+              ...currentClassRec,
+              menu: entry.menu,
+            },
+            menu: entry.menu,
+          };
+        }
+      });
+
       await setDoc(
         doc(db, "school_data", `${udise}_mdm`),
         {
           monthlyCalendar: updatedCalendarRecords,
+          registerRecords: updatedRegisterRecords,
           updatedAt: new Date().toISOString(),
         },
         { merge: true },
       );
       setMonthlyCalendarRecords(updatedCalendarRecords);
+      setRegisterRecords(updatedRegisterRecords);
       toast.success(t("मासिक कॅलेंडर हजेरी व मेनू जतन केला!", "Monthly Calendar attendance and menu saved successfully!"));
     } catch (e) {
       console.error(e);
@@ -6064,11 +6123,150 @@ function TeacherMDMPage() {
   };
 
   // Get incoming record quantity for a specific item in a month
-  const getIncomingForItem = (itemName: string, month: string, year: number, cls: string = "1 To 5") => {
-    const key = `${year}_${month}_${cls}`;
-    const record = incomingRecords[key];
-    if (!record) return 0;
-    return parseFloat(record[itemName] || "0") || 0;
+  const getIncomingForItem = (
+    itemName: string,
+    month: string,
+    year: number,
+    cls: string = "1 To 5",
+    day?: number
+  ) => {
+    const itemKey = getItemKeyFromName(itemName);
+    let totalIncoming = 0;
+
+    const monthNamesEng = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const marathiMonths = ["", "जानेवारी", "फेब्रुवारी", "मार्च", "एप्रिल", "मे", "जून", "जुलै", "ऑगस्ट", "सप्टेंबर", "ऑक्टोबर", "नोव्हेंबर", "डिसेंबर"];
+
+    let monthNum = 0;
+    const monthMap: { [k: string]: number } = {
+      "जानेवारी": 1, "फेब्रुवारी": 2, "मार्च": 3, "एप्रिल": 4,
+      "मे": 5, "जून": 6, "जुलै": 7, "ऑगस्ट": 8,
+      "सप्टेंबर": 9, "ऑक्टोबर": 10, "नोव्हेंबर": 11, "डिसेंबर": 12
+    };
+
+    if (monthMap[month]) {
+      monthNum = monthMap[month];
+    } else {
+      const idx = monthNamesEng.findIndex((m) => m && m.toLowerCase() === month.toLowerCase());
+      if (idx !== -1) {
+        monthNum = idx;
+      } else {
+        const numVal = parseInt(month, 10);
+        if (!isNaN(numVal) && numVal >= 1 && numVal <= 12) monthNum = numVal;
+      }
+    }
+
+    const engMonthName = monthNum > 0 ? monthNamesEng[monthNum] : month;
+    const marMonthName = monthNum > 0 ? marathiMonths[monthNum] : month;
+
+    // 1. From incRecords (Incoming Stock Tab entries list)
+    if (Array.isArray(incRecords)) {
+      incRecords.forEach((r: any) => {
+        if (!r) return;
+        const rItem = r.item || r.itemName || r.name || "";
+        const rKey = getItemKeyFromName(rItem);
+        const isItemMatch = (rKey && rKey === itemKey) || rItem.toLowerCase().trim() === itemName.toLowerCase().trim();
+
+        if (!isItemMatch) return;
+
+        let dateMatched = false;
+        let rDayNum = 0;
+
+        if (r.date) {
+          const parts = r.date.split(/[-/]/);
+          if (parts.length === 3) {
+            let rYear = 0;
+            let rMonth = 0;
+            let rDay = 0;
+            if (parts[0].length === 4) {
+              rYear = parseInt(parts[0], 10);
+              rMonth = parseInt(parts[1], 10);
+              rDay = parseInt(parts[2], 10);
+            } else {
+              rDay = parseInt(parts[0], 10);
+              rMonth = parseInt(parts[1], 10);
+              rYear = parseInt(parts[2], 10);
+            }
+            if (rYear === year && rMonth === monthNum) {
+              dateMatched = true;
+              rDayNum = rDay;
+            }
+          }
+        } else {
+          const recYear = parseInt(r.year, 10);
+          let recMonthNum = 0;
+          if (monthMap[r.month]) recMonthNum = monthMap[r.month];
+          else recMonthNum = monthNamesEng.findIndex(m => m && m.toLowerCase() === String(r.month).toLowerCase());
+          if (recYear === year && recMonthNum === monthNum) {
+            dateMatched = true;
+          }
+        }
+
+        if (dateMatched) {
+          if (day !== undefined && day > 0) {
+            if (rDayNum === day) {
+              totalIncoming += parseFloat(r.qty || r.quantity || r.received || "0") || 0;
+            }
+          } else {
+            totalIncoming += parseFloat(r.qty || r.quantity || r.received || "0") || 0;
+          }
+        }
+      });
+    }
+
+    // 2. From incomingRecords (Monthly Matrix Records)
+    if (incomingRecords && (day === undefined || day === 1)) {
+      const keysToTry = [
+        `${year}_${engMonthName}_${cls}`,
+        `${year}_${marMonthName}_${cls}`,
+        `${year}_${monthNum}_${cls}`,
+        `${year}_${String(monthNum).padStart(2, "0")}_${cls}`,
+        `${year}_${engMonthName}_1 To 5`,
+        `${year}_${marMonthName}_1 To 5`,
+        `${year}_${monthNum}_1 To 5`,
+        `${year}_${String(monthNum).padStart(2, "0")}_1 To 5`,
+      ];
+
+      for (const k of keysToTry) {
+        const recData = incomingRecords[k];
+        if (recData) {
+          const val = parseFloat(recData[itemKey] || recData[itemName] || "0") || 0;
+          if (val > 0) {
+            totalIncoming += val;
+            break;
+          }
+        }
+      }
+    }
+
+    // 3. From openingStockReceived (Opening stock tab received values)
+    if (openingStockReceived && (day === undefined || day === 1)) {
+      const recVal = parseFloat(openingStockReceived[itemKey] || openingStockReceived[itemName] || "0") || 0;
+      if (recVal > 0 && totalIncoming === 0) {
+        totalIncoming += recVal;
+      }
+    }
+
+    // 4. From openingStockDateMap
+    if (openingStockDateMap && (day === undefined || day === 1)) {
+      Object.entries(openingStockDateMap).forEach(([dStr, dMap]: [string, any]) => {
+        const parts = dStr.split("-");
+        if (parts.length === 3) {
+          const dYear = parseInt(parts[0], 10);
+          const dMonth = parseInt(parts[1], 10);
+          const dDay = parseInt(parts[2], 10);
+          if (dYear === year && dMonth === monthNum && (day === undefined || dDay === day)) {
+            if (dMap && dMap.received) {
+              const val = parseFloat(dMap.received[itemKey] || dMap.received[itemName] || "0") || 0;
+              if (val > 0) {
+                totalIncoming += val;
+              }
+            }
+          }
+        }
+      });
+    }
+
+    return roundStock(totalIncoming);
   };
 
   // Item mapping for annual report columns (Marathi header -> English key in stockRecords)
@@ -6190,7 +6388,7 @@ function TeacherMDMPage() {
         return {
           beneficiary: Number(classRec.beneficiary) || 0,
           enrolled: Number(classRec.totalEnrolled || classRec.pat) || (classSection === "1 To 5" ? (Number(profile?.patPrimary) || 0) : (Number(profile?.patUpper) || 0)),
-          menu: classRec.menu || getMenuForRegisterDate(dateISO, classSection),
+          menu: getMenuForRegisterDate(dateISO, classSection) || classRec.menu,
           selectedItems: classRec.selectedItems || getSelectedItemsForRegisterDate(dateISO, classSection),
           isHoliday: false,
           holidayReason: ""
@@ -12004,7 +12202,7 @@ function TeacherMDMPage() {
                               recordedDaysCount++;
                             }
 
-                            const dayIncomingRice = day === 1 ? getIncomingForItem("Rice", engMonthNames[monthNum], year, "1 To 5") : 0;
+                            const dayIncomingRice = getIncomingForItem("Rice", engMonthNames[monthNum], year, "1 To 5", day);
                             if (dayIncomingRice > 0 && !riceReceivedDateStr) {
                               riceReceivedDateStr = dateFormatted;
                             }
