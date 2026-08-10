@@ -2048,6 +2048,7 @@ function TeacherMDMPage() {
       Turmeric: true,
       Cumin: true,
       Mustard: true,
+      Chili: true,
     };
 
     if (nameLower.includes("तूर") || nameLower.includes("turdal") || nameLower.includes("वरण")) {
@@ -3018,7 +3019,7 @@ function TeacherMDMPage() {
     if (cleaned.includes("rice") || cleaned.includes("तांदूळ")) return "Rice";
     if (cleaned.includes("mugdal") || cleaned.includes("moong dal") || cleaned.includes("मूगडाळ")) return "Mugdal";
     if (cleaned.includes("turdal") || cleaned.includes("tur dal") || cleaned.includes("तूरडाळ")) return "Turdal";
-    if (cleaned.includes("masurdal") || cleaned.includes("masoor dal") || cleaned.includes("मसूरडाळ")) return "Masurdal";
+    if (cleaned.includes("masurdal") || cleaned.includes("masoor dal") || cleaned.includes("मसूरडाळ") || cleaned.includes("मसूर") || cleaned.includes("मसुरी")) return "Masurdal";
     if (cleaned.includes("matki") || cleaned.includes("मटकी")) return "Matki";
     if (cleaned.includes("moong") || cleaned.includes("मूग")) return "Moong";
     if (cleaned.includes("cowpea") || cleaned.includes("चवळी")) return "Cowpea";
@@ -3752,7 +3753,7 @@ function TeacherMDMPage() {
     }
   }, [registerDate]);
 
-  // Load saved beneficiary when date or class changes
+  // Load saved beneficiary & enrolled when date or class changes
   useEffect(() => {
     if (registerDate && registerClass && registerClass !== "Select Class") {
       const savedRecord = registerRecords[registerDate];
@@ -3760,16 +3761,22 @@ function TeacherMDMPage() {
         const classRecord = savedRecord[registerClass] || (registerClass === "1 To 5" ? savedRecord : null);
         if (classRecord) {
           setRegisterBeneficiary(classRecord.beneficiary || "");
+          const savedEnr = classRecord.enrolled || classRecord.totalEnrolled || "";
+          const defaultPat = registerClass === "1 To 5" ? (profile?.patPrimary || "") : (profile?.patUpper || "");
+          setTotalEnrolled((savedEnr === "45" || savedEnr === "35") && defaultPat && defaultPat !== savedEnr ? defaultPat : (savedEnr || defaultPat));
         } else {
           setRegisterBeneficiary("");
+          setTotalEnrolled(registerClass === "1 To 5" ? (profile?.patPrimary || "") : (profile?.patUpper || ""));
         }
       } else {
         setRegisterBeneficiary("");
+        setTotalEnrolled(registerClass === "1 To 5" ? (profile?.patPrimary || "") : (profile?.patUpper || ""));
       }
     } else {
       setRegisterBeneficiary("");
+      setTotalEnrolled("");
     }
-  }, [registerDate, registerClass, registerRecords]);
+  }, [registerDate, registerClass, registerRecords, profile]);
 
   useEffect(() => {
     if (dailyRecord.date) {
@@ -4068,52 +4075,77 @@ function TeacherMDMPage() {
   ): number => {
     let totalUsed = 0;
     const isPrimary = classStr === "1 To 5";
+    const itemKey = getItemKeyFromName(itemName);
 
-    Object.keys(registerRecords || {}).forEach((dateStr) => {
-      const parts = dateStr.split("-");
-      if (parts.length !== 3) return;
-      const recYear = parts[0];
-      const monthIndex = parseInt(parts[1], 10) - 1;
-      const monthNames = [
-        "January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"
-      ];
-      if (monthIndex < 0 || monthIndex > 11) return;
-      const recMonth = monthNames[monthIndex];
+    const monthMap: { [k: string]: number } = {
+      "January": 1, "February": 2, "March": 3, "April": 4,
+      "May": 5, "June": 6, "July": 7, "August": 8,
+      "September": 9, "October": 10, "November": 11, "December": 12,
+      "जानेवारी": 1, "फेब्रुवारी": 2, "मार्च": 3, "एप्रिल": 4,
+      "मे": 5, "जून": 6, "जुलै": 7, "ऑगस्ट": 8,
+      "सप्टेंबर": 9, "ऑक्टोबर": 10, "नोव्हेंबर": 11, "डिसेंबर": 12
+    };
 
-      if (
-        recYear !== yearStr ||
-        recMonth.toLowerCase() !== monthName.toLowerCase()
-      )
-        return;
+    const monthNum = monthMap[monthName] || monthMap[monthName.trim()] || 7;
+    const year = parseInt(yearStr, 10) || 2026;
+    const daysInMonth = new Date(year, monthNum, 0).getDate();
 
-      const record = registerRecords[dateStr];
-      if (!record) return;
-      const classRecord = record[classStr] || (classStr === "1 To 5" ? record : null);
-      if (!classRecord) return;
-      const bene = Number(classRecord.beneficiary) || 0;
-      if (bene === 0) return;
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateISO = `${year}-${String(monthNum).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      const daily = getDailyDataForMonthDate(dateISO, classStr as "1 To 5" | "6 To 8");
 
-      // Only count this item if it was actively selected/used that day
-      const selectedItems = classRecord.selectedItems || getSelectedItemsForRegisterDate(dateStr, classStr);
-      const wasSelected = selectedItems
-        ? !!selectedItems[itemName]
-        : false;
-      if (!wasSelected) return;
+      if (daily.isHoliday || !daily.beneficiary || daily.beneficiary <= 0) continue;
 
+      const bene = daily.beneficiary;
+
+      // Determine active selected items for this day
+      const recipeSelection = getRecipeItemsById(daily.menu);
+      const activeSelected: Record<string, boolean> = { ...recipeSelection };
+      if (daily.selectedItems) {
+        Object.keys(daily.selectedItems).forEach((k) => {
+          if (daily.selectedItems[k]) {
+            activeSelected[k] = true;
+          }
+        });
+      }
+
+      // Check if this item was used
+      const wasSelected =
+        !!activeSelected[itemName] ||
+        !!activeSelected[itemKey] ||
+        (daily.selectedItems ? (!!daily.selectedItems[itemName] || !!daily.selectedItems[itemKey]) : false);
+
+      if (!wasSelected) continue;
+
+      // Find quantity rule
       const rule = quantityRules.find(
-        (r) => r.item.toLowerCase() === itemName.toLowerCase(),
+        (r) =>
+          r.item.toLowerCase() === itemName.toLowerCase() ||
+          r.item.toLowerCase() === itemKey.toLowerCase(),
       );
-      if (!rule) return;
 
-      const qtyStr = isPrimary ? rule.qty15 : rule.qty68;
-      const qty = Number(qtyStr) || 0; // qty is already in kg (e.g. 0.1 kg = 100 g)
-      if (qty <= 0) return;
+      let qKg = 0;
+      if (rule) {
+        const qtyStr = isPrimary ? rule.qty15 : rule.qty68;
+        const qty = Number(qtyStr) || 0;
+        qKg = qty >= 1 ? qty / 1000 : qty;
+      }
 
-      // If qty >= 1, the rule is stored in grams → convert to kg; otherwise already in kg
-      const qtyKg = qty >= 1 ? qty / 1000 : qty;
-      totalUsed += qtyKg * bene;
-    });
+      if (qKg <= 0) {
+        // Fallback rates if rule not specified
+        if (itemKey === "Rice") qKg = isPrimary ? 0.100 : 0.150;
+        else if (itemKey === "Masurdal" || itemKey === "Mugdal" || itemKey === "Turdal" || itemKey === "Matki" || itemKey === "Cowpea" || itemKey === "Gram" || itemKey === "Pease" || itemKey === "Soyabean Wadi") qKg = isPrimary ? 0.020 : 0.030;
+        else if (itemKey === "Moong") qKg = isPrimary ? 0.010 : 0.015;
+        else if (itemKey === "Chili" || itemKey === "Turmeric" || itemKey === "Onion Garlic Masala" || itemKey === "Garam Masala" || itemKey === "Cumin" || itemKey === "Mustard") qKg = isPrimary ? 0.0004 : 0.0006;
+        else if (itemKey === "Salt") qKg = isPrimary ? 0.004 : 0.006;
+        else if (itemKey === "Oil") qKg = isPrimary ? 0.0054 : 0.0082;
+        else if (itemKey === "Vegetables") qKg = 0.050;
+      }
+
+      if (qKg > 0) {
+        totalUsed += qKg * bene;
+      }
+    }
 
     return Number(totalUsed.toFixed(6));
   };
@@ -5092,13 +5124,13 @@ function TeacherMDMPage() {
         [registerDate]: {
           ...currentDayRecord,
           [registerClass]: {
-            enrolled: registerClass === "1 To 5" ? "45" : "35",
+            enrolled: totalEnrolled || (registerClass === "1 To 5" ? (profile?.patPrimary || "0") : (profile?.patUpper || "0")),
             beneficiary: registerBeneficiary || "0",
             menu: currentMenu,
             selectedItems: currentSelectedItems,
           },
           // Flat fallback fields for backward compatibility
-          enrolled: registerClass === "1 To 5" ? "45" : "35",
+          enrolled: totalEnrolled || (registerClass === "1 To 5" ? (profile?.patPrimary || "0") : (profile?.patUpper || "0")),
           beneficiary: registerBeneficiary || "0",
           menu: currentMenu,
           selectedItems: currentSelectedItems,
@@ -5302,8 +5334,7 @@ function TeacherMDMPage() {
           (acc, r) => acc + (r.beneficiary || 0),
           0,
         );
-        const avgBeneficiaries =
-          dayCount > 0 ? Math.round(beneficiarySum / stockRecords.length) : 45;
+        const avgBeneficiaries = dayCount > 0 ? Math.round(beneficiarySum / stockRecords.length) : (stockClass === "1 To 5" ? (Number(profile?.patPrimary) || 0) : (Number(profile?.patUpper) || 0));
 
         const standardNeed =
           qtyPerStudent >= 1
@@ -6131,7 +6162,6 @@ function TeacherMDMPage() {
     day?: number
   ) => {
     const itemKey = getItemKeyFromName(itemName);
-    let totalIncoming = 0;
 
     const monthNamesEng = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
     const marathiMonths = ["", "जानेवारी", "फेब्रुवारी", "मार्च", "एप्रिल", "मे", "जून", "जुलै", "ऑगस्ट", "सप्टेंबर", "ऑक्टोबर", "नोव्हेंबर", "डिसेंबर"];
@@ -6159,6 +6189,9 @@ function TeacherMDMPage() {
     const marMonthName = monthNum > 0 ? marathiMonths[monthNum] : month;
 
     // 1. From incRecords (Incoming Stock Tab entries list)
+    let incTotal = 0;
+    let incDayTotal = 0;
+
     if (Array.isArray(incRecords)) {
       incRecords.forEach((r: any) => {
         if (!r) return;
@@ -6202,19 +6235,18 @@ function TeacherMDMPage() {
         }
 
         if (dateMatched) {
-          if (day !== undefined && day > 0) {
-            if (rDayNum === day) {
-              totalIncoming += parseFloat(r.qty || r.quantity || r.received || "0") || 0;
-            }
-          } else {
-            totalIncoming += parseFloat(r.qty || r.quantity || r.received || "0") || 0;
+          const val = parseFloat(r.qty || r.quantity || r.received || "0") || 0;
+          incTotal += val;
+          if (day !== undefined && rDayNum === day) {
+            incDayTotal += val;
           }
         }
       });
     }
 
     // 2. From incomingRecords (Monthly Matrix Records)
-    if (incomingRecords && (day === undefined || day === 1)) {
+    let matrixVal = 0;
+    if (incomingRecords) {
       const keysToTry = [
         `${year}_${engMonthName}_${cls}`,
         `${year}_${marMonthName}_${cls}`,
@@ -6231,7 +6263,7 @@ function TeacherMDMPage() {
         if (recData) {
           const val = parseFloat(recData[itemKey] || recData[itemName] || "0") || 0;
           if (val > 0) {
-            totalIncoming += val;
+            matrixVal = val;
             break;
           }
         }
@@ -6239,26 +6271,29 @@ function TeacherMDMPage() {
     }
 
     // 3. From openingStockReceived (Opening stock tab received values)
-    if (openingStockReceived && (day === undefined || day === 1)) {
-      const recVal = parseFloat(openingStockReceived[itemKey] || openingStockReceived[itemName] || "0") || 0;
-      if (recVal > 0 && totalIncoming === 0) {
-        totalIncoming += recVal;
-      }
+    let opRecVal = 0;
+    if (openingStockReceived) {
+      opRecVal = parseFloat(openingStockReceived[itemKey] || openingStockReceived[itemName] || "0") || 0;
     }
 
     // 4. From openingStockDateMap
-    if (openingStockDateMap && (day === undefined || day === 1)) {
+    let dateMapVal = 0;
+    let dateMapDayVal = 0;
+    if (openingStockDateMap) {
       Object.entries(openingStockDateMap).forEach(([dStr, dMap]: [string, any]) => {
         const parts = dStr.split("-");
         if (parts.length === 3) {
           const dYear = parseInt(parts[0], 10);
           const dMonth = parseInt(parts[1], 10);
           const dDay = parseInt(parts[2], 10);
-          if (dYear === year && dMonth === monthNum && (day === undefined || dDay === day)) {
+          if (dYear === year && dMonth === monthNum) {
             if (dMap && dMap.received) {
               const val = parseFloat(dMap.received[itemKey] || dMap.received[itemName] || "0") || 0;
               if (val > 0) {
-                totalIncoming += val;
+                dateMapVal += val;
+                if (day !== undefined && dDay === day) {
+                  dateMapDayVal += val;
+                }
               }
             }
           }
@@ -6266,7 +6301,20 @@ function TeacherMDMPage() {
       });
     }
 
-    return roundStock(totalIncoming);
+    // Determine final incoming value avoiding double counting:
+    if (day !== undefined && day > 0) {
+      if (incDayTotal > 0) return roundStock(incDayTotal);
+      if (dateMapDayVal > 0) return roundStock(dateMapDayVal);
+      if (day === 1 && incTotal === 0 && dateMapVal === 0) {
+        return roundStock(Math.max(matrixVal, opRecVal));
+      }
+      return 0;
+    }
+
+    const maxFallback = Math.max(matrixVal, opRecVal, dateMapVal);
+    const finalIncoming = incTotal > 0 ? Math.max(incTotal, maxFallback) : maxFallback;
+
+    return roundStock(finalIncoming);
   };
 
   // Item mapping for annual report columns (Marathi header -> English key in stockRecords)
@@ -6387,9 +6435,11 @@ function TeacherMDMPage() {
       if (classRec && (Number(classRec.beneficiary) > 0 || classRec.menu)) {
         return {
           beneficiary: Number(classRec.beneficiary) || 0,
-          enrolled: Number(classRec.totalEnrolled || classRec.pat) || (classSection === "1 To 5" ? (Number(profile?.patPrimary) || 0) : (Number(profile?.patUpper) || 0)),
+          enrolled: ((Number(classRec.totalEnrolled || classRec.enrolled || classRec.pat) || 0) === 45 || (Number(classRec.totalEnrolled || classRec.enrolled || classRec.pat) || 0) === 35) && (classSection === "1 To 5" ? (Number(profile?.patPrimary) || 0) : (Number(profile?.patUpper) || 0)) > 0 && (classSection === "1 To 5" ? (Number(profile?.patPrimary) || 0) : (Number(profile?.patUpper) || 0)) !== (Number(classRec.totalEnrolled || classRec.enrolled || classRec.pat) || 0) ? (classSection === "1 To 5" ? (Number(profile?.patPrimary) || 0) : (Number(profile?.patUpper) || 0)) : (Number(classRec.totalEnrolled || classRec.enrolled || classRec.pat) || (classSection === "1 To 5" ? (Number(profile?.patPrimary) || 0) : (Number(profile?.patUpper) || 0))),
           menu: getMenuForRegisterDate(dateISO, classSection) || classRec.menu,
           selectedItems: classRec.selectedItems || getSelectedItemsForRegisterDate(dateISO, classSection),
+          purakAhar: !!classRec.purakAhar,
+          purakAharDetails: classRec.purakAharDetails || (classRec.purakAhar ? "अंडी/केळी" : ""),
           isHoliday: false,
           holidayReason: ""
         };
@@ -6410,6 +6460,8 @@ function TeacherMDMPage() {
           enrolled: classSection === "1 To 5" ? (Number(profile?.patPrimary) || 0) : (Number(profile?.patUpper) || 0),
           menu: entry.menu || getMenuForRegisterDate(dateISO, classSection),
           selectedItems: getSelectedItemsForRegisterDate(dateISO, classSection),
+          purakAhar: !!entry.purakAhar,
+          purakAharDetails: entry.purakAharDetails || (entry.purakAhar ? "अंडी/केळी" : ""),
           isHoliday: !!entry.isHoliday,
           holidayReason: entry.holidayReason || ""
         };
@@ -6423,6 +6475,8 @@ function TeacherMDMPage() {
       enrolled: classSection === "1 To 5" ? (Number(profile?.patPrimary) || 0) : (Number(profile?.patUpper) || 0),
       menu: isSunday ? "— Select recipe —" : getMenuForRegisterDate(dateISO, classSection),
       selectedItems: getSelectedItemsForRegisterDate(dateISO, classSection),
+      purakAhar: false,
+      purakAharDetails: "",
       isHoliday: isSunday,
       holidayReason: isSunday ? "रविवार सुट्टी" : ""
     };
@@ -11952,13 +12006,7 @@ function TeacherMDMPage() {
                                       "दिस",
                                     ];
                                     const mIdx = d.getMonth();
-                                    const month = t(
-                                      monthsMr[mIdx],
-                                      monthsEn[mIdx],
-                                      monthsHi[mIdx],
-                                    );
-                                    const year = d.getFullYear();
-                                    return `${day}-${month}-${year}`;
+                                    return `${day}-${t(monthsMr[mIdx], monthsEn[mIdx], monthsHi[mIdx])}-${d.getFullYear()}`;
                                   };
                                   return `${formatDemandDate(demandFromDate)} ${t("ते", "To", "से")} ${formatDemandDate(demandToDate)}`;
                                 })()}
@@ -12534,12 +12582,12 @@ function TeacherMDMPage() {
                                                 </td>
                                               );
                                             })}
-                                            <td className="border-r border-slate-700 px-1 py-0.5"></td>
-                                            <td className="border-r border-slate-700 px-1 py-0.5"></td>
-                                            <td className="border-r border-slate-700 px-1 py-0.5"></td>
-                                            <td className="border-r border-slate-700 px-1 py-0.5 text-xs font-semibold">{bene > 0 ? (bene * 0.01).toFixed(2) : ""}</td>
-                                            <td className="border-r border-slate-700 px-1 py-0.5 text-xs">{bene > 0 ? "अंडी/केळी" : ""}</td>
-                                            <td className="border-r border-slate-700 px-1 py-0.5 text-xs font-bold">{bene > 0 ? (bene * (parseFloat(primaryRate) || 5.45)).toFixed(2) : ""}</td>
+                                            <td className="border-r border-slate-700 px-1 py-0.5 text-xs">
+                                              {daily.isHoliday || bene === 0 || (!daily.purakAhar && !daily.purakAharDetails) ? "" : (daily.purakAharDetails || "अंडी/केळी")}
+                                            </td>
+                                            <td className="border-r border-slate-700 px-1 py-0.5 text-xs font-bold">
+                                              {daily.isHoliday || bene === 0 ? "" : (bene * (parseFloat(primaryRate) || 5.45)).toFixed(2)}
+                                            </td>
                                           </tr>
                                         );
                                       })}
@@ -12556,8 +12604,7 @@ function TeacherMDMPage() {
                                             </td>
                                           ))}
                                           <td className="border-r border-slate-700 px-1 py-0.5"></td>
-                                          <td className="border-r border-slate-700 px-1 py-0.5"></td>
-                                          <td className="border-r border-slate-700 px-1 py-0.5 font-black">{monthlyTotalGrant.toFixed(2)}</td>
+                                          <td className="border-r border-slate-700 px-1 py-0.5 font-black">{monthlyTotalGrant > 0 ? monthlyTotalGrant.toFixed(2) : ""}</td>
                                         </tr>
                                       )}
                                     </tbody>
