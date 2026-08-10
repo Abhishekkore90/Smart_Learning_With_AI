@@ -464,17 +464,42 @@ export function CCESubjectWise({
   const saveRatings = async () => {
     setSaving(true);
     try {
+      const teacherId = getTeacherId();
+      const payload = {
+        class: activeClass,
+        academicYear,
+        semester: activeSemester,
+        ratings: ratingData,
+        teacherId: teacherId || "",
+        updatedAt: new Date().toISOString(),
+      };
+
+      // 1. Generic class doc
       await setDoc(
         doc(db, "cce_outcomes", `${activeClass}_${academicYear}_${activeSemester}`),
-        {
-          class: activeClass,
-          academicYear,
-          semester: activeSemester,
-          ratings: ratingData,
-          updatedAt: new Date().toISOString(),
-        },
+        payload,
         { merge: true }
       );
+      await setDoc(
+        doc(db, "cce_outcomes", `${activeClass}_${academicYear}`),
+        payload,
+        { merge: true }
+      );
+
+      // 2. Teacher-isolated docs
+      if (teacherId) {
+        await setDoc(
+          doc(db, "cce_outcomes", `${teacherId}_${activeClass}_${academicYear}_${activeSemester}`),
+          payload,
+          { merge: true }
+        );
+        await setDoc(
+          doc(db, "cce_outcomes", `${teacherId}_${activeClass}_${academicYear}`),
+          payload,
+          { merge: true }
+        );
+      }
+
       toast.success("गुणवत्तेच्या नोंदी जतन झाल्या!");
       setEditingOutcome(null);
     } catch (err: any) {

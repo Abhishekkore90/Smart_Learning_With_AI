@@ -133,15 +133,18 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
     setLoading(true);
     try {
       const docId = `${selectedClass}_${academicYear}`;
+      const currentTeacherId = getTeacherId();
 
       // 1. Fetch Global & Class Settings (from CCESettings / Bunny Storage / school_settings)
       try {
         let globalSettings = null;
 
-        // Try local storage cache
+        // Try local storage cache (teacher-specific first, then generic)
         try {
+          const cachedTeacher = localStorage.getItem(`cce_general_school_settings_${currentTeacherId}`);
           const cachedGen = localStorage.getItem("cce_general_school_settings");
-          if (cachedGen) globalSettings = JSON.parse(cachedGen);
+          const cached = cachedTeacher || cachedGen;
+          if (cached) globalSettings = JSON.parse(cached);
         } catch (e) {}
 
         // Try Bunny Storage CDN
@@ -152,15 +155,44 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
           } catch (e) {}
         }
 
-        // Try Firestore global document
+        // Try Firestore teacher-specific documents first, then global
         if (!globalSettings) {
+          // Try ${teacherId}_general
+          try {
+            const teacherGenSnap = await getDoc(doc(db, "school_settings", `${currentTeacherId}_general`));
+            if (teacherGenSnap.exists()) globalSettings = teacherGenSnap.data();
+          } catch (e) {}
+        }
+        if (!globalSettings) {
+          // Try ${teacherId}
+          try {
+            const teacherSnap = await getDoc(doc(db, "school_settings", currentTeacherId));
+            if (teacherSnap.exists()) globalSettings = teacherSnap.data();
+          } catch (e) {}
+        }
+        if (!globalSettings) {
+          // Fallback: Try generic "general" doc
           const generalSnap = await getDoc(doc(db, "school_settings", "general"));
           if (generalSnap.exists()) globalSettings = generalSnap.data();
         }
 
-        // Try Firestore class-specific document
-        const settingsSnap = await getDoc(doc(db, "cce_settings", docId));
-        const classSettings = settingsSnap.exists() ? settingsSnap.data() : {};
+        // Try Firestore class-specific document (teacher-isolated first, then generic)
+        let classSettings = {};
+        const classDocIdsToTry = [
+          `${currentTeacherId}_${selectedClass}_${academicYear}`,
+          `${currentTeacherId}_${selectedClass}_${selectedMedium}_${academicYear}`,
+          `${selectedClass}_${selectedMedium}_${academicYear}`,
+          docId,
+        ];
+        for (const cDocId of classDocIdsToTry) {
+          try {
+            const settingsSnap = await getDoc(doc(db, "cce_settings", cDocId));
+            if (settingsSnap.exists()) {
+              classSettings = settingsSnap.data();
+              break;
+            }
+          } catch (e) {}
+        }
 
         const mergedSettings = { ...(globalSettings || {}), ...classSettings };
 
@@ -189,7 +221,6 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
       }
 
       // 2. Fetch User's Real Students for this selected class & medium (Isolated by teacherId)
-      const currentTeacherId = getTeacherId();
       const loadedStudents = await fetchStudentsForClass(selectedClass, selectedMedium, currentTeacherId);
 
       // Merge student_details collection for accurate gender, caste, religion, etc.
@@ -1572,6 +1603,20 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
             return 0;
           };
 
+          const getSubjectDisplayName = (s) => {
+            if (!s) return "";
+            const str = String(s).trim();
+            if (str.includes("प्रथम") || str.includes("मराठी")) return "प्रथम भाषा : मराठी";
+            if (str.includes("द्वितीय") || str.includes("इंग्रजी")) return "द्वितीय भाषा : इंग्रजी";
+            if (str.includes("तृतीय") || str.includes("हिंदी")) return "तृतीय भाषा : हिंदी";
+            if (str.includes("गणित")) return "गणित";
+            if (str.includes("परिसर")) return "परिसर अभ्यास";
+            if (str.includes("कला")) return "कला";
+            if (str.includes("कार्यानुभव")) return "कार्यानुभव";
+            if (str.includes("शारीरिक")) return "शारीरिक शिक्षण व आरोग्य";
+            return str;
+          };
+
           return (
             <>
               {/* ========================================================================= */}
@@ -1590,15 +1635,15 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
 
                   {/* Table 1: Overall Grade Counts */}
                   <div className="mb-6">
-                    <table className="w-full border-collapse border border-amber-500 text-xs text-center font-medium">
+                    <table className="w-full table-fixed border-collapse border border-amber-500 text-xs text-center font-medium">
                       <thead>
                         <tr className="bg-amber-100 text-slate-900 font-bold border-b border-amber-500">
-                          <th className="border border-amber-500 p-2 w-10">अ. क्र.</th>
-                          <th className="border border-amber-500 p-2 text-left w-48">विषय</th>
-                          <th className="border border-amber-500 p-2 w-14">संख्या</th>
-                          <th className="border border-amber-500 p-2 w-14">उपस्थिती</th>
+                          <th className="border border-amber-500 p-1.5 w-10 min-w-[32px]">अ. क्र.</th>
+                          <th className="border border-amber-500 p-1.5 text-left w-44 min-w-[140px]">विषय</th>
+                          <th className="border border-amber-500 p-1.5 w-12 min-w-[40px]">संख्या</th>
+                          <th className="border border-amber-500 p-1.5 w-12 min-w-[40px]">उपस्थिती</th>
                           {GRADE_KEYS.map((g) => (
-                            <th key={g} className="border border-amber-500 p-2">{GRADE_LABELS[g]}</th>
+                            <th key={g} className="border border-amber-500 p-1.5 text-center w-12 min-w-[44px]">{GRADE_LABELS[g]}</th>
                           ))}
                         </tr>
                       </thead>
@@ -1616,12 +1661,12 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
 
                           return (
                             <tr key={sub} className="border-b border-amber-400 hover:bg-amber-50/40">
-                              <td className="border border-amber-500 p-2 font-bold">{idx + 1}</td>
-                              <td className="border border-amber-500 p-2 text-left font-bold text-slate-900">{sub}</td>
-                              <td className="border border-amber-500 p-2 font-bold">{students.length}</td>
-                              <td className="border border-amber-500 p-2 font-bold">{displayPresent}</td>
+                              <td className="border border-amber-500 p-1.5 font-bold w-10">{idx + 1}</td>
+                              <td className="border border-amber-500 p-1 text-left font-bold text-slate-900 text-[11px] leading-tight w-44">{getSubjectDisplayName(sub)}</td>
+                              <td className="border border-amber-500 p-1.5 font-bold w-12">{students.length}</td>
+                              <td className="border border-amber-500 p-1.5 font-bold w-12">{displayPresent}</td>
                               {GRADE_KEYS.map((g) => (
-                                <td key={g} className="border border-amber-500 p-2 font-bold">
+                                <td key={g} className="border border-amber-500 p-1.5 font-bold text-center w-12 min-w-[44px]">
                                   {gradeCounts[g]}
                                 </td>
                               ))}
@@ -1634,22 +1679,22 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
 
                   {/* Table 2: Gender-wise Grade Counts */}
                   <div>
-                    <table className="w-full border-collapse border border-amber-500 text-xs text-center font-medium">
+                    <table className="w-full table-fixed border-collapse border border-amber-500 text-xs text-center font-medium">
                       <thead>
                         <tr className="bg-amber-100 text-slate-900 font-bold border-b border-amber-500">
-                          <th className="border border-amber-500 p-2 w-10" rowSpan={2}>अ. क्र.</th>
-                          <th className="border border-amber-500 p-2 text-left w-48" rowSpan={2}>विषय</th>
-                          <th className="border border-amber-500 p-2 w-14" rowSpan={2}>संख्या</th>
-                          <th className="border border-amber-500 p-2 w-14" rowSpan={2}>उपस्थिती</th>
+                          <th className="border border-amber-500 p-1 w-8 min-w-[28px]" rowSpan={2}>अ. क्र.</th>
+                          <th className="border border-amber-500 p-1.5 text-left w-40 min-w-[130px]" rowSpan={2}>विषय</th>
+                          <th className="border border-amber-500 p-1 w-10 min-w-[32px]" rowSpan={2}>संख्या</th>
+                          <th className="border border-amber-500 p-1 w-10 min-w-[32px]" rowSpan={2}>उपस्थिती</th>
                           {GRADE_KEYS.map((g) => (
-                            <th key={g} className="border border-amber-500 p-1" colSpan={2}>{GRADE_LABELS[g]}</th>
+                            <th key={g} className="border border-amber-500 p-1 text-center" colSpan={2}>{GRADE_LABELS[g]}</th>
                           ))}
                         </tr>
                         <tr className="bg-amber-100 text-slate-900 font-bold border-b border-amber-500">
                           {GRADE_KEYS.map((g) => (
                             <React.Fragment key={g}>
-                              <th className="border border-amber-500 p-1 text-[11px]">मुले</th>
-                              <th className="border border-amber-500 p-1 text-[11px]">मुली</th>
+                              <th className="border border-amber-500 p-0.5 text-[10px] text-center w-8 min-w-[28px]">मुले</th>
+                              <th className="border border-amber-500 p-0.5 text-[10px] text-center w-8 min-w-[28px]">मुली</th>
                             </React.Fragment>
                           ))}
                         </tr>
@@ -1674,14 +1719,14 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
 
                           return (
                             <tr key={sub} className="border-b border-amber-400 hover:bg-amber-50/40">
-                              <td className="border border-amber-500 p-2 font-bold">{idx + 1}</td>
-                              <td className="border border-amber-500 p-2 text-left font-bold text-slate-900">{sub}</td>
-                              <td className="border border-amber-500 p-2 font-bold">{students.length}</td>
-                              <td className="border border-amber-500 p-2 font-bold">{displayPresent2}</td>
+                              <td className="border border-amber-500 p-1 font-bold w-8">{idx + 1}</td>
+                              <td className="border border-amber-500 p-1 text-left font-bold text-slate-900 text-[10px] leading-tight w-40">{getSubjectDisplayName(sub)}</td>
+                              <td className="border border-amber-500 p-1 font-bold w-10">{students.length}</td>
+                              <td className="border border-amber-500 p-1 font-bold w-10">{displayPresent2}</td>
                               {GRADE_KEYS.map((g) => (
                                 <React.Fragment key={g}>
-                                  <td className="border border-amber-500 p-1 font-bold">{boyCounts[g]}</td>
-                                  <td className="border border-amber-500 p-1 font-bold">{girlCounts[g]}</td>
+                                  <td className="border border-amber-500 p-0.5 font-bold text-center w-8 min-w-[28px]">{boyCounts[g]}</td>
+                                  <td className="border border-amber-500 p-0.5 font-bold text-center w-8 min-w-[28px]">{girlCounts[g]}</td>
                                 </React.Fragment>
                               ))}
                             </tr>
@@ -1718,25 +1763,25 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
                     <span>सन: <b>{academicYear}</b></span>
                   </div>
 
-                  <table className="w-full border-collapse border border-amber-500 text-[11px] text-center font-medium">
+                  <table className="w-full table-fixed border-collapse border border-amber-500 text-[11px] text-center font-medium">
                     <thead>
                       <tr className="bg-amber-100 text-slate-900 font-bold border-b border-amber-500">
-                        <th className="border border-amber-500 p-1.5 w-28" rowSpan={2}>विषय</th>
-                        <th className="border border-amber-500 p-1.5 w-32" rowSpan={2}>जात संवर्ग</th>
-                        <th className="border border-amber-500 p-1" colSpan={3}>संख्या</th>
+                        <th className="border border-amber-500 p-1 w-24 min-w-[80px]" rowSpan={2}>विषय</th>
+                        <th className="border border-amber-500 p-1 w-24 min-w-[80px]" rowSpan={2}>जात संवर्ग</th>
+                        <th className="border border-amber-500 p-0.5 text-center" colSpan={3}>संख्या</th>
                         {GRADE_KEYS.map((g) => (
-                          <th key={g} className="border border-amber-500 p-1" colSpan={3}>{GRADE_LABELS[g]}</th>
+                          <th key={g} className="border border-amber-500 p-0.5 text-center" colSpan={3}>{GRADE_LABELS[g]}</th>
                         ))}
                       </tr>
                       <tr className="bg-amber-100 text-slate-900 font-bold border-b border-amber-500">
-                        <th className="border border-amber-500 p-1 text-[10px]">मुले</th>
-                        <th className="border border-amber-500 p-1 text-[10px]">मुली</th>
-                        <th className="border border-amber-500 p-1 text-[10px]">एकूण</th>
+                        <th className="border border-amber-500 p-0.5 text-[9px] text-center w-7 min-w-[24px]">मुले</th>
+                        <th className="border border-amber-500 p-0.5 text-[9px] text-center w-7 min-w-[24px]">मुली</th>
+                        <th className="border border-amber-500 p-0.5 text-[9px] text-center w-7 min-w-[24px]">एकूण</th>
                         {GRADE_KEYS.map((g) => (
                           <React.Fragment key={g}>
-                            <th className="border border-amber-500 p-0.5 text-[10px]">मुले</th>
-                            <th className="border border-amber-500 p-0.5 text-[10px]">मुली</th>
-                            <th className="border border-amber-500 p-0.5 text-[10px]">एकूण</th>
+                            <th className="border border-amber-500 p-0.5 text-[9px] text-center w-7 min-w-[24px]">मुले</th>
+                            <th className="border border-amber-500 p-0.5 text-[9px] text-center w-7 min-w-[24px]">मुली</th>
+                            <th className="border border-amber-500 p-0.5 text-[9px] text-center w-7 min-w-[24px]">एकूण</th>
                           </React.Fragment>
                         ))}
                       </tr>
@@ -1787,17 +1832,17 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
                               return (
                                 <tr key={cat.key} className="border-b border-amber-300 hover:bg-amber-50/30">
                                   {cIdx === 0 && (
-                                    <td rowSpan={6} className="border border-amber-500 p-2 font-bold text-slate-900 align-middle text-center bg-amber-50/50">{sub}</td>
+                                    <td rowSpan={6} className="border border-amber-500 p-1 font-bold text-slate-900 align-middle text-center bg-amber-50/50 w-24 text-[10px] leading-tight">{getSubjectDisplayName(sub)}</td>
                                   )}
-                                  <td className="border border-amber-500 p-1.5 text-left font-bold text-slate-800">{cat.label}</td>
-                                  <td className="border border-amber-500 p-1 font-bold">{rowData.countBoys}</td>
-                                  <td className="border border-amber-500 p-1 font-bold">{rowData.countGirls}</td>
-                                  <td className="border border-amber-500 p-1 font-extrabold text-blue-800">{rowData.countTotal}</td>
+                                  <td className="border border-amber-500 p-1 text-left font-bold text-slate-800 w-24">{cat.label}</td>
+                                  <td className="border border-amber-500 p-0.5 font-bold text-center w-7 min-w-[24px]">{rowData.countBoys}</td>
+                                  <td className="border border-amber-500 p-0.5 font-bold text-center w-7 min-w-[24px]">{rowData.countGirls}</td>
+                                  <td className="border border-amber-500 p-0.5 font-extrabold text-blue-800 text-center w-7 min-w-[24px]">{rowData.countTotal}</td>
                                   {GRADE_KEYS.map((g) => (
                                     <React.Fragment key={g}>
-                                      <td className="border border-amber-500 p-0.5 font-bold">{rowData.grades[g].b}</td>
-                                      <td className="border border-amber-500 p-0.5 font-bold">{rowData.grades[g].g}</td>
-                                      <td className="border border-amber-500 p-0.5 font-extrabold text-slate-900">{rowData.grades[g].t}</td>
+                                      <td className="border border-amber-500 p-0.5 font-bold text-center w-7 min-w-[24px]">{rowData.grades[g].b}</td>
+                                      <td className="border border-amber-500 p-0.5 font-bold text-center w-7 min-w-[24px]">{rowData.grades[g].g}</td>
+                                      <td className="border border-amber-500 p-0.5 font-extrabold text-slate-900 text-center w-7 min-w-[24px]">{rowData.grades[g].t}</td>
                                     </React.Fragment>
                                   ))}
                                 </tr>
@@ -1805,15 +1850,15 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
                             })}
                             {/* Total Row for Subject */}
                             <tr className="bg-amber-100/70 font-black border-b-2 border-amber-600">
-                              <td className="border border-amber-500 p-1.5 text-left font-black text-slate-900">एकूण</td>
-                              <td className="border border-amber-500 p-1 font-black">{totalCategoryData.countBoys}</td>
-                              <td className="border border-amber-500 p-1 font-black">{totalCategoryData.countGirls}</td>
-                              <td className="border border-amber-500 p-1 font-black text-blue-900">{totalCategoryData.countTotal}</td>
+                              <td className="border border-amber-500 p-1 text-left font-black text-slate-900 w-24">एकूण</td>
+                              <td className="border border-amber-500 p-0.5 font-black text-center w-7 min-w-[24px]">{totalCategoryData.countBoys}</td>
+                              <td className="border border-amber-500 p-0.5 font-black text-center w-7 min-w-[24px]">{totalCategoryData.countGirls}</td>
+                              <td className="border border-amber-500 p-0.5 font-black text-blue-900 text-center w-7 min-w-[24px]">{totalCategoryData.countTotal}</td>
                               {GRADE_KEYS.map((g) => (
                                 <React.Fragment key={g}>
-                                  <td className="border border-amber-500 p-0.5 font-black">{totalCategoryData.grades[g].b}</td>
-                                  <td className="border border-amber-500 p-0.5 font-black">{totalCategoryData.grades[g].g}</td>
-                                  <td className="border border-amber-500 p-0.5 font-black text-slate-900">{totalCategoryData.grades[g].t}</td>
+                                  <td className="border border-amber-500 p-0.5 font-black text-center w-7 min-w-[24px]">{totalCategoryData.grades[g].b}</td>
+                                  <td className="border border-amber-500 p-0.5 font-black text-center w-7 min-w-[24px]">{totalCategoryData.grades[g].g}</td>
+                                  <td className="border border-amber-500 p-0.5 font-black text-slate-900 text-center w-7 min-w-[24px]">{totalCategoryData.grades[g].t}</td>
                                 </React.Fragment>
                               ))}
                             </tr>
@@ -1866,11 +1911,11 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
                             const subRowSpan = hasRegularInPart1 ? 2 : 1;
 
                             return (
-                              <table className="w-full table-fixed border-collapse border border-lime-600 text-xs text-center font-medium">
+                              <table className="w-full border-collapse border border-lime-600 text-xs text-center font-medium">
                                 <thead>
                                   <tr className="bg-lime-200 text-slate-900 font-extrabold border-b border-lime-600">
-                                    <th className="border border-lime-600 p-1 w-8 min-w-[30px]" rowSpan={headerRowSpan}>अ. क्र.</th>
-                                    <th className="border border-lime-600 p-1.5 text-left w-48 min-w-[150px]" rowSpan={headerRowSpan}>विद्यार्थ्याचे नाव</th>
+                                    <th className="border border-lime-600 p-0 w-4 min-w-[14px] text-[9px] leading-tight" rowSpan={headerRowSpan}>अ.क्र.</th>
+                                    <th className="border border-lime-600 p-1 text-left w-52 min-w-[160px]" rowSpan={headerRowSpan}>विद्यार्थ्याचे नाव</th>
                                     {subjectsPart1.map((sub) => {
                                       const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
                                       return (
@@ -1885,16 +1930,16 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
                                       const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
                                       return isPractical ? (
                                         <React.Fragment key={sub}>
-                                          <th className="border border-lime-600 p-0.5 text-[10px] leading-tight font-bold" rowSpan={subRowSpan}>अ<br/><span className="text-[8px] font-normal">आकारिक</span></th>
-                                          <th className="border border-lime-600 p-0.5 text-[10px] font-bold" rowSpan={subRowSpan}>एकूण</th>
-                                          <th className="border border-lime-600 p-0.5 text-[10px] font-bold" rowSpan={subRowSpan}>श्रेणी</th>
+                                          <th className="border border-lime-600 p-0.5 text-[10px] leading-tight font-bold w-9" rowSpan={subRowSpan}>अ<br/><span className="text-[8px] font-normal">आकारिक</span></th>
+                                          <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9" rowSpan={subRowSpan}>एकूण</th>
+                                          <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9" rowSpan={subRowSpan}>श्रेणी</th>
                                         </React.Fragment>
                                       ) : (
                                         <React.Fragment key={sub}>
-                                          <th className="border border-lime-600 p-0.5 text-[10px] font-bold">अ</th>
-                                          <th className="border border-lime-600 p-0.5 text-[10px] font-bold">ब</th>
-                                          <th className="border border-lime-600 p-0.5 text-[10px] font-bold" rowSpan={subRowSpan}>एकूण</th>
-                                          <th className="border border-lime-600 p-0.5 text-[10px] font-bold" rowSpan={subRowSpan}>श्रेणी</th>
+                                          <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9">अ</th>
+                                          <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9">ब</th>
+                                          <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9" rowSpan={subRowSpan}>एकूण</th>
+                                          <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9" rowSpan={subRowSpan}>श्रेणी</th>
                                         </React.Fragment>
                                       );
                                     })}
@@ -1915,8 +1960,8 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
                                   )}
                                   {/* Sub-Header Row: Max Marks */}
                                   <tr className="bg-lime-100 text-slate-900 font-black border-b border-lime-600 text-[10px]">
-                                    <td className="border border-lime-600 p-1 w-8"></td>
-                                    <td className="border border-lime-600 p-1 text-left font-black w-48">पैकी</td>
+                                    <td className="border border-lime-600 p-0 w-4"></td>
+                                    <td className="border border-lime-600 p-1 text-left font-black w-52">पैकी</td>
                                     {subjectsPart1.map((sub) => {
                                       const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
                                       const formMax = ["1st", "2nd", "1", "2"].includes(String(selectedClass)) ? "70" : ["3rd", "4th", "3", "4"].includes(String(selectedClass)) ? "60" : ["5th", "6th", "5", "6"].includes(String(selectedClass)) ? "50" : "40";
@@ -1943,8 +1988,8 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
                                   {students.map((student, idx) => {
                                     return (
                                       <tr key={student.id} className="border-b border-lime-300 hover:bg-lime-50/40">
-                                        <td className="border border-lime-600 p-1 font-bold w-8">{idx + 1}</td>
-                                        <td className="border border-lime-600 p-1 text-left font-bold text-slate-900 whitespace-nowrap text-xs">{student.name}</td>
+                                        <td className="border border-lime-600 p-0 font-bold w-4 text-center text-[10px]">{idx + 1}</td>
+                                        <td className="border border-lime-600 p-1 text-left font-bold text-slate-900 text-xs w-52 truncate overflow-hidden" title={student.name}>{student.name}</td>
                                         {subjectsPart1.map((sub) => {
                                           const stats = getStudentSubjectStats(student, sub);
                                           return stats.isPracticalSub ? (
@@ -1980,11 +2025,11 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
                             const subRowSpan = hasRegularInPart2 ? 2 : 1;
 
                             return (
-                              <table className="w-full table-fixed border-collapse border border-lime-600 text-xs text-center font-medium">
+                              <table className="w-full border-collapse border border-lime-600 text-xs text-center font-medium">
                                 <thead>
                                   <tr className="bg-lime-200 text-slate-900 font-extrabold border-b border-lime-600">
-                                    <th className="border border-lime-600 p-1 w-8 min-w-[30px]" rowSpan={headerRowSpan}>अ. क्र.</th>
-                                    <th className="border border-lime-600 p-1.5 text-left w-48 min-w-[150px]" rowSpan={headerRowSpan}>विद्यार्थ्याचे नाव</th>
+                                    <th className="border border-lime-600 p-0 w-4 min-w-[14px] text-[9px] leading-tight" rowSpan={headerRowSpan}>अ.क्र.</th>
+                                    <th className="border border-lime-600 p-1 text-left w-52 min-w-[160px]" rowSpan={headerRowSpan}>विद्यार्थ्याचे नाव</th>
                                     {subjectsPart2.map((sub) => {
                                       const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
                                       return (
@@ -1993,19 +2038,19 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
                                         </th>
                                       );
                                     })}
-                                    <th className="border border-lime-600 p-1 text-[11px]" rowSpan={headerRowSpan}>उपस्थिती</th>
-                                    <th className="border border-lime-600 p-1 text-[11px]" rowSpan={headerRowSpan}>एकूण गुण</th>
-                                    <th className="border border-lime-600 p-1 text-[11px]" rowSpan={headerRowSpan}>टक्केवारी</th>
-                                    <th className="border border-lime-600 p-1 text-[11px]" rowSpan={headerRowSpan}>अंतिम श्रेणी</th>
+                                    <th className="border border-lime-600 p-0 text-[9px] w-8 min-w-[28px] leading-tight" rowSpan={headerRowSpan}>उपस्थिती</th>
+                                    <th className="border border-lime-600 p-0 text-[9px] w-8 min-w-[28px] leading-tight" rowSpan={headerRowSpan}>एकूण गुण</th>
+                                    <th className="border border-lime-600 p-0 text-[9px] w-10 min-w-[36px] leading-tight" rowSpan={headerRowSpan}>टक्केवारी</th>
+                                    <th className="border border-lime-600 p-0 text-[9px] w-8 min-w-[28px] leading-tight" rowSpan={headerRowSpan}>अंतिम श्रेणी</th>
                                   </tr>
                                   <tr className="bg-lime-200 text-slate-900 font-extrabold border-b border-lime-600">
                                     {subjectsPart2.map((sub) => {
                                       const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
                                       return isPractical ? (
                                         <React.Fragment key={sub}>
-                                          <th className="border border-lime-600 p-0.5 text-[10px] leading-tight font-bold" rowSpan={subRowSpan}>अ<br/><span className="text-[8px] font-normal">आकारिक</span></th>
-                                          <th className="border border-lime-600 p-0.5 text-[10px] font-bold" rowSpan={subRowSpan}>एकूण</th>
-                                          <th className="border border-lime-600 p-0.5 text-[10px] font-bold" rowSpan={subRowSpan}>श्रेणी</th>
+                                          <th className="border border-lime-600 p-0.5 text-[10px] leading-tight font-bold w-9" rowSpan={subRowSpan}>अ<br/><span className="text-[8px] font-normal">आकारिक</span></th>
+                                          <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9" rowSpan={subRowSpan}>एकूण</th>
+                                          <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9" rowSpan={subRowSpan}>श्रेणी</th>
                                         </React.Fragment>
                                       ) : (
                                         <React.Fragment key={sub}>
@@ -2033,8 +2078,8 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
                                   )}
                                   {/* Sub-Header Row: Max Marks */}
                                   <tr className="bg-lime-100 text-slate-900 font-black border-b border-lime-600 text-[10px]">
-                                    <td className="border border-lime-600 p-1 w-8"></td>
-                                    <td className="border border-lime-600 p-1 text-left font-black w-48">पैकी</td>
+                                    <td className="border border-lime-600 p-0 w-4"></td>
+                                    <td className="border border-lime-600 p-1 text-left font-black w-52">पैकी</td>
                                     {subjectsPart2.map((sub) => {
                                       const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
                                       const formMax = ["1st", "2nd", "1", "2"].includes(String(selectedClass)) ? "70" : ["3rd", "4th", "3", "4"].includes(String(selectedClass)) ? "60" : ["5th", "6th", "5", "6"].includes(String(selectedClass)) ? "50" : "40";
@@ -2055,10 +2100,10 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
                                         </React.Fragment>
                                       );
                                     })}
-                                    <td className="border border-lime-600 p-1">140</td>
-                                    <td className="border border-lime-600 p-1">{subjects.length * 100}</td>
-                                    <td className="border border-lime-600 p-1">100%</td>
-                                    <td className="border border-lime-600 p-1"></td>
+                                    <td className="border border-lime-600 p-0 w-8 text-[10px]">140</td>
+                                    <td className="border border-lime-600 p-0 w-8 text-[10px]">{subjects.length * 100}</td>
+                                    <td className="border border-lime-600 p-0 w-10 text-[10px]">100%</td>
+                                    <td className="border border-lime-600 p-0 w-8"></td>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -2073,8 +2118,8 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
 
                                     return (
                                       <tr key={student.id} className="border-b border-lime-300 hover:bg-lime-50/40">
-                                        <td className="border border-lime-600 p-1 font-bold w-8">{idx + 1}</td>
-                                        <td className="border border-lime-600 p-1 text-left font-bold text-slate-900 whitespace-nowrap text-xs">{student.name}</td>
+                                        <td className="border border-lime-600 p-0 font-bold w-4 text-center text-[10px]">{idx + 1}</td>
+                                        <td className="border border-lime-600 p-1 text-left font-bold text-slate-900 text-xs whitespace-nowrap" title={student.name}>{student.name}</td>
                                         {subjectsPart2.map((sub) => {
                                           const stats = getStudentSubjectStats(student, sub);
                                           return stats.isPracticalSub ? (
@@ -2092,10 +2137,10 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
                                             </React.Fragment>
                                           );
                                         })}
-                                        <td className="border border-lime-600 p-1 font-bold">{attDays}</td>
-                                        <td className="border border-lime-600 p-1 font-black text-blue-900">{grandObtainedTotal}</td>
-                                        <td className="border border-lime-600 p-1 font-black text-blue-900">{totalMaxMarks > 0 && !isNaN(grandObtainedTotal) ? ((grandObtainedTotal / totalMaxMarks) * 100).toFixed(2) + "%" : "0.00%"}</td>
-                                        <td className="border border-lime-600 p-1 font-black text-emerald-900">{getGrade(totalMaxMarks > 0 ? (grandObtainedTotal / totalMaxMarks) * 100 : 0)}</td>
+                                        <td className="border border-lime-600 p-0 font-bold w-8 text-[10px]">{attDays}</td>
+                                        <td className="border border-lime-600 p-0 font-black text-blue-900 w-8 text-[10px]">{grandObtainedTotal}</td>
+                                        <td className="border border-lime-600 p-0 font-black text-blue-900 w-10 text-[9px]">{totalMaxMarks > 0 && !isNaN(grandObtainedTotal) ? ((grandObtainedTotal / totalMaxMarks) * 100).toFixed(2) + "%" : "0.00%"}</td>
+                                        <td className="border border-lime-600 p-0 font-black text-emerald-900 w-8 text-[10px]">{getGrade(totalMaxMarks > 0 ? (grandObtainedTotal / totalMaxMarks) * 100 : 0)}</td>
                                       </tr>
                                     );
                                   })}

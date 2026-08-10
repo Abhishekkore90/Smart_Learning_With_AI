@@ -22,6 +22,8 @@ const Collectout = safeLazy(() => import("@/result/Collectout"));
 // @ts-ignore
 const GradeWise = safeLazy(() => import("@/result/GradeWise"));
 // @ts-ignore
+const AnnualResultRegister = safeLazy(() => import("@/result/AnnualResultRegister"));
+// @ts-ignore
 const Result5th8th = safeLazy(() => import("@/result/Result5th8th"));
 // @ts-ignore
 const ResultSSC = safeLazy(() => import("@/result/ResultSSC"));
@@ -195,7 +197,7 @@ export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
               ) : selectedClass === "12th" ? (
                 <ResultHSC initialClass={selectedClass} initialYear={academicYear} />
               ) : (
-                <GradeWise initialClass={selectedClass} initialYear={academicYear} onBack={() => setSelectedOption(null)} />
+                <AnnualResultRegister initialClass={selectedClass} initialYear={academicYear} onBack={() => setSelectedOption(null)} />
               )}
             </Suspense>
           </PdfErrorBoundary>
