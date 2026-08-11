@@ -23,6 +23,7 @@ import {
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import { PinGate } from "@/components/teacher/PinGate";
+import { ModulePaywall } from "@/components/teacher/ModulePaywall";
 import {
   Users,
   Calendar,
@@ -1484,7 +1485,8 @@ function TeacherMeetingPage() {
 
       {/* Main Container */}
       <main className="lg:pl-0 pt-16 min-h-screen">
-        <PinGate sectionKey="meeting">
+        <ModulePaywall moduleId="meeting-register" defaultTitle="माता-पालक व शिक्षक सभा नोंदवही (Meeting Register)">
+          <PinGate sectionKey="meeting">
           <div className="p-4 md:p-8 space-y-8 max-w-full mx-auto print:p-0 print:pl-0">
             {/* Header section (Hidden on print) */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 print:hidden">
@@ -4272,6 +4274,7 @@ function TeacherMeetingPage() {
             </AnimatePresence>
           </div>
         </PinGate>
+        </ModulePaywall>
       </main>
     </div>
   );

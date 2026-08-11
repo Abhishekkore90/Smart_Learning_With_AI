@@ -72,6 +72,7 @@ import { showToast as toast } from "@/lib/custom-toast";
 import { uploadBlobToBunny } from "@/lib/bunnyStorage";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
+import { ModulePaywall } from "@/components/teacher/ModulePaywall";
 import { TeacherStatisticsEditor } from "@/components/teacher/TeacherStatisticsEditor";
 import { MonthlyParipathRegister } from "@/components/teacher/MonthlyParipathRegister";
 import { PinGate } from "@/components/teacher/PinGate";
@@ -304,7 +305,8 @@ function ModulePage() {
       </header>
 
       <main className="flex-1 lg:pl-0 px-2 sm:px-4 md:px-6 py-4 md:py-6 max-w-full pt-24 mx-auto w-full relative z-10">
-        <PinGate sectionKey="planning" enabled={moduleId === "annual-monthly-planning"}>
+        <ModulePaywall moduleId={moduleId} defaultTitle={config.m}>
+          <PinGate sectionKey="planning" enabled={moduleId === "annual-monthly-planning"}>
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -416,6 +418,7 @@ function ModulePage() {
             </div>
           </motion.div>
         </PinGate>
+        </ModulePaywall>
       </main>
 
       <nav className="md:hidden fixed bottom-4 left-4 right-4 h-20 bg-white/90 backdrop-blur-xl border border-slate-200 rounded-[2.5rem] shadow-2xl z-50 flex items-center justify-around px-8">

@@ -29,6 +29,7 @@ import {
   Eye,
   CloudUpload,
   Book,
+  DollarSign,
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -145,6 +146,17 @@ const adminModules = [
     glow: "bg-amber-400/20",
     stats: "Assembly Guides",
     trend: "Live Sync",
+  },
+  {
+    title: "Module Pricing & Payments",
+    desc: "Set pricing & paywall settings for teacher modules and view teacher Razorpay payment history.",
+    icon: DollarSign,
+    to: "/admin/module-payments",
+    color: "from-emerald-600 to-teal-700",
+    glow: "bg-emerald-400/20",
+    stats: "Razorpay Hub",
+    trend: "Live Sync",
+    status: "Active",
   },
 ];
 
