@@ -39,14 +39,6 @@ export default defineConfig({
           headers: {
             'Referer': 'https://api.anthropic.com',
             'Origin': 'https://api.anthropic.com'
-          },
-          configure: (proxy) => {
-            proxy.on('error', (_err, _req, res: any) => {
-              if (res && 'headersSent' in res && !res.headersSent) {
-                res.writeHead(504, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: 'Proxy Gateway Timeout' }));
-              }
-            });
           }
         },
         '/api/bunny-stream': {
@@ -56,14 +48,6 @@ export default defineConfig({
           headers: {
             'Referer': 'https://video.bunnycdn.com',
             'Origin': 'https://video.bunnycdn.com'
-          },
-          configure: (proxy) => {
-            proxy.on('error', (_err, _req, res: any) => {
-              if (res && 'headersSent' in res && !res.headersSent) {
-                res.writeHead(504, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: 'Proxy Gateway Timeout' }));
-              }
-            });
           }
         },
         '/api/bunny-storage': {
@@ -73,14 +57,6 @@ export default defineConfig({
           headers: {
             'Referer': 'https://storage.bunnycdn.com',
             'Origin': 'https://storage.bunnycdn.com'
-          },
-          configure: (proxy) => {
-            proxy.on('error', (_err, _req, res: any) => {
-              if (res && 'headersSent' in res && !res.headersSent) {
-                res.writeHead(504, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: 'Proxy Gateway Timeout' }));
-              }
-            });
           }
         },
         '/api/bunny-cdn': {
@@ -90,14 +66,13 @@ export default defineConfig({
           headers: {
             'Referer': 'https://sgkbrainova.b-cdn.net',
             'Origin': 'https://sgkbrainova.b-cdn.net'
-          },
-          configure: (proxy) => {
-            proxy.on('error', (_err, _req, res: any) => {
-              if (res && 'headersSent' in res && !res.headersSent) {
-                res.writeHead(504, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: 'Proxy Gateway Timeout' }));
-              }
-            });
+          }
+        },
+        '/v0/b': {
+          target: 'https://firebasestorage.googleapis.com',
+          changeOrigin: true,
+          headers: {
+            'Origin': 'https://firebasestorage.googleapis.com'
           }
         }
       }

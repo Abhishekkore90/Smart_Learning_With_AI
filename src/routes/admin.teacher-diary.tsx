@@ -258,6 +258,7 @@ function TeacherDiaryAdmin() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      console.log("FILE_SELECTED: ", file.name, "size:", file.size);
       const ext = file.name.split(".").pop()?.toLowerCase();
       if (ext && ["pdf", "doc", "docx", "xlsx", "xls", "csv"].includes(ext)) {
         setSelectedFile(file);
@@ -290,22 +291,27 @@ function TeacherDiaryAdmin() {
     const classFolder = selectedClass.toLowerCase().replace(/\s+/g, "-");
     const mediumFolder = selectedMedium.toLowerCase().replace(/\s+/g, "-");
 
+    console.log("UPLOAD_STARTED: Beginning upload process for", selectedFile.name);
     setUploading(true);
-    setUploadProgress(10);
-    setUploadStatus("Uploading document to Bunny Storage...");
+    setUploadProgress(0); // Show real progress from 0% instead of hardcoding 10%
+    setUploadStatus("Uploading document...");
 
     try {
-      // 1. Upload to Bunny Storage
+      // 1. Upload to Storage
       const result = await uploadFileWithProgress(selectedFile, {
         folderPath: `teacher-diaries/${classFolder}/${mediumFolder}`,
         maxSizeBytes: 50 * 1024 * 1024,
         preferredProvider: "bunny",
         onProgress: (pct) => {
-          setUploadProgress(10 + Math.round(pct * 0.85));
+          console.log(`UPLOAD_PROGRESS: ${pct}%`);
+          setUploadProgress(pct);
         },
       });
 
+      console.log("UPLOAD_COMPLETED: File uploaded successfully.");
       const fileUrl = result.url;
+      console.log("DOWNLOAD_URL_CREATED: ", fileUrl);
+      console.log("DATABASE_SAVE_STARTED: Saving record to Firestore...");
       setUploadStatus("Saving record in database...");
       setUploadProgress(95);
 
@@ -328,8 +334,10 @@ function TeacherDiaryAdmin() {
       });
 
       localStorage.setItem(`admin_diary_preview_${selectedClass}_${selectedMedium}`, dateStr);
+      console.log("DATABASE_SAVE_COMPLETED: Record saved successfully.");
       setUploadProgress(100);
       setUploadStatus("Upload completed!");
+      console.log("UPLOAD_SUCCESS: Complete flow finished perfectly.");
 
 
       if (isUpdate) {
@@ -345,8 +353,8 @@ function TeacherDiaryAdmin() {
 
       await fetchExistingRecords(selectedClass, selectedMedium);
     } catch (err: any) {
-      console.error("Upload error:", err);
-      setUploadStatus("Upload failed");
+      console.error("UPLOAD_ERROR:", err);
+      setUploadStatus("Upload failed: " + (err.message || "Unknown error"));
       toast.error(err.message || "Failed to upload Teaching Diary file.");
     } finally {
       setUploading(false);

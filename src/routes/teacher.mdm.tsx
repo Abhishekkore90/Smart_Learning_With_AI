@@ -1922,16 +1922,6 @@ function TeacherMDMPage() {
       }
     },
     {
-      id: "recipe_15",
-      name: "मसुरी पुलाव",
-      nameEn: "Masuri Pulav",
-      aliases: ["मसुरी पुलाव", "मसूरी पुलाव", "Masuri Pulav", "Masoor Pulav"],
-      defaultIngredients: {
-        Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
-        Masurdal: true, "Onion Garlic Masala": true, "Garam Masala": true
-      }
-    },
-    {
       id: "recipe_11",
       name: "गोड लापशी",
       nameEn: "Sweet Lapshi",
@@ -1984,10 +1974,7 @@ function TeacherMDMPage() {
 
   const getRecipeName = (raw: string | undefined | null): string => {
     const rec = resolveRecipe(raw);
-    if (rec) {
-      return lang === "mr" ? rec.name : rec.nameEn;
-    }
-    return raw && raw !== "— Select recipe —" && raw !== "Select Menu" ? raw : (lang === "mr" ? "— रेसिपी निवडा —" : "— Select recipe —");
+    return rec ? rec.name : (raw && raw !== "— Select recipe —" ? raw : "— Select recipe —");
   };
 
   const getRecipeId = (raw: string | undefined | null): string => {
@@ -1997,27 +1984,7 @@ function TeacherMDMPage() {
 
   const getRecipeItemsById = (recipeIdOrName: string): Record<string, boolean> => {
     const rec = resolveRecipe(recipeIdOrName);
-    const targetKey = rec ? rec.id : recipeIdOrName;
-    if (recipeIngredientsMap[targetKey] && Object.keys(recipeIngredientsMap[targetKey]).some(Boolean)) {
-      return recipeIngredientsMap[targetKey];
-    }
-    if (rec) {
-      const selection: Record<string, boolean> = {};
-      const DAILY_KEYS = ["Rice", "Cumin", "Mustard", "Turmeric", "Salt", "Oil", "Chili", "Onion Garlic Masala", "Garam Masala"];
-      const PULSE_KEYS = ["Mugdal", "Turdal", "Masurdal", "Matki", "Moong", "Cowpea", "Gram", "Pease", "Soyabean Wadi", "Vegetables", "Sugar-Jaggery", "Milk-Milk Powder", "Ragi Satva"];
-
-      DAILY_KEYS.forEach((dKey) => {
-        if (rec.defaultIngredients && rec.defaultIngredients[dKey] !== undefined) {
-          selection[dKey] = rec.defaultIngredients[dKey];
-        } else {
-          selection[dKey] = true;
-        }
-      });
-      PULSE_KEYS.forEach((pKey) => {
-        selection[pKey] = rec.defaultIngredients ? !!rec.defaultIngredients[pKey] : false;
-      });
-      return selection;
-    }
+    if (rec) return rec.defaultIngredients;
     return getRecipeItemsByName(recipeIdOrName);
   };
 
@@ -2078,12 +2045,9 @@ function TeacherMDMPage() {
       items["Soyabean Wadi"] = true;
       items["Onion Garlic Masala"] = true;
     }
-    if (nameLower.includes("मसूर") || nameLower.includes("masur") || nameLower.includes("मसुरी")) {
+    if (nameLower.includes("मसूर") || nameLower.includes("masur")) {
       items["Masurdal"] = true;
       items["Onion Garlic Masala"] = true;
-      if (nameLower.includes("पुलाव") || nameLower.includes("pulav")) {
-        items["Garam Masala"] = true;
-      }
     }
     if (nameLower.includes("मसाला") || nameLower.includes("masala") || nameLower.includes("पुलाव") || nameLower.includes("pulav") || nameLower.includes("खिचडी") || nameLower.includes("khichadi")) {
       if (!nameLower.includes("वरण") && !nameLower.includes("खीर") && !nameLower.includes("लापशी")) {
@@ -2119,65 +2083,8 @@ function TeacherMDMPage() {
   const getMenuForRegisterDate = (dateStr: string, classStr = registerClass) => {
     if (!dateStr) return "No Menu Available";
 
-    const parts = dateStr.split("-");
-    let normalizedDateStr = dateStr;
-    let yStr = "";
-    let mNum = 0;
-    const calSectionKey = classStr === "6 To 8" ? "6-8" : "1-5";
-
-    if (parts.length === 3) {
-      yStr = parts[0];
-      mNum = parseInt(parts[1], 10);
-      const dNum = parseInt(parts[2], 10);
-      if (!isNaN(mNum) && !isNaN(dNum)) {
-        normalizedDateStr = `${yStr}-${String(mNum).padStart(2, "0")}-${String(dNum).padStart(2, "0")}`;
-      }
-    }
-
-    // 1. Check Monthly Calendar active state (calEntries) if active month & year match
-    if (mNum && yStr && calYear === parseInt(yStr, 10) && calMonth === mNum) {
-      const activeCalEntry = calEntries?.[normalizedDateStr] || calEntries?.[dateStr];
-      if (
-        activeCalEntry &&
-        activeCalEntry.menu &&
-        activeCalEntry.menu !== "— Select recipe —" &&
-        activeCalEntry.menu !== "Select Menu" &&
-        activeCalEntry.menu !== "No Menu Available"
-      ) {
-        return activeCalEntry.menu;
-      }
-    }
-
-    // 2. Check Monthly Calendar Saved Records (monthlyCalendarRecords)
-    if (mNum && yStr && monthlyCalendarRecords) {
-      const keysToTry = [
-        `${yStr}_${mNum}_${calSectionKey}`,
-        `${yStr}_${mNum}_1-5`,
-        `${yStr}_${mNum}_6-8`,
-        `${yStr}_${String(mNum).padStart(2, "0")}_${calSectionKey}`,
-        `${yStr}_${String(mNum).padStart(2, "0")}_1-5`,
-        `${yStr}_${String(mNum).padStart(2, "0")}_6-8`,
-      ];
-
-      for (const k of keysToTry) {
-        const calRec = monthlyCalendarRecords[k];
-        if (calRec) {
-          const entry = calRec[normalizedDateStr] || calRec[dateStr];
-          if (
-            entry &&
-            entry.menu &&
-            entry.menu !== "— Select recipe —" &&
-            entry.menu !== "Select Menu" &&
-            entry.menu !== "No Menu Available"
-          ) {
-            return entry.menu;
-          }
-        }
-      }
-    }
-
-    // 3. Check if saved in daily register record
-    const savedRecord = registerRecords ? (registerRecords[normalizedDateStr] || registerRecords[dateStr]) : undefined;
+    // 1. Check if saved in daily register record
+    const savedRecord = registerRecords ? registerRecords[dateStr] : undefined;
     if (savedRecord) {
       const classRecord = savedRecord[classStr] || (classStr === "1 To 5" ? savedRecord : null);
       if (classRecord && classRecord.menu && classRecord.menu !== "No Menu Available" && classRecord.menu !== "Select Menu") {
@@ -2185,8 +2092,37 @@ function TeacherMDMPage() {
       }
     }
 
-    // 4. Fall back to weekly configured menu
-    const dayKey = getDayOfWeekKeyForDate(normalizedDateStr || dateStr);
+    // 2. Check Monthly Calendar Records (monthlyCalendarRecords or calEntries)
+    if (dateStr) {
+      const parts = dateStr.split("-");
+      if (parts.length === 3) {
+        const y = parts[0];
+        const m = parseInt(parts[1], 10);
+        const calSectionKey = classStr === "6 To 8" ? "6-8" : "1-5";
+        
+        const keysToTry = [
+          `${y}_${m}_${calSectionKey}`,
+          `${y}_${m}_1-5`,
+          `${y}_${m}_6-8`
+        ];
+
+        if (monthlyCalendarRecords) {
+          for (const k of keysToTry) {
+            const calRec = monthlyCalendarRecords[k];
+            if (calRec && calRec[dateStr] && calRec[dateStr].menu && calRec[dateStr].menu !== "— Select recipe —" && calRec[dateStr].menu !== "Select Menu") {
+              return calRec[dateStr].menu;
+            }
+          }
+        }
+
+        if (calEntries && calEntries[dateStr] && calEntries[dateStr].menu && calEntries[dateStr].menu !== "— Select recipe —" && calEntries[dateStr].menu !== "Select Menu") {
+          return calEntries[dateStr].menu;
+        }
+      }
+    }
+
+    // 3. Fall back to weekly configured menu
+    const dayKey = getDayOfWeekKeyForDate(dateStr);
     if (
       dayKey &&
       menuRecords &&
@@ -2197,8 +2133,8 @@ function TeacherMDMPage() {
       return menuRecords[dayKey].menu;
     }
 
-    // 5. Fall back to simple day search
-    const d = new Date(normalizedDateStr || dateStr);
+    // 4. Fall back to simple day search
+    const d = new Date(dateStr);
     if (!isNaN(d.getTime())) {
       const days = [
         "Sunday",
@@ -2223,6 +2159,7 @@ function TeacherMDMPage() {
       }
     }
 
+    return "No Menu Available";
   };
 
   const getSelectedItemsForRegisterDate = (dateStr: string, classStr = registerClass) => {
@@ -2351,12 +2288,9 @@ function TeacherMDMPage() {
         item: string;
         prev: number;
         received: number;
-        incomingQty?: number;
-        lokQty?: number;
         cookedDays: number;
         beneficiary: number;
         used: number;
-        damaged?: number;
       }[]
     >
   >({});
@@ -2387,26 +2321,26 @@ function TeacherMDMPage() {
   };
   const [showStockReportModal, setShowStockReportModal] = useState(false);
   const [stockRecords, setStockRecords] = useState<
-    { item: string; prev: number; received: number; incomingQty?: number; lokQty?: number; cookedDays: number; beneficiary: number; used: number; damaged?: number }[]
+    { item: string; prev: number; received: number; cookedDays: number; beneficiary: number; used: number; damaged?: number }[]
   >([
-    { item: "Rice", prev: 0, received: 0, incomingQty: 0, lokQty: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
-    { item: "Pease", prev: 0, received: 0, incomingQty: 0, lokQty: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
-    { item: "Mugdal", prev: 0, received: 0, incomingQty: 0, lokQty: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
-    { item: "Cowpea", prev: 0, received: 0, incomingQty: 0, lokQty: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
-    { item: "Gram", prev: 0, received: 0, incomingQty: 0, lokQty: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
-    { item: "Masurdal", prev: 0, received: 0, incomingQty: 0, lokQty: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
-    { item: "Matki", prev: 0, received: 0, incomingQty: 0, lokQty: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
-    { item: "Moong", prev: 0, received: 0, incomingQty: 0, lokQty: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
-    { item: "Turdal", prev: 0, received: 0, incomingQty: 0, lokQty: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
-    { item: "Soyabean Wadi", prev: 0, received: 0, incomingQty: 0, lokQty: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
-    { item: "Turmeric", prev: 0, received: 0, incomingQty: 0, lokQty: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
-    { item: "Salt", prev: 0, received: 0, incomingQty: 0, lokQty: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
-    { item: "Onion Garlic Masala", prev: 0, received: 0, incomingQty: 0, lokQty: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
-    { item: "Cumin", prev: 0, received: 0, incomingQty: 0, lokQty: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
-    { item: "Mustard", prev: 0, received: 0, incomingQty: 0, lokQty: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
-    { item: "Chili", prev: 0, received: 0, incomingQty: 0, lokQty: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
-    { item: "Garam Masala", prev: 0, received: 0, incomingQty: 0, lokQty: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
-    { item: "Oil", prev: 0, received: 0, incomingQty: 0, lokQty: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Rice", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Pease", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Mugdal", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Cowpea", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Gram", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Masurdal", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Matki", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Moong", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Turdal", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Soyabean Wadi", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Turmeric", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Salt", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Onion Garlic Masala", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Cumin", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Mustard", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Chili", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Garam Masala", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
+    { item: "Oil", prev: 0, received: 0, cookedDays: 0, beneficiary: 0, used: 0, damaged: 0 },
   ]);
 
   const handleStockRecordChange = (
@@ -2459,13 +2393,6 @@ function TeacherMDMPage() {
     useState(false);
 
   // Damaged Stock States
-  const [damagedYear, setDamagedYear] = useState(
-    new Date().getFullYear().toString(),
-  );
-  const [damagedMonth, setDamagedMonth] = useState(
-    new Date().toLocaleString("en-US", { month: "long" }),
-  );
-  const [damagedClass, setDamagedClass] = useState("1 To 5");
   const [damagedItem, setDamagedItem] = useState("");
   const [damagedQty, setDamagedQty] = useState("");
   const [damagedDate, setDamagedDate] = useState(
@@ -2475,28 +2402,6 @@ function TeacherMDMPage() {
   const [damagedRecords, setDamagedRecords] = useState<
     { id: string; item: string; qty: string; date: string; reason: string }[]
   >([]);
-
-  const handleSaveDamagedStockTable = async () => {
-    if (!user) return;
-    setSaving(true);
-    try {
-      const udise = getUdise();
-      await setDoc(
-        doc(db, "school_data", `${udise}_mdm`),
-        {
-          openingStockSpent,
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true },
-      );
-      toast.success(t("खराब साठा माहिती यशस्वीरित्या जतन केली!", "Damaged stock entries saved successfully!"));
-    } catch (e) {
-      console.error(e);
-      toast.error(t("खराब साठा जतन करण्यात अडचण आली.", "Failed to save damaged stock entries"));
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handleSaveDamagedStock = async () => {
     if (!user) return;
@@ -2525,30 +2430,11 @@ function TeacherMDMPage() {
         { damagedRecords: updated, updatedAt: new Date().toISOString() },
         { merge: true },
       );
-      toast.success(t("खराब साठा नोंद यशस्वीरित्या जतन केली!", "Damaged stock record saved successfully!"));
     } catch (e) {
       console.error(e);
       toast.error(t("नोंद जतन करण्यात अडचण आली.", "Failed to save record"));
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleDeleteDamagedStock = async (id: string) => {
-    if (!user) return;
-    try {
-      const udise = getUdise();
-      const updated = damagedRecords.filter((r) => r.id !== id);
-      setDamagedRecords(updated);
-      await setDoc(
-        doc(db, "school_data", `${udise}_mdm`),
-        { damagedRecords: updated, updatedAt: new Date().toISOString() },
-        { merge: true },
-      );
-      toast.success(t("नोंद यशस्वीरित्या हटवली!", "Record deleted successfully!"));
-    } catch (e) {
-      console.error(e);
-      toast.error(t("नोंद हटवण्यात अडचण आली.", "Failed to delete record"));
     }
   };
 
@@ -2970,13 +2856,6 @@ function TeacherMDMPage() {
   };
 
   // Loksahabhag (Public Contribution) States & Logic
-  const [loksahabhagYear, setLoksahabhagYear] = useState(
-    new Date().getFullYear().toString(),
-  );
-  const [loksahabhagMonth, setLoksahabhagMonth] = useState(
-    new Date().toLocaleString("en-US", { month: "long" }),
-  );
-  const [loksahabhagClass, setLoksahabhagClass] = useState("1 To 5");
   const [lokItem, setLokItem] = useState("");
   const [lokQty, setLokQty] = useState("");
   const [lokDate, setLokDate] = useState(
@@ -2987,28 +2866,6 @@ function TeacherMDMPage() {
   const [lokRecords, setLokRecords] = useState<
     { id: string; item: string; qty: string; date: string; donor: string; remark: string }[]
   >([]);
-
-  const handleSaveLoksahabhagTable = async () => {
-    if (!user) return;
-    setSaving(true);
-    try {
-      const udise = getUdise();
-      await setDoc(
-        doc(db, "school_data", `${udise}_mdm`),
-        {
-          openingStockLoksahabhag,
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true },
-      );
-      toast.success(t("लोकसहभाग माहिती यशस्वीरित्या जतन केली!", "Loksahabhag entries saved successfully!"));
-    } catch (e) {
-      console.error(e);
-      toast.error(t("लोकसहभाग जतन करण्यात अडचण आली.", "Failed to save loksahabhag entries"));
-    } finally {
-      setSaving(false);
-    }
-  };
 
   // Item Key Resolver for matching Marathi / Dropdown Item names to REPORT_ITEMS key
   const getItemKeyFromName = (rawName: string): string => {
@@ -3272,24 +3129,11 @@ function TeacherMDMPage() {
       };
     }
 
-    // 3. Active Monthly Calendar State Holiday check (if active month/year matches)
-    if (calYear === year && calMonth === month) {
-      const activeEntry = calEntries?.[`${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`] || calEntries?.[dateStr];
-      if (activeEntry?.isHoliday) {
-        return {
-          disabled: true,
-          isSunday: false,
-          isHoliday: true,
-          reason: activeEntry.holidayReason || "नोंदवलेली सुट्टी",
-        };
-      }
-    }
-
-    // 4. Monthly Calendar Records Holiday check (for both primary 1-5 and upper 6-8)
+    // 3. Monthly Calendar Records Holiday check (for both primary 1-5 and upper 6-8)
     const key15 = `${year}_${month}_1-5`;
     const key68 = `${year}_${month}_6-8`;
-    const cal15 = monthlyCalendarRecords?.[key15]?.[dateStr] || monthlyCalendarRecords?.[key15]?.[`${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`];
-    const cal68 = monthlyCalendarRecords?.[key68]?.[dateStr] || monthlyCalendarRecords?.[key68]?.[`${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`];
+    const cal15 = monthlyCalendarRecords?.[key15]?.[dateStr];
+    const cal68 = monthlyCalendarRecords?.[key68]?.[dateStr];
 
     if (cal15?.isHoliday || cal68?.isHoliday) {
       const reason = cal15?.holidayReason || cal68?.holidayReason || "नोंदवलेली सुट्टी";
@@ -3301,7 +3145,7 @@ function TeacherMDMPage() {
       };
     }
 
-    // 5. Daily Register Record Holiday check
+    // 4. Daily Register Record Holiday check
     const regRec = registerRecords?.[dateStr];
     if (regRec) {
       const classRec = regRec[registerClass] || (registerClass === "1 To 5" ? regRec : null);
@@ -3427,34 +3271,15 @@ function TeacherMDMPage() {
         [`${calYear}_${calMonth}_${calSection}_mode`]: calMode,
       };
 
-      // Also sync registerRecords for dates in calEntries
-      const updatedRegisterRecords = { ...registerRecords };
-      Object.entries(calEntries).forEach(([dateKey, entry]) => {
-        if (entry.menu && entry.menu !== "— Select recipe —" && entry.menu !== "Select Menu") {
-          const currentRec = updatedRegisterRecords[dateKey] || {};
-          const currentClassRec = currentRec[registerClass] || {};
-          updatedRegisterRecords[dateKey] = {
-            ...currentRec,
-            [registerClass]: {
-              ...currentClassRec,
-              menu: entry.menu,
-            },
-            menu: entry.menu,
-          };
-        }
-      });
-
       await setDoc(
         doc(db, "school_data", `${udise}_mdm`),
         {
           monthlyCalendar: updatedCalendarRecords,
-          registerRecords: updatedRegisterRecords,
           updatedAt: new Date().toISOString(),
         },
         { merge: true },
       );
       setMonthlyCalendarRecords(updatedCalendarRecords);
-      setRegisterRecords(updatedRegisterRecords);
       toast.success(t("मासिक कॅलेंडर हजेरी व मेनू जतन केला!", "Monthly Calendar attendance and menu saved successfully!"));
     } catch (e) {
       console.error(e);
@@ -3868,12 +3693,6 @@ function TeacherMDMPage() {
   };
 
   const getTranslatedMenu = (menuName: string) => {
-    const rec = resolveRecipe(menuName);
-    if (rec) {
-      if (lang === "mr") return rec.name;
-      if (lang === "en") return rec.nameEn;
-    }
-    const targetName = rec ? rec.nameEn : menuName;
     const menus: Record<string, { mr: string; en: string; hi: string }> = {
       "Vegetable Pulav": {
         mr: "व्हेज पुलाव",
@@ -3936,8 +3755,8 @@ function TeacherMDMPage() {
       },
       Other: { mr: "इतर", en: "Other", hi: "अन्य" },
     };
-    const m = menus[targetName] || menus[menuName];
-    if (!m) return rec ? rec.name : menuName;
+    const m = menus[menuName];
+    if (!m) return menuName;
     return t(m.mr, m.en, m.hi);
   };
 
@@ -4182,8 +4001,7 @@ function TeacherMDMPage() {
           const closing =
             (Number(prevItem.prev) || 0) +
             (Number(prevItem.received) || 0) -
-            (Number(prevItem.used) || 0) -
-            (Number(prevItem.damaged) || 0);
+            (Number(prevItem.used) || 0);
           return Math.max(0, roundStock(closing));
         }
       }
@@ -4212,34 +4030,8 @@ function TeacherMDMPage() {
       customRegisterRecords,
       customIncomingRecords,
     );
-    const itemKey = getItemKeyFromName(itemName);
-    let prevIncTabQty = 0;
-    incRecords.forEach((r) => {
-      if (!r.date || !r.item || !r.qty) return;
-      const rKey = getItemKeyFromName(r.item);
-      const isMatch = (rKey && rKey === itemKey) || r.item.toLowerCase().trim() === itemName.toLowerCase().trim();
-      if (isMatch) {
-        const parts = r.date.split("-");
-        if (parts.length === 3) {
-          const recYear = parts[0];
-          const monthIndex = parseInt(parts[1], 10) - 1;
-          const monthNames = [
-            "January", "February", "March", "April", "May", "June",
-            "July", "August", "September", "October", "November", "December"
-          ];
-          if (monthIndex >= 0 && monthIndex <= 11) {
-            const recMonth = monthNames[monthIndex];
-            if (recYear === prevYear && recMonth.toLowerCase() === prevMonth.toLowerCase()) {
-              prevIncTabQty += parseFloat(r.qty) || 0;
-            }
-          }
-        }
-      }
-    });
     const prevKeyData = customIncomingRecords[prevKey] || {};
-    const prevReceived = (Number(prevKeyData[itemName]) || Number(prevKeyData[itemKey]) || 0) + prevIncTabQty;
-    const prevLok = getLokForMonth(itemName, prevMonth, Number(prevYear) || 2026);
-    const prevDamaged = getDamagedForMonth(itemName, prevMonth, Number(prevYear) || 2026);
+    const prevReceived = Number(prevKeyData[itemName]) || 0;
 
     // Calculate used for prev month on the fly using custom/live records
     let prevUsed = 0;
@@ -4289,7 +4081,7 @@ function TeacherMDMPage() {
     });
     prevUsed = roundStock(prevUsed);
 
-    const closing = prevOpening + prevReceived + prevLok - prevUsed - prevDamaged;
+    const closing = prevOpening + prevReceived - prevUsed;
     return Math.max(0, roundStock(closing));
   };
 
@@ -4438,7 +4230,7 @@ function TeacherMDMPage() {
         const incomingQty = roundStock((Number(incomingData[item.item]) || Number(incomingData[itemKey]) || 0) + incTabQty);
         const lokQty = roundStock(getLokForMonth(item.item, stockMonth, Number(stockYear) || 2026, stockAsOnDate));
         const received = roundStock(incomingQty + lokQty);
-        const damaged = roundStock(getDamagedForMonth(item.item, stockMonth, Number(stockYear) || 2026, stockAsOnDate));
+        const damaged = roundStock(getDamagedForMonth(item.item, stockMonth, Number(stockYear) || 2026));
 
         // ── 2. Previous month closing stock (carry-forward chain) ───────────
         const prev = roundStock(getOpeningStock(
@@ -4516,8 +4308,6 @@ function TeacherMDMPage() {
           ...item,
           prev,
           received,
-          incomingQty,
-          lokQty,
           used,
           damaged,
           cookedDays,
@@ -4536,8 +4326,6 @@ function TeacherMDMPage() {
     stockClass,
     stockAsOnDate,
     incRecords,
-    lokRecords,
-    damagedRecords,
     incomingRecords,
     registerRecords,
     quantityRules,
@@ -4545,7 +4333,7 @@ function TeacherMDMPage() {
 
   // ─── Low Stock Warning Computation & Auto-Trigger ─────────────────────────
   const [showLowStockModal, setShowLowStockModal] = useState(false);
-  const [hasDismissedLowStockSession, setHasDismissedLowStockSession] = useState(false);
+  const [dismissedLowStockHash, setDismissedLowStockHash] = useState("");
 
   const lowStockItems = React.useMemo(() => {
     if (!stockRecords || stockRecords.length === 0) return [];
@@ -4574,12 +4362,16 @@ function TeacherMDMPage() {
   }, [stockRecords, lang, t_global]);
 
   useEffect(() => {
-    if (activeTab === "stock" && !hasDismissedLowStockSession && lowStockItems.length > 0) {
-      setShowLowStockModal(true);
+    if (lowStockItems.length > 0) {
+      const currentHash = JSON.stringify(lowStockItems);
+      if (currentHash !== dismissedLowStockHash) {
+        setShowLowStockModal(true);
+      }
     } else {
       setShowLowStockModal(false);
+      setDismissedLowStockHash("");
     }
-  }, [activeTab, hasDismissedLowStockSession, lowStockItems.length]);
+  }, [lowStockItems, dismissedLowStockHash]);
 
   useEffect(() => {
     if (!user) return;
@@ -4793,9 +4585,6 @@ function TeacherMDMPage() {
           }
           if (firestoreData.lokRecords && Array.isArray(firestoreData.lokRecords)) {
             setLokRecords(firestoreData.lokRecords);
-          }
-          if (firestoreData.damagedRecords && Array.isArray(firestoreData.damagedRecords)) {
-            setDamagedRecords(firestoreData.damagedRecords);
           }
           if (firestoreData.openingStockDateWise) {
             setOpeningStockDateMap(firestoreData.openingStockDateWise);
@@ -6123,150 +5912,11 @@ function TeacherMDMPage() {
   };
 
   // Get incoming record quantity for a specific item in a month
-  const getIncomingForItem = (
-    itemName: string,
-    month: string,
-    year: number,
-    cls: string = "1 To 5",
-    day?: number
-  ) => {
-    const itemKey = getItemKeyFromName(itemName);
-    let totalIncoming = 0;
-
-    const monthNamesEng = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    const marathiMonths = ["", "जानेवारी", "फेब्रुवारी", "मार्च", "एप्रिल", "मे", "जून", "जुलै", "ऑगस्ट", "सप्टेंबर", "ऑक्टोबर", "नोव्हेंबर", "डिसेंबर"];
-
-    let monthNum = 0;
-    const monthMap: { [k: string]: number } = {
-      "जानेवारी": 1, "फेब्रुवारी": 2, "मार्च": 3, "एप्रिल": 4,
-      "मे": 5, "जून": 6, "जुलै": 7, "ऑगस्ट": 8,
-      "सप्टेंबर": 9, "ऑक्टोबर": 10, "नोव्हेंबर": 11, "डिसेंबर": 12
-    };
-
-    if (monthMap[month]) {
-      monthNum = monthMap[month];
-    } else {
-      const idx = monthNamesEng.findIndex((m) => m && m.toLowerCase() === month.toLowerCase());
-      if (idx !== -1) {
-        monthNum = idx;
-      } else {
-        const numVal = parseInt(month, 10);
-        if (!isNaN(numVal) && numVal >= 1 && numVal <= 12) monthNum = numVal;
-      }
-    }
-
-    const engMonthName = monthNum > 0 ? monthNamesEng[monthNum] : month;
-    const marMonthName = monthNum > 0 ? marathiMonths[monthNum] : month;
-
-    // 1. From incRecords (Incoming Stock Tab entries list)
-    if (Array.isArray(incRecords)) {
-      incRecords.forEach((r: any) => {
-        if (!r) return;
-        const rItem = r.item || r.itemName || r.name || "";
-        const rKey = getItemKeyFromName(rItem);
-        const isItemMatch = (rKey && rKey === itemKey) || rItem.toLowerCase().trim() === itemName.toLowerCase().trim();
-
-        if (!isItemMatch) return;
-
-        let dateMatched = false;
-        let rDayNum = 0;
-
-        if (r.date) {
-          const parts = r.date.split(/[-/]/);
-          if (parts.length === 3) {
-            let rYear = 0;
-            let rMonth = 0;
-            let rDay = 0;
-            if (parts[0].length === 4) {
-              rYear = parseInt(parts[0], 10);
-              rMonth = parseInt(parts[1], 10);
-              rDay = parseInt(parts[2], 10);
-            } else {
-              rDay = parseInt(parts[0], 10);
-              rMonth = parseInt(parts[1], 10);
-              rYear = parseInt(parts[2], 10);
-            }
-            if (rYear === year && rMonth === monthNum) {
-              dateMatched = true;
-              rDayNum = rDay;
-            }
-          }
-        } else {
-          const recYear = parseInt(r.year, 10);
-          let recMonthNum = 0;
-          if (monthMap[r.month]) recMonthNum = monthMap[r.month];
-          else recMonthNum = monthNamesEng.findIndex(m => m && m.toLowerCase() === String(r.month).toLowerCase());
-          if (recYear === year && recMonthNum === monthNum) {
-            dateMatched = true;
-          }
-        }
-
-        if (dateMatched) {
-          if (day !== undefined && day > 0) {
-            if (rDayNum === day) {
-              totalIncoming += parseFloat(r.qty || r.quantity || r.received || "0") || 0;
-            }
-          } else {
-            totalIncoming += parseFloat(r.qty || r.quantity || r.received || "0") || 0;
-          }
-        }
-      });
-    }
-
-    // 2. From incomingRecords (Monthly Matrix Records)
-    if (incomingRecords && (day === undefined || day === 1)) {
-      const keysToTry = [
-        `${year}_${engMonthName}_${cls}`,
-        `${year}_${marMonthName}_${cls}`,
-        `${year}_${monthNum}_${cls}`,
-        `${year}_${String(monthNum).padStart(2, "0")}_${cls}`,
-        `${year}_${engMonthName}_1 To 5`,
-        `${year}_${marMonthName}_1 To 5`,
-        `${year}_${monthNum}_1 To 5`,
-        `${year}_${String(monthNum).padStart(2, "0")}_1 To 5`,
-      ];
-
-      for (const k of keysToTry) {
-        const recData = incomingRecords[k];
-        if (recData) {
-          const val = parseFloat(recData[itemKey] || recData[itemName] || "0") || 0;
-          if (val > 0) {
-            totalIncoming += val;
-            break;
-          }
-        }
-      }
-    }
-
-    // 3. From openingStockReceived (Opening stock tab received values)
-    if (openingStockReceived && (day === undefined || day === 1)) {
-      const recVal = parseFloat(openingStockReceived[itemKey] || openingStockReceived[itemName] || "0") || 0;
-      if (recVal > 0 && totalIncoming === 0) {
-        totalIncoming += recVal;
-      }
-    }
-
-    // 4. From openingStockDateMap
-    if (openingStockDateMap && (day === undefined || day === 1)) {
-      Object.entries(openingStockDateMap).forEach(([dStr, dMap]: [string, any]) => {
-        const parts = dStr.split("-");
-        if (parts.length === 3) {
-          const dYear = parseInt(parts[0], 10);
-          const dMonth = parseInt(parts[1], 10);
-          const dDay = parseInt(parts[2], 10);
-          if (dYear === year && dMonth === monthNum && (day === undefined || dDay === day)) {
-            if (dMap && dMap.received) {
-              const val = parseFloat(dMap.received[itemKey] || dMap.received[itemName] || "0") || 0;
-              if (val > 0) {
-                totalIncoming += val;
-              }
-            }
-          }
-        }
-      });
-    }
-
-    return roundStock(totalIncoming);
+  const getIncomingForItem = (itemName: string, month: string, year: number, cls: string = "1 To 5") => {
+    const key = `${year}_${month}_${cls}`;
+    const record = incomingRecords[key];
+    if (!record) return 0;
+    return parseFloat(record[itemName] || "0") || 0;
   };
 
   // Item mapping for annual report columns (Marathi header -> English key in stockRecords)
@@ -6343,18 +5993,15 @@ function TeacherMDMPage() {
     return "शून्य रुपये फक्त";
   };
 
-  const getDamagedForMonth = (itemName: string, month: string, year: number, maxDateStr?: string) => {
+  const getDamagedForMonth = (itemName: string, month: string, year: number) => {
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
     const mIdx = monthNames.findIndex(m => m.toLowerCase() === month.toLowerCase());
     if (mIdx === -1) return 0;
     let total = 0;
-    const targetKey = getItemKeyFromName(itemName);
     damagedRecords.forEach((rec) => {
-      if (maxDateStr && rec.date && rec.date.trim() > maxDateStr.trim()) return;
       const d = new Date(rec.date);
       if (!isNaN(d.getTime()) && d.getMonth() === mIdx && d.getFullYear() === year) {
-        const recKey = getItemKeyFromName(rec.item);
-        if ((recKey && recKey === targetKey) || rec.item.toLowerCase().trim() === itemName.toLowerCase().trim()) {
+        if (rec.item.toLowerCase() === itemName.toLowerCase()) {
           total += parseFloat(rec.qty) || 0;
         }
       }
@@ -6388,7 +6035,7 @@ function TeacherMDMPage() {
         return {
           beneficiary: Number(classRec.beneficiary) || 0,
           enrolled: Number(classRec.totalEnrolled || classRec.pat) || (classSection === "1 To 5" ? (Number(profile?.patPrimary) || 0) : (Number(profile?.patUpper) || 0)),
-          menu: getMenuForRegisterDate(dateISO, classSection) || classRec.menu,
+          menu: classRec.menu || getMenuForRegisterDate(dateISO, classSection),
           selectedItems: classRec.selectedItems || getSelectedItemsForRegisterDate(dateISO, classSection),
           isHoliday: false,
           holidayReason: ""
@@ -7642,201 +7289,20 @@ function TeacherMDMPage() {
                   </div>
                 )}
 
-                {/* 2. STOCK RECEIVED (साहित्य आवक) TAB - Table with Opening Stock + Received = Total Stock */}
+                {/* 2. STOCK RECEIVED (साहित्य आवक) TAB - Learnify Exact UI */}
                 {activeTab === "incoming" && (
                   <div className="space-y-6">
-                    {/* Main Title & Action Bar */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-3">
-                      <div>
-                        <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
-                          <Package className="w-6 h-6 text-emerald-600" />
-                          <span>{lang === "mr" ? "साहित्य आवक (Stock Received)" : "Stock Received"}</span>
-                        </h2>
-                        <p className="text-xs font-semibold text-slate-500 mt-1">
-                          {lang === "mr"
-                            ? "महिना निहाय प्राप्त साठा नोंदवा. एकूण उपलब्ध साठा = आरंभीची शिल्लक (+) आलेले साहित्य."
-                            : "Record monthly received stock. Total Available Stock = Opening Stock + Received Stock."}
-                        </p>
-                      </div>
+                    <div className="flex items-center justify-between border-b pb-3">
+                      <h2 className="text-xl font-bold text-slate-800">
+                        {lang === "mr" ? "साहित्य आवक (Stock Received)" : "Stock Received"}
+                      </h2>
                     </div>
 
-                    {/* Main Table Card (आरंभीची शिल्लक स्टाइल तक्ता) */}
-                    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
-                      {/* Top Controls: Filter & Save */}
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100">
-                        <div className="flex flex-wrap items-center gap-3">
-                          {/* Year */}
-                          <div className="flex items-center gap-2">
-                            <label className="text-xs font-black text-slate-700">{lang === "mr" ? "वर्ष:" : "Year:"}</label>
-                            <select
-                              value={incomingYear}
-                              onChange={(e) => setIncomingYear(e.target.value)}
-                              className="h-9 px-3 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
-                            >
-                              <option value="2025">2025</option>
-                              <option value="2026">2026</option>
-                              <option value="2027">2027</option>
-                            </select>
-                          </div>
-
-                          {/* Month */}
-                          <div className="flex items-center gap-2">
-                            <label className="text-xs font-black text-slate-700">{lang === "mr" ? "महिना:" : "Month:"}</label>
-                            <select
-                              value={incomingMonth}
-                              onChange={(e) => setIncomingMonth(e.target.value)}
-                              className="h-9 px-3 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
-                            >
-                              {[
-                                "January", "February", "March", "April", "May", "June",
-                                "July", "August", "September", "October", "November", "December"
-                              ].map((m) => (
-                                <option key={m} value={m}>
-                                  {m === "January" ? "जानेवारी" : m === "February" ? "फेब्रुवारी" : m === "March" ? "मार्च" : m === "April" ? "एप्रिल" : m === "May" ? "मे" : m === "June" ? "जून" : m === "July" ? "जुलै" : m === "August" ? "ऑगस्ट" : m === "September" ? "सप्टेंबर" : m === "October" ? "ऑक्टोबर" : m === "November" ? "नोव्हेंबर" : "डिसेंबर"} ({m})
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          {/* Class */}
-                          <div className="flex items-center gap-2">
-                            <label className="text-xs font-black text-slate-700">{lang === "mr" ? "इयत्ता:" : "Class:"}</label>
-                            <select
-                              value={incomingClass}
-                              onChange={(e) => setIncomingClass(e.target.value)}
-                              className="h-9 px-3 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
-                            >
-                              <option value="1 To 5">{lang === "mr" ? "१ ते ५" : "1 To 5"}</option>
-                              <option value="6 To 8">{lang === "mr" ? "६ ते ८" : "6 To 8"}</option>
-                            </select>
-                          </div>
-                        </div>
-
-                        {/* Save Button */}
-                        <button
-                          onClick={handleSaveIncoming}
-                          disabled={saving}
-                          className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
-                        >
-                          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                          <span>{lang === "mr" ? "साहित्य आवक जतन करा" : "Save Incoming Stock"}</span>
-                        </button>
-                      </div>
-
-                      {/* Main Incoming Stock Table */}
-                      <div className="w-full overflow-x-auto">
-                        <table className="w-full text-left text-xs border-collapse min-w-[750px]">
-                          <thead>
-                            <tr className="bg-emerald-100/90 border-b border-emerald-300 text-emerald-950 font-bold">
-                              <th className="p-3 border-r border-emerald-300 min-w-[220px]">
-                                {lang === "mr" ? "धान्याचे नाव (Item Name)" : "Item Name"}
-                              </th>
-                              <th className="p-3 text-center border-r border-emerald-300 bg-emerald-200/60 min-w-[170px]">
-                                {lang === "mr" ? "मागील / आरंभीची शिल्लक (+)" : "Opening Stock (+)"}
-                              </th>
-                              <th className="p-3 text-center border-r border-slate-200 bg-blue-100/80 min-w-[170px]">
-                                {lang === "mr" ? "आलेले साहित्य / प्राप्त साठा (+)" : "Stock Received (+)"}
-                              </th>
-                              <th className="p-3 text-center border-r border-emerald-300 bg-emerald-300/70 font-black text-emerald-950 min-w-[180px]">
-                                {lang === "mr" ? "एकूण उपलब्ध साठा (=)" : "Total Available Stock (=)"}
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-200">
-                            {REPORT_ITEMS.slice(0, 18).map((item, idx) => {
-                              const openVal = roundStock(getOpeningStock(incomingMonth, incomingYear, incomingClass, item.key));
-
-                              let incTabQty = 0;
-                              const itemKey = getItemKeyFromName(item.key);
-                              incRecords.forEach((r) => {
-                                if (!r.date || !r.item || !r.qty) return;
-                                const rKey = getItemKeyFromName(r.item);
-                                const isMatch = (rKey && rKey === itemKey) || r.item.toLowerCase().trim() === item.key.toLowerCase().trim();
-                                if (isMatch) {
-                                  const parts = r.date.split("-");
-                                  if (parts.length === 3) {
-                                    const recYear = parts[0];
-                                    const monthIndex = parseInt(parts[1], 10) - 1;
-                                    const monthNames = [
-                                      "January", "February", "March", "April", "May", "June",
-                                      "July", "August", "September", "October", "November", "December"
-                                    ];
-                                    if (monthIndex >= 0 && monthIndex <= 11) {
-                                      if (recYear === incomingYear && monthNames[monthIndex].toLowerCase() === incomingMonth.toLowerCase()) {
-                                        incTabQty += parseFloat(r.qty) || 0;
-                                      }
-                                    }
-                                  }
-                                }
-                              });
-
-                              const typedIncVal = parseFloat(incomingQuantities[item.key] || "0") || 0;
-                              const totalIncVal = roundStock(typedIncVal + incTabQty);
-                              const totalStock = roundStock(openVal + totalIncVal);
-
-                              return (
-                                <tr key={item.key} className={`hover:bg-emerald-50/40 transition-colors ${idx % 2 === 0 ? "bg-white" : "bg-slate-50/50"}`}>
-                                  {/* 1. Item Name */}
-                                  <td className="p-3 border-r border-slate-200 font-extrabold text-slate-900">
-                                    <div className="flex items-center gap-2">
-                                      <span className="size-2 rounded-full bg-emerald-500 shrink-0"></span>
-                                      <div>
-                                        <span className="block text-xs font-black text-slate-900">{item.nameMr}</span>
-                                        <span className="block text-[11px] font-bold text-slate-500">{item.key} ({item.unit})</span>
-                                      </div>
-                                    </div>
-                                  </td>
-
-                                  {/* 2. आरंभीची शिल्लक (Autocalculated Read-only) */}
-                                  <td className="p-2 border-r border-slate-200 text-center bg-emerald-50/30">
-                                    <div className="w-full h-9 flex items-center justify-center font-bold text-emerald-950 bg-emerald-100/60 border border-emerald-300 rounded-lg text-xs shadow-2xs">
-                                      {toMarathiNumbers(openVal.toFixed(3))} {item.unit}
-                                    </div>
-                                  </td>
-
-                                  {/* 3. आलेले साहित्य (Editable Input) */}
-                                  <td className="p-2 border-r border-slate-200 text-center bg-blue-50/30">
-                                    <input
-                                      type="number"
-                                      step="0.001"
-                                      min="0"
-                                      placeholder="0"
-                                      value={incomingQuantities[item.key] || ""}
-                                      onChange={(e) =>
-                                        setIncomingQuantities({
-                                          ...incomingQuantities,
-                                          [item.key]: e.target.value,
-                                        })
-                                      }
-                                      className="w-full h-9 text-center border border-blue-300 rounded-lg font-bold text-blue-950 focus:ring-2 focus:ring-blue-500 bg-white text-xs px-2 shadow-2xs outline-none"
-                                    />
-                                    {incTabQty > 0 && (
-                                      <span className="text-[10px] font-bold text-blue-600 block mt-0.5">
-                                        +{toMarathiNumbers(incTabQty.toFixed(3))} ({lang === "mr" ? "नोंदी" : "vouchers"})
-                                      </span>
-                                    )}
-                                  </td>
-
-                                  {/* 4. एकूण शिल्लक साठा (= आरंभीची शिल्लक + आलेले साहित्य) */}
-                                  <td className="p-2 border-r border-emerald-300 text-center bg-emerald-100/40">
-                                    <div className="w-full h-9 flex items-center justify-center font-black text-xs px-2 rounded-lg border bg-emerald-200/80 text-emerald-950 border-emerald-400 shadow-inner select-none">
-                                      {toMarathiNumbers(totalStock.toFixed(3))} {item.unit}
-                                    </div>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-
-                    {/* Bottom Cards: Individual Voucher Entry & Recent Entries */}
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-4">
-                      {/* Left Column: Form Card (प्राप्त साठा नोंदवा - वैयक्तिक पावती) */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                      {/* Left Column: Form Card (प्राप्त साठा नोंदवा) */}
                       <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5">
                         <h3 className="font-bold text-base text-slate-800 border-b pb-2">
-                          {lang === "mr" ? "प्राप्त साठा नोंदवा (पावती/चलन निहाय)" : "Record Stock Received (Voucher Entry)"}
+                          {lang === "mr" ? "प्राप्त साठा नोंदवा" : "Record Stock Received"}
                         </h3>
                         <div className="space-y-4">
                           {/* 1. साहित्य */}
@@ -7928,7 +7394,7 @@ function TeacherMDMPage() {
                       {/* Right Column: Recent Entries Table (अलीकडील नोंदी) */}
                       <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
                         <h3 className="font-bold text-base text-slate-800 border-b pb-2">
-                          {lang === "mr" ? "अलीकडील आवक नोंदी" : "Recent Voucher Logs"}
+                          {lang === "mr" ? "अलीकडील नोंदी" : "Recent Entries"}
                         </h3>
                         <div className="w-full overflow-x-auto">
                           <table className="w-full text-left text-xs border-collapse">
@@ -7976,207 +7442,14 @@ function TeacherMDMPage() {
                 {/* LOKSAHABHAG (PUBLIC CONTRIBUTION) TAB */}
                 {activeTab === "loksahabhag" && (
                   <div className="space-y-6">
-                    {/* Main Title & Action Bar */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-3">
-                      <div>
-                        <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
-                          <Users className="w-6 h-6 text-emerald-600" />
-                          <span>{lang === "mr" ? "लोकसहभाग (Public Contribution)" : "Public Contribution"}</span>
-                        </h2>
-                        <p className="text-xs font-semibold text-slate-500 mt-1">
-                          {lang === "mr"
-                            ? "महिना निहाय लोकसहभाग नोंदवा. एकूण उपलब्ध साठा = मागील साठा (आरंभीची शिल्लक + साहित्य आवक) (+) लोकसहभाग."
-                            : "Record monthly public contribution. Total Available Stock = Previous Stock (Opening + Received) + Loksahabhag."}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Main Table Card (आरंभीची शिल्लक / साहित्य आवक स्टाइल तक्ता) */}
-                    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
-                      {/* Top Controls: Filter & Save */}
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100">
-                        <div className="flex flex-wrap items-center gap-3">
-                          {/* Year */}
-                          <div className="flex items-center gap-2">
-                            <label className="text-xs font-black text-slate-700">{lang === "mr" ? "वर्ष:" : "Year:"}</label>
-                            <select
-                              value={loksahabhagYear}
-                              onChange={(e) => setLoksahabhagYear(e.target.value)}
-                              className="h-9 px-3 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
-                            >
-                              <option value="2025">2025</option>
-                              <option value="2026">2026</option>
-                              <option value="2027">2027</option>
-                            </select>
-                          </div>
-
-                          {/* Month */}
-                          <div className="flex items-center gap-2">
-                            <label className="text-xs font-black text-slate-700">{lang === "mr" ? "महिना:" : "Month:"}</label>
-                            <select
-                              value={loksahabhagMonth}
-                              onChange={(e) => setLoksahabhagMonth(e.target.value)}
-                              className="h-9 px-3 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
-                            >
-                              {[
-                                "January", "February", "March", "April", "May", "June",
-                                "July", "August", "September", "October", "November", "December"
-                              ].map((m) => (
-                                <option key={m} value={m}>
-                                  {m === "January" ? "जानेवारी" : m === "February" ? "फेब्रुवारी" : m === "March" ? "मार्च" : m === "April" ? "एप्रिल" : m === "May" ? "मे" : m === "June" ? "जून" : m === "July" ? "जुलै" : m === "August" ? "ऑगस्ट" : m === "September" ? "सप्टेंबर" : m === "October" ? "ऑक्टोबर" : m === "November" ? "नोव्हेंबर" : "डिसेंबर"} ({m})
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          {/* Class */}
-                          <div className="flex items-center gap-2">
-                            <label className="text-xs font-black text-slate-700">{lang === "mr" ? "इयत्ता:" : "Class:"}</label>
-                            <select
-                              value={loksahabhagClass}
-                              onChange={(e) => setLoksahabhagClass(e.target.value)}
-                              className="h-9 px-3 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
-                            >
-                              <option value="1 To 5">{lang === "mr" ? "१ ते ५" : "1 To 5"}</option>
-                              <option value="6 To 8">{lang === "mr" ? "६ ते ८" : "6 To 8"}</option>
-                            </select>
-                          </div>
-                        </div>
-
-                        {/* Save Button */}
-                        <button
-                          onClick={handleSaveLoksahabhagTable}
-                          disabled={saving}
-                          className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
-                        >
-                          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                          <span>{lang === "mr" ? "लोकसहभाग जतन करा" : "Save Loksahabhag Entry"}</span>
-                        </button>
-                      </div>
-
-                      {/* Main Loksahabhag Stock Table */}
-                      <div className="w-full overflow-x-auto">
-                        <table className="w-full text-left text-xs border-collapse min-w-[750px]">
-                          <thead>
-                            <tr className="bg-emerald-100/90 border-b border-emerald-300 text-emerald-950 font-bold">
-                              <th className="p-3 border-r border-emerald-300 min-w-[220px]">
-                                {lang === "mr" ? "धान्याचे नाव (Item Name)" : "Item Name"}
-                              </th>
-                              <th className="p-3 text-center border-r border-emerald-300 bg-emerald-200/60 min-w-[170px]">
-                                {lang === "mr" ? "साहित्य आवक मधील साठा (+)" : "Previous Total Stock (+)"}
-                              </th>
-                              <th className="p-3 text-center border-r border-slate-200 bg-amber-100/80 min-w-[170px]">
-                                {lang === "mr" ? "लोकसहभाग (+)" : "Loksahabhag (+)"}
-                              </th>
-                              <th className="p-3 text-center border-r border-emerald-300 bg-emerald-300/70 font-black text-emerald-950 min-w-[180px]">
-                                {lang === "mr" ? "एकूण उपलब्ध साठा (=)" : "Total Available Stock (=)"}
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-200">
-                            {REPORT_ITEMS.slice(0, 18).map((item, idx) => {
-                              // 1. Opening stock for the month
-                              const openVal = roundStock(getOpeningStock(loksahabhagMonth, loksahabhagYear, loksahabhagClass, item.key));
-
-                              // 2. Incoming received stock (table + vouchers) for the month
-                              let incTabQty = 0;
-                              const itemKey = getItemKeyFromName(item.key);
-                              incRecords.forEach((r) => {
-                                if (!r.date || !r.item || !r.qty) return;
-                                const rKey = getItemKeyFromName(r.item);
-                                const isMatch = (rKey && rKey === itemKey) || r.item.toLowerCase().trim() === item.key.toLowerCase().trim();
-                                if (isMatch) {
-                                  const parts = r.date.split("-");
-                                  if (parts.length === 3) {
-                                    const recYear = parts[0];
-                                    const monthIndex = parseInt(parts[1], 10) - 1;
-                                    const monthNames = [
-                                      "January", "February", "March", "April", "May", "June",
-                                      "July", "August", "September", "October", "November", "December"
-                                    ];
-                                    if (monthIndex >= 0 && monthIndex <= 11) {
-                                      if (recYear === loksahabhagYear && monthNames[monthIndex].toLowerCase() === loksahabhagMonth.toLowerCase()) {
-                                        incTabQty += parseFloat(r.qty) || 0;
-                                      }
-                                    }
-                                  }
-                                }
-                              });
-                              const recordKeyInc = `${loksahabhagYear}_${loksahabhagMonth}_${loksahabhagClass}`;
-                              const typedIncVal = parseFloat((incomingRecords[recordKeyInc] || {})[item.key] || "0") || 0;
-                              const totalIncVal = roundStock(typedIncVal + incTabQty);
-
-                              // 3. Stock available from previous page (Opening + Incoming)
-                              const prevAvailStock = roundStock(openVal + totalIncVal);
-
-                              // 4. Loksahabhag entries from individual logs
-                              const lokTabQty = roundStock(getLokForMonth(item.key, loksahabhagMonth, Number(loksahabhagYear) || 2026));
-
-                              // 5. Typed loksahabhag value
-                              const typedLokVal = parseFloat(openingStockLoksahabhag[item.key] || "0") || 0;
-                              const totalLokVal = roundStock(typedLokVal + lokTabQty);
-
-                              // 6. Total Stock = (Opening + Incoming) + Loksahabhag
-                              const totalStock = roundStock(prevAvailStock + totalLokVal);
-
-                              return (
-                                <tr key={item.key} className={`hover:bg-emerald-50/40 transition-colors ${idx % 2 === 0 ? "bg-white" : "bg-slate-50/50"}`}>
-                                  {/* 1. Item Name */}
-                                  <td className="p-3 border-r border-slate-200 font-extrabold text-slate-900">
-                                    <div className="flex items-center gap-2">
-                                      <span className="size-2 rounded-full bg-emerald-500 shrink-0"></span>
-                                      <div>
-                                        <span className="block text-xs font-black text-slate-900">{item.nameMr}</span>
-                                        <span className="block text-[11px] font-bold text-slate-500">{item.key} ({item.unit})</span>
-                                      </div>
-                                    </div>
-                                  </td>
-
-                                  {/* 2. साहित्य आवक मधील साठा (Read-only from Opening + Incoming) */}
-                                  <td className="p-2 border-r border-slate-200 text-center bg-emerald-50/30">
-                                    <div className="w-full h-9 flex items-center justify-center font-bold text-emerald-950 bg-emerald-100/60 border border-emerald-300 rounded-lg text-xs shadow-2xs">
-                                      {toMarathiNumbers(prevAvailStock.toFixed(3))} {item.unit}
-                                    </div>
-                                  </td>
-
-                                  {/* 3. लोकसहभाग (+) (Editable Input) */}
-                                  <td className="p-2 border-r border-slate-200 text-center bg-amber-50/30">
-                                    <input
-                                      type="number"
-                                      step="0.001"
-                                      min="0"
-                                      placeholder="0"
-                                      value={openingStockLoksahabhag[item.key] || ""}
-                                      onChange={(e) => handleOpeningLoksahabhagChange(item.key, e.target.value)}
-                                      className="w-full h-9 text-center border border-amber-300 rounded-lg font-bold text-amber-950 focus:ring-2 focus:ring-amber-500 bg-white text-xs px-2 shadow-2xs outline-none"
-                                    />
-                                    {lokTabQty > 0 && (
-                                      <span className="text-[10px] font-bold text-amber-600 block mt-0.5">
-                                        +{toMarathiNumbers(lokTabQty.toFixed(3))} ({lang === "mr" ? "नोंदी" : "vouchers"})
-                                      </span>
-                                    )}
-                                  </td>
-
-                                  {/* 4. एकूण शिल्लक साठा (= मागील साठा + लोकसहभाग) */}
-                                  <td className="p-2 border-r border-emerald-300 text-center bg-emerald-100/40">
-                                    <div className="w-full h-9 flex items-center justify-center font-black text-xs px-2 rounded-lg border bg-emerald-200/80 text-emerald-950 border-emerald-400 shadow-inner select-none">
-                                      {toMarathiNumbers(totalStock.toFixed(3))} {item.unit}
-                                    </div>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-
-                    {/* Bottom Cards: Individual Donation Entry & Recent Donation Entries */}
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-4">
+                    <h2 className="text-xl font-bold text-slate-800 border-b pb-3">
+                      {lang === "mr" ? "लोकसहभाग नोंद" : "Loksahabhag (Public Contribution)"}
+                    </h2>
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                       {/* Left Column: Form Card */}
                       <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
                         <h3 className="font-bold text-base text-slate-800">
-                          {lang === "mr" ? "लोकसहभाग नोंदवा (देणगीदार निहाय)" : "Report Public Contribution (Donor Entry)"}
+                          {lang === "mr" ? "लोकसहभाग नोंदवा" : "Report Public Contribution"}
                         </h3>
                         <div className="space-y-3">
                           <div>
@@ -8251,7 +7524,7 @@ function TeacherMDMPage() {
                           <button
                             onClick={handleSaveLoksahabhag}
                             disabled={saving}
-                            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2"
                           >
                             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                             {lang === "mr" ? "Save (जतन करा)" : "Save Record"}
@@ -8262,7 +7535,7 @@ function TeacherMDMPage() {
                       {/* Right Column: Recent Entries Table */}
                       <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
                         <h3 className="font-bold text-base text-slate-800">
-                          {lang === "mr" ? "अलीकडील लोकसहभाग नोंदी" : "Recent Contribution Logs"}
+                          {lang === "mr" ? "अलीकडील नोंदी" : "Recent Entries"}
                         </h3>
                         <div className="w-full overflow-x-auto">
                           <table className="w-full text-left text-xs border-collapse">
@@ -8312,210 +7585,14 @@ function TeacherMDMPage() {
                 {/* DAMAGED STOCK TAB */}
                 {activeTab === "damaged-stock" && (
                   <div className="space-y-6">
-                    {/* Main Title & Action Bar */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-3">
-                      <div>
-                        <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
-                          <Trash2 className="w-6 h-6 text-rose-600" />
-                          <span>{lang === "mr" ? "खराब साठा (Damaged Stock)" : "Damaged Stock"}</span>
-                        </h2>
-                        <p className="text-xs font-semibold text-slate-500 mt-1">
-                          {lang === "mr"
-                            ? "महिना निहाय खराब साठा नोंदवा. एकूण शिल्लक साठा = लोकसहभाग नंतरचा साठा (-) खराब साठा."
-                            : "Record monthly damaged stock. Total Remaining Stock = Stock after Loksahabhag - Damaged Stock."}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Main Table Card (इतर तक्त्यांप्रमाणेच उभा तक्ता) */}
-                    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
-                      {/* Top Controls: Filter & Save */}
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100">
-                        <div className="flex flex-wrap items-center gap-3">
-                          {/* Year */}
-                          <div className="flex items-center gap-2">
-                            <label className="text-xs font-black text-slate-700">{lang === "mr" ? "वर्ष:" : "Year:"}</label>
-                            <select
-                              value={damagedYear}
-                              onChange={(e) => setDamagedYear(e.target.value)}
-                              className="h-9 px-3 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
-                            >
-                              <option value="2025">2025</option>
-                              <option value="2026">2026</option>
-                              <option value="2027">2027</option>
-                            </select>
-                          </div>
-
-                          {/* Month */}
-                          <div className="flex items-center gap-2">
-                            <label className="text-xs font-black text-slate-700">{lang === "mr" ? "महिना:" : "Month:"}</label>
-                            <select
-                              value={damagedMonth}
-                              onChange={(e) => setDamagedMonth(e.target.value)}
-                              className="h-9 px-3 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
-                            >
-                              {[
-                                "January", "February", "March", "April", "May", "June",
-                                "July", "August", "September", "October", "November", "December"
-                              ].map((m) => (
-                                <option key={m} value={m}>
-                                  {m === "January" ? "जानेवारी" : m === "February" ? "फेब्रुवारी" : m === "March" ? "मार्च" : m === "April" ? "एप्रिल" : m === "May" ? "मे" : m === "June" ? "जून" : m === "July" ? "जुलै" : m === "August" ? "ऑगस्ट" : m === "September" ? "सप्टेंबर" : m === "October" ? "ऑक्टोबर" : m === "November" ? "नोव्हेंबर" : "डिसेंबर"} ({m})
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          {/* Class */}
-                          <div className="flex items-center gap-2">
-                            <label className="text-xs font-black text-slate-700">{lang === "mr" ? "इयत्ता:" : "Class:"}</label>
-                            <select
-                              value={damagedClass}
-                              onChange={(e) => setDamagedClass(e.target.value)}
-                              className="h-9 px-3 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
-                            >
-                              <option value="1 To 5">{lang === "mr" ? "१ ते ५" : "1 To 5"}</option>
-                              <option value="6 To 8">{lang === "mr" ? "६ ते ८" : "6 To 8"}</option>
-                            </select>
-                          </div>
-                        </div>
-
-                        {/* Save Button */}
-                        <button
-                          onClick={handleSaveDamagedStockTable}
-                          disabled={saving}
-                          className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
-                        >
-                          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                          <span>{lang === "mr" ? "खराब साठा जतन करा" : "Save Damaged Stock Entry"}</span>
-                        </button>
-                      </div>
-
-                      {/* Main Damaged Stock Table */}
-                      <div className="w-full overflow-x-auto">
-                        <table className="w-full text-left text-xs border-collapse min-w-[750px]">
-                          <thead>
-                            <tr className="bg-emerald-100/90 border-b border-emerald-300 text-emerald-950 font-bold">
-                              <th className="p-3 border-r border-emerald-300 min-w-[220px]">
-                                {lang === "mr" ? "धान्याचे नाव (Item Name)" : "Item Name"}
-                              </th>
-                              <th className="p-3 text-center border-r border-emerald-300 bg-emerald-200/60 min-w-[170px]">
-                                {lang === "mr" ? "लोकसहभाग नंतरचा साठा (+)" : "Stock after Loksahabhag (+)"}
-                              </th>
-                              <th className="p-3 text-center border-r border-slate-200 bg-rose-100/80 min-w-[170px]">
-                                {lang === "mr" ? "खराब साठा (-)" : "Damaged Stock (-)"}
-                              </th>
-                              <th className="p-3 text-center border-r border-emerald-300 bg-emerald-300/70 font-black text-emerald-950 min-w-[180px]">
-                                {lang === "mr" ? "एकूण शिल्लक साठा (=)" : "Total Remaining Stock (=)"}
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-200">
-                            {REPORT_ITEMS.slice(0, 18).map((item, idx) => {
-                              // 1. Opening stock for the month
-                              const openVal = roundStock(getOpeningStock(damagedMonth, damagedYear, damagedClass, item.key));
-
-                              // 2. Incoming received stock for the month
-                              let incTabQty = 0;
-                              const itemKey = getItemKeyFromName(item.key);
-                              incRecords.forEach((r) => {
-                                if (!r.date || !r.item || !r.qty) return;
-                                const rKey = getItemKeyFromName(r.item);
-                                const isMatch = (rKey && rKey === itemKey) || r.item.toLowerCase().trim() === item.key.toLowerCase().trim();
-                                if (isMatch) {
-                                  const parts = r.date.split("-");
-                                  if (parts.length === 3) {
-                                    const recYear = parts[0];
-                                    const monthIndex = parseInt(parts[1], 10) - 1;
-                                    const monthNames = [
-                                      "January", "February", "March", "April", "May", "June",
-                                      "July", "August", "September", "October", "November", "December"
-                                    ];
-                                    if (monthIndex >= 0 && monthIndex <= 11) {
-                                      if (recYear === damagedYear && monthNames[monthIndex].toLowerCase() === damagedMonth.toLowerCase()) {
-                                        incTabQty += parseFloat(r.qty) || 0;
-                                      }
-                                    }
-                                  }
-                                }
-                              });
-                              const recordKeyInc = `${damagedYear}_${damagedMonth}_${damagedClass}`;
-                              const typedIncVal = parseFloat((incomingRecords[recordKeyInc] || {})[item.key] || "0") || 0;
-                              const totalIncVal = roundStock(typedIncVal + incTabQty);
-
-                              // 3. Loksahabhag stock for the month
-                              const typedLokVal = parseFloat(openingStockLoksahabhag[item.key] || "0") || 0;
-                              const lokTabQty = roundStock(getLokForMonth(item.key, damagedMonth, Number(damagedYear) || 2026));
-                              const totalLokVal = roundStock(typedLokVal + lokTabQty);
-
-                              // 4. Available stock from previous stage (Loksahabhag total)
-                              const prevAvailStock = roundStock(openVal + totalIncVal + totalLokVal);
-
-                              // 5. Damaged stock for the month (table + individual logs)
-                              const typedDmgVal = parseFloat(openingStockSpent[item.key] || "0") || 0;
-                              const dmgTabQty = roundStock(getDamagedForMonth(item.key, damagedMonth, Number(damagedYear) || 2026));
-                              const totalDmgVal = roundStock(typedDmgVal + dmgTabQty);
-
-                              // 6. Remaining Stock = Previous Available Stock - Damaged Stock
-                              const totalRemainingStock = Math.max(0, roundStock(prevAvailStock - totalDmgVal));
-
-                              return (
-                                <tr key={item.key} className={`hover:bg-emerald-50/40 transition-colors ${idx % 2 === 0 ? "bg-white" : "bg-slate-50/50"}`}>
-                                  {/* 1. Item Name */}
-                                  <td className="p-3 border-r border-slate-200 font-extrabold text-slate-900">
-                                    <div className="flex items-center gap-2">
-                                      <span className="size-2 rounded-full bg-emerald-500 shrink-0"></span>
-                                      <div>
-                                        <span className="block text-xs font-black text-slate-900">{item.nameMr}</span>
-                                        <span className="block text-[11px] font-bold text-slate-500">{item.key} ({item.unit})</span>
-                                      </div>
-                                    </div>
-                                  </td>
-
-                                  {/* 2. लोकसहभाग नंतरचा साठा (Read-only from Opening + Incoming + Loksahabhag) */}
-                                  <td className="p-2 border-r border-slate-200 text-center bg-emerald-50/30">
-                                    <div className="w-full h-9 flex items-center justify-center font-bold text-emerald-950 bg-emerald-100/60 border border-emerald-300 rounded-lg text-xs shadow-2xs">
-                                      {toMarathiNumbers(prevAvailStock.toFixed(3))} {item.unit}
-                                    </div>
-                                  </td>
-
-                                  {/* 3. खराब साठा (-) (Editable Input) */}
-                                  <td className="p-2 border-r border-slate-200 text-center bg-rose-50/30">
-                                    <input
-                                      type="number"
-                                      step="0.001"
-                                      min="0"
-                                      placeholder="0"
-                                      value={openingStockSpent[item.key] || ""}
-                                      onChange={(e) => handleOpeningSpentChange(item.key, e.target.value)}
-                                      className="w-full h-9 text-center border border-rose-300 rounded-lg font-bold text-rose-950 focus:ring-2 focus:ring-rose-500 bg-white text-xs px-2 shadow-2xs outline-none"
-                                    />
-                                    {dmgTabQty > 0 && (
-                                      <span className="text-[10px] font-bold text-rose-600 block mt-0.5">
-                                        -{toMarathiNumbers(dmgTabQty.toFixed(3))} ({lang === "mr" ? "नोंदी" : "vouchers"})
-                                      </span>
-                                    )}
-                                  </td>
-
-                                  {/* 4. एकूण शिल्लक साठा (= लोकसहभाग नंतरचा साठा - खराब साठा) */}
-                                  <td className="p-2 border-r border-emerald-300 text-center bg-emerald-100/40">
-                                    <div className="w-full h-9 flex items-center justify-center font-black text-xs px-2 rounded-lg border bg-emerald-200/80 text-emerald-950 border-emerald-400 shadow-inner select-none">
-                                      {toMarathiNumbers(totalRemainingStock.toFixed(3))} {item.unit}
-                                    </div>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-
-                    {/* Bottom Cards: Individual Damaged Entry & Recent Damaged Logs */}
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-4">
+                    <h2 className="text-xl font-bold text-slate-800 border-b pb-3">
+                      {lang === "mr" ? "खराब साठा नोंद" : "Damaged Stock Register"}
+                    </h2>
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                       {/* Left Column: Form Card */}
                       <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
                         <h3 className="font-bold text-base text-slate-800">
-                          {lang === "mr" ? "खराब साठा नोंदवा (वैयक्तिक नोंद)" : "Report Damaged Stock (Individual Log)"}
+                          {lang === "mr" ? "खराब साठा नोंदवा" : "Report Damaged Stock"}
                         </h3>
                         <div className="space-y-3">
                           <div>
@@ -8587,7 +7664,7 @@ function TeacherMDMPage() {
                           <button
                             onClick={handleSaveDamagedStock}
                             disabled={saving}
-                            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2"
                           >
                             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                             {lang === "mr" ? "Save (जतन करा)" : "Save Record"}
@@ -8598,7 +7675,7 @@ function TeacherMDMPage() {
                       {/* Right Column: Recent Entries Table */}
                       <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
                         <h3 className="font-bold text-base text-slate-800">
-                          {lang === "mr" ? "अलीकडील खराब साठा नोंदी" : "Recent Damaged Stock Logs"}
+                          {lang === "mr" ? "अलीकडील नोंदी" : "Recent Entries"}
                         </h3>
                         <div className="w-full overflow-x-auto">
                           <table className="w-full text-left text-xs border-collapse">
@@ -8608,13 +7685,12 @@ function TeacherMDMPage() {
                                 <th className="p-2.5">{lang === "mr" ? "साहित्य" : "Material"}</th>
                                 <th className="p-2.5">{lang === "mr" ? "प्रमाण" : "Quantity"}</th>
                                 <th className="p-2.5">{lang === "mr" ? "कारण" : "Reason"}</th>
-                                <th className="p-2.5 text-right">{lang === "mr" ? "कृती" : "Action"}</th>
                               </tr>
                             </thead>
                             <tbody>
                               {damagedRecords.length === 0 ? (
                                 <tr>
-                                  <td colSpan={5} className="p-6 text-center text-slate-400 font-medium">
+                                  <td colSpan={4} className="p-6 text-center text-slate-400 font-medium">
                                     {lang === "mr" ? "कोणतीही खराब साठा नोंद उपलब्ध नाही." : "No damaged stock records found."}
                                   </td>
                                 </tr>
@@ -8623,17 +7699,8 @@ function TeacherMDMPage() {
                                   <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50/80">
                                     <td className="p-2.5 font-medium">{r.date}</td>
                                     <td className="p-2.5 font-bold text-slate-800">{r.item}</td>
-                                    <td className="p-2.5 font-bold text-rose-600">-{r.qty} kg</td>
+                                    <td className="p-2.5 font-bold text-rose-600">{r.qty} kg</td>
                                     <td className="p-2.5 text-slate-600">{r.reason || "-"}</td>
-                                    <td className="p-2.5 text-right">
-                                      <button
-                                        onClick={() => handleDeleteDamagedStock(r.id)}
-                                        title={lang === "mr" ? "हटवा" : "Delete"}
-                                        className="p-1 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                                      >
-                                        <Trash2 className="size-4 text-rose-500 hover:text-rose-700" />
-                                      </button>
-                                    </td>
                                   </tr>
                                 ))
                               )}
@@ -8732,18 +7799,27 @@ function TeacherMDMPage() {
                             Recipe
                           </label>
                           <select
-                            value={getRecipeId(formulaRecipe) || "Select Recipe"}
-                            onChange={(e) => {
-                              const selectedId = e.target.value;
-                              const rec = resolveRecipe(selectedId);
-                              setFormulaRecipe(rec ? rec.id : selectedId);
-                            }}
+                            value={formulaRecipe}
+                            onChange={(e) => setFormulaRecipe(e.target.value)}
                             className="w-full h-10 px-3.5 bg-white border border-slate-300 rounded-xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                           >
-                            <option value="Select Recipe">{lang === "mr" ? "— रेसिपी निवडा —" : "Select Recipe"}</option>
-                            {MASTER_RECIPES.map((r) => (
-                              <option key={r.id} value={r.id}>{r.name}</option>
-                            ))}
+                            <option value="Select Recipe">{getTranslatedMenu("Select Menu")}</option>
+                            <option value="Vegetable Pulav">{getTranslatedMenu("Vegetable Pulav")}</option>
+                            <option value="Masala Rice">{getTranslatedMenu("Masala Rice")}</option>
+                            <option value="Matar Pulav">{getTranslatedMenu("Matar Pulav")}</option>
+                            <option value="Mungdal Khichadi">{getTranslatedMenu("Mungdal Khichadi")}</option>
+                            <option value="Cowpea Khichadi">{getTranslatedMenu("Cowpea Khichadi")}</option>
+                            <option value="Chana Pulav">{getTranslatedMenu("Chana Pulav")}</option>
+                            <option value="Soyabin Pulav">{getTranslatedMenu("Soyabin Pulav")}</option>
+                            <option value="Masuri Pulav">{getTranslatedMenu("Masuri Pulav")}</option>
+                            <option value="Egg Pulav">{getTranslatedMenu("Egg Pulav")}</option>
+                            <option value="Sprouted Matki Usal">{getTranslatedMenu("Sprouted Matki Usal")}</option>
+                            <option value="Sweet Khichadi">{getTranslatedMenu("Sweet Khichadi")}</option>
+                            <option value="Mug Shevaga Varan Bhat">{getTranslatedMenu("Mug Shevaga Varan Bhat")}</option>
+                            <option value="Rice pudding">{getTranslatedMenu("Rice pudding")}</option>
+                            <option value="ragi porridge">{getTranslatedMenu("ragi porridge")}</option>
+                            <option value="Sprouted pulses">{getTranslatedMenu("Sprouted pulses")}</option>
+                            <option value="Other">{getTranslatedMenu("Other")}</option>
                           </select>
                         </div>
 
@@ -8913,331 +7989,166 @@ function TeacherMDMPage() {
                 )}
 
                 {/* 2. MENU TAB */}
-                {/* 2. MENU TAB - Recipe Ingredients Matrix Table */}
                 {activeTab === "menu" && (
                   <div className="w-full space-y-4">
-                    {/* Page Header */}
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-200 pb-3">
+                    {/* Page Title */}
+                    <div className="flex items-center justify-between border-b border-slate-200 pb-3">
                       <div>
                         <h2 className="text-xl font-bold text-slate-800">
-                          {lang === "mr" ? "रेसिपी साहित्य निवड (Recipe Ingredients Matrix)" : "Recipe Ingredients Matrix"}
+                          {lang === "mr" ? "रेसिपी साहित्य (Recipe Ingredients)" : "Recipe Ingredients"}
                         </h2>
                         <p className="text-xs text-slate-500 font-medium mt-0.5">
-                          {lang === "mr"
-                            ? "पहिल्या उभ्या कॉलम मधील पाककृतीनुसार (Recipe) उजवीकडे आवश्यक धान्यांचे चेकबॉक्स निवडून सेव्ह करा"
-                            : "Select ingredients using the matrix checkboxes for each recipe and click Save"}
+                          {lang === "mr" ? "प्रत्येक पाककृतीसाठी (Recipe) वापरले जाणारे घटक साहित्य निवडा व जतन करा" : "Select and save ingredient materials used for each recipe formula"}
                         </p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={async () => {
-                            if (!user) return;
-                            setSaving(true);
-                            try {
-                              const udise = getUdise();
-                              const fullMap: Record<string, Record<string, boolean>> = {};
-                              MASTER_RECIPES.forEach((rec) => {
-                                const existing = recipeIngredientsMap[rec.id];
-                                const merged: Record<string, boolean> = {};
-
-                                const DAILY_KEYS = ["Rice", "Cumin", "Mustard", "Turmeric", "Salt", "Oil", "Chili", "Onion Garlic Masala", "Garam Masala"];
-                                const PULSE_KEYS = ["Mugdal", "Turdal", "Masurdal", "Matki", "Moong", "Cowpea", "Gram", "Pease", "Soyabean Wadi", "Vegetables", "Sugar-Jaggery", "Milk-Milk Powder", "Ragi Satva"];
-
-                                DAILY_KEYS.forEach((dKey) => {
-                                  if (existing && existing[dKey] !== undefined) {
-                                    merged[dKey] = existing[dKey];
-                                  } else if (rec.defaultIngredients && rec.defaultIngredients[dKey] !== undefined) {
-                                    merged[dKey] = rec.defaultIngredients[dKey];
-                                  } else {
-                                    merged[dKey] = true;
-                                  }
-                                });
-
-                                PULSE_KEYS.forEach((pKey) => {
-                                  if (existing && existing[pKey] !== undefined) {
-                                    merged[pKey] = existing[pKey];
-                                  } else {
-                                    merged[pKey] = rec.defaultIngredients ? !!rec.defaultIngredients[pKey] : false;
-                                  }
-                                });
-
-                                fullMap[rec.id] = merged;
-                              });
-
-                              setRecipeIngredientsMap(fullMap);
-
-                              await setDoc(
-                                doc(db, "school_data", `${udise}_mdm`),
-                                {
-                                  recipeIngredientsMap: fullMap,
-                                  updatedAt: new Date().toISOString(),
-                                },
-                                { merge: true }
-                              );
-                              toast.success(lang === "mr" ? "सर्व रेसिपी साहित्य यशस्वीरित्या जतन केले!" : "Saved all recipe ingredients successfully!");
-                            } catch (e) {
-                              console.error(e);
-                              toast.error(lang === "mr" ? "साहित्य जतन करण्यात अडचण आली." : "Failed to save recipe ingredients");
-                            } finally {
-                              setSaving(false);
-                            }
-                          }}
-                          disabled={saving}
-                          className="px-4 py-2 bg-[#008955] hover:bg-[#007044] text-white rounded-xl text-xs font-extrabold shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
-                        >
-                          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                          <span>{lang === "mr" ? "सर्व रेसिपी साहित्य जतन करा" : "Save All Ingredients"}</span>
-                        </button>
-
-                        <button
-                          onClick={() => setShowMenuReportModal(true)}
-                          className="px-3.5 py-2 bg-[#047857] hover:bg-[#065f46] text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
-                        >
-                          <FileText className="w-4 h-4" />
-                          <span>{lang === "mr" ? "अन्न मेनू अहवाल (PDF)" : "Menu Report (PDF)"}</span>
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => setShowMenuReportModal(true)}
+                        className="px-4 py-2 bg-[#047857] hover:bg-[#065f46] text-white rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <FileText className="w-4 h-4" />
+                        <span>{lang === "mr" ? "अन्न मेनू अहवाल (PDF)" : "Food Menu Report"}</span>
+                      </button>
                     </div>
 
-                    {/* Matrix Table Card */}
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-4">
-                      {/* Sub-instruction badge */}
-                      <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-emerald-50/80 border border-emerald-200 rounded-xl text-xs font-medium text-emerald-950">
-                        <div className="flex items-center gap-2">
-                          <span className="px-2 py-0.5 bg-emerald-600 text-white rounded font-bold text-[11px]">माहिती</span>
-                          <span>दररोज लागणारे साहित्य (तांदूळ, मसाले, तेल, मीठ) बाय-डिफॉल्ट सिलेक्टेड ठेवले आहेत. आवश्यकतेनुसार चेक/अनचेक करा.</span>
+                    {/* Main Card */}
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+                      {/* Recipe Dropdown Field */}
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-semibold text-slate-700 block">
+                          Recipe
+                        </label>
+                        <select
+                          value={getRecipeId(menuType) || "Select Menu"}
+                          onChange={(e) => handleRecipeChange(e.target.value)}
+                          className="w-full h-10 px-3.5 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-emerald-600 transition-colors"
+                        >
+                          <option value="Select Menu">Select Recipe</option>
+                          {MASTER_RECIPES.map((r) => (
+                            <option key={r.id} value={r.id}>{r.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Show ingredients checklist ONLY when a recipe is selected */}
+                      {menuType && menuType !== "Select Menu" ? (
+                        <>
+                          {/* Instruction Subtext */}
+                          <p className="text-xs text-slate-500 leading-relaxed font-medium">
+                            Select ingredients used for <span className="font-bold text-slate-900">{getTranslatedMenu(menuType)}</span>. Your selection is saved until you change it. Deselected ingredients keep formula rows at zero and are excluded from daily entry.
+                          </p>
+
+                          {/* Checklist Box */}
+                          <div className="border border-slate-200 rounded-2xl p-4 bg-slate-50/50 max-h-[420px] overflow-y-auto">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {/* Column 1 */}
+                              <div className="space-y-2.5">
+                                {[
+                                  "Rice",
+                                  "Turdal",
+                                  "Matki",
+                                  "Cowpea",
+                                  "Pease",
+                                  "Cumin",
+                                  "Turmeric",
+                                  "Salt",
+                                  "Garam Masala",
+                                  "Sugar-Jaggery",
+                                  "Ragi Satva"
+                                ].map((item) => {
+                                  const isChecked = !!selectedMenuItems[item];
+                                  return (
+                                    <label
+                                      key={item}
+                                      className="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 hover:border-slate-300 hover:bg-slate-50/80 transition-all cursor-pointer select-none shadow-2xs"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={isChecked}
+                                        onChange={(e) =>
+                                          setSelectedMenuItems({
+                                            ...selectedMenuItems,
+                                            [item]: e.target.checked,
+                                          })
+                                        }
+                                        className="size-4 rounded border-slate-300 text-emerald-600 focus:ring-0 cursor-pointer accent-emerald-600"
+                                      />
+                                      <span className="text-sm font-semibold text-slate-800">
+                                        {getTranslatedItem(item)}
+                                      </span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+
+                              {/* Column 2 */}
+                              <div className="space-y-2.5">
+                                {[
+                                  "Mugdal",
+                                  "Masurdal",
+                                  "Moong",
+                                  "Gram",
+                                  "Soyabean Wadi",
+                                  "Mustard",
+                                  "Onion Garlic Masala",
+                                  "Chili",
+                                  "Oil",
+                                  "Milk-Milk Powder",
+                                  "Vegetables"
+                                ].map((item) => {
+                                  const isChecked = !!selectedMenuItems[item];
+                                  return (
+                                    <label
+                                      key={item}
+                                      className="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-800 hover:border-slate-300 hover:bg-slate-50/80 transition-all cursor-pointer select-none shadow-2xs"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={isChecked}
+                                        onChange={(e) =>
+                                          setSelectedMenuItems({
+                                            ...selectedMenuItems,
+                                            [item]: e.target.checked,
+                                          })
+                                        }
+                                        className="size-4 rounded border-slate-300 text-emerald-600 focus:ring-0 cursor-pointer accent-emerald-600"
+                                      />
+                                      <span className="text-sm font-semibold text-slate-800">
+                                        {getTranslatedItem(item)}
+                                      </span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Action Bar */}
+                          <div className="flex items-center gap-4 pt-1">
+                            <button
+                              onClick={handleSaveMenu}
+                              disabled={saving}
+                              className="px-5 py-2.5 bg-[#008955] hover:bg-[#007044] text-white rounded-xl text-sm font-bold shadow-sm flex items-center gap-2 transition-colors cursor-pointer"
+                            >
+                              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                              <span>Save ingredients</span>
+                            </button>
+                            <button
+                              onClick={() => setActiveTab("quantity")}
+                              className="text-sm font-semibold text-[#008955] hover:underline cursor-pointer"
+                            >
+                              Go to Recipe Formulas →
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="p-8 text-center border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+                          <p className="text-sm font-semibold text-slate-600">
+                            {lang === "mr"
+                              ? "साहित्य निवडण्यासाठी कृपया प्रथम वरील ड्रॉपडाउनमधून पाककृती (Recipe) निवडा."
+                              : "Please select a Recipe from the dropdown above to choose its ingredients."}
+                          </p>
                         </div>
-                        <button
-                          onClick={() => setActiveTab("quantity")}
-                          className="text-xs font-bold text-emerald-700 hover:underline cursor-pointer"
-                        >
-                          प्रमाण (Recipe Formulas) कडे जा →
-                        </button>
-                      </div>
-
-                      {/* Scrollable Matrix Table */}
-                      <div className="w-full overflow-x-auto border border-slate-300 rounded-xl shadow-2xs max-h-[600px] overflow-y-auto">
-                        <table className="w-full border-collapse text-slate-900 bg-white min-w-[1200px] text-xs">
-                          <thead className="sticky top-0 z-30">
-                            {/* Group Header Row */}
-                            <tr className="bg-[#008955] text-white font-extrabold border-b border-emerald-700">
-                              <th rowSpan={2} className="border border-emerald-700 p-2.5 text-left min-w-[200px] bg-[#007044] sticky left-0 z-40 shadow-md">
-                                {lang === "mr" ? "पाककृती / मेनूचे नाव" : "Recipe Name"}
-                              </th>
-                              <th colSpan={9} className="border border-emerald-700 p-2 text-center bg-amber-600/90 text-white font-black uppercase tracking-wider">
-                                {lang === "mr" ? "दररोज लागणारे नियमित साहित्य (बाय डिफॉल्ट सिलेक्टेड)" : "Daily Essential Staples & Spices"}
-                              </th>
-                              <th colSpan={13} className="border border-emerald-700 p-2 text-center bg-teal-700/90 text-white font-black uppercase tracking-wider">
-                                {lang === "mr" ? "कडधान्य व डाळी (Pulses & Specific Ingredients)" : "Pulses & Legumes"}
-                              </th>
-                            </tr>
-
-                            {/* Item Names Header Row */}
-                            <tr className="bg-emerald-100 text-emerald-950 font-bold border-b border-emerald-300 text-[11px]">
-                              {/* Daily Essentials */}
-                              {[
-                                { key: "Rice", nameMr: "तांदूळ" },
-                                { key: "Cumin", nameMr: "जिरे" },
-                                { key: "Mustard", nameMr: "मोहरी" },
-                                { key: "Turmeric", nameMr: "हळद" },
-                                { key: "Salt", nameMr: "मीठ" },
-                                { key: "Oil", nameMr: "तेल" },
-                                { key: "Chili", nameMr: "मिरची पावडर" },
-                                { key: "Onion Garlic Masala", nameMr: "कांदा लसूण मसाला" },
-                                { key: "Garam Masala", nameMr: "गरम मसाला" },
-                              ].map((item) => (
-                                <th key={item.key} className="border border-emerald-300 p-2 text-center min-w-[75px] bg-amber-50/90 text-amber-950 font-extrabold">
-                                  {item.nameMr}
-                                </th>
-                              ))}
-
-                              {/* Pulses & Legumes */}
-                              {[
-                                { key: "Mugdal", nameMr: "मूग डाळ" },
-                                { key: "Turdal", nameMr: "तूर डाळ" },
-                                { key: "Masurdal", nameMr: "मसूर डाळ" },
-                                { key: "Matki", nameMr: "मटकी" },
-                                { key: "Moong", nameMr: "अख्खा मूग" },
-                                { key: "Cowpea", nameMr: "चवळी" },
-                                { key: "Gram", nameMr: "हरभरा" },
-                                { key: "Pease", nameMr: "वाटाणा" },
-                                { key: "Soyabean Wadi", nameMr: "सोयाबीन वडी" },
-                                { key: "Vegetables", nameMr: "भाजीपाला" },
-                                { key: "Sugar-Jaggery", nameMr: "साखर/गूळ" },
-                                { key: "Milk-Milk Powder", nameMr: "दूध पावडर" },
-                                { key: "Ragi Satva", nameMr: "नाचणी सत्व" },
-                              ].map((item) => (
-                                <th key={item.key} className="border border-emerald-300 p-2 text-center min-w-[75px] bg-teal-50/90 text-teal-950 font-extrabold">
-                                  {item.nameMr}
-                                </th>
-                              ))}
-                            </tr>
-                          </thead>
-
-                          <tbody>
-                            {MASTER_RECIPES.map((rec, rIdx) => {
-                              const recipeId = rec.id;
-                              const currentMap = recipeIngredientsMap[recipeId] || null;
-
-                              const DAILY_LIST = [
-                                { key: "Rice" }, { key: "Cumin" }, { key: "Mustard" },
-                                { key: "Turmeric" }, { key: "Salt" }, { key: "Oil" },
-                                { key: "Chili" }, { key: "Onion Garlic Masala" }, { key: "Garam Masala" }
-                              ];
-
-                              const PULSE_LIST = [
-                                { key: "Mugdal" }, { key: "Turdal" }, { key: "Masurdal" },
-                                { key: "Matki" }, { key: "Moong" }, { key: "Cowpea" },
-                                { key: "Gram" }, { key: "Pease" }, { key: "Soyabean Wadi" },
-                                { key: "Vegetables" }, { key: "Sugar-Jaggery" }, { key: "Milk-Milk Powder" },
-                                { key: "Ragi Satva" }
-                              ];
-
-                              const getCheck = (key: string): boolean => {
-                                if (currentMap && currentMap[key] !== undefined) {
-                                  return !!currentMap[key];
-                                }
-                                if (DAILY_LIST.some((d) => d.key === key)) {
-                                  if (rec.defaultIngredients && rec.defaultIngredients[key] !== undefined) {
-                                    return !!rec.defaultIngredients[key];
-                                  }
-                                  return true; // Default checked for daily essential items
-                                }
-                                return rec.defaultIngredients ? !!rec.defaultIngredients[key] : false;
-                              };
-
-                              const toggleCheck = (key: string, val: boolean) => {
-                                setRecipeIngredientsMap((prev) => {
-                                  const existing = prev[recipeId] || {};
-                                  const fullExisting: Record<string, boolean> = {};
-                                  [...DAILY_LIST, ...PULSE_LIST].forEach((item) => {
-                                    fullExisting[item.key] = getCheck(item.key);
-                                  });
-                                  return {
-                                    ...prev,
-                                    [recipeId]: {
-                                      ...fullExisting,
-                                      ...existing,
-                                      [key]: val,
-                                    },
-                                  };
-                                });
-                              };
-
-                              return (
-                                <tr
-                                  key={recipeId}
-                                  className={`h-10 transition-colors hover:bg-emerald-50/60 ${rIdx % 2 === 0 ? "bg-white" : "bg-slate-50/70"}`}
-                                >
-                                  {/* Recipe Name Column (Sticky) */}
-                                  <td className={`border border-slate-300 p-2 text-left font-black text-slate-900 sticky left-0 z-20 shadow-sm ${rIdx % 2 === 0 ? "bg-white" : "bg-slate-50"}`}>
-                                    <div className="flex items-center gap-2">
-                                      <span className="size-2 rounded-full bg-emerald-600 shrink-0"></span>
-                                      <span className="text-xs font-bold text-slate-800">{rec.name}</span>
-                                    </div>
-                                  </td>
-
-                                  {/* Daily Essentials Checkboxes */}
-                                  {DAILY_LIST.map((item) => {
-                                    const checked = getCheck(item.key);
-                                    return (
-                                      <td key={item.key} className="border border-slate-300 p-1 text-center bg-amber-50/20">
-                                        <input
-                                          type="checkbox"
-                                          checked={checked}
-                                          onChange={(e) => toggleCheck(item.key, e.target.checked)}
-                                          className="size-4.5 rounded border-amber-400 text-emerald-600 focus:ring-0 cursor-pointer accent-emerald-600"
-                                        />
-                                      </td>
-                                    );
-                                  })}
-
-                                  {/* Pulses & Legumes Checkboxes */}
-                                  {PULSE_LIST.map((item) => {
-                                    const checked = getCheck(item.key);
-                                    return (
-                                      <td key={item.key} className="border border-slate-300 p-1 text-center bg-teal-50/20">
-                                        <input
-                                          type="checkbox"
-                                          checked={checked}
-                                          onChange={(e) => toggleCheck(item.key, e.target.checked)}
-                                          className="size-4.5 rounded border-teal-400 text-emerald-600 focus:ring-0 cursor-pointer accent-emerald-600"
-                                        />
-                                      </td>
-                                    );
-                                  })}
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-
-                      {/* Bottom Save Action Bar */}
-                      <div className="flex items-center justify-between pt-2">
-                        <p className="text-xs text-slate-500 font-medium">
-                          बदल केल्यानंतर <span className="font-bold text-slate-800">"सर्व रेसिपी साहित्य जतन करा"</span> बटणावर क्लिक करा.
-                        </p>
-                        <button
-                          onClick={async () => {
-                            if (!user) return;
-                            setSaving(true);
-                            try {
-                              const udise = getUdise();
-                              const fullMap: Record<string, Record<string, boolean>> = {};
-                              MASTER_RECIPES.forEach((rec) => {
-                                const existing = recipeIngredientsMap[rec.id];
-                                const merged: Record<string, boolean> = {};
-
-                                const DAILY_KEYS = ["Rice", "Cumin", "Mustard", "Turmeric", "Salt", "Oil", "Chili", "Onion Garlic Masala", "Garam Masala"];
-                                const PULSE_KEYS = ["Mugdal", "Turdal", "Masurdal", "Matki", "Moong", "Cowpea", "Gram", "Pease", "Soyabean Wadi", "Vegetables", "Sugar-Jaggery", "Milk-Milk Powder", "Ragi Satva"];
-
-                                DAILY_KEYS.forEach((dKey) => {
-                                  if (existing && existing[dKey] !== undefined) {
-                                    merged[dKey] = existing[dKey];
-                                  } else if (rec.defaultIngredients && rec.defaultIngredients[dKey] !== undefined) {
-                                    merged[dKey] = rec.defaultIngredients[dKey];
-                                  } else {
-                                    merged[dKey] = true;
-                                  }
-                                });
-
-                                PULSE_KEYS.forEach((pKey) => {
-                                  if (existing && existing[pKey] !== undefined) {
-                                    merged[pKey] = existing[pKey];
-                                  } else {
-                                    merged[pKey] = rec.defaultIngredients ? !!rec.defaultIngredients[pKey] : false;
-                                  }
-                                });
-
-                                fullMap[rec.id] = merged;
-                              });
-
-                              setRecipeIngredientsMap(fullMap);
-
-                              await setDoc(
-                                doc(db, "school_data", `${udise}_mdm`),
-                                {
-                                  recipeIngredientsMap: fullMap,
-                                  updatedAt: new Date().toISOString(),
-                                },
-                                { merge: true }
-                              );
-                              toast.success(lang === "mr" ? "सर्व रेसिपी साहित्य यशस्वीरित्या जतन केले!" : "Saved all recipe ingredients successfully!");
-                            } catch (e) {
-                              console.error(e);
-                              toast.error(lang === "mr" ? "साहित्य जतन करण्यात अडचण आली." : "Failed to save recipe ingredients");
-                            } finally {
-                              setSaving(false);
-                            }
-                          }}
-                          disabled={saving}
-                          className="px-6 py-2.5 bg-[#008955] hover:bg-[#007044] text-white font-extrabold text-sm rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
-                        >
-                          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                          <span>{lang === "mr" ? "सर्व रेसिपी साहित्य जतन करा" : "Save All Ingredients"}</span>
-                        </button>
-                      </div>
+                      )}
                     </div>
 
                       {/* Food Menu Report Modal */}
@@ -9455,7 +8366,7 @@ function TeacherMDMPage() {
                             <span>{registerDate} · {getTranslatedDay(registerDay)}</span>
                           </div>
                           <p className="text-xs font-bold text-emerald-800">
-                            {lang === "mr" ? "रेसिपी" : "Recipe"}: {getRecipeName(getMenuForRegisterDate(registerDate))}
+                            Recipe: {getTranslatedMenu(getMenuForRegisterDate(registerDate))}
                           </p>
                           <p className="text-sm font-medium text-emerald-700">
                             Group: प्राथमिक (इयत्ता १ ते ५) · Calendar master · Formula: custom
@@ -9919,48 +8830,43 @@ function TeacherMDMPage() {
 
                                   const absentSt = (enrNum > 0 && presNum >= 0) ? Math.max(0, enrNum - presNum).toString() : "—";
 
-                                  const recipeSelection = getRecipeItemsById(rawMenu);
-                                  const activeSelected: Record<string, boolean> = dayOfWeek === 0 ? {} : { ...recipeSelection };
-                                  const savedItems = classData?.selectedItems || getSelectedItemsForRegisterDate(fullDateKey, registerClass);
-                                  if (savedItems && dayOfWeek !== 0) {
-                                    Object.keys(savedItems).forEach((k) => {
-                                      if (savedItems[k]) {
-                                        activeSelected[k] = true;
-                                      }
-                                    });
-                                  }
+                                  const selectedForDay = dayOfWeek === 0 ? null : (classData?.selectedItems || getSelectedItemsForRegisterDate(fullDateKey, registerClass));
 
-                                  const calcKg = (itemKey: string, fallbackQty = 0.02, decimals = 2) => {
-                                    if (beneNum <= 0 || dayOfWeek === 0) return "—";
-                                    if (!activeSelected[itemKey]) return "—";
-                                    const rate = getRecipeItemRate(itemKey, registerClass) || fallbackQty;
-                                    return (beneNum * rate).toFixed(decimals);
-                                  };
+                                  const riceKg = beneNum > 0 && (!selectedForDay || selectedForDay["Rice"] !== false) ? (beneNum * (registerClass === "6 To 8" ? 0.15 : 0.1)).toFixed(2) : "—";
+                                  const moongKg = beneNum > 0 && (selectedForDay ? selectedForDay["Mugdal"] : recipeName.includes("मूग")) ? (beneNum * 0.02).toFixed(2) : "—";
+                                  const turKg = beneNum > 0 && (selectedForDay ? selectedForDay["Turdal"] : recipeName.includes("तूर") || recipeName.includes("वरण")) ? (beneNum * 0.02).toFixed(2) : "—";
+                                  const masurKg = beneNum > 0 && (selectedForDay ? selectedForDay["Masurdal"] : recipeName.includes("मसूर")) ? (beneNum * 0.02).toFixed(2) : (classData?.masurKg || "—");
+                                  const matkiKg = beneNum > 0 && (selectedForDay ? selectedForDay["Matki"] : (recipeName.includes("मटकी") || recipeName.includes("उसळ"))) ? (beneNum * 0.02).toFixed(2) : (classData?.matkiKg || "—");
+                                  const moongAkkhaKg = beneNum > 0 && (selectedForDay ? selectedForDay["Moong"] : recipeName.includes("मूग")) ? (beneNum * 0.02).toFixed(2) : (classData?.moongAkkhaKg || "—");
+                                  const chawliKg = beneNum > 0 && (selectedForDay ? selectedForDay["Cowpea"] : recipeName.includes("चवळी")) ? (beneNum * 0.02).toFixed(2) : (classData?.chawliKg || "—");
+                                  const harbharaKg = beneNum > 0 && (selectedForDay ? selectedForDay["Gram"] : (recipeName.includes("हरभरा") || recipeName.includes("चना"))) ? (beneNum * 0.02).toFixed(2) : (classData?.harbharaKg || "—");
+                                  const vatanaKg = beneNum > 0 && (selectedForDay ? selectedForDay["Pease"] : recipeName.includes("वाटाणा")) ? (beneNum * 0.02).toFixed(2) : (classData?.vatanaKg || "—");
+                                  const soyabeanKg = beneNum > 0 && (selectedForDay ? selectedForDay["Soyabean Wadi"] : (recipeName.includes("सोयाबीन") || recipeName.includes("वडी"))) ? (beneNum * 0.015).toFixed(2) : (classData?.soyabeanKg || "—");
 
-                                  const riceKg = calcKg("Rice", registerClass === "6 To 8" ? 0.15 : 0.1, 2);
-                                  const moongKg = calcKg("Mugdal", 0.02, 2);
-                                  const turKg = calcKg("Turdal", 0.02, 2);
-                                  const masurKg = calcKg("Masurdal", 0.02, 2);
-                                  const matkiKg = calcKg("Matki", 0.02, 2);
-                                  const moongAkkhaKg = calcKg("Moong", 0.02, 2);
-                                  const chawliKg = calcKg("Cowpea", 0.02, 2);
-                                  const harbharaKg = calcKg("Gram", 0.02, 2);
-                                  const vatanaKg = calcKg("Pease", 0.02, 2);
-                                  const soyabeanKg = calcKg("Soyabean Wadi", 0.02, 2);
+                                  const jireKgVal = beneNum > 0 && dayOfWeek !== 0 && (!selectedForDay || selectedForDay["Cumin"] !== false) ? (classData?.jireKg || (beneNum * 0.0005).toFixed(3)) : "—";
+                                  const mohariKgVal = beneNum > 0 && dayOfWeek !== 0 && (!selectedForDay || selectedForDay["Mustard"] !== false) ? (classData?.mohariKg || (beneNum * 0.0005).toFixed(3)) : "—";
+                                  const haladKgVal = beneNum > 0 && dayOfWeek !== 0 && (!selectedForDay || selectedForDay["Turmeric"] !== false) ? (classData?.haladKg || (beneNum * 0.001).toFixed(3)) : "—";
+                                  const tikhatMasalaKgVal = beneNum > 0 && dayOfWeek !== 0 && (selectedForDay ? selectedForDay["Onion Garlic Masala"] : true) ? (classData?.tikhatMasalaKg || (beneNum * 0.002).toFixed(3)) : "—";
+                                  const meethKgVal = beneNum > 0 && dayOfWeek !== 0 && (!selectedForDay || selectedForDay["Salt"] !== false) ? (classData?.meethKg || (beneNum * 0.003).toFixed(3)) : "—";
+                                  const mirchiPowderKgVal = beneNum > 0 && dayOfWeek !== 0 && (selectedForDay ? selectedForDay["Chili"] : false) ? (classData?.mirchiPowderKg || (beneNum * 0.0015).toFixed(3)) : "—";
+                                  const garamMasalaKgVal = beneNum > 0 && dayOfWeek !== 0 && (selectedForDay ? selectedForDay["Garam Masala"] : false) ? (classData?.garamMasalaKg || (beneNum * 0.001).toFixed(3)) : "—";
+                                  const telKgVal = beneNum > 0 && dayOfWeek !== 0 && (!selectedForDay || selectedForDay["Oil"] !== false) ? (classData?.telKg || (beneNum * 0.005).toFixed(3)) : "—";
 
-                                  const jireKgVal = calcKg("Cumin", 0.0004, 3);
-                                  const mohariKgVal = calcKg("Mustard", 0.0004, 3);
-                                  const haladKgVal = calcKg("Turmeric", 0.0004, 3);
-                                  const tikhatMasalaKgVal = calcKg("Onion Garlic Masala", 0.0004, 3);
-                                  const meethKgVal = calcKg("Salt", 0.004, 3);
-                                  const mirchiPowderKgVal = calcKg("Chili", 0.0004, 3);
-                                  const garamMasalaKgVal = calcKg("Garam Masala", 0.0004, 3);
-                                  const telKgVal = calcKg("Oil", 0.005495, 3);
+                                  const gulKgVal = isCurrentSelectedDate
+                                    ? (classData?.gulKg || ((selectedForDay ? selectedForDay["Sugar-Jaggery"] : (recipeName.includes("गोड") || recipeName.includes("खीर") || recipeName.includes("लापशी"))) ? (beneNum > 0 ? (beneNum * 0.015).toFixed(2) : "—") : "—"))
+                                    : (classData?.gulKg || ((selectedForDay ? selectedForDay["Sugar-Jaggery"] : (recipeName.includes("गोड") || recipeName.includes("खीर") || recipeName.includes("लापशी"))) ? (beneNum > 0 ? (beneNum * 0.015).toFixed(2) : "—") : "—"));
 
-                                  const gulKgVal = calcKg("Sugar-Jaggery", 0.015, 2);
-                                  const doodhKgVal = calcKg("Milk-Milk Powder", 0.01, 2);
-                                  const nachniKgVal = calcKg("Ragi Satva", 0.015, 2);
-                                  const bhajiKgVal = calcKg("Vegetables", 0.05, 3);
+                                  const doodhKgVal = isCurrentSelectedDate
+                                    ? (classData?.doodhKg || ((selectedForDay ? selectedForDay["Milk-Milk Powder"] : (recipeName.includes("दूध") || recipeName.includes("खीर") || recipeName.includes("नाचणी"))) ? (beneNum > 0 ? (beneNum * 0.01).toFixed(2) : "—") : "—"))
+                                    : (classData?.doodhKg || ((selectedForDay ? selectedForDay["Milk-Milk Powder"] : (recipeName.includes("दूध") || recipeName.includes("खीर") || recipeName.includes("नाचणी"))) ? (beneNum > 0 ? (beneNum * 0.01).toFixed(2) : "—") : "—"));
+
+                                  const nachniKgVal = isCurrentSelectedDate
+                                    ? (classData?.nachniKg || ((selectedForDay ? selectedForDay["Ragi Satva"] : recipeName.includes("नाचणी")) ? (beneNum > 0 ? (beneNum * 0.015).toFixed(2) : "—") : "—"))
+                                    : (classData?.nachniKg || ((selectedForDay ? selectedForDay["Ragi Satva"] : recipeName.includes("नाचणी")) ? (beneNum > 0 ? (beneNum * 0.015).toFixed(2) : "—") : "—"));
+
+                                  const bhajiKgVal = isCurrentSelectedDate
+                                    ? (veggieKg || classData?.veggieKg || (beneNum > 0 ? (beneNum * getRecipeItemRate("Vegetables", registerClass)).toFixed(3) : "—"))
+                                    : (classData?.veggieKg || (beneNum > 0 ? (beneNum * getRecipeItemRate("Vegetables", registerClass)).toFixed(3) : "—"));
 
                                   const purakStrVal = isCurrentSelectedDate
                                     ? (purakAhar ? (purakAharDetails || "होय") : (classData?.purakAharDetails || (classData?.purakAhar ? "होय" : "—")))
@@ -9989,7 +8895,7 @@ function TeacherMDMPage() {
                                         {dayNameStr}
                                       </td>
                                       <td className="p-2 border-r border-slate-100 font-medium text-slate-800 truncate max-w-[130px]">
-                                        {getRecipeName(recipeName)}
+                                        {getTranslatedMenu(recipeName)}
                                       </td>
                                       <td className="p-2 border-r border-slate-100 text-center font-semibold text-slate-800">
                                         {totalEnr}
@@ -10850,19 +9756,10 @@ function TeacherMDMPage() {
                   <div className="bg-white p-12 border border-slate-300 w-full min-h-[800px] flex flex-col items-center">
                     <div className="w-full max-w-[800px] space-y-10">
                       {/* Title */}
-                      <div className="text-center py-4 flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                      <div className="text-center py-4">
                         <h2 className="text-2xl font-bold text-[#004C99]">
                           {t_global.mdm_stock_now}
                         </h2>
-                        {lowStockItems.length > 0 && (
-                          <button
-                            onClick={() => setShowLowStockModal(true)}
-                            className="px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer transition-colors"
-                          >
-                            <AlertTriangle className="w-4 h-4 text-amber-600" />
-                            <span>कमतरता साठा वॉर्निंग ({lowStockItems.length})</span>
-                          </button>
-                        )}
                       </div>
 
                       {/* Dropdowns Row */}
@@ -11029,120 +9926,263 @@ function TeacherMDMPage() {
 
                           {/* Table Section */}
                           <div className="w-full overflow-x-auto">
-                            <table className="w-full border-collapse border border-slate-300 text-slate-900 bg-white min-w-[1000px]">
+                            <table className="w-full border-collapse border border-black text-slate-900 bg-white">
                               <thead>
-                                <tr className="bg-emerald-100/90 text-emerald-950 font-bold border-b border-emerald-300 text-xs">
-                                  <th className="border border-emerald-300 p-2 text-center w-[16%]">
-                                    {lang === "mr" ? "धान्य/माल" : "Goods / Item Name"}
+                                <tr className="bg-slate-50 font-bold">
+                                  <th className="border border-black p-2 text-xs font-bold text-center w-[15%]">
+                                    {t("धान्य/माल", "Goods", "सामग्री")}
                                   </th>
-                                  <th className="border border-emerald-300 p-2 text-center bg-emerald-200/60 w-[9%]">
-                                    {lang === "mr" ? "आरंभीची शिल्लक (+)" : "Opening Stock (+)"}
+                                  <th className="border border-black p-2 text-xs font-bold text-center w-[12%]">
+                                    {t(
+                                      "मागील साठा",
+                                      "Previous Stock",
+                                      "पिछला स्टॉक",
+                                    )}
                                   </th>
-                                  <th className="border border-emerald-300 p-2 text-center bg-blue-100/80 w-[9%]">
-                                    {lang === "mr" ? "प्राप्त धान्य (+)" : "Stock Received (+)"}
+                                  <th className="border border-black p-2 text-xs font-bold text-center w-[12%]">
+                                    {t(
+                                      "प्राप्त धान्य",
+                                      "Received Goods",
+                                      "प्राप्त स्टॉक",
+                                    )}
                                   </th>
-                                  <th className="border border-emerald-300 p-2 text-center bg-amber-100/80 w-[9%]">
-                                    {lang === "mr" ? "लोकसहभाग (+)" : "Loksahabhag (+)"}
+                                  <th className="border border-black p-2 text-xs font-bold text-center w-[12%]">
+                                    {t(
+                                      "एकूण धान्य",
+                                      "Total Goods",
+                                      "कुल स्टॉक",
+                                    )}
                                   </th>
-                                  <th className="border border-emerald-300 p-2 text-center bg-rose-100/80 w-[9%]">
-                                    {lang === "mr" ? "खराब साठा (-)" : "Damaged Stock (-)"}
+                                  <th className="border border-black p-2 text-xs font-bold text-center w-[12%]">
+                                    {t(
+                                      "भोजन शिजवलेले दिवस",
+                                      "Food Cooked Days",
+                                      "भोजन पकाने के दिन",
+                                    )}
                                   </th>
-                                  <th className="border border-emerald-300 p-2 text-center bg-emerald-300/70 font-black text-emerald-950 w-[11%]">
-                                    {lang === "mr" ? "एकूण साठा (=)" : "Total Available (=)"}
+                                  <th className="border border-black p-2 text-xs font-bold text-center w-[12%]">
+                                    {t(
+                                      "लाभार्थी - चालू महिन्यात",
+                                      "Beneficiary - in current month",
+                                      "लाभार्थी - चालू माह",
+                                    )}
                                   </th>
-                                  <th className="border border-emerald-300 p-2 text-center w-[9%]">
-                                    {lang === "mr" ? "भोजन शिजवलेले दिवस" : "Cooked Days"}
+                                  <th className="border border-black p-2 text-xs font-bold text-center w-[12%]">
+                                    {t(
+                                      "भोजनासाठी वापरलेले साहित्य",
+                                      "Items used for cooking food",
+                                      "पकाने में प्रयुक्त सामग्री",
+                                    )}
                                   </th>
-                                  <th className="border border-emerald-300 p-2 text-center w-[10%]">
-                                    {lang === "mr" ? "चालू महिन्यात लाभार्थी" : "Beneficiary Students"}
-                                  </th>
-                                  <th className="border border-emerald-300 p-2 text-center bg-orange-100/70 w-[9%]">
-                                    {lang === "mr" ? "भोजनासाठी वापरलेले साहित्य (-)" : "Used Stock (-)"}
-                                  </th>
-                                  <th className="border border-emerald-300 p-2 text-center bg-emerald-400/80 font-black text-emerald-950 w-[9%]">
-                                    {lang === "mr" ? "शिल्लक धान्य (=)" : "Remaining Stock (=)"}
+                                  <th className="border border-black p-2 text-xs font-bold text-center w-[13%]">
+                                    {t(
+                                      "शिल्लक धान्य",
+                                      "Remaining Goods",
+                                      "शेष सामग्री",
+                                    )}
                                   </th>
                                 </tr>
                               </thead>
                               <tbody>
-                                {REPORT_ITEMS.slice(0, 18).map((repItem, idx) => {
-                                  // Find matching item record from stockRecords
-                                  const itemRec = stockRecords.find(
-                                    (r) => r.item.toLowerCase() === repItem.key.toLowerCase() || getItemKeyFromName(r.item).toLowerCase() === getItemKeyFromName(repItem.key).toLowerCase()
-                                  );
-
-                                  const prevStock = roundStock(itemRec ? itemRec.prev : 0);
-                                  const recQty = roundStock(itemRec ? (itemRec.incomingQty || 0) : 0);
-                                  const lokQty = roundStock(itemRec ? (itemRec.lokQty || 0) : 0);
-                                  const damagedQty = roundStock(itemRec ? (itemRec.damaged || 0) : 0);
-
-                                  // Total Available Stock before cooking = (Opening + Received + Loksahabhag - Damaged)
-                                  const totalAvail = Math.max(0, roundStock(prevStock + recQty + lokQty - damagedQty));
-
-                                  const cookedDays = itemRec ? itemRec.cookedDays : 0;
-                                  const beneficiary = itemRec ? itemRec.beneficiary : 0;
-                                  const usedQty = roundStock(itemRec ? itemRec.used : 0);
-
-                                  // Final Remaining Stock = Total Available Stock - Used Stock
-                                  const finalRemaining = Math.max(0, roundStock(totalAvail - usedQty));
+                                {stockRecords.map((item, idx) => {
+                                  const totalGoods =
+                                    Number(item.prev) + Number(item.received);
+                                  const remainingGoods = Math.max(0, totalGoods - Number(item.used) - Number(item.damaged || 0));
 
                                   return (
                                     <tr
-                                      key={repItem.key}
-                                      className={`h-9 text-xs transition-colors hover:bg-emerald-50/50 ${idx % 2 === 0 ? "bg-white" : "bg-slate-50/60"}`}
+                                      key={idx}
+                                      className="bg-white h-8 text-xs"
                                     >
-                                      {/* Goods / Item Name */}
-                                      <td className="border border-slate-300 p-2 text-left font-black text-slate-900">
-                                        <div className="flex items-center gap-1.5">
-                                          <span className="size-2 rounded-full bg-emerald-600 shrink-0"></span>
-                                          <span>{repItem.nameMr}</span>
-                                          <span className="text-[11px] font-bold text-slate-400">({repItem.unit})</span>
-                                        </div>
+                                      {/* Goods */}
+                                      <td className="border border-black p-1 text-center font-bold text-slate-800">
+                                        {t(
+                                          item.item === "Rice"
+                                            ? "तांदूळ"
+                                            : item.item === "Mugdal"
+                                              ? "मूग डाळ"
+                                              : item.item === "Turdal"
+                                                ? "तूर डाळ"
+                                                : item.item === "Masurdal"
+                                                  ? "मसूर डाळ"
+                                                  : item.item === "Matki"
+                                                    ? "मटकी"
+                                                    : item.item === "Moong"
+                                                      ? "मूग"
+                                                      : item.item === "Cowpea"
+                                                        ? "चवळी"
+                                                        : item.item === "Gram"
+                                                          ? "हरभरा"
+                                                          : item.item ===
+                                                            "Pease"
+                                                            ? "वाटाणा"
+                                                            : item.item ===
+                                                              "Cumin"
+                                                              ? "जिरे"
+                                                              : item.item ===
+                                                                "Mustard"
+                                                                ? "मोहरी"
+                                                                : item.item ===
+                                                                  "Turmeric"
+                                                                  ? "हळद"
+                                                                  : item.item ===
+                                                                    "Chili"
+                                                                    ? "मिरची"
+                                                                    : item.item ===
+                                                                      "Oil"
+                                                                      ? "तेल"
+                                                                      : item.item ===
+                                                                        "Salt"
+                                                                        ? "मीठ"
+                                                                        : item.item ===
+                                                                          "Onion Garlic Masala"
+                                                                          ? "कांदा लसूण मसाला"
+                                                                          : item.item ===
+                                                                            "Garam Masala"
+                                                                            ? "गरम मसाला"
+                                                                            : item.item ===
+                                                                              "Vegetables"
+                                                                              ? "भाजीपाला"
+                                                                              : item.item ===
+                                                                                "Milk-Milk Powder"
+                                                                                ? "दूध/दूध पावडर"
+                                                                                : item.item ===
+                                                                                  "Sugar-Jaggery"
+                                                                                  ? "साखर/गूळ"
+                                                                                  : item.item ===
+                                                                                    "Soyabean Wadi"
+                                                                                    ? "सोयाबीन वडी"
+                                                                                    : item.item ===
+                                                                                      "Ragi Satva"
+                                                                                      ? "नाचणी सत्व"
+                                                                                      : item.item ===
+                                                                                        "Expenses"
+                                                                                        ? "खर्च"
+                                                                                        : item.item,
+                                          item.item,
+                                          item.item === "Rice"
+                                            ? "चावल"
+                                            : item.item === "Mugdal"
+                                              ? "मूग दाल"
+                                              : item.item === "Turdal"
+                                                ? "अरहर दाल (तूर दाल)"
+                                                : item.item === "Masurdal"
+                                                  ? "मसूर दाल"
+                                                  : item.item === "Matki"
+                                                    ? "मटकी"
+                                                    : item.item === "Moong"
+                                                      ? "मूग"
+                                                      : item.item === "Cowpea"
+                                                        ? "लोबिया"
+                                                        : item.item === "Gram"
+                                                          ? "चना"
+                                                          : item.item ===
+                                                            "Pease"
+                                                            ? "मटर"
+                                                            : item.item ===
+                                                              "Cumin"
+                                                              ? "जीरा"
+                                                              : item.item ===
+                                                                "Mustard"
+                                                                ? "सरसों"
+                                                                : item.item ===
+                                                                  "Turmeric"
+                                                                  ? "हल्दी"
+                                                                  : item.item ===
+                                                                    "Chili"
+                                                                    ? "मिर्च"
+                                                                    : item.item ===
+                                                                      "Oil"
+                                                                      ? "तेल"
+                                                                      : item.item ===
+                                                                        "Salt"
+                                                                        ? "नमक"
+                                                                        : item.item ===
+                                                                          "Onion Garlic Masala"
+                                                                          ? "प्याज लहसुन मसाला"
+                                                                          : item.item ===
+                                                                            "Garam Masala"
+                                                                            ? "गरम मसाला"
+                                                                            : item.item ===
+                                                                              "Vegetables"
+                                                                              ? "सब्जियाँ"
+                                                                              : item.item ===
+                                                                                "Milk-Milk Powder"
+                                                                                ? "दूध पाउडर"
+                                                                                : item.item ===
+                                                                                  "Sugar-Jaggery"
+                                                                                  ? "चीनी/गुड़"
+                                                                                  : item.item ===
+                                                                                    "Soyabean Wadi"
+                                                                                    ? "सोयाबीन वडी"
+                                                                                    : item.item ===
+                                                                                      "Ragi Satva"
+                                                                                      ? "रागी सत्व"
+                                                                                      : item.item ===
+                                                                                        "Expenses"
+                                                                                        ? "खर्च"
+                                                                                        : item.item,
+                                        )}
                                       </td>
 
-                                      {/* Opening Stock */}
-                                      <td className="border border-slate-300 p-1.5 text-center font-bold text-slate-800 bg-emerald-50/30">
-                                        {toMarathiNumbers(prevStock.toFixed(3))}
+                                      {/* Previous Stock */}
+                                      <td className="border border-black p-1 text-center">
+                                        <input
+                                          type="number"
+                                          value={item.prev}
+                                          readOnly
+                                          className="w-[90%] mx-auto text-center border border-slate-200 rounded p-1 outline-none bg-slate-50 text-slate-500 font-bold"
+                                        />
                                       </td>
 
                                       {/* Received Goods */}
-                                      <td className="border border-slate-300 p-1.5 text-center font-bold text-blue-900 bg-blue-50/30">
-                                        {toMarathiNumbers(recQty.toFixed(3))}
+                                      <td className="border border-black p-1 text-center">
+                                        <input
+                                          type="number"
+                                          value={item.received}
+                                          readOnly
+                                          className="w-[90%] mx-auto text-center border border-slate-200 rounded p-1 outline-none bg-slate-50 text-slate-500 font-bold"
+                                        />
                                       </td>
 
-                                      {/* Loksahabhag */}
-                                      <td className="border border-slate-300 p-1.5 text-center font-bold text-amber-900 bg-amber-50/30">
-                                        {toMarathiNumbers(lokQty.toFixed(3))}
-                                      </td>
-
-                                      {/* Damaged Stock */}
-                                      <td className="border border-slate-300 p-1.5 text-center font-bold text-rose-900 bg-rose-50/30">
-                                        {toMarathiNumbers(damagedQty.toFixed(3))}
-                                      </td>
-
-                                      {/* Total Available Stock (= Opening + Received + Loksahabhag - Damaged) */}
-                                      <td className="border border-slate-300 p-1.5 text-center font-black text-emerald-950 bg-emerald-100/70">
-                                        {toMarathiNumbers(totalAvail.toFixed(3))}
+                                      {/* Total Goods */}
+                                      <td className="border border-black p-1 text-center font-bold text-slate-700">
+                                        {totalGoods}
                                       </td>
 
                                       {/* Food Cooked Days */}
-                                      <td className="border border-slate-300 p-1.5 text-center font-bold text-slate-800">
-                                        {toMarathiNumbers(cookedDays.toString())}
+                                      <td className="border border-black p-1 text-center">
+                                        <input
+                                          type="number"
+                                          value={item.cookedDays}
+                                          readOnly
+                                          className="w-[90%] mx-auto text-center border border-slate-200 rounded p-1 outline-none bg-slate-50 text-slate-500 font-bold"
+                                        />
                                       </td>
 
-                                      {/* Beneficiary Students */}
-                                      <td className="border border-slate-300 p-1.5 text-center font-bold text-slate-800">
-                                        {toMarathiNumbers(beneficiary.toString())}
+                                      {/* Beneficiary - in current month */}
+                                      <td className="border border-black p-1 text-center">
+                                        <input
+                                          type="number"
+                                          value={item.beneficiary}
+                                          readOnly
+                                          className="w-[90%] mx-auto text-center border border-slate-200 rounded p-1 outline-none bg-slate-50 text-slate-500 font-bold"
+                                        />
                                       </td>
 
-                                      {/* Items Used for Cooking */}
-                                      <td className="border border-slate-300 p-1.5 text-center font-bold text-orange-950 bg-orange-50/50">
-                                        {toMarathiNumbers(usedQty.toFixed(3))}
+                                      {/* Items used for cooking food */}
+                                      <td className="border border-black p-1 text-center">
+                                        <input
+                                          type="number"
+                                          value={item.used}
+                                          readOnly
+                                          className="w-[90%] mx-auto text-center border border-slate-200 rounded p-1 outline-none bg-slate-50 text-slate-500 font-bold"
+                                        />
                                       </td>
 
-                                      {/* Final Remaining Stock */}
-                                      <td className="border border-slate-300 p-1.5 text-center font-black text-emerald-950 bg-emerald-200/80">
-                                        {toMarathiNumbers(finalRemaining.toFixed(3))}
+                                      {/* Remaining Goods */}
+                                      <td className="border border-black p-1 text-center font-bold text-teal-600">
+                                        {remainingGoods}
                                       </td>
                                     </tr>
                                   );
@@ -12202,7 +11242,7 @@ function TeacherMDMPage() {
                               recordedDaysCount++;
                             }
 
-                            const dayIncomingRice = getIncomingForItem("Rice", engMonthNames[monthNum], year, "1 To 5", day);
+                            const dayIncomingRice = day === 1 ? getIncomingForItem("Rice", engMonthNames[monthNum], year, "1 To 5") : 0;
                             if (dayIncomingRice > 0 && !riceReceivedDateStr) {
                               riceReceivedDateStr = dateFormatted;
                             }
@@ -12441,8 +11481,6 @@ function TeacherMDMPage() {
                           let monthlyTotalRiceUsed = 0;
                           let monthlyTotalTat = 0;
                           let monthlyTotalGrant = 0;
-                          const monthlyItemTotals: Record<string, number> = {};
-                          itemKeysOrder.forEach((ik) => { monthlyItemTotals[ik] = 0; });
 
                           const renderPage = (startDay: number, endDay: number, isFirstPage: boolean) => {
                             const days = Array.from({ length: endDay - startDay + 1 }, (_, i) => {
@@ -12499,16 +11537,6 @@ function TeacherMDMPage() {
                                           monthlyTotalGrant += bene * (parseFloat(primaryRate) || 5.45);
                                         }
 
-                                        const recipeSelection = getRecipeItemsById(daily.menu);
-                                        const activeSelected: Record<string, boolean> = (isSunday || daily.isHoliday) ? {} : { ...recipeSelection };
-                                        if (daily.selectedItems && !isSunday && !daily.isHoliday) {
-                                          Object.keys(daily.selectedItems).forEach((k) => {
-                                            if (daily.selectedItems[k]) {
-                                              activeSelected[k] = true;
-                                            }
-                                          });
-                                        }
-
                                         return (
                                           <tr key={day} className={`border-b border-slate-700 h-[20px] text-xs ${isSunday || daily.isHoliday ? "bg-red-50/70" : rowIdx % 2 === 0 ? "bg-white" : "bg-slate-50/40"}`}>
                                             <td className="border-r border-slate-700 px-1 py-0.5 text-xs font-bold">{rowIdx + 1}</td>
@@ -12519,15 +11547,14 @@ function TeacherMDMPage() {
                                             <td className="border-r border-slate-700 px-1 py-0.5 font-bold">{daily.isHoliday || bene === 0 ? "" : bene}</td>
                                             {itemKeysOrder.map((itemKey) => {
                                               if (daily.isHoliday || bene === 0) return <td key={itemKey} className="border-r border-slate-700 px-1 py-0.5"></td>;
-                                              const wasSelected = !!activeSelected[itemKey];
+                                              const wasSelected = daily.selectedItems ? !!daily.selectedItems[itemKey] : true;
                                               if (!wasSelected) return <td key={itemKey} className="border-r border-slate-700 px-1 py-0.5"></td>;
                                               const rule = quantityRules.find(r => r.item.toLowerCase() === itemKey.toLowerCase());
-                                              const qStr = rule ? rule.qty15 : (itemKey === "Rice" ? "0.100" : "0.02");
+                                              const qStr = rule ? rule.qty15 : "0.02";
                                               const qVal = parseFloat(qStr) || 0;
                                               const qKg = qVal >= 1 ? qVal / 1000 : qVal;
                                               const usedKg = qKg * bene;
                                               if (itemKey === "Rice") monthlyTotalRiceUsed += usedKg;
-                                              monthlyItemTotals[itemKey] = (monthlyItemTotals[itemKey] || 0) + usedKg;
                                               return (
                                                 <td key={itemKey} className="border-r border-slate-700 px-1 py-0.5 text-xs font-medium">
                                                   {usedKg > 0 ? usedKg.toFixed(3) : ""}
@@ -12547,17 +11574,14 @@ function TeacherMDMPage() {
                                       {!isFirstPage && (
                                         <tr className="border-b border-slate-700 bg-amber-100/80 font-black text-xs h-[22px]">
                                           <td className="border-r border-slate-700 px-2 py-1.5 font-black text-left" colSpan={3}>एकूण</td>
-                                          <td className="border-r border-slate-700 px-1 py-0.5"></td>
-                                          <td className="border-r border-slate-700 px-1 py-0.5 font-black">{monthlyTotalTat}</td>
-                                          <td className="border-r border-slate-700 px-1 py-0.5 font-black">{monthlyTotalTat}</td>
-                                          {itemKeysOrder.map((ik) => (
-                                            <td key={ik} className="border-r border-slate-700 px-1 py-0.5 font-black text-[11px]">
-                                              {(monthlyItemTotals[ik] || 0) > 0 ? (monthlyItemTotals[ik] || 0).toFixed(3) : ""}
-                                            </td>
+                                          <td className="border-r border-slate-700 px-1 py-0.5.5"></td>
+                                          <td className="border-r border-slate-700 px-1 py-0.5.5 font-black">{monthlyTotalTat}</td>
+                                          <td className="border-r border-slate-700 px-1 py-0.5.5 font-black">{monthlyTotalTat}</td>
+                                          <td className="border-r border-slate-700 px-1 py-0.5.5 font-black">{monthlyTotalRiceUsed.toFixed(3)}</td>
+                                          {Array.from({length: 23}, (_, ci) => (
+                                            <td key={ci} className="border-r border-slate-700 px-1 py-0.5.5"></td>
                                           ))}
-                                          <td className="border-r border-slate-700 px-1 py-0.5"></td>
-                                          <td className="border-r border-slate-700 px-1 py-0.5"></td>
-                                          <td className="border-r border-slate-700 px-1 py-0.5 font-black">{monthlyTotalGrant.toFixed(2)}</td>
+                                          <td className="border-r border-slate-700 px-1 py-0.5.5 font-black">{monthlyTotalGrant.toFixed(2)}</td>
                                         </tr>
                                       )}
                                     </tbody>
@@ -14614,24 +13638,24 @@ function TeacherMDMPage() {
                             ) : (
                               <table className="w-full border-collapse border border-black text-center text-sm font-sans style-table-fixed" style={{ tableLayout: "fixed" }}>
                                 <colgroup>
-                                  <col style={{ width: "2.5%" }} />
-                                  <col style={{ width: "6.5%" }} />
-                                  <col style={{ width: "3.5%" }} />
-                                  <col style={{ width: "3.5%" }} />
-                                  <col style={{ width: "4.0%" }} />
-                                  <col style={{ width: "3.2%" }} />
-                                  <col style={{ width: "4.8%" }} />
-                                  <col style={{ width: "6.0%" }} />
-                                  <col style={{ width: "7.0%" }} />
-                                  <col style={{ width: "7.8%" }} />
-                                  <col style={{ width: "4.8%" }} />
-                                  <col style={{ width: "6.2%" }} />
-                                  <col style={{ width: "5.5%" }} />
-                                  <col style={{ width: "5.2%" }} />
-                                  <col style={{ width: "5.8%" }} />
-                                  <col style={{ width: "5.5%" }} />
-                                  <col style={{ width: "5.5%" }} />
+                                  <col style={{ width: "2.8%" }} />
                                   <col style={{ width: "7.2%" }} />
+                                  <col style={{ width: "3.8%" }} />
+                                  <col style={{ width: "3.8%" }} />
+                                  <col style={{ width: "4.2%" }} />
+                                  <col style={{ width: "3.2%" }} />
+                                  <col style={{ width: "5%" }} />
+                                  <col style={{ width: "6.5%" }} />
+                                  <col style={{ width: "7.5%" }} />
+                                  <col style={{ width: "5.5%" }} />
+                                  <col style={{ width: "5%" }} />
+                                  <col style={{ width: "6.5%" }} />
+                                  <col style={{ width: "6.5%" }} />
+                                  <col style={{ width: "5.5%" }} />
+                                  <col style={{ width: "6.5%" }} />
+                                  <col style={{ width: "6.5%" }} />
+                                  <col style={{ width: "6%" }} />
+                                  <col style={{ width: "8.2%" }} />
                                 </colgroup>
                                 <thead>
                                   <tr className="bg-slate-100 text-slate-900 font-extrabold border-b border-black">
@@ -14755,8 +13779,8 @@ function TeacherMDMPage() {
                                           <td className="border border-black p-1 font-semibold">{beneficiary}</td>
                                           <td className="border border-black p-1">{cookHonorarium.toFixed(2)}</td>
                                           <td className="border border-black p-1 font-semibold">{vegGrant.toFixed(2)}</td>
-                                          <td className="border border-black p-0.5 text-[10px] font-semibold whitespace-nowrap leading-tight text-center">{receivedSupplier > 0 ? "10/07/2026" : "—"}</td>
-                                          <td className="border border-black p-1 font-bold whitespace-nowrap text-center">{prevStock}</td>
+                                          <td className="border border-black p-1 text-xs">{receivedSupplier > 0 ? "10/07/2026" : "—"}</td>
+                                          <td className="border border-black p-1 font-bold">{prevStock}</td>
                                           <td className="border border-black p-1">{receivedSupplier}</td>
                                           <td className="border border-black p-1">{receivedPublic}</td>
                                           <td className="border border-black p-1 font-bold">{totalReceived}</td>
@@ -14844,7 +13868,7 @@ function TeacherMDMPage() {
                     <button
                       onClick={() => {
                         setShowLowStockModal(false);
-                        setHasDismissedLowStockSession(true);
+                        setDismissedLowStockHash(JSON.stringify(lowStockItems));
                       }}
                       className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
                       aria-label="Close"
@@ -14888,7 +13912,7 @@ function TeacherMDMPage() {
                 <button
                   onClick={() => {
                     setShowLowStockModal(false);
-                    setHasDismissedLowStockSession(true);
+                    setDismissedLowStockHash(JSON.stringify(lowStockItems));
                   }}
                   className="w-full sm:flex-1 py-2.5 bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white font-black text-sm rounded-xl shadow-md transition-colors text-center cursor-pointer"
                 >
@@ -14897,7 +13921,7 @@ function TeacherMDMPage() {
                 <button
                   onClick={() => {
                     setShowLowStockModal(false);
-                    setHasDismissedLowStockSession(true);
+                    setDismissedLowStockHash(JSON.stringify(lowStockItems));
                     setActiveTab("incoming");
                   }}
                   className="w-full sm:flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-sm rounded-xl border border-slate-300 transition-colors text-center cursor-pointer"

@@ -10,7 +10,7 @@ const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyCfVSQggxj-kZ2yJAW2xB0BcupzfCJsowU",
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "education-89c54.firebaseapp.com",
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "education-89c54",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "education-89c54.firebasestorage.app",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "education-89c54.appspot.com",
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "292663641725",
   appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:292663641725:web:076b161074bb891513d314",
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-S4WJTJZ4XC",
@@ -40,8 +40,13 @@ if (app) {
 }
 
 // Connect to emulator in development if specified
-if (import.meta.env.DEV && import.meta.env.VITE_USE_FIREBASE_EMULATOR === "true") {
-  connectFunctionsEmulator(functions, "127.0.0.1", 5001);
+if (import.meta.env.DEV) {
+  if (import.meta.env.VITE_USE_FIREBASE_EMULATOR === "true") {
+    connectFunctionsEmulator(functions, "127.0.0.1", 5001);
+  }
+  
+  // Set max retry time to 10 seconds to prevent infinite hanging on CORS/Network errors
+  storage.maxUploadRetryTime = 10000;
 }
 
 // Pre-bind the Firebase Callable Function wrapper

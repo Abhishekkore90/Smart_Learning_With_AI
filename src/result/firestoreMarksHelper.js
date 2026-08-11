@@ -199,14 +199,9 @@ export const fetchFirestoreMarks = async (selectedClass, academicYear, term = "f
     return {};
   };
 
-  let sem1 = {}, sem2 = {}, gen = {};
-  try {
-    sem1 = await loadDocData("sem1");
-    sem2 = await loadDocData("sem2");
-    gen = await loadDocData("");
-  } catch (err) {
-    console.error("Error loading CCE marks documents:", err);
-  }
+  const sem1 = await loadDocData("sem1");
+  const sem2 = await loadDocData("sem2");
+  const gen = await loadDocData("");
 
   mergedMarks = {
     ...(gen.semester2 || gen.semester1 || gen.marksData || gen.data || gen || {}),

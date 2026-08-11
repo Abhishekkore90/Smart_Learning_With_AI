@@ -2,8 +2,6 @@ import React, { useState, useEffect } from "react";
 import { Lock, Eye, EyeOff, Loader2, KeyRound, School, User, UserCheck, MapPin, Milestone, GraduationCap, Save } from "lucide-react";
 import { showToast as toast } from "@/lib/custom-toast";
 import { motion, AnimatePresence } from "framer-motion";
-import { auth, db } from "@/lib/firebase";
-import { doc, setDoc } from "firebase/firestore";
 
 interface PinGateProps {
   sectionKey: string;
@@ -31,37 +29,21 @@ export function PinGate({ sectionKey, children, enabled = true }: PinGateProps) 
   const storageKey = `unlocked_section_${sectionKey}`;
 
   useEffect(() => {
-    const loadSaved = () => {
-      if (typeof window !== "undefined") {
-        const state = sessionStorage.getItem(storageKey);
-        if (state === "true") {
-          setIsUnlocked(true);
-        }
-
-        const savedProfStr = localStorage.getItem("sqaaf_teacher_profile");
-        let savedProf: any = {};
-        if (savedProfStr) {
-          try { savedProf = JSON.parse(savedProfStr); } catch (e) {}
-        }
-
-        // Load saved setup values from localStorage with profile fallbacks
-        setTeacherName(localStorage.getItem("teacher_name") || savedProf.teacherName || savedProf.fullName || "");
-        setPrincipalName(localStorage.getItem("teacher_principal_name") || savedProf.principalName || savedProf.headMasterName || "");
-        setSchoolName(localStorage.getItem("teacher_school_name") || savedProf.schoolName || "");
-        setUdiseNumber(localStorage.getItem("teacher_udise") || savedProf.udise || "");
-        setTaluka(localStorage.getItem("teacher_taluka") || savedProf.taluka || "");
-        setDistrict(localStorage.getItem("teacher_district") || savedProf.district || "");
-        setCenter(localStorage.getItem("teacher_center") || savedProf.center || savedProf.kendra || "");
+    if (typeof window !== "undefined") {
+      const state = sessionStorage.getItem(storageKey);
+      if (state === "true") {
+        setIsUnlocked(true);
       }
-    };
 
-    loadSaved();
-    window.addEventListener("teacher_profile_updated", loadSaved);
-    window.addEventListener("storage", loadSaved);
-    return () => {
-      window.removeEventListener("teacher_profile_updated", loadSaved);
-      window.removeEventListener("storage", loadSaved);
-    };
+      // Load saved setup values from localStorage
+      setTeacherName(localStorage.getItem("teacher_name") || "");
+      setPrincipalName(localStorage.getItem("teacher_principal_name") || "");
+      setSchoolName(localStorage.getItem("teacher_school_name") || "");
+      setUdiseNumber(localStorage.getItem("teacher_udise") || "");
+      setTaluka(localStorage.getItem("teacher_taluka") || "");
+      setDistrict(localStorage.getItem("teacher_district") || "");
+      setCenter(localStorage.getItem("teacher_center") || "");
+    }
   }, [storageKey]);
 
   const handleSubmitPin = (e: React.FormEvent) => {
@@ -90,7 +72,7 @@ export function PinGate({ sectionKey, children, enabled = true }: PinGateProps) 
     }, 600);
   };
 
-  const handleSaveSetup = async (e: React.FormEvent) => {
+  const handleSaveSetup = (e: React.FormEvent) => {
     e.preventDefault();
     
     localStorage.setItem("teacher_name", teacherName);
@@ -100,41 +82,6 @@ export function PinGate({ sectionKey, children, enabled = true }: PinGateProps) 
     localStorage.setItem("teacher_taluka", taluka);
     localStorage.setItem("teacher_district", district);
     localStorage.setItem("teacher_center", center);
-    localStorage.setItem("teacher_kendra", center);
-
-    const existingProfileStr = localStorage.getItem("sqaaf_teacher_profile");
-    let existingProfile: any = {};
-    if (existingProfileStr) {
-      try { existingProfile = JSON.parse(existingProfileStr); } catch (err) {}
-    }
-
-    const updatedProfile = {
-      ...existingProfile,
-      fullName: teacherName || existingProfile.fullName || "",
-      teacherName: teacherName || existingProfile.teacherName || "",
-      principalName: principalName || existingProfile.principalName || "",
-      headMasterName: principalName || existingProfile.headMasterName || "",
-      schoolName: schoolName || existingProfile.schoolName || "",
-      udise: udiseNumber || existingProfile.udise || "",
-      taluka: taluka || existingProfile.taluka || "",
-      district: district || existingProfile.district || "",
-      center: center || existingProfile.center || "",
-      kendra: center || existingProfile.kendra || "",
-      beat: center || existingProfile.beat || "",
-    };
-
-    localStorage.setItem("sqaaf_teacher_profile", JSON.stringify(updatedProfile));
-
-    if (auth && auth.currentUser) {
-      try {
-        await setDoc(doc(db, "teachers", auth.currentUser.uid), updatedProfile, { merge: true });
-      } catch (err) {
-        console.error("Error saving profile to Firestore:", err);
-      }
-    }
-
-    window.dispatchEvent(new Event("teacher_profile_updated"));
-    window.dispatchEvent(new Event("storage"));
 
     toast.success("माहिती जतन केली / Setup Info Saved!");
     setActiveTab("pin"); // Switch back to login PIN

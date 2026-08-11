@@ -6,8 +6,6 @@ import { getTeacherId } from "../lib/teacherIsolationHelper";
 import { Download, Printer, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import "./result.css";
-import { CLASS_1_OUTCOMES } from "@/data/class1_outcomes";
-import { CLASS_2_OUTCOMES } from "@/data/class2_outcomes";
 import { CLASS_3_OUTCOMES } from "@/data/class3_outcomes";
 import { CLASS_4_OUTCOMES } from "@/data/class4_outcomes";
 import { CLASS_5_OUTCOMES } from "@/data/class5_outcomes";
@@ -15,35 +13,191 @@ import { CLASS_6_OUTCOMES } from "@/data/class6_outcomes";
 import { CLASS_7_OUTCOMES } from "@/data/class7_outcomes";
 import { CLASS_8_OUTCOMES } from "@/data/class8_outcomes";
 
+// -------------------- CLASS-WISE LEARNING OUTCOMES BANKS --------------------
+
+// Class 1st Outcomes
+const MARATHI_OUTCOMES_1ST = [
+  { code: "9.1.1", text: "जास्त लांबीची अपरिचित गाणी, मोठ्या वाक्यांच्या गोष्टी (४ ते ८ वाक्ये) काळजीपूर्वक ऐकतो. त्याबद्दल संभाषण करतो आणि प्रश्न विचारतो." },
+  { code: "9.1.2", text: "मोठी (१० ओळी) गाणी/कविता गातो व मोठ्याने पुन्हा म्हणून दाखवतो." },
+  { code: "9.2", text: "शिक्षकांच्या मदतीने यमक जुळवतो लहानलहान कविता तयार करतो." },
+  { code: "9.3", text: "भाषणात सहभागी होतो. बोलण्यासाठी स्वतःची वेळ घेण्याची वाट पाहतो आणि इतरांना बोलू देतो." },
+  { code: "9.3.2", text: "वर्गात वाचून दाखवलेल्या किंवा चर्चा केलेल्या माहितीपर/कथेतर आशय स्वतःच्या अनुभवांशी सक्षमपणे जोडतो आणि त्याबद्दल बोलतो." },
+  { code: "9.4.1", text: "साध्या स्वरूपाच्या अनेक कृतींचा समावेश असलेल्या सूचनांचे पालन करतो. (काच वेळी ६ ते ९ सूचना एकत्र दिल्यास)" },
+  { code: "9.4.2", text: "साध्या स्वरूपाच्या अनेक कृतींचा समावेश असलेल्या सूचनांचे पालन करतो. (काच वेळी ८ ते ९ सूचना एकत्र दिल्यास)" },
+  { code: "9.5", text: "गोष्टींची मध्यवर्ती कल्पना व पात्रांच्या भावना लक्षात घेऊन संवादासह सांगतो." },
+  { code: "9.6", text: "साधे कथानक व पात्रासह स्वतःच्या छोट्या गोष्टी सांगतो." },
+  { code: "9.7", text: "चित्र आणि संदर्भ यानुसार अपरिचित शब्दांच्या अर्थाचा अंदाज बांधतो." },
+  { code: "10.1.1", text: "अक्षरांच्या ध्वनीमधून स्वर व व्यंजनांचे ध्वनी वेगळे करतो." },
+  { code: "10.1.2", text: "शब्दांतून अक्षरांचे ध्वनी वेगळे करतो." },
+  { code: "10.2.1", text: "साधी विरामचिन्हे ओळखतो (पूर्णविराम, प्रश्नचिन्ह)" },
+  { code: "10.3.1", text: "वर्णमालेतील सर्व अक्षरे (ज्ञा, क्ष या संयुक्त अक्षरांसह) व स्वरचिन्हे वाचतो." },
+  { code: "10.3.2", text: "सर्व अक्षरे व सर्व स्वरचिन्हे आणि नेहमी वापरत असलेली जोडाक्षरे यांसह बहुवर्णिय शब्द वाचतो." },
+  { code: "10.3.3", text: "वर्णमालेतील सर्व अक्षरे आणि स्वरचिन्हे वापरून स्वतः शब्द लिहितो आणि त्यावरून वाक्य सांगतो." },
+  { code: "10.3.4", text: "शिकलेली अक्षरे आणि स्वरचिन्हे वापरून स्वतः वाक्य लिहितो." },
+  { code: "10.4", text: "योग्य उच्चार आणि ध्वनी विरामसह लहान परिच्छेद अचूकपणे वाचतो." },
+  { code: "10.5", text: "दृक् आशय आणि समान मजकूर असणाऱ्या पुस्तकांचे स्वतंत्रपणे वाचन करण्यास सुरुवात करतो." },
+  { code: "10.5.2", text: "गोष्टींची अपरिचित पुस्तके वाचतो आणि शिक्षकांच्या मार्गदर्शनाखाली ती समजावून घेतो. गोष्टीतील कथानक व पात्र ओळखतो." },
+  { code: "10.6", text: "छोट्या कविता वाचतो आणि त्याचा शाब्दिक अर्थ सांगतो." },
+  { code: "10.7", text: "खेळ खेळण्याकरिता सोप्या सूचना वाचतो आणि त्याप्रमाणे गटात खेळतो." },
+  { code: "10.8.1", text: "चित्रांचा क्रम तयार करतो आणि त्यासोबत छोटी वाक्ये पारंपारिक लिपीत वर्णमालेतील अक्षरे व स्वरचिन्हे वापरून लिहितो. शब्द आणि छोटी वाक्ये लिहून चित्रपट्ट्यांचे वर्णन करतो." },
+  { code: "10.8.2", text: "तीन किंवा चार वर्णाक्षरांच्या शब्दांचे श्रुतलेखन करतो." },
+  { code: "10.8.3", text: "वर्णमालेतील अक्षरे व स्वरचिन्हे यांचा वापर करून दोन-तीन वाक्यांचे लेखन स्वतः करतो. उदा. स्वतःचा अनुभव, चित्र अथवा वस्तूंचे वर्णन, स्वतःच्या दोन-तीन वाक्यांत लिहितो." },
+  { code: "10.9", text: "पुस्तकांच्या आवडीबद्दल सांगतो. छोट्या पुस्तकांचे नियमित वाचन करतो." }
+];
+
+const ENGLISH_OUTCOMES_1ST = [
+  { code: "9.1.1.1", text: "Listens to longer (4-8 sentences) songs/poems (unfamiliar) with attention and have conversations about them and asks questions." },
+  { code: "9.1.2.1", text: "Sings/recites longer (10 sentences) songs/ poems." },
+  { code: "9.2.1.1", text: "Extends/Creates short poems/ rhymes with the help of the teacher." },
+  { code: "9.3.1.1", text: "Engages in conversations, wait for his/her turn to speak and allow other to speak." },
+  { code: "9.3.2.1", text: "Engages with non-fictional content read aloud or discussed in class, links knowledge from his/her own experiences and talks about it." },
+  { code: "9.4.1.1", text: "Follows instructions comprising of several steps. (8 to 9 instructions at a time)" },
+  { code: "9.4.2.1", text: "Gives clear instructions comprising of several steps. (8 to 9 instructions at a time)" },
+  { code: "9.5.1.1", text: "Interprets the intent of the plot and emotions of the characters in a story and tells the story with dialogue." },
+  { code: "9.6.1.1", text: "Narrates his/her own short stories with simple plots and characters." },
+  { code: "9.7.1.1", text: "Predicts meaning of unknown words in texts using pictures and context clues." },
+  { code: "11.1.1.1", text: "Identifies rhyming words and alliterations." },
+  { code: "11.1.2.1", text: "Identifies the beginning and end syllables in words." },
+  { code: "11.1.3.1", text: "Combines 2-3 syllables to form simple words." },
+  { code: "11.2.1.1", text: "Begins to visually recognise and connect letters to corresponding sounds." },
+  { code: "11.2.2.1", text: "Produces familiar words from familiar letters." },
+  { code: "11.2.3.1", text: "Recognises sight words, their names and labels of objects in his/her environment." },
+  { code: "11.2.4.1", text: "Writes down short words on dictation." }
+];
+
+const MATHS_OUTCOMES_1ST = [
+  { code: "1.LO.1.1", text: "गुणधर्मानुसार वस्तू वेगळ्या करतो आणि त्यामागील नियमांचे वर्णन करतो. (उदाहरणार्थ, समान बदलांनुसार रंगाच्या प्राण्यांचे गट करतात.)" },
+  { code: "1.LO.2.1", text: "मोजण्याच्या मदतीने सोप्या आकृतिबंधातील हरवलेला घटक ओळखतो/शोधतो. (उदाहरणार्थ, लाल-निळा, लाल-निळा, लाल-.....)" },
+  { code: "1.LO.3.1", text: "२०पेक्षा जास्त वस्तू ९९पर्यंतच्या संख्यानामांनी मोजतो आणि १०-१०च्या टप्प्याने ९९पर्यंत संख्या मोजतो." },
+  { code: "1.LO.3.2", text: "विशिष्ट अंकापासून पुढे व मागे अशी मोजणी करतो. (० ते ९९)" },
+  { code: "1.LO.3.3", text: "दोनच्या गटातील संख्या/राशी ओळखतो. (उदाहरणार्थ, १० चे दोन गट म्हणजे २० करतो.)" },
+  { code: "1.LO.4.1", text: "एकाच गटातील वस्तूंची त्यांच्या विविध गुणधर्मानुसार मांडणी करतो. (उदाहरणार्थ, आकार, माप, लांबी, वजन)" },
+  { code: "1.LO.4.2", text: "दिलेल्या संख्यांची चढत्या आणि उतरत्या क्रमाने मांडणी करतो. (१ ते ९)" },
+  { code: "1.LO.5.1", text: "वस्तू/बाबींची अनुपस्थिती दाखवण्यासाठी शून्याचे चिन्ह ओळखतो/वापरतो." },
+  { code: "1.LO.5.2", text: "२०पर्यंतच्या संख्या ओळखतो व लिहितो आणि ९९पर्यंत संख्यानामे लिहितो." },
+  { code: "1.LO.5.3", text: "२०पर्यंतच्या दोन संख्यांची तुलना करतो व पेक्षा मोठा, पेक्षा लहान असा शब्दसंग्रह वापरतो." },
+  { code: "1.LO.6.1", text: "दैनंदिन परिस्थितीत आणि मूर्त वस्तूंचा वापर करून ९पर्यंत उत्तर येईल, अशी उदाहरणे बेरजेची तथ्ये वापरून गणितीय मांडणी करून सोडवतो." },
+  { code: "1.LO.6.2", text: "वजाबाकीवर आधारित व ९पर्यंत उत्तरे येणारी उदाहरणे सोडवण्यासाठी आणि त्यांची गणितीय मांडणी करण्यासाठी दैनंदिन जीवनातील परिस्थितींचा आणि मूर्त वस्तूंचा उपयोग करतो." },
+  { code: "1.LO.6.3", text: "संख्यांची बेरीज आणि वजाबाकी यांच्यातील संबंध विकसित करतो." },
+  { code: "1.LO.6.4", text: "बेरीज/वजाबाकी या क्रियांसाठी +/- चिन्हे ओळखतो." },
+  { code: "1.LO.7.1", text: "गट करून लहान संख्येची गुणाकारची उदाहरणे सोडवतो." },
+  { code: "1.LO.7.2", text: "गुणाकाराचे चिन्ह ओळखतो." },
+  { code: "1.LO.7.3", text: "भागाकाराची उदाहरणे सोडवण्यासाठी गटात विभागणी करतो व प्रयत्न-प्रमाद (trial and error) पद्धतींचा वापर करतो." },
+  { code: "1.LO.7.4", text: "भागाकाराचे चिन्ह ओळखतो." },
+  { code: "1.LO.8.1", text: "अवकाशीय संबंध वापरतो व शब्दसंग्रह विकसित करतो. (उदाहरणार्थ, वर, खाली, आत, बाहेर, जवळ, दूर, आधी आणि नंतर)" },
+  { code: "1.LO.8.2", text: "आजूबाजूच्या परिसरातून विविध आकार आणि मापांच्या वस्तू गोळा करतो. (उदाहरणार्थ, खडू, ब्लॉक, चेंडू, शंकू, पाईप)" },
+  { code: "1.LO.8.3", text: "विविध आकार आणि इतर निरीक्षणीय गुणधर्मांच्या आधारे वस्तू वेगळ्या करतो आणि वर्गीकृत करतो." },
+  { code: "1.LO.8.4", text: "स्वतःच्या भाषेत विविध आकारांच्या भौतिक वैशिष्ट्यांचे निरीक्षण आणि वर्णन करतो. (उदाहरणार्थ, बॉल घरंगळतो, बॉक्स घसरतो आणि त्याला कोपरे असतात.)" },
+  { code: "1.LO.8.5", text: "विविध गुणधर्मांवर आधारित आकारांची तुलना करतो. (उदाहरणार्थ, लांबी, क्षेत्रफळ, आकारमान)" },
+  { code: "1.LO.9.1", text: "जवळ-दूर, बारीक/पातळ-जाड, आखूड-लांब, वर-खाली, यांतील फरक ओळखतो." },
+  { code: "1.LO.9.2", text: "अप्रमाणित एककांच्या साहाय्याने लांबी मोजतो. (उदाहरणार्थ, खेळाच्या संदर्भात विटी-दांडू, गोट्या)" },
+  { code: "1.LO.9.3", text: "हाताची वीत, हाताची बोट, हात, पाऊल यांसारख्या अप्रमाणित लांबीच्या एककाने कमी अंतराचा व लांबीचा अंदाज बांधतो व पडताळा घेतो." },
+  { code: "1.LO.9.4", text: "तुलना करून हलक्या ते जड वस्तू किंवा उलट क्रमाने क्रमवारी लावतो." },
+  { code: "1.LO.9.5", text: "कप, चमचा, मग यांसारख्या अप्रमाणित एककाच्या साहाय्याने आकारमानाचा अंदाज करतो व प्रत्यक्ष मोजतो." },
+  { code: "1.LO.10.1", text: "अगोदर, नंतर यांसारख्या संज्ञांचा वापर करून घडलेल्या घटनांमध्ये फरक करतो." },
+  { code: "1.LO.10.2", text: "सुट्टीचा आणि शाळेचा कालावधी यांतील कमी आणि अधिक कालावधीची गुणात्मक अनुभूती घेतो." },
+  { code: "1.LO.10.3", text: "दिवसातील घटना/प्रसंग यांचा क्रम लावतो." },
+  { code: "1.LO.11.1", text: "नाणी व नोटांची बेरीज करून/मिळवून २० रु.पर्यंतची रक्कम तयार करतो." },
+  { code: "1.LO.12.1", text: "राशी, आकार, अवकाश आणि मापन यांच्याशी संबंधित गणितीय प्रश्नांचे वर्णन करण्यासाठी विधाने तयार करतो." },
+  { code: "1.LO.13.1", text: "साध्या गणितीय समस्यांच्या स्वरूपात वास्तव जगातील प्रसंग ओळखतो." },
+  { code: "1.LO.13.2", text: "विविध कार्यनीतींचा/पद्धतींचा वापर करून साध्या अंकगणितीय समस्या सोडवतो." }
+];
+
+// Class 2nd Outcomes
+const MARATHI_OUTCOMES_2ND = [
+  { code: "2.1.1", text: "वाचलेल्या साहित्यातील नवीन शब्द ओळखतो व त्यांचा अर्थ विचारतो." },
+  { code: "2.1.2", text: "चित्रे व मजकूर पाहून स्वतःच्या कल्पनेने गोष्टी सांगतो." },
+  { code: "2.2.1", text: "विविध विषयांवर स्वतःच्या बोलीभाषेत मत व्यक्त करतो." },
+  { code: "2.3.1", text: "कविता व गाणी लयामध्ये व सुरात गायन करतो." },
+  { code: "2.4.1", text: "योग्य गतीने व विरामचिन्हांचा विचार करून वाचन करतो." },
+  { code: "2.5.1", text: "ऐकलेल्या गोष्टींवर आधारित सोपे प्रश्न विचारतो." }
+];
+
+const ENGLISH_OUTCOMES_2ND = [
+  { code: "2.1.1", text: "Recites poems and rhymes with proper rhythm and action." },
+  { code: "2.2.1", text: "Responds to simple English instructions in classroom." },
+  { code: "2.3.1", text: "Reads simple words and 3-4 letter sentences accurately." },
+  { code: "2.4.1", text: "Writes simple words correctly on dictation." }
+];
+
+const MATHS_OUTCOMES_2ND = [
+  { code: "2.LO.1", text: "दोन अंकी संख्यांची बेरीज व वजाबाकी दैनंदिन प्रसंगात करतो." },
+  { code: "2.LO.2", text: "९९ पर्यंतच्या संख्यांचा स्थानिक मान ओळखतो." },
+  { code: "2.LO.3", text: "आकृत्या व भौमितिक आकार (त्रिकोण, चौकोन, वर्तुळ) ओळखतो." },
+  { code: "2.LO.4", text: "नाणी व चलनी नोटांची मोजणी करून सोपे व्यवहार करतो." }
+];
+
 // Dynamic Class Outcomes Resolver
-const getClassOutcomes = (classValue, subjectKey, customOutcomesMap = {}) => {
-  const normKey = subjectKey === "maths" ? "math" : subjectKey;
-
-  // Check custom user-created outcomes first
-  if (customOutcomesMap[normKey] && Array.isArray(customOutcomesMap[normKey]) && customOutcomesMap[normKey].length > 0) {
-    return customOutcomesMap[normKey];
-  }
-  if (customOutcomesMap[subjectKey] && Array.isArray(customOutcomesMap[subjectKey]) && customOutcomesMap[subjectKey].length > 0) {
-    return customOutcomesMap[subjectKey];
-  }
-
+const getClassOutcomes = (classValue, subjectKey) => {
   const norm = String(classValue || "1st").toLowerCase().replace(/[^0-9]/g, "") || "1";
 
-  let outcomeBank = null;
-  if (norm === "1") outcomeBank = CLASS_1_OUTCOMES;
-  else if (norm === "2") outcomeBank = CLASS_2_OUTCOMES;
-  else if (norm === "3") outcomeBank = CLASS_3_OUTCOMES;
-  else if (norm === "4") outcomeBank = CLASS_4_OUTCOMES;
-  else if (norm === "5") outcomeBank = CLASS_5_OUTCOMES;
-  else if (norm === "6") outcomeBank = CLASS_6_OUTCOMES;
-  else if (norm === "7") outcomeBank = CLASS_7_OUTCOMES;
-  else if (norm === "8") outcomeBank = CLASS_8_OUTCOMES;
-
-  if (outcomeBank) {
-    if (outcomeBank[normKey]) return outcomeBank[normKey];
-    if (outcomeBank[subjectKey]) return outcomeBank[subjectKey];
+  if (norm === "3") {
+    if (subjectKey === "marathi") return CLASS_3_OUTCOMES.marathi || [];
+    if (subjectKey === "maths" || subjectKey === "math") return CLASS_3_OUTCOMES.math || [];
+    if (subjectKey === "english") return CLASS_3_OUTCOMES.english || [];
+    if (subjectKey === "evs1") return CLASS_3_OUTCOMES.evs1 || [];
+    if (subjectKey === "evs2") return CLASS_3_OUTCOMES.evs2 || [];
   }
 
+  if (norm === "4") {
+    if (subjectKey === "marathi") return CLASS_4_OUTCOMES.marathi || [];
+    if (subjectKey === "maths" || subjectKey === "math") return CLASS_4_OUTCOMES.math || [];
+    if (subjectKey === "english") return CLASS_4_OUTCOMES.english || [];
+    if (subjectKey === "evs1") return CLASS_4_OUTCOMES.evs1 || [];
+    if (subjectKey === "evs2") return CLASS_4_OUTCOMES.evs2 || [];
+  }
+
+  if (norm === "5") {
+    if (subjectKey === "marathi") return CLASS_5_OUTCOMES.marathi || [];
+    if (subjectKey === "hindi") return CLASS_5_OUTCOMES.hindi || [];
+    if (subjectKey === "maths" || subjectKey === "math") return CLASS_5_OUTCOMES.math || [];
+    if (subjectKey === "english") return CLASS_5_OUTCOMES.english || [];
+    if (subjectKey === "evs1") return CLASS_5_OUTCOMES.evs1 || [];
+    if (subjectKey === "evs2") return CLASS_5_OUTCOMES.evs2 || [];
+  }
+
+  if (norm === "6") {
+    if (subjectKey === "marathi") return CLASS_6_OUTCOMES.marathi || [];
+    if (subjectKey === "hindi") return CLASS_6_OUTCOMES.hindi || [];
+    if (subjectKey === "maths" || subjectKey === "math") return CLASS_6_OUTCOMES.math || [];
+    if (subjectKey === "english") return CLASS_6_OUTCOMES.english || [];
+    if (subjectKey === "science") return CLASS_6_OUTCOMES.science || [];
+    if (subjectKey === "history") return CLASS_6_OUTCOMES.history || [];
+    if (subjectKey === "geography") return CLASS_6_OUTCOMES.geography || [];
+  }
+
+  if (norm === "7") {
+    if (subjectKey === "marathi") return CLASS_7_OUTCOMES.marathi || [];
+    if (subjectKey === "hindi") return CLASS_7_OUTCOMES.hindi || [];
+    if (subjectKey === "maths" || subjectKey === "math") return CLASS_7_OUTCOMES.math || [];
+    if (subjectKey === "english") return CLASS_7_OUTCOMES.english || [];
+    if (subjectKey === "science") return CLASS_7_OUTCOMES.science || [];
+    if (subjectKey === "history") return CLASS_7_OUTCOMES.history || [];
+    if (subjectKey === "geography") return CLASS_7_OUTCOMES.geography || [];
+  }
+
+  if (norm === "8") {
+    if (subjectKey === "marathi") return CLASS_8_OUTCOMES.marathi || [];
+    if (subjectKey === "hindi") return CLASS_8_OUTCOMES.hindi || [];
+    if (subjectKey === "maths" || subjectKey === "math") return CLASS_8_OUTCOMES.math || [];
+    if (subjectKey === "english") return CLASS_8_OUTCOMES.english || [];
+    if (subjectKey === "science") return CLASS_8_OUTCOMES.science || [];
+    if (subjectKey === "history") return CLASS_8_OUTCOMES.history || [];
+    if (subjectKey === "geography") return CLASS_8_OUTCOMES.geography || [];
+  }
+
+  if (subjectKey === "marathi") {
+    if (norm === "2") return MARATHI_OUTCOMES_2ND;
+    return MARATHI_OUTCOMES_1ST;
+  }
+  if (subjectKey === "english") {
+    if (norm === "2") return ENGLISH_OUTCOMES_2ND;
+    return ENGLISH_OUTCOMES_1ST;
+  }
+  if (subjectKey === "maths" || subjectKey === "math") {
+    if (norm === "2") return MATHS_OUTCOMES_2ND;
+    return MATHS_OUTCOMES_1ST;
+  }
   return [];
 };
 
@@ -118,27 +272,12 @@ const OutcomeTable = ({ title, outcomes, subjectName, getUserSelectedLevel, stud
   );
 };
 
-import { getDefaultSubjectsForClass } from "../data/cceSubjects";
-
-const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", initialSemester = "sem2", onBack }) => {
+const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) => {
   const [selectedClass, setSelectedClass] = useState(initialClass || "1st");
   const [academicYear, setAcademicYear] = useState(initialYear || "2025-26");
-  const [selectedSemester, setSelectedSemester] = useState(initialSemester || "sem2");
   const [division, setDivision] = useState("1");
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
-  const [configuredSubjects, setConfiguredSubjects] = useState(() => {
-    const med = localStorage.getItem("cce_selected_medium") || "marathi";
-    const stored = localStorage.getItem(`cce_subjects_${initialClass}_${initialYear}_${med}`) ||
-      localStorage.getItem(`cce_subjects_${initialClass}_${initialYear}`);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      } catch (e) { }
-    }
-    return getDefaultSubjectsForClass(initialClass || "1st", med);
-  });
 
   const [schoolData, setSchoolData] = useState({
     schoolName: "",
@@ -151,7 +290,6 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
   const [marksData, setMarksData] = useState({});
   const [levelsData, setLevelsData] = useState({});
   const [outcomesRatings, setOutcomesRatings] = useState({});
-  const [customOutcomesData, setCustomOutcomesData] = useState({});
 
   const printRef = useRef(null);
 
@@ -163,18 +301,13 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
     setLoading(true);
     try {
       const docId = `${selectedClass}_${academicYear}`;
-      const currentTeacherId = getTeacherId();
 
       // 1. Fetch Global / Class School Settings
       try {
         let globalSettings = null;
-
-        // Try local storage cache (teacher-specific first, then generic)
         try {
-          const cachedTeacher = localStorage.getItem(`cce_general_school_settings_${currentTeacherId}`);
           const cachedGen = localStorage.getItem("cce_general_school_settings");
-          const cached = cachedTeacher || cachedGen;
-          if (cached) globalSettings = JSON.parse(cached);
+          if (cachedGen) globalSettings = JSON.parse(cachedGen);
         } catch (e) { }
 
         if (!globalSettings) {
@@ -184,43 +317,8 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
           } catch (e) { }
         }
 
-        // Try Firestore teacher-specific documents first, then global
-        if (!globalSettings) {
-          try {
-            const teacherGenSnap = await getDoc(doc(db, "school_settings", `${currentTeacherId}_general`));
-            if (teacherGenSnap.exists()) globalSettings = teacherGenSnap.data();
-          } catch (e) { }
-        }
-        if (!globalSettings) {
-          try {
-            const teacherSnap = await getDoc(doc(db, "school_settings", currentTeacherId));
-            if (teacherSnap.exists()) globalSettings = teacherSnap.data();
-          } catch (e) { }
-        }
-        if (!globalSettings) {
-          try {
-            const generalSnap = await getDoc(doc(db, "school_settings", "general"));
-            if (generalSnap.exists()) globalSettings = generalSnap.data();
-          } catch (e) { }
-        }
-
-        // Try teacher-isolated class-specific settings first
-        let classSettings = {};
-        const classDocIdsToTry = [
-          `${currentTeacherId}_${selectedClass}_${academicYear}`,
-          `${currentTeacherId}_${selectedClass}_${localStorage.getItem("cce_selected_medium") || "marathi"}_${academicYear}`,
-          `${selectedClass}_${localStorage.getItem("cce_selected_medium") || "marathi"}_${academicYear}`,
-          docId,
-        ];
-        for (const cDocId of classDocIdsToTry) {
-          try {
-            const settingsSnap = await getDoc(doc(db, "cce_settings", cDocId));
-            if (settingsSnap.exists()) {
-              classSettings = settingsSnap.data();
-              break;
-            }
-          } catch (e) { }
-        }
+        const settingsSnap = await getDoc(doc(db, "cce_settings", docId));
+        const classSettings = settingsSnap.exists() ? settingsSnap.data() : {};
         const mergedSettings = { ...(globalSettings || {}), ...classSettings };
 
         if (mergedSettings.schoolName || mergedSettings.udiseCode || mergedSettings.teacherName) {
@@ -231,43 +329,12 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
             headmasterName: mergedSettings.principalName || mergedSettings.headmasterName || "",
           });
         }
-
-        // Fetch active configured subjects for this class ("विषय निश्चिती")
-        const currentMed = localStorage.getItem("cce_selected_medium") || "marathi";
-        let activeSubs = [];
-        try {
-          const stored = localStorage.getItem(`cce_subjects_${selectedClass}_${academicYear}_${currentMed}`) ||
-            localStorage.getItem(`cce_subjects_${selectedClass}_${academicYear}`);
-          if (stored) {
-            const parsed = JSON.parse(stored);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              activeSubs = parsed;
-            }
-          }
-        } catch (e) { }
-
-        if (activeSubs.length === 0 && mergedSettings.subjects && Array.isArray(mergedSettings.subjects)) {
-          activeSubs = mergedSettings.subjects;
-        }
-
-        if (activeSubs.length === 0) {
-          activeSubs = getDefaultSubjectsForClass(selectedClass, currentMed);
-        }
-
-        setConfiguredSubjects(activeSubs);
-
-        // Fetch custom user-created learning outcomes if saved
-        try {
-          const customListSnap = await getDoc(doc(db, "cce_outcomes_list_v2", `${selectedClass}_${academicYear}`));
-          if (customListSnap.exists() && customListSnap.data().outcomes) {
-            setCustomOutcomesData(customListSnap.data().outcomes);
-          }
-        } catch (e) { }
       } catch (e) { }
 
       // 2. Fetch Students for Selected Class
       let loadedStudents = [];
       const currentMedium = localStorage.getItem("cce_selected_medium") || "marathi";
+      const currentTeacherId = getTeacherId();
 
       try {
         const uQuery = query(collection(db, "users"), where("role", "==", "student"));
@@ -318,70 +385,48 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
         const bunnyOutcomes = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_outcomes.json`);
         const bunnyLevels = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_levels.json`);
 
-        // Try teacher-isolated outcome docs first, then generic
-        const outcomeDocIds = [
-          `${currentTeacherId}_${selectedClass}_${academicYear}_sem2`,
-          `${selectedClass}_${academicYear}_sem2`,
-          `${currentTeacherId}_${selectedClass}_${academicYear}_sem1`,
-          `${selectedClass}_${academicYear}_sem1`,
-          `${currentTeacherId}_${selectedClass}_${academicYear}`,
-          docId,
-        ];
-        let mergedRatings = {};
-        for (const oDocId of outcomeDocIds) {
-          try {
-            const outSnap = await getDoc(doc(db, "cce_outcomes", oDocId));
-            if (outSnap.exists()) {
-              const rData = outSnap.data().ratings || outSnap.data();
-              mergedRatings = { ...mergedRatings, ...rData };
-            }
-          } catch (e) { }
-        }
-        mergedRatings = { ...mergedRatings, ...(bunnyOutcomes || {}) };
+        const outSnapSem2 = await getDoc(doc(db, "cce_outcomes", `${selectedClass}_${academicYear}_sem2`));
+        const outSnapSem1 = await getDoc(doc(db, "cce_outcomes", `${selectedClass}_${academicYear}_sem1`));
+        const outSnapGen = await getDoc(doc(db, "cce_outcomes", docId));
+
+        const rSem2 = outSnapSem2.exists() ? (outSnapSem2.data().ratings || outSnapSem2.data()) : {};
+        const rSem1 = outSnapSem1.exists() ? (outSnapSem1.data().ratings || outSnapSem1.data()) : {};
+        const rGen = outSnapGen.exists() ? (outSnapGen.data().ratings || outSnapGen.data()) : {};
+
+        const mergedRatings = {
+          ...rGen,
+          ...rSem1,
+          ...rSem2,
+          ...(bunnyOutcomes || {}),
+        };
         setOutcomesRatings(mergedRatings);
 
-        // Fetch levels data (teacher-isolated first)
-        let mergedLevels = {};
-        const levelDocIds = [`${currentTeacherId}_${selectedClass}_${academicYear}`, docId];
-        for (const lDocId of levelDocIds) {
-          try {
-            const levSnap = await getDoc(doc(db, "cce_levels_v2", lDocId));
-            if (levSnap.exists()) {
-              const lData = levSnap.data().levelsData || levSnap.data();
-              mergedLevels = { ...mergedLevels, ...lData };
-              break;
-            }
-          } catch (e) { }
-        }
-        mergedLevels = { ...mergedLevels, ...(bunnyLevels || {}) };
+        const levSnap = await getDoc(doc(db, "cce_levels_v2", docId));
+        const lData = levSnap.exists() ? (levSnap.data().levelsData || levSnap.data()) : {};
+
+        const mergedLevels = {
+          ...lData,
+          ...(bunnyLevels || {}),
+        };
         setLevelsData(mergedLevels);
       } catch (e) {
         console.error("Error fetching outcome levels:", e);
       }
 
-      // 4. Fetch Marks Data (teacher-isolated first)
+      // 4. Fetch Marks Data
       try {
         const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
         const bunnyMarksSec = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_marks_second.json`);
         const bunnyMarksFirst = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_marks_first.json`);
 
-        let mergedMarks = {};
-        const marksDocIds = [
-          `${currentTeacherId}_${selectedClass}_${academicYear}`,
-          `${currentTeacherId}_${selectedClass}_${currentMedium}_${academicYear}`,
-          docId,
-        ];
-        for (const mDocId of marksDocIds) {
-          try {
-            const marksSnap = await getDoc(doc(db, "cce_marks_v2", mDocId));
-            if (marksSnap.exists()) {
-              const mData = marksSnap.data();
-              const mRecords = mData.semester2 || mData.semester1 || mData.marksData || mData.data || mData || {};
-              mergedMarks = { ...mergedMarks, ...mRecords };
-            }
-          } catch (e) { }
-        }
-        mergedMarks = { ...mergedMarks, ...(bunnyMarksFirst || {}), ...(bunnyMarksSec || {}) };
+        const marksSnap = await getDoc(doc(db, "cce_marks_v2", docId));
+        const mData = marksSnap.exists() ? marksSnap.data() : {};
+
+        const mergedMarks = {
+          ...(mData.semester2 || mData.semester1 || mData.marksData || mData.data || mData || {}),
+          ...(bunnyMarksFirst || {}),
+          ...(bunnyMarksSec || {}),
+        };
         setMarksData(mergedMarks);
       } catch (e) {
         console.error("Error fetching marks data:", e);
@@ -421,36 +466,6 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
     window.print();
   };
 
-  const isSubjectActive = (subName) => {
-    if (!configuredSubjects || configuredSubjects.length === 0) return false;
-    const name = subName.toLowerCase().trim();
-
-    return configuredSubjects.some((s) => {
-      const active = (typeof s === "string" ? s : s.name || s.label || s.title || "").toLowerCase().trim();
-      if (!active) return false;
-
-      if (name.includes("मराठी")) return active.includes("मराठी") || active.includes("प्रथम") || active.includes("marathi");
-      if (name.includes("हिंदी")) return active.includes("हिंदी") || active.includes("hindi");
-      if (name.includes("इंग्रजी")) return active.includes("इंग्रजी") || active.includes("english");
-      if (name.includes("गणित")) return active.includes("गणित") || active.includes("math");
-      if (name === "परिसर अभ्यास १" || name.includes("परिसर १")) {
-        return active.includes("परिसर १") || active.includes("परिसर अभ्यास १") || (active.includes("परिसर अभ्यास") && !active.includes("२") && !active.includes("2"));
-      }
-      if (name === "परिसर अभ्यास २" || name.includes("परिसर २")) {
-        return active.includes("परिसर २") || active.includes("परिसर अभ्यास २");
-      }
-      if (name.includes("परिसर अभ्यास")) return active.includes("परिसर") || active.includes("evs");
-      if (name.includes("सामान्य विज्ञान") || name.includes("विज्ञान")) return active.includes("विज्ञान") || active.includes("science");
-      if (name.includes("इतिहास")) return active.includes("इतिहास") || active.includes("नागरिकशास्त्र") || active.includes("सामाजिक") || active.includes("social");
-      if (name.includes("भूगोल")) return active.includes("भूगोल") || active.includes("सामाजिक") || active.includes("social");
-      if (name.includes("कला")) return active.includes("कला") || active.includes("art");
-      if (name.includes("कार्यानुभव") || name.includes("कार्यशिक्षण")) return active.includes("कार्यानुभव") || active.includes("कार्यशिक्षण") || active.includes("work");
-      if (name.includes("शारीरिक")) return active.includes("शारीरिक") || active.includes("आरोग्य") || active.includes("pe") || active.includes("sports") || active.includes("physical");
-
-      return active.includes(name) || name.includes(active);
-    });
-  };
-
   /**
    * Resolves the EXACT level (1, 2, 3, or 4) entered by the user for a specific student and outcome code.
    * Checks outcomesRatings, levelsData, and marksData across all ID and subject aliases.
@@ -470,19 +485,12 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
       subjectName,
       subjectName ? subjectName.toLowerCase() : "",
       subjectName && subjectName.includes("मराठी") ? "marathi" : "",
-      subjectName && subjectName.includes("हिंदी") ? "hindi" : "",
       subjectName && subjectName.includes("इंग्रजी") ? "english" : "",
-      subjectName && subjectName.includes("गणित") ? "math" : "",
-      subjectName && subjectName.includes("गणित") ? "maths" : "",
-      subjectName && subjectName.includes("परिसर १") ? "evs1" : "",
-      subjectName && subjectName.includes("परिसर २") ? "evs2" : "",
-      subjectName && subjectName.includes("परिसर") ? "evs" : "",
-      subjectName && subjectName.includes("विज्ञान") ? "science" : "",
-      subjectName && subjectName.includes("इतिहास") ? "history" : "",
-      subjectName && subjectName.includes("भूगोल") ? "geography" : "",
+      subjectName && subjectName.includes("गणित") ? "maths" : (subjectName && subjectName.includes("गणित") ? "math" : ""),
+      subjectName && subjectName.includes("परिसर") ? "parisar" : "",
       subjectName && subjectName.includes("कला") ? "kala" : "",
-      subjectName && (subjectName.includes("कार्यानुभव") || subjectName.includes("कार्यशिक्षण")) ? "karyanubhav" : "",
-      subjectName && (subjectName.includes("शारीरिक") || subjectName.includes("आरोग्य")) ? "sharirik" : "",
+      subjectName && subjectName.includes("कार्यानुभव") ? "karyanubhav" : "",
+      subjectName && subjectName.includes("शारीरिक") ? "sharirik" : "",
     ].filter(Boolean);
 
     // 1. Check outcomesRatings: ratings[subjectKey][outcomeCode][studentId]
@@ -495,18 +503,6 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
             const parsed = parseInt(val);
             if (parsed >= 1 && parsed <= 4) return parsed;
           }
-        }
-      }
-    }
-
-    // Direct check for top-level outcomeCode in outcomesRatings
-    if (outcomesRatings[outcomeCode]) {
-      const studentMap = outcomesRatings[outcomeCode];
-      for (const stdKey of possibleStudentKeys) {
-        const val = studentMap[stdKey];
-        if (val !== undefined && val !== null && val !== 0 && val !== "") {
-          const parsed = parseInt(val);
-          if (parsed >= 1 && parsed <= 4) return parsed;
         }
       }
     }
@@ -569,18 +565,15 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
   }
 
   // Fetch Class-Specific Outcomes
-  const marathiOutcomes = getClassOutcomes(selectedClass, "marathi", customOutcomesData);
-  const hindiOutcomes = getClassOutcomes(selectedClass, "hindi", customOutcomesData);
-  const englishOutcomes = getClassOutcomes(selectedClass, "english", customOutcomesData);
-  const mathsOutcomes = getClassOutcomes(selectedClass, "math", customOutcomesData);
-  const evs1Outcomes = getClassOutcomes(selectedClass, "evs1", customOutcomesData);
-  const evs2Outcomes = getClassOutcomes(selectedClass, "evs2", customOutcomesData);
-  const scienceOutcomes = getClassOutcomes(selectedClass, "science", customOutcomesData);
-  const historyOutcomes = getClassOutcomes(selectedClass, "history", customOutcomesData);
-  const geographyOutcomes = getClassOutcomes(selectedClass, "geography", customOutcomesData);
-  const kalaOutcomes = getClassOutcomes(selectedClass, "kala", customOutcomesData);
-  const karyanubhavOutcomes = getClassOutcomes(selectedClass, "karyanubhav", customOutcomesData);
-  const sharirikOutcomes = getClassOutcomes(selectedClass, "sharirik", customOutcomesData);
+  const marathiOutcomes = getClassOutcomes(selectedClass, "marathi");
+  const hindiOutcomes = getClassOutcomes(selectedClass, "hindi");
+  const englishOutcomes = getClassOutcomes(selectedClass, "english");
+  const mathsOutcomes = getClassOutcomes(selectedClass, "maths");
+  const evs1Outcomes = getClassOutcomes(selectedClass, "evs1");
+  const evs2Outcomes = getClassOutcomes(selectedClass, "evs2");
+  const scienceOutcomes = getClassOutcomes(selectedClass, "science");
+  const historyOutcomes = getClassOutcomes(selectedClass, "history");
+  const geographyOutcomes = getClassOutcomes(selectedClass, "geography");
 
   return (
     <div className="font-sans text-slate-800">
@@ -647,68 +640,35 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
                 <span>इयत्ता - <b>{selectedClass}</b></span>
                 <span>तुकडी - <b>{division}</b></span>
                 <span>हजेरी क्र. <b>{student.rollNo}</b></span>
-                <span>{selectedSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
+                <span>द्वितीय सत्र</span>
               </div>
 
               {/* 1. प्रथम भाषा: मराठी Section */}
-              {isSubjectActive("मराठी") && (
-                <OutcomeTable title="प्रथम भाषा: मराठी" outcomes={marathiOutcomes} subjectName="मराठी" getUserSelectedLevel={getUserSelectedLevel} student={student} />
-              )}
+              <OutcomeTable title="प्रथम भाषा: मराठी" outcomes={marathiOutcomes} subjectName="मराठी" getUserSelectedLevel={getUserSelectedLevel} student={student} />
 
               {/* 2. द्वितीय भाषा: हिंदी Section */}
-              {isSubjectActive("हिंदी") && (
-                <OutcomeTable title="द्वितीय भाषा: हिंदी" outcomes={hindiOutcomes} subjectName="हिंदी" getUserSelectedLevel={getUserSelectedLevel} student={student} />
-              )}
+              <OutcomeTable title="द्वितीय भाषा: हिंदी" outcomes={hindiOutcomes} subjectName="हिंदी" getUserSelectedLevel={getUserSelectedLevel} student={student} />
 
               {/* 3. गणित Section */}
-              {isSubjectActive("गणित") && (
-                <OutcomeTable title="गणित" outcomes={mathsOutcomes} subjectName="गणित" getUserSelectedLevel={getUserSelectedLevel} student={student} />
-              )}
+              <OutcomeTable title="गणित" outcomes={mathsOutcomes} subjectName="गणित" getUserSelectedLevel={getUserSelectedLevel} student={student} />
 
               {/* 4. तृतीय भाषा: इंग्रजी Section */}
-              {isSubjectActive("इंग्रजी") && (
-                <OutcomeTable title="तृतीय भाषा: इंग्रजी" outcomes={englishOutcomes} subjectName="इंग्रजी" getUserSelectedLevel={getUserSelectedLevel} student={student} />
-              )}
+              <OutcomeTable title="तृतीय भाषा: इंग्रजी" outcomes={englishOutcomes} subjectName="इंग्रजी" getUserSelectedLevel={getUserSelectedLevel} student={student} />
 
               {/* 5. परिसर अभ्यास १ Section */}
-              {isSubjectActive("परिसर अभ्यास १") && (
-                <OutcomeTable title="परिसर अभ्यास १" outcomes={evs1Outcomes} subjectName="परिसर अभ्यास १" getUserSelectedLevel={getUserSelectedLevel} student={student} />
-              )}
+              <OutcomeTable title="परिसर अभ्यास १" outcomes={evs1Outcomes} subjectName="परिसर अभ्यास १" getUserSelectedLevel={getUserSelectedLevel} student={student} />
 
               {/* 6. परिसर अभ्यास २ Section */}
-              {isSubjectActive("परिसर अभ्यास २") && (
-                <OutcomeTable title="परिसर अभ्यास २" outcomes={evs2Outcomes} subjectName="परिसर अभ्यास २" getUserSelectedLevel={getUserSelectedLevel} student={student} />
-              )}
+              <OutcomeTable title="परिसर अभ्यास २" outcomes={evs2Outcomes} subjectName="परिसर अभ्यास २" getUserSelectedLevel={getUserSelectedLevel} student={student} />
 
               {/* 7. सामान्य विज्ञान Section */}
-              {isSubjectActive("सामान्य विज्ञान") && (
-                <OutcomeTable title="सामान्य विज्ञान" outcomes={scienceOutcomes} subjectName="सामान्य विज्ञान" getUserSelectedLevel={getUserSelectedLevel} student={student} />
-              )}
+              <OutcomeTable title="सामान्य विज्ञान" outcomes={scienceOutcomes} subjectName="सामान्य विज्ञान" getUserSelectedLevel={getUserSelectedLevel} student={student} />
 
               {/* 8. इतिहास व नागरिकशास्त्र Section */}
-              {isSubjectActive("इतिहास व नागरिकशास्त्र") && (
-                <OutcomeTable title="इतिहास व नागरिकशास्त्र" outcomes={historyOutcomes} subjectName="इतिहास व नागरिकशास्त्र" getUserSelectedLevel={getUserSelectedLevel} student={student} />
-              )}
+              <OutcomeTable title="इतिहास व नागरिकशास्त्र" outcomes={historyOutcomes} subjectName="इतिहास व नागरिकशास्त्र" getUserSelectedLevel={getUserSelectedLevel} student={student} />
 
               {/* 9. भूगोल Section */}
-              {isSubjectActive("भूगोल") && (
-                <OutcomeTable title="भूगोल" outcomes={geographyOutcomes} subjectName="भूगोल" getUserSelectedLevel={getUserSelectedLevel} student={student} />
-              )}
-
-              {/* 10. कला Section */}
-              {isSubjectActive("कला") && (
-                <OutcomeTable title="कला" outcomes={kalaOutcomes} subjectName="कला" getUserSelectedLevel={getUserSelectedLevel} student={student} />
-              )}
-
-              {/* 11. कार्यानुभव / कार्यशिक्षण Section */}
-              {isSubjectActive("कार्यानुभव") && (
-                <OutcomeTable title="कार्यानुभव / कार्यशिक्षण" outcomes={karyanubhavOutcomes} subjectName="कार्यानुभव" getUserSelectedLevel={getUserSelectedLevel} student={student} />
-              )}
-
-              {/* 12. शारीरिक शिक्षण व आरोग्य Section */}
-              {isSubjectActive("शारीरिक") && (
-                <OutcomeTable title="शारीरिक शिक्षण व आरोग्य" outcomes={sharirikOutcomes} subjectName="शारीरिक" getUserSelectedLevel={getUserSelectedLevel} student={student} />
-              )}
+              <OutcomeTable title="भूगोल" outcomes={geographyOutcomes} subjectName="भूगोल" getUserSelectedLevel={getUserSelectedLevel} student={student} />
             </div>
 
             {/* Signatures */}

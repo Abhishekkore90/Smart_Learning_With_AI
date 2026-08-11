@@ -386,11 +386,7 @@ const Result5th8th = () => {
     fetchSubjectsForClass(e.target.value);
 
     if (selectedClass) {
-      try {
-        await fetchDivisionsForClass(selectedClass);
-      } catch (err) {
-        console.error("Error fetching divisions for class:", err);
-      }
+      await fetchDivisionsForClass(selectedClass);
     }
 
     // Filter students based on the selected class
@@ -1615,7 +1611,7 @@ tbody tr:nth-child(odd) {
                         <>
                           <tr>
                             <td colSpan="3" style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}><strong>शेकडा गुण :</strong></td>
-                            <td colSpan="2" style={{ border: '1px solid #000', padding: '5px' }}><strong>{!isNaN(perc) && isFinite(perc) ? perc.toFixed(2) : "0.00"}%</strong></td>
+                            <td colSpan="2" style={{ border: '1px solid #000', padding: '5px' }}><strong>{perc.toFixed(2)}%</strong></td>
                           </tr>
                           <tr>
                             <td colSpan="3" style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}><strong>निकाल दिनांक :</strong></td>
@@ -1960,7 +1956,7 @@ tbody tr:nth-child(odd) {
                                 <td colSpan="1"></td>
                                 <td colSpan="2"><b>{language === "English" ? "Total Marks" : "एकूण गुण"}</b></td>
                                 <td colSpan="1"><b>{totalMarks} / {totalSubjects * 100}</b></td>
-                                <td colSpan="1"><b>{!isNaN(percentage) && isFinite(percentage) ? percentage.toFixed(2) : "0.00"}%</b></td>
+                                <td colSpan="1"><b>{percentage.toFixed(2)}%</b></td>
                               </tr>
                             </>
                           )}

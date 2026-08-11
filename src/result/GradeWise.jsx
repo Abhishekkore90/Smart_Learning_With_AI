@@ -142,26 +142,15 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
         e1: { boys: 0, girls: 0 },
       }));
 
-      // 3. Query all students from Firestore & merge student_details
+      // 3. Query all students from Firestore
       try {
         const currentTeacherId = getTeacherId();
-        const detailsMap = new Map();
-        try {
-          const detailsSnap = await getDocs(collection(db, "student_details"));
-          detailsSnap.forEach((docSnap) => {
-            detailsMap.set(docSnap.id, docSnap.data());
-          });
-        } catch (e) {}
-
         const uSnap = await getDocs(query(collection(db, "users"), where("role", "==", "student")));
         const studentsByClass = {};
 
         const currentMedium = localStorage.getItem("cce_selected_medium") || "marathi";
         uSnap.forEach((docSnap) => {
-          const rawData = docSnap.data();
-          const det = detailsMap.get(docSnap.id) || detailsMap.get(rawData.name) || detailsMap.get(rawData.fullName) || {};
-          const sData = { ...rawData, ...det };
-
+          const sData = docSnap.data();
           const rawClass = String(sData.class || sData.currentClass || "").toLowerCase();
           const idx = getClassIndex(rawClass);
           if (idx >= 0 && idx < INITIAL_CLASSES.length) {
@@ -173,13 +162,9 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
           }
         });
 
-        // Determine Term key & Alt Term key
+        // Determine Term key
         let termKey = "sem1";
-        let altTermKey = "first";
-        if (selectedTerm === "द्वितीय सत्र") {
-          termKey = "sem2";
-          altTermKey = "second";
-        }
+        if (selectedTerm === "द्वितीय सत्र") termKey = "sem2";
 
         // Loop over classes and calculate grade buckets
         for (let idx = 0; idx < INITIAL_CLASSES.length; idx++) {
@@ -195,9 +180,6 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
               Object.entries(recs).forEach(([k, v]) => {
                 if (v && typeof v === "object") {
                   semMarks[k] = { ...(semMarks[k] || {}), ...v };
-                } else if (v !== undefined && v !== null) {
-                  if (!semMarks[k]) semMarks[k] = {};
-                  semMarks[k].total = v;
                 }
               });
             }
@@ -208,23 +190,13 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
             const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
             const b1 = await fetchJsonFromBunny(`cce_results/${clsObj.id}_${academicYear}_${termKey}.json`);
             mergeDoc(b1);
-            const bAlt = await fetchJsonFromBunny(`cce_results/${clsObj.id}_${academicYear}_${altTermKey}.json`);
-            mergeDoc(bAlt);
             const bGen = await fetchJsonFromBunny(`cce_results/${clsObj.id}_${academicYear}_marks.json`);
             mergeDoc(bGen);
           } catch (e) {}
 
-          // 2. Firestore cce_marks_v2 documents to try (including teacher isolation)
+          // 2. Firestore cce_marks_v2 documents to try
           const docsToTry = [
-            ...(currentTeacherId ? [
-              `${currentTeacherId}_${clsObj.id}_${currentMedium}_${academicYear}_${termKey}`,
-              `${currentTeacherId}_${clsObj.id}_${academicYear}_${termKey}`,
-              `${currentTeacherId}_${clsObj.id}_${academicYear}_${altTermKey}`,
-              `${currentTeacherId}_${clsObj.id}_${academicYear}`,
-            ] : []),
-            `${clsObj.id}_${currentMedium}_${academicYear}_${termKey}`,
             `${clsObj.id}_${academicYear}_${termKey}`,
-            `${clsObj.id}_${academicYear}_${altTermKey}`,
             `${clsObj.id}_${academicYear}`,
             `${clsObj.id}_${termKey}`,
             `${clsObj.id}`,
@@ -239,22 +211,12 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
             } catch (e) {}
           }
 
-          // 3. LocalStorage marks cache fallback
-          try {
-            const cached = localStorage.getItem(`cce_marks_${clsObj.id}_${academicYear}_${termKey}`) ||
-                           localStorage.getItem(`cce_marks_${clsObj.id}_${academicYear}`);
-            if (cached) {
-              const parsed = JSON.parse(cached);
-              mergeDoc(parsed);
-            }
-          } catch (e) {}
-
           classStudents.forEach((st) => {
-            const gStr = String(st.gender || st.sex || st.ling || "").toLowerCase().trim();
             const isGirl =
-              gStr === "female" || gStr === "f" || gStr === "2" ||
-              gStr.includes("female") || gStr.includes("girl") ||
-              gStr.includes("मुली") || gStr.includes("मुलगी") || gStr.includes("स्त्री");
+              String(st.gender || st.sex || "").toLowerCase().includes("female") ||
+              String(st.gender || st.sex || "").includes("मुली") ||
+              String(st.gender || st.sex || "").includes("मुलगी") ||
+              String(st.gender || st.sex || "").includes("स्त्री");
 
             const genderKey = isGirl ? "girls" : "boys";
             newMatrix[idx].pat[genderKey] += 1;
@@ -274,51 +236,32 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
             let totalObtained = 0;
             let totalMax = 0;
 
-            if (stdRecord && typeof stdRecord === "object") {
-              const targetRec = stdRecord[termKey] || stdRecord[altTermKey] || stdRecord;
-
-              Object.entries(targetRec).forEach(([subKey, subVal]) => {
-                if (subKey === "sem1" || subKey === "sem2" || subKey === "first" || subKey === "second") return;
-
-                let obt = 0;
-                let max = 100;
-
-                if (typeof subVal === "number" || (typeof subVal === "string" && !isNaN(subVal))) {
-                  obt = Number(subVal);
-                } else if (subVal && typeof subVal === "object") {
-                  const subTerm = subVal[termKey] || subVal[altTermKey] || subVal;
-                  if (typeof subTerm === "number" || (typeof subTerm === "string" && !isNaN(subTerm))) {
-                    obt = Number(subTerm);
-                  } else if (typeof subTerm === "object" && subTerm !== null) {
-                    if (subTerm.total !== undefined && !isNaN(subTerm.total)) obt = Number(subTerm.total);
-                    else if (subTerm.obtained !== undefined && !isNaN(subTerm.obtained)) obt = Number(subTerm.obtained);
-                    else if (subTerm.mark !== undefined && !isNaN(subTerm.mark)) obt = Number(subTerm.mark);
-                    else {
-                      let sum = 0;
-                      let found = false;
-                      ["tondiKaam", "pratyakshikPrayog", "upakramKriti", "prakalpa", "chaachaniLekhi", "swadhyayVargakarya", "itar", "sankalitTondi", "sankalitPratyakshik", "sankalitLekhi", "formative", "summative", "akaratmak", "sankalit"].forEach((f) => {
-                        if (subTerm[f] !== undefined && subTerm[f] !== null && subTerm[f] !== "") {
-                          const n = Number(subTerm[f]);
-                          if (!isNaN(n)) { sum += n; found = true; }
-                        }
-                      });
-                      if (found) obt = sum;
-                    }
-                    max = Number(subTerm.outOf || subTerm.max || subTerm.totalMax || 100) || 100;
-                  }
+            Object.entries(stdRecord).forEach(([subKey, subVal]) => {
+              if (subVal && typeof subVal === "object") {
+                let obtained = 0;
+                let max = 0;
+                if (subVal[termKey]) {
+                  const tv = subVal[termKey];
+                  obtained = Number(tv.total !== undefined ? tv.total : tv.obtained !== undefined ? tv.obtained : (Number(tv.formative || 0) + Number(tv.summative || 0))) || 0;
+                  max = Number(tv.outOf || tv.max || 100) || 100;
+                } else {
+                  obtained = Number(subVal.total !== undefined ? subVal.total : subVal.obtained !== undefined ? subVal.obtained : (Number(subVal.formative || 0) + Number(subVal.summative || 0))) || 0;
+                  max = Number(subVal.outOf || subVal.max || subVal.totalMax || 100) || 100;
                 }
-
-                totalObtained += obt;
+                totalObtained += obtained;
                 totalMax += max;
-              });
-            }
+              } else if (typeof subVal === "number" || (typeof subVal === "string" && !isNaN(subVal))) {
+                totalObtained += Number(subVal);
+                totalMax += 100;
+              }
+            });
 
             if (totalMax > 0 && totalObtained > 0) {
               const percent = (totalObtained / totalMax) * 100;
               const gradeCat = getGradeCategory(percent);
               newMatrix[idx][gradeCat][genderKey] += 1;
             } else {
-              // Default to E1 bucket if no marks recorded yet
+              // Default to E1 bucket if no marks recorded yet, so Pat = Sum of Grades
               const gradeCat = getGradeCategory(0);
               newMatrix[idx][gradeCat][genderKey] += 1;
             }
@@ -448,18 +391,9 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
             onChange={(e) => setAcademicYear(e.target.value)}
             className="px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
           >
-            {(() => {
-              const curY = new Date().getFullYear();
-              const curM = new Date().getMonth();
-              const refY = curM >= 5 ? curY : curY - 1;
-              const yrs = [];
-              for (let y = refY + 1; y >= 2020; y--) {
-                yrs.push(`${y}-${y + 1}`);
-              }
-              return yrs.map((y) => (
-                <option key={y} value={y}>{y}</option>
-              ));
-            })()}
+            <option value="2024-25">2024-25</option>
+            <option value="2025-26">2025-26</option>
+            <option value="2026-27">2026-27</option>
           </select>
 
           {/* Refresh Button */}

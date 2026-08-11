@@ -51,6 +51,7 @@ import { Route as TeacherHomeworkRouteImport } from './routes/teacher.homework'
 import { Route as TeacherConceptMappingRouteImport } from './routes/teacher.concept-mapping'
 import { Route as TeacherClassSetupRouteImport } from './routes/teacher.class-setup'
 import { Route as StudentTimetableRouteImport } from './routes/student.timetable'
+import { Route as StudentTeachingRecordRouteImport } from './routes/student.teaching-record'
 import { Route as StudentResultRouteImport } from './routes/student.result'
 import { Route as StudentQuestionBankRouteImport } from './routes/student.question-bank'
 import { Route as StudentNoticesRouteImport } from './routes/student.notices'
@@ -305,6 +306,11 @@ const TeacherClassSetupRoute = TeacherClassSetupRouteImport.update({
 const StudentTimetableRoute = StudentTimetableRouteImport.update({
   id: '/student/timetable',
   path: '/student/timetable',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudentTeachingRecordRoute = StudentTeachingRecordRouteImport.update({
+  id: '/student/teaching-record',
+  path: '/student/teaching-record',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StudentResultRoute = StudentResultRouteImport.update({
@@ -583,6 +589,7 @@ export interface FileRoutesByFullPath {
   '/student/notices': typeof StudentNoticesRoute
   '/student/question-bank': typeof StudentQuestionBankRoute
   '/student/result': typeof StudentResultRoute
+  '/student/teaching-record': typeof StudentTeachingRecordRoute
   '/student/timetable': typeof StudentTimetableRoute
   '/teacher/class-setup': typeof TeacherClassSetupRoute
   '/teacher/concept-mapping': typeof TeacherConceptMappingRoute
@@ -671,6 +678,7 @@ export interface FileRoutesByTo {
   '/student/notices': typeof StudentNoticesRoute
   '/student/question-bank': typeof StudentQuestionBankRoute
   '/student/result': typeof StudentResultRoute
+  '/student/teaching-record': typeof StudentTeachingRecordRoute
   '/student/timetable': typeof StudentTimetableRoute
   '/teacher/class-setup': typeof TeacherClassSetupRoute
   '/teacher/concept-mapping': typeof TeacherConceptMappingRoute
@@ -761,6 +769,7 @@ export interface FileRoutesById {
   '/student/notices': typeof StudentNoticesRoute
   '/student/question-bank': typeof StudentQuestionBankRoute
   '/student/result': typeof StudentResultRoute
+  '/student/teaching-record': typeof StudentTeachingRecordRoute
   '/student/timetable': typeof StudentTimetableRoute
   '/teacher/class-setup': typeof TeacherClassSetupRoute
   '/teacher/concept-mapping': typeof TeacherConceptMappingRoute
@@ -852,6 +861,7 @@ export interface FileRouteTypes {
     | '/student/notices'
     | '/student/question-bank'
     | '/student/result'
+    | '/student/teaching-record'
     | '/student/timetable'
     | '/teacher/class-setup'
     | '/teacher/concept-mapping'
@@ -940,6 +950,7 @@ export interface FileRouteTypes {
     | '/student/notices'
     | '/student/question-bank'
     | '/student/result'
+    | '/student/teaching-record'
     | '/student/timetable'
     | '/teacher/class-setup'
     | '/teacher/concept-mapping'
@@ -1029,6 +1040,7 @@ export interface FileRouteTypes {
     | '/student/notices'
     | '/student/question-bank'
     | '/student/result'
+    | '/student/teaching-record'
     | '/student/timetable'
     | '/teacher/class-setup'
     | '/teacher/concept-mapping'
@@ -1117,6 +1129,7 @@ export interface RootRouteChildren {
   StudentNoticesRoute: typeof StudentNoticesRoute
   StudentQuestionBankRoute: typeof StudentQuestionBankRoute
   StudentResultRoute: typeof StudentResultRoute
+  StudentTeachingRecordRoute: typeof StudentTeachingRecordRoute
   StudentTimetableRoute: typeof StudentTimetableRoute
   TeacherClassSetupRoute: typeof TeacherClassSetupRoute
   TeacherConceptMappingRoute: typeof TeacherConceptMappingRoute
@@ -1449,6 +1462,13 @@ declare module '@tanstack/react-router' {
       path: '/student/timetable'
       fullPath: '/student/timetable'
       preLoaderRoute: typeof StudentTimetableRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/student/teaching-record': {
+      id: '/student/teaching-record'
+      path: '/student/teaching-record'
+      fullPath: '/student/teaching-record'
+      preLoaderRoute: typeof StudentTeachingRecordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/student/result': {
@@ -1867,6 +1887,7 @@ const rootRouteChildren: RootRouteChildren = {
   StudentNoticesRoute: StudentNoticesRoute,
   StudentQuestionBankRoute: StudentQuestionBankRoute,
   StudentResultRoute: StudentResultRoute,
+  StudentTeachingRecordRoute: StudentTeachingRecordRoute,
   StudentTimetableRoute: StudentTimetableRoute,
   TeacherClassSetupRoute: TeacherClassSetupRoute,
   TeacherConceptMappingRoute: TeacherConceptMappingRoute,
