@@ -241,11 +241,11 @@ const SUBJECT_META: Record<
   },
 };
 
-function convertGenderEnding(text: string, gender: GenderMode): string {
+export function convertGenderEnding(text: string, gender: GenderMode): string {
   if (!text || gender === "none") return text;
   if (gender === "female") {
     let res = text;
-    // Explicit pronoun & possessive replacements
+    // Explicit Marathi pronoun & possessive replacements
     res = res
       .replace(/\bत्याचा\b/g, "तिचा")
       .replace(/\bत्याची\b/g, "तिची")
@@ -255,15 +255,33 @@ function convertGenderEnding(text: string, gender: GenderMode): string {
       .replace(/\bस्वतःचे\b/g, "स्वतःची")
       .replace(/\bतो\b/g, "ती");
 
-    // Dynamic verb endings (तो/तोय -> ते/तेय)
+    // Dynamic Marathi verb endings (तो/तोय -> ते/तेय)
     res = res
       .replace(/(\S+?)तोय(?=[\s\.,!?;]|$)/g, "$1तेय")
       .replace(/(\S+?)तो(?=[\s\.,!?;]|$)/g, "$1ते");
 
+    // English pronoun replacements for Female student (He -> She, His/Him -> Her, Himself -> Herself)
+    res = res
+      .replace(/\bHe's\b/g, "She's")
+      .replace(/\bhe's\b/g, "she's")
+      .replace(/\bHE'S\b/g, "SHE'S")
+      .replace(/\bHimself\b/g, "Herself")
+      .replace(/\bhimself\b/g, "herself")
+      .replace(/\bHIMSELF\b/g, "HERSELF")
+      .replace(/\bHe\b/g, "She")
+      .replace(/\bhe\b/g, "she")
+      .replace(/\bHE\b/g, "SHE")
+      .replace(/\bHis\b/g, "Her")
+      .replace(/\bhis\b/g, "her")
+      .replace(/\bHIS\b/g, "HER")
+      .replace(/\bHim\b/g, "Her")
+      .replace(/\bhim\b/g, "her")
+      .replace(/\bHIM\b/g, "HER");
+
     return res;
   } else {
     let res = text;
-    // Explicit pronoun & possessive replacements
+    // Explicit Marathi pronoun & possessive replacements
     res = res
       .replace(/\bतिचा\b/g, "त्याचा")
       .replace(/\bतिची\b/g, "त्याची")
@@ -272,10 +290,25 @@ function convertGenderEnding(text: string, gender: GenderMode): string {
       .replace(/\bस्वतःची\b/g, "स्वतःचा")
       .replace(/\bती\b/g, "तो");
 
-    // Dynamic verb endings (ते/तेय -> तो/तोय)
+    // Dynamic Marathi verb endings (ते/तेय -> तो/तोय)
     res = res
       .replace(/(\S+?)तेय(?=[\s\.,!?;]|$)/g, "$1तोय")
       .replace(/(\S+?)ते(?=[\s\.,!?;]|$)/g, "$1तो");
+
+    // English pronoun replacements for Male student (She -> He, Her -> His, Herself -> Himself)
+    res = res
+      .replace(/\bShe's\b/g, "He's")
+      .replace(/\bshe's\b/g, "he's")
+      .replace(/\bSHE'S\b/g, "HE'S")
+      .replace(/\bHerself\b/g, "Himself")
+      .replace(/\bherself\b/g, "himself")
+      .replace(/\bHERSELF\b/g, "HIMSELF")
+      .replace(/\bShe\b/g, "He")
+      .replace(/\bshe\b/g, "he")
+      .replace(/\bSHE\b/g, "HE")
+      .replace(/\bHer\b/g, "His")
+      .replace(/\bher\b/g, "his")
+      .replace(/\bHER\b/g, "HIS");
 
     return res;
   }

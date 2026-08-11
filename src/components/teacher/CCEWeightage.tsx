@@ -283,6 +283,7 @@ export function CCEWeightage({
     try {
       const teacherId = getTeacherId();
       const docKey = teacherId ? `${teacherId}_${selectedClass}_${academicYear}` : `${selectedClass}_${academicYear}`;
+      const generalKey = `${selectedClass}_${academicYear}`;
       const weightageDoc = {
         class: selectedClass,
         academicYear,
@@ -295,9 +296,13 @@ export function CCEWeightage({
 
       try {
         localStorage.setItem(`cce_weightage_cache_${docKey}`, JSON.stringify(data));
+        localStorage.setItem(`cce_weightage_cache_${generalKey}`, JSON.stringify(data));
       } catch (e) { }
 
       await setDoc(doc(db, "cce_weightage_v2", docKey), weightageDoc, { merge: true });
+      if (docKey !== generalKey) {
+        await setDoc(doc(db, "cce_weightage_v2", generalKey), weightageDoc, { merge: true });
+      }
       toast.success("भारांश जतन झाला!");
     } catch (err: any) {
       toast.error("जतन अयशस्वी: " + err.message);
@@ -334,6 +339,7 @@ export function CCEWeightage({
   const saveWeightageDocs = async (updatedData: WeightageData) => {
     const teacherId = getTeacherId();
     const docKey = teacherId ? `${teacherId}_${selectedClass}_${academicYear}` : `${selectedClass}_${academicYear}`;
+    const generalKey = `${selectedClass}_${academicYear}`;
     const docData = {
       class: selectedClass,
       academicYear,
@@ -346,9 +352,13 @@ export function CCEWeightage({
 
     try {
       localStorage.setItem(`cce_weightage_cache_${docKey}`, JSON.stringify(updatedData));
+      localStorage.setItem(`cce_weightage_cache_${generalKey}`, JSON.stringify(updatedData));
     } catch (e) { }
 
     await setDoc(doc(db, "cce_weightage_v2", docKey), docData, { merge: true });
+    if (docKey !== generalKey) {
+      await setDoc(doc(db, "cce_weightage_v2", generalKey), docData, { merge: true });
+    }
   };
 
   const duplicateItem = async (item: WeightageItem) => {

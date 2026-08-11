@@ -66,10 +66,37 @@ export function useCCEPdfData(currentClass: string, academicYear: string, medium
         }
 
         // 3. Fetch CCE Weightages
-        const weightageSnap = await getDoc(doc(db, "cce_weightage_v2", `${currentClass}_${academicYear}`));
-        if (weightageSnap.exists()) {
-          setWeightages(weightageSnap.data().data);
+        const weightageDocIds = [
+          teacherId ? `${teacherId}_${currentClass}_${academicYear}` : null,
+          `${currentClass}_${academicYear}`,
+        ].filter(Boolean) as string[];
+
+        let loadedWeightage = null;
+        for (const wId of weightageDocIds) {
+          try {
+            const cached = localStorage.getItem(`cce_weightage_cache_${wId}`);
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              if (parsed && (parsed.semester1 || parsed.semester2 || parsed.data)) {
+                loadedWeightage = parsed.data || parsed;
+                break;
+              }
+            }
+          } catch (e) {}
         }
+        if (!loadedWeightage) {
+          for (const wId of weightageDocIds) {
+            try {
+              const wSnap = await getDoc(doc(db, "cce_weightage_v2", wId));
+              if (wSnap.exists()) {
+                const d = wSnap.data();
+                loadedWeightage = d.data || d;
+                break;
+              }
+            } catch (e) {}
+          }
+        }
+        setWeightages(loadedWeightage);
 
         // 4. Fetch CCE Marks
         const exams = ["test1", "test2", "semester1", "test3", "test4", "semester2"];
