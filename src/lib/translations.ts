@@ -486,7 +486,7 @@ export const DICTIONARY = {
     mdm_item_matki: "मटकी",
     mdm_item_milk: "दूध/दूध पावडर",
     mdm_item_moong: "अख्खा मुग",
-    mdm_item_mugdal: "मूगडाळ",
+    mdm_item_mugdal: "मुगडाळ",
     mdm_item_mustard: "मोहरी",
     mdm_item_oil: "तेल लीटरमध्ये",
     mdm_item_onion_garlic: "कांदा लसूण मसाला",

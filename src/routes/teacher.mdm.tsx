@@ -1823,82 +1823,130 @@ function TeacherMDMPage() {
   const MASTER_RECIPES: MasterRecipe[] = [
     {
       id: "recipe_1",
-      name: "व्हेज पुलाव",
+      name: "व्हेजीटेबल पुलाव",
       nameEn: "Vegetable Pulav",
-      aliases: ["व्हेजिटेबल पुलाव", "Vegetable Pulav", "Veg Pulav"],
+      aliases: ["व्हेजीटेबल पुलाव", "व्हेज पुलाव", "व्हेजिटेबल पुलाव", "Vegetable Pulav", "Veg Pulav"],
       defaultIngredients: {
         Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
         Vegetables: true, "Onion Garlic Masala": true
       }
     },
     {
-      id: "recipe_2",
-      name: "चना पुलाव",
-      nameEn: "Chana Pulav",
-      aliases: ["चणा/हरभरा पुलाव", "चना/हरभरा पुलाव", "Chana Pulav", "Chana Pulav"],
-      defaultIngredients: {
-        Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
-        Gram: true, "Onion Garlic Masala": true, "Garam Masala": true
-      }
-    },
-    {
-      id: "recipe_3",
-      name: "मूग शेवगा वरण भात",
-      nameEn: "Moong Drumstick Dal Rice",
-      aliases: ["मूग/तूर शेवग्याचे वरण आणि भात", "Mug Shevaga Varan Bhat", "वरण भात"],
-      defaultIngredients: {
-        Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
-        Moong: true, Turdal: true
-      }
-    },
-    {
-      id: "recipe_4",
-      name: "चवळी खिचडी",
-      nameEn: "Cowpea Khichdi",
-      aliases: ["चवळी खिचडी", "Cowpea Khichadi"],
-      defaultIngredients: {
-        Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
-        Cowpea: true, "Onion Garlic Masala": true
-      }
-    },
-    {
-      id: "recipe_5",
-      name: "मटकी उसळ भात",
-      nameEn: "Matki Usal Rice",
-      aliases: ["मोड आलेल्या मटकीची उसळ व साधा शिजवलेला भात", "Sprouted Matki Usal", "मटकी उसळ"],
-      defaultIngredients: {
-        Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
-        Matki: true, "Onion Garlic Masala": true
-      }
-    },
-    {
       id: "recipe_6",
       name: "मसाले भात",
       nameEn: "Spiced Rice",
-      aliases: ["मसाले भात", "Masala Rice"],
+      aliases: ["मसाले भात", "Masala Rice", "मसाला भात"],
       defaultIngredients: {
         Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
         "Onion Garlic Masala": true, "Garam Masala": true
       }
     },
     {
-      id: "recipe_7",
-      name: "मूग डाळ खिचडी",
-      nameEn: "Moong Dal Khichdi",
-      aliases: ["मूग-डाळ खिचडी", "Mungdal Khichadi", "मूग डाळ खिचडी"],
-      defaultIngredients: {
-        Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
-        Mugdal: true
-      }
-    },
-    {
       id: "recipe_8",
-      name: "वाटाणा पुलाव",
+      name: "मटार पुलाव",
       nameEn: "Peas Pulav",
-      aliases: ["मटार/वाटाणा पुलाव", "Matar Pulav", "वाटाणा पुलाव"],
+      aliases: ["मटार पुलाव", "मटार/वाटाणा पुलाव", "Matar Pulav", "वाटाणा पुलाव"],
       defaultIngredients: {
         Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
         Pease: true, "Onion Garlic Masala": true
+      }
+    },
+    {
+      id: "recipe_7",
+      name: "मुगडाळ खिचडी",
+      nameEn: "Moong Dal Khichdi",
+      aliases: ["मुगडाळ खिचडी", "मूग डाळ खिचडी", "मूग-डाळ खिचडी", "डाळ खिचडी", "Mungdal Khichadi", "Moong Dal Khichdi"],
+      defaultIngredients: {
+        Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
+        Mugdal: true, "Onion Garlic Masala": true
+      }
+    },
+    {
+      id: "recipe_4",
+      name: "चवळी खिचडी",
+      nameEn: "Cowpea Khichdi",
+      aliases: ["चवळी खिचडी", "चवळी उसळ व भात", "Cowpea Khichadi"],
+      defaultIngredients: {
+        Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
+        Cowpea: true, "Onion Garlic Masala": true
+      }
+    },
+    {
+      id: "recipe_2",
+      name: "चणा पुलाव",
+      nameEn: "Chana Pulav",
+      aliases: ["चणा पुलाव", "चणा/हरभरा पुलाव", "चना पुलाव", "Chana Pulav"],
+      defaultIngredients: {
+        Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
+        Gram: true, "Onion Garlic Masala": true, "Garam Masala": true
+      }
+    },
+    {
+      id: "recipe_10",
+      name: "सोयाबीन पुलाव",
+      nameEn: "Soyabean Pulav",
+      aliases: ["सोयाबीन पुलाव", "सोयाबीन भात", "Soyabean Rice", "Soyabin Pulav"],
+      defaultIngredients: {
+        Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
+        "Soyabean Wadi": true, "Onion Garlic Masala": true
+      }
+    },
+    {
+      id: "recipe_15",
+      name: "मसूरी पुलाव",
+      nameEn: "Masuri Pulav",
+      aliases: ["मसूरी पुलाव", "मसुरी पुलाव", "Masuri Pulav", "Masoor Pulav"],
+      defaultIngredients: {
+        Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
+        Masurdal: true, "Onion Garlic Masala": true, "Garam Masala": true
+      }
+    },
+    {
+      id: "recipe_3",
+      name: "मूग शेवगा वरण भात",
+      nameEn: "Moong Drumstick Dal Rice",
+      aliases: ["मूग शेवगा वरण भात", "मूग/तूर शेवग्याचे वरण आणि भात", "Mug Shevaga Varan Bhat"],
+      defaultIngredients: {
+        Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
+        Moong: true, Turdal: true
+      }
+    },
+    {
+      id: "recipe_5",
+      name: "मोड आलेल्या मटकीचे उसळ",
+      nameEn: "Sprouted Matki Usal",
+      aliases: ["मोड आलेल्या मटकीचे उसळ", "मोड आलेल्या मटकीची उसळ व साधा शिजवलेला भात", "मटकी उसळ भात", "Sprouted Matki Usal", "मटकी उसळ", "मूग उसळ व भात", "मूग उसळ भात", "Moong Usal & Rice (Sprouts & Rice)"],
+      defaultIngredients: {
+        Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
+        Matki: true, "Onion Garlic Masala": true
+      }
+    },
+    {
+      id: "recipe_egg",
+      name: "अंडा पुलाव",
+      nameEn: "Egg Pulav",
+      aliases: ["अंडा पुलाव", "अंडी पुलाव", "Egg Pulav"],
+      defaultIngredients: {
+        Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
+        "Onion Garlic Masala": true, "Garam Masala": true
+      }
+    },
+    {
+      id: "recipe_11",
+      name: "गोड खिचडी",
+      nameEn: "Sweet Khichdi",
+      aliases: ["गोड खिचडी", "गोड लापशी", "Sweet Lapshi", "Sweet Khichadi", "गोड लापशी / खीर", "गोड लापशी व खीर", "Sweet Lapshi / Kheer"],
+      defaultIngredients: {
+        Rice: true, "Sugar-Jaggery": true, "Milk-Milk Powder": true
+      }
+    },
+    {
+      id: "recipe_13",
+      name: "नाचणी सत्व",
+      nameEn: "Nachni Satva",
+      aliases: ["नाचणी सत्व", "नाचणीची पेज", "Ragi Porridge", "ragi porridge"],
+      defaultIngredients: {
+        "Ragi Satva": true, "Sugar-Jaggery": true, "Milk-Milk Powder": true
       }
     },
     {
@@ -1912,50 +1960,12 @@ function TeacherMDMPage() {
       }
     },
     {
-      id: "recipe_10",
-      name: "सोयाबीन भात",
-      nameEn: "Soyabean Rice",
-      aliases: ["सोयाबीन भात", "Soyabin Pulav"],
-      defaultIngredients: {
-        Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
-        "Soyabean Wadi": true, "Onion Garlic Masala": true
-      }
-    },
-    {
-      id: "recipe_15",
-      name: "मसुरी पुलाव",
-      nameEn: "Masuri Pulav",
-      aliases: ["मसुरी पुलाव", "मसूरी पुलाव", "Masuri Pulav", "Masoor Pulav"],
-      defaultIngredients: {
-        Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
-        Masurdal: true, "Onion Garlic Masala": true, "Garam Masala": true
-      }
-    },
-    {
-      id: "recipe_11",
-      name: "गोड लापशी",
-      nameEn: "Sweet Lapshi",
-      aliases: ["गोड लापशी", "Sweet Khichadi"],
-      defaultIngredients: {
-        Rice: true, "Sugar-Jaggery": true, "Milk-Milk Powder": true
-      }
-    },
-    {
       id: "recipe_12",
       name: "तांदळाची खीर",
       nameEn: "Rice Kheer",
       aliases: ["तांदळाची खीर", "Rice pudding"],
       defaultIngredients: {
         Rice: true, "Sugar-Jaggery": true, "Milk-Milk Powder": true
-      }
-    },
-    {
-      id: "recipe_13",
-      name: "नाचणी सत्व",
-      nameEn: "Ragi Porridge",
-      aliases: ["नाचणी सत्व", "ragi porridge"],
-      defaultIngredients: {
-        "Ragi Satva": true, "Sugar-Jaggery": true, "Milk-Milk Powder": true
       }
     },
     {
@@ -1974,12 +1984,11 @@ function TeacherMDMPage() {
     const byId = MASTER_RECIPES.find((r) => r.id === raw);
     if (byId) return byId;
     const cleaned = raw.trim().toLowerCase();
-    return MASTER_RECIPES.find(
-      (r) =>
-        r.name.toLowerCase() === cleaned ||
-        r.nameEn.toLowerCase() === cleaned ||
-        r.aliases.some((a) => a.toLowerCase() === cleaned)
+    const exactNameMatch = MASTER_RECIPES.find(
+      (r) => r.name.toLowerCase() === cleaned || r.nameEn.toLowerCase() === cleaned
     );
+    if (exactNameMatch) return exactNameMatch;
+    return MASTER_RECIPES.find((r) => r.aliases.some((a) => a.toLowerCase() === cleaned));
   };
 
   const getRecipeName = (raw: string | undefined | null): string => {
@@ -2135,7 +2144,16 @@ function TeacherMDMPage() {
       }
     }
 
-    // 1. Check Monthly Calendar active state (calEntries) if active month & year match
+    // 1. Check if saved in explicit daily register record for this date
+    const savedRecord = registerRecords ? (registerRecords[normalizedDateStr] || registerRecords[dateStr]) : undefined;
+    if (savedRecord) {
+      const classRecord = savedRecord[classStr] || (classStr === "1 To 5" ? savedRecord : null);
+      if (classRecord && classRecord.menu && classRecord.menu !== "No Menu Available" && classRecord.menu !== "Select Menu" && classRecord.menu !== "— Select recipe —") {
+        return classRecord.menu;
+      }
+    }
+
+    // 2. Check Monthly Calendar active state (calEntries) if active month & year match
     if (mNum && yStr && calYear === parseInt(yStr, 10) && calMonth === mNum) {
       const activeCalEntry = calEntries?.[normalizedDateStr] || calEntries?.[dateStr];
       if (
@@ -2149,7 +2167,7 @@ function TeacherMDMPage() {
       }
     }
 
-    // 2. Check Monthly Calendar Saved Records (monthlyCalendarRecords)
+    // 3. Check Monthly Calendar Saved Records (monthlyCalendarRecords)
     if (mNum && yStr && monthlyCalendarRecords) {
       const keysToTry = [
         `${yStr}_${mNum}_${calSectionKey}`,
@@ -2174,15 +2192,6 @@ function TeacherMDMPage() {
             return entry.menu;
           }
         }
-      }
-    }
-
-    // 3. Check if saved in daily register record
-    const savedRecord = registerRecords ? (registerRecords[normalizedDateStr] || registerRecords[dateStr]) : undefined;
-    if (savedRecord) {
-      const classRecord = savedRecord[classStr] || (classStr === "1 To 5" ? savedRecord : null);
-      if (classRecord && classRecord.menu && classRecord.menu !== "No Menu Available" && classRecord.menu !== "Select Menu") {
-        return classRecord.menu;
       }
     }
 
@@ -10165,7 +10174,7 @@ function TeacherMDMPage() {
                                 </p>
                               </div>
 
-                              <table className="w-full border-collapse text-black text-xs text-center table-fixed">
+                              <div className="w-full overflow-x-auto"><table className="min-w-[1350px] w-full border-collapse text-black text-xs text-center border border-black">
                                 <thead>
                                   <tr className="bg-slate-50 font-bold">
                                     <th className="border-b border-r border-black p-1 w-[6%]">
@@ -10422,6 +10431,7 @@ function TeacherMDMPage() {
                                   })()}
                                 </tbody>
                               </table>
+                              </div>
 
                               {/* Certificate */}
                               <div className="p-6 text-black border-t border-black print:border-t-2">
@@ -13227,9 +13237,57 @@ function TeacherMDMPage() {
                           <button
                             type="button"
                             onClick={() => setSelectedReportCategory("masik_goshwara")}
-                            className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-xl shadow-sm transition-all cursor-pointer active:scale-95"
+                            className={`px-3 py-1.5 font-extrabold text-xs rounded-xl shadow-sm transition-all cursor-pointer active:scale-95 border ${
+                              selectedReportCategory === "masik_goshwara"
+                                ? "bg-blue-600 text-white border-blue-700"
+                                : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+                            }`}
                           >
-                            मासिक ताळमेळ अहवाल (प्रपत्र ब)
+                            मासिक प्रमाणपत्र / ताळमेळ (प्रपत्र ब)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedReportCategory("tandul_bhag1")}
+                            className={`px-3 py-1.5 font-extrabold text-xs rounded-xl shadow-sm transition-all cursor-pointer active:scale-95 border ${
+                              selectedReportCategory === "tandul_bhag1"
+                                ? "bg-blue-600 text-white border-blue-700"
+                                : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+                            }`}
+                          >
+                            तांदूळ नोंदवही (भाग १)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedReportCategory("dhanyadi_bhag2")}
+                            className={`px-3 py-1.5 font-extrabold text-xs rounded-xl shadow-sm transition-all cursor-pointer active:scale-95 border ${
+                              selectedReportCategory === "dhanyadi_bhag2"
+                                ? "bg-blue-600 text-white border-blue-700"
+                                : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+                            }`}
+                          >
+                            धान्यादी माल नोंदवही (भाग २)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedReportCategory("anudan_report")}
+                            className={`px-3 py-1.5 font-extrabold text-xs rounded-xl shadow-sm transition-all cursor-pointer active:scale-95 border ${
+                              selectedReportCategory === "anudan_report"
+                                ? "bg-blue-600 text-white border-blue-700"
+                                : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+                            }`}
+                          >
+                            अनुदान अहवाल
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedReportCategory("purak_ahar_report")}
+                            className={`px-3 py-1.5 font-extrabold text-xs rounded-xl shadow-sm transition-all cursor-pointer active:scale-95 border ${
+                              selectedReportCategory === "purak_ahar_report"
+                                ? "bg-blue-600 text-white border-blue-700"
+                                : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+                            }`}
+                          >
+                            पूरक आहार (अंडी/केळी)
                           </button>
                           <button
                             type="button"
