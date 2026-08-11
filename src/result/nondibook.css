@@ -1,0 +1,161 @@
+.nonditable {
+  table-layout: fixed; /* Makes all columns equal width */
+  width: 100%; /* Ensures the table takes up the full container width */
+}
+
+.nonditable th, td {
+  width: 100px; /* Example: Sets each column to 100px wide */
+  text-align: center; /* Center-aligns text within cells (optional) */
+}
+
+/* Optional: Adjust for better visual appearance */
+.nonditable th, td {
+  padding: 10px; 
+  border: 1px solid #000;
+
+}
+
+.nonditable thead th {
+  height: 95px;
+  line-height: 95%;
+  padding: 0; /* or a small value, e.g., 2px 4px */
+  background-color: #54a4fa; /* blue color */
+  color: #0c0101; /* white text color */
+  font-weight: 800; /* make the text bold */
+}
+
+
+ /* 
+  <table style={{ width: "100%", borderCollapse: "collapse", fontFamily: "Arial, sans-serif" }}>
+  <thead>
+    <tr style={{ color: "black", textAlign: "center" }}>
+      <th style={{ padding: "2px", border: "1px solid #ddd", fontSize: "16px" }}>First Semester</th>
+      <th style={{ padding: "2px", border: "1px solid #ddd", fontSize: "16px" }}>Second Semester</th>
+    </tr>
+  </thead>
+ 
+ <tbody>
+    <tr style={{ color: "black", textAlign: "center" }}>
+      <th colSpan="2" style={{ padding: "2px", border: "1px solid #ddd", fontSize: "16px" }}>Special Progress</th>
+    </tr>
+    <tr style={{ backgroundColor: "#ffffff" }}>
+      <td style={{ width: "50%", padding: "2px", border: "1px solid #ddd", verticalAlign: "top" }}>
+        <textarea
+          id="special-progress"
+          style={{
+            width: "100%",
+            padding: "10px",
+            borderRadius: "4px",
+            border: "1px solid #ccc",
+            boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)",
+            resize: "none",
+            fontSize: "14px",
+            height: "100px"
+          }}
+          value={selectedStudentResults?.nondi?.firstSemester?.specialEntries || "No data available"}
+          readOnly
+        />
+      </td>
+      <td style={{ width: "50%", padding: "2px", border: "1px solid #ddd", verticalAlign: "top" }}>
+        <textarea
+          id="special-progress"
+          style={{
+            width: "100%",
+            padding: "10px",
+            borderRadius: "4px",
+            border: "1px solid #ccc",
+            boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)",
+            resize: "none",
+            fontSize: "14px",
+            height: "100px"
+          }}
+          value={selectedStudentResults?.nondi?.secondSemester?.specialEntries || "No data available"}
+          readOnly
+        />
+      </td>
+    </tr>
+    <tr style={{ color: "black", textAlign: "center" }}>
+      <th colSpan="2" style={{ padding: "2px", border: "1px solid #ddd", fontSize: "16px" }}>{language === "English" ? "Hobbies" : "छंद"}</th>
+    </tr>
+    <tr style={{ backgroundColor: "#ffffff" }}>
+      <td style={{ width: "50%", padding: "2px", border: "1px solid #ddd", verticalAlign: "top" }}>
+        <textarea
+          id="hobbies"
+          style={{
+            width: "100%",
+            padding: "10px",
+            borderRadius: "4px",
+            border: "1px solid #ccc",
+            boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)",
+            resize: "none",
+            fontSize: "14px",
+            height: "100px"
+          }}
+          value={selectedStudentResults?.nondi?.firstSemester?.interestsAndHobbies || "No data available"}
+          readOnly
+        />
+      </td>
+      <td style={{ width: "50%", padding: "2px", border: "1px solid #ddd", verticalAlign: "top" }}>
+        <textarea
+          id="hobbies"
+          style={{
+            width: "100%",
+            padding: "10px",
+            borderRadius: "4px",
+            border: "1px solid #ccc",
+            boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)",
+            resize: "none",
+            fontSize: "14px",
+            height: "100px"
+          }}
+          value={selectedStudentResults?.nondi?.secondSemester?.interestsAndHobbies || "No data available"}
+          readOnly
+        />
+      </td>
+    </tr>
+    <tr style={{ color: "black", textAlign: "center" }}>
+      <th colSpan="2" style={{ padding: "2px", border: "1px solid #ddd", fontSize: "16px" }}>{language === "English" ? "Required Improvements" : "आवश्यक सुधारणा"}</th>
+    </tr>
+    <tr style={{ backgroundColor: "#ffffff" }}>
+      <td style={{ width: "50%", padding: "2px", border: "1px solid #ddd", verticalAlign: "top" }}>
+        <textarea
+          id="required-improvements"
+          style={{
+            width: "100%",
+            padding: "10px",
+            borderRadius: "4px",
+            border: "1px solid #ccc",
+            boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)",
+            resize: "none",
+            fontSize: "14px",
+            height: "100px"
+          }}
+          value={selectedStudentResults?.nondi?.firstSemester?.necessaryCorrections || "No data available"}
+          readOnly
+        />
+      </td>
+      <td style={{ width: "50%", padding: "2px", border: "1px solid #ddd", verticalAlign: "top" }}>
+        <textarea
+          id="required-improvements"
+          style={{
+            width: "100%",
+            padding: "10px",
+            borderRadius: "4px",
+            border: "1px solid #ccc",
+            boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)",
+            resize: "none",
+            fontSize: "14px",
+            height: "100px"
+          }}
+          value={selectedStudentResults?.nondi?.secondSemester?.necessaryCorrections || "No data available"}
+          readOnly
+        />
+      </td>
+    </tr>
+
+
+  
+
+
+  </tbody>
+</table> */
