@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from '@tanstack/react-router'
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
+import { ModulePaywall } from "@/components/teacher/ModulePaywall";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { ArrowLeft, Languages, Eye, School, CheckCircle2, ChevronRight, Upload, Trash2, FileText, Edit, MapPin, User, Building2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -5195,6 +5196,7 @@ function TeacherSqafPage() {
       </div>
 
       <main className={`${(activeStandardDetails !== null || view === "certificate") ? "" : "lg:pl-0 pt-16"} min-h-screen transition-all duration-300`}>
+        <ModulePaywall moduleId="sqaf-register" defaultTitle="शालेय गुणवत्ता आश्वासन व प्रमाणीकरण (SQAAF)">
         {activeStandardDetails === null && (
           <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
             <div className="absolute top-24 left-1/4 size-[500px] bg-amber-200/10 rounded-full blur-[100px] animate-pulse" />
@@ -6072,6 +6074,7 @@ function TeacherSqafPage() {
             )}
           </AnimatePresence>
         </div>
+        </ModulePaywall>
       </main>
     </div>
   );

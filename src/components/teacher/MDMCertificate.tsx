@@ -31,6 +31,10 @@ export interface MDMCertificateProps {
   primaryStateGrant?: number;
   upperCenterGrant?: number;
   upperStateGrant?: number;
+  primaryKendraShare?: string;
+  primaryRajyaShare?: string;
+  upperKendraShare?: string;
+  upperRajyaShare?: string;
   totalGrantAll?: number;
   vegUsageKg?: number;
 }
@@ -82,6 +86,10 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
   primaryStateGrant = 0,
   upperCenterGrant = 0,
   upperStateGrant = 0,
+  primaryKendraShare = "1.56",
+  primaryRajyaShare = "1.03",
+  upperKendraShare = "2.32",
+  upperRajyaShare = "1.56",
   totalGrantAll = 0,
   vegUsageKg,
 }) => {
@@ -184,7 +192,7 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
                     <td className="border border-black p-1 font-bold" style={{ border: '1px solid #000000' }} rowSpan={2}>{certBeneficiaryPrimary || toMarathiNumbers(primaryBeneficiarySum.toString())}</td>
                     <td className="border border-black p-1 font-bold" style={{ border: '1px solid #000000' }} rowSpan={2}>{certPrimaryCookedDays || toMarathiNumbers(primaryCookedDays.toString())}</td>
                     <td className="border border-black p-1 font-medium" style={{ border: '1px solid #000000' }}>केंद्र</td>
-                    <td className="border border-black p-1" style={{ border: '1px solid #000000' }}>{toMarathiNumbers("४.०७")}</td>
+                    <td className="border border-black p-1" style={{ border: '1px solid #000000' }}>{toMarathiNumbers(primaryKendraShare)}</td>
                     <td className="border border-black p-1 font-semibold" style={{ border: '1px solid #000000' }}>{toMarathiNumbers(primaryCenterGrant.toFixed(2))}</td>
                     <td className="border border-black p-1 font-bold" style={{ border: '1px solid #000000' }} rowSpan={2}>{toMarathiNumbers(helperCount.toString())}</td>
                     <td className="border border-black p-1 font-medium" style={{ border: '1px solid #000000' }}>केंद्र - {toMarathiNumbers(helperCenterPay.toFixed(2))}</td>
@@ -192,7 +200,7 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
                   </tr>
                   <tr>
                     <td className="border border-black p-1 font-medium" style={{ border: '1px solid #000000' }}>राज्य</td>
-                    <td className="border border-black p-1" style={{ border: '1px solid #000000' }}>{toMarathiNumbers("२.७१")}</td>
+                    <td className="border border-black p-1" style={{ border: '1px solid #000000' }}>{toMarathiNumbers(primaryRajyaShare)}</td>
                     <td className="border border-black p-1 font-semibold" style={{ border: '1px solid #000000' }}>{toMarathiNumbers(primaryStateGrant.toFixed(2))}</td>
                     <td className="border border-black p-1 font-medium" style={{ border: '1px solid #000000' }}>राज्य - {toMarathiNumbers(helperStatePay.toFixed(2))}</td>
                   </tr>
@@ -208,7 +216,7 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
                     <td className="border border-black p-1 font-bold" style={{ border: '1px solid #000000' }} rowSpan={2}>{certBeneficiaryUpper || toMarathiNumbers(upperBeneficiarySum.toString())}</td>
                     <td className="border border-black p-1 font-bold" style={{ border: '1px solid #000000' }} rowSpan={2}>{certUpperCookedDays || toMarathiNumbers(upperCookedDays.toString())}</td>
                     <td className="border border-black p-1 font-medium" style={{ border: '1px solid #000000' }}>केंद्र</td>
-                    <td className="border border-black p-1" style={{ border: '1px solid #000000' }}>{toMarathiNumbers("६.१०")}</td>
+                    <td className="border border-black p-1" style={{ border: '1px solid #000000' }}>{toMarathiNumbers(upperKendraShare)}</td>
                     <td className="border border-black p-1 font-semibold" style={{ border: '1px solid #000000' }}>{toMarathiNumbers(upperCenterGrant.toFixed(2))}</td>
                     <td className="border border-black p-1 font-bold" style={{ border: '1px solid #000000' }} rowSpan={2}>{toMarathiNumbers(helperCount.toString())}</td>
                     <td className="border border-black p-1 font-medium" style={{ border: '1px solid #000000' }}>केंद्र - {toMarathiNumbers(helperCenterPay.toFixed(2))}</td>
@@ -216,7 +224,7 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
                   </tr>
                   <tr>
                     <td className="border border-black p-1 font-medium" style={{ border: '1px solid #000000' }}>राज्य</td>
-                    <td className="border border-black p-1" style={{ border: '1px solid #000000' }}>{toMarathiNumbers("४.०७")}</td>
+                    <td className="border border-black p-1" style={{ border: '1px solid #000000' }}>{toMarathiNumbers(upperRajyaShare)}</td>
                     <td className="border border-black p-1 font-semibold" style={{ border: '1px solid #000000' }}>{toMarathiNumbers(upperStateGrant.toFixed(2))}</td>
                     <td className="border border-black p-1 font-medium" style={{ border: '1px solid #000000' }}>राज्य - {toMarathiNumbers(helperStatePay.toFixed(2))}</td>
                   </tr>

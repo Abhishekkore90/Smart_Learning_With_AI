@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
+import { ModulePaywall } from "@/components/teacher/ModulePaywall";
 // @ts-ignore
 import { matchStudentClassAndMedium } from "@/result/firestoreMarksHelper";
 // @ts-ignore
@@ -968,11 +969,13 @@ function TeacherResultsPage() {
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <CCEPdfCreation 
-                selectedClass={selectedClass} 
-                academicYear={academicYear} 
-                onBack={() => navigate({ to: "/teacher/result", search: { tab: "dashboard" } as any })}
-              />
+              <ModulePaywall moduleId="cce-result" defaultTitle="सातत्यपूर्ण सर्वंकष मूल्यांकन नोंदवही (CCE Result Evaluation)">
+                <CCEPdfCreation 
+                  selectedClass={selectedClass} 
+                  academicYear={academicYear} 
+                  onBack={() => navigate({ to: "/teacher/result", search: { tab: "dashboard" } as any })}
+                />
+              </ModulePaywall>
             </motion.div>
           )}
 
