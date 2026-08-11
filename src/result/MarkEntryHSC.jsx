@@ -278,11 +278,7 @@ const fetchStudentData = async () => {
     setDivision(""); // Reset division when class changes
   
     if (selectedClass) {
-      try {
-        await fetchDivisionsForClass(selectedClass);
-      } catch (err) {
-        console.error("Error fetching divisions:", err);
-      }
+      await fetchDivisionsForClass(selectedClass);
     }
   };
 
@@ -477,26 +473,18 @@ useEffect(() => {
   };
 
   const handleFetchRemark = async (srNo) => {
-    try {
-      const remark = await fetchRemark(srNo);
-      setSpecialEntries(prevState => ({
-        ...prevState,
-        [srNo]: remark
-      }));
-    } catch (err) {
-      console.error("Error fetching remark for srNo:", srNo, err);
-    }
+    const remark = await fetchRemark(srNo);
+    setSpecialEntries(prevState => ({
+      ...prevState,
+      [srNo]: remark
+    }));
   };
   useEffect(() => {
     const fetchRemarks = async () => {
       const remarks = {};
       for (const student of selectedStudents) {
-        try {
-          const remark = await fetchRemark(student.srNo);
-          remarks[student.srNo] = remark;
-        } catch (err) {
-          console.error("Error fetching remark for student:", student.srNo, err);
-        }
+        const remark = await fetchRemark(student.srNo);
+        remarks[student.srNo] = remark;
       }
       setSpecialEntries(remarks);
     };

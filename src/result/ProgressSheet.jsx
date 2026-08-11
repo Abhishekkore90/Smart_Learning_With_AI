@@ -32,10 +32,9 @@ const getGrade = (percentage) => {
   return "इ-2";
 };
 
-const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialSemester = "sem1", onBack }) => {
+const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", onBack }) => {
   const [selectedClass, setSelectedClass] = useState(initialClass || "1st");
   const [academicYear, setAcademicYear] = useState(initialYear || "2025-26");
-  const [selectedSemester, setSelectedSemester] = useState(initialSemester || "sem1");
   const [division, setDivision] = useState("1");
   const [layoutMode, setLayoutMode] = useState("1page"); // "1page" (१ पान Portrait), "2pages" (२ पाने Portrait), "landscape" (आडवे)
   const [showLayoutModal, setShowLayoutModal] = useState(false);
@@ -231,24 +230,16 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
           let recs = null;
 
           // 1. Try local storage cache for instant fresh load for selectedMedium only
-          const currentTeacherId = getTeacherId();
-          const cacheKeys = [
-            currentTeacherId ? `cce_remarks_cache_${currentTeacherId}_${selectedClass}_${academicYear}_${sem}_${selectedMedium}` : null,
-            `cce_remarks_cache_${selectedClass}_${academicYear}_${sem}_${selectedMedium}`
-          ].filter(Boolean);
-
-          for (const cacheKey of cacheKeys) {
-            try {
-              const cached = localStorage.getItem(cacheKey);
-              if (cached) {
-                const parsed = JSON.parse(cached);
-                if (parsed && typeof parsed === "object" && Object.keys(parsed).length > 0) {
-                  recs = parsed;
-                  break;
-                }
+          const cacheKey = `cce_remarks_cache_${selectedClass}_${academicYear}_${sem}_${selectedMedium}`;
+          try {
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              if (parsed && typeof parsed === "object" && Object.keys(parsed).length > 0) {
+                recs = parsed;
               }
-            } catch (e) { }
-          }
+            }
+          } catch (e) { }
 
           // 2. Try Firestore docs for currentTeacherId and selectedMedium strictly
           if (!recs) {

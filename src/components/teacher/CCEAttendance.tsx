@@ -81,6 +81,7 @@ export function CCEAttendance({
 
   // 2. Load daily attendance for selected month
   useEffect(() => {
+    if (!selectedClass || !academicYear || !selectedMonth?.key) return;
     const loadAttendance = async () => {
       setLoading(true);
       try {
@@ -101,6 +102,7 @@ export function CCEAttendance({
 
   // 3. Load monthly attendance summary records for all students
   useEffect(() => {
+    if (!selectedClass || !academicYear) return;
     let isMounted = true;
     try {
       const cached = localStorage.getItem(`cce_monthly_attendance_${selectedClass}_${academicYear}`);
@@ -136,20 +138,32 @@ export function CCEAttendance({
     };
   }, [selectedClass, academicYear]);
 
-  // 4. Load working days
+  // 4. Load working days with real-time sync
   useEffect(() => {
-    const loadWorkingDays = async () => {
-      try {
-        const ref = doc(db, "cce_working_days", `${selectedClass}_${academicYear}`);
-        const snap = await getDoc(ref);
+    if (!selectedClass || !academicYear) return;
+    let isMounted = true;
+    const ref = doc(db, "cce_working_days", `${selectedClass}_${academicYear}`);
+    const unsub = onSnapshot(
+      ref,
+      (snap) => {
+        if (!isMounted) return;
         if (snap.exists() && snap.data().days) {
-          setWorkingDays((prev) => ({ ...prev, ...snap.data().days }));
+          setWorkingDays(snap.data().days);
+        } else {
+          // Check legacy doc fallback
+          getDoc(doc(db, "cce_attendance", `${selectedClass}_${academicYear}_working_days`)).then((legacySnap) => {
+            if (isMounted && legacySnap.exists() && (legacySnap.data().workingDays || legacySnap.data().days)) {
+              setWorkingDays(legacySnap.data().workingDays || legacySnap.data().days);
+            }
+          }).catch(() => {});
         }
-      } catch (err) {
-        console.error("Error loading working days:", err);
-      }
+      },
+      (err) => console.warn("Working days snapshot error:", err)
+    );
+    return () => {
+      isMounted = false;
+      unsub();
     };
-    loadWorkingDays();
   }, [selectedClass, academicYear]);
 
   const saveAttendance = async () => {
@@ -208,6 +222,21 @@ export function CCEAttendance({
         },
         { merge: true }
       );
+
+      // Also set legacy doc for ProgressSheet and report compatibility
+      const legacyRef = doc(db, "cce_attendance", `${selectedClass}_${academicYear}_working_days`);
+      await setDoc(
+        legacyRef,
+        {
+          class: selectedClass,
+          academicYear,
+          workingDays: workingDays,
+          days: workingDays,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+
       toast.success("कामाचे दिवस जतन झाले!");
       setMainView("attendance");
     } catch (err: any) {
@@ -353,7 +382,7 @@ export function CCEAttendance({
           {/* Month-wise 2-column Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 px-6 mt-4">
             {MONTHS.map((month) => {
-              const totalDays = workingDays[month.key] || 0;
+              const totalDays = workingDays[month.key] !== undefined ? workingDays[month.key] : month.days;
               const attended = getMonthAttended(month.key);
               const isEntered = attended > 0;
 
@@ -383,23 +412,28 @@ export function CCEAttendance({
                       type="text"
                       inputMode="numeric"
                       pattern="[0-9]*"
+                      disabled={totalDays === 0}
                       value={attended === 0 ? "" : attended}
                       onChange={(e) => {
+                        if (totalDays === 0) {
+                          setMonthAttended(month.key, 0);
+                          return;
+                        }
                         const raw = e.target.value.replace(/[^0-9]/g, "");
                         const num = raw === "" ? 0 : parseInt(raw, 10) || 0;
                         const val = Math.min(
-                          totalDays || month.days,
+                          totalDays,
                           Math.max(0, num)
                         );
                         setMonthAttended(month.key, val);
                       }}
                       onWheel={(e) => (e.target as HTMLElement).blur()}
                       placeholder="0"
-                      className="flex-1 px-4 py-3 bg-transparent text-slate-900 text-base font-extrabold outline-none w-0"
+                      className={`flex-1 px-4 py-3 bg-transparent text-slate-900 text-base font-extrabold outline-none w-0 ${totalDays === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
                     />
                     <div className="pr-4 py-3 text-slate-400 font-bold text-sm bg-slate-50 border-l border-slate-100 flex items-center gap-1">
                       <span>/</span>
-                      <span className="text-slate-700">{totalDays || month.days}</span>
+                      <span className="text-slate-700">{totalDays}</span>
                       <span className="text-[10px] text-slate-400 font-medium">दिवस</span>
                     </div>
                   </div>
@@ -527,7 +561,7 @@ export function CCEAttendance({
   // ── MONTH EDIT VIEW (Single month modal for all students) ──
   if (selectedMonthForEdit) {
     const month = selectedMonthForEdit;
-    const totalDays = workingDays[month.key] || month.days;
+    const totalDays = workingDays[month.key] !== undefined ? workingDays[month.key] : month.days;
 
     const getAttended = (studentId: string): number => {
       const rec = monthlyAttendance[studentId] || {};
@@ -632,8 +666,13 @@ export function CCEAttendance({
                     type="text"
                     inputMode="numeric"
                     pattern="[0-9]*"
+                    disabled={totalDays === 0}
                     value={attended === 0 ? "" : attended}
                     onChange={(e) => {
+                      if (totalDays === 0) {
+                        setAttended(student.id, 0);
+                        return;
+                      }
                       const raw = e.target.value.replace(/[^0-9]/g, "");
                       const num = raw === "" ? 0 : parseInt(raw, 10) || 0;
                       const val = Math.min(totalDays, Math.max(0, num));
@@ -641,7 +680,7 @@ export function CCEAttendance({
                     }}
                     onWheel={(e) => (e.target as HTMLElement).blur()}
                     placeholder="0"
-                    className="flex-1 w-0 h-full text-center bg-transparent text-slate-900 text-base font-black outline-none"
+                    className={`flex-1 w-0 h-full text-center bg-transparent text-slate-900 text-base font-black outline-none ${totalDays === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
                   />
                   <span className="pr-3 text-slate-400 font-bold text-xs whitespace-nowrap bg-slate-50 border-l border-slate-100 h-full flex items-center">
                     / {totalDays}
@@ -872,7 +911,7 @@ export function CCEAttendance({
                         {month.label}
                       </h4>
                       <p className="text-xs text-slate-400 font-semibold mt-0.5">
-                        कामाचे दिवस: {workingDays[month.key] || month.days}
+                        कामाचे दिवस: {workingDays[month.key] !== undefined ? workingDays[month.key] : month.days}
                       </p>
                     </div>
                   </div>

@@ -241,11 +241,11 @@ const SUBJECT_META: Record<
   },
 };
 
-function convertGenderEnding(text: string, gender: GenderMode): string {
+export function convertGenderEnding(text: string, gender: GenderMode): string {
   if (!text || gender === "none") return text;
   if (gender === "female") {
     let res = text;
-    // Explicit pronoun & possessive replacements
+    // Explicit Marathi pronoun & possessive replacements
     res = res
       .replace(/\bत्याचा\b/g, "तिचा")
       .replace(/\bत्याची\b/g, "तिची")
@@ -255,15 +255,33 @@ function convertGenderEnding(text: string, gender: GenderMode): string {
       .replace(/\bस्वतःचे\b/g, "स्वतःची")
       .replace(/\bतो\b/g, "ती");
 
-    // Dynamic verb endings (तो/तोय -> ते/तेय)
+    // Dynamic Marathi verb endings (तो/तोय -> ते/तेय)
     res = res
       .replace(/(\S+?)तोय(?=[\s\.,!?;]|$)/g, "$1तेय")
       .replace(/(\S+?)तो(?=[\s\.,!?;]|$)/g, "$1ते");
 
+    // English pronoun replacements for Female student (He -> She, His/Him -> Her, Himself -> Herself)
+    res = res
+      .replace(/\bHe's\b/g, "She's")
+      .replace(/\bhe's\b/g, "she's")
+      .replace(/\bHE'S\b/g, "SHE'S")
+      .replace(/\bHimself\b/g, "Herself")
+      .replace(/\bhimself\b/g, "herself")
+      .replace(/\bHIMSELF\b/g, "HERSELF")
+      .replace(/\bHe\b/g, "She")
+      .replace(/\bhe\b/g, "she")
+      .replace(/\bHE\b/g, "SHE")
+      .replace(/\bHis\b/g, "Her")
+      .replace(/\bhis\b/g, "her")
+      .replace(/\bHIS\b/g, "HER")
+      .replace(/\bHim\b/g, "Her")
+      .replace(/\bhim\b/g, "her")
+      .replace(/\bHIM\b/g, "HER");
+
     return res;
   } else {
     let res = text;
-    // Explicit pronoun & possessive replacements
+    // Explicit Marathi pronoun & possessive replacements
     res = res
       .replace(/\bतिचा\b/g, "त्याचा")
       .replace(/\bतिची\b/g, "त्याची")
@@ -272,10 +290,25 @@ function convertGenderEnding(text: string, gender: GenderMode): string {
       .replace(/\bस्वतःची\b/g, "स्वतःचा")
       .replace(/\bती\b/g, "तो");
 
-    // Dynamic verb endings (ते/तेय -> तो/तोय)
+    // Dynamic Marathi verb endings (ते/तेय -> तो/तोय)
     res = res
       .replace(/(\S+?)तेय(?=[\s\.,!?;]|$)/g, "$1तोय")
       .replace(/(\S+?)ते(?=[\s\.,!?;]|$)/g, "$1तो");
+
+    // English pronoun replacements for Male student (She -> He, Her -> His, Herself -> Himself)
+    res = res
+      .replace(/\bShe's\b/g, "He's")
+      .replace(/\bshe's\b/g, "he's")
+      .replace(/\bSHE'S\b/g, "HE'S")
+      .replace(/\bHerself\b/g, "Himself")
+      .replace(/\bherself\b/g, "himself")
+      .replace(/\bHERSELF\b/g, "HIMSELF")
+      .replace(/\bShe\b/g, "He")
+      .replace(/\bshe\b/g, "he")
+      .replace(/\bSHE\b/g, "HE")
+      .replace(/\bHer\b/g, "His")
+      .replace(/\bher\b/g, "his")
+      .replace(/\bHER\b/g, "HIS");
 
     return res;
   }
@@ -503,73 +536,66 @@ export function CCERemarks({
     };
   }, [selectedClass, selectedMedium]);
 
-  // Load remarks for all students (strict teacher isolation with blank initial state)
+  // Load remarks for all students (strict medium isolation with fallback)
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
     setAllRemarks({});
 
-    const teacherId = getTeacherId();
-    const activeDocId = teacherId
-      ? `${teacherId}_${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`
-      : `${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`;
-
-    const cacheKeysToTry = [
-      `cce_remarks_cache_${activeDocId}`,
-      `cce_remarks_cache_${teacherId}_${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`,
-      `cce_remarks_cache_${teacherId}_${selectedClass}_${academicYear}_${activeSemester}`,
-      `cce_remarks_cache_${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`,
-      `cce_remarks_cache_${selectedClass}_${academicYear}_${activeSemester}`,
-      `cce_remarks_${selectedClass}_${academicYear}_${activeSemester}`,
-    ];
-
-    for (const cKey of cacheKeysToTry) {
-      try {
-        const cached = localStorage.getItem(cKey);
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (parsed && typeof parsed === "object" && Object.keys(parsed).length > 0) {
-            setAllRemarks(parsed);
-            break;
-          }
+    try {
+      const cached = localStorage.getItem(
+        `cce_remarks_cache_${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`
+      );
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && typeof parsed === "object") {
+          setAllRemarks(parsed);
         }
-      } catch (e) {}
-    }
+      }
+    } catch (e) {}
 
     const loadAllRemarks = async () => {
       let merged: Record<string, StudentRemarks> = {};
-      const docIdsToTry = [
-        activeDocId,
-        `${teacherId}_${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`,
-        `${teacherId}_${selectedClass}_${academicYear}_${activeSemester}`,
-        `${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`,
-        `${selectedClass}_${academicYear}_${activeSemester}`,
-        `${selectedClass}_${selectedMedium}_${academicYear}_${activeSemester}`,
-      ];
+      const teacherId = getTeacherId();
 
-      for (const dId of docIdsToTry) {
-        try {
-          const sSnap = await getDoc(doc(db, "cce_remarks_v2", dId));
-          if (sSnap.exists()) {
-            const data = sSnap.data();
-            const recs = data.records || data.remarks || data.data || {};
-            if (recs && typeof recs === "object" && Object.keys(recs).length > 0) {
-              Object.entries(recs).forEach(([k, v]) => {
-                if (v && typeof v === "object") {
-                  merged[k] = v as StudentRemarks;
-                }
-              });
-              break;
+      const teacherDocId = `${teacherId}_${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`;
+      const primaryDocId = `${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`;
+      const fallbackDocId = `${selectedClass}_${academicYear}_${activeSemester}_marathi`;
+      const genericDocId = `${selectedClass}_${academicYear}_${activeSemester}`;
+
+      try {
+        let sSnap = teacherId ? await getDoc(doc(db, "cce_remarks_v2", teacherDocId)) : null;
+        if (!sSnap || !sSnap.exists()) {
+          sSnap = await getDoc(doc(db, "cce_remarks_v2", primaryDocId));
+        }
+        if (!sSnap.exists() && selectedMedium === "semi") {
+          sSnap = await getDoc(doc(db, "cce_remarks_v2", fallbackDocId));
+        }
+        if (!sSnap.exists()) {
+          sSnap = await getDoc(doc(db, "cce_remarks_v2", genericDocId));
+        }
+
+        if (sSnap.exists()) {
+          const data = sSnap.data();
+          const recs = data.records || data.remarks || data.data || {};
+          Object.entries(recs).forEach(([k, v]) => {
+            if (v && typeof v === "object") {
+              merged[k] = v as StudentRemarks;
             }
-          }
-        } catch (e) {}
-      }
+          });
+        }
+      } catch (e) {}
 
       if (isMounted) {
         setAllRemarks(merged);
         setLoading(false);
       }
     };
+
+    const teacherId = getTeacherId();
+    const activeDocId = teacherId
+      ? `${teacherId}_${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`
+      : `${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`;
 
     const primaryRef = doc(db, "cce_remarks_v2", activeDocId);
     const unsub = onSnapshot(
@@ -580,7 +606,10 @@ export function CCERemarks({
           const recs = snap.data().records || {};
           setAllRemarks(recs);
           try {
-            localStorage.setItem(`cce_remarks_cache_${activeDocId}`, JSON.stringify(recs));
+            localStorage.setItem(
+              `cce_remarks_cache_${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`,
+              JSON.stringify(recs)
+            );
           } catch (e) {}
         }
         setLoading(false);
@@ -604,14 +633,14 @@ export function CCERemarks({
     if (!allRemarks || typeof allRemarks !== "object") return {};
 
     if (st.id && allRemarks[st.id]) return allRemarks[st.id];
-    if (st.rollNo !== undefined && st.rollNo !== null && allRemarks[st.rollNo]) return allRemarks[st.rollNo];
-    if (st.rollNo !== undefined && st.rollNo !== null && allRemarks[String(st.rollNo)]) return allRemarks[String(st.rollNo)];
+    if (st.rollNo && allRemarks[st.rollNo]) return allRemarks[st.rollNo];
+    if (st.rollNo && allRemarks[String(st.rollNo)]) return allRemarks[String(st.rollNo)];
     if (st.name && allRemarks[st.name]) return allRemarks[st.name];
     if (st.fullName && allRemarks[st.fullName]) return allRemarks[st.fullName];
 
-    const sId = String(st.id || "").toLowerCase();
-    const sName = String(st.fullName || st.name || "").toLowerCase().trim();
-    const sRoll = String(st.rollNo ?? "").trim();
+    const sId = (st.id || "").toLowerCase();
+    const sName = (st.fullName || st.name || "").toLowerCase().trim();
+    const sRoll = (st.rollNo || "").trim();
 
     for (const [k, v] of Object.entries(allRemarks)) {
       const kLower = k.toLowerCase().trim();
@@ -663,7 +692,7 @@ export function CCERemarks({
     setRemarkSearchQuery("");
     
     // Auto-detect gender if available (Female/मुलगी/Girl/F vs Male/मुलगा/Boy/M)
-    const g = String(
+    const g = (
       student.gender ||
       (student as any).sex ||
       (student as any).genderMode ||
@@ -708,54 +737,6 @@ export function CCERemarks({
     setStudentRemarks(formattedRemarks);
   };
 
-  // Re-sync studentRemarks whenever activeSemester or allRemarks changes while editing a student
-  useEffect(() => {
-    if (editingStudent) {
-      const rawRemarks = getStudentRemarksRecord(editingStudent);
-      const g = String(
-        editingStudent.gender ||
-        (editingStudent as any).sex ||
-        (editingStudent as any).genderMode ||
-        ""
-      ).toLowerCase();
-      let detectedGender: GenderMode = "male";
-      if (
-        g.includes("female") ||
-        g.includes("girl") ||
-        g.includes("स्त्री") ||
-        g.includes("मुलगी") ||
-        g === "f"
-      ) {
-        detectedGender = "female";
-      } else if (
-        g.includes("male") ||
-        g.includes("boy") ||
-        g.includes("पुरुष") ||
-        g.includes("मुलगा") ||
-        g === "m"
-      ) {
-        detectedGender = "male";
-      }
-      setGenderMode(detectedGender);
-
-      const formattedRemarks: StudentRemarks = {};
-      Object.keys(rawRemarks || {}).forEach((subKey) => {
-        const val = rawRemarks[subKey];
-        if (Array.isArray(val)) {
-          formattedRemarks[subKey] = val.map((item) =>
-            typeof item === "string" ? convertGenderEnding(item, detectedGender) : item
-          );
-        } else if (typeof val === "string") {
-          formattedRemarks[subKey] = convertGenderEnding(val, detectedGender);
-        } else {
-          formattedRemarks[subKey] = val;
-        }
-      });
-
-      setStudentRemarks(formattedRemarks);
-    }
-  }, [activeSemester, allRemarks]);
-
   const removeRemark = (subKey: string, text: string) => {
     setStudentRemarks((prev) => ({
       ...prev,
@@ -796,14 +777,12 @@ export function CCERemarks({
       ...(editingStudent.rollNo ? { [editingStudent.rollNo]: studentRemarks } : {}),
     };
 
-    const teacherId = getTeacherId();
-    const activeDocId = teacherId
-      ? `${teacherId}_${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`
-      : `${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`;
-
     // 1. Instant Local Cache Update (0ms)
     try {
-      localStorage.setItem(`cce_remarks_cache_${activeDocId}`, JSON.stringify(updated));
+      localStorage.setItem(
+        `cce_remarks_cache_${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`,
+        JSON.stringify(updated)
+      );
     } catch (e) {}
 
     // 2. Instant Local State Update (0ms)
@@ -824,21 +803,31 @@ export function CCERemarks({
 
     // 4. Background Async Firestore Sync (non-blocking)
     try {
-      setDoc(
-        doc(db, "cce_remarks_v2", activeDocId),
-        {
-          class: selectedClass,
-          academicYear,
-          semester: activeSemester,
-          medium: selectedMedium,
-          teacherId,
-          records: updated,
-          updatedAt: new Date().toISOString(),
-        },
-        { merge: true }
-      ).catch((err) => {
-        console.warn("Background Firestore save warning:", err);
-      });
+      const teacherId = getTeacherId();
+      const docIdsToSave = [
+        `${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`,
+      ];
+      if (teacherId) {
+        docIdsToSave.push(`${teacherId}_${selectedClass}_${academicYear}_${activeSemester}_${selectedMedium}`);
+      }
+
+      for (const dId of docIdsToSave) {
+        setDoc(
+          doc(db, "cce_remarks_v2", dId),
+          {
+            class: selectedClass,
+            academicYear,
+            semester: activeSemester,
+            medium: selectedMedium,
+            teacherId,
+            records: updated,
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true }
+        ).catch((err) => {
+          console.warn("Background Firestore save warning:", err);
+        });
+      }
     } catch (err: any) {
       console.warn("Background save failed:", err);
     }

@@ -96,23 +96,78 @@ export function CCEOverallResult({ selectedClass, academicYear, onBack }: { sele
   }, [selectedClass, academicYear]);
 
   useEffect(() => {
-    const loadWeightages = async () => {
+    const currentTeacherId = getTeacherId();
+    const docIds = [
+      currentTeacherId ? `${currentTeacherId}_${selectedClass}_${academicYear}` : null,
+      `${selectedClass}_${academicYear}`,
+    ].filter(Boolean) as string[];
+
+    for (const dId of docIds) {
       try {
-        const snap = await getDoc(doc(db, "cce_weightage_v2", `${selectedClass}_${academicYear}`));
-        if (snap.exists() && snap.data().data) {
-          setWeightages(snap.data().data);
-        } else {
-          setWeightages(null);
+        const cached = localStorage.getItem(`cce_weightage_cache_${dId}`);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed && (parsed.semester1 || parsed.semester2 || parsed.data)) {
+            setWeightages(parsed.data || parsed);
+            break;
+          }
         }
-      } catch {}
+      } catch (e) {}
+    }
+
+    const loadWeightages = async () => {
+      for (const dId of docIds) {
+        try {
+          const snap = await getDoc(doc(db, "cce_weightage_v2", dId));
+          if (snap.exists() && (snap.data().data || snap.data().semester1)) {
+            const fresh = snap.data().data || snap.data();
+            setWeightages(fresh);
+            try {
+              localStorage.setItem(`cce_weightage_cache_${dId}`, JSON.stringify(fresh));
+            } catch (e) {}
+            break;
+          }
+        } catch (e) {}
+      }
     };
     loadWeightages();
   }, [selectedClass, academicYear]);
 
+  const findSubjectWeightage = (subjectsObj: Record<string, any>, subjectName: string) => {
+    if (!subjectsObj) return null;
+    if (subjectsObj[subjectName]) return subjectsObj[subjectName];
+
+    const normTarget = subjectName.toLowerCase().replace(/[^a-z0-9\u0900-\u097F]/g, "");
+    for (const key of Object.keys(subjectsObj)) {
+      const normKey = key.toLowerCase().replace(/[^a-z0-9\u0900-\u097F]/g, "");
+      if (normKey === normTarget || (normKey && normTarget && (normKey.includes(normTarget) || normTarget.includes(normKey)))) {
+        return subjectsObj[key];
+      }
+    }
+    const lower = String(subjectName).toLowerCase().trim();
+    for (const [sKey, sVal] of Object.entries(subjectsObj)) {
+      const sLower = String(sKey).toLowerCase().trim();
+      if (
+        (lower.includes("मराठी") && sLower.includes("मराठी")) ||
+        (lower.includes("इंग्रजी") && sLower.includes("इंग्रजी")) ||
+        (lower.includes("हिंदी") && sLower.includes("हिंदी")) ||
+        (lower.includes("गणित") && sLower.includes("गणित")) ||
+        (lower.includes("कला") && sLower.includes("कला")) ||
+        (lower.includes("कार्यानुभव") && sLower.includes("कार्यानुभव")) ||
+        (lower.includes("शारीरिक") && sLower.includes("शारीरिक")) ||
+        (lower.includes("परिसर") && sLower.includes("परिसर"))
+      ) {
+        return sVal;
+      }
+    }
+    const subKey = getSubjectKey(subjectName);
+    if (subjectsObj[subKey]) return subjectsObj[subKey];
+    return null;
+  };
+
   const getSubjectPercentage = (rollNoStr: string, subjectName: string, examKey: string, record: any) => {
     if (!record) return 0;
     const rollNo = parseInt(rollNoStr);
-    const subKey = getSubjectKey(subjectName);
     const isSem1 = ["test1", "test2", "semester1"].includes(examKey);
     const semesterKey = isSem1 ? "semester1" : "semester2";
 
@@ -128,22 +183,28 @@ export function CCEOverallResult({ selectedClass, academicYear, onBack }: { sele
     let weights = defaultWeights;
 
     if (weightages) {
-      const items = weightages[semesterKey] || [];
-      const assignedItem = items.find((item: any) => item.studentIds?.includes(rollNo));
-      if (assignedItem && assignedItem.subjects && assignedItem.subjects[subKey]) {
-        const sw = assignedItem.subjects[subKey];
-        weights = {
-          tondiKaam: parseInt(sw.tondiKaam) || 0,
-          pratyakshikPrayog: parseInt(sw.pratyakshikPrayog) || 0,
-          upakramKriti: parseInt(sw.upakramKriti) || 0,
-          prakalpa: parseInt(sw.prakalpa) || 0,
-          chaachaniLekhi: parseInt(sw.chaachaniLekhi) || 0,
-          swadhyayVargakarya: parseInt(sw.swadhyayVargakarya) || 0,
-          itar: parseInt(sw.itar) || 0,
-          sankalitTondi: parseInt(sw.sankalitTondi) || 0,
-          sankalitPratyakshik: parseInt(sw.sankalitPratyakshik) || 0,
-          sankalitLekhi: parseInt(sw.sankalitLekhi) || 0,
-        };
+      const items = weightages[semesterKey] || weightages.data?.[semesterKey] || [];
+      let assignedItem = items.find((item: any) =>
+        item.studentIds?.some((id: any) => String(id) === String(rollNoStr) || String(id) === String(rollNo))
+      );
+      if (!assignedItem && items.length > 0) assignedItem = items[0];
+
+      if (assignedItem && assignedItem.subjects) {
+        const sw = findSubjectWeightage(assignedItem.subjects, subjectName);
+        if (sw) {
+          weights = {
+            tondiKaam: parseInt(sw.tondiKaam) || 0,
+            pratyakshikPrayog: parseInt(sw.pratyakshikPrayog) || 0,
+            upakramKriti: parseInt(sw.upakramKriti) || 0,
+            prakalpa: parseInt(sw.prakalpa) || 0,
+            chaachaniLekhi: parseInt(sw.chaachaniLekhi) || 0,
+            swadhyayVargakarya: parseInt(sw.swadhyayVargakarya) || 0,
+            itar: parseInt(sw.itar) || 0,
+            sankalitTondi: parseInt(sw.sankalitTondi) || 0,
+            sankalitPratyakshik: parseInt(sw.sankalitPratyakshik) || 0,
+            sankalitLekhi: parseInt(sw.sankalitLekhi) || 0,
+          };
+        }
       }
     }
 

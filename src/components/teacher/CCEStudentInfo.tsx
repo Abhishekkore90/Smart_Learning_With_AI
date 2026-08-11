@@ -40,8 +40,33 @@ import {
   Eye,
   FileText,
   Sparkles,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
+
+export const RELIGION_OPTIONS = [
+  "हिंदू",
+  "इस्लाम",
+  "मुस्लिम",
+  "शीख",
+  "ख्रिश्चन",
+  "बौद्ध",
+  "जैन",
+  "इतर",
+];
+
+export const CASTE_OPTIONS = [
+  "OPEN (ओपन)",
+  "SC (अनुसूचित जाती)",
+  "ST (अनुसूचित जमाती)",
+  "OBC (इतर मागास वर्ग)",
+  "SBC (विशेष मागास प्रवर्ग)",
+  "VJ (भटक्या जमाती - अ)",
+  "NTB (भटक्या जमाती - ब)",
+  "NTC (भटक्या जमाती - क)",
+  "NTD (भटक्या जमाती - ड)",
+  "OTHER (इतर)",
+];
 
 interface StudentRecord {
   id: string;
@@ -171,6 +196,212 @@ function FloatInput({
             ×
           </button>
         )}
+      </div>
+    </div>
+  );
+}
+
+// Floating label select component for Religion and Caste dropdowns
+function FloatSelect({
+  label,
+  value,
+  onChange,
+  options,
+  placeholder,
+  required,
+  icon: Icon,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: string[];
+  placeholder?: string;
+  required?: boolean;
+  icon?: any;
+}) {
+  const [focused, setFocused] = useState(false);
+  const filled = value !== undefined && value !== null && value.toString().length > 0;
+
+  const allOptions = useMemo(() => {
+    if (value && !options.includes(value)) {
+      return [value, ...options];
+    }
+    return options;
+  }, [value, options]);
+
+  return (
+    <div className="relative mb-4">
+      <label
+        className="absolute left-3.5 transition-all pointer-events-none font-bold z-10 rounded-md px-1.5"
+        style={{
+          top: focused || filled ? "-10px" : "16px",
+          fontSize: focused || filled ? "12px" : "14px",
+          color: focused ? "#2563eb" : filled ? "#1e293b" : "#64748b",
+          background: "white",
+        }}
+      >
+        {label}{required && <span className="text-red-500 ml-0.5">*</span>}
+      </label>
+      <div className="relative flex items-center">
+        {Icon && (
+          <div className="absolute left-4 text-slate-400 pointer-events-none z-10">
+            <Icon className="size-4" />
+          </div>
+        )}
+        <select
+          value={value || ""}
+          onChange={(e) => onChange(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          className={`w-full ${Icon ? "pl-11" : "px-4"} pr-10 py-4 rounded-2xl text-sm font-semibold outline-none transition-all appearance-none cursor-pointer`}
+          style={{
+            background: focused ? "#f8fafc" : "#ffffff",
+            border: `1.5px solid ${focused ? "#3b82f6" : "#cbd5e1"}`,
+            boxShadow: focused ? "0 0 0 4px rgba(59, 130, 246, 0.12)" : "none",
+            color: value ? "#0f172a" : "#94a3b8",
+          }}
+        >
+          <option value="" disabled hidden>
+            {placeholder || "-- निवडा --"}
+          </option>
+          {allOptions.map((opt) => (
+            <option key={opt} value={opt} className="text-slate-900 font-semibold py-1">
+              {opt}
+            </option>
+          ))}
+        </select>
+        <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10">
+          <ChevronDown className="size-4" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Floating label date picker component for Birthdate
+function FloatDatePicker({
+  label,
+  value,
+  onChange,
+  required,
+  icon: Icon = Calendar,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  required?: boolean;
+  icon?: any;
+}) {
+  const [focused, setFocused] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Convert DD/MM/YYYY or DD0MM0YYYY or free text to YYYY-MM-DD for native <input type="date">
+  const toIsoDate = (val: string) => {
+    if (!val) return "";
+    const clean = val.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) return clean;
+
+    const parts = clean.split(/[\/\.-]/);
+    if (parts.length === 3) {
+      if (parts[0].length === 4) return `${parts[0]}-${parts[1].padStart(2, "0")}-${parts[2].padStart(2, "0")}`;
+      if (parts[2].length === 4) return `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+    }
+    if (/^\d{8}$/.test(clean)) {
+      const d = clean.slice(0, 2);
+      const m = clean.slice(2, 4);
+      const y = clean.slice(4, 8);
+      return `${y}-${m}-${d}`;
+    }
+    return "";
+  };
+
+  // Convert YYYY-MM-DD to DD/MM/YYYY for display and storing
+  const toDisplayDate = (isoVal: string) => {
+    if (!isoVal) return "";
+    const parts = isoVal.split("-");
+    if (parts.length === 3 && parts[0].length === 4) {
+      return `${parts[2].padStart(2, "0")}/${parts[1].padStart(2, "0")}/${parts[0]}`;
+    }
+    return isoVal;
+  };
+
+  const isoValue = toIsoDate(value);
+  const displayValue = value
+    ? value.includes("-") && value.split("-")[0].length === 4
+      ? toDisplayDate(value)
+      : value
+    : "";
+  const filled = Boolean(displayValue);
+
+  const handleOpenPicker = () => {
+    if (inputRef.current) {
+      if (typeof inputRef.current.showPicker === "function") {
+        try {
+          inputRef.current.showPicker();
+        } catch (e) {
+          inputRef.current.focus();
+        }
+      } else {
+        inputRef.current.focus();
+      }
+    }
+  };
+
+  return (
+    <div className="relative mb-4 cursor-pointer" onClick={handleOpenPicker}>
+      <label
+        className="absolute left-3.5 transition-all pointer-events-none font-bold z-10 rounded-md px-1.5"
+        style={{
+          top: focused || filled ? "-10px" : "16px",
+          fontSize: focused || filled ? "12px" : "14px",
+          color: focused ? "#2563eb" : filled ? "#1e293b" : "#64748b",
+          background: "white",
+        }}
+      >
+        {label}
+        {required && <span className="text-red-500 ml-0.5">*</span>}
+      </label>
+      <div className="relative flex items-center">
+        {Icon && (
+          <div className="absolute left-4 text-blue-600 pointer-events-none z-10">
+            <Icon className="size-4" />
+          </div>
+        )}
+        <input
+          ref={inputRef}
+          type="date"
+          value={isoValue}
+          onChange={(e) => {
+            const rawIso = e.target.value;
+            if (!rawIso) {
+              onChange("");
+              return;
+            }
+            const formattedDate = toDisplayDate(rawIso);
+            onChange(formattedDate);
+          }}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          className="w-full pl-11 pr-4 py-4 rounded-2xl text-sm font-semibold outline-none transition-all cursor-pointer opacity-0 absolute inset-0 z-20"
+        />
+        <input
+          type="text"
+          readOnly
+          value={displayValue}
+          placeholder="DD/MM/YYYY (कॅलेंडर निवडा)"
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          className={`w-full ${Icon ? "pl-11" : "px-4"} pr-10 py-4 rounded-2xl text-sm font-bold outline-none transition-all cursor-pointer`}
+          style={{
+            background: focused ? "#f8fafc" : "#ffffff",
+            border: `1.5px solid ${focused ? "#3b82f6" : "#cbd5e1"}`,
+            boxShadow: focused ? "0 0 0 4px rgba(59, 130, 246, 0.12)" : "none",
+            color: displayValue ? "#0f172a" : "#94a3b8",
+          }}
+        />
+        <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-blue-600 pointer-events-none z-10">
+          <Calendar className="size-4" />
+        </div>
       </div>
     </div>
   );
@@ -366,6 +597,11 @@ export function CCEStudentInfo({
         rollNo: newRollNo.trim(),
         gender: newGender,
         photoUrl: newPhotoUrl,
+        dob: newDetails.dob || "",
+        birthDate: newDetails.dob || "",
+        religion: newDetails.religion || "",
+        caste: newDetails.caste || "",
+        category: newDetails.caste || "",
         class: selectedClass,
         medium: selectedMedium,
         isSemiEnglish: selectedMedium === "semi",
@@ -381,6 +617,7 @@ export function CCEStudentInfo({
         doc(db, "student_details", docRef.id),
         {
           ...newDetails,
+          birthDate: newDetails.dob || "",
           fatherName: newDetails.fatherName || (newName.trim().split(" ").length > 1 ? newName.trim().split(" ").slice(1).join(" ") : ""),
           updatedAt: new Date().toISOString(),
         },
@@ -422,13 +659,18 @@ export function CCEStudentInfo({
         rollNo: editRollNo.trim(),
         gender: editGender,
         photoUrl: editPhotoUrl,
+        dob: details.dob || "",
+        birthDate: details.dob || "",
+        religion: details.religion || "",
+        caste: details.caste || "",
+        category: details.caste || "",
         medium: selectedMedium,
         isSemiEnglish: selectedMedium === "semi",
       });
 
       await setDoc(
         doc(db, "student_details", selectedStudent.id),
-        { ...details, updatedAt: new Date().toISOString() },
+        { ...details, birthDate: details.dob || "", updatedAt: new Date().toISOString() },
         { merge: true }
       );
 
@@ -456,7 +698,7 @@ export function CCEStudentInfo({
           <CreditCard className="size-4 text-blue-600" /> नोंदणी व ओळख क्रमांक (IDs)
         </h3>
         <FloatInput label="General Register No. (नोंदणी क्रमांक)" value={currentDetails.registrationNo} onChange={(v) => updateFn("registrationNo", v)} icon={Hash} placeholder="उदा. 1042" />
-        <FloatInput label="जन्म तारीख (Birthdate)" value={currentDetails.dob} onChange={(v) => updateFn("dob", v)} placeholder="DD/MM/YYYY" icon={Calendar} />
+        <FloatDatePicker label="जन्म तारीख (Birthdate)" value={currentDetails.dob} onChange={(v) => updateFn("dob", v)} icon={Calendar} />
         <FloatInput label="Student ID (सरल आयडी)" value={currentDetails.studentId} onChange={(v) => updateFn("studentId", v)} icon={CreditCard} placeholder="उदा. 201827..." />
         <FloatInput label="APAR ID (अपार आयडी)" value={currentDetails.aparId} onChange={(v) => updateFn("aparId", v)} icon={Shield} placeholder="उदा. APAAR-890..." />
         <FloatInput label="आधार क्रमांक (Aadhaar No)" value={currentDetails.aadhar} onChange={(v) => updateFn("aadhar", v)} icon={CreditCard} placeholder="उदा. 1234 5678 9012" />
@@ -468,8 +710,20 @@ export function CCEStudentInfo({
           <Activity className="size-4 text-blue-600" /> धर्म, जात, शारीरिक व इतर माहिती
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-          <FloatInput label="धर्म (Religion)" value={currentDetails.religion} onChange={(v) => updateFn("religion", v)} placeholder="उदा. हिंदू" />
-          <FloatInput label="जात / संवर्ग (Caste)" value={currentDetails.caste} onChange={(v) => updateFn("caste", v)} placeholder="उदा. मराठा / OBC" />
+          <FloatSelect
+            label="धर्म (Religion)"
+            value={currentDetails.religion}
+            onChange={(v) => updateFn("religion", v)}
+            options={RELIGION_OPTIONS}
+            placeholder="उदा. हिंदू"
+          />
+          <FloatSelect
+            label="जात / संवर्ग (Caste)"
+            value={currentDetails.caste}
+            onChange={(v) => updateFn("caste", v)}
+            options={CASTE_OPTIONS}
+            placeholder="उदा. मराठा / OBC"
+          />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           <FloatInput label="मातृभाषा (Mother Tongue)" value={currentDetails.motherTongue} onChange={(v) => updateFn("motherTongue", v)} icon={Globe} placeholder="उदा. मराठी" />

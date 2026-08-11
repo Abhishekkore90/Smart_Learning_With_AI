@@ -27,6 +27,7 @@ const MENU_ITEMS = [
 
   { icon: BookOpen, labelKey: "homework", to: "/student/homework" },
   { icon: FileText, labelKey: "results", to: "/student/result" },
+  { icon: BookOpen, labelKey: "teachingRecord", to: "/student/teaching-record" },
   { icon: HelpCircle, labelKey: "questionBank", to: "/student/question-bank" },
   { icon: CalendarIcon, labelKey: "timetable", to: "/student/timetable" },
   { icon: Trophy, labelKey: "achievements", to: "/" },

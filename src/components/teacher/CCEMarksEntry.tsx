@@ -264,27 +264,50 @@ export function CCEMarksEntry({
   useEffect(() => {
     const currentTeacherId = getTeacherId();
     const docIds = [
-      `${currentTeacherId}_${selectedClass}_${academicYear}`,
+      currentTeacherId ? `${currentTeacherId}_${selectedClass}_${academicYear}` : null,
       `${selectedClass}_${academicYear}`,
-    ];
+    ].filter(Boolean) as string[];
 
     let unsub: () => void = () => {};
 
-    const initWeightages = async () => {
-      let loadedDocId = `${selectedClass}_${academicYear}`;
-      for (const dId of docIds) {
-        if (!dId) continue;
-        const snap = await getDoc(doc(db, "cce_weightage_v2", dId));
-        if (snap.exists() && (snap.data().data || snap.data().semester1)) {
-          setWeightages(snap.data().data || snap.data());
-          loadedDocId = dId;
-          break;
+    // Load instantly from localStorage cache for 0ms latency
+    for (const dId of docIds) {
+      try {
+        const cached = localStorage.getItem(`cce_weightage_cache_${dId}`);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed && (parsed.semester1 || parsed.semester2 || parsed.data)) {
+            setWeightages(parsed.data || parsed);
+            break;
+          }
         }
+      } catch (e) {}
+    }
+
+    const initWeightages = async () => {
+      let loadedDocId = docIds[0];
+      for (const dId of docIds) {
+        try {
+          const snap = await getDoc(doc(db, "cce_weightage_v2", dId));
+          if (snap.exists() && (snap.data().data || snap.data().semester1)) {
+            const freshData = snap.data().data || snap.data();
+            setWeightages(freshData);
+            loadedDocId = dId;
+            try {
+              localStorage.setItem(`cce_weightage_cache_${dId}`, JSON.stringify(freshData));
+            } catch (e) {}
+            break;
+          }
+        } catch (e) {}
       }
 
       unsub = onSnapshot(doc(db, "cce_weightage_v2", loadedDocId), (sSnap) => {
         if (sSnap.exists() && (sSnap.data().data || sSnap.data().semester1)) {
-          setWeightages(sSnap.data().data || sSnap.data());
+          const freshData = sSnap.data().data || sSnap.data();
+          setWeightages(freshData);
+          try {
+            localStorage.setItem(`cce_weightage_cache_${loadedDocId}`, JSON.stringify(freshData));
+          } catch (e) {}
         }
       });
     };
@@ -320,16 +343,37 @@ export function CCEMarksEntry({
     const normTarget = subjectName.toLowerCase().replace(/[^a-z0-9\u0900-\u097F]/g, "");
     for (const key of Object.keys(subjectsObj)) {
       const normKey = key.toLowerCase().replace(/[^a-z0-9\u0900-\u097F]/g, "");
-      if (normKey === normTarget || (normKey && normTarget && (normKey.includes(normTarget) || normTarget.includes(normKey)))) {
+      if (normKey === normTarget) return subjectsObj[key];
+    }
+    for (const key of Object.keys(subjectsObj)) {
+      const normKey = key.toLowerCase().replace(/[^a-z0-9\u0900-\u097F]/g, "");
+      if (normKey && normTarget && (normKey.includes(normTarget) || normTarget.includes(normKey))) {
         return subjectsObj[key];
       }
     }
 
-    const keywords = ["मराठी", "इंग्रजी", "हिंदी", "गणित", "विज्ञान", "परिसर", "सामाजिक", "कला", "कार्यानुभव", "शारीरिक"];
-    const targetKw = keywords.find((kw) => subjectName.includes(kw));
-    if (targetKw) {
-      for (const key of Object.keys(subjectsObj)) {
-        if (key.includes(targetKw)) return subjectsObj[key];
+    const lowerTarget = subjectName.toLowerCase().trim();
+    for (const [sKey, sVal] of Object.entries(subjectsObj)) {
+      const sLower = String(sKey).toLowerCase().trim();
+      if (
+        (lowerTarget.includes("मराठी") && sLower.includes("मराठी")) ||
+        (lowerTarget.includes("इंग्रजी") && sLower.includes("इंग्रजी")) ||
+        (lowerTarget.includes("english") && sLower.includes("english")) ||
+        (lowerTarget.includes("हिंदी") && sLower.includes("हिंदी")) ||
+        (lowerTarget.includes("hindi") && sLower.includes("hindi")) ||
+        (lowerTarget.includes("गणित") && sLower.includes("गणित")) ||
+        (lowerTarget.includes("math") && sLower.includes("math")) ||
+        (lowerTarget.includes("परिसर १") && sLower.includes("परिसर १")) ||
+        (lowerTarget.includes("परिसर २") && sLower.includes("परिसर २")) ||
+        (lowerTarget.includes("परिसर") && sLower.includes("परिसर") && !lowerTarget.includes("१") && !lowerTarget.includes("२") && !sLower.includes("१") && !sLower.includes("२")) ||
+        (lowerTarget.includes("विज्ञान") && sLower.includes("विज्ञान")) ||
+        (lowerTarget.includes("इतिहास") && sLower.includes("इतिहास")) ||
+        (lowerTarget.includes("भूगोल") && sLower.includes("भूगोल")) ||
+        (lowerTarget.includes("कला") && sLower.includes("कला")) ||
+        (lowerTarget.includes("कार्यानुभव") && sLower.includes("कार्यानुभव")) ||
+        (lowerTarget.includes("शारीरिक") && sLower.includes("शारीरिक"))
+      ) {
+        return sVal;
       }
     }
 
@@ -381,7 +425,7 @@ export function CCEMarksEntry({
     }));
   };
 
-  const getActiveColsForStudent = (rollNoStr: string, subjectName: string) => {
+  const getActiveColsForStudent = (rollNoStr: string, subjectName: string, studentId?: string) => {
     const rollNo = parseInt(rollNoStr);
     const isPracticalSub =
       subjectName.includes("कला") ||
@@ -408,7 +452,13 @@ export function CCEMarksEntry({
 
     const semesterKey = activeSemester === "sem1" ? "semester1" : "semester2";
     const items = weightages[semesterKey] || weightages.data?.[semesterKey] || [];
-    let assignedItem = items.find((item: any) => item.studentIds?.includes(rollNo));
+    let assignedItem = items.find((item: any) =>
+      item.studentIds?.some((id: any) =>
+        String(id) === String(rollNoStr) ||
+        String(id) === String(rollNo) ||
+        (studentId && String(id) === String(studentId))
+      )
+    );
 
     if (!assignedItem && items.length > 0) {
       assignedItem = items[0];

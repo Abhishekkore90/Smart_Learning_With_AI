@@ -47,8 +47,8 @@ export async function uploadFileWithProgress(
     import.meta.env.VITE_BUNNY_STORAGE_CDN_HOSTNAME || "vz-7a00d099-4a8.b-cdn.net"
   ).replace(/^https?:\/\//, "").replace(/\/$/, "");
 
-  // Attempt Bunny Storage upload if API key is provided
-  if (storageApiKey && storageZone) {
+  // Attempt Bunny Storage upload if API key is provided and Firebase isn't explicitly preferred
+  if (storageApiKey && storageZone && options.preferredProvider !== "firebase") {
     try {
       const bunnyUrl = await uploadToBunny(
         file,
@@ -165,7 +165,14 @@ function uploadToBunny(
       xhr.send(file);
     };
 
-    executeRequest(directUrl);
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    
+    // On localhost, direct URL will always fail CORS. Use proxyUrl immediately to avoid 15s timeout.
+    if (isLocalhost) {
+      executeRequest(proxyUrl);
+    } else {
+      executeRequest(directUrl);
+    }
   });
 }
 

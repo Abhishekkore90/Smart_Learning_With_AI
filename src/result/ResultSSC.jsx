@@ -361,11 +361,7 @@ function ResultSSC() {
     setDivision(""); // Reset division when class changes
 
     if (selectedClass) {
-      try {
-        await fetchDivisionsForClass(selectedClass);
-      } catch (err) {
-        console.error("Error fetching divisions for class:", err);
-      }
+      await fetchDivisionsForClass(selectedClass);
       const filteredStudents = studentData.filter((student) => student.currentClass === selectedClass);
       setSelectedStudents(filteredStudents);
     } else {
