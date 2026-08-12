@@ -31,27 +31,51 @@ export const isStudentSemiEnglish = (s) => {
   return false;
 };
 
-export const matchStudentClassAndMedium = (student, targetClass, targetMedium, currentTeacherId = null) => {
+export const normalizeAcademicYear = (yr) => {
+  if (!yr) return "";
+  const s = String(yr).trim();
+  const m = s.match(/(\d{4})\s*[-–/]\s*(\d{2,4})/);
+  if (m) {
+    const start = m[1];
+    const end = m[2].length === 2 ? `20${m[2]}` : m[2];
+    return `${start}-${end}`;
+  }
+  return s;
+};
+
+export const matchStudentClassAndMedium = (student, targetClass, targetMedium, currentTeacherId = null, targetAcademicYear = null) => {
   if (!student) return false;
 
-  // Strict Multi-Tenant Franchise Isolation:
-  // ONLY allow students assigned/created by the logged-in teacher.
-  const tId = currentTeacherId || (typeof localStorage !== "undefined" ? localStorage.getItem("current_teacher_id") : null);
+  // 1. Strict Teacher ID Isolation: Each teacher ONLY sees their OWN students
+  const activeTeacherId = currentTeacherId || (typeof localStorage !== "undefined" ? localStorage.getItem("current_teacher_id") : null);
   const sTeacherId = student.teacherId || student.createdById || student.userId;
 
-  if (tId && tId !== "default_teacher") {
-    if (!sTeacherId || sTeacherId !== tId) {
+  if (activeTeacherId && activeTeacherId !== "admin" && activeTeacherId !== "super_admin") {
+    if (!sTeacherId || (sTeacherId !== activeTeacherId && sTeacherId !== "global")) {
       return false;
     }
   }
 
-  const stdClass = normalizeClassKey(student.class || student.currentClass || student.className);
+  // 2. Strict Class Matching
+  const stdClass = normalizeClassKey(student.class || student.currentClass || student.className || student.stdClass);
   const tgtClass = normalizeClassKey(targetClass);
-  if (stdClass !== tgtClass) return false;
+  if (tgtClass && stdClass && stdClass !== tgtClass) return false;
 
-  const isSemi = isStudentSemiEnglish(student);
+  // 3. Strict Academic Year Matching
+  if (targetAcademicYear && student.academicYear) {
+    const stdYr = normalizeAcademicYear(student.academicYear);
+    const tgtYr = normalizeAcademicYear(targetAcademicYear);
+    if (stdYr && tgtYr && stdYr !== tgtYr) return false;
+  }
+
+  // 4. Strict Medium Isolation: Marathi vs Semi-English MUST NEVER MIX
   const targetIsSemi = String(targetMedium || "marathi").toLowerCase().trim() === "semi";
-  return targetIsSemi ? isSemi : !isSemi;
+  const studentIsSemi = isStudentSemiEnglish(student);
+  if (targetIsSemi !== studentIsSemi) {
+    return false;
+  }
+
+  return true;
 };
 
 /**
@@ -87,6 +111,7 @@ export const fetchStudentsForClass = async (selectedClass, medium, teacherId = n
           division: d.division || "1",
           dob: d.dob || d.birthDate || "",
           caste: d.caste || d.category || "",
+          gender: d.gender || d.sex || d.ling || d.genderType || d.studentGender || "",
           studentId: d.studentId || docSnap.id,
         });
       }
@@ -116,6 +141,7 @@ export const fetchStudentsForClass = async (selectedClass, medium, teacherId = n
             division: d.division || "1",
             dob: d.dob || d.birthDate || "",
             caste: d.caste || d.category || "",
+            gender: d.gender || d.sex || d.ling || d.genderType || d.studentGender || "",
             studentId: d.studentId || docSnap.id,
           });
         }
@@ -150,6 +176,7 @@ export const fetchStudentsForClass = async (selectedClass, medium, teacherId = n
         motherTongue: det.motherTongue || s.motherTongue || "",
         caste: det.caste || s.caste || "",
         religion: det.religion || s.religion || "",
+        gender: det.gender || det.sex || det.ling || s.gender || s.sex || s.ling || s.genderType || s.studentGender || "",
         address: det.address || s.address || "",
         mobile: det.phone || s.phone || s.mobile || "",
         studentId: det.studentId || s.studentId || s.id || "",

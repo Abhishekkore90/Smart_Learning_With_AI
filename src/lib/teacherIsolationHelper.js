@@ -35,23 +35,42 @@ export const getTeacherDocId = (teacherId, key) => {
 };
 
 /**
- * Strict Multi-Tenant Student Matcher:
- * Checks Teacher Isolation + Class Normalization + Medium Isolation
+ * Robust Multi-Tenant Student Matcher:
+ * Checks Class Normalization + Teacher ID Matching (with global/fallback support) + Medium Matching
  */
-export const matchStudentTeacherClassAndMedium = (student, currentTeacherId, selectedClass, selectedMedium) => {
+export const matchStudentTeacherClassAndMedium = (student, currentTeacherId, selectedClass, selectedMedium, targetAcademicYear = null) => {
   if (!student) return false;
 
-  // 1. Strict Teacher ID Isolation
+  // 1. Strict Teacher ID Isolation: Each teacher ONLY sees their OWN students
+  const activeTeacherId = currentTeacherId || (typeof localStorage !== "undefined" ? localStorage.getItem("current_teacher_id") : null);
   const sTeacherId = student.teacherId || student.createdById || student.userId;
-  if (sTeacherId !== currentTeacherId) return false;
 
-  // 2. Class Normalization Matching
-  const stdClass = normalizeClassKey(student.class || student.currentClass || student.className);
+  if (activeTeacherId && activeTeacherId !== "admin" && activeTeacherId !== "super_admin") {
+    if (!sTeacherId || (sTeacherId !== activeTeacherId && sTeacherId !== "global")) {
+      return false;
+    }
+  }
+
+  // 2. Strict Class Matching
+  const stdClass = normalizeClassKey(student.class || student.currentClass || student.className || student.stdClass);
   const tgtClass = normalizeClassKey(selectedClass);
-  if (stdClass !== tgtClass) return false;
+  if (tgtClass && stdClass && stdClass !== tgtClass) return false;
 
-  // 3. Medium Matching
-  const isSemi = isStudentSemiEnglish(student);
+  // 3. Strict Academic Year Matching
+  if (targetAcademicYear && student.academicYear) {
+    const stdYr = String(student.academicYear).trim();
+    const tgtYr = String(targetAcademicYear).trim();
+    const mStd = stdYr.match(/(\d{4})/);
+    const mTgt = tgtYr.match(/(\d{4})/);
+    if (mStd && mTgt && mStd[1] !== mTgt[1]) return false;
+  }
+
+  // 4. Strict Medium Isolation: Marathi vs Semi-English MUST NEVER MIX
   const targetIsSemi = String(selectedMedium || "marathi").toLowerCase().trim() === "semi";
-  return targetIsSemi ? isSemi : !isSemi;
+  const studentIsSemi = isStudentSemiEnglish(student);
+  if (targetIsSemi !== studentIsSemi) {
+    return false;
+  }
+
+  return true;
 };

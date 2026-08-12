@@ -4,6 +4,7 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { matchStudentClassAndMedium } from "./firestoreMarksHelper";
 import { getTeacherId } from "@/lib/teacherIsolationHelper";
+import { DEFAULT_MARATHI_SUBJECTS_MAP } from "@/data/cceSubjects";
 import { toast } from "sonner";
 
 // Default Class Definitions
@@ -20,7 +21,7 @@ const INITIAL_CLASSES = [
 
 // Helper to determine Grade from percentage
 const getGradeCategory = (percent) => {
-  if (percent === undefined || percent === null || isNaN(percent)) return "e1";
+  if (percent === undefined || percent === null || isNaN(percent)) return "e2";
   const p = Number(percent);
   if (p >= 91) return "a1";
   if (p >= 81) return "a2";
@@ -29,7 +30,8 @@ const getGradeCategory = (percent) => {
   if (p >= 51) return "c1";
   if (p >= 41) return "c2";
   if (p >= 33) return "d";
-  return "e1";
+  if (p >= 21) return "e1";
+  return "e2"; // 20% व कमी
 };
 
 // Helper to match class string to index 0-7
@@ -73,18 +75,36 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
       c1: { boys: 0, girls: 0 }, // 51 ते 60
       c2: { boys: 0, girls: 0 }, // 41 ते 50
       d: { boys: 0, girls: 0 },  // 33 ते 40
-      e1: { boys: 0, girls: 0 }, // 32 व कमी
+      e1: { boys: 0, girls: 0 }, // 21 ते 32
+      e2: { boys: 0, girls: 0 }, // 20 व कमी
     }))
   );
 
   const printRef = useRef(null);
 
   useEffect(() => {
+    // 0ms Instant Cache Load
+    try {
+      const cached = localStorage.getItem(`gradewise_matrix_cache_${academicYear}_${selectedTerm}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setGradeMatrix(parsed);
+          setLoading(false);
+        }
+      }
+    } catch (e) { }
+
     fetchSchoolDataAndCalculate();
   }, [academicYear, selectedTerm]);
 
   const fetchSchoolDataAndCalculate = async () => {
-    setLoading(true);
+    // If we already loaded from cache, don't show full-page spinner while background refreshing
+    const cachedExists = localStorage.getItem(`gradewise_matrix_cache_${academicYear}_${selectedTerm}`);
+    if (!cachedExists) {
+      setLoading(true);
+    }
+
     try {
       // 1. Fetch School Name from Settings / LocalStorage / Firebase
       let fetchedSchoolName = "";
@@ -94,7 +114,7 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
           const parsed = JSON.parse(cachedGen);
           if (parsed.schoolName) fetchedSchoolName = parsed.schoolName;
         }
-      } catch (e) {}
+      } catch (e) { }
 
       if (!fetchedSchoolName) {
         fetchedSchoolName =
@@ -109,7 +129,7 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
           if (genSnap.exists() && genSnap.data().schoolName) {
             fetchedSchoolName = genSnap.data().schoolName;
           }
-        } catch (e) {}
+        } catch (e) { }
       }
 
       if (!fetchedSchoolName) {
@@ -121,7 +141,7 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
               fetchedSchoolName = sSnap.data().schoolName;
             }
           }
-        } catch (e) {}
+        } catch (e) { }
       }
 
       if (fetchedSchoolName) {
@@ -140,38 +160,44 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
         c2: { boys: 0, girls: 0 },
         d: { boys: 0, girls: 0 },
         e1: { boys: 0, girls: 0 },
+        e2: { boys: 0, girls: 0 },
       }));
 
-      // 3. Query all students from Firestore & merge student_details
+      // 3. Parallel query for student records
       try {
         const currentTeacherId = getTeacherId();
+        const currentMedium = localStorage.getItem("cce_selected_medium") || "marathi";
         const detailsMap = new Map();
-        try {
-          const detailsSnap = await getDocs(collection(db, "student_details"));
-          detailsSnap.forEach((docSnap) => {
+
+        const [detailsRes, usersRes] = await Promise.allSettled([
+          getDocs(collection(db, "student_details")),
+          getDocs(query(collection(db, "users"), where("role", "==", "student"))),
+        ]);
+
+        if (detailsRes.status === "fulfilled" && detailsRes.value) {
+          detailsRes.value.forEach((docSnap) => {
             detailsMap.set(docSnap.id, docSnap.data());
           });
-        } catch (e) {}
+        }
 
-        const uSnap = await getDocs(query(collection(db, "users"), where("role", "==", "student")));
         const studentsByClass = {};
+        if (usersRes.status === "fulfilled" && usersRes.value) {
+          usersRes.value.forEach((docSnap) => {
+            const rawData = docSnap.data();
+            const det = detailsMap.get(docSnap.id) || detailsMap.get(rawData.name) || detailsMap.get(rawData.fullName) || {};
+            const sData = { ...rawData, ...det };
 
-        const currentMedium = localStorage.getItem("cce_selected_medium") || "marathi";
-        uSnap.forEach((docSnap) => {
-          const rawData = docSnap.data();
-          const det = detailsMap.get(docSnap.id) || detailsMap.get(rawData.name) || detailsMap.get(rawData.fullName) || {};
-          const sData = { ...rawData, ...det };
-
-          const rawClass = String(sData.class || sData.currentClass || "").toLowerCase();
-          const idx = getClassIndex(rawClass);
-          if (idx >= 0 && idx < INITIAL_CLASSES.length) {
-            const classId = INITIAL_CLASSES[idx].id; // e.g., "1st", "2nd"
-            if (matchStudentClassAndMedium({ id: docSnap.id, ...sData }, classId, currentMedium, currentTeacherId)) {
-              if (!studentsByClass[idx]) studentsByClass[idx] = [];
-              studentsByClass[idx].push({ id: docSnap.id, ...sData });
+            const rawClass = String(sData.class || sData.currentClass || "").toLowerCase();
+            const idx = getClassIndex(rawClass);
+            if (idx >= 0 && idx < INITIAL_CLASSES.length) {
+              const classId = INITIAL_CLASSES[idx].id;
+              if (matchStudentClassAndMedium({ id: docSnap.id, ...sData }, classId, currentMedium, currentTeacherId)) {
+                if (!studentsByClass[idx]) studentsByClass[idx] = [];
+                studentsByClass[idx].push({ id: docSnap.id, ...sData });
+              }
             }
-          }
-        });
+          });
+        }
 
         // Determine Term key & Alt Term key
         let termKey = "sem1";
@@ -181,154 +207,185 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
           altTermKey = "second";
         }
 
-        // Loop over classes and calculate grade buckets
-        for (let idx = 0; idx < INITIAL_CLASSES.length; idx++) {
-          const clsObj = INITIAL_CLASSES[idx];
-          const classStudents = studentsByClass[idx] || [];
+        // 4. Parallel fetch for all 8 classes marks from Firestore cce_marks_v2 and LocalStorage
+        await Promise.all(
+          INITIAL_CLASSES.map(async (clsObj, idx) => {
+            const classStudents = studentsByClass[idx] || [];
+            let semMarks = {};
 
-          let semMarks = {};
-
-          const mergeDoc = (d) => {
-            if (!d) return;
-            const recs = d.records || d.marksData || d.marks || d.data || d;
-            if (recs && typeof recs === "object") {
-              Object.entries(recs).forEach(([k, v]) => {
-                if (v && typeof v === "object") {
-                  semMarks[k] = { ...(semMarks[k] || {}), ...v };
-                } else if (v !== undefined && v !== null) {
-                  if (!semMarks[k]) semMarks[k] = {};
-                  semMarks[k].total = v;
-                }
-              });
-            }
-          };
-
-          // 1. Bunny storage marks
-          try {
-            const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
-            const b1 = await fetchJsonFromBunny(`cce_results/${clsObj.id}_${academicYear}_${termKey}.json`);
-            mergeDoc(b1);
-            const bAlt = await fetchJsonFromBunny(`cce_results/${clsObj.id}_${academicYear}_${altTermKey}.json`);
-            mergeDoc(bAlt);
-            const bGen = await fetchJsonFromBunny(`cce_results/${clsObj.id}_${academicYear}_marks.json`);
-            mergeDoc(bGen);
-          } catch (e) {}
-
-          // 2. Firestore cce_marks_v2 documents to try (including teacher isolation)
-          const docsToTry = [
-            ...(currentTeacherId ? [
-              `${currentTeacherId}_${clsObj.id}_${currentMedium}_${academicYear}_${termKey}`,
-              `${currentTeacherId}_${clsObj.id}_${academicYear}_${termKey}`,
-              `${currentTeacherId}_${clsObj.id}_${academicYear}_${altTermKey}`,
-              `${currentTeacherId}_${clsObj.id}_${academicYear}`,
-            ] : []),
-            `${clsObj.id}_${currentMedium}_${academicYear}_${termKey}`,
-            `${clsObj.id}_${academicYear}_${termKey}`,
-            `${clsObj.id}_${academicYear}_${altTermKey}`,
-            `${clsObj.id}_${academicYear}`,
-            `${clsObj.id}_${termKey}`,
-            `${clsObj.id}`,
-          ];
-
-          for (const dId of docsToTry) {
-            try {
-              const mSnap = await getDoc(doc(db, "cce_marks_v2", dId));
-              if (mSnap.exists()) {
-                mergeDoc(mSnap.data());
+            const mergeDoc = (d) => {
+              if (!d) return;
+              const recs = d.records || d.semester1 || d.semester2 || d.marksData || d.marks || d.data || d;
+              if (recs && typeof recs === "object") {
+                Object.entries(recs).forEach(([k, v]) => {
+                  if (v && typeof v === "object") {
+                    semMarks[k] = { ...(semMarks[k] || {}), ...v };
+                  } else if (v !== undefined && v !== null) {
+                    if (!semMarks[k]) semMarks[k] = {};
+                    semMarks[k].total = v;
+                  }
+                });
               }
-            } catch (e) {}
-          }
+            };
 
-          // 3. LocalStorage marks cache fallback
-          try {
-            const cached = localStorage.getItem(`cce_marks_${clsObj.id}_${academicYear}_${termKey}`) ||
-                           localStorage.getItem(`cce_marks_${clsObj.id}_${academicYear}`);
-            if (cached) {
-              const parsed = JSON.parse(cached);
-              mergeDoc(parsed);
-            }
-          } catch (e) {}
+            // LocalStorage cache check for marks
+            try {
+              const cached = localStorage.getItem(`cce_marks_cache_${clsObj.id}_${academicYear}_${termKey}_${currentMedium}`) ||
+                localStorage.getItem(`cce_marks_${clsObj.id}_${academicYear}_${termKey}`) ||
+                localStorage.getItem(`cce_marks_${clsObj.id}_${academicYear}`);
+              if (cached) mergeDoc(JSON.parse(cached));
+            } catch (e) { }
 
-          classStudents.forEach((st) => {
-            const gStr = String(st.gender || st.sex || st.ling || "").toLowerCase().trim();
-            const isGirl =
-              gStr === "female" || gStr === "f" || gStr === "2" ||
-              gStr.includes("female") || gStr.includes("girl") ||
-              gStr.includes("मुली") || gStr.includes("मुलगी") || gStr.includes("स्त्री");
+            // Fetch from Firestore cce_marks_v2
+            const docsToFetch = [
+              ...(currentTeacherId ? [
+                `${currentTeacherId}_${clsObj.id}_${academicYear}`,
+                `${currentTeacherId}_${clsObj.id}_${currentMedium}_${academicYear}`,
+                `${currentTeacherId}_${clsObj.id}_${academicYear}_${termKey}`,
+                `${currentTeacherId}_${clsObj.id}_${currentMedium}_${academicYear}_${termKey}`,
+              ] : []),
+              `${clsObj.id}_${currentMedium}_${academicYear}_${termKey}`,
+              `${clsObj.id}_${academicYear}_${termKey}`,
+              `${clsObj.id}_${academicYear}_${altTermKey}`,
+              `${clsObj.id}_${currentMedium}_${academicYear}`,
+              `${clsObj.id}_${academicYear}`,
+              `${clsObj.id}_${termKey}`,
+              `${clsObj.id}`,
+            ];
 
-            const genderKey = isGirl ? "girls" : "boys";
-            newMatrix[idx].pat[genderKey] += 1;
+            const docResults = await Promise.allSettled(
+              docsToFetch.map((dId) => getDoc(doc(db, "cce_marks_v2", dId)))
+            );
 
-            // Fetch Marks for this student
-            const stdRecord =
-              semMarks[st.id] ||
-              semMarks[st.rollNo] ||
-              semMarks[String(st.rollNo)] ||
-              semMarks[st.name] ||
-              semMarks[st.fullName] ||
-              st.marks ||
-              st.cce_marks ||
-              st.marksData ||
-              {};
+            docResults.forEach((res) => {
+              if (res.status === "fulfilled" && res.value?.exists()) {
+                mergeDoc(res.value.data());
+              }
+            });
 
-            let totalObtained = 0;
-            let totalMax = 0;
+            const classSubjects = DEFAULT_MARATHI_SUBJECTS_MAP[clsObj.id] || DEFAULT_MARATHI_SUBJECTS_MAP["1st"];
+            const totalMax = classSubjects.length * 100;
 
-            if (stdRecord && typeof stdRecord === "object") {
-              const targetRec = stdRecord[termKey] || stdRecord[altTermKey] || stdRecord;
+            classStudents.forEach((st) => {
+              const gStr = String(st.gender || st.sex || st.ling || st.studentGender || st.genderType || "").toLowerCase().trim();
+              const isGirl =
+                gStr === "female" || gStr === "f" || gStr === "2" ||
+                gStr.includes("female") || gStr.includes("girl") ||
+                gStr.includes("मुली") || gStr.includes("मुलगी") || gStr.includes("स्त्री");
 
-              Object.entries(targetRec).forEach(([subKey, subVal]) => {
-                if (subKey === "sem1" || subKey === "sem2" || subKey === "first" || subKey === "second") return;
+              const genderKey = isGirl ? "girls" : "boys";
+              newMatrix[idx].pat[genderKey] += 1;
 
-                let obt = 0;
-                let max = 100;
+              // Extract student marks object matching BoardResult.jsx
+              const studentMarksObj =
+                semMarks[st.id] ||
+                semMarks[st.rollNo] ||
+                semMarks[String(st.rollNo)] ||
+                semMarks[st.name] ||
+                semMarks[st.fullName] ||
+                st.marks ||
+                st.cce_marks ||
+                st.marksData ||
+                {};
 
-                if (typeof subVal === "number" || (typeof subVal === "string" && !isNaN(subVal))) {
-                  obt = Number(subVal);
-                } else if (subVal && typeof subVal === "object") {
-                  const subTerm = subVal[termKey] || subVal[altTermKey] || subVal;
-                  if (typeof subTerm === "number" || (typeof subTerm === "string" && !isNaN(subTerm))) {
-                    obt = Number(subTerm);
-                  } else if (typeof subTerm === "object" && subTerm !== null) {
-                    if (subTerm.total !== undefined && !isNaN(subTerm.total)) obt = Number(subTerm.total);
-                    else if (subTerm.obtained !== undefined && !isNaN(subTerm.obtained)) obt = Number(subTerm.obtained);
-                    else if (subTerm.mark !== undefined && !isNaN(subTerm.mark)) obt = Number(subTerm.mark);
-                    else {
-                      let sum = 0;
-                      let found = false;
-                      ["tondiKaam", "pratyakshikPrayog", "upakramKriti", "prakalpa", "chaachaniLekhi", "swadhyayVargakarya", "itar", "sankalitTondi", "sankalitPratyakshik", "sankalitLekhi", "formative", "summative", "akaratmak", "sankalit"].forEach((f) => {
-                        if (subTerm[f] !== undefined && subTerm[f] !== null && subTerm[f] !== "") {
-                          const n = Number(subTerm[f]);
-                          if (!isNaN(n)) { sum += n; found = true; }
-                        }
-                      });
-                      if (found) obt = sum;
+              let studentMarks = studentMarksObj;
+              if (studentMarks && studentMarks.subjects && typeof studentMarks.subjects === "object") {
+                studentMarks = studentMarks.subjects;
+              } else if (studentMarks && studentMarks.records && typeof studentMarks.records === "object") {
+                studentMarks = studentMarks.records;
+              }
+
+              let grandObtainedTotal = 0;
+              let hasAnyMarkData = false;
+
+              classSubjects.forEach((subName) => {
+                const lower = String(subName).toLowerCase().trim();
+                let subData = {};
+
+                if (studentMarks[subName]) {
+                  subData = studentMarks[subName];
+                } else if (lower.includes("मराठी")) {
+                  subData = studentMarks["marathi"] || studentMarks["prathambhasha"] || studentMarks["प्रथम भाषा : मराठी"] || studentMarks["प्रथम भाषा: मराठी"] || studentMarks["प्रथम भाषा"] || studentMarks["मराठी"] || {};
+                } else if (lower.includes("इंग्रजी")) {
+                  subData = studentMarks["english"] || studentMarks["dvitiybhasha"] || studentMarks["द्वितीय भाषा : इंग्रजी"] || studentMarks["द्वितीय भाषा: इंग्रजी"] || studentMarks["तृतीय भाषा: इंग्रजी"] || studentMarks["तृतीय भाषा : इंग्रजी"] || studentMarks["तृतीय भाषा"] || studentMarks["इंग्रजी"] || {};
+                } else if (lower.includes("हिंदी")) {
+                  subData = studentMarks["hindi"] || studentMarks["tritiyabhasha"] || studentMarks["हिंदी"] || {};
+                } else if (lower.includes("गणित")) {
+                  subData = studentMarks["ganit"] || studentMarks["math"] || studentMarks["maths"] || studentMarks["गणित"] || {};
+                } else if (lower.includes("परिसर")) {
+                  subData = studentMarks["parisar"] || studentMarks["parisar1"] || studentMarks["parisar2"] || studentMarks["परिसर अभ्यास"] || studentMarks["vijnan"] || studentMarks["vidnyan"] || studentMarks["विज्ञान"] || {};
+                } else if (lower.includes("कला")) {
+                  subData = studentMarks["kala"] || studentMarks["कला"] || {};
+                } else if (lower.includes("कार्यानुभव")) {
+                  subData = studentMarks["karyanubhav"] || studentMarks["कार्यानुभव"] || {};
+                } else if (lower.includes("शारीरिक")) {
+                  subData = studentMarks["sharirik"] || studentMarks["शारीरिक शिक्षण"] || studentMarks["शारीरिक शिक्षण व आरोग्य"] || {};
+                }
+
+                if (!subData || Object.keys(subData).length === 0) {
+                  for (const [k, v] of Object.entries(studentMarks)) {
+                    const kLower = String(k).toLowerCase().trim();
+                    if (
+                      (lower.includes("मराठी") && kLower.includes("मराठी")) ||
+                      (lower.includes("इंग्रजी") && kLower.includes("इंग्रजी")) ||
+                      (lower.includes("हिंदी") && kLower.includes("हिंदी")) ||
+                      (lower.includes("गणित") && kLower.includes("गणित")) ||
+                      (lower.includes("कला") && kLower.includes("कला")) ||
+                      (lower.includes("कार्यानुभव") && kLower.includes("कार्यानुभव")) ||
+                      (lower.includes("शारीरिक") && kLower.includes("शारीरिक")) ||
+                      (lower.includes("परिसर") && kLower.includes("परिसर")) ||
+                      kLower === lower
+                    ) {
+                      subData = v;
+                      break;
                     }
-                    max = Number(subTerm.outOf || subTerm.max || subTerm.totalMax || 100) || 100;
                   }
                 }
 
-                totalObtained += obt;
-                totalMax += max;
-              });
-            }
+                const isPracticalSub = lower.includes("कला") || lower.includes("कार्यानुभव") || lower.includes("शारीरिक");
 
-            if (totalMax > 0 && totalObtained > 0) {
-              const percent = (totalObtained / totalMax) * 100;
-              const gradeCat = getGradeCategory(percent);
-              newMatrix[idx][gradeCat][genderKey] += 1;
-            } else {
-              // Default to E1 bucket if no marks recorded yet
-              const gradeCat = getGradeCategory(0);
-              newMatrix[idx][gradeCat][genderKey] += 1;
-            }
-          });
-        }
+                const tondiKaamObt = Number(subData.tondiKaam ?? subData.tondi ?? subData.oral ?? 0);
+                const pratyakshikPrayogObt = Number(subData.pratyakshikPrayog ?? subData.practical ?? subData.activity ?? 0);
+                const upakramKritiObt = Number(subData.upakramKriti ?? subData.upakram ?? subData.project ?? 0);
+                const prakalpaObt = Number(subData.prakalp ?? subData.prakalpa ?? 0);
+                const chaachaniLekhiObt = Number(subData.chaachaniLekhi ?? subData.chaachani ?? subData.test ?? subData.exam ?? 0);
+                const swadhyayVargakaryaObt = Number(subData.swadhyayVargakarya ?? subData.swadhyay ?? subData.vargakarya ?? subData.homework ?? 0);
+                const itarObt = Number(subData.itar ?? subData.other ?? 0);
+
+                const sankalitTondiObt = Number(subData.sankalitTondi ?? subData.semesterOral ?? 0);
+                const sankalitPratyakshikObt = Number(subData.sankalitPratyakshik ?? subData.semesterPractical ?? 0);
+                const sankalitLekhiObt = Number(subData.sankalitLekhi ?? subData.lekhi ?? subData.written ?? subData.semesterWritten ?? 0);
+
+                const hasForm = tondiKaamObt > 0 || pratyakshikPrayogObt > 0 || upakramKritiObt > 0 || prakalpaObt > 0 || chaachaniLekhiObt > 0 || swadhyayVargakaryaObt > 0 || itarObt > 0;
+                const formTotal = hasForm ? (tondiKaamObt + pratyakshikPrayogObt + upakramKritiObt + prakalpaObt + chaachaniLekhiObt + swadhyayVargakaryaObt + itarObt) : Number(subData.akarik ?? subData.formTotal ?? subData.Akarik?.Total ?? 0);
+
+                const hasSem = sankalitTondiObt > 0 || sankalitPratyakshikObt > 0 || sankalitLekhiObt > 0;
+                const semTotal = isPracticalSub ? 0 : (hasSem ? (sankalitTondiObt + sankalitPratyakshikObt + sankalitLekhiObt) : Number(subData.sankalit ?? subData.semTotal ?? subData.Sanklik?.Total ?? 0));
+                const grandTotal = (formTotal + semTotal) > 0 ? (formTotal + semTotal) : Number(subData.total ?? subData.grandTotal ?? subData.obtained ?? subData.marks ?? 0);
+
+                if (subData && Object.keys(subData).length > 0 && (hasForm || hasSem || subData.akarik !== undefined || subData.sankalit !== undefined || subData.total !== undefined || subData.grandTotal !== undefined || subData.obtained !== undefined || subData.marks !== undefined)) {
+                  hasAnyMarkData = true;
+                }
+
+                grandObtainedTotal += grandTotal;
+              });
+
+              if (hasAnyMarkData) {
+                const percent = totalMax > 0 ? (grandObtainedTotal / totalMax) * 100 : 0;
+                const gradeCat = getGradeCategory(percent);
+                newMatrix[idx][gradeCat][genderKey] += 1;
+              }
+            });
+          })
+        );
       } catch (e) {
         console.error("Error fetching students for grade wise matrix:", e);
       }
 
       setGradeMatrix(newMatrix);
+      try {
+        localStorage.setItem(`gradewise_matrix_cache_${academicYear}_${selectedTerm}`, JSON.stringify(newMatrix));
+      } catch (e) { }
     } catch (err) {
       console.error("Error loading grade compilation matrix:", err);
     }
@@ -356,7 +413,7 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
     window.print();
   };
 
-  // PDF Export Handler
+  // High Quality Crisp PDF Export Handler
   const handleDownloadPdf = async () => {
     if (!printRef.current) return;
     setDownloading(true);
@@ -364,14 +421,55 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
     try {
       const { default: html2pdf } = await import("html2pdf.js");
       const element = printRef.current;
+
+      // Clone element to prevent input artifacts and ensure 100% width fit
+      const clone = element.cloneNode(true);
+
+      // Replace input elements with clean text spans in clone
+      clone.querySelectorAll("input").forEach((inp) => {
+        const val = inp.value || "0";
+        const parent = inp.parentNode;
+        if (parent) {
+          const span = document.createElement("span");
+          span.style.display = "inline-block";
+          span.style.width = "100%";
+          span.style.textAlign = "center";
+          span.style.fontWeight = "bold";
+          span.style.fontSize = "11px";
+          span.style.color = "#0f172a";
+          span.textContent = val;
+          parent.replaceChild(span, inp);
+        }
+      });
+
+      // Temporary offscreen container styled specifically for A4 landscape
+      const tempContainer = document.createElement("div");
+      tempContainer.style.position = "absolute";
+      tempContainer.style.left = "-9999px";
+      tempContainer.style.top = "-9999px";
+      tempContainer.style.width = "1120px";
+      tempContainer.style.background = "#ffffff";
+      tempContainer.style.padding = "10px";
+      tempContainer.appendChild(clone);
+      document.body.appendChild(tempContainer);
+
       const opt = {
         margin: [4, 4, 4, 4],
         filename: `श्रेणीनिहाय_निकाल_संकलन_प्रपत्र_${academicYear}.pdf`,
         image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          windowWidth: 1150,
+          scrollX: 0,
+          scrollY: 0,
+        },
+        jsPDF: { unit: "mm", format: "a4", orientation: "landscape", compress: true },
       };
-      await html2pdf().set(opt).from(element).save();
+
+      await html2pdf().set(opt).from(clone).save();
+      document.body.removeChild(tempContainer);
       toast.success("PDF यशस्वीरित्या डाऊनलोड झाली!");
     } catch (err) {
       console.error("PDF download error:", err);
@@ -392,6 +490,7 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
       c2: { boys: 0, girls: 0 },
       d: { boys: 0, girls: 0 },
       e1: { boys: 0, girls: 0 },
+      e2: { boys: 0, girls: 0 },
     };
 
     gradeMatrix.forEach((row) => {
@@ -531,34 +630,9 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
               </div>
             </div>
 
-            {/* Table matching PDF Layout with Colgroup for exact alignment */}
             <table className="w-full border-collapse border-2 border-blue-900 text-center text-[11px] font-semibold text-slate-900 grade-matrix-table" style={{ tableLayout: "fixed" }}>
-              <colgroup>
-                <col style={{ width: "35px" }} /> {/* अ.क्र. */}
-                <col style={{ width: "75px" }} /> {/* इयत्ता */}
-                <col style={{ width: "38px" }} /> {/* पट मुले */}
-                <col style={{ width: "38px" }} /> {/* पट मुली */}
-                <col style={{ width: "38px" }} /> {/* अ-1 मुले */}
-                <col style={{ width: "38px" }} /> {/* अ-1 मुली */}
-                <col style={{ width: "38px" }} /> {/* अ-2 मुले */}
-                <col style={{ width: "38px" }} /> {/* अ-2 मुली */}
-                <col style={{ width: "38px" }} /> {/* ब-1 मुले */}
-                <col style={{ width: "38px" }} /> {/* ब-1 मुली */}
-                <col style={{ width: "38px" }} /> {/* ब-2 मुले */}
-                <col style={{ width: "38px" }} /> {/* ब-2 मुली */}
-                <col style={{ width: "38px" }} /> {/* क-1 मुले */}
-                <col style={{ width: "38px" }} /> {/* क-1 मुली */}
-                <col style={{ width: "38px" }} /> {/* क-2 मुले */}
-                <col style={{ width: "38px" }} /> {/* क-2 मुली */}
-                <col style={{ width: "38px" }} /> {/* ड मुले */}
-                <col style={{ width: "38px" }} /> {/* ड मुली */}
-                <col style={{ width: "38px" }} /> {/* इ-1 मुले */}
-                <col style={{ width: "38px" }} /> {/* इ-1 मुली */}
-                <col style={{ width: "42px" }} /> {/* एकूण मुले */}
-                <col style={{ width: "42px" }} /> {/* एकूण मुली */}
-              </colgroup>
+              <colgroup><col style={{ width: "35px" }} /><col style={{ width: "70px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "38px" }} /><col style={{ width: "38px" }} /></colgroup>
               <thead>
-                {/* Row 1: Super Headers */}
                 <tr className="bg-blue-50/80 font-black border-b-2 border-blue-900 text-blue-950">
                   <th className="border border-blue-900 p-1" rowSpan={3}>
                     अ. क्र.
@@ -569,7 +643,7 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
                   <th className="border border-blue-900 p-1" colSpan={2} rowSpan={2}>
                     पट
                   </th>
-                  <th className="border border-blue-900 p-1" colSpan={16}>
+                  <th className="border border-blue-900 p-1" colSpan={18}>
                     वर्गवार श्रेणी
                   </th>
                   <th className="border border-blue-900 p-1" colSpan={2} rowSpan={2}>
@@ -577,254 +651,146 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
                   </th>
                 </tr>
 
-                {/* Row 2: Grade Ranges */}
                 <tr className="bg-blue-50/50 font-black border-b border-blue-900 text-blue-950 text-[10px]">
-                  <th className="border border-blue-900 py-1 px-0.5" colSpan={2}>अ-1<br /><span className="text-[8.5px] font-normal tracking-tighter">(91 ते 100)</span></th>
-                  <th className="border border-blue-900 py-1 px-0.5" colSpan={2}>अ-2<br /><span className="text-[8.5px] font-normal tracking-tighter">(81 ते 90)</span></th>
-                  <th className="border border-blue-900 py-1 px-0.5" colSpan={2}>ब-1<br /><span className="text-[8.5px] font-normal tracking-tighter">(71 ते 80)</span></th>
-                  <th className="border border-blue-900 py-1 px-0.5" colSpan={2}>ब-2<br /><span className="text-[8.5px] font-normal tracking-tighter">(61 ते 70)</span></th>
-                  <th className="border border-blue-900 py-1 px-0.5" colSpan={2}>क-1<br /><span className="text-[8.5px] font-normal tracking-tighter">(51 ते 60)</span></th>
-                  <th className="border border-blue-900 py-1 px-0.5" colSpan={2}>क-2<br /><span className="text-[8.5px] font-normal tracking-tighter">(41 ते 50)</span></th>
-                  <th className="border border-blue-900 py-1 px-0.5" colSpan={2}>ड<br /><span className="text-[8.5px] font-normal tracking-tighter">(33 ते 40)</span></th>
-                  <th className="border border-blue-900 py-1 px-0.5" colSpan={2}>इ-1<br /><span className="text-[8.5px] font-normal tracking-tighter">(32 व कमी)</span></th>
+                  <th className="border border-blue-900 py-1 px-0.5" colSpan={2}>अ-1<br /><span className="text-[8px] font-normal tracking-tighter">(91 ते 100)</span></th>
+                  <th className="border border-blue-900 py-1 px-0.5" colSpan={2}>अ-2<br /><span className="text-[8px] font-normal tracking-tighter">(81 ते 90)</span></th>
+                  <th className="border border-blue-900 py-1 px-0.5" colSpan={2}>ब-1<br /><span className="text-[8px] font-normal tracking-tighter">(71 ते 80)</span></th>
+                  <th className="border border-blue-900 py-1 px-0.5" colSpan={2}>ब-2<br /><span className="text-[8px] font-normal tracking-tighter">(61 ते 70)</span></th>
+                  <th className="border border-blue-900 py-1 px-0.5" colSpan={2}>क-1<br /><span className="text-[8px] font-normal tracking-tighter">(51 ते 60)</span></th>
+                  <th className="border border-blue-900 py-1 px-0.5" colSpan={2}>क-2<br /><span className="text-[8px] font-normal tracking-tighter">(41 ते 50)</span></th>
+                  <th className="border border-blue-900 py-1 px-0.5" colSpan={2}>ड<br /><span className="text-[8px] font-normal tracking-tighter">(33 ते 40)</span></th>
+                  <th className="border border-blue-900 py-1 px-0.5" colSpan={2}>इ-1<br /><span className="text-[8px] font-normal tracking-tighter">(21 ते 32)</span></th>
+                  <th className="border border-blue-900 py-1 px-0.5" colSpan={2}>इ-2<br /><span className="text-[8px] font-normal tracking-tighter">(20 व कमी)</span></th>
                 </tr>
 
-                {/* Row 3: Sub Header Boys/Girls */}
                 <tr className="bg-blue-100/60 font-black border-b-2 border-blue-900 text-blue-950 text-[10px]">
-                  {/* Pat */}
                   <th className="border border-blue-900 py-1 px-0.5">मुले</th>
                   <th className="border border-blue-900 py-1 px-0.5">मुली</th>
-
-                  {/* Grades */}
                   <th className="border border-blue-900 py-1 px-0.5">मुले</th>
                   <th className="border border-blue-900 py-1 px-0.5">मुली</th>
-
                   <th className="border border-blue-900 py-1 px-0.5">मुले</th>
                   <th className="border border-blue-900 py-1 px-0.5">मुली</th>
-
                   <th className="border border-blue-900 py-1 px-0.5">मुले</th>
                   <th className="border border-blue-900 py-1 px-0.5">मुली</th>
-
                   <th className="border border-blue-900 py-1 px-0.5">मुले</th>
                   <th className="border border-blue-900 py-1 px-0.5">मुली</th>
-
                   <th className="border border-blue-900 py-1 px-0.5">मुले</th>
                   <th className="border border-blue-900 py-1 px-0.5">मुली</th>
-
                   <th className="border border-blue-900 py-1 px-0.5">मुले</th>
                   <th className="border border-blue-900 py-1 px-0.5">मुली</th>
-
                   <th className="border border-blue-900 py-1 px-0.5">मुले</th>
                   <th className="border border-blue-900 py-1 px-0.5">मुली</th>
-
                   <th className="border border-blue-900 py-1 px-0.5">मुले</th>
                   <th className="border border-blue-900 py-1 px-0.5">मुली</th>
-
-                  {/* Total */}
                   <th className="border border-blue-900 py-1 px-0.5">मुले</th>
                   <th className="border border-blue-900 py-1 px-0.5">मुली</th>
+                  <th className="border border-blue-900 py-1 px-0.5 bg-blue-100">मुले</th>
+                  <th className="border border-blue-900 py-1 px-0.5 bg-blue-100">मुली</th>
                 </tr>
               </thead>
 
               <tbody>
-                {gradeMatrix.map((cls, idx) => {
-                  // Calculate Total Row Passed Boys & Girls
-                  const rowTotalBoys =
-                    (cls.a1?.boys || 0) +
-                    (cls.a2?.boys || 0) +
-                    (cls.b1?.boys || 0) +
-                    (cls.b2?.boys || 0) +
-                    (cls.c1?.boys || 0) +
-                    (cls.c2?.boys || 0) +
-                    (cls.d?.boys || 0) +
-                    (cls.e1?.boys || 0);
+                {(() => {
+                  const activeRows = gradeMatrix.filter((cls) => {
+                    const patTotal = (cls.pat?.boys || 0) + (cls.pat?.girls || 0);
+                    const gradeSum =
+                      (cls.a1?.boys || 0) + (cls.a1?.girls || 0) +
+                      (cls.a2?.boys || 0) + (cls.a2?.girls || 0) +
+                      (cls.b1?.boys || 0) + (cls.b1?.girls || 0) +
+                      (cls.b2?.boys || 0) + (cls.b2?.girls || 0) +
+                      (cls.c1?.boys || 0) + (cls.c1?.girls || 0) +
+                      (cls.c2?.boys || 0) + (cls.c2?.girls || 0) +
+                      (cls.d?.boys || 0) + (cls.d?.girls || 0) +
+                      (cls.e1?.boys || 0) + (cls.e1?.girls || 0) +
+                      (cls.e2?.boys || 0) + (cls.e2?.girls || 0);
+                    return patTotal > 0 || gradeSum > 0;
+                  });
 
-                  const rowTotalGirls =
-                    (cls.a1?.girls || 0) +
-                    (cls.a2?.girls || 0) +
-                    (cls.b1?.girls || 0) +
-                    (cls.b2?.girls || 0) +
-                    (cls.c1?.girls || 0) +
-                    (cls.c2?.girls || 0) +
-                    (cls.d?.girls || 0) +
-                    (cls.e1?.girls || 0);
+                  const rowsToDisplay = activeRows.length > 0 ? activeRows : gradeMatrix;
 
-                  return (
-                    <tr key={cls.id} className="border-b border-blue-900 hover:bg-blue-50/30 transition-colors">
-                      {/* Sr No */}
-                      <td className="border border-blue-900 py-1 font-extrabold">{idx + 1}</td>
+                  return rowsToDisplay.map((cls, displayIdx) => {
+                    const originalIdx = gradeMatrix.findIndex((g) => g.id === cls.id);
+                    const targetIdx = originalIdx >= 0 ? originalIdx : displayIdx;
 
-                      {/* Class Name */}
-                      <td className="border border-blue-900 py-1 px-1 font-black text-slate-900 whitespace-nowrap overflow-hidden text-ellipsis">{cls.name}</td>
+                    const rowTotalBoys =
+                      (cls.a1?.boys || 0) +
+                      (cls.a2?.boys || 0) +
+                      (cls.b1?.boys || 0) +
+                      (cls.b2?.boys || 0) +
+                      (cls.c1?.boys || 0) +
+                      (cls.c2?.boys || 0) +
+                      (cls.d?.boys || 0) +
+                      (cls.e1?.boys || 0) +
+                      (cls.e2?.boys || 0);
 
-                      {/* Pat (Enrolled) */}
-                      <td className="border border-blue-900 p-0">
-                        <input
-                          type="number"
-                          value={cls.pat.boys}
-                          onChange={(e) => handleCellChange(idx, "pat", "boys", e.target.value)}
-                          className="w-full text-center bg-transparent focus:bg-amber-100 border-none font-bold text-xs focus:outline-none py-1"
-                        />
-                      </td>
-                      <td className="border border-blue-900 p-0">
-                        <input
-                          type="number"
-                          value={cls.pat.girls}
-                          onChange={(e) => handleCellChange(idx, "pat", "girls", e.target.value)}
-                          className="w-full text-center bg-transparent focus:bg-amber-100 border-none font-bold text-xs focus:outline-none py-1"
-                        />
-                      </td>
+                    const rowTotalGirls =
+                      (cls.a1?.girls || 0) +
+                      (cls.a2?.girls || 0) +
+                      (cls.b1?.girls || 0) +
+                      (cls.b2?.girls || 0) +
+                      (cls.c1?.girls || 0) +
+                      (cls.c2?.girls || 0) +
+                      (cls.d?.girls || 0) +
+                      (cls.e1?.girls || 0) +
+                      (cls.e2?.girls || 0);
 
-                      {/* Grade A1 */}
-                      <td className="border border-blue-900 p-0">
-                        <input
-                          type="number"
-                          value={cls.a1.boys}
-                          onChange={(e) => handleCellChange(idx, "a1", "boys", e.target.value)}
-                          className="w-full text-center bg-transparent focus:bg-amber-100 border-none font-semibold text-xs focus:outline-none py-1"
-                        />
-                      </td>
-                      <td className="border border-blue-900 p-0">
-                        <input
-                          type="number"
-                          value={cls.a1.girls}
-                          onChange={(e) => handleCellChange(idx, "a1", "girls", e.target.value)}
-                          className="w-full text-center bg-transparent focus:bg-amber-100 border-none font-semibold text-xs focus:outline-none py-1"
-                        />
-                      </td>
+                    const gradeKeys = ["a1", "a2", "b1", "b2", "c1", "c2", "d", "e1", "e2"];
 
-                      {/* Grade A2 */}
-                      <td className="border border-blue-900 p-0">
-                        <input
-                          type="number"
-                          value={cls.a2.boys}
-                          onChange={(e) => handleCellChange(idx, "a2", "boys", e.target.value)}
-                          className="w-full text-center bg-transparent focus:bg-amber-100 border-none font-semibold text-xs focus:outline-none py-1"
-                        />
-                      </td>
-                      <td className="border border-blue-900 p-0">
-                        <input
-                          type="number"
-                          value={cls.a2.girls}
-                          onChange={(e) => handleCellChange(idx, "a2", "girls", e.target.value)}
-                          className="w-full text-center bg-transparent focus:bg-amber-100 border-none font-semibold text-xs focus:outline-none py-1"
-                        />
-                      </td>
+                    return (
+                      <tr key={cls.id} className="border-b border-blue-900 hover:bg-blue-50/30 transition-colors">
+                        {/* Sr No */}
+                        <td className="border border-blue-900 py-1 font-extrabold">{displayIdx + 1}</td>
 
-                      {/* Grade B1 */}
-                      <td className="border border-blue-900 p-0">
-                        <input
-                          type="number"
-                          value={cls.b1.boys}
-                          onChange={(e) => handleCellChange(idx, "b1", "boys", e.target.value)}
-                          className="w-full text-center bg-transparent focus:bg-amber-100 border-none font-semibold text-xs focus:outline-none py-1"
-                        />
-                      </td>
-                      <td className="border border-blue-900 p-0">
-                        <input
-                          type="number"
-                          value={cls.b1.girls}
-                          onChange={(e) => handleCellChange(idx, "b1", "girls", e.target.value)}
-                          className="w-full text-center bg-transparent focus:bg-amber-100 border-none font-semibold text-xs focus:outline-none py-1"
-                        />
-                      </td>
+                        {/* Class Name */}
+                        <td className="border border-blue-900 py-1 px-1 font-black text-slate-900 whitespace-nowrap overflow-hidden text-ellipsis">{cls.name}</td>
 
-                      {/* Grade B2 */}
-                      <td className="border border-blue-900 p-0">
-                        <input
-                          type="number"
-                          value={cls.b2.boys}
-                          onChange={(e) => handleCellChange(idx, "b2", "boys", e.target.value)}
-                          className="w-full text-center bg-transparent focus:bg-amber-100 border-none font-semibold text-xs focus:outline-none py-1"
-                        />
-                      </td>
-                      <td className="border border-blue-900 p-0">
-                        <input
-                          type="number"
-                          value={cls.b2.girls}
-                          onChange={(e) => handleCellChange(idx, "b2", "girls", e.target.value)}
-                          className="w-full text-center bg-transparent focus:bg-amber-100 border-none font-semibold text-xs focus:outline-none py-1"
-                        />
-                      </td>
+                        {/* Pat (Enrolled) */}
+                        <td className="border border-blue-900 p-0">
+                          <input
+                            type="number"
+                            value={cls.pat.boys}
+                            onChange={(e) => handleCellChange(targetIdx, "pat", "boys", e.target.value)}
+                            className="w-full text-center bg-transparent focus:bg-amber-100 border-none font-bold text-xs focus:outline-none py-1"
+                          />
+                        </td>
+                        <td className="border border-blue-900 p-0">
+                          <input
+                            type="number"
+                            value={cls.pat.girls}
+                            onChange={(e) => handleCellChange(targetIdx, "pat", "girls", e.target.value)}
+                            className="w-full text-center bg-transparent focus:bg-amber-100 border-none font-bold text-xs focus:outline-none py-1"
+                          />
+                        </td>
 
-                      {/* Grade C1 */}
-                      <td className="border border-blue-900 p-0">
-                        <input
-                          type="number"
-                          value={cls.c1.boys}
-                          onChange={(e) => handleCellChange(idx, "c1", "boys", e.target.value)}
-                          className="w-full text-center bg-transparent focus:bg-amber-100 border-none font-semibold text-xs focus:outline-none py-1"
-                        />
-                      </td>
-                      <td className="border border-blue-900 p-0">
-                        <input
-                          type="number"
-                          value={cls.c1.girls}
-                          onChange={(e) => handleCellChange(idx, "c1", "girls", e.target.value)}
-                          className="w-full text-center bg-transparent focus:bg-amber-100 border-none font-semibold text-xs focus:outline-none py-1"
-                        />
-                      </td>
+                        {/* Grade Columns */}
+                        {gradeKeys.map((gKey) => (
+                          <React.Fragment key={gKey}>
+                            <td className="border border-blue-900 p-0">
+                              <input
+                                type="number"
+                                value={cls[gKey]?.boys || 0}
+                                onChange={(e) => handleCellChange(targetIdx, gKey, "boys", e.target.value)}
+                                className="w-full text-center bg-transparent focus:bg-amber-100 border-none font-semibold text-xs focus:outline-none py-1"
+                              />
+                            </td>
+                            <td className="border border-blue-900 p-0">
+                              <input
+                                type="number"
+                                value={cls[gKey]?.girls || 0}
+                                onChange={(e) => handleCellChange(targetIdx, gKey, "girls", e.target.value)}
+                                className="w-full text-center bg-transparent focus:bg-amber-100 border-none font-semibold text-xs focus:outline-none py-1"
+                              />
+                            </td>
+                          </React.Fragment>
+                        ))}
 
-                      {/* Grade C2 */}
-                      <td className="border border-blue-900 p-0">
-                        <input
-                          type="number"
-                          value={cls.c2.boys}
-                          onChange={(e) => handleCellChange(idx, "c2", "boys", e.target.value)}
-                          className="w-full text-center bg-transparent focus:bg-amber-100 border-none font-semibold text-xs focus:outline-none py-1"
-                        />
-                      </td>
-                      <td className="border border-blue-900 p-0">
-                        <input
-                          type="number"
-                          value={cls.c2.girls}
-                          onChange={(e) => handleCellChange(idx, "c2", "girls", e.target.value)}
-                          className="w-full text-center bg-transparent focus:bg-amber-100 border-none font-semibold text-xs focus:outline-none py-1"
-                        />
-                      </td>
-
-                      {/* Grade D */}
-                      <td className="border border-blue-900 p-0">
-                        <input
-                          type="number"
-                          value={cls.d.boys}
-                          onChange={(e) => handleCellChange(idx, "d", "boys", e.target.value)}
-                          className="w-full text-center bg-transparent focus:bg-amber-100 border-none font-semibold text-xs focus:outline-none py-1"
-                        />
-                      </td>
-                      <td className="border border-blue-900 p-0">
-                        <input
-                          type="number"
-                          value={cls.d.girls}
-                          onChange={(e) => handleCellChange(idx, "d", "girls", e.target.value)}
-                          className="w-full text-center bg-transparent focus:bg-amber-100 border-none font-semibold text-xs focus:outline-none py-1"
-                        />
-                      </td>
-
-                      {/* Grade E1 */}
-                      <td className="border border-blue-900 p-0">
-                        <input
-                          type="number"
-                          value={cls.e1.boys}
-                          onChange={(e) => handleCellChange(idx, "e1", "boys", e.target.value)}
-                          className="w-full text-center bg-transparent focus:bg-amber-100 border-none font-semibold text-xs focus:outline-none py-1"
-                        />
-                      </td>
-                      <td className="border border-blue-900 p-0">
-                        <input
-                          type="number"
-                          value={cls.e1.girls}
-                          onChange={(e) => handleCellChange(idx, "e1", "girls", e.target.value)}
-                          className="w-full text-center bg-transparent focus:bg-amber-100 border-none font-semibold text-xs focus:outline-none py-1"
-                        />
-                      </td>
-
-                      {/* Row Total */}
-                      <td className="border border-blue-900 py-1 font-black text-blue-950 bg-blue-50/30">{rowTotalBoys}</td>
-                      <td className="border border-blue-900 py-1 font-black text-blue-950 bg-blue-50/30">{rowTotalGirls}</td>
-                    </tr>
-                  );
-                })}
+                        {/* Row Total */}
+                        <td className="border border-blue-900 py-1 font-black text-blue-950 bg-blue-50/30">{rowTotalBoys}</td>
+                        <td className="border border-blue-900 py-1 font-black text-blue-950 bg-blue-50/30">{rowTotalGirls}</td>
+                      </tr>
+                    );
+                  });
+                })()}
 
                 {/* Bottom Total Row (एकूण) matching PDF */}
                 <tr className="bg-amber-100/80 font-black text-slate-950 text-[11px] border-t-2 border-blue-900">
@@ -867,6 +833,10 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
                   {/* E1 Totals */}
                   <td className="border border-blue-900 py-2 font-black">{columnTotals.e1.boys}</td>
                   <td className="border border-blue-900 py-2 font-black">{columnTotals.e1.girls}</td>
+
+                  {/* E2 Totals */}
+                  <td className="border border-blue-900 py-2 font-black">{columnTotals.e2.boys}</td>
+                  <td className="border border-blue-900 py-2 font-black">{columnTotals.e2.girls}</td>
 
                   {/* Total Sum Across All Grades */}
                   <td className="border border-blue-900 py-2 font-black bg-amber-200">

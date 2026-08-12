@@ -532,7 +532,7 @@ export function CCEStudentInfo({
       setLoading(false);
     });
     return () => unsub();
-  }, [selectedClass, academicYear]);
+  }, [selectedClass, selectedMedium, academicYear]);
 
   // Load student_details for all students in real-time
   useEffect(() => {

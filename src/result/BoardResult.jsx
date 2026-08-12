@@ -66,7 +66,7 @@ const CASTE_CATEGORIES = [
 
 const isGirlStudent = (student) => {
   if (!student) return false;
-  const g = String(student?.gender || student?.ling || student?.sex || "").trim().toLowerCase();
+  const g = String(student?.gender || student?.ling || student?.sex || student?.studentGender || student?.genderType || "").trim().toLowerCase();
   return (
     g.includes("girl") ||
     g.includes("female") ||
@@ -85,16 +85,105 @@ const isBoyStudent = (student) => {
 };
 
 const getStudentCasteCategory = (student) => {
-  if (!student) return "open";
-  const c = String(student?.caste || student?.category || student?.jaat || student?.castCategory || "").trim().toLowerCase();
-  if (c.includes("sc") || c.includes("अनुसूचित जाती")) return "sc";
-  if (c.includes("st") || c.includes("अनुसूचित जमाती")) return "st";
-  if (c.includes("vj") || c.includes("nt") || c.includes("वि.जा") || c.includes("भ.ज") || c.includes("विजा") || c.includes("भज")) return "vjnt";
-  if (c.includes("obc") || c.includes("sbc") || c.includes("इतर मागास") || c.includes("ओबीसी")) return "obc";
-  return "open";
+  if (!student) return null;
+  const raw = String(
+    student?.caste ||
+    student?.category ||
+    student?.jaat ||
+    student?.castCategory ||
+    ""
+  ).trim().toLowerCase();
+
+  if (!raw || raw === "n/a" || raw === "none" || raw === "undefined" || raw === "null") {
+    return null;
+  }
+
+  const tokens = raw.split(/[\s,_\-/()]+/);
+
+  // 1. SC (Scheduled Caste / अनुसूचित जाती)
+  if (
+    tokens.includes("sc") ||
+    raw.includes("scheduled caste") ||
+    raw.includes("अनुसूचित जाती") ||
+    raw.includes("अनुसूचीत जाती") ||
+    raw.includes("मातंग") ||
+    raw.includes("चर्मकार") ||
+    raw.includes("बौद्ध") ||
+    raw.includes("महार")
+  ) {
+    return "sc";
+  }
+
+  // 2. ST (Scheduled Tribe / अनुसूचित जमाती)
+  if (
+    tokens.includes("st") ||
+    raw.includes("scheduled tribe") ||
+    raw.includes("अनुसूचित जमाती") ||
+    raw.includes("अनुसूचीत जमाती") ||
+    raw.includes("भिल्ल") ||
+    raw.includes("कोळी")
+  ) {
+    return "st";
+  }
+
+  // 3. VJNT (विमुक्त जाती व भटक्या जमाती / VJ / NTB / NTC / NTD)
+  if (
+    tokens.includes("vj") ||
+    tokens.includes("nt") ||
+    tokens.includes("vjnt") ||
+    tokens.includes("ntb") ||
+    tokens.includes("ntc") ||
+    tokens.includes("ntd") ||
+    raw.includes("vj-a") ||
+    raw.includes("nt-b") ||
+    raw.includes("nt-c") ||
+    raw.includes("nt-d") ||
+    raw.includes("vimukta") ||
+    raw.includes("nomadic") ||
+    raw.includes("वि.जा") ||
+    raw.includes("भ.ज") ||
+    raw.includes("विजा") ||
+    raw.includes("भज") ||
+    raw.includes("विमुक्त") ||
+    raw.includes("भटक्या") ||
+    raw.includes("धनगर") ||
+    raw.includes("वंजारी")
+  ) {
+    return "vjnt";
+  }
+
+  // 4. OBC / SBC (इतर मागास / विशेष मागास)
+  if (
+    tokens.includes("obc") ||
+    tokens.includes("sbc") ||
+    raw.includes("other backward") ||
+    raw.includes("special backward") ||
+    raw.includes("इतर मागास") ||
+    raw.includes("विशेष मागास") ||
+    raw.includes("ओबीसी") ||
+    raw.includes("एसबीसी") ||
+    raw.includes("माळी") ||
+    raw.includes("तेली") ||
+    raw.includes("कुणबी")
+  ) {
+    return "obc";
+  }
+
+  // 5. OPEN / General (बिगर मागास / खुला)
+  if (
+    tokens.includes("open") ||
+    tokens.includes("general") ||
+    raw.includes("बिगर मागास") ||
+    raw.includes("खुला") ||
+    raw.includes("सर्वसाधारण")
+  ) {
+    return "open";
+  }
+
+  return null;
 };
 
-const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) => {
+const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTerm = "sem2", onBack }) => {
   const [selectedClass, setSelectedClass] = useState(initialClass || "1st");
   const [academicYear, setAcademicYear] = useState(initialYear || "2025-26");
   const [division, setDivision] = useState("1");
@@ -121,15 +210,18 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
   const [marksData, setMarksData] = useState({});
   const [remarksData, setRemarksData] = useState({});
   const [attendanceData, setAttendanceData] = useState({});
+  const [totalWorkingDays, setTotalWorkingDays] = useState(0);
   const [weightageData, setWeightageData] = useState({});
+  const [selectedTerm, setSelectedTerm] = useState(initialTerm || "sem2"); // "sem1" = प्रथम सत्र | "sem2" = द्वितीय सत्र
 
   const printRef = useRef(null);
 
   useEffect(() => {
-    loadUserFirestoreData();
-  }, [selectedClass, academicYear, selectedMedium]);
+    loadUserFirestoreData(selectedTerm);
+  }, [selectedClass, academicYear, selectedMedium, selectedTerm]);
 
-  const loadUserFirestoreData = async () => {
+  const loadUserFirestoreData = async (term = "sem2") => {
+    const termSuffix = term === "sem1" ? "sem1" : "sem2";
     setLoading(true);
     try {
       const docId = `${selectedClass}_${academicYear}`;
@@ -270,7 +362,10 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
           return null;
         };
 
-        const examKeys = ["sem2", "sem1", "test1", "test2", "oral1", "oral2", "pratyakshik1", "pratyakshik2", "general"];
+        // Term-aware exam keys: sem1 = test1/oral1/pratyakshik1, sem2 = test2/oral2/pratyakshik2
+        const examKeys = termSuffix === "sem1"
+          ? ["sem1", "test1", "oral1", "pratyakshik1", "general"]
+          : ["sem2", "test2", "oral2", "pratyakshik2", "general"];
 
         for (const exKey of examKeys) {
           const exData = await loadMarksDoc(exKey);
@@ -292,15 +387,18 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
           }
         }
 
-        // Bunny CDN fallback
+        // Bunny CDN fallback — only for selected term
         try {
           const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
-          const bunnyFiles = [
-            `cce_results/${selectedClass}_${academicYear}_marks_second.json`,
-            `cce_results/${selectedClass}_${academicYear}_marks_first.json`,
-            `cce_results/${selectedClass}_${academicYear}_marks_sem2.json`,
-            `cce_results/${selectedClass}_${academicYear}_marks_sem1.json`,
-          ];
+          const bunnyFiles = termSuffix === "sem1"
+            ? [
+                `cce_results/${selectedClass}_${academicYear}_marks_first.json`,
+                `cce_results/${selectedClass}_${academicYear}_marks_sem1.json`,
+              ]
+            : [
+                `cce_results/${selectedClass}_${academicYear}_marks_second.json`,
+                `cce_results/${selectedClass}_${academicYear}_marks_sem2.json`,
+              ];
           for (const file of bunnyFiles) {
             const bData = await fetchJsonFromBunny(file);
             if (bData && typeof bData === "object") {
@@ -388,8 +486,8 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
           return recs;
         };
 
-        const sem1Recs = await loadSemesterRemarks("sem1");
-        const sem2Recs = await loadSemesterRemarks("sem2");
+        // Load only selected term's remarks
+        const termRecs = await loadSemesterRemarks(termSuffix);
 
         const deepMergeRemarks = (target, source) => {
           if (!source || typeof source !== "object") return;
@@ -403,23 +501,70 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
           });
         };
 
-        deepMergeRemarks(mergedRemarks, sem1Recs);
-        deepMergeRemarks(mergedRemarks, sem2Recs);
-
+        deepMergeRemarks(mergedRemarks, termRecs);
         setRemarksData(mergedRemarks);
       } catch (e) {
         console.error("Error fetching remarks:", e);
       }
 
-      // 5. Fetch Attendance Data from _monthly doc and per-month docs (matching CCEAttendance save structure)
+      // 5. Fetch Working Days & Attendance Data
       try {
+        let computedTotalWorkingDays = 0;
+        try {
+          let wDaysObj = null;
+          // Try term-specific doc first, then legacy combined doc
+          const wDocIdsToTry = [
+            `${selectedClass}_${academicYear}_${termSuffix}`,
+            `${selectedClass}_${academicYear}`,
+          ];
+          for (const wDocId of wDocIdsToTry) {
+            const wSnap = await getDoc(doc(db, "cce_working_days", wDocId));
+            if (wSnap.exists()) {
+              wDaysObj = wSnap.data().days || wSnap.data().workingDays || wSnap.data();
+              break;
+            }
+          }
+          if (!wDaysObj) {
+            const legacyWSnap = await getDoc(doc(db, "cce_attendance", `${selectedClass}_${academicYear}_working_days`));
+            if (legacyWSnap.exists()) {
+              wDaysObj = legacyWSnap.data().workingDays || legacyWSnap.data().days || legacyWSnap.data();
+            }
+          }
+
+          if (!wDaysObj) {
+            try {
+              const cachedWDays = localStorage.getItem(`cce_working_days_${selectedClass}_${academicYear}`);
+              if (cachedWDays) wDaysObj = JSON.parse(cachedWDays);
+            } catch(e) {}
+          }
+
+          if (wDaysObj && typeof wDaysObj === "object") {
+            let sumDays = 0;
+            Object.values(wDaysObj).forEach((v) => {
+              const numV = Number(v);
+              if (!isNaN(numV) && numV > 0 && numV <= 31) sumDays += numV;
+            });
+            if (sumDays > 0) computedTotalWorkingDays = sumDays;
+            else if (typeof wDaysObj.total === "number" && wDaysObj.total > 0) computedTotalWorkingDays = wDaysObj.total;
+            else if (typeof wDaysObj.workingDays === "number" && wDaysObj.workingDays > 0) computedTotalWorkingDays = wDaysObj.workingDays;
+          } else if (typeof wDaysObj === "number" && wDaysObj > 0) {
+            computedTotalWorkingDays = wDaysObj;
+          }
+        } catch (e) {}
+
+        setTotalWorkingDays(computedTotalWorkingDays);
+
         let attMap = {};
 
-        // 5a. Try loading from _monthly summary doc first (primary source)
-        const monthlyDocId = `${selectedClass}_${academicYear}_monthly`;
-        try {
-          const monthlySnap = await getDoc(doc(db, "cce_attendance", monthlyDocId));
-          if (monthlySnap.exists()) {
+        // 5a. Try loading from term-specific _monthly doc first, then combined fallback
+        const monthlyDocIdsToTry = [
+          `${selectedClass}_${academicYear}_${termSuffix}_monthly`,
+          `${selectedClass}_${academicYear}_monthly`,
+        ];
+        for (const monthlyDocId of monthlyDocIdsToTry) {
+          try {
+            const monthlySnap = await getDoc(doc(db, "cce_attendance", monthlyDocId));
+            if (monthlySnap.exists()) {
             const recs = monthlySnap.data().records || monthlySnap.data();
             if (recs && typeof recs === "object") {
               // Structure: { studentId: { jun: 20, jul: 22, ... }, ... }
@@ -432,13 +577,23 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
                 }
               });
             }
+            if (Object.keys(attMap).length > 0) break;
           }
-        } catch (e) {}
+          } catch (e) {}
+        }
 
         // 5b. Try localStorage cache if no Firestore data
         if (Object.keys(attMap).length === 0) {
           try {
-            const cached = localStorage.getItem(`cce_monthly_attendance_${selectedClass}_${academicYear}`);
+            const cacheKeysToTry = [
+              `cce_monthly_attendance_${selectedClass}_${academicYear}_${termSuffix}`,
+              `cce_monthly_attendance_${selectedClass}_${academicYear}`,
+            ];
+            let cached = null;
+            for (const cKey of cacheKeysToTry) {
+              cached = localStorage.getItem(cKey);
+              if (cached) break;
+            }
             if (cached) {
               const parsed = JSON.parse(cached);
               if (parsed && typeof parsed === "object") {
@@ -543,7 +698,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
     setDownloading(true);
     toast.info("PDF तयार होत आहे, थेट डाऊनलोड सुरू झाली आहे...");
     try {
-      const { toPng } = await import("html-to-image");
+      const { toJpeg } = await import("html-to-image");
       const { default: jsPDF } = await import("jspdf");
 
       const pdfPages = printRef.current.querySelectorAll(".pdf-page");
@@ -553,24 +708,66 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
         return;
       }
 
-      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
+      let pdf = null;
 
       for (let i = 0; i < pdfPages.length; i++) {
         const pageEl = pdfPages[i];
-        const dataUrl = await toPng(pageEl, {
+        const isLandscape = pageEl.classList.contains("pdf-page-landscape") || pageEl.getAttribute("data-orientation") === "landscape";
+
+        const dataUrl = await toJpeg(pageEl, {
+          quality: 0.72,
           pixelRatio: 2,
           cacheBust: true,
           backgroundColor: "#ffffff",
+          style: {
+            overflow: "visible",
+            scrollbarWidth: "none",
+          },
         });
 
-        if (i > 0) pdf.addPage();
-        pdf.addImage(dataUrl, "PNG", 0, 0, pdfWidth, pdfHeight);
+        // Load captured image to read exact natural aspect ratio
+        const img = new Image();
+        img.src = dataUrl;
+        await new Promise((resolve) => {
+          if (img.complete) resolve();
+          else img.onload = resolve;
+        });
+
+        const naturalWidth = img.naturalWidth || 1;
+        const naturalHeight = img.naturalHeight || 1;
+
+        if (isLandscape) {
+          // Page 3: Rotated Landscape Page with 100% natural proportional height!
+          const targetWidth = 297; // mm
+          const targetHeight = Number(((naturalHeight / naturalWidth) * targetWidth).toFixed(2));
+
+          if (i === 0) {
+            pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: [targetWidth, targetHeight], compress: true });
+          } else {
+            pdf.addPage([targetWidth, targetHeight], "landscape");
+          }
+
+          pdf.addImage(dataUrl, "JPEG", 0, 0, targetWidth, targetHeight, undefined, "FAST");
+        } else {
+          // Pages 1 & 2: Standard Portrait A4 (210mm x 297mm)
+          const targetWidth = 210; // mm
+          const targetHeight = 297; // mm
+
+          if (i === 0) {
+            pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
+          } else {
+            pdf.addPage("a4", "portrait");
+          }
+
+          pdf.addImage(dataUrl, "JPEG", 0, 0, targetWidth, targetHeight, undefined, "FAST");
+        }
       }
 
-      pdf.save(`CCE_मूल्यांकन_नोंदवही_${selectedClass}_${academicYear}.pdf`);
-      toast.success("PDF यशस्वीरित्या थेट डाऊनलोड झाली!");
+      if (pdf) {
+        const termLabel = selectedTerm === "sem1" ? "प्रथम_सत्र" : "द्वितीय_सत्र";
+        pdf.save(`CCE_मूल्यांकन_नोंदवही_${selectedClass}_${termLabel}_${academicYear}.pdf`);
+        toast.success("PDF यशस्वीरित्या थेट डाऊनलोड झाली!");
+      }
     } catch (err) {
       console.error("PDF generation error:", err);
       toast.error("PDF निर्मितीत अडचण आली: " + err.message);
@@ -594,6 +791,15 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
   return (
     <div className="font-sans text-slate-800">
       <style>{`
+        .pdf-page, .pdf-page * {
+          scrollbar-width: none !important;
+          -ms-overflow-style: none !important;
+        }
+        .pdf-page::-webkit-scrollbar, .pdf-page *::-webkit-scrollbar {
+          display: none !important;
+          width: 0 !important;
+          height: 0 !important;
+        }
         @media print {
           @page {
             size: A4 portrait;
@@ -627,6 +833,14 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
             padding: 8mm 6mm !important;
             page-break-after: always !important;
             break-after: page !important;
+            overflow: visible !important;
+          }
+          .pdf-page-landscape {
+            width: 297mm !important;
+            height: 210mm !important;
+            max-height: 210mm !important;
+            padding: 6mm 6mm !important;
+            overflow: visible !important;
           }
         }
       `}</style>
@@ -705,6 +919,30 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
           </div>
         </div>
 
+
+        {/* Term Switcher — प्रथम सत्र / द्वितीय सत्र */}
+        <div className="flex items-center gap-1 bg-amber-50 p-1 rounded-xl border border-amber-200 text-xs font-bold">
+          <button
+            onClick={() => { setSelectedTerm("sem1"); }}
+            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+              selectedTerm === "sem1"
+                ? "bg-amber-600 text-white shadow-sm"
+                : "text-amber-700 hover:text-amber-900 hover:bg-amber-100"
+            }`}
+          >
+            प्रथम सत्र
+          </button>
+          <button
+            onClick={() => { setSelectedTerm("sem2"); }}
+            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+              selectedTerm === "sem2"
+                ? "bg-amber-600 text-white shadow-sm"
+                : "text-amber-700 hover:text-amber-900 hover:bg-amber-100"
+            }`}
+          >
+            द्वितीय सत्र
+          </button>
+        </div>
 
         {/* Page Mode Switcher */}
         <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
@@ -931,7 +1169,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
                     <span>इयत्ता - <b>{selectedClass}</b></span>
                     <span>तुकडी - <b>{division}</b></span>
                     <span>हजेरी क्र. <b>{student.rollNo}</b></span>
-                    <span>द्वितीय सत्र</span>
+                    <span>{selectedTerm === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
                   </div>
 
                   {/* Marks Table */}
@@ -1416,7 +1654,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
                     <span>इयत्ता - <b>{selectedClass}</b></span>
                     <span>तुकडी - <b>{division}</b></span>
                     <span>हजेरी क्र. <b>{student.rollNo}</b></span>
-                    <span>द्वितीय सत्र</span>
+                    <span>{selectedTerm === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
                   </div>
 
                   {/* Descriptive Remarks Table */}
@@ -1634,16 +1872,16 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
             const sName = String(student.name || "").trim().toLowerCase();
             const sFullName = String(student.fullName || "").trim().toLowerCase();
 
-            let rec = attendanceData[sId] || attendanceData[sRoll] || attendanceData[student.name] || attendanceData[student.fullName] || {};
+            let rec = attendanceData[sId] || attendanceData[sRoll] || attendanceData[student.name] || attendanceData[student.fullName] || null;
 
             if (!rec || (typeof rec === "object" && Object.keys(rec).length === 0)) {
               for (const [aKey, aVal] of Object.entries(attendanceData)) {
                 const lowerKey = String(aKey).trim().toLowerCase();
                 if (
-                  (sId && (lowerKey === sId.toLowerCase() || lowerKey === `student_${sId.toLowerCase()}`)) ||
-                  (sRoll && (lowerKey === sRoll.toLowerCase() || lowerKey === `roll_${sRoll.toLowerCase()}` || lowerKey === `student_${sRoll.toLowerCase()}`)) ||
-                  (sName && (lowerKey === sName || lowerKey.includes(sName))) ||
-                  (sFullName && (lowerKey === sFullName || lowerKey.includes(sFullName)))
+                  (sId && lowerKey === sId.toLowerCase()) ||
+                  (sRoll && (lowerKey === sRoll.toLowerCase() || lowerKey === `roll_${sRoll.toLowerCase()}`)) ||
+                  (sName && (lowerKey === sName || lowerKey === sName.replace(/\s+/g, ""))) ||
+                  (sFullName && (lowerKey === sFullName || lowerKey === sFullName.replace(/\s+/g, "")))
                 ) {
                   rec = aVal;
                   break;
@@ -1651,14 +1889,23 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
               }
             }
 
-            if (typeof rec === "number") return rec;
+            if (typeof rec === "number" && rec > 0) return rec;
             if (typeof rec === "object" && rec !== null) {
               let total = 0;
-              Object.values(rec).forEach((v) => {
-                if (typeof v === "number") total += v;
-                else if (typeof v === "string" && !isNaN(Number(v))) total += Number(v);
+              Object.entries(rec).forEach(([k, v]) => {
+                const lowerK = String(k).toLowerCase().trim();
+                // Filter out non-monthly keys to prevent double addition
+                if (["total", "workingdays", "updatedat", "id", "name", "fullname", "rollno"].includes(lowerK)) {
+                  return;
+                }
+                const numV = Number(v);
+                if (!isNaN(numV) && numV > 0 && numV <= 31) {
+                  total += numV;
+                }
               });
-              return total > 0 ? total : (Number(rec.total) || Number(rec.attendance) || 0);
+              if (total > 0) return total;
+              if (typeof rec.total === "number" && rec.total > 0 && rec.total <= 366) return rec.total;
+              if (typeof rec.attendance === "number" && rec.attendance > 0 && rec.attendance <= 366) return rec.attendance;
             }
             return 0;
           };
@@ -1689,7 +1936,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
                     <span>शाळा: <b>{schoolData.schoolName || "जिल्हा परिषद शाळा धोंडेवाडी(पेड)ता.तासगाव जि.सांगली"}</b></span>
                     <span>इयत्ता: <b>{selectedClass}</b></span>
                     <span>तुकडी: <b>{division}</b></span>
-                    <span>द्वितीय सत्र</span>
+                    <span>{selectedTerm === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
                     <span>सन: <b>{academicYear}</b></span>
                   </div>
 
@@ -1819,7 +2066,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
                     <span>शाळा: <b>{schoolData.schoolName || "जिल्हा परिषद शाळा धोंडेवाडी(पेड)ता.तासगाव जि.सांगली"}</b></span>
                     <span>इयत्ता: <b>{selectedClass}</b></span>
                     <span>तुकडी: <b>{division}</b></span>
-                    <span>द्वितीय सत्र</span>
+                    <span>{selectedTerm === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
                     <span>सन: <b>{academicYear}</b></span>
                   </div>
 
@@ -1942,276 +2189,142 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", onBack }) 
               </div>
 
               {/* ========================================================================= */}
-              {/* PAGE 3: सातत्यपूर्ण सर्वंकष मूल्यांकन: निकाल पत्रक                      */}
+              {/* PAGE 3: सातत्यपूर्ण सर्वंकष मूल्यांकन: निकाल पत्रक (एकत्रित लँडस्केप टेबल)    */}
               {/* ========================================================================= */}
-              <div className="pdf-page bg-white p-6 border border-slate-200 rounded-3xl min-h-[285mm] overflow-hidden shadow-sm flex flex-col justify-between">
+              <div className="pdf-page pdf-page-landscape bg-white p-6 border border-slate-200 rounded-3xl min-w-[297mm] overflow-x-auto shadow-sm flex flex-col justify-between mb-4" data-orientation="landscape" style={{ pageBreakBefore: "always", breakBefore: "page" }}>
                 <div>
                   <h2 className="text-xl font-black text-lime-900 text-center mb-2 tracking-tight">सातत्यपूर्ण सर्वंकष मूल्यांकन: निकाल पत्रक</h2>
-                  <div className="flex items-center justify-between text-xs font-bold text-slate-800 border-b border-lime-300 pb-2 mb-3">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-800 border-b border-lime-300 pb-2 mb-4">
                     <span>शाळा: <b>{schoolData.schoolName || "जिल्हा परिषद शाळा धोंडेवाडी(पेड)ता.तासगाव जि.सांगली"}</b></span>
                     <span>इयत्ता: <b>{selectedClass}</b></span>
                     <span>तुकडी: <b>{division}</b></span>
-                    <span>द्वितीय सत्र</span>
+                    <span>{selectedTerm === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
                     <span>सन: <b>{academicYear}</b></span>
                   </div>
 
-                  {(() => {
-                    const halfIdx = Math.ceil(subjects.length / 2);
-                    const subjectsPart1 = subjects.slice(0, halfIdx);
-                    const subjectsPart2 = subjects.slice(halfIdx);
-
-                    return (
-                      <div className="space-y-4">
-                        {/* PART 1 TABLE */}
-                        <div>
-                          <div className="text-[11px] font-black text-lime-900 mb-1">भाग १ : प्रथम व द्वितीय भाषा, गणित</div>
-                          {(() => {
-                            const hasRegularInPart1 = subjectsPart1.some((s) => !s.includes("कला") && !s.includes("कार्यानुभव") && !s.includes("शारीरिक"));
-                            const headerRowSpan = hasRegularInPart1 ? 3 : 2;
-                            const subRowSpan = hasRegularInPart1 ? 2 : 1;
-
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse border border-lime-600 text-xs text-center font-medium">
+                      <thead>
+                        <tr className="bg-lime-200 text-slate-900 font-extrabold border-b border-lime-600">
+                          <th className="border border-lime-600 p-0.5 w-6 min-w-[20px] text-[10px] leading-tight" rowSpan={3}>अ.क्र.</th>
+                          <th className="border border-lime-600 p-1 text-left min-w-[160px]" rowSpan={3}>विद्यार्थ्याचे नाव</th>
+                          {subjects.map((sub) => {
                             return (
-                              <table className="w-full border-collapse border border-lime-600 text-xs text-center font-medium">
-                                <thead>
-                                  <tr className="bg-lime-200 text-slate-900 font-extrabold border-b border-lime-600">
-                                    <th className="border border-lime-600 p-0 w-4 min-w-[14px] text-[9px] leading-tight" rowSpan={headerRowSpan}>अ.क्र.</th>
-                                    <th className="border border-lime-600 p-1 text-left w-52 min-w-[160px]" rowSpan={headerRowSpan}>विद्यार्थ्याचे नाव</th>
-                                    {subjectsPart1.map((sub) => {
-                                      const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
-                                      return (
-                                        <th key={sub} className="border border-lime-600 p-1" colSpan={isPractical ? 3 : 4}>
-                                          {sub}
-                                        </th>
-                                      );
-                                    })}
-                                  </tr>
-                                  <tr className="bg-lime-200 text-slate-900 font-extrabold border-b border-lime-600">
-                                    {subjectsPart1.map((sub) => {
-                                      const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
-                                      return isPractical ? (
-                                        <React.Fragment key={sub}>
-                                          <th className="border border-lime-600 p-0.5 text-[10px] leading-tight font-bold w-9" rowSpan={subRowSpan}>अ<br/><span className="text-[8px] font-normal">आकारिक</span></th>
-                                          <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9" rowSpan={subRowSpan}>एकूण</th>
-                                          <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9" rowSpan={subRowSpan}>श्रेणी</th>
-                                        </React.Fragment>
-                                      ) : (
-                                        <React.Fragment key={sub}>
-                                          <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9">अ</th>
-                                          <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9">ब</th>
-                                          <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9" rowSpan={subRowSpan}>एकूण</th>
-                                          <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9" rowSpan={subRowSpan}>श्रेणी</th>
-                                        </React.Fragment>
-                                      );
-                                    })}
-                                  </tr>
-                                  {hasRegularInPart1 && (
-                                    <tr className="bg-lime-200 text-slate-900 font-extrabold border-b border-lime-600">
-                                      {subjectsPart1.map((sub) => {
-                                        const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
-                                        if (isPractical) return null;
-                                        return (
-                                          <React.Fragment key={sub}>
-                                            <th className="border border-lime-600 p-0.5 text-[8px] font-normal">आकारिक</th>
-                                            <th className="border border-lime-600 p-0.5 text-[8px] font-normal">संकलित</th>
-                                          </React.Fragment>
-                                        );
-                                      })}
-                                    </tr>
-                                  )}
-                                  {/* Sub-Header Row: Max Marks */}
-                                  <tr className="bg-lime-100 text-slate-900 font-black border-b border-lime-600 text-[10px]">
-                                    <td className="border border-lime-600 p-0 w-4"></td>
-                                    <td className="border border-lime-600 p-1 text-left font-black w-52">पैकी</td>
-                                    {subjectsPart1.map((sub) => {
-                                      const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
-                                      const formMax = ["1st", "2nd", "1", "2"].includes(String(selectedClass)) ? "70" : ["3rd", "4th", "3", "4"].includes(String(selectedClass)) ? "60" : ["5th", "6th", "5", "6"].includes(String(selectedClass)) ? "50" : "40";
-                                      const semMax = ["1st", "2nd", "1", "2"].includes(String(selectedClass)) ? "30" : ["3rd", "4th", "3", "4"].includes(String(selectedClass)) ? "40" : ["5th", "6th", "5", "6"].includes(String(selectedClass)) ? "50" : "60";
-
-                                      return isPractical ? (
-                                        <React.Fragment key={sub}>
-                                          <td className="border border-lime-600 p-1">100</td>
-                                          <td className="border border-lime-600 p-1">100</td>
-                                          <td className="border border-lime-600 p-1"></td>
-                                        </React.Fragment>
-                                      ) : (
-                                        <React.Fragment key={sub}>
-                                          <td className="border border-lime-600 p-1">{formMax}</td>
-                                          <td className="border border-lime-600 p-1">{semMax}</td>
-                                          <td className="border border-lime-600 p-1">100</td>
-                                          <td className="border border-lime-600 p-1"></td>
-                                        </React.Fragment>
-                                      );
-                                    })}
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {students.map((student, idx) => {
-                                    return (
-                                      <tr key={student.id} className="border-b border-lime-300 hover:bg-lime-50/40">
-                                        <td className="border border-lime-600 p-0 font-bold w-4 text-center text-[10px]">{idx + 1}</td>
-                                        <td className="border border-lime-600 p-1 text-left font-bold text-slate-900 text-xs w-52 truncate overflow-hidden" title={student.name}>{student.name}</td>
-                                        {subjectsPart1.map((sub) => {
-                                          const stats = getStudentSubjectStats(student, sub);
-                                          return stats.isPracticalSub ? (
-                                            <React.Fragment key={sub}>
-                                              <td className="border border-lime-600 p-1 font-bold">{stats.formTotal || "-"}</td>
-                                              <td className="border border-lime-600 p-1 font-extrabold text-blue-900">{stats.grandTotal || "-"}</td>
-                                              <td className="border border-lime-600 p-1 font-bold text-emerald-800">{stats.gradeStr}</td>
-                                            </React.Fragment>
-                                          ) : (
-                                            <React.Fragment key={sub}>
-                                              <td className="border border-lime-600 p-1 font-bold">{stats.formTotal || "-"}</td>
-                                              <td className="border border-lime-600 p-1 font-bold">{stats.semTotal || "-"}</td>
-                                              <td className="border border-lime-600 p-1 font-extrabold text-blue-900">{stats.grandTotal || "-"}</td>
-                                              <td className="border border-lime-600 p-1 font-bold text-emerald-800">{stats.gradeStr}</td>
-                                            </React.Fragment>
-                                          );
-                                        })}
-                                      </tr>
-                                    );
-                                  })}
-                                </tbody>
-                              </table>
+                              <th key={sub} className="border border-lime-600 p-1" colSpan={4}>
+                                {sub}
+                              </th>
                             );
-                          })()}
-                        </div>
-
-                        {/* PART 2 TABLE */}
-                        <div>
-                          <div className="text-[11px] font-black text-lime-900 mb-1">भाग २ : इतर विषय व अंतिम निकाल</div>
-                          {(() => {
-                            const hasRegularInPart2 = subjectsPart2.some((s) => !s.includes("कला") && !s.includes("कार्यानुभव") && !s.includes("शारीरिक"));
-                            const headerRowSpan = hasRegularInPart2 ? 3 : 2;
-                            const subRowSpan = hasRegularInPart2 ? 2 : 1;
-
+                          })}
+                          <th className="border border-lime-600 p-0.5 text-[9px] w-10 min-w-[32px] leading-tight" rowSpan={3}>उपस्थिती</th>
+                          <th className="border border-lime-600 p-0.5 text-[9px] w-10 min-w-[32px] leading-tight" rowSpan={3}>एकूण गुण</th>
+                          <th className="border border-lime-600 p-0.5 text-[9px] w-12 min-w-[40px] leading-tight" rowSpan={3}>टक्केवारी</th>
+                          <th className="border border-lime-600 p-0.5 text-[9px] w-10 min-w-[32px] leading-tight" rowSpan={3}>अंतिम श्रेणी</th>
+                        </tr>
+                        <tr className="bg-lime-200 text-slate-900 font-extrabold border-b border-lime-600">
+                          {subjects.map((sub) => {
+                            const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
+                            return isPractical ? (
+                              <React.Fragment key={sub}>
+                                <th className="border border-lime-600 p-0.5 text-[10px] leading-tight font-bold" colSpan={2} rowSpan={2}>अ<br/><span className="text-[8px] font-normal">आकारिक</span></th>
+                                <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9" rowSpan={2}>एकूण</th>
+                                <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9" rowSpan={2}>श्रेणी</th>
+                              </React.Fragment>
+                            ) : (
+                              <React.Fragment key={sub}>
+                                <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9">अ</th>
+                                <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9">ब</th>
+                                <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9" rowSpan={2}>एकूण</th>
+                                <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9" rowSpan={2}>श्रेणी</th>
+                              </React.Fragment>
+                            );
+                          })}
+                        </tr>
+                        <tr className="bg-lime-200 text-slate-900 font-extrabold border-b border-lime-600">
+                          {subjects.map((sub) => {
+                            const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
+                            if (isPractical) return null;
                             return (
-                              <table className="w-full border-collapse border border-lime-600 text-xs text-center font-medium">
-                                <thead>
-                                  <tr className="bg-lime-200 text-slate-900 font-extrabold border-b border-lime-600">
-                                    <th className="border border-lime-600 p-0 w-4 min-w-[14px] text-[9px] leading-tight" rowSpan={headerRowSpan}>अ.क्र.</th>
-                                    <th className="border border-lime-600 p-1 text-left w-52 min-w-[160px]" rowSpan={headerRowSpan}>विद्यार्थ्याचे नाव</th>
-                                    {subjectsPart2.map((sub) => {
-                                      const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
-                                      return (
-                                        <th key={sub} className="border border-lime-600 p-1" colSpan={isPractical ? 3 : 4}>
-                                          {sub}
-                                        </th>
-                                      );
-                                    })}
-                                    <th className="border border-lime-600 p-0 text-[9px] w-8 min-w-[28px] leading-tight" rowSpan={headerRowSpan}>उपस्थिती</th>
-                                    <th className="border border-lime-600 p-0 text-[9px] w-8 min-w-[28px] leading-tight" rowSpan={headerRowSpan}>एकूण गुण</th>
-                                    <th className="border border-lime-600 p-0 text-[9px] w-10 min-w-[36px] leading-tight" rowSpan={headerRowSpan}>टक्केवारी</th>
-                                    <th className="border border-lime-600 p-0 text-[9px] w-8 min-w-[28px] leading-tight" rowSpan={headerRowSpan}>अंतिम श्रेणी</th>
-                                  </tr>
-                                  <tr className="bg-lime-200 text-slate-900 font-extrabold border-b border-lime-600">
-                                    {subjectsPart2.map((sub) => {
-                                      const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
-                                      return isPractical ? (
-                                        <React.Fragment key={sub}>
-                                          <th className="border border-lime-600 p-0.5 text-[10px] leading-tight font-bold w-9" rowSpan={subRowSpan}>अ<br/><span className="text-[8px] font-normal">आकारिक</span></th>
-                                          <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9" rowSpan={subRowSpan}>एकूण</th>
-                                          <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9" rowSpan={subRowSpan}>श्रेणी</th>
-                                        </React.Fragment>
-                                      ) : (
-                                        <React.Fragment key={sub}>
-                                          <th className="border border-lime-600 p-0.5 text-[10px] font-bold">अ</th>
-                                          <th className="border border-lime-600 p-0.5 text-[10px] font-bold">ब</th>
-                                          <th className="border border-lime-600 p-0.5 text-[10px] font-bold" rowSpan={subRowSpan}>एकूण</th>
-                                          <th className="border border-lime-600 p-0.5 text-[10px] font-bold" rowSpan={subRowSpan}>श्रेणी</th>
-                                        </React.Fragment>
-                                      );
-                                    })}
-                                  </tr>
-                                  {hasRegularInPart2 && (
-                                    <tr className="bg-lime-200 text-slate-900 font-extrabold border-b border-lime-600">
-                                      {subjectsPart2.map((sub) => {
-                                        const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
-                                        if (isPractical) return null;
-                                        return (
-                                          <React.Fragment key={sub}>
-                                            <th className="border border-lime-600 p-0.5 text-[8px] font-normal">आकारिक</th>
-                                            <th className="border border-lime-600 p-0.5 text-[8px] font-normal">संकलित</th>
-                                          </React.Fragment>
-                                        );
-                                      })}
-                                    </tr>
-                                  )}
-                                  {/* Sub-Header Row: Max Marks */}
-                                  <tr className="bg-lime-100 text-slate-900 font-black border-b border-lime-600 text-[10px]">
-                                    <td className="border border-lime-600 p-0 w-4"></td>
-                                    <td className="border border-lime-600 p-1 text-left font-black w-52">पैकी</td>
-                                    {subjectsPart2.map((sub) => {
-                                      const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
-                                      const formMax = ["1st", "2nd", "1", "2"].includes(String(selectedClass)) ? "70" : ["3rd", "4th", "3", "4"].includes(String(selectedClass)) ? "60" : ["5th", "6th", "5", "6"].includes(String(selectedClass)) ? "50" : "40";
-                                      const semMax = ["1st", "2nd", "1", "2"].includes(String(selectedClass)) ? "30" : ["3rd", "4th", "3", "4"].includes(String(selectedClass)) ? "40" : ["5th", "6th", "5", "6"].includes(String(selectedClass)) ? "50" : "60";
-
-                                      return isPractical ? (
-                                        <React.Fragment key={sub}>
-                                          <td className="border border-lime-600 p-1">100</td>
-                                          <td className="border border-lime-600 p-1">100</td>
-                                          <td className="border border-lime-600 p-1"></td>
-                                        </React.Fragment>
-                                      ) : (
-                                        <React.Fragment key={sub}>
-                                          <td className="border border-lime-600 p-1">{formMax}</td>
-                                          <td className="border border-lime-600 p-1">{semMax}</td>
-                                          <td className="border border-lime-600 p-1">100</td>
-                                          <td className="border border-lime-600 p-1"></td>
-                                        </React.Fragment>
-                                      );
-                                    })}
-                                    <td className="border border-lime-600 p-0 w-8 text-[10px]">140</td>
-                                    <td className="border border-lime-600 p-0 w-8 text-[10px]">{subjects.length * 100}</td>
-                                    <td className="border border-lime-600 p-0 w-10 text-[10px]">100%</td>
-                                    <td className="border border-lime-600 p-0 w-8"></td>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {students.map((student, idx) => {
-                                    let grandObtainedTotal = 0;
-                                    subjects.forEach((sub) => {
-                                      const stats = getStudentSubjectStats(student, sub);
-                                      grandObtainedTotal += stats.grandTotal;
-                                    });
-                                    const totalMaxMarks = subjects.length * 100;
-                                    const attDays = getStudentAttendanceDays(student) || 140;
-
-                                    return (
-                                      <tr key={student.id} className="border-b border-lime-300 hover:bg-lime-50/40">
-                                        <td className="border border-lime-600 p-0 font-bold w-4 text-center text-[10px]">{idx + 1}</td>
-                                        <td className="border border-lime-600 p-1 text-left font-bold text-slate-900 text-xs whitespace-nowrap" title={student.name}>{student.name}</td>
-                                        {subjectsPart2.map((sub) => {
-                                          const stats = getStudentSubjectStats(student, sub);
-                                          return stats.isPracticalSub ? (
-                                            <React.Fragment key={sub}>
-                                              <td className="border border-lime-600 p-1 font-bold">{stats.formTotal || "-"}</td>
-                                              <td className="border border-lime-600 p-1 font-extrabold text-blue-900">{stats.grandTotal || "-"}</td>
-                                              <td className="border border-lime-600 p-1 font-bold text-emerald-800">{stats.gradeStr}</td>
-                                            </React.Fragment>
-                                          ) : (
-                                            <React.Fragment key={sub}>
-                                              <td className="border border-lime-600 p-1 font-bold">{stats.formTotal || "-"}</td>
-                                              <td className="border border-lime-600 p-1 font-bold">{stats.semTotal || "-"}</td>
-                                              <td className="border border-lime-600 p-1 font-extrabold text-blue-900">{stats.grandTotal || "-"}</td>
-                                              <td className="border border-lime-600 p-1 font-bold text-emerald-800">{stats.gradeStr}</td>
-                                            </React.Fragment>
-                                          );
-                                        })}
-                                        <td className="border border-lime-600 p-0 font-bold w-8 text-[10px]">{attDays}</td>
-                                        <td className="border border-lime-600 p-0 font-black text-blue-900 w-8 text-[10px]">{grandObtainedTotal}</td>
-                                        <td className="border border-lime-600 p-0 font-black text-blue-900 w-10 text-[9px]">{totalMaxMarks > 0 && !isNaN(grandObtainedTotal) ? ((grandObtainedTotal / totalMaxMarks) * 100).toFixed(2) + "%" : "0.00%"}</td>
-                                        <td className="border border-lime-600 p-0 font-black text-emerald-900 w-8 text-[10px]">{getGrade(totalMaxMarks > 0 ? (grandObtainedTotal / totalMaxMarks) * 100 : 0)}</td>
-                                      </tr>
-                                    );
-                                  })}
-                                </tbody>
-                              </table>
+                              <React.Fragment key={sub}>
+                                <th className="border border-lime-600 p-0.5 text-[8px] font-normal">आकारिक</th>
+                                <th className="border border-lime-600 p-0.5 text-[8px] font-normal">संकलित</th>
+                              </React.Fragment>
                             );
-                          })()}
-                        </div>
-                      </div>
-                    );
-                  })()}
+                          })}
+                        </tr>
+                        {/* Sub-Header Row: Max Marks (पैकी) */}
+                        <tr className="bg-lime-100 text-slate-900 font-black border-b border-lime-600 text-[10px]">
+                          <td className="border border-lime-600 p-0 w-6"></td>
+                          <td className="border border-lime-600 p-1 text-left font-black">पैकी</td>
+                          {subjects.map((sub) => {
+                            const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
+                            const formMax = ["1st", "2nd", "1", "2"].includes(String(selectedClass)) ? "70" : ["3rd", "4th", "3", "4"].includes(String(selectedClass)) ? "60" : ["5th", "6th", "5", "6"].includes(String(selectedClass)) ? "50" : "40";
+                            const semMax = ["1st", "2nd", "1", "2"].includes(String(selectedClass)) ? "30" : ["3rd", "4th", "3", "4"].includes(String(selectedClass)) ? "40" : ["5th", "6th", "5", "6"].includes(String(selectedClass)) ? "50" : "60";
+
+                            return isPractical ? (
+                              <React.Fragment key={sub}>
+                                <td className="border border-lime-600 p-1" colSpan={2}>100</td>
+                                <td className="border border-lime-600 p-1">100</td>
+                                <td className="border border-lime-600 p-1"></td>
+                              </React.Fragment>
+                            ) : (
+                              <React.Fragment key={sub}>
+                                <td className="border border-lime-600 p-1">{formMax}</td>
+                                <td className="border border-lime-600 p-1">{semMax}</td>
+                                <td className="border border-lime-600 p-1">100</td>
+                                <td className="border border-lime-600 p-1"></td>
+                              </React.Fragment>
+                            );
+                          })}
+                          <td className="border border-lime-600 p-0 text-[10px]">{totalWorkingDays > 0 ? totalWorkingDays : "-"}</td>
+                          <td className="border border-lime-600 p-0 text-[10px]">{subjects.length * 100}</td>
+                          <td className="border border-lime-600 p-0 text-[10px]">100%</td>
+                          <td className="border border-lime-600 p-0"></td>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {students.map((student, idx) => {
+                          let grandObtainedTotal = 0;
+                          subjects.forEach((sub) => {
+                            const stats = getStudentSubjectStats(student, sub);
+                            grandObtainedTotal += stats.grandTotal;
+                          });
+                          const totalMaxMarks = subjects.length * 100;
+                          const attDays = getStudentAttendanceDays(student);
+                          const pctVal = totalMaxMarks > 0 ? (grandObtainedTotal / totalMaxMarks) * 100 : 0;
+                          const overallPct = pctVal.toFixed(2) + "%";
+                          const overallGrade = getGrade(pctVal);
+
+                          return (
+                            <tr key={student.id} className="border-b border-lime-300 hover:bg-lime-50/40">
+                              <td className="border border-lime-600 p-0 font-bold w-6 text-center text-[10px]">{idx + 1}</td>
+                              <td className="border border-lime-600 p-1 text-left font-bold text-slate-900 text-xs whitespace-nowrap" title={student.name}>{student.name}</td>
+                              {subjects.map((sub) => {
+                                const stats = getStudentSubjectStats(student, sub);
+                                return stats.isPracticalSub ? (
+                                  <React.Fragment key={sub}>
+                                    <td className="border border-lime-600 p-1 font-bold" colSpan={2}>{stats.formTotal || "-"}</td>
+                                    <td className="border border-lime-600 p-1 font-extrabold text-blue-900">{stats.grandTotal || "-"}</td>
+                                    <td className="border border-lime-600 p-1 font-bold text-emerald-800">{stats.gradeStr}</td>
+                                  </React.Fragment>
+                                ) : (
+                                  <React.Fragment key={sub}>
+                                    <td className="border border-lime-600 p-1 font-bold">{stats.formTotal || "-"}</td>
+                                    <td className="border border-lime-600 p-1 font-bold">{stats.semTotal || "-"}</td>
+                                    <td className="border border-lime-600 p-1 font-extrabold text-blue-900">{stats.grandTotal || "-"}</td>
+                                    <td className="border border-lime-600 p-1 font-bold text-emerald-800">{stats.gradeStr}</td>
+                                  </React.Fragment>
+                                );
+                              })}
+                              <td className="border border-lime-600 p-0 font-bold text-[10px]">{attDays > 0 ? attDays : "-"}</td>
+                              <td className="border border-lime-600 p-0 font-black text-blue-900 text-[10px]">{grandObtainedTotal}</td>
+                              <td className="border border-lime-600 p-0 font-black text-blue-900 text-[9px]">{overallPct}</td>
+                              <td className="border border-lime-600 p-0 font-black text-emerald-900 text-[10px]">{overallGrade}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between pt-6 border-t border-slate-200 mt-6 text-xs font-bold text-slate-800">
