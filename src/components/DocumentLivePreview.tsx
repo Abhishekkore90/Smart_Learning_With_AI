@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, forwardRef, useImperativeHandle, useRef } from "react";
 import * as XLSX from "xlsx";
 import { 
   FileText, 
@@ -14,6 +14,9 @@ import {
   FileCheck
 } from "lucide-react";
 import { getBunnyStorageUrl } from "@/lib/bunny-auth-pdf";
+import { showToast as toast } from "@/lib/custom-toast";
+import { db } from "@/lib/firebase";
+import { doc, updateDoc } from "firebase/firestore";
 
 interface Props {
   selectedFile?: File | null;
@@ -526,26 +529,86 @@ export function groupStructuredPagesByDay(pages: StructuredDayPage[]): GroupedDa
   return list;
 }
 
-export const StructuredDayPageList: React.FC<{ pages: StructuredDayPage[] }> = ({ pages }) => {
-  const dayRecords = groupStructuredPagesByDay(pages);
+export interface StructuredDayPageListRef {
+  getEditedData: () => any[];
+}
+
+export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { pages: StructuredDayPage[] }>(({ pages }, ref) => {
+  const [dayRecords, setDayRecords] = useState<any[]>([]);
+
+  useEffect(() => {
+    setDayRecords(groupStructuredPagesByDay(pages));
+  }, [pages]);
+
+  useImperativeHandle(ref, () => ({
+    getEditedData: () => dayRecords
+  }));
+
+  const updateHeader = (dayIdx: number, field: string, value: string) => {
+    setDayRecords(prev => {
+      const next = [...prev];
+      next[dayIdx] = { ...next[dayIdx], [field]: value };
+      return next;
+    });
+  };
+
+  const updateRow = (dayIdx: number, rowIdx: number, field: string, value: string) => {
+    setDayRecords(prev => {
+      const next = [...prev];
+      const nextPeriods = [...(next[dayIdx].periods || [])];
+      nextPeriods[rowIdx] = { ...nextPeriods[rowIdx], [field]: value };
+      next[dayIdx] = { ...next[dayIdx], periods: nextPeriods };
+      return next;
+    });
+  };
 
   return (
     <div className="space-y-8 font-sans max-w-4xl mx-auto pb-6">
       <style>{`
         @media print {
+          body {
+            background: white !important;
+            color: black !important;
+          }
           .day-card {
+            border: none !important;
+            box-shadow: none !important;
+            padding: 10px !important;
+            margin: 0 !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
+            page-break-before: always !important;
+            break-before: always !important;
+          }
+          .day-card:first-of-type {
+            page-break-before: avoid !important;
+            break-before: avoid !important;
           }
           tr {
             page-break-inside: avoid !important;
             break-inside: avoid !important;
           }
+          table th {
+            padding: 7px 8px !important;
+            font-size: 10px !important;
+            background-color: #f1f5f9 !important;
+            color: #0f172a !important;
+          }
+          table td {
+            padding: 7px 8px !important;
+            font-size: 10px !important;
+            line-height: 1.35 !important;
+          }
+          h2 {
+            font-size: 18px !important;
+            margin-top: 8px !important;
+            margin-bottom: 12px !important;
+          }
           .signature-section {
             page-break-inside: avoid !important;
             break-inside: avoid !important;
-            page-break-before: auto !important;
-            break-before: auto !important;
+            margin-top: 8px !important;
+            padding-top: 12px !important;
           }
         }
         .day-card {
@@ -589,19 +652,20 @@ export const StructuredDayPageList: React.FC<{ pages: StructuredDayPage[] }> = (
             </h2>
             
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 text-xs font-bold text-slate-700 bg-slate-50/80 p-4 rounded-2xl border border-slate-200 text-left">
-              <div><span className="text-slate-400 font-medium block text-[10px] uppercase">दिनांक</span> <span className="text-indigo-600 font-black text-sm">{p.date || "-"}</span></div>
-              <div><span className="text-slate-400 font-medium block text-[10px] uppercase">वार</span> <span className="text-slate-900 font-bold">{p.day || "-"}</span></div>
-              <div><span className="text-slate-400 font-medium block text-[10px] uppercase">वर्गशिक्षक</span> <span className="text-slate-900 font-bold">{p.teacher}</span></div>
-              <div><span className="text-slate-400 font-medium block text-[10px] uppercase">शाळा</span> <span className="text-slate-900 font-bold">{p.school}</span></div>
-              <div><span className="text-slate-400 font-medium block text-[10px] uppercase">इयत्ता</span> <span className="text-slate-900 font-bold">{p.std}</span></div>
-              <div><span className="text-slate-400 font-medium block text-[10px] uppercase">सन</span> <span className="text-slate-900 font-bold">{p.year}</span></div>
+              <div><span className="text-slate-400 font-medium block text-[10px] uppercase">दिनांक</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "date", e.currentTarget.textContent || "")} className="text-indigo-600 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.date || "-"}</span></div>
+              <div><span className="text-slate-400 font-medium block text-[10px] uppercase">वार</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "day", e.currentTarget.textContent || "")} className="text-slate-900 font-bold outline-indigo-500 focus:bg-white px-1 rounded block">{p.day || "-"}</span></div>
+              <div><span className="text-slate-400 font-medium block text-[10px] uppercase">वर्गशिक्षक</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "teacher", e.currentTarget.textContent || "")} className="text-slate-900 font-bold outline-indigo-500 focus:bg-white px-1 rounded block">{p.teacher || "-"}</span></div>
+              <div><span className="text-slate-400 font-medium block text-[10px] uppercase">शाळा</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "school", e.currentTarget.textContent || "")} className="text-slate-900 font-bold outline-indigo-500 focus:bg-white px-1 rounded block">{p.school || "-"}</span></div>
+              <div><span className="text-slate-400 font-medium block text-[10px] uppercase">इयत्ता</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "std", e.currentTarget.textContent || "")} className="text-slate-900 font-bold outline-indigo-500 focus:bg-white px-1 rounded block">{p.std || "-"}</span></div>
+              <div><span className="text-slate-400 font-medium block text-[10px] uppercase">सन</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "year", e.currentTarget.textContent || "")} className="text-slate-900 font-bold outline-indigo-500 focus:bg-white px-1 rounded block">{p.year || "-"}</span></div>
             </div>
 
             {p.thought && (
               <div className="text-xs italic text-amber-900 bg-amber-50/90 p-3.5 rounded-2xl border border-amber-200/80 text-left flex items-start gap-2">
                 <Sparkles className="size-4 text-amber-600 shrink-0 mt-0.5" />
-                <div>
-                  <strong className="not-italic text-amber-950 font-black">आजचा सुविचार :</strong> "{p.thought}"
+                <div className="flex-1">
+                  <strong className="not-italic text-amber-950 font-black">आजचा सुविचार :</strong> 
+                  "<span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "thought", e.currentTarget.textContent || "")} className="outline-amber-500 focus:bg-white px-1 rounded">{p.thought}</span>"
                 </div>
               </div>
             )}
@@ -610,7 +674,7 @@ export const StructuredDayPageList: React.FC<{ pages: StructuredDayPage[] }> = (
           {p.periods.length > 0 ? (
             <div className="overflow-x-auto rounded-2xl border border-slate-300 shadow-sm">
               <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-slate-900 text-white font-bold text-[11px]">
+                <thead className="bg-slate-100 text-slate-900 font-bold text-[11px] border-b border-slate-200">
                   <tr>
                     {(p.columnHeaders && p.columnHeaders.length > 0
                       ? p.columnHeaders
@@ -618,7 +682,7 @@ export const StructuredDayPageList: React.FC<{ pages: StructuredDayPage[] }> = (
                     ).map((header: string, hIdx: number, arr: string[]) => (
                       <th
                         key={hIdx}
-                        className={`p-2.5 ${hIdx === 0 ? "text-center w-14 bg-slate-950" : ""} ${hIdx < arr.length - 1 ? "border-r border-slate-700" : ""}`}
+                        className={`p-2.5 bg-slate-100 text-slate-900 font-extrabold ${hIdx === 0 ? "text-center w-14 bg-slate-200" : ""} ${hIdx < arr.length - 1 ? "border-r border-slate-200" : ""}`}
                       >
                         {header}
                       </th>
@@ -626,19 +690,19 @@ export const StructuredDayPageList: React.FC<{ pages: StructuredDayPage[] }> = (
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 font-medium text-slate-800 bg-white">
-                  {p.periods.map((row, idx) => (
+                  {p.periods.map((row: any, rIdx: number) => (
                     <tr 
-                      key={idx} 
-                      className="hover:bg-indigo-50/40 transition-colors"
+                      key={rIdx} 
+                      className="hover:bg-indigo-50/40 transition-colors group"
                       style={{ pageBreakInside: "avoid", breakInside: "avoid" }}
                     >
                       <td className="p-3 border-r border-slate-200 text-center font-black text-indigo-700 bg-indigo-50/50">{row.period}</td>
-                      <td className="p-3 border-r border-slate-200 font-bold text-slate-900">{row.subject}</td>
-                      <td className="p-3 border-r border-slate-200 font-medium text-slate-800 leading-relaxed">{row.topic}</td>
-                      <td className="p-3 border-r border-slate-200 text-slate-700 leading-relaxed">{row.outcome}</td>
-                      <td className="p-3 border-r border-slate-200 text-slate-700 leading-relaxed">{row.experience}</td>
-                      <td className="p-3 border-r border-slate-200 text-slate-600">{row.tools}</td>
-                      <td className="p-3 text-slate-600">{row.materials}</td>
+                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "subject", e.currentTarget.textContent || "")} className="p-3 border-r border-slate-200 font-bold text-slate-900 outline-indigo-500 focus:bg-white">{row.subject}</td>
+                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "topic", e.currentTarget.textContent || "")} className="p-3 border-r border-slate-200 font-medium text-slate-800 leading-relaxed outline-indigo-500 focus:bg-white">{row.topic}</td>
+                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "outcome", e.currentTarget.textContent || "")} className="p-3 border-r border-slate-200 text-slate-700 leading-relaxed outline-indigo-500 focus:bg-white">{row.outcome}</td>
+                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "experience", e.currentTarget.textContent || "")} className="p-3 border-r border-slate-200 text-slate-700 leading-relaxed outline-indigo-500 focus:bg-white">{row.experience}</td>
+                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "tools", e.currentTarget.textContent || "")} className="p-3 border-r border-slate-200 text-slate-600 outline-indigo-500 focus:bg-white">{row.tools}</td>
+                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "materials", e.currentTarget.textContent || "")} className="p-3 text-slate-600 outline-indigo-500 focus:bg-white">{row.materials}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -674,7 +738,7 @@ export const StructuredDayPageList: React.FC<{ pages: StructuredDayPage[] }> = (
       ))}
     </div>
   );
-};
+});
 
 function extractTextFromBinaryDoc(arrayBuffer: ArrayBuffer): string {
   try {
@@ -711,21 +775,79 @@ function extractTextFromBinaryDoc(arrayBuffer: ArrayBuffer): string {
   }
 }
 
-export const DocumentLivePreview: React.FC<Props> = ({
+export interface DocumentLivePreviewProps {
+  selectedFile?: File | null;
+  savedRecord?: any;
+  authenticatedPdfUrl?: string | null;
+  loadingPdf?: boolean;
+}
+
+export interface DocumentLivePreviewRef {
+  getStructuredData: () => any[] | null;
+}
+
+export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLivePreviewProps>(({
   selectedFile,
   savedRecord,
   authenticatedPdfUrl,
-  loadingPdf = false,
-}) => {
+  loadingPdf = false
+}, ref) => {
   const [htmlContent, setHtmlContent] = useState<string | null>(null);
-  const [multiDayPages, setMultiDayPages] = useState<StructuredDayPage[] | null>(null);
+  const [structuredPages, setStructuredPages] = useState<StructuredDayPage[]>([]);
+  const structuredListRef = useRef<StructuredDayPageListRef>(null);
+
+  useImperativeHandle(ref, () => ({
+    getStructuredData: () => {
+      if (structuredListRef.current) {
+        return structuredListRef.current.getEditedData();
+      }
+      return null;
+    }
+  }));
+
   const [excelPreviewData, setExcelPreviewData] = useState<any[] | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [loadingContent, setLoadingContent] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [localPdfBlobUrl, setLocalPdfBlobUrl] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"original" | "structured">("original");
+  const [isInnerDownloading, setIsInnerDownloading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Determine active document metadata
+  const handleSaveChanges = async () => {
+    if (!savedRecord || !savedRecord.id) {
+      toast.error("डेटा सेव्ह करण्यासाठी आधी रेकॉर्ड उपलब्ध असणे आवश्यक आहे.");
+      return;
+    }
+
+    const cls = savedRecord.className;
+    const med = savedRecord.medium;
+    if (!cls || !med) {
+      toast.error("वर्ग किंवा माध्यम उपलब्ध नसल्यामुळे बदल सेव्ह करता आले नाहीत.");
+      return;
+    }
+
+    const editedData = structuredListRef.current?.getEditedData() || structuredPages;
+    if (!editedData || editedData.length === 0) {
+      toast.error("सेव्ह करण्यासाठी कोणताही डेटा नाही.");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const diaryDocRef = doc(db, "teacher_diaries", cls, med, savedRecord.id);
+      await updateDoc(diaryDocRef, {
+        structuredData: editedData
+      });
+      toast.success("✅ बदल यशस्वीरित्या डेटाबेसमध्ये सेव्ह झाले आहेत!");
+    } catch (err: any) {
+      console.error("Firestore save error:", err);
+      toast.error("डेटाबेसमध्ये बदल सेव्ह करताना अडचण आली: " + (err.message || err));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const activeFileName = selectedFile?.name || savedRecord?.fileName || "Document";
   const activeExt = activeFileName.split(".").pop()?.toLowerCase() || "";
   const pageUrlLower = (savedRecord?.pageUrl || "").toLowerCase();
@@ -736,7 +858,6 @@ export const DocumentLivePreview: React.FC<Props> = ({
                 pageUrlLower.includes("/pages/") || 
                 pageUrlLower.includes("pdf");
 
-  // Manage local PDF Object URL
   useEffect(() => {
     if (selectedFile && (selectedFile.type === "application/pdf" || activeExt === "pdf")) {
       const blobUrl = URL.createObjectURL(selectedFile);
@@ -751,12 +872,17 @@ export const DocumentLivePreview: React.FC<Props> = ({
 
   useEffect(() => {
     setHtmlContent(null);
-    setMultiDayPages(null);
+    setStructuredPages([]);
     setExcelPreviewData(null);
     setErrorMsg(null);
     setViewMode(isPdf ? "original" : "structured");
 
-    // CASE 1: Preview locally selected file
+    if (savedRecord && (savedRecord as any).structuredData && (savedRecord as any).structuredData.length > 0) {
+      setStructuredPages((savedRecord as any).structuredData);
+      setViewMode("structured");
+      return;
+    }
+
     if (selectedFile) {
       const ext = selectedFile.name.split(".").pop()?.toLowerCase();
 
@@ -786,8 +912,8 @@ export const DocumentLivePreview: React.FC<Props> = ({
                 }
               }
 
-              if (extractedPages.length > 0 && extractedPages.some((p) => p.periods.length > 0)) {
-                setMultiDayPages(extractedPages);
+              if (extractedPages.length > 0) {
+                setStructuredPages(extractedPages);
               }
             } catch (err) {
               console.warn("PDF text extraction note:", err);
@@ -804,27 +930,23 @@ export const DocumentLivePreview: React.FC<Props> = ({
               const result = await mammoth.convertToHtml({ arrayBuffer: buffer });
               if (result.value && result.value.trim().length > 0) {
                 setHtmlContent(result.value);
-                // Use HTML table parser first (preserves actual table cell structure)
                 const parsedFromHtml = parseHtmlToStructuredDiaries(result.value);
                 if (parsedFromHtml.length > 0) {
-                  setMultiDayPages(parsedFromHtml);
+                  setStructuredPages(parsedFromHtml);
                 } else {
-                  // Fallback to raw text parser if no tables found in HTML
                   const rawTxt = await mammoth.extractRawText({ arrayBuffer: buffer });
                   const parsed = parseMultiPageTextToStructuredDiaries(rawTxt.value);
-                  if (parsed.length > 0) setMultiDayPages(parsed);
+                  if (parsed.length > 0) setStructuredPages(parsed);
                 }
                 return;
               }
-            } catch (err: any) {
-              // Mammoth XML parse failed
-            }
+            } catch (err: any) {}
 
             const extractedText = extractTextFromBinaryDoc(buffer);
             if (extractedText && extractedText.length > 0) {
               const parsed = parseMultiPageTextToStructuredDiaries(extractedText);
               if (parsed.length > 0) {
-                setMultiDayPages(parsed);
+                setStructuredPages(parsed);
               }
             } else {
               setErrorMsg(`Word document selected (${selectedFile.name}). Ready for upload.`);
@@ -845,14 +967,12 @@ export const DocumentLivePreview: React.FC<Props> = ({
               const rows: any[] = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: "" });
               setExcelPreviewData(rows.slice(0, 50));
             } catch (err) {
-              console.error("Excel parse error:", err);
               setErrorMsg("Could not parse Excel preview.");
             }
           })
           .finally(() => setLoadingContent(false));
       }
     } 
-    // CASE 2: Preview saved record (Word doc or PDF URL)
     else if (savedRecord && savedRecord.pageUrl) {
       const fileNameLower = (savedRecord.fileName || savedRecord.pageUrl).toLowerCase();
       if (fileNameLower.endsWith(".docx") || fileNameLower.endsWith(".doc")) {
@@ -874,27 +994,23 @@ export const DocumentLivePreview: React.FC<Props> = ({
               const result = await mammoth.convertToHtml({ arrayBuffer: buffer });
               if (result.value && result.value.trim().length > 0) {
                 setHtmlContent(result.value);
-                // Use HTML table parser first (preserves actual table cell structure)
                 const parsedFromHtml = parseHtmlToStructuredDiaries(result.value);
                 if (parsedFromHtml.length > 0) {
-                  setMultiDayPages(parsedFromHtml);
+                  setStructuredPages(parsedFromHtml);
                 } else {
-                  // Fallback to raw text parser if no tables found in HTML
                   const rawTxt = await mammoth.extractRawText({ arrayBuffer: buffer });
                   const parsed = parseMultiPageTextToStructuredDiaries(rawTxt.value);
-                  if (parsed.length > 0) setMultiDayPages(parsed);
+                  if (parsed.length > 0) setStructuredPages(parsed);
                 }
                 return;
               }
-            } catch (err) {
-              // Mammoth XML parse failed
-            }
+            } catch (err) {}
 
             const extractedText = extractTextFromBinaryDoc(buffer);
             if (extractedText && extractedText.length > 0) {
               const parsed = parseMultiPageTextToStructuredDiaries(extractedText);
               if (parsed.length > 0) {
-                setMultiDayPages(parsed);
+                setStructuredPages(parsed);
               }
             }
           })
@@ -906,17 +1022,153 @@ export const DocumentLivePreview: React.FC<Props> = ({
     }
   }, [selectedFile, savedRecord, isPdf]);
 
-  // Compute final PDF URL for display
   const pdfUrlToDisplay = selectedFile && isPdf
     ? localPdfBlobUrl
     : (authenticatedPdfUrl || savedRecord?.pageUrl || null);
 
-  const hasStructuredView = multiDayPages && multiDayPages.length > 0 && multiDayPages.some((p) => p.periods.length > 0);
+  const hasStructuredView = structuredPages && structuredPages.length > 0;
   const downloadUrl = savedRecord?.pageUrl || (selectedFile ? localPdfBlobUrl : null);
 
+  const handleInnerDownload = async () => {
+    if (!downloadUrl || isInnerDownloading) return;
+    setIsInnerDownloading(true);
+    try {
+      let blob: Blob | null = null;
+      try {
+        const directRes = await fetch(downloadUrl);
+        if (directRes.ok) {
+          const b = await directRes.blob();
+          if (!b.type.includes("text/html")) blob = b;
+        }
+      } catch { }
+
+      if (!blob) {
+        const proxyUrl = getBunnyStorageUrl(downloadUrl);
+        const headers: Record<string, string> = {};
+        if (import.meta.env.DEV) {
+          headers["AccessKey"] = import.meta.env.VITE_BUNNY_STORAGE_API_KEY || "";
+        }
+        const res = await fetch(proxyUrl, { headers });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        blob = await res.blob();
+      }
+
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = activeFileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+    } catch (err: any) {
+      try { window.open(downloadUrl, "_blank"); } catch { }
+    } finally {
+      setIsInnerDownloading(false);
+    }
+  };
+
+  const handleLocalDownloadPdf = async () => {
+    const pagesToUse = structuredListRef.current?.getEditedData() || structuredPages;
+    if (!pagesToUse || pagesToUse.length === 0) {
+      return handleInnerDownload();
+    }
+
+    setIsGeneratingPdf(true);
+    toast.success("PDF डाउनलोड तयार होत आहे... (Generating PDF...)");
+
+    try {
+      const defaultHeaders = ["तासिका", "विषय", "अध्ययन मुद्दा / पाठ्यघटक", "अध्ययन निष्पत्ती", "अध्ययन अनुभव", "साधन तंत्रे", "शैक्षणिक साहित्य"];
+      const dayBlocks = pagesToUse.map((p: any, idx: number) => {
+        const rows = (p.periods || []).map((row: any, rIdx: number) => `
+          <tr style="background:${rIdx % 2 === 0 ? "#fff" : "#f8fafc"}; page-break-inside: avoid; break-inside: avoid;">
+            <td style="text-align:center;font-weight:700;color:#4338ca;width:50px">${row.period}</td>
+            <td style="font-weight:600">${row.subject || "-"}</td>
+            <td>${row.topic || "-"}</td>
+            <td>${row.outcome || "-"}</td>
+            <td>${row.experience || "-"}</td>
+            <td>${row.tools || "-"}</td>
+            <td>${row.materials || "-"}</td>
+          </tr>`).join("");
+
+        const headers = (p.columnHeaders && p.columnHeaders.length > 0 ? p.columnHeaders : defaultHeaders)
+          .map((h: string) => `<th>${h}</th>`).join("");
+
+        return `
+          <div class="day-block" style="margin-bottom: 15px; ${idx > 0 ? "page-break-before: always; break-before: always;" : ""} page-break-inside: avoid; break-inside: avoid;">
+            <div class="day-header" style="display: flex; justify-content: flex-end; margin-bottom: 6px;">
+              <span class="period-count" style="color: #475569; background: #f1f5f9; padding: 4px 10px; border-radius: 20px; font-weight: 600; font-size: 11px;">
+                ${(p.periods || []).length} तासिका (Periods)
+              </span>
+            </div>
+            <h2 style="font-size: 18px; font-weight: 900; text-align: center; color: #0f172a; margin: 8px 0 12px 0;">दैनंदिन पाठ टाचण</h2>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; font-size: 11px;">
+              <div><span style="color:#94a3b8; font-size:9px; text-transform:uppercase; font-weight:600; display:block;">दिनांक</span><span style="font-weight:700; color:#4338ca; font-size:12px;">${p.date || "-"}</span></div>
+              <div><span style="color:#94a3b8; font-size:9px; text-transform:uppercase; font-weight:600; display:block;">वार</span><span style="font-weight:700; color:#0f172a;">${p.day || "-"}</span></div>
+              <div><span style="color:#94a3b8; font-size:9px; text-transform:uppercase; font-weight:600; display:block;">वर्गशिक्षक</span><span style="font-weight:700; color:#0f172a;">${p.teacher || "-"}</span></div>
+              <div><span style="color:#94a3b8; font-size:9px; text-transform:uppercase; font-weight:600; display:block;">शाळा</span><span style="font-weight:700; color:#0f172a;">${p.school || "-"}</span></div>
+              <div><span style="color:#94a3b8; font-size:9px; text-transform:uppercase; font-weight:600; display:block;">इयत्ता</span><span style="font-weight:700; color:#0f172a;">${p.std || "-"}</span></div>
+              <div><span style="color:#94a3b8; font-size:9px; text-transform:uppercase; font-weight:600; display:block;">सन</span><span style="font-weight:700; color:#0f172a;">${p.year || "-"}</span></div>
+            </div>
+            ${p.thought ? `<div style="font-size:10.5px; font-style:italic; color:#78350f; background:#fffbeb; border-left:3px solid #f59e0b; padding:7px 12px; margin-bottom:10px; border-radius:4px;">✨ आजचा सुविचार : '${p.thought}'</div>` : ""}
+            <table style="width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 12px;">
+              <thead>
+                <tr style="background: #f1f5f9; color: #0f172a;">
+                  ${headers}
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+            <div style="border-top: 1px solid #e2e8f0; padding-top: 12px; margin-top: 8px; page-break-inside: avoid; break-inside: avoid;">
+              <p style="font-weight: 700; font-size: 11px; margin-bottom: 4px;">दिवसभरातील वैशिष्टपूर्ण बाबी:</p>
+              <p style="color: #cbd5e1; font-size: 11px; margin-bottom: 4px;">________________________________________________________________________________________</p>
+              <p style="color: #cbd5e1; font-size: 11px; margin-bottom: 4px;">________________________________________________________________________________________</p>
+              <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 12px; padding: 20px 30px 0;">
+                <span>वर्गशिक्षक</span><span>मुख्याध्यापक</span>
+              </div>
+            </div>
+          </div>`;
+      }).join("");
+
+      const element = document.createElement("div");
+      element.innerHTML = `
+        <div style="font-family: 'Noto Sans Devanagari', Arial, sans-serif; color: #1e293b; line-height: 1.4; padding: 10px;">
+          <style>
+            table th { background-color: #f1f5f9 !important; color: #0f172a !important; padding: 7px 8px !important; text-align: left; font-size: 10px !important; text-transform: uppercase; border-right: 1px solid #cbd5e1; }
+            table th:first-child { text-align: center; width: 45px; background-color: #e2e8f0 !important; }
+            table td { padding: 7px 8px !important; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #f1f5f9; vertical-align: top; font-size: 10px !important; line-height: 1.35 !important; }
+            table th:last-child, table td:last-child { border-right: none; }
+            thead { display: table-header-group; }
+            tr { page-break-inside: avoid; break-inside: avoid; }
+          </style>
+          ${dayBlocks}
+        </div>
+      `;
+
+      const html2pdf = (await import("html2pdf.js")).default;
+      const baseName = activeFileName.replace(/\.[^/.]+$/, "") || "Teaching_Diary";
+      
+      const opt = {
+        margin:       6,
+        filename:     `${baseName}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak:    { mode: ['css'], avoid: '.day-block' }
+      };
+
+      await html2pdf().set(opt).from(element).save();
+      toast.success(`✅ "${baseName}.pdf" डाउनलोड झाली!`);
+    } catch (err) {
+      console.error("Local PDF generation error:", err);
+      toast.error("PDF डाउनलोड करताना अडचण आली.");
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
   return (
-    <div className="w-full bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm flex flex-col h-[680px]">
-      {/* Top Header */}
+    <div className="w-full bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm flex flex-col h-full min-h-[500px]">
       <div className="p-4 bg-slate-900 text-white flex items-center justify-between gap-3 shrink-0 flex-wrap">
         <div className="flex items-center gap-3 min-w-0">
           <div className="size-9 rounded-xl bg-indigo-600 flex items-center justify-center shrink-0 shadow-md">
@@ -931,7 +1183,7 @@ export const DocumentLivePreview: React.FC<Props> = ({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          {hasStructuredView && (
+          {isPdf && hasStructuredView && (
             <div className="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700 text-xs font-bold">
               {isPdf && (
                 <button
@@ -959,20 +1211,51 @@ export const DocumentLivePreview: React.FC<Props> = ({
           )}
 
           {downloadUrl && (
-            <a
-              href={downloadUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              download={activeFileName}
-              className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shrink-0 shadow-sm"
-            >
-              <Download className="size-3.5" /> Download
-            </a>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleInnerDownload}
+                disabled={isInnerDownloading}
+                className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shrink-0 shadow-sm cursor-pointer"
+              >
+                {isInnerDownloading ? (
+                  <><Loader2 className="size-3.5 animate-spin" /> Downloading...</>
+                ) : (
+                  <><Download className="size-3.5" /> Download to Word</>
+                )}
+              </button>
+
+              {hasStructuredView && (
+                <button
+                  onClick={handleLocalDownloadPdf}
+                  disabled={isGeneratingPdf}
+                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shrink-0 shadow-sm cursor-pointer"
+                >
+                  {isGeneratingPdf ? (
+                    <><Loader2 className="size-3.5 animate-spin" /> Generating PDF...</>
+                  ) : (
+                    <><Download className="size-3.5" /> Download to PDF</>
+                  )}
+                </button>
+              )}
+
+              {viewMode === "structured" && savedRecord && (
+                <button
+                  onClick={handleSaveChanges}
+                  disabled={isSaving}
+                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shrink-0 shadow-sm cursor-pointer"
+                >
+                  {isSaving ? (
+                    <><Loader2 className="size-3.5 animate-spin" /> Saving...</>
+                  ) : (
+                    <><FileCheck className="size-3.5" /> Save Changes</>
+                  )}
+                </button>
+              )}
+            </div>
           )}
         </div>
       </div>
 
-      {/* Main Content Viewer Area */}
       <div className="flex-1 w-full bg-slate-50 overflow-auto relative p-2 sm:p-4">
         {loadingContent || loadingPdf ? (
           <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-400">
@@ -982,7 +1265,6 @@ export const DocumentLivePreview: React.FC<Props> = ({
             </span>
           </div>
         ) : isPdf && pdfUrlToDisplay && viewMode === "original" ? (
-          /* PDF IFRAME / VISUAL PREVIEW */
           <div className="w-full h-full rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shadow-inner flex flex-col relative">
             <iframe
               src={pdfUrlToDisplay.includes("#") ? pdfUrlToDisplay : `${pdfUrlToDisplay}#view=FitH`}
@@ -990,11 +1272,11 @@ export const DocumentLivePreview: React.FC<Props> = ({
               className="w-full h-full border-none rounded-2xl bg-white"
             />
           </div>
-        ) : hasStructuredView && viewMode === "structured" ? (
-          /* STRUCTURED DIARY TABLE VIEW */
-          <StructuredDayPageList pages={multiDayPages!} />
+        ) : viewMode === "structured" && structuredPages.length > 0 ? (
+          <div className="w-full">
+            <StructuredDayPageList ref={structuredListRef} pages={structuredPages} />
+          </div>
         ) : htmlContent ? (
-          /* WORD (.DOCX) HTML PREVIEW */
           <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm max-w-3xl mx-auto prose prose-slate text-sm font-sans leading-relaxed text-slate-800">
             <div className="mb-4 pb-3 border-b border-slate-100 flex items-center justify-between text-xs text-slate-400">
               <span className="font-bold text-indigo-600 uppercase tracking-wider">Word Document Content Preview</span>
@@ -1065,15 +1347,17 @@ export const DocumentLivePreview: React.FC<Props> = ({
               )}
               {downloadUrl && (
                 <div className="pt-3">
-                  <a
-                    href={downloadUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    download={activeFileName}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black shadow-md transition-all"
+                  <button
+                    onClick={handleInnerDownload}
+                    disabled={isInnerDownloading}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white rounded-xl text-xs font-black shadow-md transition-all cursor-pointer"
                   >
-                    <Download className="size-4" /> Download / Open Word File
-                  </a>
+                    {isInnerDownloading ? (
+                      <><Loader2 className="size-4 animate-spin" /> Downloading...</>
+                    ) : (
+                      <><Download className="size-4" /> Download / Open Word File</>
+                    )}
+                  </button>
                 </div>
               )}
             </div>
@@ -1095,4 +1379,4 @@ export const DocumentLivePreview: React.FC<Props> = ({
       </div>
     </div>
   );
-};
+});
