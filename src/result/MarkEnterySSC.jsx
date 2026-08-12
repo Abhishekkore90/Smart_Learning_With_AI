@@ -283,7 +283,11 @@ const handleClassChange = async (e) => {
   fetchSubjectsForClass(e.target.value);
 
   if (selectedClass) {
-    await fetchDivisionsForClass(selectedClass);
+    try {
+      await fetchDivisionsForClass(selectedClass);
+    } catch (err) {
+      console.error("Error fetching divisions:", err);
+    }
   }
 
   // Filter students by class only (include all, regardless of division)
@@ -458,8 +462,12 @@ useEffect(() => {
     const fetchRemarks = async () => {
       const remarks = {};
       for (const student of selectedStudents) {
-        const remark = await fetchRemark(student.srNo);
-        remarks[student.srNo] = remark;
+        try {
+          const remark = await fetchRemark(student.srNo);
+          remarks[student.srNo] = remark;
+        } catch (err) {
+          console.error("Error fetching remark for student:", student.srNo, err);
+        }
       }
       setSpecialEntries(remarks);
     };
@@ -583,10 +591,15 @@ useEffect(() => {
       const marksData = {};
       
       for (const student of selectedStudents) {
-        const studentMarks = await fetchMarksData(student.srNo, academicYear, selectedExamName, subject);
-        marksData[student.srNo] = {
-          [subject]: studentMarks
-        };
+        try {
+          const studentMarks = await fetchMarksData(student.srNo, academicYear, selectedExamName, subject);
+          marksData[student.srNo] = {
+            [subject]: studentMarks
+          };
+        } catch (err) {
+          console.error("Error fetching marks for student:", student.srNo, err);
+          marksData[student.srNo] = { [subject]: {} };
+        }
       }
       
       setMarksData(marksData);
@@ -628,10 +641,15 @@ const submit = async () => {
 
   // Fetch marks for each student
   for (const student of selectedStudents) {
-    const studentMarks = await fetchMarksData(student.srNo, academicYear, selectedExamName, subject);
-    marksData[student.srNo] = {
-      [subject]: studentMarks
-    };
+    try {
+      const studentMarks = await fetchMarksData(student.srNo, academicYear, selectedExamName, subject);
+      marksData[student.srNo] = {
+        [subject]: studentMarks
+      };
+    } catch (err) {
+      console.error("Error fetching marks for student:", student.srNo, err);
+      marksData[student.srNo] = { [subject]: {} };
+    }
   }
 
   setMarksData(marksData);

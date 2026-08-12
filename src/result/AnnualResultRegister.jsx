@@ -62,6 +62,7 @@ export default function AnnualResultRegister({ initialClass, initialYear, onBack
   const [subjects, setSubjects] = useState([]);
   const [sem1MarksData, setSem1MarksData] = useState({});
   const [sem2MarksData, setSem2MarksData] = useState({});
+  const [attendanceData, setAttendanceData] = useState({});
 
   const printRef = useRef(null);
 
@@ -74,8 +75,12 @@ export default function AnnualResultRegister({ initialClass, initialYear, onBack
     try {
       // 1. Fetch School Settings
       let sName = "";
+      const currentTeacherId = getTeacherId();
+
       try {
-        const cached = localStorage.getItem("cce_general_school_settings");
+        const cachedTeacher = localStorage.getItem(`cce_general_school_settings_${currentTeacherId}`);
+        const cachedGen = localStorage.getItem("cce_general_school_settings");
+        const cached = cachedTeacher || cachedGen;
         if (cached) {
           const parsed = JSON.parse(cached);
           if (parsed.schoolName) sName = parsed.schoolName;
@@ -87,6 +92,24 @@ export default function AnnualResultRegister({ initialClass, initialYear, onBack
           localStorage.getItem("schoolName") ||
           localStorage.getItem("teacher_school_name") ||
           "";
+      }
+
+      if (!sName && currentTeacherId) {
+        try {
+          const teacherGenSnap = await getDoc(doc(db, "school_settings", `${currentTeacherId}_general`));
+          if (teacherGenSnap.exists() && teacherGenSnap.data().schoolName) {
+            sName = teacherGenSnap.data().schoolName;
+          }
+        } catch (e) {}
+      }
+
+      if (!sName && currentTeacherId) {
+        try {
+          const teacherSnap = await getDoc(doc(db, "school_settings", currentTeacherId));
+          if (teacherSnap.exists() && teacherSnap.data().schoolName) {
+            sName = teacherSnap.data().schoolName;
+          }
+        } catch (e) {}
       }
 
       if (!sName) {
@@ -111,8 +134,7 @@ export default function AnnualResultRegister({ initialClass, initialYear, onBack
       ];
       setSubjects(classSubjects);
 
-      // 3. Fetch Students from Firestore
-      const currentTeacherId = getTeacherId();
+      // 3. Fetch Students from Firestore & Merge student_details
       const uSnap = await getDocs(query(collection(db, "users"), where("role", "==", "student")));
       const matchedStudents = [];
       uSnap.forEach((docSnap) => {
@@ -122,6 +144,20 @@ export default function AnnualResultRegister({ initialClass, initialYear, onBack
         }
       });
 
+      // Merge student_details collection for exact user-entered details (GR No, Roll No, Attendance etc.)
+      try {
+        const detailsMap = new Map();
+        const detailsSnap = await getDocs(collection(db, "student_details"));
+        detailsSnap.forEach((docSnap) => {
+          detailsMap.set(docSnap.id, docSnap.data());
+        });
+
+        matchedStudents.forEach((st, idx) => {
+          const det = detailsMap.get(st.id) || detailsMap.get(st.name) || detailsMap.get(st.fullName) || {};
+          matchedStudents[idx] = { ...st, ...det };
+        });
+      } catch (e) {}
+
       matchedStudents.sort((a, b) => {
         const rA = parseInt(a.rollNo || a.roll_number || "999", 10);
         const rB = parseInt(b.rollNo || b.roll_number || "999", 10);
@@ -129,6 +165,44 @@ export default function AnnualResultRegister({ initialClass, initialYear, onBack
       });
 
       setStudents(matchedStudents);
+
+      // Fetch Attendance Data
+      let attMap = {};
+      try {
+        const cached = localStorage.getItem(`cce_monthly_attendance_${selectedClass}_${academicYear}`);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed && typeof parsed === "object") {
+            Object.assign(attMap, parsed);
+          }
+        }
+      } catch (e) {}
+
+      const attDocIds = [
+        ...(currentTeacherId ? [
+          `${currentTeacherId}_${selectedClass}_${academicYear}_monthly`,
+          `${currentTeacherId}_${selectedClass}_${academicYear}`,
+        ] : []),
+        `${selectedClass}_${academicYear}_monthly`,
+        `${selectedClass}_${academicYear}`,
+      ];
+
+      for (const dId of attDocIds) {
+        try {
+          const attSnap = await getDoc(doc(db, "cce_attendance", dId));
+          if (attSnap.exists()) {
+            const data = attSnap.data().records || attSnap.data().attendanceData || attSnap.data();
+            if (data && typeof data === "object") {
+              Object.entries(data).forEach(([stId, stAtt]) => {
+                if (!attMap[stId]) attMap[stId] = stAtt;
+                else if (typeof stAtt === "object") Object.assign(attMap[stId], stAtt);
+              });
+            }
+          }
+        } catch (e) {}
+      }
+
+      setAttendanceData(attMap);
 
       // 4. Fetch Marks for Sem 1 & Sem 2
       const loadSemesterMarks = async (semKey) => {
@@ -241,6 +315,39 @@ export default function AnnualResultRegister({ initialClass, initialYear, onBack
     }
 
     return 0;
+  };
+
+  // Helper to extract student attendance accurately
+  const getStudentAttendance = (student, attData) => {
+    if (!student) return "-";
+
+    // 1. Direct student profile check
+    if (student.attendance && Number(student.attendance) > 0) return Number(student.attendance);
+    if (student.presentDays && Number(student.presentDays) > 0) return Number(student.presentDays);
+    if (student.totalPresent && Number(student.totalPresent) > 0) return Number(student.totalPresent);
+    if (student.totalAttendance && Number(student.totalAttendance) > 0) return Number(student.totalAttendance);
+
+    // 2. Check attData map
+    const stdKeys = [student.id, student.rollNo, String(student.rollNo), student.name, student.fullName, student.studentId].filter(Boolean);
+    if (attData && typeof attData === "object") {
+      for (const k of stdKeys) {
+        const rec = attData[k];
+        if (rec) {
+          if (typeof rec === "number" && rec > 0) return rec;
+          if (typeof rec === "object") {
+            if (rec.total && typeof rec.total === "number" && rec.total > 0) return rec.total;
+            let sum = 0;
+            Object.values(rec).forEach((v) => {
+              const num = Number(v);
+              if (!isNaN(num) && num > 0) sum += num;
+            });
+            if (sum > 0) return sum;
+          }
+        }
+      }
+    }
+
+    return student.attendance || student.presentDays || "-";
   };
 
   const handlePrint = () => {
@@ -367,16 +474,16 @@ export default function AnnualResultRegister({ initialClass, initialYear, onBack
               <tr style={{ backgroundColor: "#edf5bd", color: "#1f2e0c" }}>
                 {subjects.map((_, sIdx) => (
                   <React.Fragment key={sIdx}>
-                    <th className="border border-slate-700 px-1 py-1 font-bold">
+                    <th className="border border-slate-700 p-1 font-bold" style={{ width: "36px", minWidth: "36px", maxWidth: "36px" }}>
                       <div className="writing-vertical">प्रथम सत्र</div>
                     </th>
-                    <th className="border border-slate-700 px-1 py-1 font-bold">
+                    <th className="border border-slate-700 p-1 font-bold" style={{ width: "36px", minWidth: "36px", maxWidth: "36px" }}>
                       <div className="writing-vertical">द्वितीय सत्र</div>
                     </th>
-                    <th className="border border-slate-700 px-1 py-1 font-bold">
+                    <th className="border border-slate-700 p-1 font-bold" style={{ width: "36px", minWidth: "36px", maxWidth: "36px" }}>
                       <div className="writing-vertical">एकूण</div>
                     </th>
-                    <th className="border border-slate-700 px-1 py-1 font-bold">
+                    <th className="border border-slate-700 p-1 font-bold" style={{ width: "36px", minWidth: "36px", maxWidth: "36px" }}>
                       <div className="writing-vertical">श्रेणी</div>
                     </th>
                   </React.Fragment>
@@ -387,10 +494,10 @@ export default function AnnualResultRegister({ initialClass, initialYear, onBack
               <tr style={{ backgroundColor: "#edf5bd", color: "#1f2e0c" }}>
                 {subjects.map((_, sIdx) => (
                   <React.Fragment key={sIdx}>
-                    <th className="border border-slate-700 px-1 py-1 font-extrabold">100</th>
-                    <th className="border border-slate-700 px-1 py-1 font-extrabold">100</th>
-                    <th className="border border-slate-700 px-1 py-1 font-extrabold">200</th>
-                    <th className="border border-slate-700 px-1 py-1"></th>
+                    <th className="border border-slate-700 p-1 font-extrabold" style={{ width: "36px", minWidth: "36px" }}>100</th>
+                    <th className="border border-slate-700 p-1 font-extrabold" style={{ width: "36px", minWidth: "36px" }}>100</th>
+                    <th className="border border-slate-700 p-1 font-extrabold" style={{ width: "36px", minWidth: "36px" }}>200</th>
+                    <th className="border border-slate-700 p-1" style={{ width: "36px", minWidth: "36px" }}></th>
                   </React.Fragment>
                 ))}
               </tr>
@@ -424,46 +531,46 @@ export default function AnnualResultRegister({ initialClass, initialYear, onBack
 
                   const overallPercent = grandTotalMax > 0 ? (grandTotalObt / grandTotalMax) * 100 : 0;
                   const overallGrade = getMarathiGrade(overallPercent);
-                  const attendance = st.attendance || st.presentDays || 234;
+                  const attendance = getStudentAttendance(st, attendanceData);
 
                   return (
                     <tr key={st.id || idx} className="hover:bg-slate-50 transition-colors">
-                      <td className="border border-slate-700 px-2 py-1.5 font-bold text-center">
+                      <td className="border border-slate-700 px-2 py-1.5 font-bold text-center" style={{ width: "40px" }}>
                         {idx + 1}
                       </td>
-                      <td className="border border-slate-700 px-3 py-1.5 font-bold text-left text-slate-900 whitespace-nowrap">
+                      <td className="border border-slate-700 px-3 py-1.5 font-bold text-left text-slate-900 whitespace-nowrap" style={{ minWidth: "160px" }}>
                         {st.fullName || st.name || `विद्यार्थी ${idx + 1}`}
                       </td>
 
                       {/* Subject Marks Columns */}
                       {subjectRows.map((subRes, sIdx) => (
                         <React.Fragment key={sIdx}>
-                          <td className="border border-slate-700 px-1.5 py-1.5 font-semibold text-slate-800">
+                          <td className="border border-slate-700 p-1 font-semibold text-slate-800 text-center" style={{ width: "36px", minWidth: "36px" }}>
                             {subRes.m1 > 0 ? subRes.m1 : "-"}
                           </td>
-                          <td className="border border-slate-700 px-1.5 py-1.5 font-semibold text-slate-800">
+                          <td className="border border-slate-700 p-1 font-semibold text-slate-800 text-center" style={{ width: "36px", minWidth: "36px" }}>
                             {subRes.m2 > 0 ? subRes.m2 : "-"}
                           </td>
-                          <td className="border border-slate-700 px-1.5 py-1.5 font-black text-slate-950">
+                          <td className="border border-slate-700 p-1 font-black text-slate-950 text-center" style={{ width: "36px", minWidth: "36px" }}>
                             {subRes.subTotal > 0 ? subRes.subTotal : "-"}
                           </td>
-                          <td className="border border-slate-700 px-1.5 py-1.5 font-extrabold text-slate-900">
+                          <td className="border border-slate-700 p-1 font-extrabold text-slate-900 text-center" style={{ width: "36px", minWidth: "36px" }}>
                             {subRes.subGrade}
                           </td>
                         </React.Fragment>
                       ))}
 
                       {/* Student Summary Columns */}
-                      <td className="border border-slate-700 px-1.5 py-1.5 font-bold text-slate-800">
+                      <td className="border border-slate-700 p-1 font-bold text-slate-800 text-center" style={{ width: "40px", minWidth: "40px" }}>
                         {attendance}
                       </td>
-                      <td className="border border-slate-700 px-1.5 py-1.5 font-black text-slate-950">
+                      <td className="border border-slate-700 p-1 font-black text-slate-950 text-center" style={{ width: "40px", minWidth: "40px" }}>
                         {grandTotalObt > 0 ? grandTotalObt : "-"}
                       </td>
-                      <td className="border border-slate-700 px-1.5 py-1.5 font-black text-slate-950">
+                      <td className="border border-slate-700 p-1 font-black text-slate-950 text-center" style={{ width: "40px", minWidth: "40px" }}>
                         {overallPercent > 0 ? overallPercent.toFixed(2) : "-"}
                       </td>
-                      <td className="border border-slate-700 px-1.5 py-1.5 font-black text-slate-950">
+                      <td className="border border-slate-700 p-1 font-black text-slate-950 text-center" style={{ width: "40px", minWidth: "40px" }}>
                         {overallGrade}
                       </td>
                     </tr>
