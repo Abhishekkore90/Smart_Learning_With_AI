@@ -408,7 +408,11 @@ const fetchStudentData = async () => {
     setDivision(""); // Reset division when class changes
   
     if (selectedClass) {
-      await fetchDivisionsForClass(selectedClass);
+      try {
+        await fetchDivisionsForClass(selectedClass);
+      } catch (err) {
+        console.error("Error fetching divisions for class:", err);
+      }
       const filteredStudents = studentData.filter((student) => student.currentClass === selectedClass);
       setSelectedStudents(filteredStudents);
     } else {

@@ -63,6 +63,8 @@ export function ModulePaywall({ moduleId, defaultTitle, children }: ModulePaywal
   useEffect(() => {
     let unsubPricing: () => void;
     let unsubPayment: () => void;
+    let unsubAccess: () => void;
+    let unsubAllAccess: () => void;
 
     const checkAccess = async () => {
       setLoading(true);
@@ -107,8 +109,44 @@ export function ModulePaywall({ moduleId, defaultTitle, children }: ModulePaywal
               setIsUnlocked(true);
               setPaymentInfo(pData);
             }
+          }
+          // Don't set isUnlocked=false here — admin access check below may grant it
+        });
+
+        // 3. Listen to admin-granted free access (per-module OR all-modules)
+        const accessDocKey = `${teacherId}_${moduleId}`;
+        const allAccessDocKey = `${teacherId}_ALL`;
+        let moduleAccessGranted = false;
+        let allAccessGranted = false;
+
+        unsubAccess = onSnapshot(doc(db, "teacher_module_access", accessDocKey), (snap) => {
+          if (snap.exists() && snap.data().status === "GRANTED") {
+            moduleAccessGranted = true;
+            setIsUnlocked(true);
+            setPaymentInfo({ ...snap.data(), grantedByAdmin: true });
           } else {
-            setIsUnlocked(false);
+            moduleAccessGranted = false;
+            if (!allAccessGranted) {
+              // Only keep locked if ALL access also not granted
+            }
+          }
+          if (!allAccessGranted && !moduleAccessGranted) {
+            // Will be resolved by allAccess listener
+          }
+          setLoading(false);
+        });
+
+        // 4. Listen to ALL-modules access grant (admin gave access to ALL sections)
+        unsubAllAccess = onSnapshot(doc(db, "teacher_module_access", allAccessDocKey), (snap) => {
+          if (snap.exists() && snap.data().status === "GRANTED") {
+            allAccessGranted = true;
+            setIsUnlocked(true);
+            setPaymentInfo({ ...snap.data(), grantedByAdmin: true, allAccess: true });
+          } else {
+            allAccessGranted = false;
+            if (!moduleAccessGranted) {
+              // Neither module nor all access granted — stay locked (payment check already ran)
+            }
           }
           setLoading(false);
         });
@@ -122,6 +160,8 @@ export function ModulePaywall({ moduleId, defaultTitle, children }: ModulePaywal
     return () => {
       if (unsubPricing) unsubPricing();
       if (unsubPayment) unsubPayment();
+      if (unsubAccess) unsubAccess();
+      if (unsubAllAccess) unsubAllAccess();
     };
   }, [moduleId, teacherId]);
 

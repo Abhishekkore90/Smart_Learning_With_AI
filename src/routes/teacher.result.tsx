@@ -452,84 +452,91 @@ function TeacherResultsPage() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50/50">
-      <TeacherHeader />
-      <TeacherSidebar />
+    <ModulePaywall moduleId="cce-result">
+      <div className="min-h-screen bg-slate-50/50">
+        <TeacherHeader />
+        <TeacherSidebar />
 
-      <main className="lg:pl-0 pt-16 min-h-screen">
-        <div className="p-6 md:p-10 space-y-8 max-w-full mx-auto">
-          {activeTab !== "dashboard" && activeTab !== "account" && (
-            <div className="mb-6">
-              <button
-                onClick={() => navigate({ to: "/teacher/result", search: { tab: "dashboard" } as any })}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-blue-50 hover:bg-[#1E432D] hover:text-white text-blue-800 border border-blue-200 rounded-2xl text-sm font-bold tracking-wide transition-all shadow-sm cursor-pointer"
-              >
-                ← मुख्यपृष्ठ (Back to Dashboard)
-              </button>
-            </div>
-          )}
+        <main className="lg:pl-0 pt-16 min-h-screen">
+          <div className="p-6 md:p-10 space-y-8 max-w-full mx-auto">
+            {activeTab !== "dashboard" && activeTab !== "account" && (
+              <div className="mb-6">
+                <button
+                  onClick={() => navigate({ to: "/teacher/result", search: { tab: "dashboard" } as any })}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-blue-50 hover:bg-[#1E432D] hover:text-white text-blue-800 border border-blue-200 rounded-2xl text-sm font-bold tracking-wide transition-all shadow-sm cursor-pointer"
+                >
+                  ← मुख्यपृष्ठ (Back to Dashboard)
+                </button>
+              </div>
+            )}
 
-          {activeTab === "dashboard" && (
-            <div className="w-full max-w-[1250px] mx-auto bg-gradient-to-b from-white via-slate-50/50 to-white text-slate-800 rounded-[2.5rem] p-6 md:p-10 font-sans shadow-2xl border border-slate-200/80 relative overflow-hidden">
-              {/* Background Ambient Decorative Elements */}
-              <div className="absolute top-0 right-0 w-72 h-72 bg-gradient-to-br from-blue-400/10 via-cyan-400/5 to-transparent rounded-bl-full pointer-events-none blur-xl" />
-              <div className="absolute -bottom-10 -left-10 w-60 h-60 bg-gradient-to-tr from-indigo-400/10 via-purple-400/5 to-transparent rounded-full pointer-events-none blur-xl" />
+            {activeTab === "dashboard" && (
+              <div className="w-full max-w-[1250px] mx-auto bg-gradient-to-b from-white via-slate-50/50 to-white text-slate-800 rounded-[2.5rem] p-6 md:p-10 font-sans shadow-2xl border border-slate-200/80 relative overflow-hidden">
+                {/* Background Ambient Decorative Elements */}
+                <div className="absolute top-0 right-0 w-72 h-72 bg-gradient-to-br from-blue-400/10 via-cyan-400/5 to-transparent rounded-bl-full pointer-events-none blur-xl" />
+                <div className="absolute -bottom-10 -left-10 w-60 h-60 bg-gradient-to-tr from-indigo-400/10 via-purple-400/5 to-transparent rounded-full pointer-events-none blur-xl" />
 
-              {/* Top Header */}
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-200/80 relative z-10">
-                <div className="flex items-center gap-4">
-                  <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-cyan-500 p-3.5 rounded-2xl text-white font-black text-base flex items-center justify-center shadow-lg shadow-blue-500/20 ring-4 ring-blue-50">
-                    <span className="tracking-tight">निकाल</span>
+                {/* Top Header */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-200/80 relative z-10">
+                  <div className="flex items-center gap-4">
+                    <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-cyan-500 p-3.5 rounded-2xl text-white font-black text-base flex items-center justify-center shadow-lg shadow-blue-500/20 ring-4 ring-blue-50">
+                      <span className="tracking-tight">निकाल</span>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2.5">
+                        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">CCE Result Dashboard</h1>
+                        <span className="bg-blue-100 text-blue-700 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider border border-blue-200">
+                          {studentsCount} विद्यार्थी
+                        </span>
+                      </div>
+                      <p className="text-xs text-blue-600 font-bold uppercase tracking-wider mt-0.5">सतत व सर्वंकष मूल्यमापन प्रणाली</p>
+                    </div>
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2.5">
-                      <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">CCE Result Dashboard</h1>
-                      <span className="bg-blue-100 text-blue-700 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider border border-blue-200">
-                        {studentsCount} विद्यार्थी
+
+                  {/* Dropdowns Selector Pills */}
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {/* Academic Year Selector */}
+                    <div className="flex items-center gap-2 bg-white border border-slate-200 shadow-sm rounded-2xl px-3.5 py-2 hover:border-blue-300 transition-colors">
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">वर्ष:</span>
+                      <select 
+                        className="bg-transparent text-blue-700 text-xs font-extrabold outline-none cursor-pointer"
+                        value={academicYear}
+                        onChange={(e) => setAcademicYear(e.target.value)}
+                      >
+                        {getDynamicAcademicYears().map((y) => (
+                          <option key={y.value} value={y.value}>
+                            {y.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Class Selector */}
+                    <div className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md shadow-blue-500/20 rounded-2xl px-4 py-2 ring-2 ring-blue-100">
+                      <span className="text-xs font-medium text-blue-100 uppercase tracking-wider">इयत्ता:</span>
+                      <select 
+                        className="bg-transparent text-white text-xs font-extrabold outline-none cursor-pointer border-none"
+                        value={selectedClass}
+                        onChange={(e) => setSelectedClass(e.target.value)}
+                      >
+                        <option value="1st" className="text-slate-800 font-bold">पहिली (1st)</option>
+                        <option value="2nd" className="text-slate-800 font-bold">दुसरी (2nd)</option>
+                        <option value="3rd" className="text-slate-800 font-bold">तिसरी (3rd)</option>
+                        <option value="4th" className="text-slate-800 font-bold">चौथी (4th)</option>
+                        <option value="5th" className="text-slate-800 font-bold">पाचवी (5th)</option>
+                        <option value="6th" className="text-slate-800 font-bold">सहावी (6th)</option>
+                        <option value="7th" className="text-slate-800 font-bold">सातवी (7th)</option>
+                        <option value="8th" className="text-slate-800 font-bold">आठवी (8th)</option>
+                      </select>
+                    </div>
+
+                    {/* Medium Indicator (Configured from School Info Settings) */}
+                    <div className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-500/20 rounded-2xl px-4 py-2 ring-2 ring-purple-100/50">
+                      <span className="text-xs font-bold text-purple-200 uppercase tracking-wider">माध्यम:</span>
+                      <span className="text-xs font-black text-white">
+                        {selectedMedium === "semi" ? "सेमी इंग्रजी (Semi-English)" : "मराठी माध्यम (Marathi)"}
                       </span>
                     </div>
-                    <p className="text-xs text-blue-600 font-bold uppercase tracking-wider mt-0.5">सतत व सर्वंकष मूल्यमापन प्रणाली</p>
-                  </div>
-                </div>
-
-                {/* Dropdowns Selector Pills */}
-                <div className="flex items-center gap-3 flex-wrap">
-                  {/* Academic Year Selector */}
-                  <div className="flex items-center gap-2 bg-white border border-slate-200 shadow-sm rounded-2xl px-3.5 py-2 hover:border-blue-300 transition-colors">
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">वर्ष:</span>
-                    <select 
-                      className="bg-transparent text-blue-700 text-xs font-extrabold outline-none cursor-pointer"
-                      value={academicYear}
-                      onChange={(e) => setAcademicYear(e.target.value)}
-                    >
-                      {getDynamicAcademicYears().map((y) => (
-                        <option key={y.value} value={y.value}>
-                          {y.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Class Selector */}
-                  <div className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md shadow-blue-500/20 rounded-2xl px-4 py-2 ring-2 ring-blue-100">
-                    <span className="text-xs font-medium text-blue-100 uppercase tracking-wider">इयत्ता:</span>
-                    <select 
-                      className="bg-transparent text-white text-xs font-extrabold outline-none cursor-pointer border-none"
-                      value={selectedClass}
-                      onChange={(e) => setSelectedClass(e.target.value)}
-                    >
-                      <option value="1st" className="text-slate-800 font-bold">पहिली (1st)</option>
-                      <option value="2nd" className="text-slate-800 font-bold">दुसरी (2nd)</option>
-                      <option value="3rd" className="text-slate-800 font-bold">तिसरी (3rd)</option>
-                      <option value="4th" className="text-slate-800 font-bold">चौथी (4th)</option>
-                      <option value="5th" className="text-slate-800 font-bold">पाचवी (5th)</option>
-                      <option value="6th" className="text-slate-800 font-bold">सहावी (6th)</option>
-                      <option value="7th" className="text-slate-800 font-bold">सातवी (7th)</option>
-                      <option value="8th" className="text-slate-800 font-bold">आठवी (8th)</option>
-                    </select>
-                  </div>
-
-                  {/* Medium Indicator (Configured from School Info Settings) */}
                   <div className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-500/20 rounded-2xl px-4 py-2 ring-2 ring-purple-100/50">
                     <span className="text-xs font-bold text-purple-200 uppercase tracking-wider">माध्यम:</span>
                     <span className="text-xs font-black text-white">
@@ -969,13 +976,11 @@ function TeacherResultsPage() {
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <ModulePaywall moduleId="cce-result" defaultTitle="सातत्यपूर्ण सर्वंकष मूल्यांकन नोंदवही (CCE Result Evaluation)">
-                <CCEPdfCreation 
-                  selectedClass={selectedClass} 
-                  academicYear={academicYear} 
-                  onBack={() => navigate({ to: "/teacher/result", search: { tab: "dashboard" } as any })}
-                />
-              </ModulePaywall>
+              <CCEPdfCreation 
+                selectedClass={selectedClass} 
+                academicYear={academicYear} 
+                onBack={() => navigate({ to: "/teacher/result", search: { tab: "dashboard" } as any })}
+              />
             </motion.div>
           )}
 
@@ -1004,5 +1009,6 @@ function TeacherResultsPage() {
         </div>
       </main>
     </div>
+    </ModulePaywall>
   );
 }
