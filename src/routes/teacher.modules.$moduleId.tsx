@@ -1,4 +1,4 @@
-import {
+﻿import {
   createFileRoute,
   Link,
   useParams,
@@ -1125,7 +1125,7 @@ function TemplateVisualHub({
                           {editFields.name}
                         </h2>
                         <div className="inline-flex items-center gap-3 px-6 py-2 bg-[#111827] text-white rounded-full text-[10px] font-black uppercase tracking-[0.3em] shadow-xl">
-                          Class {editFields.class} • Div {editFields.division}
+                          Class {editFields.class} ΓÇó Div {editFields.division}
                         </div>
                       </div>
 
@@ -1189,7 +1189,7 @@ function TemplateVisualHub({
                           {editFields.name}
                         </h2>
                         <div className="inline-flex px-8 py-3 bg-white text-[#111827] rounded-full text-[10px] font-black uppercase tracking-widest shadow-2xl">
-                          Grade {editFields.class} • Section{" "}
+                          Grade {editFields.class} ΓÇó Section{" "}
                           {editFields.division}
                         </div>
                       </div>
@@ -1297,7 +1297,7 @@ function TemplateVisualHub({
 
                       <div className="px-12 py-4 bg-white text-[#111827] rounded-2xl font-black uppercase tracking-[0.4em] text-xs shadow-3xl flex items-center gap-4">
                         <div className="size-2 rounded-full bg-rose-600 animate-ping" />
-                        Elite Champion • {editFields.rank}
+                        Elite Champion ΓÇó {editFields.rank}
                       </div>
 
                       <div className="mt-auto w-full flex justify-between items-center opacity-20 text-[9px] font-black uppercase tracking-[0.5em] border-t border-white/10 pt-8">
@@ -1605,7 +1605,7 @@ function AssemblyBookViewer() {
           {/* Divider */}
           <div className="border-b-2 border-slate-800 pb-2 mb-6 mt-12">
             <h3 className="text-lg font-bold text-slate-800 uppercase tracking-widest">
-              {lang === "en" ? "Reference Books & Materials Report" : "संदर्भ ग्रंथ आणि साहित्य अहवाल"}
+              {lang === "en" ? "Reference Books & Materials Report" : "αñ╕αñéαñªαñ░αÑìαñ¡ αñùαÑìαñ░αñéαñÑ αñåαñúαñ┐ αñ╕αñ╛αñ╣αñ┐αññαÑìαñ» αñàαñ╣αñ╡αñ╛αñ▓"}
             </h3>
           </div>
 
@@ -1613,7 +1613,7 @@ function AssemblyBookViewer() {
             <div className="py-12 flex flex-col items-center justify-center text-slate-500 border border-slate-200 bg-slate-50">
               <Loader2 className="size-6 text-slate-400 animate-spin mb-2" />
               <p className="text-sm font-semibold uppercase tracking-wider">
-                {lang === "en" ? "Loading Data..." : "माहिती लोड होत आहे..."}
+                {lang === "en" ? "Loading Data..." : "αñ«αñ╛αñ╣αñ┐αññαÑÇ αñ▓αÑïαñí αñ╣αÑïαññ αñåαñ╣αÑç..."}
               </p>
             </div>
           ) : (
@@ -1623,10 +1623,10 @@ function AssemblyBookViewer() {
                   <thead className="bg-slate-100 text-slate-800 text-xs uppercase font-bold border-b border-slate-300">
                     <tr>
                       <th className="px-4 py-3 border-r border-slate-200">#</th>
-                      <th className="px-4 py-3 border-r border-slate-200">{lang === "en" ? "Document Name" : "दस्तऐवजाचे नाव"}</th>
-                      <th className="px-4 py-3 border-r border-slate-200">{lang === "en" ? "Size" : "आकार"}</th>
-                      <th className="px-4 py-3 border-r border-slate-200">{lang === "en" ? "Date Added" : "तारीख"}</th>
-                      <th className="px-4 py-3 text-center">{lang === "en" ? "Actions" : "कृती"}</th>
+                      <th className="px-4 py-3 border-r border-slate-200">{lang === "en" ? "Document Name" : "αñªαñ╕αÑìαññαñÉαñ╡αñ£αñ╛αñÜαÑç αñ¿αñ╛αñ╡"}</th>
+                      <th className="px-4 py-3 border-r border-slate-200">{lang === "en" ? "Size" : "αñåαñòαñ╛αñ░"}</th>
+                      <th className="px-4 py-3 border-r border-slate-200">{lang === "en" ? "Date Added" : "αññαñ╛αñ░αÑÇαñû"}</th>
+                      <th className="px-4 py-3 text-center">{lang === "en" ? "Actions" : "αñòαÑâαññαÑÇ"}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1657,7 +1657,7 @@ function AssemblyBookViewer() {
                                 {loadingData && isSelected ? (
                                   <Loader2 className="size-3 animate-spin inline mr-1" />
                                 ) : null}
-                                {isSelected ? (lang === "en" ? "Close" : "बंद करा") : (lang === "en" ? "View" : "पहा")}
+                                {isSelected ? (lang === "en" ? "Close" : "αñ¼αñéαñª αñòαñ░αñ╛") : (lang === "en" ? "View" : "αñ¬αñ╣αñ╛")}
                               </button>
                               <button
                                 onClick={() => handleDownload(book)}
@@ -1669,7 +1669,7 @@ function AssemblyBookViewer() {
                                 ) : (
                                   <Download className="size-3" />
                                 )}
-                                {lang === "en" ? "Download" : "डाउनलोड"}
+                                {lang === "en" ? "Download" : "αñíαñ╛αñëαñ¿αñ▓αÑïαñí"}
                               </button>
                             </div>
                           </td>
@@ -1685,7 +1685,7 @@ function AssemblyBookViewer() {
                   <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-4">
                     <h4 className="font-bold text-slate-800 text-sm flex items-center gap-2">
                       <FileText className="size-4 text-slate-500" />
-                      {lang === "en" ? "Document Preview:" : "दस्तऐवज पूर्वावलोकन:"} {selectedBook.name}
+                      {lang === "en" ? "Document Preview:" : "αñªαñ╕αÑìαññαñÉαñ╡αñ£ αñ¬αÑéαñ░αÑìαñ╡αñ╛αñ╡αñ▓αÑïαñòαñ¿:"} {selectedBook.name}
                     </h4>
                     <button
                       onClick={() => {
@@ -1694,7 +1694,7 @@ function AssemblyBookViewer() {
                       }}
                       className="px-3 py-1 text-xs font-bold text-slate-600 border border-slate-300 hover:bg-slate-100"
                     >
-                      {lang === "en" ? "Close Preview" : "पूर्वावलोकन बंद करा"}
+                      {lang === "en" ? "Close Preview" : "αñ¬αÑéαñ░αÑìαñ╡αñ╛αñ╡αñ▓αÑïαñòαñ¿ αñ¼αñéαñª αñòαñ░αñ╛"}
                     </button>
                   </div>
 
@@ -1703,7 +1703,7 @@ function AssemblyBookViewer() {
                       <div className="flex flex-col items-center gap-2 text-slate-500">
                         <Loader2 className="size-6 animate-spin" />
                         <p className="text-xs font-bold uppercase">
-                          {lang === "en" ? "Loading document..." : "दस्तऐवज लोड होत आहे..."}
+                          {lang === "en" ? "Loading document..." : "αñªαñ╕αÑìαññαñÉαñ╡αñ£ αñ▓αÑïαñí αñ╣αÑïαññ αñåαñ╣αÑç..."}
                         </p>
                       </div>
                     ) : bookData ? (
@@ -1727,7 +1727,7 @@ function AssemblyBookViewer() {
                       <div className="text-slate-400 flex flex-col items-center">
                         <AlertCircle className="size-6 mb-2" />
                         <span className="text-xs font-bold">
-                          {lang === "en" ? "Preview Not Available" : "पूर्वावलोकन उपलब्ध नाही"}
+                          {lang === "en" ? "Preview Not Available" : "αñ¬αÑéαñ░αÑìαñ╡αñ╛αñ╡αñ▓αÑïαñòαñ¿ αñëαñ¬αñ▓αñ¼αÑìαñº αñ¿αñ╛αñ╣αÑÇ"}
                         </span>
                       </div>
                     )}
@@ -1742,9 +1742,9 @@ function AssemblyBookViewer() {
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   DailyAssemblyContent — Full Paripath / परीपाठ Structured View
-   ═══════════════════════════════════════════════════════════════ */
+/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+   DailyAssemblyContent ΓÇö Full Paripath / αñ¬αñ░αÑÇαñ¬αñ╛αñá Structured View
+   ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */
 function DailyAssemblyContent() {
   const [assemblyMode, setAssemblyMode] = useState<"daily" | "monthly">("daily");
   const [lang, setLang] = useState<"mr" | "en" | "hi">("mr");
@@ -1801,7 +1801,7 @@ function DailyAssemblyContent() {
           if (hData[selectedDate]?.isHoliday) {
             setHolidayNotice({
               isHoliday: true,
-              reason: hData[selectedDate].reason || "शाळेस सुट्टी",
+              reason: hData[selectedDate].reason || "αñ╢αñ╛αñ│αÑçαñ╕ αñ╕αÑüαñƒαÑìαñƒαÑÇ",
             });
             return;
           }
@@ -1813,7 +1813,7 @@ function DailyAssemblyContent() {
           if (dateObj.getDay() === 0) {
             setHolidayNotice({
               isHoliday: true,
-              reason: "रविवारची सुट्टी",
+              reason: "αñ░αñ╡αñ┐αñ╡αñ╛αñ░αñÜαÑÇ αñ╕αÑüαñƒαÑìαñƒαÑÇ",
             });
             return;
           }
@@ -1851,11 +1851,11 @@ function DailyAssemblyContent() {
     return () => unsubscribeArchive();
   }, [selectedDate]);
 
-  const MARATHI_DAYS_LIST = ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
-  const MARATHI_MONTHS_LIST = ["जानेवारी", "फेब्रुवारी", "मार्च", "एप्रिल", "मे", "जून", "जुलै", "ऑगस्ट", "सप्टेंबर", "ऑक्टोबर", "नोव्हेंबर", "डिसेंबर"];
+  const MARATHI_DAYS_LIST = ["αñ░αñ╡αñ┐αñ╡αñ╛αñ░", "αñ╕αÑïαñ«αñ╡αñ╛αñ░", "αñ«αñéαñùαñ│αñ╡αñ╛αñ░", "αñ¼αÑüαñºαñ╡αñ╛αñ░", "αñùαÑüαñ░αÑüαñ╡αñ╛αñ░", "αñ╢αÑüαñòαÑìαñ░αñ╡αñ╛αñ░", "αñ╢αñ¿αñ┐αñ╡αñ╛αñ░"];
+  const MARATHI_MONTHS_LIST = ["αñ£αñ╛αñ¿αÑçαñ╡αñ╛αñ░αÑÇ", "αñ½αÑçαñ¼αÑìαñ░αÑüαñ╡αñ╛αñ░αÑÇ", "αñ«αñ╛αñ░αÑìαñÜ", "αñÅαñ¬αÑìαñ░αñ┐αñ▓", "αñ«αÑç", "αñ£αÑéαñ¿", "αñ£αÑüαñ▓αÑê", "αñæαñùαñ╕αÑìαñƒ", "αñ╕αñ¬αÑìαñƒαÑçαñéαñ¼αñ░", "αñæαñòαÑìαñƒαÑïαñ¼αñ░", "αñ¿αÑïαñ╡αÑìαñ╣αÑçαñéαñ¼αñ░", "αñíαñ┐αñ╕αÑçαñéαñ¼αñ░"];
 
   const toDevanagariDigits = (str: string | number): string => {
-    const devanagariDigits = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
+    const devanagariDigits = ["αÑª", "αÑº", "αÑ¿", "αÑ⌐", "αÑ¬", "αÑ½", "αÑ¼", "αÑ¡", "αÑ«", "αÑ»"];
     return String(str).replace(/[0-9]/g, (w) => devanagariDigits[parseInt(w, 10)]);
   };
 
@@ -1896,11 +1896,11 @@ function DailyAssemblyContent() {
 
   const handleDownloadPdf = async () => {
     if (!formData) {
-      toast.error("परिपाठ content सापडला नाही. कृपया पुन्हा प्रयत्न करा.");
+      toast.error("αñ¬αñ░αñ┐αñ¬αñ╛αñá content αñ╕αñ╛αñ¬αñíαñ▓αñ╛ αñ¿αñ╛αñ╣αÑÇ. αñòαÑâαñ¬αñ»αñ╛ αñ¬αÑüαñ¿αÑìαñ╣αñ╛ αñ¬αÑìαñ░αñ»αññαÑìαñ¿ αñòαñ░αñ╛.");
       return;
     }
 
-    toast.success("PDF निर्मिती सुरू आहे... कृपया प्रतीक्षा करा.");
+    toast.success("PDF αñ¿αñ┐αñ░αÑìαñ«αñ┐αññαÑÇ αñ╕αÑüαñ░αÑé αñåαñ╣αÑç... αñòαÑâαñ¬αñ»αñ╛ αñ¬αÑìαñ░αññαÑÇαñòαÑìαñ╖αñ╛ αñòαñ░αñ╛.");
 
     try {
       const html2pdfModule = await import("html2pdf.js");
@@ -1944,18 +1944,18 @@ function DailyAssemblyContent() {
 
       const pageHeader = `
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2.5px solid #2e7d32; padding-bottom: 6px; margin-bottom: 12px;">
-          <div style="font-size: 14px; font-weight: 800; color: #2e7d32; font-family: 'Noto Sans Devanagari', sans-serif;">📖 दैनिक परिपाठ</div>
-          <div style="font-size: 13px; font-weight: 700; color: #2e7d32; font-family: 'Noto Sans Devanagari', sans-serif;">दिनांक: ${dateStr}</div>
+          <div style="font-size: 14px; font-weight: 800; color: #2e7d32; font-family: 'Noto Sans Devanagari', sans-serif;">≡ƒôû αñªαÑêαñ¿αñ┐αñò αñ¬αñ░αñ┐αñ¬αñ╛αñá</div>
+          <div style="font-size: 13px; font-weight: 700; color: #2e7d32; font-family: 'Noto Sans Devanagari', sans-serif;">αñªαñ┐αñ¿αñ╛αñéαñò: ${dateStr}</div>
         </div>
       `;
 
       // School Info Header
       const schoolHeader = (schoolInfo.schoolName || schoolInfo.udise || schoolInfo.kendra) ? `
         <div style="border: 2px solid #2e7d32; border-radius: 10px; padding: 12px 18px; margin-bottom: 14px; background: #f0fdf4; text-align: center; page-break-inside: avoid;">
-          ${schoolInfo.schoolName ? `<div style="font-size: 18px; font-weight: 900; color: #166534; margin-bottom: 6px; font-family: 'Noto Sans Devanagari', sans-serif;">शाळेचे नाव: ${schoolInfo.schoolName}</div>` : ''}
+          ${schoolInfo.schoolName ? `<div style="font-size: 18px; font-weight: 900; color: #166534; margin-bottom: 6px; font-family: 'Noto Sans Devanagari', sans-serif;">αñ╢αñ╛αñ│αÑçαñÜαÑç αñ¿αñ╛αñ╡: ${schoolInfo.schoolName}</div>` : ''}
           <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: #166534; border-top: 1px dashed #86efac; padding-top: 6px; font-family: 'Noto Sans Devanagari', sans-serif;">
-            <span>केंद्र: ${schoolInfo.kendra || '-'} | युडायस (UDISE): ${schoolInfo.udise || '-'}</span>
-            <span>तालुका: ${schoolInfo.taluka || '-'} | जिल्हा: ${schoolInfo.jilha || '-'}</span>
+            <span>αñòαÑçαñéαñªαÑìαñ░: ${schoolInfo.kendra || '-'} | αñ»αÑüαñíαñ╛αñ»αñ╕ (UDISE): ${schoolInfo.udise || '-'}</span>
+            <span>αññαñ╛αñ▓αÑüαñòαñ╛: ${schoolInfo.taluka || '-'} | αñ£αñ┐αñ▓αÑìαñ╣αñ╛: ${schoolInfo.jilha || '-'}</span>
           </div>
         </div>
       ` : '';
@@ -1971,14 +1971,14 @@ function DailyAssemblyContent() {
       const silentPasayadan = data.silentPasayadan || assemblyItems[5]?.content || "";
 
       const panchangItems = [
-        { label: "वार", value: data.day },
-        { label: "मास", value: data.month },
-        { label: "पक्ष", value: data.paksha },
-        { label: "तिथी", value: data.tithi },
-        { label: "नक्षत्र", value: data.nakshatra },
-        { label: "योग", value: data.yog },
-        { label: "सूर्योदय", value: data.sunrise },
-        { label: "सूर्यास्त", value: data.sunset },
+        { label: "αñ╡αñ╛αñ░", value: data.day },
+        { label: "αñ«αñ╛αñ╕", value: data.month },
+        { label: "αñ¬αñòαÑìαñ╖", value: data.paksha },
+        { label: "αññαñ┐αñÑαÑÇ", value: data.tithi },
+        { label: "αñ¿αñòαÑìαñ╖αññαÑìαñ░", value: data.nakshatra },
+        { label: "αñ»αÑïαñù", value: data.yog },
+        { label: "αñ╕αÑéαñ░αÑìαñ»αÑïαñªαñ»", value: data.sunrise },
+        { label: "αñ╕αÑéαñ░αÑìαñ»αñ╛αñ╕αÑìαññ", value: data.sunset },
       ].filter(item => Boolean(item.value));
 
       const eventsContent = data.events || data.dinvishesh || "";
@@ -1986,8 +1986,8 @@ function DailyAssemblyContent() {
 
       const gkItems = [1, 2, 3, 4].map(num => data[`gkQ${num}`] ? `
         <div style="background: #f5f3ff; border: 1px solid #ede9fe; border-radius: 8px; padding: 8px 12px; margin-bottom: 6px;">
-          <div style="font-size: 13px; font-weight: 800; color: #5b21b6; font-family: 'Noto Sans Devanagari', sans-serif;">प्रश्न ${num}: ${data[`gkQ${num}`]}</div>
-          <div style="font-size: 13px; font-weight: 700; color: #166534; margin-top: 4px; font-family: 'Noto Sans Devanagari', sans-serif;">उत्तर: ${data[`gkA${num}`] || "-"}</div>
+          <div style="font-size: 13px; font-weight: 800; color: #5b21b6; font-family: 'Noto Sans Devanagari', sans-serif;">αñ¬αÑìαñ░αñ╢αÑìαñ¿ ${num}: ${data[`gkQ${num}`]}</div>
+          <div style="font-size: 13px; font-weight: 700; color: #166534; margin-top: 4px; font-family: 'Noto Sans Devanagari', sans-serif;">αñëαññαÑìαññαñ░: ${data[`gkA${num}`] || "-"}</div>
         </div>
       ` : '').join('');
 
@@ -2003,40 +2003,40 @@ function DailyAssemblyContent() {
         <div style="padding: 14px 22px; width: 100%; box-sizing: border-box;">
           ${pageHeader}
           ${schoolHeader}
-          ${greenBar("परिपाठ सुरुवात")}
+          ${greenBar("αñ¬αñ░αñ┐αñ¬αñ╛αñá αñ╕αÑüαñ░αÑüαñ╡αñ╛αññ")}
           <div style="${sectionBox('#bbf7d0')}">
-            ${greenBar(assemblyItems[0]?.label || 'राष्ट्रगीत')}
+            ${greenBar(assemblyItems[0]?.label || 'αñ░αñ╛αñ╖αÑìαñƒαÑìαñ░αñùαÑÇαññ')}
             <div style="${contentText} font-weight: 700;">${nl2br(nationalAnthem)}</div>
           </div>
           <div style="${sectionBox('#bbf7d0')}">
-            ${greenBar(assemblyItems[1]?.label || 'राज्यगीत')}
+            ${greenBar(assemblyItems[1]?.label || 'αñ░αñ╛αñ£αÑìαñ»αñùαÑÇαññ')}
             <div style="${contentText} font-size: 12px; line-height: 1.5;">${nl2br(stateAnthem)}</div>
           </div>
           <div style="${sectionBox('#bbf7d0')}">
-            ${greenBar(assemblyItems[2]?.label || 'प्रतिज्ञा')}
+            ${greenBar(assemblyItems[2]?.label || 'αñ¬αÑìαñ░αññαñ┐αñ£αÑìαñ₧αñ╛')}
             <div style="${contentText}">${nl2br(pledge)}</div>
           </div>
 
           <div style="${sectionBox('#fed7aa')}">
-            ${greenBar(assemblyItems[3]?.label || 'संविधान उद्देशिका')}
+            ${greenBar(assemblyItems[3]?.label || 'αñ╕αñéαñ╡αñ┐αñºαñ╛αñ¿ αñëαñªαÑìαñªαÑçαñ╢αñ┐αñòαñ╛')}
             <div style="${contentText}">${nl2br(preamble)}</div>
           </div>
 
           <div style="${sectionBox('#bbf7d0')}">
-            ${greenBar(assemblyItems[4]?.label || 'प्रार्थना')}
+            ${greenBar(assemblyItems[4]?.label || 'αñ¬αÑìαñ░αñ╛αñ░αÑìαñÑαñ¿αñ╛')}
             <div style="${contentText}">${nl2br(prayer)}</div>
           </div>
 
           ${silentPasayadan ? `
           <div style="${sectionBox('#fde68a')}">
-            ${greenBar(assemblyItems[5]?.label || 'पसायदान')}
+            ${greenBar(assemblyItems[5]?.label || 'αñ¬αñ╕αñ╛αñ»αñªαñ╛αñ¿')}
             <div style="${contentText} font-size: 12px; line-height: 1.55;">${nl2br(silentPasayadan)}</div>
           </div>
           ` : ''}
 
           ${panchangItems.length > 0 ? `
           <div style="${sectionBox('#fed7aa')}">
-            ${greenBar("आजचे पंचांग")}
+            ${greenBar("αñåαñ£αñÜαÑç αñ¬αñéαñÜαñ╛αñéαñù")}
             <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
               ${panchangItems.map(item => `
                 <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 6px; text-align: center;">
@@ -2050,7 +2050,7 @@ function DailyAssemblyContent() {
 
           ${data.thought ? `
           <div style="${sectionBox('#ede9fe')}">
-            ${greenBar("सुविचार")}
+            ${greenBar("αñ╕αÑüαñ╡αñ┐αñÜαñ╛αñ░")}
             <div style="padding: 14px; background: #faf5ff; border: 1px solid #ede9fe; border-radius: 8px; text-align: center;">
               <div style="font-size: 16px; font-weight: 800; color: #1f2937; font-style: italic; font-family: 'Noto Sans Devanagari', sans-serif;">"${data.thought}"</div>
             </div>
@@ -2059,7 +2059,7 @@ function DailyAssemblyContent() {
 
           ${data.shlok ? `
           <div style="${sectionBox('#fecaca')}">
-            ${greenBar("श्लोक")}
+            ${greenBar("αñ╢αÑìαñ▓αÑïαñò")}
             <div style="padding: 14px; background: #fff5f5; border: 1px solid #fecaca; border-radius: 8px; text-align: center;">
               <div style="${contentText} font-size: 14px;">${nl2br(data.shlok)}</div>
             </div>
@@ -2068,14 +2068,14 @@ function DailyAssemblyContent() {
 
           ${data.proverb ? `
           <div style="${sectionBox('#ccfbf1')}">
-            ${greenBar("म्हण व अर्थ")}
+            ${greenBar("αñ«αÑìαñ╣αñú αñ╡ αñàαñ░αÑìαñÑ")}
             <div style="padding: 12px; background: #f0fdfa; border: 1px solid #ccfbf1; border-radius: 8px; text-align: center; margin-bottom: 6px;">
-              <div style="font-size: 10px; font-weight: 700; color: #0d9488; text-transform: uppercase; margin-bottom: 4px; font-family: 'Noto Sans Devanagari', sans-serif;">म्हण</div>
+              <div style="font-size: 10px; font-weight: 700; color: #0d9488; text-transform: uppercase; margin-bottom: 4px; font-family: 'Noto Sans Devanagari', sans-serif;">αñ«αÑìαñ╣αñú</div>
               <div style="font-size: 15px; font-weight: 800; color: #1f2937; font-family: 'Noto Sans Devanagari', sans-serif;">"${data.proverb}"</div>
             </div>
             ${data.proverbMeaning ? `
             <div style="padding: 10px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; text-align: center;">
-              <div style="font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; margin-bottom: 4px; font-family: 'Noto Sans Devanagari', sans-serif;">म्हणीचा अर्थ</div>
+              <div style="font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; margin-bottom: 4px; font-family: 'Noto Sans Devanagari', sans-serif;">αñ«αÑìαñ╣αñúαÑÇαñÜαñ╛ αñàαñ░αÑìαñÑ</div>
               <div style="font-size: 13px; font-weight: 600; color: #4b5563; font-family: 'Noto Sans Devanagari', sans-serif;">${data.proverbMeaning}</div>
             </div>
             ` : ''}
@@ -2084,33 +2084,33 @@ function DailyAssemblyContent() {
 
           ${eventsContent ? `
           <div style="${sectionBox('#bfdbfe')}">
-            ${greenBar(`${data.dateMonth ? data.dateMonth + ' ' : ''}दिनविशेष`)}
-            ${data.yearDay ? `<div style="font-size: 12px; font-weight: 700; color: #3b82f6; text-align: center; background: #dbeafe; border-radius: 20px; padding: 4px 12px; display: inline-block; margin: 0 auto 8px auto; font-family: 'Noto Sans Devanagari', sans-serif;">हा वर्षातील ${data.yearDay} वा दिवस आहे.</div>` : ''}
+            ${greenBar(`${data.dateMonth ? data.dateMonth + ' ' : ''}αñªαñ┐αñ¿αñ╡αñ┐αñ╢αÑçαñ╖`)}
+            ${data.yearDay ? `<div style="font-size: 12px; font-weight: 700; color: #3b82f6; text-align: center; background: #dbeafe; border-radius: 20px; padding: 4px 12px; display: inline-block; margin: 0 auto 8px auto; font-family: 'Noto Sans Devanagari', sans-serif;">αñ╣αñ╛ αñ╡αñ░αÑìαñ╖αñ╛αññαÑÇαñ▓ ${data.yearDay} αñ╡αñ╛ αñªαñ┐αñ╡αñ╕ αñåαñ╣αÑç.</div>` : ''}
             <div style="${contentText} text-align: left; font-size: 13px;">${nl2br(eventsContent)}</div>
           </div>
           ` : ''}
 
           ${newsContent ? `
           <div style="${sectionBox('#a7f3d0')}">
-            ${greenBar("सुसंस्कारक्षम बातम्या")}
+            ${greenBar("αñ╕αÑüαñ╕αñéαñ╕αÑìαñòαñ╛αñ░αñòαÑìαñ╖αñ« αñ¼αñ╛αññαñ«αÑìαñ»αñ╛")}
             <div style="${contentText} text-align: left; font-size: 13px;">${nl2br(newsContent)}</div>
           </div>
           ` : ''}
 
           ${data.patrioticSong ? `
           <div style="${sectionBox('#c7d2fe')}">
-            ${greenBar(`देशभक्ती गीत${data.songTitle ? ': ' + data.songTitle : ''}`)}
+            ${greenBar(`αñªαÑçαñ╢αñ¡αñòαÑìαññαÑÇ αñùαÑÇαññ${data.songTitle ? ': ' + data.songTitle : ''}`)}
             <div style="${contentText} font-size: 13px;">${nl2br(data.patrioticSong)}</div>
           </div>
           ` : ''}
 
           ${data.story ? `
           <div style="${sectionBox('#fecdd3')}">
-            ${greenBar(`बोधकथा${data.storyTitle ? ': ' + data.storyTitle : ''}`)}
+            ${greenBar(`αñ¼αÑïαñºαñòαñÑαñ╛${data.storyTitle ? ': ' + data.storyTitle : ''}`)}
             <div style="${contentText} text-align: left; font-size: 13px;">${nl2br(data.story)}</div>
             ${data.moral ? `
             <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 8px 14px; border-radius: 0 6px 6px 0; margin-top: 8px;">
-              <span style="font-size: 12px; font-weight: 800; color: #92400e; font-family: 'Noto Sans Devanagari', sans-serif;">⭐ तात्पर्य: </span>
+              <span style="font-size: 12px; font-weight: 800; color: #92400e; font-family: 'Noto Sans Devanagari', sans-serif;">Γ¡É αññαñ╛αññαÑìαñ¬αñ░αÑìαñ»: </span>
               <span style="font-size: 13px; font-weight: 700; color: #1f2937; font-family: 'Noto Sans Devanagari', sans-serif;">${data.moral}</span>
             </div>
             ` : ''}
@@ -2119,21 +2119,21 @@ function DailyAssemblyContent() {
 
           ${gkItems ? `
           <div style="${sectionBox('#f3e8ff')}">
-            ${greenBar("सामान्य ज्ञान (G.K.)")}
+            ${greenBar("αñ╕αñ╛αñ«αñ╛αñ¿αÑìαñ» αñ£αÑìαñ₧αñ╛αñ¿ (G.K.)")}
             ${gkItems}
           </div>
           ` : ''}
 
           ${data.personalityTitle || data.personality ? `
           <div style="${sectionBox('#ccfbf1')}">
-            ${greenBar(`थोरव्यक्ती परिचय${data.personalityTitle ? ': ' + data.personalityTitle : ''}`)}
+            ${greenBar(`αñÑαÑïαñ░αñ╡αÑìαñ»αñòαÑìαññαÑÇ αñ¬αñ░αñ┐αñÜαñ»${data.personalityTitle ? ': ' + data.personalityTitle : ''}`)}
             <div style="${contentText} text-align: left;">${nl2br(data.personality || "-")}</div>
           </div>
           ` : ''}
 
           <div style="width: 100%; height: 1.5px; background: linear-gradient(90deg, transparent, #cbd5e1, transparent); margin: 14px 0;"></div>
           <div style="text-align: center; padding: 8px 0; font-size: 10px; font-weight: 700; color: #9ca3af; font-family: 'Noto Sans Devanagari', sans-serif;">
-            निर्मिती: ${data.creator || "Smart Learning With AI"} | © दैनिक परिपाठ ${new Date().getFullYear()}
+            αñ¿αñ┐αñ░αÑìαñ«αñ┐αññαÑÇ: ${data.creator || "Smart Learning With AI"} | ┬⌐ αñªαÑêαñ¿αñ┐αñò αñ¬αñ░αñ┐αñ¬αñ╛αñá ${new Date().getFullYear()}
           </div>
         </div>
       `;
@@ -2162,14 +2162,14 @@ function DailyAssemblyContent() {
         document.body.removeChild(downloadLink);
         setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
 
-        toast.success("PDF यशस्वीरीत्या डाउनलोड झाली! 🎉");
+        toast.success("PDF αñ»αñ╢αñ╕αÑìαñ╡αÑÇαñ░αÑÇαññαÑìαñ»αñ╛ αñíαñ╛αñëαñ¿αñ▓αÑïαñí αñ¥αñ╛αñ▓αÑÇ! ≡ƒÄë");
       } catch (innerErr) {
         if (tempDiv.parentNode) document.body.removeChild(tempDiv);
         throw innerErr;
       }
     } catch (err: any) {
       console.error("PDF generation error", err);
-      toast.error(`PDF तयार करताना त्रुटी आली: ${err.message || "PDF generate failed"}. कृपया पुन्हा प्रयत्न करा.`);
+      toast.error(`PDF αññαñ»αñ╛αñ░ αñòαñ░αññαñ╛αñ¿αñ╛ αññαÑìαñ░αÑüαñƒαÑÇ αñåαñ▓αÑÇ: ${err.message || "PDF generate failed"}. αñòαÑâαñ¬αñ»αñ╛ αñ¬αÑüαñ¿αÑìαñ╣αñ╛ αñ¬αÑìαñ░αñ»αññαÑìαñ¿ αñòαñ░αñ╛.`);
     }
   };
 
@@ -2249,7 +2249,7 @@ function DailyAssemblyContent() {
             }`}
           >
             <BookMarked className="size-4" />
-            {lang === "en" ? "Daily Assembly" : "दैनिक परिपाठ"}
+            {lang === "en" ? "Daily Assembly" : "αñªαÑêαñ¿αñ┐αñò αñ¬αñ░αñ┐αñ¬αñ╛αñá"}
           </button>
 
           <button
@@ -2261,7 +2261,7 @@ function DailyAssemblyContent() {
             }`}
           >
             <Table className="size-4" />
-            {lang === "en" ? "Monthly Assembly" : "मासिक परिपाठ (रजिस्टर)"}
+            {lang === "en" ? "Monthly Assembly" : "αñ«αñ╛αñ╕αñ┐αñò αñ¬αñ░αñ┐αñ¬αñ╛αñá (αñ░αñ£αñ┐αñ╕αÑìαñƒαñ░)"}
           </button>
         </div>
       </div>
@@ -2275,61 +2275,61 @@ function DailyAssemblyContent() {
             <DialogContent className="sm:max-w-md bg-white rounded-3xl p-6 border-0 shadow-2xl">
               <DialogHeader>
                 <DialogTitle className="text-2xl font-black text-slate-800 flex items-center gap-2 mb-2">
-                  <School className="size-6 text-indigo-600" /> शाळेची माहिती
+                  <School className="size-6 text-indigo-600" /> αñ╢αñ╛αñ│αÑçαñÜαÑÇ αñ«αñ╛αñ╣αñ┐αññαÑÇ
                 </DialogTitle>
                 <p className="text-slate-500 text-sm font-medium">
-                  कृपया PDF वर दाखवण्यासाठी खालील माहिती भरा. ही माहिती तुमच्या ब्राउझरमध्ये सेव्ह राहील.
+                  αñòαÑâαñ¬αñ»αñ╛ PDF αñ╡αñ░ αñªαñ╛αñûαñ╡αñúαÑìαñ»αñ╛αñ╕αñ╛αñáαÑÇ αñûαñ╛αñ▓αÑÇαñ▓ αñ«αñ╛αñ╣αñ┐αññαÑÇ αñ¡αñ░αñ╛. αñ╣αÑÇ αñ«αñ╛αñ╣αñ┐αññαÑÇ αññαÑüαñ«αñÜαÑìαñ»αñ╛ αñ¼αÑìαñ░αñ╛αñëαñ¥αñ░αñ«αñºαÑìαñ»αÑç αñ╕αÑçαñ╡αÑìαñ╣ αñ░αñ╛αñ╣αÑÇαñ▓.
                 </p>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">शाळेचे नाव</label>
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">αñ╢αñ╛αñ│αÑçαñÜαÑç αñ¿αñ╛αñ╡</label>
                   <input 
                     type="text" 
                     value={schoolInfo.schoolName || ""}
                     onChange={(e) => setSchoolInfo({...schoolInfo, schoolName: e.target.value})}
-                    placeholder="उदा. जि. प. प्रा. शाळा..."
+                    placeholder="αñëαñªαñ╛. αñ£αñ┐. αñ¬. αñ¬αÑìαñ░αñ╛. αñ╢αñ╛αñ│αñ╛..."
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-bold text-slate-700 outline-none"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">युडायस (UDISE) कोड</label>
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">αñ»αÑüαñíαñ╛αñ»αñ╕ (UDISE) αñòαÑïαñí</label>
                   <input 
                     type="text" 
                     value={schoolInfo.udise}
                     onChange={(e) => setSchoolInfo({...schoolInfo, udise: e.target.value})}
-                    placeholder="उदा. 27251..."
+                    placeholder="αñëαñªαñ╛. 27251..."
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-bold text-slate-700 outline-none"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">केंद्र (Kendra)</label>
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">αñòαÑçαñéαñªαÑìαñ░ (Kendra)</label>
                   <input 
                     type="text" 
                     value={schoolInfo.kendra}
                     onChange={(e) => setSchoolInfo({...schoolInfo, kendra: e.target.value})}
-                    placeholder="केंद्राचे नाव"
+                    placeholder="αñòαÑçαñéαñªαÑìαñ░αñ╛αñÜαÑç αñ¿αñ╛αñ╡"
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-bold text-slate-700 outline-none"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">तालुका</label>
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">αññαñ╛αñ▓αÑüαñòαñ╛</label>
                     <input 
                       type="text" 
                       value={schoolInfo.taluka}
                       onChange={(e) => setSchoolInfo({...schoolInfo, taluka: e.target.value})}
-                      placeholder="तालुका"
+                      placeholder="αññαñ╛αñ▓αÑüαñòαñ╛"
                       className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-bold text-slate-700 outline-none"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">जिल्हा</label>
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">αñ£αñ┐αñ▓αÑìαñ╣αñ╛</label>
                     <input 
                       type="text" 
                       value={schoolInfo.jilha}
                       onChange={(e) => setSchoolInfo({...schoolInfo, jilha: e.target.value})}
-                      placeholder="जिल्हा"
+                      placeholder="αñ£αñ┐αñ▓αÑìαñ╣αñ╛"
                       className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-bold text-slate-700 outline-none"
                     />
                   </div>
@@ -2340,11 +2340,11 @@ function DailyAssemblyContent() {
                   onClick={() => {
                     localStorage.setItem("paripathSchoolInfo", JSON.stringify(schoolInfo));
                     setShowSchoolInfoModal(false);
-                    toast.success("माहिती यशस्वीरित्या सेव्ह झाली!");
+                    toast.success("αñ«αñ╛αñ╣αñ┐αññαÑÇ αñ»αñ╢αñ╕αÑìαñ╡αÑÇαñ░αñ┐αññαÑìαñ»αñ╛ αñ╕αÑçαñ╡αÑìαñ╣ αñ¥αñ╛αñ▓αÑÇ!");
                   }}
                   className="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-sm uppercase tracking-wider transition-colors shadow-lg shadow-indigo-600/20"
                 >
-                  सेव्ह करा (Save)
+                  αñ╕αÑçαñ╡αÑìαñ╣ αñòαñ░αñ╛ (Save)
                 </button>
               </DialogFooter>
             </DialogContent>
@@ -2355,10 +2355,10 @@ function DailyAssemblyContent() {
             <div className="flex items-center gap-5 relative z-10">
               <div>
                 <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight drop-shadow-md">
-                  दैनिक परिपाठ
+                  αñªαÑêαñ¿αñ┐αñò αñ¬αñ░αñ┐αñ¬αñ╛αñá
                 </h2>
                 <p className="text-xs font-black text-indigo-200 uppercase tracking-[0.3em] mt-1.5 opacity-80">
-                  आजचा परिपाठ
+                  αñåαñ£αñÜαñ╛ αñ¬αñ░αñ┐αñ¬αñ╛αñá
                 </p>
               </div>
             </div>
@@ -2375,17 +2375,17 @@ function DailyAssemblyContent() {
               <button
                 onClick={() => setShowSchoolInfoModal(true)}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-black text-xs md:text-sm uppercase tracking-wider transition-all border border-white/20"
-                title="शाळेची माहिती भरा / बदला"
+                title="αñ╢αñ╛αñ│αÑçαñÜαÑÇ αñ«αñ╛αñ╣αñ┐αññαÑÇ αñ¡αñ░αñ╛ / αñ¼αñªαñ▓αñ╛"
               >
                 <School className="size-4" />
-                <span className="hidden sm:inline">शाळेची माहिती</span>
+                <span className="hidden sm:inline">αñ╢αñ╛αñ│αÑçαñÜαÑÇ αñ«αñ╛αñ╣αñ┐αññαÑÇ</span>
               </button>
               <button
                 onClick={handleDownloadPdf}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-black text-xs md:text-sm uppercase tracking-wider transition-all shadow-lg shadow-indigo-500/25 active:scale-95 border border-indigo-400/30"
               >
                 <Download className="size-4" />
-                <span>{lang === "en" ? "Download PDF" : "PDF डाउनलोड"}</span>
+                <span>{lang === "en" ? "Download PDF" : "PDF αñíαñ╛αñëαñ¿αñ▓αÑïαñí"}</span>
               </button>
             </div>
           </div>
@@ -2397,17 +2397,17 @@ function DailyAssemblyContent() {
               </div>
               <div className="space-y-2">
                 <span className="px-4 py-1.5 rounded-full bg-amber-500/20 text-amber-900 border border-amber-400/40 font-black text-xs uppercase tracking-widest inline-block">
-                  🏖️ सुट्टीची सूचना / School Holiday Notice
+                  ≡ƒÅû∩╕Å αñ╕αÑüαñƒαÑìαñƒαÑÇαñÜαÑÇ αñ╕αÑéαñÜαñ¿αñ╛ / School Holiday Notice
                 </span>
                 <h3 className="text-2xl md:text-4xl font-black text-amber-950 tracking-tight pt-2">
-                  आज शाळेस सुट्टी आहे!
+                  αñåαñ£ αñ╢αñ╛αñ│αÑçαñ╕ αñ╕αÑüαñƒαÑìαñƒαÑÇ αñåαñ╣αÑç!
                 </h3>
                 <p className="text-base md:text-xl font-bold text-amber-800">
-                  कारण: <span className="underline decoration-amber-400 font-black text-amber-900">{holidayNotice.reason || "शाळेस सुट्टी"}</span>
+                  αñòαñ╛αñ░αñú: <span className="underline decoration-amber-400 font-black text-amber-900">{holidayNotice.reason || "αñ╢αñ╛αñ│αÑçαñ╕ αñ╕αÑüαñƒαÑìαñƒαÑÇ"}</span>
                 </p>
               </div>
               <p className="text-slate-600 text-sm max-w-lg mx-auto font-semibold pt-2">
-                मासिक परिपाठ नोंदवहीमध्ये या दिनांकास सुट्टी म्हणून घोषित केले आहे. त्यामुळे या दिनांकाचा दैनिक परिपाठ स्थगित राहील.
+                αñ«αñ╛αñ╕αñ┐αñò αñ¬αñ░αñ┐αñ¬αñ╛αñá αñ¿αÑïαñéαñªαñ╡αñ╣αÑÇαñ«αñºαÑìαñ»αÑç αñ»αñ╛ αñªαñ┐αñ¿αñ╛αñéαñòαñ╛αñ╕ αñ╕αÑüαñƒαÑìαñƒαÑÇ αñ«αÑìαñ╣αñúαÑéαñ¿ αñÿαÑïαñ╖αñ┐αññ αñòαÑçαñ▓αÑç αñåαñ╣αÑç. αññαÑìαñ»αñ╛αñ«αÑüαñ│αÑç αñ»αñ╛ αñªαñ┐αñ¿αñ╛αñéαñòαñ╛αñÜαñ╛ αñªαÑêαñ¿αñ┐αñò αñ¬αñ░αñ┐αñ¬αñ╛αñá αñ╕αÑìαñÑαñùαñ┐αññ αñ░αñ╛αñ╣αÑÇαñ▓.
               </p>
             </div>
           ) : !dbFormData ? (
@@ -2416,10 +2416,10 @@ function DailyAssemblyContent() {
                 <Calendar className="size-8" />
               </div>
               <h3 className="text-xl md:text-2xl font-black text-amber-900">
-                दिनांक {formData.dateMonth} ({formData.day}) साठी परिपाठ उपलब्ध नाही
+                αñªαñ┐αñ¿αñ╛αñéαñò {formData.dateMonth} ({formData.day}) αñ╕αñ╛αñáαÑÇ αñ¬αñ░αñ┐αñ¬αñ╛αñá αñëαñ¬αñ▓αñ¼αÑìαñº αñ¿αñ╛αñ╣αÑÇ
               </h3>
               <p className="text-slate-600 text-sm max-w-md mx-auto font-medium">
-                या दिनांकाचा परिपाठ सुपर ॲडमिन कडून अजून अपलोड केलेला नाही. कृपया कॅलेंडरमधून इतर दिनांक निवडा किंवा ॲडमिन कडून अपडेट होण्याची वाट पहा.
+                αñ»αñ╛ αñªαñ┐αñ¿αñ╛αñéαñòαñ╛αñÜαñ╛ αñ¬αñ░αñ┐αñ¬αñ╛αñá αñ╕αÑüαñ¬αñ░ αÑ▓αñíαñ«αñ┐αñ¿ αñòαñíαÑéαñ¿ αñàαñ£αÑéαñ¿ αñàαñ¬αñ▓αÑïαñí αñòαÑçαñ▓αÑçαñ▓αñ╛ αñ¿αñ╛αñ╣αÑÇ. αñòαÑâαñ¬αñ»αñ╛ αñòαÑàαñ▓αÑçαñéαñíαñ░αñ«αñºαÑéαñ¿ αñçαññαñ░ αñªαñ┐αñ¿αñ╛αñéαñò αñ¿αñ┐αñ╡αñíαñ╛ αñòαñ┐αñéαñ╡αñ╛ αÑ▓αñíαñ«αñ┐αñ¿ αñòαñíαÑéαñ¿ αñàαñ¬αñíαÑçαñƒ αñ╣αÑïαñúαÑìαñ»αñ╛αñÜαÑÇ αñ╡αñ╛αñƒ αñ¬αñ╣αñ╛.
               </p>
             </div>
           ) : (
@@ -2429,17 +2429,17 @@ function DailyAssemblyContent() {
                 <div className="bg-[#f0fdf4] border-[2px] border-[#2e7d32] rounded-xl p-4 md:p-6 mb-6 w-full text-center shadow-sm">
                   {schoolInfo.schoolName && (
                     <h3 className="text-lg md:text-xl font-black text-[#166534] mb-3 drop-shadow-sm">
-                      शाळेचे नाव: {schoolInfo.schoolName}
+                      αñ╢αñ╛αñ│αÑçαñÜαÑç αñ¿αñ╛αñ╡: {schoolInfo.schoolName}
                     </h3>
                   )}
                   <div className="flex flex-col md:flex-row justify-between items-center gap-3 pt-3 border-t border-dashed border-[#86efac]">
                     <div className="text-sm md:text-base font-bold text-[#166534]">
-                      केंद्र: <span className="font-black text-[#15803d]">{schoolInfo.kendra || '-'}</span> &nbsp;|&nbsp; 
-                      युडायस (UDISE): <span className="font-black text-[#15803d]">{schoolInfo.udise || '-'}</span>
+                      αñòαÑçαñéαñªαÑìαñ░: <span className="font-black text-[#15803d]">{schoolInfo.kendra || '-'}</span> &nbsp;|&nbsp; 
+                      αñ»αÑüαñíαñ╛αñ»αñ╕ (UDISE): <span className="font-black text-[#15803d]">{schoolInfo.udise || '-'}</span>
                     </div>
                     <div className="text-sm md:text-base font-bold text-[#166534]">
-                      तालुका: <span className="font-black text-[#15803d]">{schoolInfo.taluka || '-'}</span> &nbsp;|&nbsp; 
-                      जिल्हा: <span className="font-black text-[#15803d]">{schoolInfo.jilha || '-'}</span>
+                      αññαñ╛αñ▓αÑüαñòαñ╛: <span className="font-black text-[#15803d]">{schoolInfo.taluka || '-'}</span> &nbsp;|&nbsp; 
+                      αñ£αñ┐αñ▓αÑìαñ╣αñ╛: <span className="font-black text-[#15803d]">{schoolInfo.jilha || '-'}</span>
                     </div>
                   </div>
                 </div>
@@ -2491,7 +2491,7 @@ function DailyAssemblyContent() {
           {(formData.month || formData.tithi || formData.nakshatra || formData.yog || formData.sunrise || formData.sunset) && (
             <SectionCard
               id="panchang"
-              emoji="🪀"
+              emoji="≡ƒ¬Ç"
               title={t.panchang}
               icon={Calendar}
               gradient="from-amber-100/80 via-orange-50/60 to-yellow-100/80"
@@ -2530,7 +2530,7 @@ function DailyAssemblyContent() {
           {formData.thought && (
             <SectionCard
               id="thought"
-              emoji="🪀"
+              emoji="≡ƒ¬Ç"
               title={t.thought}
               icon={Quote}
               gradient="from-violet-100/80 via-fuchsia-50/60 to-purple-100/80"
@@ -2554,8 +2554,8 @@ function DailyAssemblyContent() {
           {formData.shlok && (
             <SectionCard
               id="shlok"
-              emoji="🕉️"
-              title={(t as any).shlok || "श्लोक"}
+              emoji="≡ƒòë∩╕Å"
+              title={(t as any).shlok || "αñ╢αÑìαñ▓αÑïαñò"}
               icon={Quote}
               gradient="from-amber-100/80 via-rose-50/60 to-orange-100/80"
               pageBreak={false}
@@ -2578,7 +2578,7 @@ function DailyAssemblyContent() {
           {formData.proverb && (
             <SectionCard
               id="proverb"
-              emoji="🪀"
+              emoji="≡ƒ¬Ç"
               title={t.proverbTitle}
               icon={BookOpen}
               gradient="from-teal-100/80 via-emerald-50/60 to-cyan-100/80"
@@ -2608,8 +2608,8 @@ function DailyAssemblyContent() {
           {(formData.events || formData.dinvishesh) && (
             <SectionCard
               id="events"
-              emoji="🪀"
-              title={`${formData.dateMonth ? formData.dateMonth + ' ' : ''}${t.eventsTitle || 'दिनविशेष'}`}
+              emoji="≡ƒ¬Ç"
+              title={`${formData.dateMonth ? formData.dateMonth + ' ' : ''}${t.eventsTitle || 'αñªαñ┐αñ¿αñ╡αñ┐αñ╢αÑçαñ╖'}`}
               icon={Calendar}
               gradient="from-blue-100/80 via-indigo-50/60 to-sky-100/80"
               pageBreak={false}
@@ -2641,7 +2641,7 @@ function DailyAssemblyContent() {
           {formData.patrioticSong && (
             <SectionCard
               id="song"
-              emoji="🪀"
+              emoji="≡ƒ¬Ç"
               title={t.patrioticSongTitle}
               icon={Music}
               gradient="from-orange-100/80 via-red-50/60 to-amber-100/80"
@@ -2677,7 +2677,7 @@ function DailyAssemblyContent() {
           {formData.story && (
             <SectionCard
               id="story"
-              emoji="🪀"
+              emoji="≡ƒ¬Ç"
               title={t.storyTitle}
               icon={BookOpen}
               gradient="from-pink-100/80 via-rose-50/60 to-red-100/80"
@@ -2724,8 +2724,8 @@ function DailyAssemblyContent() {
           {formData.valueNews && (
             <SectionCard
               id="valueNews"
-              emoji="📰"
-              title={(t as any).valueNews || "सुसंस्कारक्षम बातम्या"}
+              emoji="≡ƒô░"
+              title={(t as any).valueNews || "αñ╕αÑüαñ╕αñéαñ╕αÑìαñòαñ╛αñ░αñòαÑìαñ╖αñ« αñ¼αñ╛αññαñ«αÑìαñ»αñ╛"}
               icon={BookOpen}
               gradient="from-emerald-100/80 via-teal-50/60 to-emerald-50/80"
               pageBreak={false}
@@ -2747,7 +2747,7 @@ function DailyAssemblyContent() {
           {(formData.gkQ1 || formData.gkQ2 || formData.gkQ3 || formData.gkQ4) && (
             <SectionCard
               id="gk"
-              emoji="🪀"
+              emoji="≡ƒ¬Ç"
               title={t.gkTitle}
               icon={HelpCircle}
               gradient="from-cyan-100/80 via-sky-50/60 to-blue-100/80"
@@ -2947,8 +2947,8 @@ function SpecialDayEditor({
     },
     {
       id: "daily-assembly",
-      label: lang === "en" ? "Daily Assembly" : "दैनिक परीपाठ",
-      sub: lang === "en" ? "Full Paripath" : "संपूर्ण परिपाठ",
+      label: lang === "en" ? "Daily Assembly" : "αñªαÑêαñ¿αñ┐αñò αñ¬αñ░αÑÇαñ¬αñ╛αñá",
+      sub: lang === "en" ? "Full Paripath" : "αñ╕αñéαñ¬αÑéαñ░αÑìαñú αñ¬αñ░αñ┐αñ¬αñ╛αñá",
       icon: BookMarked,
       color: "text-orange-500",
       bg: "bg-orange-50",
@@ -2956,8 +2956,8 @@ function SpecialDayEditor({
     },
     {
       id: "assembly-book",
-      label: lang === "en" ? "Assembly Book" : "परिपाठ पुस्तक",
-      sub: lang === "en" ? "Reference Guide" : "मार्गदर्शिका",
+      label: lang === "en" ? "Assembly Book" : "αñ¬αñ░αñ┐αñ¬αñ╛αñá αñ¬αÑüαñ╕αÑìαññαñò",
+      sub: lang === "en" ? "Reference Guide" : "αñ«αñ╛αñ░αÑìαñùαñªαñ░αÑìαñ╢αñ┐αñòαñ╛",
       icon: BookOpen,
       color: "text-blue-500",
       bg: "bg-blue-50",
@@ -2965,8 +2965,8 @@ function SpecialDayEditor({
     },
     {
       id: "month-paripath",
-      label: lang === "en" ? "Month Register" : "मासिक परिपाठ नोंदवही",
-      sub: lang === "en" ? "Paripath Register" : "मासिक नोंद तक्ता",
+      label: lang === "en" ? "Month Register" : "αñ«αñ╛αñ╕αñ┐αñò αñ¬αñ░αñ┐αñ¬αñ╛αñá αñ¿αÑïαñéαñªαñ╡αñ╣αÑÇ",
+      sub: lang === "en" ? "Paripath Register" : "αñ«αñ╛αñ╕αñ┐αñò αñ¿αÑïαñéαñª αññαñòαÑìαññαñ╛",
       icon: Table,
       color: "text-emerald-500",
       bg: "bg-emerald-50",
@@ -3167,59 +3167,59 @@ const DAILY_INTELLIGENCE_LIBRARY: any = {
   thoughts: [
     {
       en: "The beautiful thing about learning is that no one can take it away from you. This profound insight by B.B. King reminds us that education is a permanent asset that empowers individuals beyond physical boundaries. Every piece of knowledge you acquire builds a foundation for a future where you are the master of your own destiny.",
-      mr: "शिकण्याचे सर्वात सुंदर वैशिष्ट्य म्हणजे ते तुमच्याकडून कोणीही हिरावून घेऊ शकत नाही. बी.बी. किंग यांचे हे सखोल विचार आपल्याला आठवण करून देतात की शिक्षण ही एक कायमस्वरूपी संपत्ती आहे जी व्यक्तीला भौतिक सीमांच्या पलीकडे सक्षम करते. तुम्ही मिळवलेले ज्ञानाचे प्रत्येक कण अशा भविष्याचा पाया रचतात जिथे तुम्ही स्वतःच्या नशिबाचे स्वामी असाल.",
+      mr: "αñ╢αñ┐αñòαñúαÑìαñ»αñ╛αñÜαÑç αñ╕αñ░αÑìαñ╡αñ╛αññ αñ╕αÑüαñéαñªαñ░ αñ╡αÑêαñ╢αñ┐αñ╖αÑìαñƒαÑìαñ» αñ«αÑìαñ╣αñúαñ£αÑç αññαÑç αññαÑüαñ«αñÜαÑìαñ»αñ╛αñòαñíαÑéαñ¿ αñòαÑïαñúαÑÇαñ╣αÑÇ αñ╣αñ┐αñ░αñ╛αñ╡αÑéαñ¿ αñÿαÑçαñè αñ╢αñòαññ αñ¿αñ╛αñ╣αÑÇ. αñ¼αÑÇ.αñ¼αÑÇ. αñòαñ┐αñéαñù αñ»αñ╛αñéαñÜαÑç αñ╣αÑç αñ╕αñûαÑïαñ▓ αñ╡αñ┐αñÜαñ╛αñ░ αñåαñ¬αñ▓αÑìαñ»αñ╛αñ▓αñ╛ αñåαñáαñ╡αñú αñòαñ░αÑéαñ¿ αñªαÑçαññαñ╛αññ αñòαÑÇ αñ╢αñ┐αñòαÑìαñ╖αñú αñ╣αÑÇ αñÅαñò αñòαñ╛αñ»αñ«αñ╕αÑìαñ╡αñ░αÑéαñ¬αÑÇ αñ╕αñéαñ¬αññαÑìαññαÑÇ αñåαñ╣αÑç αñ£αÑÇ αñ╡αÑìαñ»αñòαÑìαññαÑÇαñ▓αñ╛ αñ¡αÑîαññαñ┐αñò αñ╕αÑÇαñ«αñ╛αñéαñÜαÑìαñ»αñ╛ αñ¬αñ▓αÑÇαñòαñíαÑç αñ╕αñòαÑìαñ╖αñ« αñòαñ░αññαÑç. αññαÑüαñ«αÑìαñ╣αÑÇ αñ«αñ┐αñ│αñ╡αñ▓αÑçαñ▓αÑç αñ£αÑìαñ₧αñ╛αñ¿αñ╛αñÜαÑç αñ¬αÑìαñ░αññαÑìαñ»αÑçαñò αñòαñú αñàαñ╢αñ╛ αñ¡αñ╡αñ┐αñ╖αÑìαñ»αñ╛αñÜαñ╛ αñ¬αñ╛αñ»αñ╛ αñ░αñÜαññαñ╛αññ αñ£αñ┐αñÑαÑç αññαÑüαñ«αÑìαñ╣αÑÇ αñ╕αÑìαñ╡αññαñâαñÜαÑìαñ»αñ╛ αñ¿αñ╢αñ┐αñ¼αñ╛αñÜαÑç αñ╕αÑìαñ╡αñ╛αñ«αÑÇ αñàαñ╕αñ╛αñ▓.",
     },
     {
       en: "Education is the most powerful weapon which you can use to change the world. Nelson Mandela's words emphasize that learning is not just about personal growth but about societal transformation. By equipping ourselves with knowledge, we gain the strategic capability to address global challenges and build a more equitable and just society for everyone.",
-      mr: "शिक्षण हे जगाला बदलण्यासाठी वापरले जाणारे सर्वात शक्तिशाली शस्त्र आहे. नेल्सन मंडेला यांचे शब्द यावर भर देतात की शिकणे हे केवळ वैयक्तिक वाढीसाठी नाही तर सामाजिक परिवर्तनासाठी आहे. स्वतःला ज्ञानाने सुसज्ज करून, आपण जागतिक आव्हानांना सामोरे जाण्याची आणि सर्वांसाठी अधिक न्याय्य समाज घडवण्याची धोरणात्मक क्षमता प्राप्त करतो.",
+      mr: "αñ╢αñ┐αñòαÑìαñ╖αñú αñ╣αÑç αñ£αñùαñ╛αñ▓αñ╛ αñ¼αñªαñ▓αñúαÑìαñ»αñ╛αñ╕αñ╛αñáαÑÇ αñ╡αñ╛αñ¬αñ░αñ▓αÑç αñ£αñ╛αñúαñ╛αñ░αÑç αñ╕αñ░αÑìαñ╡αñ╛αññ αñ╢αñòαÑìαññαñ┐αñ╢αñ╛αñ▓αÑÇ αñ╢αñ╕αÑìαññαÑìαñ░ αñåαñ╣αÑç. αñ¿αÑçαñ▓αÑìαñ╕αñ¿ αñ«αñéαñíαÑçαñ▓αñ╛ αñ»αñ╛αñéαñÜαÑç αñ╢αñ¼αÑìαñª αñ»αñ╛αñ╡αñ░ αñ¡αñ░ αñªαÑçαññαñ╛αññ αñòαÑÇ αñ╢αñ┐αñòαñúαÑç αñ╣αÑç αñòαÑçαñ╡αñ│ αñ╡αÑêαñ»αñòαÑìαññαñ┐αñò αñ╡αñ╛αñóαÑÇαñ╕αñ╛αñáαÑÇ αñ¿αñ╛αñ╣αÑÇ αññαñ░ αñ╕αñ╛αñ«αñ╛αñ£αñ┐αñò αñ¬αñ░αñ┐αñ╡αñ░αÑìαññαñ¿αñ╛αñ╕αñ╛αñáαÑÇ αñåαñ╣αÑç. αñ╕αÑìαñ╡αññαñâαñ▓αñ╛ αñ£αÑìαñ₧αñ╛αñ¿αñ╛αñ¿αÑç αñ╕αÑüαñ╕αñ£αÑìαñ£ αñòαñ░αÑéαñ¿, αñåαñ¬αñú αñ£αñ╛αñùαññαñ┐αñò αñåαñ╡αÑìαñ╣αñ╛αñ¿αñ╛αñéαñ¿αñ╛ αñ╕αñ╛αñ«αÑïαñ░αÑç αñ£αñ╛αñúαÑìαñ»αñ╛αñÜαÑÇ αñåαñúαñ┐ αñ╕αñ░αÑìαñ╡αñ╛αñéαñ╕αñ╛αñáαÑÇ αñàαñºαñ┐αñò αñ¿αÑìαñ»αñ╛αñ»αÑìαñ» αñ╕αñ«αñ╛αñ£ αñÿαñíαñ╡αñúαÑìαñ»αñ╛αñÜαÑÇ αñºαÑïαñ░αñúαñ╛αññαÑìαñ«αñò αñòαÑìαñ╖αñ«αññαñ╛ αñ¬αÑìαñ░αñ╛αñ¬αÑìαññ αñòαñ░αññαÑï.",
     },
     {
       en: "Don't let what you cannot do interfere with what you can do. This guidance from John Wooden encourages us to focus our energy on our strengths and possibilities rather than our limitations. Success is often the result of maximizing our current potential while steadily working towards overcoming our obstacles with persistence and a positive mindset.",
-      mr: "तुम्ही जे करू शकत नाही, ते तुम्ही जे करू शकता त्यात अडथळा आणू देऊ नका. जॉन वूडन यांचे हे मार्गदर्शन आपल्याला आपल्या मर्यादांऐवजी आपली ताकद आणि शक्यतांवर लक्ष केंद्रित करण्यास प्रोत्साहित करते. यश हे बऱ्याचदा आपल्या वर्तमान क्षमतेचा जास्तीत जास्त वापर करण्याचे आणि सकारात्मक विचारसरणीने आपल्या अडथळ्यांवर मात करण्याचे फळ असते.",
+      mr: "αññαÑüαñ«αÑìαñ╣αÑÇ αñ£αÑç αñòαñ░αÑé αñ╢αñòαññ αñ¿αñ╛αñ╣αÑÇ, αññαÑç αññαÑüαñ«αÑìαñ╣αÑÇ αñ£αÑç αñòαñ░αÑé αñ╢αñòαññαñ╛ αññαÑìαñ»αñ╛αññ αñàαñíαñÑαñ│αñ╛ αñåαñúαÑé αñªαÑçαñè αñ¿αñòαñ╛. αñ£αÑëαñ¿ αñ╡αÑéαñíαñ¿ αñ»αñ╛αñéαñÜαÑç αñ╣αÑç αñ«αñ╛αñ░αÑìαñùαñªαñ░αÑìαñ╢αñ¿ αñåαñ¬αñ▓αÑìαñ»αñ╛αñ▓αñ╛ αñåαñ¬αñ▓αÑìαñ»αñ╛ αñ«αñ░αÑìαñ»αñ╛αñªαñ╛αñéαñÉαñ╡αñ£αÑÇ αñåαñ¬αñ▓αÑÇ αññαñ╛αñòαñª αñåαñúαñ┐ αñ╢αñòαÑìαñ»αññαñ╛αñéαñ╡αñ░ αñ▓αñòαÑìαñ╖ αñòαÑçαñéαñªαÑìαñ░αñ┐αññ αñòαñ░αñúαÑìαñ»αñ╛αñ╕ αñ¬αÑìαñ░αÑïαññαÑìαñ╕αñ╛αñ╣αñ┐αññ αñòαñ░αññαÑç. αñ»αñ╢ αñ╣αÑç αñ¼αñ▒αÑìαñ»αñ╛αñÜαñªαñ╛ αñåαñ¬αñ▓αÑìαñ»αñ╛ αñ╡αñ░αÑìαññαñ«αñ╛αñ¿ αñòαÑìαñ╖αñ«αññαÑçαñÜαñ╛ αñ£αñ╛αñ╕αÑìαññαÑÇαññ αñ£αñ╛αñ╕αÑìαññ αñ╡αñ╛αñ¬αñ░ αñòαñ░αñúαÑìαñ»αñ╛αñÜαÑç αñåαñúαñ┐ αñ╕αñòαñ╛αñ░αñ╛αññαÑìαñ«αñò αñ╡αñ┐αñÜαñ╛αñ░αñ╕αñ░αñúαÑÇαñ¿αÑç αñåαñ¬αñ▓αÑìαñ»αñ╛ αñàαñíαñÑαñ│αÑìαñ»αñ╛αñéαñ╡αñ░ αñ«αñ╛αññ αñòαñ░αñúαÑìαñ»αñ╛αñÜαÑç αñ½αñ│ αñàαñ╕αññαÑç.",
     },
     {
       en: "A person who never made a mistake never tried anything new. Albert Einstein's perspective validates the necessity of failure in the journey of innovation. Mistakes are not setbacks but essential stepping stones that provide critical insights, helping us refine our approach and eventually achieve breakthroughs that were previously unimaginable.",
-      mr: "ज्या व्यक्तीने कधीच चूक केली नाही, त्याने कधीच काही नवीन करण्याचा प्रयत्न केला नाही. अल्बर्ट आइनस्टाइन यांचा दृष्टीकोन नाविन्यपूर्ण प्रवासात अपयशाची गरज अधोरेखित करतो. चुका या माघार नसून त्या महत्त्वाच्या पायऱ्या आहेत ज्या आपल्याला धडे देतात, आपली पद्धत सुधारण्यास मदत करतात आणि शेवटी अशक्य वाटणारी प्रगती साध्य करण्यास मदत करतात.",
+      mr: "αñ£αÑìαñ»αñ╛ αñ╡αÑìαñ»αñòαÑìαññαÑÇαñ¿αÑç αñòαñºαÑÇαñÜ αñÜαÑéαñò αñòαÑçαñ▓αÑÇ αñ¿αñ╛αñ╣αÑÇ, αññαÑìαñ»αñ╛αñ¿αÑç αñòαñºαÑÇαñÜ αñòαñ╛αñ╣αÑÇ αñ¿αñ╡αÑÇαñ¿ αñòαñ░αñúαÑìαñ»αñ╛αñÜαñ╛ αñ¬αÑìαñ░αñ»αññαÑìαñ¿ αñòαÑçαñ▓αñ╛ αñ¿αñ╛αñ╣αÑÇ. αñàαñ▓αÑìαñ¼αñ░αÑìαñƒ αñåαñçαñ¿αñ╕αÑìαñƒαñ╛αñçαñ¿ αñ»αñ╛αñéαñÜαñ╛ αñªαÑâαñ╖αÑìαñƒαÑÇαñòαÑïαñ¿ αñ¿αñ╛αñ╡αñ┐αñ¿αÑìαñ»αñ¬αÑéαñ░αÑìαñú αñ¬αÑìαñ░αñ╡αñ╛αñ╕αñ╛αññ αñàαñ¬αñ»αñ╢αñ╛αñÜαÑÇ αñùαñ░αñ£ αñàαñºαÑïαñ░αÑçαñûαñ┐αññ αñòαñ░αññαÑï. αñÜαÑüαñòαñ╛ αñ»αñ╛ αñ«αñ╛αñÿαñ╛αñ░ αñ¿αñ╕αÑéαñ¿ αññαÑìαñ»αñ╛ αñ«αñ╣αññαÑìαññαÑìαñ╡αñ╛αñÜαÑìαñ»αñ╛ αñ¬αñ╛αñ»αñ▒αÑìαñ»αñ╛ αñåαñ╣αÑçαññ αñ£αÑìαñ»αñ╛ αñåαñ¬αñ▓αÑìαñ»αñ╛αñ▓αñ╛ αñºαñíαÑç αñªαÑçαññαñ╛αññ, αñåαñ¬αñ▓αÑÇ αñ¬αñªαÑìαñºαññ αñ╕αÑüαñºαñ╛αñ░αñúαÑìαñ»αñ╛αñ╕ αñ«αñªαññ αñòαñ░αññαñ╛αññ αñåαñúαñ┐ αñ╢αÑçαñ╡αñƒαÑÇ αñàαñ╢αñòαÑìαñ» αñ╡αñ╛αñƒαñúαñ╛αñ░αÑÇ αñ¬αÑìαñ░αñùαññαÑÇ αñ╕αñ╛αñºαÑìαñ» αñòαñ░αñúαÑìαñ»αñ╛αñ╕ αñ«αñªαññ αñòαñ░αññαñ╛αññ.",
     },
   ],
   stories: [
     {
       en: "The Elephant Rope: A traveler noticed that giant elephants were held by only a small rope tied to their front leg. They didn't try to break free because, as calves, they were conditioned to believe the rope was strong enough to hold them. This story teaches us that our limitations are often mental barriers created by past experiences, and we must break free from these self-imposed beliefs to realize our true potential.",
-      mr: "हत्तीची दोरी: एका प्रवाशाला दिसले की महाकाय हत्तींना त्यांच्या पुढच्या पायाला बांधलेल्या एका लहानशा दोरीने रोखून धरले होते. ते मुक्त होण्याचा प्रयत्न करत नव्हते कारण, लहान असताना त्यांना असे वाटायचे की ती दोरी त्यांना रोखण्यासाठी पुरेशी मजबूत आहे. ही गोष्ट आपल्याला शिकवते की आपल्या मर्यादा बऱ्याचदा भूतकाळातील अनुभवांनी तयार केलेले मानसिक अडथळे असतात आणि आपली खरी क्षमता ओळखण्यासाठी आपण या स्वतःहून लादलेल्या विश्वासातून मुक्त झाले पाहिजे.",
+      mr: "αñ╣αññαÑìαññαÑÇαñÜαÑÇ αñªαÑïαñ░αÑÇ: αñÅαñòαñ╛ αñ¬αÑìαñ░αñ╡αñ╛αñ╢αñ╛αñ▓αñ╛ αñªαñ┐αñ╕αñ▓αÑç αñòαÑÇ αñ«αñ╣αñ╛αñòαñ╛αñ» αñ╣αññαÑìαññαÑÇαñéαñ¿αñ╛ αññαÑìαñ»αñ╛αñéαñÜαÑìαñ»αñ╛ αñ¬αÑüαñóαñÜαÑìαñ»αñ╛ αñ¬αñ╛αñ»αñ╛αñ▓αñ╛ αñ¼αñ╛αñéαñºαñ▓αÑçαñ▓αÑìαñ»αñ╛ αñÅαñòαñ╛ αñ▓αñ╣αñ╛αñ¿αñ╢αñ╛ αñªαÑïαñ░αÑÇαñ¿αÑç αñ░αÑïαñûαÑéαñ¿ αñºαñ░αñ▓αÑç αñ╣αÑïαññαÑç. αññαÑç αñ«αÑüαñòαÑìαññ αñ╣αÑïαñúαÑìαñ»αñ╛αñÜαñ╛ αñ¬αÑìαñ░αñ»αññαÑìαñ¿ αñòαñ░αññ αñ¿αñ╡αÑìαñ╣αññαÑç αñòαñ╛αñ░αñú, αñ▓αñ╣αñ╛αñ¿ αñàαñ╕αññαñ╛αñ¿αñ╛ αññαÑìαñ»αñ╛αñéαñ¿αñ╛ αñàαñ╕αÑç αñ╡αñ╛αñƒαñ╛αñ»αñÜαÑç αñòαÑÇ αññαÑÇ αñªαÑïαñ░αÑÇ αññαÑìαñ»αñ╛αñéαñ¿αñ╛ αñ░αÑïαñûαñúαÑìαñ»αñ╛αñ╕αñ╛αñáαÑÇ αñ¬αÑüαñ░αÑçαñ╢αÑÇ αñ«αñ£αñ¼αÑéαññ αñåαñ╣αÑç. αñ╣αÑÇ αñùαÑïαñ╖αÑìαñƒ αñåαñ¬αñ▓αÑìαñ»αñ╛αñ▓αñ╛ αñ╢αñ┐αñòαñ╡αññαÑç αñòαÑÇ αñåαñ¬αñ▓αÑìαñ»αñ╛ αñ«αñ░αÑìαñ»αñ╛αñªαñ╛ αñ¼αñ▒αÑìαñ»αñ╛αñÜαñªαñ╛ αñ¡αÑéαññαñòαñ╛αñ│αñ╛αññαÑÇαñ▓ αñàαñ¿αÑüαñ¡αñ╡αñ╛αñéαñ¿αÑÇ αññαñ»αñ╛αñ░ αñòαÑçαñ▓αÑçαñ▓αÑç αñ«αñ╛αñ¿αñ╕αñ┐αñò αñàαñíαñÑαñ│αÑç αñàαñ╕αññαñ╛αññ αñåαñúαñ┐ αñåαñ¬αñ▓αÑÇ αñûαñ░αÑÇ αñòαÑìαñ╖αñ«αññαñ╛ αñôαñ│αñûαñúαÑìαñ»αñ╛αñ╕αñ╛αñáαÑÇ αñåαñ¬αñú αñ»αñ╛ αñ╕αÑìαñ╡αññαñâαñ╣αÑéαñ¿ αñ▓αñ╛αñªαñ▓αÑçαñ▓αÑìαñ»αñ╛ αñ╡αñ┐αñ╢αÑìαñ╡αñ╛αñ╕αñ╛αññαÑéαñ¿ αñ«αÑüαñòαÑìαññ αñ¥αñ╛αñ▓αÑç αñ¬αñ╛αñ╣αñ┐αñ£αÑç.",
     },
     {
       en: "The Starfish Thrower: An old man saw a boy throwing starfish back into the ocean after a storm. When asked why he bothered since there were thousands, the boy picked one up, threw it back, and said, 'It made a difference to that one.' This narrative reminds us that while we cannot solve every problem in the world, every small act of kindness we perform has a profound and lasting impact on the individuals we help.",
-      mr: "स्टारफिश फेकणारा मुलगा: एका वृद्ध माणसाने एका मुलाला वादळानंतर समुद्राच्या किनाऱ्यावर पडलेले स्टारफिश पुन्हा समुद्रात फेकताना पाहिले. जेव्हा त्याला विचारले गेले की हजारो स्टारफिश असताना तो हा त्रास का घेत आहे, तेव्हा त्या मुलाने एक स्टारफिश उचलला, तो समुद्रात फेकला आणि म्हणाला, 'या एकासाठी तरी फरक पडला.' ही गोष्ट आपल्याला आठवण करून देते की आपण जगातील प्रत्येक समस्या सोडू शकत नसलो तरी, आपण केलेली प्रत्येक छोटी दयाळू कृती आपण मदत केलेल्या व्यक्तीवर खोल आणि कायमस्वरूपी प्रभाव पाडते.",
+      mr: "αñ╕αÑìαñƒαñ╛αñ░αñ½αñ┐αñ╢ αñ½αÑçαñòαñúαñ╛αñ░αñ╛ αñ«αÑüαñ▓αñùαñ╛: αñÅαñòαñ╛ αñ╡αÑâαñªαÑìαñº αñ«αñ╛αñúαñ╕αñ╛αñ¿αÑç αñÅαñòαñ╛ αñ«αÑüαñ▓αñ╛αñ▓αñ╛ αñ╡αñ╛αñªαñ│αñ╛αñ¿αñéαññαñ░ αñ╕αñ«αÑüαñªαÑìαñ░αñ╛αñÜαÑìαñ»αñ╛ αñòαñ┐αñ¿αñ╛αñ▒αÑìαñ»αñ╛αñ╡αñ░ αñ¬αñíαñ▓αÑçαñ▓αÑç αñ╕αÑìαñƒαñ╛αñ░αñ½αñ┐αñ╢ αñ¬αÑüαñ¿αÑìαñ╣αñ╛ αñ╕αñ«αÑüαñªαÑìαñ░αñ╛αññ αñ½αÑçαñòαññαñ╛αñ¿αñ╛ αñ¬αñ╛αñ╣αñ┐αñ▓αÑç. αñ£αÑçαñ╡αÑìαñ╣αñ╛ αññαÑìαñ»αñ╛αñ▓αñ╛ αñ╡αñ┐αñÜαñ╛αñ░αñ▓αÑç αñùαÑçαñ▓αÑç αñòαÑÇ αñ╣αñ£αñ╛αñ░αÑï αñ╕αÑìαñƒαñ╛αñ░αñ½αñ┐αñ╢ αñàαñ╕αññαñ╛αñ¿αñ╛ αññαÑï αñ╣αñ╛ αññαÑìαñ░αñ╛αñ╕ αñòαñ╛ αñÿαÑçαññ αñåαñ╣αÑç, αññαÑçαñ╡αÑìαñ╣αñ╛ αññαÑìαñ»αñ╛ αñ«αÑüαñ▓αñ╛αñ¿αÑç αñÅαñò αñ╕αÑìαñƒαñ╛αñ░αñ½αñ┐αñ╢ αñëαñÜαñ▓αñ▓αñ╛, αññαÑï αñ╕αñ«αÑüαñªαÑìαñ░αñ╛αññ αñ½αÑçαñòαñ▓αñ╛ αñåαñúαñ┐ αñ«αÑìαñ╣αñúαñ╛αñ▓αñ╛, 'αñ»αñ╛ αñÅαñòαñ╛αñ╕αñ╛αñáαÑÇ αññαñ░αÑÇ αñ½αñ░αñò αñ¬αñíαñ▓αñ╛.' αñ╣αÑÇ αñùαÑïαñ╖αÑìαñƒ αñåαñ¬αñ▓αÑìαñ»αñ╛αñ▓αñ╛ αñåαñáαñ╡αñú αñòαñ░αÑéαñ¿ αñªαÑçαññαÑç αñòαÑÇ αñåαñ¬αñú αñ£αñùαñ╛αññαÑÇαñ▓ αñ¬αÑìαñ░αññαÑìαñ»αÑçαñò αñ╕αñ«αñ╕αÑìαñ»αñ╛ αñ╕αÑïαñíαÑé αñ╢αñòαññ αñ¿αñ╕αñ▓αÑï αññαñ░αÑÇ, αñåαñ¬αñú αñòαÑçαñ▓αÑçαñ▓αÑÇ αñ¬αÑìαñ░αññαÑìαñ»αÑçαñò αñ¢αÑïαñƒαÑÇ αñªαñ»αñ╛αñ│αÑé αñòαÑâαññαÑÇ αñåαñ¬αñú αñ«αñªαññ αñòαÑçαñ▓αÑçαñ▓αÑìαñ»αñ╛ αñ╡αÑìαñ»αñòαÑìαññαÑÇαñ╡αñ░ αñûαÑïαñ▓ αñåαñúαñ┐ αñòαñ╛αñ»αñ«αñ╕αÑìαñ╡αñ░αÑéαñ¬αÑÇ αñ¬αÑìαñ░αñ¡αñ╛αñ╡ αñ¬αñ╛αñíαññαÑç.",
     },
   ],
   significance: [
     {
       en: "National Science Day: Commemorated to honor the discovery of the Raman Effect by Indian physicist Sir C.V. Raman. This day serves as a critical reminder of the importance of scientific inquiry and rational thinking in our daily lives. It encourages students to explore the wonders of the physical world and pursue careers in research and technology to contribute to global progress.",
-      mr: "राष्ट्रीय विज्ञान दिन: भारतीय भौतिकशास्त्रज्ञ सर सी.व्ही. रमण यांनी शोधलेल्या 'रमण इफेक्ट'च्या सन्मानार्थ हा दिवस साजरा केला जातो. हा दिवस आपल्या दैनंदिन जीवनातील वैज्ञानिक चौकस बुद्धी आणि तर्कसंगत विचारांच्या महत्त्वाची आठवण करून देतो. हे विद्यार्थ्यांना भौतिक जगाचे चमत्कार शोधण्यासाठी आणि जागतिक प्रगतीमध्ये योगदान देण्यासाठी संशोधन आणि तंत्रज्ञानामध्ये करिअर करण्यासाठी प्रोत्साहित करते.",
+      mr: "αñ░αñ╛αñ╖αÑìαñƒαÑìαñ░αÑÇαñ» αñ╡αñ┐αñ£αÑìαñ₧αñ╛αñ¿ αñªαñ┐αñ¿: αñ¡αñ╛αñ░αññαÑÇαñ» αñ¡αÑîαññαñ┐αñòαñ╢αñ╛αñ╕αÑìαññαÑìαñ░αñ£αÑìαñ₧ αñ╕αñ░ αñ╕αÑÇ.αñ╡αÑìαñ╣αÑÇ. αñ░αñ«αñú αñ»αñ╛αñéαñ¿αÑÇ αñ╢αÑïαñºαñ▓αÑçαñ▓αÑìαñ»αñ╛ 'αñ░αñ«αñú αñçαñ½αÑçαñòαÑìαñƒ'αñÜαÑìαñ»αñ╛ αñ╕αñ¿αÑìαñ«αñ╛αñ¿αñ╛αñ░αÑìαñÑ αñ╣αñ╛ αñªαñ┐αñ╡αñ╕ αñ╕αñ╛αñ£αñ░αñ╛ αñòαÑçαñ▓αñ╛ αñ£αñ╛αññαÑï. αñ╣αñ╛ αñªαñ┐αñ╡αñ╕ αñåαñ¬αñ▓αÑìαñ»αñ╛ αñªαÑêαñ¿αñéαñªαñ┐αñ¿ αñ£αÑÇαñ╡αñ¿αñ╛αññαÑÇαñ▓ αñ╡αÑêαñ£αÑìαñ₧αñ╛αñ¿αñ┐αñò αñÜαÑîαñòαñ╕ αñ¼αÑüαñªαÑìαñºαÑÇ αñåαñúαñ┐ αññαñ░αÑìαñòαñ╕αñéαñùαññ αñ╡αñ┐αñÜαñ╛αñ░αñ╛αñéαñÜαÑìαñ»αñ╛ αñ«αñ╣αññαÑìαññαÑìαñ╡αñ╛αñÜαÑÇ αñåαñáαñ╡αñú αñòαñ░αÑéαñ¿ αñªαÑçαññαÑï. αñ╣αÑç αñ╡αñ┐αñªαÑìαñ»αñ╛αñ░αÑìαñÑαÑìαñ»αñ╛αñéαñ¿αñ╛ αñ¡αÑîαññαñ┐αñò αñ£αñùαñ╛αñÜαÑç αñÜαñ«αññαÑìαñòαñ╛αñ░ αñ╢αÑïαñºαñúαÑìαñ»αñ╛αñ╕αñ╛αñáαÑÇ αñåαñúαñ┐ αñ£αñ╛αñùαññαñ┐αñò αñ¬αÑìαñ░αñùαññαÑÇαñ«αñºαÑìαñ»αÑç αñ»αÑïαñùαñªαñ╛αñ¿ αñªαÑçαñúαÑìαñ»αñ╛αñ╕αñ╛αñáαÑÇ αñ╕αñéαñ╢αÑïαñºαñ¿ αñåαñúαñ┐ αññαñéαññαÑìαñ░αñ£αÑìαñ₧αñ╛αñ¿αñ╛αñ«αñºαÑìαñ»αÑç αñòαñ░αñ┐αñàαñ░ αñòαñ░αñúαÑìαñ»αñ╛αñ╕αñ╛αñáαÑÇ αñ¬αÑìαñ░αÑïαññαÑìαñ╕αñ╛αñ╣αñ┐αññ αñòαñ░αññαÑç.",
     },
     {
       en: "World Environment Day: A global platform for inspiring positive change in the protection of our planet's ecosystems. It highlights the urgent need to address climate change, deforestation, and pollution through collective action. Students play a pivotal role as future stewards of the earth, and this day empowers them to adopt sustainable habits and advocate for a greener, healthier future for all living beings.",
-      mr: "जागतिक पर्यावरण दिन: आपल्या ग्रहाच्या परिसंस्थेच्या संरक्षणासाठी सकारात्मक बदल घडवून आणण्यासाठी हे एक जागतिक व्यासपीठ आहे. हे हवामान बदल, जंगलतोड आणि प्रदूषण यांसारख्या समस्यांवर एकत्रित कृतीद्वारे मात करण्याची निकड अधोरेखित करते. पृथ्वीचे भावी रक्षक म्हणून विद्यार्थी महत्त्वाची भूमिका बजावतात आणि हा दिवस त्यांना शाश्वत सवयी स्वीकारण्यास आणि सर्वांसाठी हिरव्यागार भविष्याचा पुरस्कार करण्यास सक्षम करतो.",
+      mr: "αñ£αñ╛αñùαññαñ┐αñò αñ¬αñ░αÑìαñ»αñ╛αñ╡αñ░αñú αñªαñ┐αñ¿: αñåαñ¬αñ▓αÑìαñ»αñ╛ αñùαÑìαñ░αñ╣αñ╛αñÜαÑìαñ»αñ╛ αñ¬αñ░αñ┐αñ╕αñéαñ╕αÑìαñÑαÑçαñÜαÑìαñ»αñ╛ αñ╕αñéαñ░αñòαÑìαñ╖αñúαñ╛αñ╕αñ╛αñáαÑÇ αñ╕αñòαñ╛αñ░αñ╛αññαÑìαñ«αñò αñ¼αñªαñ▓ αñÿαñíαñ╡αÑéαñ¿ αñåαñúαñúαÑìαñ»αñ╛αñ╕αñ╛αñáαÑÇ αñ╣αÑç αñÅαñò αñ£αñ╛αñùαññαñ┐αñò αñ╡αÑìαñ»αñ╛αñ╕αñ¬αÑÇαñá αñåαñ╣αÑç. αñ╣αÑç αñ╣αñ╡αñ╛αñ«αñ╛αñ¿ αñ¼αñªαñ▓, αñ£αñéαñùαñ▓αññαÑïαñí αñåαñúαñ┐ αñ¬αÑìαñ░αñªαÑéαñ╖αñú αñ»αñ╛αñéαñ╕αñ╛αñ░αñûαÑìαñ»αñ╛ αñ╕αñ«αñ╕αÑìαñ»αñ╛αñéαñ╡αñ░ αñÅαñòαññαÑìαñ░αñ┐αññ αñòαÑâαññαÑÇαñªαÑìαñ╡αñ╛αñ░αÑç αñ«αñ╛αññ αñòαñ░αñúαÑìαñ»αñ╛αñÜαÑÇ αñ¿αñ┐αñòαñí αñàαñºαÑïαñ░αÑçαñûαñ┐αññ αñòαñ░αññαÑç. αñ¬αÑâαñÑαÑìαñ╡αÑÇαñÜαÑç αñ¡αñ╛αñ╡αÑÇ αñ░αñòαÑìαñ╖αñò αñ«αÑìαñ╣αñúαÑéαñ¿ αñ╡αñ┐αñªαÑìαñ»αñ╛αñ░αÑìαñÑαÑÇ αñ«αñ╣αññαÑìαññαÑìαñ╡αñ╛αñÜαÑÇ αñ¡αÑéαñ«αñ┐αñòαñ╛ αñ¼αñ£αñ╛αñ╡αññαñ╛αññ αñåαñúαñ┐ αñ╣αñ╛ αñªαñ┐αñ╡αñ╕ αññαÑìαñ»αñ╛αñéαñ¿αñ╛ αñ╢αñ╛αñ╢αÑìαñ╡αññ αñ╕αñ╡αñ»αÑÇ αñ╕αÑìαñ╡αÑÇαñòαñ╛αñ░αñúαÑìαñ»αñ╛αñ╕ αñåαñúαñ┐ αñ╕αñ░αÑìαñ╡αñ╛αñéαñ╕αñ╛αñáαÑÇ αñ╣αñ┐αñ░αñ╡αÑìαñ»αñ╛αñùαñ╛αñ░ αñ¡αñ╡αñ┐αñ╖αÑìαñ»αñ╛αñÜαñ╛ αñ¬αÑüαñ░αñ╕αÑìαñòαñ╛αñ░ αñòαñ░αñúαÑìαñ»αñ╛αñ╕ αñ╕αñòαÑìαñ╖αñ« αñòαñ░αññαÑï.",
     },
   ],
   jokes: [
     {
       en: "Why did the teacher wear sunglasses in the classroom today? Because she said her students were so bright that they were literally dazzling! It's a humorous way to acknowledge the exceptional potential and intellectual brilliance that each student brings to the learning environment, encouraging them to keep shining in their academic pursuits.",
-      mr: "आज वर्गात शिक्षकाने गॉगल का लावला होता? कारण ती म्हणाली की तिचे विद्यार्थी इतके तेजस्वी (ब्राइट) होते की ते अक्षरशः डोळे दिपवून टाकत होते! हा एक विनोदी मार्ग आहे ज्याद्वारे प्रत्येक विद्यार्थी शैक्षणिक वातावरणात आणत असलेल्या विलक्षण क्षमता आणि बौद्धिक तेजाची प्रशंसा केली जाते, त्यांना त्यांच्या अभ्यासात चमकत राहण्यास प्रोत्साहित केले जाते.",
+      mr: "αñåαñ£ αñ╡αñ░αÑìαñùαñ╛αññ αñ╢αñ┐αñòαÑìαñ╖αñòαñ╛αñ¿αÑç αñùαÑëαñùαñ▓ αñòαñ╛ αñ▓αñ╛αñ╡αñ▓αñ╛ αñ╣αÑïαññαñ╛? αñòαñ╛αñ░αñú αññαÑÇ αñ«αÑìαñ╣αñúαñ╛αñ▓αÑÇ αñòαÑÇ αññαñ┐αñÜαÑç αñ╡αñ┐αñªαÑìαñ»αñ╛αñ░αÑìαñÑαÑÇ αñçαññαñòαÑç αññαÑçαñ£αñ╕αÑìαñ╡αÑÇ (αñ¼αÑìαñ░αñ╛αñçαñƒ) αñ╣αÑïαññαÑç αñòαÑÇ αññαÑç αñàαñòαÑìαñ╖αñ░αñ╢αñâ αñíαÑïαñ│αÑç αñªαñ┐αñ¬αñ╡αÑéαñ¿ αñƒαñ╛αñòαññ αñ╣αÑïαññαÑç! αñ╣αñ╛ αñÅαñò αñ╡αñ┐αñ¿αÑïαñªαÑÇ αñ«αñ╛αñ░αÑìαñù αñåαñ╣αÑç αñ£αÑìαñ»αñ╛αñªαÑìαñ╡αñ╛αñ░αÑç αñ¬αÑìαñ░αññαÑìαñ»αÑçαñò αñ╡αñ┐αñªαÑìαñ»αñ╛αñ░αÑìαñÑαÑÇ αñ╢αÑêαñòαÑìαñ╖αñúαñ┐αñò αñ╡αñ╛αññαñ╛αñ╡αñ░αñúαñ╛αññ αñåαñúαññ αñàαñ╕αñ▓αÑçαñ▓αÑìαñ»αñ╛ αñ╡αñ┐αñ▓αñòαÑìαñ╖αñú αñòαÑìαñ╖αñ«αññαñ╛ αñåαñúαñ┐ αñ¼αÑîαñªαÑìαñºαñ┐αñò αññαÑçαñ£αñ╛αñÜαÑÇ αñ¬αÑìαñ░αñ╢αñéαñ╕αñ╛ αñòαÑçαñ▓αÑÇ αñ£αñ╛αññαÑç, αññαÑìαñ»αñ╛αñéαñ¿αñ╛ αññαÑìαñ»αñ╛αñéαñÜαÑìαñ»αñ╛ αñàαñ¡αÑìαñ»αñ╛αñ╕αñ╛αññ αñÜαñ«αñòαññ αñ░αñ╛αñ╣αñúαÑìαñ»αñ╛αñ╕ αñ¬αÑìαñ░αÑïαññαÑìαñ╕αñ╛αñ╣αñ┐αññ αñòαÑçαñ▓αÑç αñ£αñ╛αññαÑç.",
     },
     {
       en: "Why was the math book looking so incredibly sad and overwhelmed? Because it had way too many complex problems to solve all at once! This joke lightens the mood around a challenging subject like mathematics, reminding us that even though problems can seem daunting, they can be tackled one step at a time with patience, practice, and a bit of humor to keep us going.",
-      mr: "गणिताचे पुस्तक इतके प्रचंड दुःखी आणि हतबल का दिसत होते? कारण त्याच्याकडे एकाच वेळी सोडवण्यासाठी खूप जास्त जटिल समस्या (प्रॉब्लेम्स) होत्या! हा विनोद गणित या आव्हानात्मक विषयाबद्दलची भीती कमी करतो आणि आपल्याला आठवण करून देतो की समस्या कितीही कठीण वाटल्या तरी, संयम, सराव आणि थोड्या विनोदाने त्या एका वेळी एक अशा सोडवल्या जाऊ शकतात.",
+      mr: "αñùαñúαñ┐αññαñ╛αñÜαÑç αñ¬αÑüαñ╕αÑìαññαñò αñçαññαñòαÑç αñ¬αÑìαñ░αñÜαñéαñí αñªαÑüαñâαñûαÑÇ αñåαñúαñ┐ αñ╣αññαñ¼αñ▓ αñòαñ╛ αñªαñ┐αñ╕αññ αñ╣αÑïαññαÑç? αñòαñ╛αñ░αñú αññαÑìαñ»αñ╛αñÜαÑìαñ»αñ╛αñòαñíαÑç αñÅαñòαñ╛αñÜ αñ╡αÑçαñ│αÑÇ αñ╕αÑïαñíαñ╡αñúαÑìαñ»αñ╛αñ╕αñ╛αñáαÑÇ αñûαÑéαñ¬ αñ£αñ╛αñ╕αÑìαññ αñ£αñƒαñ┐αñ▓ αñ╕αñ«αñ╕αÑìαñ»αñ╛ (αñ¬αÑìαñ░αÑëαñ¼αÑìαñ▓αÑçαñ«αÑìαñ╕) αñ╣αÑïαññαÑìαñ»αñ╛! αñ╣αñ╛ αñ╡αñ┐αñ¿αÑïαñª αñùαñúαñ┐αññ αñ»αñ╛ αñåαñ╡αÑìαñ╣αñ╛αñ¿αñ╛αññαÑìαñ«αñò αñ╡αñ┐αñ╖αñ»αñ╛αñ¼αñªαÑìαñªαñ▓αñÜαÑÇ αñ¡αÑÇαññαÑÇ αñòαñ«αÑÇ αñòαñ░αññαÑï αñåαñúαñ┐ αñåαñ¬αñ▓αÑìαñ»αñ╛αñ▓αñ╛ αñåαñáαñ╡αñú αñòαñ░αÑéαñ¿ αñªαÑçαññαÑï αñòαÑÇ αñ╕αñ«αñ╕αÑìαñ»αñ╛ αñòαñ┐αññαÑÇαñ╣αÑÇ αñòαñáαÑÇαñú αñ╡αñ╛αñƒαñ▓αÑìαñ»αñ╛ αññαñ░αÑÇ, αñ╕αñéαñ»αñ«, αñ╕αñ░αñ╛αñ╡ αñåαñúαñ┐ αñÑαÑïαñíαÑìαñ»αñ╛ αñ╡αñ┐αñ¿αÑïαñªαñ╛αñ¿αÑç αññαÑìαñ»αñ╛ αñÅαñòαñ╛ αñ╡αÑçαñ│αÑÇ αñÅαñò αñàαñ╢αñ╛ αñ╕αÑïαñíαñ╡αñ▓αÑìαñ»αñ╛ αñ£αñ╛αñè αñ╢αñòαññαñ╛αññ.",
     },
   ],
   news: [
     {
       en: "The school is proud to announce the launch of a new state-of-the-art Digital Learning Hub, equipped with high-speed internet and advanced educational software. This initiative aims to provide students with the latest technological tools to enhance their research capabilities and prepare them for a future dominated by digital innovation. We encourage all students to utilize these resources responsibly to broaden their horizons.",
-      mr: "शाळेला नवीन अत्याधुनिक 'डिजिटल लर्निंग हब' सुरू झाल्याची घोषणा करताना अभिमान वाटत आहे, जे हाय-स्पीड इंटरनेट आणि प्रगत शैक्षणिक सॉफ्टवेअरने सुसज्ज आहे. या उपक्रमाचा उद्देश विद्यार्थ्यांना त्यांच्या संशोधन क्षमता वाढवण्यासाठी आणि डिजिटल नाविन्यपूर्ण भविष्यासाठी तयार करण्यासाठी नवीन तांत्रिक साधने प्रदान करणे आहे. आम्ही सर्व विद्यार्थ्यांना विनंती करतो की त्यांनी या संसाधनांचा जबाबदारीने वापर करून आपली क्षितिजे विस्तारली पाहिजेत.",
+      mr: "αñ╢αñ╛αñ│αÑçαñ▓αñ╛ αñ¿αñ╡αÑÇαñ¿ αñàαññαÑìαñ»αñ╛αñºαÑüαñ¿αñ┐αñò 'αñíαñ┐αñ£αñ┐αñƒαñ▓ αñ▓αñ░αÑìαñ¿αñ┐αñéαñù αñ╣αñ¼' αñ╕αÑüαñ░αÑé αñ¥αñ╛αñ▓αÑìαñ»αñ╛αñÜαÑÇ αñÿαÑïαñ╖αñúαñ╛ αñòαñ░αññαñ╛αñ¿αñ╛ αñàαñ¡αñ┐αñ«αñ╛αñ¿ αñ╡αñ╛αñƒαññ αñåαñ╣αÑç, αñ£αÑç αñ╣αñ╛αñ»-αñ╕αÑìαñ¬αÑÇαñí αñçαñéαñƒαñ░αñ¿αÑçαñƒ αñåαñúαñ┐ αñ¬αÑìαñ░αñùαññ αñ╢αÑêαñòαÑìαñ╖αñúαñ┐αñò αñ╕αÑëαñ½αÑìαñƒαñ╡αÑçαñàαñ░αñ¿αÑç αñ╕αÑüαñ╕αñ£αÑìαñ£ αñåαñ╣αÑç. αñ»αñ╛ αñëαñ¬αñòαÑìαñ░αñ«αñ╛αñÜαñ╛ αñëαñªαÑìαñªαÑçαñ╢ αñ╡αñ┐αñªαÑìαñ»αñ╛αñ░αÑìαñÑαÑìαñ»αñ╛αñéαñ¿αñ╛ αññαÑìαñ»αñ╛αñéαñÜαÑìαñ»αñ╛ αñ╕αñéαñ╢αÑïαñºαñ¿ αñòαÑìαñ╖αñ«αññαñ╛ αñ╡αñ╛αñóαñ╡αñúαÑìαñ»αñ╛αñ╕αñ╛αñáαÑÇ αñåαñúαñ┐ αñíαñ┐αñ£αñ┐αñƒαñ▓ αñ¿αñ╛αñ╡αñ┐αñ¿αÑìαñ»αñ¬αÑéαñ░αÑìαñú αñ¡αñ╡αñ┐αñ╖αÑìαñ»αñ╛αñ╕αñ╛αñáαÑÇ αññαñ»αñ╛αñ░ αñòαñ░αñúαÑìαñ»αñ╛αñ╕αñ╛αñáαÑÇ αñ¿αñ╡αÑÇαñ¿ αññαñ╛αñéαññαÑìαñ░αñ┐αñò αñ╕αñ╛αñºαñ¿αÑç αñ¬αÑìαñ░αñªαñ╛αñ¿ αñòαñ░αñúαÑç αñåαñ╣αÑç. αñåαñ«αÑìαñ╣αÑÇ αñ╕αñ░αÑìαñ╡ αñ╡αñ┐αñªαÑìαñ»αñ╛αñ░αÑìαñÑαÑìαñ»αñ╛αñéαñ¿αñ╛ αñ╡αñ┐αñ¿αñéαññαÑÇ αñòαñ░αññαÑï αñòαÑÇ αññαÑìαñ»αñ╛αñéαñ¿αÑÇ αñ»αñ╛ αñ╕αñéαñ╕αñ╛αñºαñ¿αñ╛αñéαñÜαñ╛ αñ£αñ¼αñ╛αñ¼αñªαñ╛αñ░αÑÇαñ¿αÑç αñ╡αñ╛αñ¬αñ░ αñòαñ░αÑéαñ¿ αñåαñ¬αñ▓αÑÇ αñòαÑìαñ╖αñ┐αññαñ┐αñ£αÑç αñ╡αñ┐αñ╕αÑìαññαñ╛αñ░αñ▓αÑÇ αñ¬αñ╛αñ╣αñ┐αñ£αÑçαññ.",
     },
     {
       en: "Our annual inter-school Athletics Championship is scheduled to take place next Friday at the main sports complex. This event is a fantastic opportunity for our young athletes to demonstrate their physical prowess, teamwork, and sportsman spirit. We invite all parents and community members to join us in cheering for our students as they compete with dedication and excellence in various track and field events.",
-      mr: "आमची वार्षिक आंतरशालेय ॲथलेटिक्स चॅम्पियनशिप पुढील शुक्रवारी मुख्य क्रीडा संकुलात आयोजित केली जाणार आहे. हा कार्यक्रम आपल्या तरुण खेळाडूंसाठी त्यांचे शारीरिक कसब, सांघिक कार्य आणि खिलाडूवृत्ती प्रदर्शित करण्याची एक विलक्षण संधी आहे. आम्ही सर्व पालक आणि समाजातील सदस्यांना विनंती करतो की त्यांनी आपल्या विद्यार्थ्यांचा उत्साह वाढवण्यासाठी उपस्थित राहावे, कारण ते विविध ट्रॅक आणि फील्ड स्पर्धांमध्ये समर्पितपणे आणि उत्कृष्टतेने भाग घेणार आहेत.",
+      mr: "αñåαñ«αñÜαÑÇ αñ╡αñ╛αñ░αÑìαñ╖αñ┐αñò αñåαñéαññαñ░αñ╢αñ╛αñ▓αÑçαñ» αÑ▓αñÑαñ▓αÑçαñƒαñ┐αñòαÑìαñ╕ αñÜαÑàαñ«αÑìαñ¬αñ┐αñ»αñ¿αñ╢αñ┐αñ¬ αñ¬αÑüαñóαÑÇαñ▓ αñ╢αÑüαñòαÑìαñ░αñ╡αñ╛αñ░αÑÇ αñ«αÑüαñûαÑìαñ» αñòαÑìαñ░αÑÇαñíαñ╛ αñ╕αñéαñòαÑüαñ▓αñ╛αññ αñåαñ»αÑïαñ£αñ┐αññ αñòαÑçαñ▓αÑÇ αñ£αñ╛αñúαñ╛αñ░ αñåαñ╣αÑç. αñ╣αñ╛ αñòαñ╛αñ░αÑìαñ»αñòαÑìαñ░αñ« αñåαñ¬αñ▓αÑìαñ»αñ╛ αññαñ░αÑüαñú αñûαÑçαñ│αñ╛αñíαÑéαñéαñ╕αñ╛αñáαÑÇ αññαÑìαñ»αñ╛αñéαñÜαÑç αñ╢αñ╛αñ░αÑÇαñ░αñ┐αñò αñòαñ╕αñ¼, αñ╕αñ╛αñéαñÿαñ┐αñò αñòαñ╛αñ░αÑìαñ» αñåαñúαñ┐ αñûαñ┐αñ▓αñ╛αñíαÑéαñ╡αÑâαññαÑìαññαÑÇ αñ¬αÑìαñ░αñªαñ░αÑìαñ╢αñ┐αññ αñòαñ░αñúαÑìαñ»αñ╛αñÜαÑÇ αñÅαñò αñ╡αñ┐αñ▓αñòαÑìαñ╖αñú αñ╕αñéαñºαÑÇ αñåαñ╣αÑç. αñåαñ«αÑìαñ╣αÑÇ αñ╕αñ░αÑìαñ╡ αñ¬αñ╛αñ▓αñò αñåαñúαñ┐ αñ╕αñ«αñ╛αñ£αñ╛αññαÑÇαñ▓ αñ╕αñªαñ╕αÑìαñ»αñ╛αñéαñ¿αñ╛ αñ╡αñ┐αñ¿αñéαññαÑÇ αñòαñ░αññαÑï αñòαÑÇ αññαÑìαñ»αñ╛αñéαñ¿αÑÇ αñåαñ¬αñ▓αÑìαñ»αñ╛ αñ╡αñ┐αñªαÑìαñ»αñ╛αñ░αÑìαñÑαÑìαñ»αñ╛αñéαñÜαñ╛ αñëαññαÑìαñ╕αñ╛αñ╣ αñ╡αñ╛αñóαñ╡αñúαÑìαñ»αñ╛αñ╕αñ╛αñáαÑÇ αñëαñ¬αñ╕αÑìαñÑαñ┐αññ αñ░αñ╛αñ╣αñ╛αñ╡αÑç, αñòαñ╛αñ░αñú αññαÑç αñ╡αñ┐αñ╡αñ┐αñº αñƒαÑìαñ░αÑàαñò αñåαñúαñ┐ αñ½αÑÇαñ▓αÑìαñí αñ╕αÑìαñ¬αñ░αÑìαñºαñ╛αñéαñ«αñºαÑìαñ»αÑç αñ╕αñ«αñ░αÑìαñ¬αñ┐αññαñ¬αñúαÑç αñåαñúαñ┐ αñëαññαÑìαñòαÑâαñ╖αÑìαñƒαññαÑçαñ¿αÑç αñ¡αñ╛αñù αñÿαÑçαñúαñ╛αñ░ αñåαñ╣αÑçαññ.",
     },
   ],
 };
@@ -3250,29 +3250,29 @@ const getSyllabusData = (classVal: string, mediumVal: string) => {
   const isSemi = mediumVal === "Semi English";
 
   const months = [
-    { en: "June", mr: "जून" },
-    { en: "July", mr: "जुलै" },
-    { en: "August", mr: "ऑगस्ट" },
-    { en: "September", mr: "सप्टेंबर" },
-    { en: "October", mr: "ऑक्टोबर" },
-    { en: "November", mr: "नोव्हेंबर" },
-    { en: "December", mr: "डिसेंबर" },
-    { en: "January", mr: "जानेवारी" },
-    { en: "February", mr: "फेब्रुवारी" },
-    { en: "March", mr: "मार्च" },
-    { en: "April", mr: "एप्रिल" },
-    { en: "May", mr: "मे" }
+    { en: "June", mr: "αñ£αÑéαñ¿" },
+    { en: "July", mr: "αñ£αÑüαñ▓αÑê" },
+    { en: "August", mr: "αñæαñùαñ╕αÑìαñƒ" },
+    { en: "September", mr: "αñ╕αñ¬αÑìαñƒαÑçαñéαñ¼αñ░" },
+    { en: "October", mr: "αñæαñòαÑìαñƒαÑïαñ¼αñ░" },
+    { en: "November", mr: "αñ¿αÑïαñ╡αÑìαñ╣αÑçαñéαñ¼αñ░" },
+    { en: "December", mr: "αñíαñ┐αñ╕αÑçαñéαñ¼αñ░" },
+    { en: "January", mr: "αñ£αñ╛αñ¿αÑçαñ╡αñ╛αñ░αÑÇ" },
+    { en: "February", mr: "αñ½αÑçαñ¼αÑìαñ░αÑüαñ╡αñ╛αñ░αÑÇ" },
+    { en: "March", mr: "αñ«αñ╛αñ░αÑìαñÜ" },
+    { en: "April", mr: "αñÅαñ¬αÑìαñ░αñ┐αñ▓" },
+    { en: "May", mr: "αñ«αÑç" }
   ];
 
   let subjects: string[] = [];
   if (numericClass <= 3) {
-    subjects = ["मराठी", isSemi ? "Mathematics" : "गणित", "इंग्रजी", "खेळू करू शिकू"];
+    subjects = ["αñ«αñ░αñ╛αñáαÑÇ", isSemi ? "Mathematics" : "αñùαñúαñ┐αññ", "αñçαñéαñùαÑìαñ░αñ£αÑÇ", "αñûαÑçαñ│αÑé αñòαñ░αÑé αñ╢αñ┐αñòαÑé"];
   } else if (numericClass === 4) {
-    subjects = ["मराठी", "इंग्रजी", isSemi ? "Mathematics" : "गणित", "परिसर अभ्यास १", "परिसर अभ्यास २"];
+    subjects = ["αñ«αñ░αñ╛αñáαÑÇ", "αñçαñéαñùαÑìαñ░αñ£αÑÇ", isSemi ? "Mathematics" : "αñùαñúαñ┐αññ", "αñ¬αñ░αñ┐αñ╕αñ░ αñàαñ¡αÑìαñ»αñ╛αñ╕ αÑº", "αñ¬αñ░αñ┐αñ╕αñ░ αñàαñ¡αÑìαñ»αñ╛αñ╕ αÑ¿"];
   } else if (numericClass === 5) {
-    subjects = ["मराठी", "इंग्रजी", "हिंदी", isSemi ? "Mathematics" : "गणित", isSemi ? "General Science" : "परिसर अभ्यास १", isSemi ? "Social Sciences" : "परिसर अभ्यास २"];
+    subjects = ["αñ«αñ░αñ╛αñáαÑÇ", "αñçαñéαñùαÑìαñ░αñ£αÑÇ", "αñ╣αñ┐αñéαñªαÑÇ", isSemi ? "Mathematics" : "αñùαñúαñ┐αññ", isSemi ? "General Science" : "αñ¬αñ░αñ┐αñ╕αñ░ αñàαñ¡αÑìαñ»αñ╛αñ╕ αÑº", isSemi ? "Social Sciences" : "αñ¬αñ░αñ┐αñ╕αñ░ αñàαñ¡αÑìαñ»αñ╛αñ╕ αÑ¿"];
   } else {
-    subjects = ["मराठी", "इंग्रजी", "हिंदी", isSemi ? "Mathematics" : "गणित", isSemi ? "General Science" : "सामान्य विज्ञान", "इतिहास व नागरिकशास्त्र", "भूगोल"];
+    subjects = ["αñ«αñ░αñ╛αñáαÑÇ", "αñçαñéαñùαÑìαñ░αñ£αÑÇ", "αñ╣αñ┐αñéαñªαÑÇ", isSemi ? "Mathematics" : "αñùαñúαñ┐αññ", isSemi ? "General Science" : "αñ╕αñ╛αñ«αñ╛αñ¿αÑìαñ» αñ╡αñ┐αñ£αÑìαñ₧αñ╛αñ¿", "αñçαññαñ┐αñ╣αñ╛αñ╕ αñ╡ αñ¿αñ╛αñùαñ░αñ┐αñòαñ╢αñ╛αñ╕αÑìαññαÑìαñ░", "αñ¡αÑéαñùαÑïαñ▓"];
   }
 
   if (numericClass === 1) {
@@ -3281,14 +3281,14 @@ const getSyllabusData = (classVal: string, mediumVal: string) => {
       syllabusBySubject[subject] = {};
     });
 
-    const mathSubjectName = isSemi ? "Mathematics" : "गणित";
+    const mathSubjectName = isSemi ? "Mathematics" : "αñùαñúαñ┐αññ";
 
     const syllabusData = class1SyllabusData as any;
     months.forEach(m => {
-      syllabusBySubject["मराठी"][m.en] = syllabusData.marathi[m.en];
+      syllabusBySubject["αñ«αñ░αñ╛αñáαÑÇ"][m.en] = syllabusData.marathi[m.en];
       syllabusBySubject[mathSubjectName][m.en] = isSemi ? syllabusData.math_en[m.en] : syllabusData.math_mr[m.en];
-      syllabusBySubject["इंग्रजी"][m.en] = syllabusData.english[m.en];
-      syllabusBySubject["खेळू करू शिकू"][m.en] = syllabusData.kks[m.en];
+      syllabusBySubject["αñçαñéαñùαÑìαñ░αñ£αÑÇ"][m.en] = syllabusData.english[m.en];
+      syllabusBySubject["αñûαÑçαñ│αÑé αñòαñ░αÑé αñ╢αñ┐αñòαÑé"][m.en] = syllabusData.kks[m.en];
     });
 
     return { subjects, months, syllabusBySubject };
@@ -3308,103 +3308,103 @@ const getSyllabusData = (classVal: string, mediumVal: string) => {
 
       if (monthNameEn === "May") {
         const langIsEng = isSemi || subject.toLowerCase().includes("english") || subject.toLowerCase().includes("math") || subject.toLowerCase().includes("science");
-        topic = langIsEng ? "Summer Vacation / Holidays" : "उन्हाळी सुट्टी";
-        objectives = langIsEng ? "Revision and summer homework assignment" : "गृहपाठ व सुट्टी उपक्रम.";
-        activity = langIsEng ? "Creative projects and hobby exploration" : "विविध छंद जोपासणे व गृहप्रकल्प.";
-      } else if (subject.includes("मराठी")) {
+        topic = langIsEng ? "Summer Vacation / Holidays" : "αñëαñ¿αÑìαñ╣αñ╛αñ│αÑÇ αñ╕αÑüαñƒαÑìαñƒαÑÇ";
+        objectives = langIsEng ? "Revision and summer homework assignment" : "αñùαÑâαñ╣αñ¬αñ╛αñá αñ╡ αñ╕αÑüαñƒαÑìαñƒαÑÇ αñëαñ¬αñòαÑìαñ░αñ«.";
+        activity = langIsEng ? "Creative projects and hobby exploration" : "αñ╡αñ┐αñ╡αñ┐αñº αñ¢αñéαñª αñ£αÑïαñ¬αñ╛αñ╕αñúαÑç αñ╡ αñùαÑâαñ╣αñ¬αÑìαñ░αñòαñ▓αÑìαñ¬.";
+      } else if (subject.includes("αñ«αñ░αñ╛αñáαÑÇ")) {
         if (monthNameEn === "June") {
-          topic = "पाठ १. माय मराठी (कविता)";
-          objectives = "कवितेचे तालासुरात गायन करणे, मातृभाषेविषयी प्रेम जागृत करणे.";
-          activity = "सामूहिक कविता गायन व सुलेखन सराव.";
+          topic = "αñ¬αñ╛αñá αÑº. αñ«αñ╛αñ» αñ«αñ░αñ╛αñáαÑÇ (αñòαñ╡αñ┐αññαñ╛)";
+          objectives = "αñòαñ╡αñ┐αññαÑçαñÜαÑç αññαñ╛αñ▓αñ╛αñ╕αÑüαñ░αñ╛αññ αñùαñ╛αñ»αñ¿ αñòαñ░αñúαÑç, αñ«αñ╛αññαÑâαñ¡αñ╛αñ╖αÑçαñ╡αñ┐αñ╖αñ»αÑÇ αñ¬αÑìαñ░αÑçαñ« αñ£αñ╛αñùαÑâαññ αñòαñ░αñúαÑç.";
+          activity = "αñ╕αñ╛αñ«αÑéαñ╣αñ┐αñò αñòαñ╡αñ┐αññαñ╛ αñùαñ╛αñ»αñ¿ αñ╡ αñ╕αÑüαñ▓αÑçαñûαñ¿ αñ╕αñ░αñ╛αñ╡.";
         } else if (monthNameEn === "July") {
-          topic = "पाठ २. हत्तीचे चातुर्य & व्याकरण: नाम";
-          objectives = "चित्रावरून गोष्ट सांगणे, नामाची व्याख्या व उदाहरणे ओळखणे.";
-          activity = "चित्रे पाहून गोष्ट पूर्ण करणे, नाम ओळखा स्पर्धा.";
+          topic = "αñ¬αñ╛αñá αÑ¿. αñ╣αññαÑìαññαÑÇαñÜαÑç αñÜαñ╛αññαÑüαñ░αÑìαñ» & αñ╡αÑìαñ»αñ╛αñòαñ░αñú: αñ¿αñ╛αñ«";
+          objectives = "αñÜαñ┐αññαÑìαñ░αñ╛αñ╡αñ░αÑéαñ¿ αñùαÑïαñ╖αÑìαñƒ αñ╕αñ╛αñéαñùαñúαÑç, αñ¿αñ╛αñ«αñ╛αñÜαÑÇ αñ╡αÑìαñ»αñ╛αñûαÑìαñ»αñ╛ αñ╡ αñëαñªαñ╛αñ╣αñ░αñúαÑç αñôαñ│αñûαñúαÑç.";
+          activity = "αñÜαñ┐αññαÑìαñ░αÑç αñ¬αñ╛αñ╣αÑéαñ¿ αñùαÑïαñ╖αÑìαñƒ αñ¬αÑéαñ░αÑìαñú αñòαñ░αñúαÑç, αñ¿αñ╛αñ« αñôαñ│αñûαñ╛ αñ╕αÑìαñ¬αñ░αÑìαñºαñ╛.";
         } else if (monthNameEn === "August") {
-          topic = "पाठ ३. खेळूया शब्दांशी & व्याकरण: सर्वनाम";
-          objectives = "नवीन शब्दांचा संग्रह करणे, सर्वनामाचे उपयोग समजणे.";
-          activity = "भाषिक खेळ खेळणे, वाक्यांमधील सर्वनाम बदलणे.";
+          topic = "αñ¬αñ╛αñá αÑ⌐. αñûαÑçαñ│αÑéαñ»αñ╛ αñ╢αñ¼αÑìαñªαñ╛αñéαñ╢αÑÇ & αñ╡αÑìαñ»αñ╛αñòαñ░αñú: αñ╕αñ░αÑìαñ╡αñ¿αñ╛αñ«";
+          objectives = "αñ¿αñ╡αÑÇαñ¿ αñ╢αñ¼αÑìαñªαñ╛αñéαñÜαñ╛ αñ╕αñéαñùαÑìαñ░αñ╣ αñòαñ░αñúαÑç, αñ╕αñ░αÑìαñ╡αñ¿αñ╛αñ«αñ╛αñÜαÑç αñëαñ¬αñ»αÑïαñù αñ╕αñ«αñ£αñúαÑç.";
+          activity = "αñ¡αñ╛αñ╖αñ┐αñò αñûαÑçαñ│ αñûαÑçαñ│αñúαÑç, αñ╡αñ╛αñòαÑìαñ»αñ╛αñéαñ«αñºαÑÇαñ▓ αñ╕αñ░αÑìαñ╡αñ¿αñ╛αñ« αñ¼αñªαñ▓αñúαÑç.";
         } else if (monthNameEn === "September") {
-          topic = "पाठ ४. आम्ही जाहिरात वाचतो & विशेषण";
-          objectives = "जाहिरातींचे वाचन करून आकलन करणे, विशेषणे ओळखणे.";
-          activity = "स्वतः वस्तूंची जाहिरात तयार करणे.";
+          topic = "αñ¬αñ╛αñá αÑ¬. αñåαñ«αÑìαñ╣αÑÇ αñ£αñ╛αñ╣αñ┐αñ░αñ╛αññ αñ╡αñ╛αñÜαññαÑï & αñ╡αñ┐αñ╢αÑçαñ╖αñú";
+          objectives = "αñ£αñ╛αñ╣αñ┐αñ░αñ╛αññαÑÇαñéαñÜαÑç αñ╡αñ╛αñÜαñ¿ αñòαñ░αÑéαñ¿ αñåαñòαñ▓αñ¿ αñòαñ░αñúαÑç, αñ╡αñ┐αñ╢αÑçαñ╖αñúαÑç αñôαñ│αñûαñúαÑç.";
+          activity = "αñ╕αÑìαñ╡αññαñâ αñ╡αñ╕αÑìαññαÑéαñéαñÜαÑÇ αñ£αñ╛αñ╣αñ┐αñ░αñ╛αññ αññαñ»αñ╛αñ░ αñòαñ░αñúαÑç.";
         } else if (monthNameEn === "October") {
-          topic = "प्रथम सत्र परीक्षा व उजळणी";
-          objectives = "सत्र १ मधील अभ्यासक्रमाचे मूल्यमापन करणे.";
-          activity = "सराव प्रश्नपत्रिका सोडविणे.";
+          topic = "αñ¬αÑìαñ░αñÑαñ« αñ╕αññαÑìαñ░ αñ¬αñ░αÑÇαñòαÑìαñ╖αñ╛ αñ╡ αñëαñ£αñ│αñúαÑÇ";
+          objectives = "αñ╕αññαÑìαñ░ αÑº αñ«αñºαÑÇαñ▓ αñàαñ¡αÑìαñ»αñ╛αñ╕αñòαÑìαñ░αñ«αñ╛αñÜαÑç αñ«αÑéαñ▓αÑìαñ»αñ«αñ╛αñ¬αñ¿ αñòαñ░αñúαÑç.";
+          activity = "αñ╕αñ░αñ╛αñ╡ αñ¬αÑìαñ░αñ╢αÑìαñ¿αñ¬αññαÑìαñ░αñ┐αñòαñ╛ αñ╕αÑïαñíαñ╡αñ┐αñúαÑç.";
         } else if (monthNameEn === "November") {
-          topic = "पाठ ५. हिवाळा (कविता) & निबंध लेखन";
-          objectives = "ऋतूंमधील बदलांविषयी माहिती मिळविणे, निबंध लेखन समजणे.";
-          activity = "माझा आवडता ऋतू यावर निबंध लिहिणे.";
+          topic = "αñ¬αñ╛αñá αÑ½. αñ╣αñ┐αñ╡αñ╛αñ│αñ╛ (αñòαñ╡αñ┐αññαñ╛) & αñ¿αñ┐αñ¼αñéαñº αñ▓αÑçαñûαñ¿";
+          objectives = "αñïαññαÑéαñéαñ«αñºαÑÇαñ▓ αñ¼αñªαñ▓αñ╛αñéαñ╡αñ┐αñ╖αñ»αÑÇ αñ«αñ╛αñ╣αñ┐αññαÑÇ αñ«αñ┐αñ│αñ╡αñ┐αñúαÑç, αñ¿αñ┐αñ¼αñéαñº αñ▓αÑçαñûαñ¿ αñ╕αñ«αñ£αñúαÑç.";
+          activity = "αñ«αñ╛αñ¥αñ╛ αñåαñ╡αñíαññαñ╛ αñïαññαÑé αñ»αñ╛αñ╡αñ░ αñ¿αñ┐αñ¼αñéαñº αñ▓αñ┐αñ╣αñ┐αñúαÑç.";
         } else if (monthNameEn === "December") {
-          topic = "पाठ ६. पैशांचे व्यवहार & पत्रलेखन";
-          objectives = "बँक आणि दैनंदिन व्यवहार समजणे, पत्र लेखन आराखडा समजणे.";
-          activity = "बँकेला भेट देणे, घरगुती पत्र लिहिणे.";
+          topic = "αñ¬αñ╛αñá αÑ¼. αñ¬αÑêαñ╢αñ╛αñéαñÜαÑç αñ╡αÑìαñ»αñ╡αñ╣αñ╛αñ░ & αñ¬αññαÑìαñ░αñ▓αÑçαñûαñ¿";
+          objectives = "αñ¼αñüαñò αñåαñúαñ┐ αñªαÑêαñ¿αñéαñªαñ┐αñ¿ αñ╡αÑìαñ»αñ╡αñ╣αñ╛αñ░ αñ╕αñ«αñ£αñúαÑç, αñ¬αññαÑìαñ░ αñ▓αÑçαñûαñ¿ αñåαñ░αñ╛αñûαñíαñ╛ αñ╕αñ«αñ£αñúαÑç.";
+          activity = "αñ¼αñüαñòαÑçαñ▓αñ╛ αñ¡αÑçαñƒ αñªαÑçαñúαÑç, αñÿαñ░αñùαÑüαññαÑÇ αñ¬αññαÑìαñ░ αñ▓αñ┐αñ╣αñ┐αñúαÑç.";
         } else if (monthNameEn === "January") {
-          topic = "पाठ ७. जोडशब्द व सुविचार लेखन";
-          objectives = "जोडशब्दांचे योग्य उच्चार व लेखन करणे.";
-          activity = "दररोज एक सुविचार फलकावर लिहिणे.";
+          topic = "αñ¬αñ╛αñá αÑ¡. αñ£αÑïαñíαñ╢αñ¼αÑìαñª αñ╡ αñ╕αÑüαñ╡αñ┐αñÜαñ╛αñ░ αñ▓αÑçαñûαñ¿";
+          objectives = "αñ£αÑïαñíαñ╢αñ¼αÑìαñªαñ╛αñéαñÜαÑç αñ»αÑïαñùαÑìαñ» αñëαñÜαÑìαñÜαñ╛αñ░ αñ╡ αñ▓αÑçαñûαñ¿ αñòαñ░αñúαÑç.";
+          activity = "αñªαñ░αñ░αÑïαñ£ αñÅαñò αñ╕αÑüαñ╡αñ┐αñÜαñ╛αñ░ αñ½αñ▓αñòαñ╛αñ╡αñ░ αñ▓αñ┐αñ╣αñ┐αñúαÑç.";
         } else if (monthNameEn === "February") {
-          topic = "पाठ ८. विरामचिन्हे व क्रियापद ओळख";
-          objectives = "लेखनात योग्य विरामचिन्हांचा वापर करणे.";
-          activity = "परिच्छेदामधील विरामचिन्हे शोधणे.";
+          topic = "αñ¬αñ╛αñá αÑ«. αñ╡αñ┐αñ░αñ╛αñ«αñÜαñ┐αñ¿αÑìαñ╣αÑç αñ╡ αñòαÑìαñ░αñ┐αñ»αñ╛αñ¬αñª αñôαñ│αñû";
+          objectives = "αñ▓αÑçαñûαñ¿αñ╛αññ αñ»αÑïαñùαÑìαñ» αñ╡αñ┐αñ░αñ╛αñ«αñÜαñ┐αñ¿αÑìαñ╣αñ╛αñéαñÜαñ╛ αñ╡αñ╛αñ¬αñ░ αñòαñ░αñúαÑç.";
+          activity = "αñ¬αñ░αñ┐αñÜαÑìαñ¢αÑçαñªαñ╛αñ«αñºαÑÇαñ▓ αñ╡αñ┐αñ░αñ╛αñ«αñÜαñ┐αñ¿αÑìαñ╣αÑç αñ╢αÑïαñºαñúαÑç.";
         } else if (monthNameEn === "March") {
-          topic = "कथालेखन व संवाद वाचन सराव";
-          objectives = "गोष्टींचे स्वतःच्या शब्दांत सादरीकरण करणे.";
-          activity = "नाट्यीकरण व प्रकट वाचन.";
+          topic = "αñòαñÑαñ╛αñ▓αÑçαñûαñ¿ αñ╡ αñ╕αñéαñ╡αñ╛αñª αñ╡αñ╛αñÜαñ¿ αñ╕αñ░αñ╛αñ╡";
+          objectives = "αñùαÑïαñ╖αÑìαñƒαÑÇαñéαñÜαÑç αñ╕αÑìαñ╡αññαñâαñÜαÑìαñ»αñ╛ αñ╢αñ¼αÑìαñªαñ╛αñéαññ αñ╕αñ╛αñªαñ░αÑÇαñòαñ░αñú αñòαñ░αñúαÑç.";
+          activity = "αñ¿αñ╛αñƒαÑìαñ»αÑÇαñòαñ░αñú αñ╡ αñ¬αÑìαñ░αñòαñƒ αñ╡αñ╛αñÜαñ¿.";
         } else {
-          topic = "वार्षिक परीक्षा आणि उजळणी";
-          objectives = "संपूर्ण वर्षाचा अभ्यासक्रम उजळणी व अंतिम मूल्यमापन.";
-          activity = "मौल्यवान सराव चाचण्या आणि गुणदान.";
+          topic = "αñ╡αñ╛αñ░αÑìαñ╖αñ┐αñò αñ¬αñ░αÑÇαñòαÑìαñ╖αñ╛ αñåαñúαñ┐ αñëαñ£αñ│αñúαÑÇ";
+          objectives = "αñ╕αñéαñ¬αÑéαñ░αÑìαñú αñ╡αñ░αÑìαñ╖αñ╛αñÜαñ╛ αñàαñ¡αÑìαñ»αñ╛αñ╕αñòαÑìαñ░αñ« αñëαñ£αñ│αñúαÑÇ αñ╡ αñàαñéαññαñ┐αñ« αñ«αÑéαñ▓αÑìαñ»αñ«αñ╛αñ¬αñ¿.";
+          activity = "αñ«αÑîαñ▓αÑìαñ»αñ╡αñ╛αñ¿ αñ╕αñ░αñ╛αñ╡ αñÜαñ╛αñÜαñúαÑìαñ»αñ╛ αñåαñúαñ┐ αñùαÑüαñúαñªαñ╛αñ¿.";
         }
-      } else if (subject.includes("Math") || subject.includes("गणित")) {
+      } else if (subject.includes("Math") || subject.includes("αñùαñúαñ┐αññ")) {
         const langIsEng = isSemi || subject.toLowerCase().includes("math");
         if (monthNameEn === "June") {
-          topic = langIsEng ? "Unit 1: Roman Numerals" : "घटक १: रोमन संख्याचिन्हे";
-          objectives = langIsEng ? "Unit 1: Numbers and place value up to 100" : "घटक १: रोमन संख्याचिन्हे व स्थानिक किंमत";
-          activity = langIsEng ? "Number chart activities and place value blocks" : "अबेकसवर संख्या दाखवणे व लिहिणे.";
+          topic = langIsEng ? "Unit 1: Roman Numerals" : "αñÿαñƒαñò αÑº: αñ░αÑïαñ«αñ¿ αñ╕αñéαñûαÑìαñ»αñ╛αñÜαñ┐αñ¿αÑìαñ╣αÑç";
+          objectives = langIsEng ? "Unit 1: Numbers and place value up to 100" : "αñÿαñƒαñò αÑº: αñ░αÑïαñ«αñ¿ αñ╕αñéαñûαÑìαñ»αñ╛αñÜαñ┐αñ¿αÑìαñ╣αÑç αñ╡ αñ╕αÑìαñÑαñ╛αñ¿αñ┐αñò αñòαñ┐αñéαñ«αññ";
+          activity = langIsEng ? "Number chart activities and place value blocks" : "αñàαñ¼αÑçαñòαñ╕αñ╡αñ░ αñ╕αñéαñûαÑìαñ»αñ╛ αñªαñ╛αñûαñ╡αñúαÑç αñ╡ αñ▓αñ┐αñ╣αñ┐αñúαÑç.";
         } else if (monthNameEn === "July") {
-          topic = langIsEng ? "Unit 2: Addition & Subtraction (up to 99)" : "घटक २: बेरीज व वजाबाकी (99 पर्यंत)";
-          objectives = langIsEng ? "Performing addition and subtraction with carrying/borrowing" : "हातउसने घेऊन बेरीज-वजाबाकी करणे.";
-          activity = langIsEng ? "Abacus sums, mental math drills" : "संख्यारेषेवर बेरीज व वजाबाकी खेळ.";
+          topic = langIsEng ? "Unit 2: Addition & Subtraction (up to 99)" : "αñÿαñƒαñò αÑ¿: αñ¼αÑçαñ░αÑÇαñ£ αñ╡ αñ╡αñ£αñ╛αñ¼αñ╛αñòαÑÇ (99 αñ¬αñ░αÑìαñ»αñéαññ)";
+          objectives = langIsEng ? "Performing addition and subtraction with carrying/borrowing" : "αñ╣αñ╛αññαñëαñ╕αñ¿αÑç αñÿαÑçαñèαñ¿ αñ¼αÑçαñ░αÑÇαñ£-αñ╡αñ£αñ╛αñ¼αñ╛αñòαÑÇ αñòαñ░αñúαÑç.";
+          activity = langIsEng ? "Abacus sums, mental math drills" : "αñ╕αñéαñûαÑìαñ»αñ╛αñ░αÑçαñ╖αÑçαñ╡αñ░ αñ¼αÑçαñ░αÑÇαñ£ αñ╡ αñ╡αñ£αñ╛αñ¼αñ╛αñòαÑÇ αñûαÑçαñ│.";
         } else if (monthNameEn === "August") {
-          topic = langIsEng ? "Unit 3: Multiplication tables (2-5)" : "घटक ३: गुणाकार पाढे (२ ते ५)";
-          objectives = langIsEng ? "Reciting and applying multiplication tables 2–5" : "पाढे म्हणणे व गुणाकार समजणे.";
-          activity = langIsEng ? "Times tables songs and flashcard quiz" : "गाण्याच्या चालीवर पाढे म्हणणे.";
+          topic = langIsEng ? "Unit 3: Multiplication tables (2-5)" : "αñÿαñƒαñò αÑ⌐: αñùαÑüαñúαñ╛αñòαñ╛αñ░ αñ¬αñ╛αñóαÑç (αÑ¿ αññαÑç αÑ½)";
+          objectives = langIsEng ? "Reciting and applying multiplication tables 2ΓÇô5" : "αñ¬αñ╛αñóαÑç αñ«αÑìαñ╣αñúαñúαÑç αñ╡ αñùαÑüαñúαñ╛αñòαñ╛αñ░ αñ╕αñ«αñ£αñúαÑç.";
+          activity = langIsEng ? "Times tables songs and flashcard quiz" : "αñùαñ╛αñúαÑìαñ»αñ╛αñÜαÑìαñ»αñ╛ αñÜαñ╛αñ▓αÑÇαñ╡αñ░ αñ¬αñ╛αñóαÑç αñ«αÑìαñ╣αñúαñúαÑç.";
         } else if (monthNameEn === "September") {
-          topic = langIsEng ? "Unit 4: Division – equal sharing" : "घटक ४: भागाकार – समान वाटप";
-          objectives = langIsEng ? "Understanding division as equal grouping" : "समान गटांमध्ये विभागणी समजणे.";
-          activity = langIsEng ? "Sharing objects equally in groups" : "वस्तू समान गटांत वाटप करणे.";
+          topic = langIsEng ? "Unit 4: Division ΓÇô equal sharing" : "αñÿαñƒαñò αÑ¬: αñ¡αñ╛αñùαñ╛αñòαñ╛αñ░ ΓÇô αñ╕αñ«αñ╛αñ¿ αñ╡αñ╛αñƒαñ¬";
+          objectives = langIsEng ? "Understanding division as equal grouping" : "αñ╕αñ«αñ╛αñ¿ αñùαñƒαñ╛αñéαñ«αñºαÑìαñ»αÑç αñ╡αñ┐αñ¡αñ╛αñùαñúαÑÇ αñ╕αñ«αñ£αñúαÑç.";
+          activity = langIsEng ? "Sharing objects equally in groups" : "αñ╡αñ╕αÑìαññαÑé αñ╕αñ«αñ╛αñ¿ αñùαñƒαñ╛αñéαññ αñ╡αñ╛αñƒαñ¬ αñòαñ░αñúαÑç.";
         } else if (monthNameEn === "October") {
-          topic = langIsEng ? "Unit 5: Fractions & Half/Quarter" : "घटक ५: अपूर्णांक – अर्धे व पाव";
-          objectives = langIsEng ? "Identifying ½ and ¼ of shapes and sets" : "आकृतींचे अर्धे व पाव भाग ओळखणे.";
-          activity = langIsEng ? "Folding shapes into halves and quarters" : "कागदाच्या घड्या घालून अर्धे दाखवणे.";
+          topic = langIsEng ? "Unit 5: Fractions & Half/Quarter" : "αñÿαñƒαñò αÑ½: αñàαñ¬αÑéαñ░αÑìαñúαñ╛αñéαñò ΓÇô αñàαñ░αÑìαñºαÑç αñ╡ αñ¬αñ╛αñ╡";
+          objectives = langIsEng ? "Identifying ┬╜ and ┬╝ of shapes and sets" : "αñåαñòαÑâαññαÑÇαñéαñÜαÑç αñàαñ░αÑìαñºαÑç αñ╡ αñ¬αñ╛αñ╡ αñ¡αñ╛αñù αñôαñ│αñûαñúαÑç.";
+          activity = langIsEng ? "Folding shapes into halves and quarters" : "αñòαñ╛αñùαñªαñ╛αñÜαÑìαñ»αñ╛ αñÿαñíαÑìαñ»αñ╛ αñÿαñ╛αñ▓αÑéαñ¿ αñàαñ░αÑìαñºαÑç αñªαñ╛αñûαñ╡αñúαÑç.";
         } else if (monthNameEn === "November") {
-          topic = langIsEng ? "Unit 6: Measurement – Length, Weight, Capacity" : "घटक ६: मापन – लांबी, वजन व क्षमता";
-          objectives = langIsEng ? "Measuring objects using standard & non-standard units" : "मानक व अमानक एककांनी मापन करणे.";
-          activity = langIsEng ? "Classroom measurement activities" : "वर्गातील वस्तू मोजणे व तुलना करणे.";
+          topic = langIsEng ? "Unit 6: Measurement ΓÇô Length, Weight, Capacity" : "αñÿαñƒαñò αÑ¼: αñ«αñ╛αñ¬αñ¿ ΓÇô αñ▓αñ╛αñéαñ¼αÑÇ, αñ╡αñ£αñ¿ αñ╡ αñòαÑìαñ╖αñ«αññαñ╛";
+          objectives = langIsEng ? "Measuring objects using standard & non-standard units" : "αñ«αñ╛αñ¿αñò αñ╡ αñàαñ«αñ╛αñ¿αñò αñÅαñòαñòαñ╛αñéαñ¿αÑÇ αñ«αñ╛αñ¬αñ¿ αñòαñ░αñúαÑç.";
+          activity = langIsEng ? "Classroom measurement activities" : "αñ╡αñ░αÑìαñùαñ╛αññαÑÇαñ▓ αñ╡αñ╕αÑìαññαÑé αñ«αÑïαñ£αñúαÑç αñ╡ αññαÑüαñ▓αñ¿αñ╛ αñòαñ░αñúαÑç.";
         } else if (monthNameEn === "December") {
-          topic = langIsEng ? "Unit 7: Time – Reading Clock" : "घटक ७: वेळ – घड्याळ वाचन";
-          objectives = langIsEng ? "Reading time to the hour and half hour" : "पूर्ण व अर्ध्या तासाची वेळ सांगणे.";
-          activity = langIsEng ? "Clock model making and time matching" : "घड्याळाच्या काट्या फिरवून वेळ दाखवणे.";
+          topic = langIsEng ? "Unit 7: Time ΓÇô Reading Clock" : "αñÿαñƒαñò αÑ¡: αñ╡αÑçαñ│ ΓÇô αñÿαñíαÑìαñ»αñ╛αñ│ αñ╡αñ╛αñÜαñ¿";
+          objectives = langIsEng ? "Reading time to the hour and half hour" : "αñ¬αÑéαñ░αÑìαñú αñ╡ αñàαñ░αÑìαñºαÑìαñ»αñ╛ αññαñ╛αñ╕αñ╛αñÜαÑÇ αñ╡αÑçαñ│ αñ╕αñ╛αñéαñùαñúαÑç.";
+          activity = langIsEng ? "Clock model making and time matching" : "αñÿαñíαÑìαñ»αñ╛αñ│αñ╛αñÜαÑìαñ»αñ╛ αñòαñ╛αñƒαÑìαñ»αñ╛ αñ½αñ┐αñ░αñ╡αÑéαñ¿ αñ╡αÑçαñ│ αñªαñ╛αñûαñ╡αñúαÑç.";
         } else if (monthNameEn === "January") {
-          topic = langIsEng ? "Unit 8: Money – Coins and Notes" : "घटक ८: पैसे – नाणी व नोटा";
-          objectives = langIsEng ? "Identifying and counting Indian currency" : "नाणी व नोटा ओळखणे व मोजणे.";
-          activity = langIsEng ? "Mock shop activity with paper notes" : "कागदी नोटा वापरून खरेदी-विक्री खेळ.";
+          topic = langIsEng ? "Unit 8: Money ΓÇô Coins and Notes" : "αñÿαñƒαñò αÑ«: αñ¬αÑêαñ╕αÑç ΓÇô αñ¿αñ╛αñúαÑÇ αñ╡ αñ¿αÑïαñƒαñ╛";
+          objectives = langIsEng ? "Identifying and counting Indian currency" : "αñ¿αñ╛αñúαÑÇ αñ╡ αñ¿αÑïαñƒαñ╛ αñôαñ│αñûαñúαÑç αñ╡ αñ«αÑïαñ£αñúαÑç.";
+          activity = langIsEng ? "Mock shop activity with paper notes" : "αñòαñ╛αñùαñªαÑÇ αñ¿αÑïαñƒαñ╛ αñ╡αñ╛αñ¬αñ░αÑéαñ¿ αñûαñ░αÑçαñªαÑÇ-αñ╡αñ┐αñòαÑìαñ░αÑÇ αñûαÑçαñ│.";
         } else if (monthNameEn === "February") {
-          topic = langIsEng ? "Unit 9: Geometry – Shapes & Patterns" : "घटक ९: भूमिती – आकार व आकृतीबंध";
-          objectives = langIsEng ? "Identifying 2D & 3D shapes and repeating patterns" : "समतल व घनाकार आकार ओळखणे.";
-          activity = langIsEng ? "Shape collage and pattern drawing" : "आकारांचे चित्र काढणे व रंगवणे.";
+          topic = langIsEng ? "Unit 9: Geometry ΓÇô Shapes & Patterns" : "αñÿαñƒαñò αÑ»: αñ¡αÑéαñ«αñ┐αññαÑÇ ΓÇô αñåαñòαñ╛αñ░ αñ╡ αñåαñòαÑâαññαÑÇαñ¼αñéαñº";
+          objectives = langIsEng ? "Identifying 2D & 3D shapes and repeating patterns" : "αñ╕αñ«αññαñ▓ αñ╡ αñÿαñ¿αñ╛αñòαñ╛αñ░ αñåαñòαñ╛αñ░ αñôαñ│αñûαñúαÑç.";
+          activity = langIsEng ? "Shape collage and pattern drawing" : "αñåαñòαñ╛αñ░αñ╛αñéαñÜαÑç αñÜαñ┐αññαÑìαñ░ αñòαñ╛αñóαñúαÑç αñ╡ αñ░αñéαñùαñ╡αñúαÑç.";
         } else if (monthNameEn === "March") {
-          topic = langIsEng ? "Revision & Problem Solving" : "उजळणी व समस्या सोडवणे";
-          objectives = langIsEng ? "Reviewing all math topics and solving word problems" : "सर्व घटकांची उजळणी व शब्दसमस्या सोडवणे.";
-          activity = langIsEng ? "Sample paper practice" : "नमुना प्रश्नपत्रिका सोडविणे.";
+          topic = langIsEng ? "Revision & Problem Solving" : "αñëαñ£αñ│αñúαÑÇ αñ╡ αñ╕αñ«αñ╕αÑìαñ»αñ╛ αñ╕αÑïαñíαñ╡αñúαÑç";
+          objectives = langIsEng ? "Reviewing all math topics and solving word problems" : "αñ╕αñ░αÑìαñ╡ αñÿαñƒαñòαñ╛αñéαñÜαÑÇ αñëαñ£αñ│αñúαÑÇ αñ╡ αñ╢αñ¼αÑìαñªαñ╕αñ«αñ╕αÑìαñ»αñ╛ αñ╕αÑïαñíαñ╡αñúαÑç.";
+          activity = langIsEng ? "Sample paper practice" : "αñ¿αñ«αÑüαñ¿αñ╛ αñ¬αÑìαñ░αñ╢αÑìαñ¿αñ¬αññαÑìαñ░αñ┐αñòαñ╛ αñ╕αÑïαñíαñ╡αñ┐αñúαÑç.";
         } else {
-          topic = langIsEng ? "Annual Exam Revision" : "वार्षिक परीक्षा उजळणी";
-          objectives = langIsEng ? "Final evaluation and grade compilation" : "वार्षिक मूल्यमापन व गुणदान.";
-          activity = langIsEng ? "Final written exam" : "अंतिम परीक्षा व गुणनोंदणी.";
+          topic = langIsEng ? "Annual Exam Revision" : "αñ╡αñ╛αñ░αÑìαñ╖αñ┐αñò αñ¬αñ░αÑÇαñòαÑìαñ╖αñ╛ αñëαñ£αñ│αñúαÑÇ";
+          objectives = langIsEng ? "Final evaluation and grade compilation" : "αñ╡αñ╛αñ░αÑìαñ╖αñ┐αñò αñ«αÑéαñ▓αÑìαñ»αñ«αñ╛αñ¬αñ¿ αñ╡ αñùαÑüαñúαñªαñ╛αñ¿.";
+          activity = langIsEng ? "Final written exam" : "αñàαñéαññαñ┐αñ« αñ¬αñ░αÑÇαñòαÑìαñ╖αñ╛ αñ╡ αñùαÑüαñúαñ¿αÑïαñéαñªαñúαÑÇ.";
         }
-      } else if (subject.includes("English") || subject.includes("इंग्रजी")) {
+      } else if (subject.includes("English") || subject.includes("αñçαñéαñùαÑìαñ░αñ£αÑÇ")) {
         if (monthNameEn === "June") {
           topic = "Chapter 1: Greetings & Introductions";
           objectives = "Using basic greeting expressions and self-introduction.";
@@ -3442,7 +3442,7 @@ const getSyllabusData = (classVal: string, mediumVal: string) => {
           objectives = "Reading simple stories and answering questions.";
           activity = "Story sequencing cards, comprehension exercise.";
         } else if (monthNameEn === "March") {
-          topic = "Revision – All chapters";
+          topic = "Revision ΓÇô All chapters";
           objectives = "Review vocabulary, grammar, and reading skills.";
           activity = "Fun interactive spelling bee.";
         } else {
@@ -3452,49 +3452,49 @@ const getSyllabusData = (classVal: string, mediumVal: string) => {
         }
       } else {
         if (monthNameEn === "June") {
-          topic = `${subject} – घटक १: पायाभूत ओळख`;
-          objectives = "विषयाच्या पायाभूत संकल्पनांची ओळख.";
-          activity = "चर्चा व प्रश्नोत्तरे.";
+          topic = `${subject} ΓÇô αñÿαñƒαñò αÑº: αñ¬αñ╛αñ»αñ╛αñ¡αÑéαññ αñôαñ│αñû`;
+          objectives = "αñ╡αñ┐αñ╖αñ»αñ╛αñÜαÑìαñ»αñ╛ αñ¬αñ╛αñ»αñ╛αñ¡αÑéαññ αñ╕αñéαñòαñ▓αÑìαñ¬αñ¿αñ╛αñéαñÜαÑÇ αñôαñ│αñû.";
+          activity = "αñÜαñ░αÑìαñÜαñ╛ αñ╡ αñ¬αÑìαñ░αñ╢αÑìαñ¿αÑïαññαÑìαññαñ░αÑç.";
         } else if (monthNameEn === "July") {
-          topic = `${subject} – घटक २`;
-          objectives = "विषयाच्या दुसऱ्या घटकाचे अध्ययन.";
-          activity = "गट चर्चा व नोट्स.";
+          topic = `${subject} ΓÇô αñÿαñƒαñò αÑ¿`;
+          objectives = "αñ╡αñ┐αñ╖αñ»αñ╛αñÜαÑìαñ»αñ╛ αñªαÑüαñ╕αñ▒αÑìαñ»αñ╛ αñÿαñƒαñòαñ╛αñÜαÑç αñàαñºαÑìαñ»αñ»αñ¿.";
+          activity = "αñùαñƒ αñÜαñ░αÑìαñÜαñ╛ αñ╡ αñ¿αÑïαñƒαÑìαñ╕.";
         } else if (monthNameEn === "August") {
-          topic = `${subject} – घटक ३`;
-          objectives = "घटक ३ च्या संकल्पना समजणे.";
-          activity = "प्रात्यक्षिक व कृती उपक्रम.";
+          topic = `${subject} ΓÇô αñÿαñƒαñò αÑ⌐`;
+          objectives = "αñÿαñƒαñò αÑ⌐ αñÜαÑìαñ»αñ╛ αñ╕αñéαñòαñ▓αÑìαñ¬αñ¿αñ╛ αñ╕αñ«αñ£αñúαÑç.";
+          activity = "αñ¬αÑìαñ░αñ╛αññαÑìαñ»αñòαÑìαñ╖αñ┐αñò αñ╡ αñòαÑâαññαÑÇ αñëαñ¬αñòαÑìαñ░αñ«.";
         } else if (monthNameEn === "September") {
-          topic = `${subject} – घटक ४`;
-          objectives = "घटक ४ चे सखोल अध्ययन.";
-          activity = "गृहपाठ व सराव.";
+          topic = `${subject} ΓÇô αñÿαñƒαñò αÑ¬`;
+          objectives = "αñÿαñƒαñò αÑ¬ αñÜαÑç αñ╕αñûαÑïαñ▓ αñàαñºαÑìαñ»αñ»αñ¿.";
+          activity = "αñùαÑâαñ╣αñ¬αñ╛αñá αñ╡ αñ╕αñ░αñ╛αñ╡.";
         } else if (monthNameEn === "October") {
-          topic = `${subject} – प्रथम सत्र परीक्षा`;
-          objectives = "सत्र १ चे मूल्यमापन.";
-          activity = "सराव प्रश्नपत्रिका.";
+          topic = `${subject} ΓÇô αñ¬αÑìαñ░αñÑαñ« αñ╕αññαÑìαñ░ αñ¬αñ░αÑÇαñòαÑìαñ╖αñ╛`;
+          objectives = "αñ╕αññαÑìαñ░ αÑº αñÜαÑç αñ«αÑéαñ▓αÑìαñ»αñ«αñ╛αñ¬αñ¿.";
+          activity = "αñ╕αñ░αñ╛αñ╡ αñ¬αÑìαñ░αñ╢αÑìαñ¿αñ¬αññαÑìαñ░αñ┐αñòαñ╛.";
         } else if (monthNameEn === "November") {
-          topic = `${subject} – घटक ५`;
-          objectives = "घटक ५ च्या संकल्पना समजणे.";
-          activity = "चित्र, आकृत्या व नोट्स तयार करणे.";
+          topic = `${subject} ΓÇô αñÿαñƒαñò αÑ½`;
+          objectives = "αñÿαñƒαñò αÑ½ αñÜαÑìαñ»αñ╛ αñ╕αñéαñòαñ▓αÑìαñ¬αñ¿αñ╛ αñ╕αñ«αñ£αñúαÑç.";
+          activity = "αñÜαñ┐αññαÑìαñ░, αñåαñòαÑâαññαÑìαñ»αñ╛ αñ╡ αñ¿αÑïαñƒαÑìαñ╕ αññαñ»αñ╛αñ░ αñòαñ░αñúαÑç.";
         } else if (monthNameEn === "December") {
-          topic = `${subject} – घटक ६`;
-          objectives = "घटक ६ चे अध्ययन.";
-          activity = "गट कृती व सादरीकरण.";
+          topic = `${subject} ΓÇô αñÿαñƒαñò αÑ¼`;
+          objectives = "αñÿαñƒαñò αÑ¼ αñÜαÑç αñàαñºαÑìαñ»αñ»αñ¿.";
+          activity = "αñùαñƒ αñòαÑâαññαÑÇ αñ╡ αñ╕αñ╛αñªαñ░αÑÇαñòαñ░αñú.";
         } else if (monthNameEn === "January") {
-          topic = `${subject} – घटक ७`;
-          objectives = "घटक ७ – सखोल अभ्यास.";
-          activity = "प्रकल्प व लेखन.";
+          topic = `${subject} ΓÇô αñÿαñƒαñò αÑ¡`;
+          objectives = "αñÿαñƒαñò αÑ¡ ΓÇô αñ╕αñûαÑïαñ▓ αñàαñ¡αÑìαñ»αñ╛αñ╕.";
+          activity = "αñ¬αÑìαñ░αñòαñ▓αÑìαñ¬ αñ╡ αñ▓αÑçαñûαñ¿.";
         } else if (monthNameEn === "February") {
-          topic = `${subject} – घटक ८`;
-          objectives = "घटक ८ चे अध्ययन व उजळणी.";
-          activity = "चर्चा व सराव प्रश्न.";
+          topic = `${subject} ΓÇô αñÿαñƒαñò αÑ«`;
+          objectives = "αñÿαñƒαñò αÑ« αñÜαÑç αñàαñºαÑìαñ»αñ»αñ¿ αñ╡ αñëαñ£αñ│αñúαÑÇ.";
+          activity = "αñÜαñ░αÑìαñÜαñ╛ αñ╡ αñ╕αñ░αñ╛αñ╡ αñ¬αÑìαñ░αñ╢αÑìαñ¿.";
         } else if (monthNameEn === "March") {
-          topic = `${subject} – उजळणी`;
-          objectives = "संपूर्ण वर्षाचा अभ्यासक्रम उजळणी.";
-          activity = "सराव चाचण्या.";
+          topic = `${subject} ΓÇô αñëαñ£αñ│αñúαÑÇ`;
+          objectives = "αñ╕αñéαñ¬αÑéαñ░αÑìαñú αñ╡αñ░αÑìαñ╖αñ╛αñÜαñ╛ αñàαñ¡αÑìαñ»αñ╛αñ╕αñòαÑìαñ░αñ« αñëαñ£αñ│αñúαÑÇ.";
+          activity = "αñ╕αñ░αñ╛αñ╡ αñÜαñ╛αñÜαñúαÑìαñ»αñ╛.";
         } else {
-          topic = `${subject} – वार्षिक परीक्षा`;
-          objectives = "अंतिम मूल्यमापन.";
-          activity = "वार्षिक परीक्षा.";
+          topic = `${subject} ΓÇô αñ╡αñ╛αñ░αÑìαñ╖αñ┐αñò αñ¬αñ░αÑÇαñòαÑìαñ╖αñ╛`;
+          objectives = "αñàαñéαññαñ┐αñ« αñ«αÑéαñ▓αÑìαñ»αñ«αñ╛αñ¬αñ¿.";
+          activity = "αñ╡αñ╛αñ░αÑìαñ╖αñ┐αñò αñ¬αñ░αÑÇαñòαÑìαñ╖αñ╛.";
         }
       }
 
@@ -3506,39 +3506,39 @@ const getSyllabusData = (classVal: string, mediumVal: string) => {
 };
 
 const CLASS4_JUNE_PLAN: Record<string, Record<number, { topic: string; experience: string; tools: string; materials: string; outcome: string; isHolidayText?: string }>> = {
-  "मराठी": {
-    15: { topic: "चित्र वाचन", experience: "चित्र पाहून चित्रात काय दिसते ते सांगा.", tools: "तोंडीकाम", materials: "चित्र", outcome: "१.३.१ सांगितलेल्या/विचारलेल्या वस्तूंविषयी, घटकाविषयी पाच ते सहा ओळींत माहिती सांगतो." },
-    16: { topic: "अभिव्यक्ती", experience: "दिलेल्या विषयावर आपले मत मांडतात.", tools: "तोंडीकाम", materials: "चित्र", outcome: "१.३.१ सांगितलेल्या/विचारलेल्या वस्तूंविषयी, घटकाविषयी पाच ते सहा ओळींत माहिती सांगतो." },
-    17: { topic: "कथा सांगणे", experience: "कथा लक्षपूर्वक ऐकतात व चर्चा करतात", tools: "तोंडीकाम", materials: "चित्र", outcome: "१.१.२ कथा, उतारा, परिच्छेद, बातमी ऐकून त्यांच्यावर गटचर्चा करती." },
-    18: { topic: "बातमी वाचन", experience: "बातमी वाचन करून चर्चा करतात.", tools: "तोंडीकाम", materials: "चित्र", outcome: "१.१.२ कथा, उतारा, परिच्छेद, बातमी ऐकून त्यांच्यावर गटचर्चा करती." },
-    19: { topic: "शब्दसमूह", experience: "शब्दसमूहाचा अर्थ सांगतात.", tools: "तोंडीकाम", materials: "तक्ता", outcome: "३.१.१ दिलेल्या शब्दसमूहापासून सुसंगत वाक्य तयार करून लिहितो." },
-    20: { topic: "शब्दसमूह", experience: "शब्दसमूहाचा वाक्यात उपयोग करून सांगतात.", tools: "तोंडीकाम", materials: "तक्ता", outcome: "३.१.१ दिलेल्या शब्दसमूहापासून सुसंगत वाक्य तयार करून लिहितो." },
-    22: { topic: "हीच अमुची प्रार्थना", experience: "प्रार्थना सामूहिक पाठीमागे म्हणतात.", tools: "तोंडीकाम", materials: "ध्वनीफीत", outcome: "२.२.३ वाचलेल्या साहित्यातील (गद्य/पद्य) आशय, निष्कर्ष सांगतो." },
-    23: { topic: "हीच अमुची प्रार्थना", experience: "प्रार्थना सामूहिक तालासुरात म्हणतात.", tools: "तोंडीकाम", materials: "ध्वनीफीत", outcome: "२.२.३ वाचलेल्या साहित्यातील (गद्य/पद्य) आशय, निष्कर्ष सांगतो." },
-    24: { topic: "हीच अमुची प्रार्थना", experience: "विचारलेल्या प्रश्नांची उत्तरे देतात.", tools: "तोंडीकाम", materials: "ध्वनीफीत", outcome: "२.२.३ वाचलेल्या साहित्यातील (गद्य/पद्य) आशय, निष्कर्ष सांगतो." },
-    25: { topic: "हीच अमुची प्रार्थना", experience: "आपले अनुभव सांगतात.", tools: "उपक्रम", materials: "पेपर", outcome: "१.१.३ घडलेल्या घटना, प्रसंग व दैनंदिन अनुभव यांबाबत सुसंगतपणे मत व्यक्त करतो." },
-    26: { topic: "", experience: "", tools: "", materials: "", outcome: "", isHolidayText: "राजर्षी शाहू महाराज जयंती व मोहरम" },
-    27: { topic: "माझा पतंग", experience: "चित्र पहा, वाचा व सांगा.", tools: "तोंडीकाम", materials: "चित्र", outcome: "२.१.२ मजकुरातील मुख्य घटना व पात्रे यांविषयी बोलतो." },
-    29: { topic: "माझा पतंग", experience: "चित्र कथेच्या आधारे संवाद लिहितात.", tools: "तोंडीकाम", materials: "चित्र", outcome: "३.१.२ परिसरात घडलेल्या घटनांचा क्रम लावून स्वानुभवावर आधारित परिच्छेद तयार करतो, स्व-मतासह समारोप करतो." },
-    30: { topic: "माझा पतंग", experience: "खेळताना घडलेल्या प्रसंगाचे वर्णन करतात.", tools: "तोंडीकाम", materials: "चित्र", outcome: "३.३.४ स्वतःच्या अनुभवाचे संवाद रूपात लेखन करतो." }
+  "αñ«αñ░αñ╛αñáαÑÇ": {
+    15: { topic: "αñÜαñ┐αññαÑìαñ░ αñ╡αñ╛αñÜαñ¿", experience: "αñÜαñ┐αññαÑìαñ░ αñ¬αñ╛αñ╣αÑéαñ¿ αñÜαñ┐αññαÑìαñ░αñ╛αññ αñòαñ╛αñ» αñªαñ┐αñ╕αññαÑç αññαÑç αñ╕αñ╛αñéαñùαñ╛.", tools: "αññαÑïαñéαñíαÑÇαñòαñ╛αñ«", materials: "αñÜαñ┐αññαÑìαñ░", outcome: "αÑº.αÑ⌐.αÑº αñ╕αñ╛αñéαñùαñ┐αññαñ▓αÑçαñ▓αÑìαñ»αñ╛/αñ╡αñ┐αñÜαñ╛αñ░αñ▓αÑçαñ▓αÑìαñ»αñ╛ αñ╡αñ╕αÑìαññαÑéαñéαñ╡αñ┐αñ╖αñ»αÑÇ, αñÿαñƒαñòαñ╛αñ╡αñ┐αñ╖αñ»αÑÇ αñ¬αñ╛αñÜ αññαÑç αñ╕αñ╣αñ╛ αñôαñ│αÑÇαñéαññ αñ«αñ╛αñ╣αñ┐αññαÑÇ αñ╕αñ╛αñéαñùαññαÑï." },
+    16: { topic: "αñàαñ¡αñ┐αñ╡αÑìαñ»αñòαÑìαññαÑÇ", experience: "αñªαñ┐αñ▓αÑçαñ▓αÑìαñ»αñ╛ αñ╡αñ┐αñ╖αñ»αñ╛αñ╡αñ░ αñåαñ¬αñ▓αÑç αñ«αññ αñ«αñ╛αñéαñíαññαñ╛αññ.", tools: "αññαÑïαñéαñíαÑÇαñòαñ╛αñ«", materials: "αñÜαñ┐αññαÑìαñ░", outcome: "αÑº.αÑ⌐.αÑº αñ╕αñ╛αñéαñùαñ┐αññαñ▓αÑçαñ▓αÑìαñ»αñ╛/αñ╡αñ┐αñÜαñ╛αñ░αñ▓αÑçαñ▓αÑìαñ»αñ╛ αñ╡αñ╕αÑìαññαÑéαñéαñ╡αñ┐αñ╖αñ»αÑÇ, αñÿαñƒαñòαñ╛αñ╡αñ┐αñ╖αñ»αÑÇ αñ¬αñ╛αñÜ αññαÑç αñ╕αñ╣αñ╛ αñôαñ│αÑÇαñéαññ αñ«αñ╛αñ╣αñ┐αññαÑÇ αñ╕αñ╛αñéαñùαññαÑï." },
+    17: { topic: "αñòαñÑαñ╛ αñ╕αñ╛αñéαñùαñúαÑç", experience: "αñòαñÑαñ╛ αñ▓αñòαÑìαñ╖αñ¬αÑéαñ░αÑìαñ╡αñò αñÉαñòαññαñ╛αññ αñ╡ αñÜαñ░αÑìαñÜαñ╛ αñòαñ░αññαñ╛αññ", tools: "αññαÑïαñéαñíαÑÇαñòαñ╛αñ«", materials: "αñÜαñ┐αññαÑìαñ░", outcome: "αÑº.αÑº.αÑ¿ αñòαñÑαñ╛, αñëαññαñ╛αñ░αñ╛, αñ¬αñ░αñ┐αñÜαÑìαñ¢αÑçαñª, αñ¼αñ╛αññαñ«αÑÇ αñÉαñòαÑéαñ¿ αññαÑìαñ»αñ╛αñéαñÜαÑìαñ»αñ╛αñ╡αñ░ αñùαñƒαñÜαñ░αÑìαñÜαñ╛ αñòαñ░αññαÑÇ." },
+    18: { topic: "αñ¼αñ╛αññαñ«αÑÇ αñ╡αñ╛αñÜαñ¿", experience: "αñ¼αñ╛αññαñ«αÑÇ αñ╡αñ╛αñÜαñ¿ αñòαñ░αÑéαñ¿ αñÜαñ░αÑìαñÜαñ╛ αñòαñ░αññαñ╛αññ.", tools: "αññαÑïαñéαñíαÑÇαñòαñ╛αñ«", materials: "αñÜαñ┐αññαÑìαñ░", outcome: "αÑº.αÑº.αÑ¿ αñòαñÑαñ╛, αñëαññαñ╛αñ░αñ╛, αñ¬αñ░αñ┐αñÜαÑìαñ¢αÑçαñª, αñ¼αñ╛αññαñ«αÑÇ αñÉαñòαÑéαñ¿ αññαÑìαñ»αñ╛αñéαñÜαÑìαñ»αñ╛αñ╡αñ░ αñùαñƒαñÜαñ░αÑìαñÜαñ╛ αñòαñ░αññαÑÇ." },
+    19: { topic: "αñ╢αñ¼αÑìαñªαñ╕αñ«αÑéαñ╣", experience: "αñ╢αñ¼αÑìαñªαñ╕αñ«αÑéαñ╣αñ╛αñÜαñ╛ αñàαñ░αÑìαñÑ αñ╕αñ╛αñéαñùαññαñ╛αññ.", tools: "αññαÑïαñéαñíαÑÇαñòαñ╛αñ«", materials: "αññαñòαÑìαññαñ╛", outcome: "αÑ⌐.αÑº.αÑº αñªαñ┐αñ▓αÑçαñ▓αÑìαñ»αñ╛ αñ╢αñ¼αÑìαñªαñ╕αñ«αÑéαñ╣αñ╛αñ¬αñ╛αñ╕αÑéαñ¿ αñ╕αÑüαñ╕αñéαñùαññ αñ╡αñ╛αñòαÑìαñ» αññαñ»αñ╛αñ░ αñòαñ░αÑéαñ¿ αñ▓αñ┐αñ╣αñ┐αññαÑï." },
+    20: { topic: "αñ╢αñ¼αÑìαñªαñ╕αñ«αÑéαñ╣", experience: "αñ╢αñ¼αÑìαñªαñ╕αñ«αÑéαñ╣αñ╛αñÜαñ╛ αñ╡αñ╛αñòαÑìαñ»αñ╛αññ αñëαñ¬αñ»αÑïαñù αñòαñ░αÑéαñ¿ αñ╕αñ╛αñéαñùαññαñ╛αññ.", tools: "αññαÑïαñéαñíαÑÇαñòαñ╛αñ«", materials: "αññαñòαÑìαññαñ╛", outcome: "αÑ⌐.αÑº.αÑº αñªαñ┐αñ▓αÑçαñ▓αÑìαñ»αñ╛ αñ╢αñ¼αÑìαñªαñ╕αñ«αÑéαñ╣αñ╛αñ¬αñ╛αñ╕αÑéαñ¿ αñ╕αÑüαñ╕αñéαñùαññ αñ╡αñ╛αñòαÑìαñ» αññαñ»αñ╛αñ░ αñòαñ░αÑéαñ¿ αñ▓αñ┐αñ╣αñ┐αññαÑï." },
+    22: { topic: "αñ╣αÑÇαñÜ αñàαñ«αÑüαñÜαÑÇ αñ¬αÑìαñ░αñ╛αñ░αÑìαñÑαñ¿αñ╛", experience: "αñ¬αÑìαñ░αñ╛αñ░αÑìαñÑαñ¿αñ╛ αñ╕αñ╛αñ«αÑéαñ╣αñ┐αñò αñ¬αñ╛αñáαÑÇαñ«αñ╛αñùαÑç αñ«αÑìαñ╣αñúαññαñ╛αññ.", tools: "αññαÑïαñéαñíαÑÇαñòαñ╛αñ«", materials: "αñºαÑìαñ╡αñ¿αÑÇαñ½αÑÇαññ", outcome: "αÑ¿.αÑ¿.αÑ⌐ αñ╡αñ╛αñÜαñ▓αÑçαñ▓αÑìαñ»αñ╛ αñ╕αñ╛αñ╣αñ┐αññαÑìαñ»αñ╛αññαÑÇαñ▓ (αñùαñªαÑìαñ»/αñ¬αñªαÑìαñ») αñåαñ╢αñ», αñ¿αñ┐αñ╖αÑìαñòαñ░αÑìαñ╖ αñ╕αñ╛αñéαñùαññαÑï." },
+    23: { topic: "αñ╣αÑÇαñÜ αñàαñ«αÑüαñÜαÑÇ αñ¬αÑìαñ░αñ╛αñ░αÑìαñÑαñ¿αñ╛", experience: "αñ¬αÑìαñ░αñ╛αñ░αÑìαñÑαñ¿αñ╛ αñ╕αñ╛αñ«αÑéαñ╣αñ┐αñò αññαñ╛αñ▓αñ╛αñ╕αÑüαñ░αñ╛αññ αñ«αÑìαñ╣αñúαññαñ╛αññ.", tools: "αññαÑïαñéαñíαÑÇαñòαñ╛αñ«", materials: "αñºαÑìαñ╡αñ¿αÑÇαñ½αÑÇαññ", outcome: "αÑ¿.αÑ¿.αÑ⌐ αñ╡αñ╛αñÜαñ▓αÑçαñ▓αÑìαñ»αñ╛ αñ╕αñ╛αñ╣αñ┐αññαÑìαñ»αñ╛αññαÑÇαñ▓ (αñùαñªαÑìαñ»/αñ¬αñªαÑìαñ») αñåαñ╢αñ», αñ¿αñ┐αñ╖αÑìαñòαñ░αÑìαñ╖ αñ╕αñ╛αñéαñùαññαÑï." },
+    24: { topic: "αñ╣αÑÇαñÜ αñàαñ«αÑüαñÜαÑÇ αñ¬αÑìαñ░αñ╛αñ░αÑìαñÑαñ¿αñ╛", experience: "αñ╡αñ┐αñÜαñ╛αñ░αñ▓αÑçαñ▓αÑìαñ»αñ╛ αñ¬αÑìαñ░αñ╢αÑìαñ¿αñ╛αñéαñÜαÑÇ αñëαññαÑìαññαñ░αÑç αñªαÑçαññαñ╛αññ.", tools: "αññαÑïαñéαñíαÑÇαñòαñ╛αñ«", materials: "αñºαÑìαñ╡αñ¿αÑÇαñ½αÑÇαññ", outcome: "αÑ¿.αÑ¿.αÑ⌐ αñ╡αñ╛αñÜαñ▓αÑçαñ▓αÑìαñ»αñ╛ αñ╕αñ╛αñ╣αñ┐αññαÑìαñ»αñ╛αññαÑÇαñ▓ (αñùαñªαÑìαñ»/αñ¬αñªαÑìαñ») αñåαñ╢αñ», αñ¿αñ┐αñ╖αÑìαñòαñ░αÑìαñ╖ αñ╕αñ╛αñéαñùαññαÑï." },
+    25: { topic: "αñ╣αÑÇαñÜ αñàαñ«αÑüαñÜαÑÇ αñ¬αÑìαñ░αñ╛αñ░αÑìαñÑαñ¿αñ╛", experience: "αñåαñ¬αñ▓αÑç αñàαñ¿αÑüαñ¡αñ╡ αñ╕αñ╛αñéαñùαññαñ╛αññ.", tools: "αñëαñ¬αñòαÑìαñ░αñ«", materials: "αñ¬αÑçαñ¬αñ░", outcome: "αÑº.αÑº.αÑ⌐ αñÿαñíαñ▓αÑçαñ▓αÑìαñ»αñ╛ αñÿαñƒαñ¿αñ╛, αñ¬αÑìαñ░αñ╕αñéαñù αñ╡ αñªαÑêαñ¿αñéαñªαñ┐αñ¿ αñàαñ¿αÑüαñ¡αñ╡ αñ»αñ╛αñéαñ¼αñ╛αñ¼αññ αñ╕αÑüαñ╕αñéαñùαññαñ¬αñúαÑç αñ«αññ αñ╡αÑìαñ»αñòαÑìαññ αñòαñ░αññαÑï." },
+    26: { topic: "", experience: "", tools: "", materials: "", outcome: "", isHolidayText: "αñ░αñ╛αñ£αñ░αÑìαñ╖αÑÇ αñ╢αñ╛αñ╣αÑé αñ«αñ╣αñ╛αñ░αñ╛αñ£ αñ£αñ»αñéαññαÑÇ αñ╡ αñ«αÑïαñ╣αñ░αñ«" },
+    27: { topic: "αñ«αñ╛αñ¥αñ╛ αñ¬αññαñéαñù", experience: "αñÜαñ┐αññαÑìαñ░ αñ¬αñ╣αñ╛, αñ╡αñ╛αñÜαñ╛ αñ╡ αñ╕αñ╛αñéαñùαñ╛.", tools: "αññαÑïαñéαñíαÑÇαñòαñ╛αñ«", materials: "αñÜαñ┐αññαÑìαñ░", outcome: "αÑ¿.αÑº.αÑ¿ αñ«αñ£αñòαÑüαñ░αñ╛αññαÑÇαñ▓ αñ«αÑüαñûαÑìαñ» αñÿαñƒαñ¿αñ╛ αñ╡ αñ¬αñ╛αññαÑìαñ░αÑç αñ»αñ╛αñéαñ╡αñ┐αñ╖αñ»αÑÇ αñ¼αÑïαñ▓αññαÑï." },
+    29: { topic: "αñ«αñ╛αñ¥αñ╛ αñ¬αññαñéαñù", experience: "αñÜαñ┐αññαÑìαñ░ αñòαñÑαÑçαñÜαÑìαñ»αñ╛ αñåαñºαñ╛αñ░αÑç αñ╕αñéαñ╡αñ╛αñª αñ▓αñ┐αñ╣αñ┐αññαñ╛αññ.", tools: "αññαÑïαñéαñíαÑÇαñòαñ╛αñ«", materials: "αñÜαñ┐αññαÑìαñ░", outcome: "αÑ⌐.αÑº.αÑ¿ αñ¬αñ░αñ┐αñ╕αñ░αñ╛αññ αñÿαñíαñ▓αÑçαñ▓αÑìαñ»αñ╛ αñÿαñƒαñ¿αñ╛αñéαñÜαñ╛ αñòαÑìαñ░αñ« αñ▓αñ╛αñ╡αÑéαñ¿ αñ╕αÑìαñ╡αñ╛αñ¿αÑüαñ¡αñ╡αñ╛αñ╡αñ░ αñåαñºαñ╛αñ░αñ┐αññ αñ¬αñ░αñ┐αñÜαÑìαñ¢αÑçαñª αññαñ»αñ╛αñ░ αñòαñ░αññαÑï, αñ╕αÑìαñ╡-αñ«αññαñ╛αñ╕αñ╣ αñ╕αñ«αñ╛αñ░αÑïαñ¬ αñòαñ░αññαÑï." },
+    30: { topic: "αñ«αñ╛αñ¥αñ╛ αñ¬αññαñéαñù", experience: "αñûαÑçαñ│αññαñ╛αñ¿αñ╛ αñÿαñíαñ▓αÑçαñ▓αÑìαñ»αñ╛ αñ¬αÑìαñ░αñ╕αñéαñùαñ╛αñÜαÑç αñ╡αñ░αÑìαñúαñ¿ αñòαñ░αññαñ╛αññ.", tools: "αññαÑïαñéαñíαÑÇαñòαñ╛αñ«", materials: "αñÜαñ┐αññαÑìαñ░", outcome: "αÑ⌐.αÑ⌐.αÑ¬ αñ╕αÑìαñ╡αññαñâαñÜαÑìαñ»αñ╛ αñàαñ¿αÑüαñ¡αñ╡αñ╛αñÜαÑç αñ╕αñéαñ╡αñ╛αñª αñ░αÑéαñ¬αñ╛αññ αñ▓αÑçαñûαñ¿ αñòαñ░αññαÑï." }
   },
-  "गणित": {
-    15: { topic: "संख्याज्ञान", experience: "१०० ते ९९९ अंकाचे वाचन करतात.", tools: "प्रात्यक्षिक", materials: "तक्ता", outcome: "C-1.1 ९९९९ पर्यंतच्या संख्या ओळखतो. संख्या अक्षरांत लिहितो." },
-    16: { topic: "संख्याज्ञान", experience: "१०० ते ९९९ अंकाचे अक्षरात लेखन करा.", tools: "प्रात्यक्षिक", materials: "तक्ता", outcome: "C-1.1 ९९९९ पर्यंतच्या संख्या ओळखतो. संख्या अक्षरांत लिहितो." },
-    17: { topic: "बेरीज", experience: "तीन अंकी संख्यांची बेरीज करतात.", tools: "प्रात्यक्षिक", materials: "तक्ता", outcome: "C-1.3 बेरीज आणि वजाबाकीची उदाहरणे तयार करतो; ती मांडतो आणि सोडवतो." },
-    18: { topic: "वजाबाकी", experience: "तीन अंकी संख्यांची वजाबाकी करतात.", tools: "प्रात्यक्षिक", materials: "तक्ता", outcome: "C-1.3 बेरीज आणि वजाबाकीची उदाहरणे तयार करतो; ती मांडतो आणि सोडवतो." },
-    19: { topic: "भौमितिक आकृत्या", experience: "त्रिकोण, चौकोन, आयत, वर्तुळ संपूर्ण उजळणी करतात.", tools: "प्रात्यक्षिक", materials: "सारणी", outcome: "C-2.1 विविध आकार ओळखतो आणि त्यांची यादी करतो. कडा, कोपरे आणि पृष्ठभाग मोजतो." },
-    20: { topic: "भौमितिक आकृत्या", experience: "भौमितिक आकृत्यांची उजळणी करतात.", tools: "प्रात्यक्षिक", materials: "सारणी", outcome: "C-2.1 विविध आकार ओळखतो आणि त्यांची यादी करतो. कडा, कोपरे आणि पृष्ठभाग मोजतो." },
-    22: { topic: "खेळूया संख्यांशी", experience: "हजाराची ओळख करून घेतात.", tools: "प्रात्यक्षिक", materials: "तक्ता", outcome: "C-1.1 'हजार' ही संकल्पना समजून घेतो आणि 'हजार' ही संख्या विविध प्रकारे दर्शवितो." },
-    23: { topic: "खेळूया संख्यांशी", experience: "वेगवेगळ्या उदाहरणाद्वारे हजाराची ओळख", tools: "प्रात्यक्षिक", materials: "तक्ता", outcome: "C-1.1 'हजार' ही संकल्पना समजून घेतो आणि 'हजार' ही संख्या विविध प्रकारे दर्शवितो." },
-    24: { topic: "खेळूया संख्यांशी", experience: "हजार ही संख्या कशी बनते समजून घेतात.", tools: "प्रात्यक्षिक", materials: "तक्ता", outcome: "C-1.1 'हजार' ही संकल्पना समजून घेतो आणि 'हजार' ही संख्या विविध प्रकारे दर्शवितो." },
-    25: { topic: "खेळूया संख्यांशी", experience: "वेगवेगळ्या पद्धतीने हजार ही संख्या कशी बनते ते समजून घेतात.", tools: "प्रात्यक्षिक", materials: "तक्ता", outcome: "C-1.1 'हजार' ही संकल्पना समजून घेतो आणि 'हजार' ही संख्या विविध प्रकारे दर्शवितो." },
-    26: { topic: "", experience: "", tools: "", materials: "", outcome: "", isHolidayText: "राजर्षी शाहू महाराज जयंती व मोहरम" },
-    27: { topic: "खेळूया संख्यांशी", experience: "वेगवेगळ्या पद्धतीने हजार संख्या बनवितात.", tools: "प्रात्यक्षिक", materials: "तक्ता", outcome: "C-1.1 'हजार' ही संकल्पना समजून घेतो आणि 'हजार' ही संख्या विविध प्रकारे दर्शवितो." },
-    29: { topic: "खेळूया संख्यांशी", experience: "चार अंकी संख्येची ओळख होते.", tools: "प्रात्यक्षिक", materials: "तक्ता", outcome: "C-1.1 'हजार' ही संकल्पना समजून घेतो आणि 'हजार' ही संख्या विविध प्रकारे दर्शवितो." },
-    30: { topic: "खेळूया संख्यांशी", experience: "चार अंकी संख्येचे वाचन करतात.", tools: "प्रात्यक्षिक", materials: "तक्ता", outcome: "C-1.1 'हजार' ही संकल्पना समजून घेतो आणि 'हजार' ही संख्या विविध प्रकारे दर्शवितो." }
+  "αñùαñúαñ┐αññ": {
+    15: { topic: "αñ╕αñéαñûαÑìαñ»αñ╛αñ£αÑìαñ₧αñ╛αñ¿", experience: "αÑºαÑªαÑª αññαÑç αÑ»αÑ»αÑ» αñàαñéαñòαñ╛αñÜαÑç αñ╡αñ╛αñÜαñ¿ αñòαñ░αññαñ╛αññ.", tools: "αñ¬αÑìαñ░αñ╛αññαÑìαñ»αñòαÑìαñ╖αñ┐αñò", materials: "αññαñòαÑìαññαñ╛", outcome: "C-1.1 αÑ»αÑ»αÑ»αÑ» αñ¬αñ░αÑìαñ»αñéαññαñÜαÑìαñ»αñ╛ αñ╕αñéαñûαÑìαñ»αñ╛ αñôαñ│αñûαññαÑï. αñ╕αñéαñûαÑìαñ»αñ╛ αñàαñòαÑìαñ╖αñ░αñ╛αñéαññ αñ▓αñ┐αñ╣αñ┐αññαÑï." },
+    16: { topic: "αñ╕αñéαñûαÑìαñ»αñ╛αñ£αÑìαñ₧αñ╛αñ¿", experience: "αÑºαÑªαÑª αññαÑç αÑ»αÑ»αÑ» αñàαñéαñòαñ╛αñÜαÑç αñàαñòαÑìαñ╖αñ░αñ╛αññ αñ▓αÑçαñûαñ¿ αñòαñ░αñ╛.", tools: "αñ¬αÑìαñ░αñ╛αññαÑìαñ»αñòαÑìαñ╖αñ┐αñò", materials: "αññαñòαÑìαññαñ╛", outcome: "C-1.1 αÑ»αÑ»αÑ»αÑ» αñ¬αñ░αÑìαñ»αñéαññαñÜαÑìαñ»αñ╛ αñ╕αñéαñûαÑìαñ»αñ╛ αñôαñ│αñûαññαÑï. αñ╕αñéαñûαÑìαñ»αñ╛ αñàαñòαÑìαñ╖αñ░αñ╛αñéαññ αñ▓αñ┐αñ╣αñ┐αññαÑï." },
+    17: { topic: "αñ¼αÑçαñ░αÑÇαñ£", experience: "αññαÑÇαñ¿ αñàαñéαñòαÑÇ αñ╕αñéαñûαÑìαñ»αñ╛αñéαñÜαÑÇ αñ¼αÑçαñ░αÑÇαñ£ αñòαñ░αññαñ╛αññ.", tools: "αñ¬αÑìαñ░αñ╛αññαÑìαñ»αñòαÑìαñ╖αñ┐αñò", materials: "αññαñòαÑìαññαñ╛", outcome: "C-1.3 αñ¼αÑçαñ░αÑÇαñ£ αñåαñúαñ┐ αñ╡αñ£αñ╛αñ¼αñ╛αñòαÑÇαñÜαÑÇ αñëαñªαñ╛αñ╣αñ░αñúαÑç αññαñ»αñ╛αñ░ αñòαñ░αññαÑï; αññαÑÇ αñ«αñ╛αñéαñíαññαÑï αñåαñúαñ┐ αñ╕αÑïαñíαñ╡αññαÑï." },
+    18: { topic: "αñ╡αñ£αñ╛αñ¼αñ╛αñòαÑÇ", experience: "αññαÑÇαñ¿ αñàαñéαñòαÑÇ αñ╕αñéαñûαÑìαñ»αñ╛αñéαñÜαÑÇ αñ╡αñ£αñ╛αñ¼αñ╛αñòαÑÇ αñòαñ░αññαñ╛αññ.", tools: "αñ¬αÑìαñ░αñ╛αññαÑìαñ»αñòαÑìαñ╖αñ┐αñò", materials: "αññαñòαÑìαññαñ╛", outcome: "C-1.3 αñ¼αÑçαñ░αÑÇαñ£ αñåαñúαñ┐ αñ╡αñ£αñ╛αñ¼αñ╛αñòαÑÇαñÜαÑÇ αñëαñªαñ╛αñ╣αñ░αñúαÑç αññαñ»αñ╛αñ░ αñòαñ░αññαÑï; αññαÑÇ αñ«αñ╛αñéαñíαññαÑï αñåαñúαñ┐ αñ╕αÑïαñíαñ╡αññαÑï." },
+    19: { topic: "αñ¡αÑîαñ«αñ┐αññαñ┐αñò αñåαñòαÑâαññαÑìαñ»αñ╛", experience: "αññαÑìαñ░αñ┐αñòαÑïαñú, αñÜαÑîαñòαÑïαñ¿, αñåαñ»αññ, αñ╡αñ░αÑìαññαÑüαñ│ αñ╕αñéαñ¬αÑéαñ░αÑìαñú αñëαñ£αñ│αñúαÑÇ αñòαñ░αññαñ╛αññ.", tools: "αñ¬αÑìαñ░αñ╛αññαÑìαñ»αñòαÑìαñ╖αñ┐αñò", materials: "αñ╕αñ╛αñ░αñúαÑÇ", outcome: "C-2.1 αñ╡αñ┐αñ╡αñ┐αñº αñåαñòαñ╛αñ░ αñôαñ│αñûαññαÑï αñåαñúαñ┐ αññαÑìαñ»αñ╛αñéαñÜαÑÇ αñ»αñ╛αñªαÑÇ αñòαñ░αññαÑï. αñòαñíαñ╛, αñòαÑïαñ¬αñ░αÑç αñåαñúαñ┐ αñ¬αÑâαñ╖αÑìαñáαñ¡αñ╛αñù αñ«αÑïαñ£αññαÑï." },
+    20: { topic: "αñ¡αÑîαñ«αñ┐αññαñ┐αñò αñåαñòαÑâαññαÑìαñ»αñ╛", experience: "αñ¡αÑîαñ«αñ┐αññαñ┐αñò αñåαñòαÑâαññαÑìαñ»αñ╛αñéαñÜαÑÇ αñëαñ£αñ│αñúαÑÇ αñòαñ░αññαñ╛αññ.", tools: "αñ¬αÑìαñ░αñ╛αññαÑìαñ»αñòαÑìαñ╖αñ┐αñò", materials: "αñ╕αñ╛αñ░αñúαÑÇ", outcome: "C-2.1 αñ╡αñ┐αñ╡αñ┐αñº αñåαñòαñ╛αñ░ αñôαñ│αñûαññαÑï αñåαñúαñ┐ αññαÑìαñ»αñ╛αñéαñÜαÑÇ αñ»αñ╛αñªαÑÇ αñòαñ░αññαÑï. αñòαñíαñ╛, αñòαÑïαñ¬αñ░αÑç αñåαñúαñ┐ αñ¬αÑâαñ╖αÑìαñáαñ¡αñ╛αñù αñ«αÑïαñ£αññαÑï." },
+    22: { topic: "αñûαÑçαñ│αÑéαñ»αñ╛ αñ╕αñéαñûαÑìαñ»αñ╛αñéαñ╢αÑÇ", experience: "αñ╣αñ£αñ╛αñ░αñ╛αñÜαÑÇ αñôαñ│αñû αñòαñ░αÑéαñ¿ αñÿαÑçαññαñ╛αññ.", tools: "αñ¬αÑìαñ░αñ╛αññαÑìαñ»αñòαÑìαñ╖αñ┐αñò", materials: "αññαñòαÑìαññαñ╛", outcome: "C-1.1 'αñ╣αñ£αñ╛αñ░' αñ╣αÑÇ αñ╕αñéαñòαñ▓αÑìαñ¬αñ¿αñ╛ αñ╕αñ«αñ£αÑéαñ¿ αñÿαÑçαññαÑï αñåαñúαñ┐ 'αñ╣αñ£αñ╛αñ░' αñ╣αÑÇ αñ╕αñéαñûαÑìαñ»αñ╛ αñ╡αñ┐αñ╡αñ┐αñº αñ¬αÑìαñ░αñòαñ╛αñ░αÑç αñªαñ░αÑìαñ╢αñ╡αñ┐αññαÑï." },
+    23: { topic: "αñûαÑçαñ│αÑéαñ»αñ╛ αñ╕αñéαñûαÑìαñ»αñ╛αñéαñ╢αÑÇ", experience: "αñ╡αÑçαñùαñ╡αÑçαñùαñ│αÑìαñ»αñ╛ αñëαñªαñ╛αñ╣αñ░αñúαñ╛αñªαÑìαñ╡αñ╛αñ░αÑç αñ╣αñ£αñ╛αñ░αñ╛αñÜαÑÇ αñôαñ│αñû", tools: "αñ¬αÑìαñ░αñ╛αññαÑìαñ»αñòαÑìαñ╖αñ┐αñò", materials: "αññαñòαÑìαññαñ╛", outcome: "C-1.1 'αñ╣αñ£αñ╛αñ░' αñ╣αÑÇ αñ╕αñéαñòαñ▓αÑìαñ¬αñ¿αñ╛ αñ╕αñ«αñ£αÑéαñ¿ αñÿαÑçαññαÑï αñåαñúαñ┐ 'αñ╣αñ£αñ╛αñ░' αñ╣αÑÇ αñ╕αñéαñûαÑìαñ»αñ╛ αñ╡αñ┐αñ╡αñ┐αñº αñ¬αÑìαñ░αñòαñ╛αñ░αÑç αñªαñ░αÑìαñ╢αñ╡αñ┐αññαÑï." },
+    24: { topic: "αñûαÑçαñ│αÑéαñ»αñ╛ αñ╕αñéαñûαÑìαñ»αñ╛αñéαñ╢αÑÇ", experience: "αñ╣αñ£αñ╛αñ░ αñ╣αÑÇ αñ╕αñéαñûαÑìαñ»αñ╛ αñòαñ╢αÑÇ αñ¼αñ¿αññαÑç αñ╕αñ«αñ£αÑéαñ¿ αñÿαÑçαññαñ╛αññ.", tools: "αñ¬αÑìαñ░αñ╛αññαÑìαñ»αñòαÑìαñ╖αñ┐αñò", materials: "αññαñòαÑìαññαñ╛", outcome: "C-1.1 'αñ╣αñ£αñ╛αñ░' αñ╣αÑÇ αñ╕αñéαñòαñ▓αÑìαñ¬αñ¿αñ╛ αñ╕αñ«αñ£αÑéαñ¿ αñÿαÑçαññαÑï αñåαñúαñ┐ 'αñ╣αñ£αñ╛αñ░' αñ╣αÑÇ αñ╕αñéαñûαÑìαñ»αñ╛ αñ╡αñ┐αñ╡αñ┐αñº αñ¬αÑìαñ░αñòαñ╛αñ░αÑç αñªαñ░αÑìαñ╢αñ╡αñ┐αññαÑï." },
+    25: { topic: "αñûαÑçαñ│αÑéαñ»αñ╛ αñ╕αñéαñûαÑìαñ»αñ╛αñéαñ╢αÑÇ", experience: "αñ╡αÑçαñùαñ╡αÑçαñùαñ│αÑìαñ»αñ╛ αñ¬αñªαÑìαñºαññαÑÇαñ¿αÑç αñ╣αñ£αñ╛αñ░ αñ╣αÑÇ αñ╕αñéαñûαÑìαñ»αñ╛ αñòαñ╢αÑÇ αñ¼αñ¿αññαÑç αññαÑç αñ╕αñ«αñ£αÑéαñ¿ αñÿαÑçαññαñ╛αññ.", tools: "αñ¬αÑìαñ░αñ╛αññαÑìαñ»αñòαÑìαñ╖αñ┐αñò", materials: "αññαñòαÑìαññαñ╛", outcome: "C-1.1 'αñ╣αñ£αñ╛αñ░' αñ╣αÑÇ αñ╕αñéαñòαñ▓αÑìαñ¬αñ¿αñ╛ αñ╕αñ«αñ£αÑéαñ¿ αñÿαÑçαññαÑï αñåαñúαñ┐ 'αñ╣αñ£αñ╛αñ░' αñ╣αÑÇ αñ╕αñéαñûαÑìαñ»αñ╛ αñ╡αñ┐αñ╡αñ┐αñº αñ¬αÑìαñ░αñòαñ╛αñ░αÑç αñªαñ░αÑìαñ╢αñ╡αñ┐αññαÑï." },
+    26: { topic: "", experience: "", tools: "", materials: "", outcome: "", isHolidayText: "αñ░αñ╛αñ£αñ░αÑìαñ╖αÑÇ αñ╢αñ╛αñ╣αÑé αñ«αñ╣αñ╛αñ░αñ╛αñ£ αñ£αñ»αñéαññαÑÇ αñ╡ αñ«αÑïαñ╣αñ░αñ«" },
+    27: { topic: "αñûαÑçαñ│αÑéαñ»αñ╛ αñ╕αñéαñûαÑìαñ»αñ╛αñéαñ╢αÑÇ", experience: "αñ╡αÑçαñùαñ╡αÑçαñùαñ│αÑìαñ»αñ╛ αñ¬αñªαÑìαñºαññαÑÇαñ¿αÑç αñ╣αñ£αñ╛αñ░ αñ╕αñéαñûαÑìαñ»αñ╛ αñ¼αñ¿αñ╡αñ┐αññαñ╛αññ.", tools: "αñ¬αÑìαñ░αñ╛αññαÑìαñ»αñòαÑìαñ╖αñ┐αñò", materials: "αññαñòαÑìαññαñ╛", outcome: "C-1.1 'αñ╣αñ£αñ╛αñ░' αñ╣αÑÇ αñ╕αñéαñòαñ▓αÑìαñ¬αñ¿αñ╛ αñ╕αñ«αñ£αÑéαñ¿ αñÿαÑçαññαÑï αñåαñúαñ┐ 'αñ╣αñ£αñ╛αñ░' αñ╣αÑÇ αñ╕αñéαñûαÑìαñ»αñ╛ αñ╡αñ┐αñ╡αñ┐αñº αñ¬αÑìαñ░αñòαñ╛αñ░αÑç αñªαñ░αÑìαñ╢αñ╡αñ┐αññαÑï." },
+    29: { topic: "αñûαÑçαñ│αÑéαñ»αñ╛ αñ╕αñéαñûαÑìαñ»αñ╛αñéαñ╢αÑÇ", experience: "αñÜαñ╛αñ░ αñàαñéαñòαÑÇ αñ╕αñéαñûαÑìαñ»αÑçαñÜαÑÇ αñôαñ│αñû αñ╣αÑïαññαÑç.", tools: "αñ¬αÑìαñ░αñ╛αññαÑìαñ»αñòαÑìαñ╖αñ┐αñò", materials: "αññαñòαÑìαññαñ╛", outcome: "C-1.1 'αñ╣αñ£αñ╛αñ░' αñ╣αÑÇ αñ╕αñéαñòαñ▓αÑìαñ¬αñ¿αñ╛ αñ╕αñ«αñ£αÑéαñ¿ αñÿαÑçαññαÑï αñåαñúαñ┐ 'αñ╣αñ£αñ╛αñ░' αñ╣αÑÇ αñ╕αñéαñûαÑìαñ»αñ╛ αñ╡αñ┐αñ╡αñ┐αñº αñ¬αÑìαñ░αñòαñ╛αñ░αÑç αñªαñ░αÑìαñ╢αñ╡αñ┐αññαÑï." },
+    30: { topic: "αñûαÑçαñ│αÑéαñ»αñ╛ αñ╕αñéαñûαÑìαñ»αñ╛αñéαñ╢αÑÇ", experience: "αñÜαñ╛αñ░ αñàαñéαñòαÑÇ αñ╕αñéαñûαÑìαñ»αÑçαñÜαÑç αñ╡αñ╛αñÜαñ¿ αñòαñ░αññαñ╛αññ.", tools: "αñ¬αÑìαñ░αñ╛αññαÑìαñ»αñòαÑìαñ╖αñ┐αñò", materials: "αññαñòαÑìαññαñ╛", outcome: "C-1.1 'αñ╣αñ£αñ╛αñ░' αñ╣αÑÇ αñ╕αñéαñòαñ▓αÑìαñ¬αñ¿αñ╛ αñ╕αñ«αñ£αÑéαñ¿ αñÿαÑçαññαÑï αñåαñúαñ┐ 'αñ╣αñ£αñ╛αñ░' αñ╣αÑÇ αñ╕αñéαñûαÑìαñ»αñ╛ αñ╡αñ┐αñ╡αñ┐αñº αñ¬αÑìαñ░αñòαñ╛αñ░αÑç αñªαñ░αÑìαñ╢αñ╡αñ┐αññαÑï." }
   },
-  "इंग्रजी": {
+  "αñçαñéαñùαÑìαñ░αñ£αÑÇ": {
     15: { topic: "Poem", experience: "Sing a poem in rhythm", tools: "Oral", materials: "video", outcome: "04.01 Recognises and explains the central ideas of the poem" },
     16: { topic: "Poem", experience: "Sing a poem with action", tools: "Oral", materials: "video", outcome: "04.01 Recognises and explains the central ideas of the poem" },
     17: { topic: "Conversation", experience: "Participate in conversation", tools: "Oral", materials: "video", outcome: "04.09 Participates in conversations by attentive listening." },
@@ -3549,88 +3549,88 @@ const CLASS4_JUNE_PLAN: Record<string, Record<number, { topic: string; experienc
     23: { topic: "Back to school", experience: "Sing a poem in rhythm", tools: "Oral", materials: "video", outcome: "04.01 Recognises and explains the central ideas of the poem" },
     24: { topic: "Back to school", experience: "Sing a poem with action.", tools: "Oral", materials: "video", outcome: "04.01 Recognises and explains the central ideas of the poem" },
     25: { topic: "Back to school", experience: "Listen and repeat.", tools: "Oral", materials: "video", outcome: "04.11 Follows the proper manners of group discussion like attentive listening, active response, respects other's opinion, etc." },
-    26: { topic: "", experience: "", tools: "", materials: "", outcome: "", isHolidayText: "राजर्षी शाहू महाराज जयंती व मोहरम" },
+    26: { topic: "", experience: "", tools: "", materials: "", outcome: "", isHolidayText: "αñ░αñ╛αñ£αñ░αÑìαñ╖αÑÇ αñ╢αñ╛αñ╣αÑé αñ«αñ╣αñ╛αñ░αñ╛αñ£ αñ£αñ»αñéαññαÑÇ αñ╡ αñ«αÑïαñ╣αñ░αñ«" },
     27: { topic: "Back to school", experience: "Look at the picture and find their names.", tools: "Oral", materials: "video", outcome: "04.11 Follows the proper manners of group discussion like attentive listening, active response, respects other's opinion, etc." },
     29: { topic: "Back to school", experience: "Look at the pictures and name the actions", tools: "Oral", materials: "video", outcome: "04.11 Follows the proper manners of group discussion like attentive listening, active response, respects other's opinion, etc." },
     30: { topic: "Back to school", experience: "Look at the pictures and find answers of riddles.", tools: "Oral", materials: "video", outcome: "04.10 Presents orally in the class on the given topics." }
   },
-  "परिसर अभ्यास १": {
-    15: { topic: "सूर्यमाला", experience: "सूर्यमालेतील ग्रहांची नावे सांगा.", tools: "तोंडीकाम", materials: "चित्र", outcome: "C-1.1 सूर्यमालेतील ग्रहांचा योग्य क्रम सांगती." },
-    16: { topic: "सूर्यमाला", experience: "सूर्यमालेतील ग्रह योग्य क्रमाने सांगा.", tools: "तोंडीकाम", materials: "चित्र", outcome: "C-1.1 सूर्यमालेतील ग्रहांचा योग्य क्रम सांगती." },
-    17: { topic: "सूर्यमाला", experience: "सूर्यमालेतील ग्रहांची नावे लिहा.", tools: "तोंडीकाम", materials: "चित्र", outcome: "C-1.1 सूर्यमालेतील ग्रहांचा योग्य क्रम सांगती." },
+  "αñ¬αñ░αñ┐αñ╕αñ░ αñàαñ¡αÑìαñ»αñ╛αñ╕ αÑº": {
+    15: { topic: "αñ╕αÑéαñ░αÑìαñ»αñ«αñ╛αñ▓αñ╛", experience: "αñ╕αÑéαñ░αÑìαñ»αñ«αñ╛αñ▓αÑçαññαÑÇαñ▓ αñùαÑìαñ░αñ╣αñ╛αñéαñÜαÑÇ αñ¿αñ╛αñ╡αÑç αñ╕αñ╛αñéαñùαñ╛.", tools: "αññαÑïαñéαñíαÑÇαñòαñ╛αñ«", materials: "αñÜαñ┐αññαÑìαñ░", outcome: "C-1.1 αñ╕αÑéαñ░αÑìαñ»αñ«αñ╛αñ▓αÑçαññαÑÇαñ▓ αñùαÑìαñ░αñ╣αñ╛αñéαñÜαñ╛ αñ»αÑïαñùαÑìαñ» αñòαÑìαñ░αñ« αñ╕αñ╛αñéαñùαññαÑÇ." },
+    16: { topic: "αñ╕αÑéαñ░αÑìαñ»αñ«αñ╛αñ▓αñ╛", experience: "αñ╕αÑéαñ░αÑìαñ»αñ«αñ╛αñ▓αÑçαññαÑÇαñ▓ αñùαÑìαñ░αñ╣ αñ»αÑïαñùαÑìαñ» αñòαÑìαñ░αñ«αñ╛αñ¿αÑç αñ╕αñ╛αñéαñùαñ╛.", tools: "αññαÑïαñéαñíαÑÇαñòαñ╛αñ«", materials: "αñÜαñ┐αññαÑìαñ░", outcome: "C-1.1 αñ╕αÑéαñ░αÑìαñ»αñ«αñ╛αñ▓αÑçαññαÑÇαñ▓ αñùαÑìαñ░αñ╣αñ╛αñéαñÜαñ╛ αñ»αÑïαñùαÑìαñ» αñòαÑìαñ░αñ« αñ╕αñ╛αñéαñùαññαÑÇ." },
+    17: { topic: "αñ╕αÑéαñ░αÑìαñ»αñ«αñ╛αñ▓αñ╛", experience: "αñ╕αÑéαñ░αÑìαñ»αñ«αñ╛αñ▓αÑçαññαÑÇαñ▓ αñùαÑìαñ░αñ╣αñ╛αñéαñÜαÑÇ αñ¿αñ╛αñ╡αÑç αñ▓αñ┐αñ╣αñ╛.", tools: "αññαÑïαñéαñíαÑÇαñòαñ╛αñ«", materials: "αñÜαñ┐αññαÑìαñ░", outcome: "C-1.1 αñ╕αÑéαñ░αÑìαñ»αñ«αñ╛αñ▓αÑçαññαÑÇαñ▓ αñùαÑìαñ░αñ╣αñ╛αñéαñÜαñ╛ αñ»αÑïαñùαÑìαñ» αñòαÑìαñ░αñ« αñ╕αñ╛αñéαñùαññαÑÇ." },
     18: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     19: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     20: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
-    22: { topic: "ठेवा निसर्गाचा", experience: "आठवा आणि सांगा.", tools: "तोंडीकाम", materials: "चित्र", outcome: "C – 2.1 पाण्याचे विविध स्रोत सांगून, त्यांच्या स्वच्छतेचे महत्त्व सांगतो." },
-    23: { topic: "ठेवा निसर्गाचा", experience: "पाण्याचे स्रोत सांगा व माहिती समजून घेतात.", tools: "तोंडीकाम", materials: "चित्र", outcome: "C – 2.1 पाण्याचे विविध स्रोत सांगून, त्यांच्या स्वच्छतेचे महत्त्व सांगतो." },
-    24: { topic: "ठेवा निसर्गाचा", experience: "पाणी साठवण माहिती समजून घेतात..", tools: "तोंडीकाम", materials: "चित्र", outcome: "C – 2.1 पाण्याचे विविध स्रोत सांगून, त्यांच्या स्वच्छतेचे महत्त्व सांगतो." },
+    22: { topic: "αñáαÑçαñ╡αñ╛ αñ¿αñ┐αñ╕αñ░αÑìαñùαñ╛αñÜαñ╛", experience: "αñåαñáαñ╡αñ╛ αñåαñúαñ┐ αñ╕αñ╛αñéαñùαñ╛.", tools: "αññαÑïαñéαñíαÑÇαñòαñ╛αñ«", materials: "αñÜαñ┐αññαÑìαñ░", outcome: "C ΓÇô 2.1 αñ¬αñ╛αñúαÑìαñ»αñ╛αñÜαÑç αñ╡αñ┐αñ╡αñ┐αñº αñ╕αÑìαñ░αÑïαññ αñ╕αñ╛αñéαñùαÑéαñ¿, αññαÑìαñ»αñ╛αñéαñÜαÑìαñ»αñ╛ αñ╕αÑìαñ╡αñÜαÑìαñ¢αññαÑçαñÜαÑç αñ«αñ╣αññαÑìαññαÑìαñ╡ αñ╕αñ╛αñéαñùαññαÑï." },
+    23: { topic: "αñáαÑçαñ╡αñ╛ αñ¿αñ┐αñ╕αñ░αÑìαñùαñ╛αñÜαñ╛", experience: "αñ¬αñ╛αñúαÑìαñ»αñ╛αñÜαÑç αñ╕αÑìαñ░αÑïαññ αñ╕αñ╛αñéαñùαñ╛ αñ╡ αñ«αñ╛αñ╣αñ┐αññαÑÇ αñ╕αñ«αñ£αÑéαñ¿ αñÿαÑçαññαñ╛αññ.", tools: "αññαÑïαñéαñíαÑÇαñòαñ╛αñ«", materials: "αñÜαñ┐αññαÑìαñ░", outcome: "C ΓÇô 2.1 αñ¬αñ╛αñúαÑìαñ»αñ╛αñÜαÑç αñ╡αñ┐αñ╡αñ┐αñº αñ╕αÑìαñ░αÑïαññ αñ╕αñ╛αñéαñùαÑéαñ¿, αññαÑìαñ»αñ╛αñéαñÜαÑìαñ»αñ╛ αñ╕αÑìαñ╡αñÜαÑìαñ¢αññαÑçαñÜαÑç αñ«αñ╣αññαÑìαññαÑìαñ╡ αñ╕αñ╛αñéαñùαññαÑï." },
+    24: { topic: "αñáαÑçαñ╡αñ╛ αñ¿αñ┐αñ╕αñ░αÑìαñùαñ╛αñÜαñ╛", experience: "αñ¬αñ╛αñúαÑÇ αñ╕αñ╛αñáαñ╡αñú αñ«αñ╛αñ╣αñ┐αññαÑÇ αñ╕αñ«αñ£αÑéαñ¿ αñÿαÑçαññαñ╛αññ..", tools: "αññαÑïαñéαñíαÑÇαñòαñ╛αñ«", materials: "αñÜαñ┐αññαÑìαñ░", outcome: "C ΓÇô 2.1 αñ¬αñ╛αñúαÑìαñ»αñ╛αñÜαÑç αñ╡αñ┐αñ╡αñ┐αñº αñ╕αÑìαñ░αÑïαññ αñ╕αñ╛αñéαñùαÑéαñ¿, αññαÑìαñ»αñ╛αñéαñÜαÑìαñ»αñ╛ αñ╕αÑìαñ╡αñÜαÑìαñ¢αññαÑçαñÜαÑç αñ«αñ╣αññαÑìαññαÑìαñ╡ αñ╕αñ╛αñéαñùαññαÑï." },
     25: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
-    26: { topic: "", experience: "", tools: "", materials: "", outcome: "", isHolidayText: "राजर्षी शाहू महाराज जयंती व मोहरम" },
+    26: { topic: "", experience: "", tools: "", materials: "", outcome: "", isHolidayText: "αñ░αñ╛αñ£αñ░αÑìαñ╖αÑÇ αñ╢αñ╛αñ╣αÑé αñ«αñ╣αñ╛αñ░αñ╛αñ£ αñ£αñ»αñéαññαÑÇ αñ╡ αñ«αÑïαñ╣αñ░αñ«" },
     27: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
-    29: { topic: "ठेवा निसर्गाचा", experience: "निरीक्षण करा व सांगतात.", tools: "तोंडीकाम", materials: "चित्र", outcome: "C – 2.1 पाण्याचे विविध स्रोत सांगून, त्यांच्या स्वच्छतेचे महत्त्व सांगतो." },
-    30: { topic: "ठेवा निसर्गाचा", experience: "वाचा व समजून घेतात.", tools: "तोंडीकाम", materials: "चित्र", outcome: "C – 2.1 पाण्याचे विविध स्रोत सांगून, त्यांच्या स्वच्छतेचे महत्त्व सांगतो." }
+    29: { topic: "αñáαÑçαñ╡αñ╛ αñ¿αñ┐αñ╕αñ░αÑìαñùαñ╛αñÜαñ╛", experience: "αñ¿αñ┐αñ░αÑÇαñòαÑìαñ╖αñú αñòαñ░αñ╛ αñ╡ αñ╕αñ╛αñéαñùαññαñ╛αññ.", tools: "αññαÑïαñéαñíαÑÇαñòαñ╛αñ«", materials: "αñÜαñ┐αññαÑìαñ░", outcome: "C ΓÇô 2.1 αñ¬αñ╛αñúαÑìαñ»αñ╛αñÜαÑç αñ╡αñ┐αñ╡αñ┐αñº αñ╕αÑìαñ░αÑïαññ αñ╕αñ╛αñéαñùαÑéαñ¿, αññαÑìαñ»αñ╛αñéαñÜαÑìαñ»αñ╛ αñ╕αÑìαñ╡αñÜαÑìαñ¢αññαÑçαñÜαÑç αñ«αñ╣αññαÑìαññαÑìαñ╡ αñ╕αñ╛αñéαñùαññαÑï." },
+    30: { topic: "αñáαÑçαñ╡αñ╛ αñ¿αñ┐αñ╕αñ░αÑìαñùαñ╛αñÜαñ╛", experience: "αñ╡αñ╛αñÜαñ╛ αñ╡ αñ╕αñ«αñ£αÑéαñ¿ αñÿαÑçαññαñ╛αññ.", tools: "αññαÑïαñéαñíαÑÇαñòαñ╛αñ«", materials: "αñÜαñ┐αññαÑìαñ░", outcome: "C ΓÇô 2.1 αñ¬αñ╛αñúαÑìαñ»αñ╛αñÜαÑç αñ╡αñ┐αñ╡αñ┐αñº αñ╕αÑìαñ░αÑïαññ αñ╕αñ╛αñéαñùαÑéαñ¿, αññαÑìαñ»αñ╛αñéαñÜαÑìαñ»αñ╛ αñ╕αÑìαñ╡αñÜαÑìαñ¢αññαÑçαñÜαÑç αñ«αñ╣αññαÑìαññαÑìαñ╡ αñ╕αñ╛αñéαñùαññαÑï." }
   },
-  "परिसर अभ्यास २": {
+  "αñ¬αñ░αñ┐αñ╕αñ░ αñàαñ¡αÑìαñ»αñ╛αñ╕ αÑ¿": {
     15: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     16: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     17: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
-    18: { topic: "कुटुंब", experience: "कुटुंबातील सदस्यांची नावे सांगा.", tools: "तोंडीकाम", materials: "विविध चित्रे", outcome: "04.958.01 विस्तारित कुटुंबातील सदस्यांचे एकमेकांशी असलेले नातेसंबंध ओळखतात." },
-    19: { topic: "कुटुंब", experience: "कुटुंबातील सदस्यांची माहिती सांगा.", tools: "तोंडीकाम", materials: "विविध चित्रे", outcome: "04.958.01 विस्तारित कुटुंबातील सदस्यांचे एकमेकांशी असलेले नातेसंबंध ओळखतात." },
+    18: { topic: "αñòαÑüαñƒαÑüαñéαñ¼", experience: "αñòαÑüαñƒαÑüαñéαñ¼αñ╛αññαÑÇαñ▓ αñ╕αñªαñ╕αÑìαñ»αñ╛αñéαñÜαÑÇ αñ¿αñ╛αñ╡αÑç αñ╕αñ╛αñéαñùαñ╛.", tools: "αññαÑïαñéαñíαÑÇαñòαñ╛αñ«", materials: "αñ╡αñ┐αñ╡αñ┐αñº αñÜαñ┐αññαÑìαñ░αÑç", outcome: "04.958.01 αñ╡αñ┐αñ╕αÑìαññαñ╛αñ░αñ┐αññ αñòαÑüαñƒαÑüαñéαñ¼αñ╛αññαÑÇαñ▓ αñ╕αñªαñ╕αÑìαñ»αñ╛αñéαñÜαÑç αñÅαñòαñ«αÑçαñòαñ╛αñéαñ╢αÑÇ αñàαñ╕αñ▓αÑçαñ▓αÑç αñ¿αñ╛αññαÑçαñ╕αñéαñ¼αñéαñº αñôαñ│αñûαññαñ╛αññ." },
+    19: { topic: "αñòαÑüαñƒαÑüαñéαñ¼", experience: "αñòαÑüαñƒαÑüαñéαñ¼αñ╛αññαÑÇαñ▓ αñ╕αñªαñ╕αÑìαñ»αñ╛αñéαñÜαÑÇ αñ«αñ╛αñ╣αñ┐αññαÑÇ αñ╕αñ╛αñéαñùαñ╛.", tools: "αññαÑïαñéαñíαÑÇαñòαñ╛αñ«", materials: "αñ╡αñ┐αñ╡αñ┐αñº αñÜαñ┐αññαÑìαñ░αÑç", outcome: "04.958.01 αñ╡αñ┐αñ╕αÑìαññαñ╛αñ░αñ┐αññ αñòαÑüαñƒαÑüαñéαñ¼αñ╛αññαÑÇαñ▓ αñ╕αñªαñ╕αÑìαñ»αñ╛αñéαñÜαÑç αñÅαñòαñ«αÑçαñòαñ╛αñéαñ╢αÑÇ αñàαñ╕αñ▓αÑçαñ▓αÑç αñ¿αñ╛αññαÑçαñ╕αñéαñ¼αñéαñº αñôαñ│αñûαññαñ╛αññ." },
     20: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     22: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     23: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     24: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
-    25: { topic: "अनुभव कथन", experience: "अनुभवलेल्या समस्या मांडतात.", tools: "तोंडीकाम", materials: "विविध चित्रे", outcome: "04.958.02 कुटुंब / शाळा / शेजार या ठिकाणी निरीक्षण केलेल्या / अनुभवलेल्या समस्यांवर स्वतःचे मत मांडतात" },
-    26: { topic: "", experience: "", tools: "", materials: "", outcome: "", isHolidayText: "राजर्षी शाहू महाराज जयंती व मोहरम" },
+    25: { topic: "αñàαñ¿αÑüαñ¡αñ╡ αñòαñÑαñ¿", experience: "αñàαñ¿αÑüαñ¡αñ╡αñ▓αÑçαñ▓αÑìαñ»αñ╛ αñ╕αñ«αñ╕αÑìαñ»αñ╛ αñ«αñ╛αñéαñíαññαñ╛αññ.", tools: "αññαÑïαñéαñíαÑÇαñòαñ╛αñ«", materials: "αñ╡αñ┐αñ╡αñ┐αñº αñÜαñ┐αññαÑìαñ░αÑç", outcome: "04.958.02 αñòαÑüαñƒαÑüαñéαñ¼ / αñ╢αñ╛αñ│αñ╛ / αñ╢αÑçαñ£αñ╛αñ░ αñ»αñ╛ αñáαñ┐αñòαñ╛αñúαÑÇ αñ¿αñ┐αñ░αÑÇαñòαÑìαñ╖αñú αñòαÑçαñ▓αÑçαñ▓αÑìαñ»αñ╛ / αñàαñ¿αÑüαñ¡αñ╡αñ▓αÑçαñ▓αÑìαñ»αñ╛ αñ╕αñ«αñ╕αÑìαñ»αñ╛αñéαñ╡αñ░ αñ╕αÑìαñ╡αññαñâαñÜαÑç αñ«αññ αñ«αñ╛αñéαñíαññαñ╛αññ" },
+    26: { topic: "", experience: "", tools: "", materials: "", outcome: "", isHolidayText: "αñ░αñ╛αñ£αñ░αÑìαñ╖αÑÇ αñ╢αñ╛αñ╣αÑé αñ«αñ╣αñ╛αñ░αñ╛αñ£ αñ£αñ»αñéαññαÑÇ αñ╡ αñ«αÑïαñ╣αñ░αñ«" },
     27: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     29: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     30: { topic: "", experience: "", tools: "", materials: "", outcome: "" }
   },
-  "कला": {
+  "αñòαñ▓αñ╛": {
     15: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     16: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
-    17: { topic: "बडबड गीत", experience: "बडबड गीत गायन करतात.", tools: "तोंडीकाम", materials: "ध्वनीफीत", outcome: "बडबडगीत, समूहगीत तालासुरात म्हणतो." },
-    18: { topic: "चित्र काढणे", experience: "रेषांच्या सहाय्याने चित्र काढतात व रंगवितात.", tools: "प्रात्यक्षिक", materials: "चित्र", outcome: "रेषांच्या विविध आकारांपासून सोपे आकार काढतो तसेच नक्षीकाम करतो." },
+    17: { topic: "αñ¼αñíαñ¼αñí αñùαÑÇαññ", experience: "αñ¼αñíαñ¼αñí αñùαÑÇαññ αñùαñ╛αñ»αñ¿ αñòαñ░αññαñ╛αññ.", tools: "αññαÑïαñéαñíαÑÇαñòαñ╛αñ«", materials: "αñºαÑìαñ╡αñ¿αÑÇαñ½αÑÇαññ", outcome: "αñ¼αñíαñ¼αñíαñùαÑÇαññ, αñ╕αñ«αÑéαñ╣αñùαÑÇαññ αññαñ╛αñ▓αñ╛αñ╕αÑüαñ░αñ╛αññ αñ«αÑìαñ╣αñúαññαÑï." },
+    18: { topic: "αñÜαñ┐αññαÑìαñ░ αñòαñ╛αñóαñúαÑç", experience: "αñ░αÑçαñ╖αñ╛αñéαñÜαÑìαñ»αñ╛ αñ╕αñ╣αñ╛αñ»αÑìαñ»αñ╛αñ¿αÑç αñÜαñ┐αññαÑìαñ░ αñòαñ╛αñóαññαñ╛αññ αñ╡ αñ░αñéαñùαñ╡αñ┐αññαñ╛αññ.", tools: "αñ¬αÑìαñ░αñ╛αññαÑìαñ»αñòαÑìαñ╖αñ┐αñò", materials: "αñÜαñ┐αññαÑìαñ░", outcome: "αñ░αÑçαñ╖αñ╛αñéαñÜαÑìαñ»αñ╛ αñ╡αñ┐αñ╡αñ┐αñº αñåαñòαñ╛αñ░αñ╛αñéαñ¬αñ╛αñ╕αÑéαñ¿ αñ╕αÑïαñ¬αÑç αñåαñòαñ╛αñ░ αñòαñ╛αñóαññαÑï αññαñ╕αÑçαñÜ αñ¿αñòαÑìαñ╖αÑÇαñòαñ╛αñ« αñòαñ░αññαÑï." },
     19: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     20: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     22: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     23: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
-    24: { topic: "प्रार्थना गायन", experience: "प्रार्थना गायन करतात.", tools: "तोंडीकाम", materials: "ध्वनीफीत", outcome: "बडबडगीत, समूहगीत तालासुरात म्हणतो." },
-    25: { topic: "कविता गायन", experience: "कविता गायन तालासुरात करतात.", tools: "प्रात्यक्षिक", materials: "चित्र", outcome: "रेषांच्या विविध आकारांपासून सोपे आकार काढतो तसेच नक्षीकाम करतो." },
-    26: { topic: "", experience: "", tools: "", materials: "", outcome: "", isHolidayText: "राजर्षी शाहू महाराज जयंती व मोहरम" },
+    24: { topic: "αñ¬αÑìαñ░αñ╛αñ░αÑìαñÑαñ¿αñ╛ αñùαñ╛αñ»αñ¿", experience: "αñ¬αÑìαñ░αñ╛αñ░αÑìαñÑαñ¿αñ╛ αñùαñ╛αñ»αñ¿ αñòαñ░αññαñ╛αññ.", tools: "αññαÑïαñéαñíαÑÇαñòαñ╛αñ«", materials: "αñºαÑìαñ╡αñ¿αÑÇαñ½αÑÇαññ", outcome: "αñ¼αñíαñ¼αñíαñùαÑÇαññ, αñ╕αñ«αÑéαñ╣αñùαÑÇαññ αññαñ╛αñ▓αñ╛αñ╕αÑüαñ░αñ╛αññ αñ«αÑìαñ╣αñúαññαÑï." },
+    25: { topic: "αñòαñ╡αñ┐αññαñ╛ αñùαñ╛αñ»αñ¿", experience: "αñòαñ╡αñ┐αññαñ╛ αñùαñ╛αñ»αñ¿ αññαñ╛αñ▓αñ╛αñ╕αÑüαñ░αñ╛αññ αñòαñ░αññαñ╛αññ.", tools: "αñ¬αÑìαñ░αñ╛αññαÑìαñ»αñòαÑìαñ╖αñ┐αñò", materials: "αñÜαñ┐αññαÑìαñ░", outcome: "αñ░αÑçαñ╖αñ╛αñéαñÜαÑìαñ»αñ╛ αñ╡αñ┐αñ╡αñ┐αñº αñåαñòαñ╛αñ░αñ╛αñéαñ¬αñ╛αñ╕αÑéαñ¿ αñ╕αÑïαñ¬αÑç αñåαñòαñ╛αñ░ αñòαñ╛αñóαññαÑï αññαñ╕αÑçαñÜ αñ¿αñòαÑìαñ╖αÑÇαñòαñ╛αñ« αñòαñ░αññαÑï." },
+    26: { topic: "", experience: "", tools: "", materials: "", outcome: "", isHolidayText: "αñ░αñ╛αñ£αñ░αÑìαñ╖αÑÇ αñ╢αñ╛αñ╣αÑé αñ«αñ╣αñ╛αñ░αñ╛αñ£ αñ£αñ»αñéαññαÑÇ αñ╡ αñ«αÑïαñ╣αñ░αñ«" },
     27: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     29: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     30: { topic: "", experience: "", tools: "", materials: "", outcome: "" }
   },
-  "कार्यानुभव": {
-    15: { topic: "पाण्याचा वापर", experience: "पाण्याचे उपयोग सांगा.", tools: "तोंडीकाम", materials: "चित्र", outcome: "पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो." },
-    16: { topic: "पाण्याचा वापर", experience: "पाण्याचा वापर व बचत यावर चर्चा", tools: "तोंडीकाम", materials: "चित्र", outcome: "पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो." },
+  "αñòαñ╛αñ░αÑìαñ»αñ╛αñ¿αÑüαñ¡αñ╡": {
+    15: { topic: "αñ¬αñ╛αñúαÑìαñ»αñ╛αñÜαñ╛ αñ╡αñ╛αñ¬αñ░", experience: "αñ¬αñ╛αñúαÑìαñ»αñ╛αñÜαÑç αñëαñ¬αñ»αÑïαñù αñ╕αñ╛αñéαñùαñ╛.", tools: "αññαÑïαñéαñíαÑÇαñòαñ╛αñ«", materials: "αñÜαñ┐αññαÑìαñ░", outcome: "αñ¬αñ╛αñúαÑìαñ»αñ╛αñÜαÑç αñ╡αñ┐αñ╡αñ┐αñº αñëαñ¬αñ»αÑïαñù αñ╕αñ╛αñéαñùαññαÑï. αñ¬αñ╛αñúαÑìαñ»αñ╛αñÜαÑç αñ╡αñ┐αñ╡αñ┐αñº αñëαñ¬αñ»αÑïαñù αñ╕αñ╛αñéαñùαññαÑï. αñ¬αñ╛αñúαÑìαñ»αñ╛αñÜαÑç αñ╡αñ┐αñ╡αñ┐αñº αñëαñ¬αñ»αÑïαñù αñ╕αñ╛αñéαñùαññαÑï. αñ¬αñ╛αñúαÑìαñ»αñ╛αñÜαÑç αñ╡αñ┐αñ╡αñ┐αñº αñëαñ¬αñ»αÑïαñù αñ╕αñ╛αñéαñùαññαÑï. αñ¬αñ╛αñúαÑìαñ»αñ╛αñÜαÑç αñ╡αñ┐αñ╡αñ┐αñº αñëαñ¬αñ»αÑïαñù αñ╕αñ╛αñéαñùαññαÑï." },
+    16: { topic: "αñ¬αñ╛αñúαÑìαñ»αñ╛αñÜαñ╛ αñ╡αñ╛αñ¬αñ░", experience: "αñ¬αñ╛αñúαÑìαñ»αñ╛αñÜαñ╛ αñ╡αñ╛αñ¬αñ░ αñ╡ αñ¼αñÜαññ αñ»αñ╛αñ╡αñ░ αñÜαñ░αÑìαñÜαñ╛", tools: "αññαÑïαñéαñíαÑÇαñòαñ╛αñ«", materials: "αñÜαñ┐αññαÑìαñ░", outcome: "αñ¬αñ╛αñúαÑìαñ»αñ╛αñÜαÑç αñ╡αñ┐αñ╡αñ┐αñº αñëαñ¬αñ»αÑïαñù αñ╕αñ╛αñéαñùαññαÑï. αñ¬αñ╛αñúαÑìαñ»αñ╛αñÜαÑç αñ╡αñ┐αñ╡αñ┐αñº αñëαñ¬αñ»αÑïαñù αñ╕αñ╛αñéαñùαññαÑï. αñ¬αñ╛αñúαÑìαñ»αñ╛αñÜαÑç αñ╡αñ┐αñ╡αñ┐αñº αñëαñ¬αñ»αÑïαñù αñ╕αñ╛αñéαñùαññαÑï. αñ¬αñ╛αñúαÑìαñ»αñ╛αñÜαÑç αñ╡αñ┐αñ╡αñ┐αñº αñëαñ¬αñ»αÑïαñù αñ╕αñ╛αñéαñùαññαÑï. αñ¬αñ╛αñúαÑìαñ»αñ╛αñÜαÑç αñ╡αñ┐αñ╡αñ┐αñº αñëαñ¬αñ»αÑïαñù αñ╕αñ╛αñéαñùαññαÑï." },
     17: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     18: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     19: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     20: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
-    22: { topic: "पाण्याचा वापर", experience: "पाण्याविषयी घोषवाक्ये सांगा.", tools: "उपक्रम", materials: "-", outcome: "पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो." },
-    23: { topic: "पाण्याचा वापर", experience: "पाण्याविषयी घोषवाक्ये लिहा.", tools: "तोंडीकाम", materials: "चित्र", outcome: "पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो. पाण्याचे विविध उपयोग सांगतो." },
+    22: { topic: "αñ¬αñ╛αñúαÑìαñ»αñ╛αñÜαñ╛ αñ╡αñ╛αñ¬αñ░", experience: "αñ¬αñ╛αñúαÑìαñ»αñ╛αñ╡αñ┐αñ╖αñ»αÑÇ αñÿαÑïαñ╖αñ╡αñ╛αñòαÑìαñ»αÑç αñ╕αñ╛αñéαñùαñ╛.", tools: "αñëαñ¬αñòαÑìαñ░αñ«", materials: "-", outcome: "αñ¬αñ╛αñúαÑìαñ»αñ╛αñÜαÑç αñ╡αñ┐αñ╡αñ┐αñº αñëαñ¬αñ»αÑïαñù αñ╕αñ╛αñéαñùαññαÑï. αñ¬αñ╛αñúαÑìαñ»αñ╛αñÜαÑç αñ╡αñ┐αñ╡αñ┐αñº αñëαñ¬αñ»αÑïαñù αñ╕αñ╛αñéαñùαññαÑï. αñ¬αñ╛αñúαÑìαñ»αñ╛αñÜαÑç αñ╡αñ┐αñ╡αñ┐αñº αñëαñ¬αñ»αÑïαñù αñ╕αñ╛αñéαñùαññαÑï. αñ¬αñ╛αñúαÑìαñ»αñ╛αñÜαÑç αñ╡αñ┐αñ╡αñ┐αñº αñëαñ¬αñ»αÑïαñù αñ╕αñ╛αñéαñùαññαÑï. αñ¬αñ╛αñúαÑìαñ»αñ╛αñÜαÑç αñ╡αñ┐αñ╡αñ┐αñº αñëαñ¬αñ»αÑïαñù αñ╕αñ╛αñéαñùαññαÑï." },
+    23: { topic: "αñ¬αñ╛αñúαÑìαñ»αñ╛αñÜαñ╛ αñ╡αñ╛αñ¬αñ░", experience: "αñ¬αñ╛αñúαÑìαñ»αñ╛αñ╡αñ┐αñ╖αñ»αÑÇ αñÿαÑïαñ╖αñ╡αñ╛αñòαÑìαñ»αÑç αñ▓αñ┐αñ╣αñ╛.", tools: "αññαÑïαñéαñíαÑÇαñòαñ╛αñ«", materials: "αñÜαñ┐αññαÑìαñ░", outcome: "αñ¬αñ╛αñúαÑìαñ»αñ╛αñÜαÑç αñ╡αñ┐αñ╡αñ┐αñº αñëαñ¬αñ»αÑïαñù αñ╕αñ╛αñéαñùαññαÑï. αñ¬αñ╛αñúαÑìαñ»αñ╛αñÜαÑç αñ╡αñ┐αñ╡αñ┐αñº αñëαñ¬αñ»αÑïαñù αñ╕αñ╛αñéαñùαññαÑï. αñ¬αñ╛αñúαÑìαñ»αñ╛αñÜαÑç αñ╡αñ┐αñ╡αñ┐αñº αñëαñ¬αñ»αÑïαñù αñ╕αñ╛αñéαñùαññαÑï. αñ¬αñ╛αñúαÑìαñ»αñ╛αñÜαÑç αñ╡αñ┐αñ╡αñ┐αñº αñëαñ¬αñ»αÑïαñù αñ╕αñ╛αñéαñùαññαÑï. αñ¬αñ╛αñúαÑìαñ»αñ╛αñÜαÑç αñ╡αñ┐αñ╡αñ┐αñº αñëαñ¬αñ»αÑïαñù αñ╕αñ╛αñéαñùαññαÑï." },
     24: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     25: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
-    26: { topic: "", experience: "", tools: "", materials: "", outcome: "", isHolidayText: "राजर्षी शाहू महाराज जयंती व मोहरम" },
+    26: { topic: "", experience: "", tools: "", materials: "", outcome: "", isHolidayText: "αñ░αñ╛αñ£αñ░αÑìαñ╖αÑÇ αñ╢αñ╛αñ╣αÑé αñ«αñ╣αñ╛αñ░αñ╛αñ£ αñ£αñ»αñéαññαÑÇ αñ╡ αñ«αÑïαñ╣αñ░αñ«" },
     27: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
-    29: { topic: "बचतपेटी", experience: "कागदी बचतपेटी तयार करा.", tools: "उपक्रम", materials: "कागद", outcome: "गरजा आणि समस्या यांच्याशी निगडित कौशल्यपूर्ण समाजोपयोगी साहित्य निर्माण करतो." },
-    30: { topic: "वर्ग सुशोभन", experience: "सुशोभनासाठी सोपे साहित्य सांगा.", tools: "वर्गकार्य", materials: "-", outcome: "वर्गाचे सुशोभन करून दिनविशेष व परिसरातील लघु उद्योगांची माहिती सांगतो." }
+    29: { topic: "αñ¼αñÜαññαñ¬αÑçαñƒαÑÇ", experience: "αñòαñ╛αñùαñªαÑÇ αñ¼αñÜαññαñ¬αÑçαñƒαÑÇ αññαñ»αñ╛αñ░ αñòαñ░αñ╛.", tools: "αñëαñ¬αñòαÑìαñ░αñ«", materials: "αñòαñ╛αñùαñª", outcome: "αñùαñ░αñ£αñ╛ αñåαñúαñ┐ αñ╕αñ«αñ╕αÑìαñ»αñ╛ αñ»αñ╛αñéαñÜαÑìαñ»αñ╛αñ╢αÑÇ αñ¿αñ┐αñùαñíαñ┐αññ αñòαÑîαñ╢αñ▓αÑìαñ»αñ¬αÑéαñ░αÑìαñú αñ╕αñ«αñ╛αñ£αÑïαñ¬αñ»αÑïαñùαÑÇ αñ╕αñ╛αñ╣αñ┐αññαÑìαñ» αñ¿αñ┐αñ░αÑìαñ«αñ╛αñú αñòαñ░αññαÑï." },
+    30: { topic: "αñ╡αñ░αÑìαñù αñ╕αÑüαñ╢αÑïαñ¡αñ¿", experience: "αñ╕αÑüαñ╢αÑïαñ¡αñ¿αñ╛αñ╕αñ╛αñáαÑÇ αñ╕αÑïαñ¬αÑç αñ╕αñ╛αñ╣αñ┐αññαÑìαñ» αñ╕αñ╛αñéαñùαñ╛.", tools: "αñ╡αñ░αÑìαñùαñòαñ╛αñ░αÑìαñ»", materials: "-", outcome: "αñ╡αñ░αÑìαñùαñ╛αñÜαÑç αñ╕αÑüαñ╢αÑïαñ¡αñ¿ αñòαñ░αÑéαñ¿ αñªαñ┐αñ¿αñ╡αñ┐αñ╢αÑçαñ╖ αñ╡ αñ¬αñ░αñ┐αñ╕αñ░αñ╛αññαÑÇαñ▓ αñ▓αñÿαÑü αñëαñªαÑìαñ»αÑïαñùαñ╛αñéαñÜαÑÇ αñ«αñ╛αñ╣αñ┐αññαÑÇ αñ╕αñ╛αñéαñùαññαÑï." }
   },
-  "शारीरिक शिक्षण": {
+  "αñ╢αñ╛αñ░αÑÇαñ░αñ┐αñò αñ╢αñ┐αñòαÑìαñ╖αñú": {
     15: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     16: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     17: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     18: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
-    19: { topic: "शारीरिक स्वच्छता", experience: "वैयक्तिक स्वच्छता तपासणे", tools: "वर्गकार्य", materials: "तक्ता", outcome: "आरोग्याच्या चांगल्या सवयी समजून घेऊन त्यांचे पालन करतो." },
-    20: { topic: "खेळ", experience: "कबड्डी खेळ खेळणे.", tools: "प्रात्यक्षिक", materials: "वस्तू", outcome: "विविध प्रकारच्या खेळांत रुची घेतो. शर्यतीत सहभागी होतो." },
+    19: { topic: "αñ╢αñ╛αñ░αÑÇαñ░αñ┐αñò αñ╕αÑìαñ╡αñÜαÑìαñ¢αññαñ╛", experience: "αñ╡αÑêαñ»αñòαÑìαññαñ┐αñò αñ╕αÑìαñ╡αñÜαÑìαñ¢αññαñ╛ αññαñ¬αñ╛αñ╕αñúαÑç", tools: "αñ╡αñ░αÑìαñùαñòαñ╛αñ░αÑìαñ»", materials: "αññαñòαÑìαññαñ╛", outcome: "αñåαñ░αÑïαñùαÑìαñ»αñ╛αñÜαÑìαñ»αñ╛ αñÜαñ╛αñéαñùαñ▓αÑìαñ»αñ╛ αñ╕αñ╡αñ»αÑÇ αñ╕αñ«αñ£αÑéαñ¿ αñÿαÑçαñèαñ¿ αññαÑìαñ»αñ╛αñéαñÜαÑç αñ¬αñ╛αñ▓αñ¿ αñòαñ░αññαÑï." },
+    20: { topic: "αñûαÑçαñ│", experience: "αñòαñ¼αñíαÑìαñíαÑÇ αñûαÑçαñ│ αñûαÑçαñ│αñúαÑç.", tools: "αñ¬αÑìαñ░αñ╛αññαÑìαñ»αñòαÑìαñ╖αñ┐αñò", materials: "αñ╡αñ╕αÑìαññαÑé", outcome: "αñ╡αñ┐αñ╡αñ┐αñº αñ¬αÑìαñ░αñòαñ╛αñ░αñÜαÑìαñ»αñ╛ αñûαÑçαñ│αñ╛αñéαññ αñ░αÑüαñÜαÑÇ αñÿαÑçαññαÑï. αñ╢αñ░αÑìαñ»αññαÑÇαññ αñ╕αñ╣αñ¡αñ╛αñùαÑÇ αñ╣αÑïαññαÑï." },
     22: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     23: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     24: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     25: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
-    26: { topic: "", experience: "", tools: "", materials: "", outcome: "", isHolidayText: "राजर्षी शाहू महाराज जयंती व मोहरम" },
-    27: { topic: "खेळ", experience: "मनोरंजनात्मक खेळ खेळणे.", tools: "प्रात्यक्षिक", materials: "वस्तू", outcome: "विविध प्रकारच्या खेळांत रुची घेतो. शर्यतीत सहभागी होतो." },
+    26: { topic: "", experience: "", tools: "", materials: "", outcome: "", isHolidayText: "αñ░αñ╛αñ£αñ░αÑìαñ╖αÑÇ αñ╢αñ╛αñ╣αÑé αñ«αñ╣αñ╛αñ░αñ╛αñ£ αñ£αñ»αñéαññαÑÇ αñ╡ αñ«αÑïαñ╣αñ░αñ«" },
+    27: { topic: "αñûαÑçαñ│", experience: "αñ«αñ¿αÑïαñ░αñéαñ£αñ¿αñ╛αññαÑìαñ«αñò αñûαÑçαñ│ αñûαÑçαñ│αñúαÑç.", tools: "αñ¬αÑìαñ░αñ╛αññαÑìαñ»αñòαÑìαñ╖αñ┐αñò", materials: "αñ╡αñ╕αÑìαññαÑé", outcome: "αñ╡αñ┐αñ╡αñ┐αñº αñ¬αÑìαñ░αñòαñ╛αñ░αñÜαÑìαñ»αñ╛ αñûαÑçαñ│αñ╛αñéαññ αñ░αÑüαñÜαÑÇ αñÿαÑçαññαÑï. αñ╢αñ░αÑìαñ»αññαÑÇαññ αñ╕αñ╣αñ¡αñ╛αñùαÑÇ αñ╣αÑïαññαÑï." },
     29: { topic: "", experience: "", tools: "", materials: "", outcome: "" },
     30: { topic: "", experience: "", tools: "", materials: "", outcome: "" }
   }
@@ -3650,7 +3650,7 @@ const getDatesForMonth = (monthEn: string, year: number = 2026) => {
   const endDay = tempDate.getDate();
 
   const dates: { dateNum: number; dayMr: string; isSunday: boolean }[] = [];
-  const daysMr = ["रवि", "सोम", "मंगळ", "बुध", "गुरु", "शुक्र", "शनि"];
+  const daysMr = ["αñ░αñ╡αñ┐", "αñ╕αÑïαñ«", "αñ«αñéαñùαñ│", "αñ¼αÑüαñº", "αñùαÑüαñ░αÑü", "αñ╢αÑüαñòαÑìαñ░", "αñ╢αñ¿αñ┐"];
 
   for (let d = startDay; d <= endDay; d++) {
     const dateObj = new Date(actualYear, monthIndex, d);
@@ -3677,8 +3677,8 @@ const getDefaultDailyPlan = (
 
   if (isClass4 && isMarathiOrSemi && monthEn === "June") {
     let lookupSubject = subject;
-    if (subject.includes("Math") || subject.includes("गणित") || subject.includes("Mathematics")) {
-      lookupSubject = "गणित";
+    if (subject.includes("Math") || subject.includes("αñùαñúαñ┐αññ") || subject.includes("Mathematics")) {
+      lookupSubject = "αñùαñúαñ┐αññ";
     }
     const subjectPlan = CLASS4_JUNE_PLAN[lookupSubject];
     if (subjectPlan && subjectPlan[dateNum]) {
@@ -3686,7 +3686,7 @@ const getDefaultDailyPlan = (
     }
   }
 
-  if (dayMr === "रवि" || dayMr === "रवी") {
+  if (dayMr === "αñ░αñ╡αñ┐" || dayMr === "αñ░αñ╡αÑÇ") {
     return { topic: "-", experience: "-", tools: "-", materials: "-", outcome: "-" };
   }
 
@@ -3705,27 +3705,27 @@ const renderMonthlyCoverPage = (
     <div className="monthly-pdf-page">
       <div className="w-full my-auto flex flex-col justify-center items-center text-center space-y-12">
         <h1 className="text-5xl font-black text-slate-900 tracking-wider font-devanagari mt-10">
-          मासिक नियोजन
+          αñ«αñ╛αñ╕αñ┐αñò αñ¿αñ┐αñ»αÑïαñ£αñ¿
         </h1>
         <h2 className="text-3xl font-bold text-slate-800 font-devanagari">
-          {safeData.academicYear || "२०२६-२०२७"}
+          {safeData.academicYear || "αÑ¿αÑªαÑ¿αÑ¼-αÑ¿αÑªαÑ¿αÑ¡"}
         </h2>
         <h3 className="text-3xl font-bold text-slate-800 font-devanagari">
-          वर्ग – {classMrName}
+          αñ╡αñ░αÑìαñù ΓÇô {classMrName}
         </h3>
         <h3 className="text-3xl font-bold text-slate-800 font-devanagari">
-          {m.mr} – {actualYear}
+          {m.mr} ΓÇô {actualYear}
         </h3>
 
         <div className="w-full max-w-lg mx-auto pt-16 space-y-6 text-left">
           <div className="flex items-center gap-3 text-lg font-bold">
-            <span className="shrink-0 font-devanagari">• वर्गशिक्षक नाव :</span>
+            <span className="shrink-0 font-devanagari">ΓÇó αñ╡αñ░αÑìαñùαñ╢αñ┐αñòαÑìαñ╖αñò αñ¿αñ╛αñ╡ :</span>
             <span className="border-b-2 border-black flex-1 min-w-[200px] pb-1 font-devanagari text-slate-800">
               {safeData.classTeacher || ""}
             </span>
           </div>
           <div className="flex items-center gap-3 text-lg font-bold">
-            <span className="shrink-0 font-devanagari">• शाळेचे नाव :</span>
+            <span className="shrink-0 font-devanagari">ΓÇó αñ╢αñ╛αñ│αÑçαñÜαÑç αñ¿αñ╛αñ╡ :</span>
             <span className="border-b-2 border-black flex-1 min-w-[200px] pb-1 font-devanagari text-slate-800">
               {safeData.schoolName || ""}
             </span>
@@ -3734,7 +3734,7 @@ const renderMonthlyCoverPage = (
       </div>
 
       <div className="mt-12 pt-3 border-t-2 border-amber-900 flex justify-between items-center text-[10px] text-slate-650 font-bold font-devanagari">
-        <span>ukguruji app हे play store वरून डाऊनलोड करा.</span>
+        <span>ukguruji app αñ╣αÑç play store αñ╡αñ░αÑéαñ¿ αñíαñ╛αñèαñ¿αñ▓αÑïαñí αñòαñ░αñ╛.</span>
         <span>Page 1</span>
       </div>
     </div>
@@ -3764,11 +3764,11 @@ function AnnualMonthlyPlanningEditor({
   };
 
   const class1Periods: Record<string, Record<string, number>> = {
-    "मराठी": {
+    "αñ«αñ░αñ╛αñáαÑÇ": {
       June: 35, July: 69, August: 51, September: 53, October: 35,
       November: 61, December: 61, January: 67, February: 59, March: 61, April: 56, May: 0
     },
-    "गणित": {
+    "αñùαñúαñ┐αññ": {
       June: 28, July: 56, August: 41, September: 43, October: 28,
       November: 50, December: 50, January: 54, February: 48, March: 50, April: 46, May: 0
     },
@@ -3776,7 +3776,7 @@ function AnnualMonthlyPlanningEditor({
       June: 28, July: 56, August: 41, September: 43, October: 28,
       November: 50, December: 50, January: 54, February: 48, March: 50, April: 46, May: 0
     },
-    "इंग्रजी": {
+    "αñçαñéαñùαÑìαñ░αñ£αÑÇ": {
       June: 15, July: 30, August: 22, September: 23, October: 15,
       November: 27, December: 27, January: 29, February: 26, March: 27, April: 25, May: 0
     },
@@ -3784,19 +3784,19 @@ function AnnualMonthlyPlanningEditor({
       June: 15, July: 30, August: 22, September: 23, October: 15,
       November: 27, December: 27, January: 29, February: 26, March: 27, April: 25, May: 0
     },
-    "खेळू करू शिकू": {
+    "αñûαÑçαñ│αÑé αñòαñ░αÑé αñ╢αñ┐αñòαÑé": {
       June: 15, July: 30, August: 22, September: 23, October: 15,
       November: 27, December: 27, January: 29, February: 26, March: 27, April: 25, May: 0
     }
   };
 
   const getWeeklyPeriods = (subj: string, cls: string): number => {
-    const isMr = subj.includes("मराठी");
-    const isMath = subj.includes("Math") || subj.includes("गणित") || subj.includes("Mathematics");
-    const isEng = subj.includes("इंग्रजी") || subj.includes("English");
-    const isHindi = subj.includes("हिंदी") || subj.includes("Hindi");
-    const isSci = subj.includes("विज्ञान") || subj.includes("Science") || subj.includes("परिसर अभ्यास १") || subj.includes("Environmental Studies 1");
-    const isSoc = subj.includes("समाजशास्त्र") || subj.includes("Social Sciences") || subj.includes("परिसर अभ्यास २") || subj.includes("Environmental Studies 2") || subj.includes("इतिहास") || subj.includes("भूगोल");
+    const isMr = subj.includes("αñ«αñ░αñ╛αñáαÑÇ");
+    const isMath = subj.includes("Math") || subj.includes("αñùαñúαñ┐αññ") || subj.includes("Mathematics");
+    const isEng = subj.includes("αñçαñéαñùαÑìαñ░αñ£αÑÇ") || subj.includes("English");
+    const isHindi = subj.includes("αñ╣αñ┐αñéαñªαÑÇ") || subj.includes("Hindi");
+    const isSci = subj.includes("αñ╡αñ┐αñ£αÑìαñ₧αñ╛αñ¿") || subj.includes("Science") || subj.includes("αñ¬αñ░αñ┐αñ╕αñ░ αñàαñ¡αÑìαñ»αñ╛αñ╕ αÑº") || subj.includes("Environmental Studies 1");
+    const isSoc = subj.includes("αñ╕αñ«αñ╛αñ£αñ╢αñ╛αñ╕αÑìαññαÑìαñ░") || subj.includes("Social Sciences") || subj.includes("αñ¬αñ░αñ┐αñ╕αñ░ αñàαñ¡αÑìαñ»αñ╛αñ╕ αÑ¿") || subj.includes("Environmental Studies 2") || subj.includes("αñçαññαñ┐αñ╣αñ╛αñ╕") || subj.includes("αñ¡αÑéαñùαÑïαñ▓");
 
     if (isMr) {
       if (cls === "1st" || cls === "2nd") return 16;
@@ -3825,26 +3825,26 @@ function AnnualMonthlyPlanningEditor({
     if (isSoc) {
       if (cls === "1st" || cls === "2nd") return 0;
       if (cls === "3rd" || cls === "4th" || cls === "5th") return 4;
-      if (subj.includes("इतिहास") || subj.includes("भूगोल")) return 3;
+      if (subj.includes("αñçαññαñ┐αñ╣αñ╛αñ╕") || subj.includes("αñ¡αÑéαñùαÑïαñ▓")) return 3;
       return 6;
     }
-    if (subj.includes("खेळू करू शिकू")) {
+    if (subj.includes("αñûαÑçαñ│αÑé αñòαñ░αÑé αñ╢αñ┐αñòαÑé")) {
       if (cls === "1st" || cls === "2nd") return 12;
       if (cls === "3rd" || cls === "4th") return 10;
       if (cls === "5th") return 9;
       return 10;
     }
-    if (subj.includes("कला")) {
+    if (subj.includes("αñòαñ▓αñ╛")) {
       if (cls === "1st" || cls === "2nd") return 4;
       if (cls === "3rd" || cls === "4th" || cls === "5th") return 3;
       return 4;
     }
-    if (subj.includes("कार्यानुभव")) {
+    if (subj.includes("αñòαñ╛αñ░αÑìαñ»αñ╛αñ¿αÑüαñ¡αñ╡")) {
       if (cls === "1st" || cls === "2nd" || cls === "3rd" || cls === "4th") return 4;
       if (cls === "5th") return 3;
       return 2;
     }
-    if (subj.includes("शा.शिक्षण")) {
+    if (subj.includes("αñ╢αñ╛.αñ╢αñ┐αñòαÑìαñ╖αñú")) {
       if (cls === "1st" || cls === "2nd") return 4;
       if (cls === "3rd" || cls === "4th" || cls === "5th") return 3;
       return 4;
@@ -3854,8 +3854,8 @@ function AnnualMonthlyPlanningEditor({
 
   const getPeriodsForMonth = (subj: string, cls: string, monthEn: string): number => {
     const weekly = getWeeklyPeriods(subj, cls);
-    const class1Weekly = subj.includes("मराठी") ? 16 : (subj.includes("Math") || subj.includes("गणित") || subj.includes("Mathematics")) ? 13 : 7;
-    const lookupSubject = subj.includes("मराठी") ? "मराठी" : (subj.includes("Math") || subj.includes("गणित") || subj.includes("Mathematics")) ? "गणित" : "इंग्रजी";
+    const class1Weekly = subj.includes("αñ«αñ░αñ╛αñáαÑÇ") ? 16 : (subj.includes("Math") || subj.includes("αñùαñúαñ┐αññ") || subj.includes("Mathematics")) ? 13 : 7;
+    const lookupSubject = subj.includes("αñ«αñ░αñ╛αñáαÑÇ") ? "αñ«αñ░αñ╛αñáαÑÇ" : (subj.includes("Math") || subj.includes("αñùαñúαñ┐αññ") || subj.includes("Mathematics")) ? "αñùαñúαñ┐αññ" : "αñçαñéαñùαÑìαñ░αñ£αÑÇ";
     const class1Val = class1Periods[lookupSubject]?.[monthEn] || 30;
     return Math.round(class1Val * (weekly / class1Weekly));
   };
@@ -3892,18 +3892,18 @@ function AnnualMonthlyPlanningEditor({
 
   const classes = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"];
   const classNames: Record<string, { mr: string; en: string }> = {
-    "1st": { mr: "पहिली", en: "Class 1st" },
-    "2nd": { mr: "दुसरी", en: "Class 2nd" },
-    "3rd": { mr: "तिसरी", en: "Class 3rd" },
-    "4th": { mr: "चौथी", en: "Class 4th" },
-    "5th": { mr: "पाचवी", en: "Class 5th" },
-    "6th": { mr: "सहावी", en: "Class 6th" },
-    "7th": { mr: "सातवी", en: "Class 7th" },
-    "8th": { mr: "आठवी", en: "Class 8th" },
+    "1st": { mr: "αñ¬αñ╣αñ┐αñ▓αÑÇ", en: "Class 1st" },
+    "2nd": { mr: "αñªαÑüαñ╕αñ░αÑÇ", en: "Class 2nd" },
+    "3rd": { mr: "αññαñ┐αñ╕αñ░αÑÇ", en: "Class 3rd" },
+    "4th": { mr: "αñÜαÑîαñÑαÑÇ", en: "Class 4th" },
+    "5th": { mr: "αñ¬αñ╛αñÜαñ╡αÑÇ", en: "Class 5th" },
+    "6th": { mr: "αñ╕αñ╣αñ╛αñ╡αÑÇ", en: "Class 6th" },
+    "7th": { mr: "αñ╕αñ╛αññαñ╡αÑÇ", en: "Class 7th" },
+    "8th": { mr: "αñåαñáαñ╡αÑÇ", en: "Class 8th" },
   };
   const mediums = [
-    { id: "Marathi", title: "Marathi", sub: "मराठी माध्यम", desc: "मराठी माध्यमाचे वार्षिक/मासिक नियोजन" },
-    { id: "Semi English", title: "Semi English", sub: "सेमी इंग्रजी", desc: "Semi English medium annual/monthly planning" },
+    { id: "Marathi", title: "Marathi", sub: "αñ«αñ░αñ╛αñáαÑÇ αñ«αñ╛αñºαÑìαñ»αñ«", desc: "αñ«αñ░αñ╛αñáαÑÇ αñ«αñ╛αñºαÑìαñ»αñ«αñ╛αñÜαÑç αñ╡αñ╛αñ░αÑìαñ╖αñ┐αñò/αñ«αñ╛αñ╕αñ┐αñò αñ¿αñ┐αñ»αÑïαñ£αñ¿" },
+    { id: "Semi English", title: "Semi English", sub: "αñ╕αÑçαñ«αÑÇ αñçαñéαñùαÑìαñ░αñ£αÑÇ", desc: "Semi English medium annual/monthly planning" },
   ];
 
   const handleDownloadPDF = async (planType: string) => {
@@ -3997,7 +3997,7 @@ function AnnualMonthlyPlanningEditor({
               {safeData.schoolName}
             </h1>
             <h2 className="text-sm font-bold text-slate-655">
-              {planType === "annual" ? "वार्षिक अभ्यासक्रम नियोजन आराखडा (सत्र १ व सत्र २)" : "मासिक अभ्यासक्रम नियोजन व उद्दिष्टे"}
+              {planType === "annual" ? "αñ╡αñ╛αñ░αÑìαñ╖αñ┐αñò αñàαñ¡αÑìαñ»αñ╛αñ╕αñòαÑìαñ░αñ« αñ¿αñ┐αñ»αÑïαñ£αñ¿ αñåαñ░αñ╛αñûαñíαñ╛ (αñ╕αññαÑìαñ░ αÑº αñ╡ αñ╕αññαÑìαñ░ αÑ¿)" : "αñ«αñ╛αñ╕αñ┐αñò αñàαñ¡αÑìαñ»αñ╛αñ╕αñòαÑìαñ░αñ« αñ¿αñ┐αñ»αÑïαñ£αñ¿ αñ╡ αñëαñªαÑìαñªαñ┐αñ╖αÑìαñƒαÑç"}
             </h2>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
               Academic Session: {safeData.academicYear}
@@ -4005,12 +4005,12 @@ function AnnualMonthlyPlanningEditor({
           </div>
         ) : (
           <div className="text-center space-y-2 mb-8 border-b-4 border-slate-950 pb-4">
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">वार्षिक नियोजन</h1>
-            <h2 className="text-base font-bold text-slate-800">शैक्षणिक वर्ष २०२६ – २०२७</h2>
-            <h3 className="text-sm font-bold text-slate-800">इयत्ता – {classNames[selectedClass]?.mr}</h3>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">αñ╡αñ╛αñ░αÑìαñ╖αñ┐αñò αñ¿αñ┐αñ»αÑïαñ£αñ¿</h1>
+            <h2 className="text-base font-bold text-slate-800">αñ╢αÑêαñòαÑìαñ╖αñúαñ┐αñò αñ╡αñ░αÑìαñ╖ αÑ¿αÑªαÑ¿αÑ¼ ΓÇô αÑ¿αÑªαÑ¿αÑ¡</h2>
+            <h3 className="text-sm font-bold text-slate-800">αñçαñ»αññαÑìαññαñ╛ ΓÇô {classNames[selectedClass]?.mr}</h3>
             <div className="flex justify-between text-xs font-bold text-slate-800 px-4 pt-4">
-              <div>वर्गशिक्षक नाव – {safeData.classTeacher}</div>
-              <div>शाळा - {safeData.schoolName}</div>
+              <div>αñ╡αñ░αÑìαñùαñ╢αñ┐αñòαÑìαñ╖αñò αñ¿αñ╛αñ╡ ΓÇô {safeData.classTeacher}</div>
+              <div>αñ╢αñ╛αñ│αñ╛ - {safeData.schoolName}</div>
             </div>
           </div>
         )}
@@ -4020,15 +4020,15 @@ function AnnualMonthlyPlanningEditor({
           <div className="grid grid-cols-4 gap-4 p-4 bg-slate-50 border border-slate-200 rounded-xl mb-6 text-[11px] font-medium text-slate-700">
             <div>
               <span className="font-bold text-slate-400 uppercase text-[9px] block">Standard</span>
-              {classNames[selectedClass]?.en} (इयत्ता {classNames[selectedClass]?.mr})
+              {classNames[selectedClass]?.en} (αñçαñ»αññαÑìαññαñ╛ {classNames[selectedClass]?.mr})
             </div>
             <div>
               <span className="font-bold text-slate-400 uppercase text-[9px] block">Medium</span>
-              {selectedMedium} ({selectedMedium === "Semi English" ? "सेमी इंग्रजी" : "मराठी"})
+              {selectedMedium} ({selectedMedium === "Semi English" ? "αñ╕αÑçαñ«αÑÇ αñçαñéαñùαÑìαñ░αñ£αÑÇ" : "αñ«αñ░αñ╛αñáαÑÇ"})
             </div>
             <div>
               <span className="font-bold text-slate-400 uppercase text-[9px] block">Teacher</span>
-              {safeData.classTeacher || "—"}
+              {safeData.classTeacher || "ΓÇö"}
             </div>
             <div>
               <span className="font-bold text-slate-400 uppercase text-[9px] block">Updated At</span>
@@ -4043,324 +4043,324 @@ function AnnualMonthlyPlanningEditor({
             {/* Prefix tables for 1st Class Marathi Medium */}
             {(selectedMedium === "Marathi" || selectedMedium === "Semi English") && (
               <div className="space-y-10">
-                {/* Table 1: वार्षिक कामाचे दिवस */}
+                {/* Table 1: αñ╡αñ╛αñ░αÑìαñ╖αñ┐αñò αñòαñ╛αñ«αñ╛αñÜαÑç αñªαñ┐αñ╡αñ╕ */}
                 <div className="space-y-3">
                   <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider border-b border-slate-300 pb-1 text-center">
-                    वार्षिक कामाचे दिवस ( सन -२०२६/२०२७ )
+                    αñ╡αñ╛αñ░αÑìαñ╖αñ┐αñò αñòαñ╛αñ«αñ╛αñÜαÑç αñªαñ┐αñ╡αñ╕ ( αñ╕αñ¿ -αÑ¿αÑªαÑ¿αÑ¼/αÑ¿αÑªαÑ¿αÑ¡ )
                   </h3>
                   <table>
                     <thead>
                       <tr>
-                        <th className="text-center">महिना</th>
-                        <th className="text-center">सोमवार</th>
-                        <th className="text-center">मंगळवार</th>
-                        <th className="text-center">बुधवार</th>
-                        <th className="text-center">गुरुवार</th>
-                        <th className="text-center">शुक्रवार</th>
-                        <th className="text-center">शनिवार</th>
-                        <th className="text-center">एकूण</th>
-                        <th className="text-center">रविवार व सुट्टी</th>
+                        <th className="text-center">αñ«αñ╣αñ┐αñ¿αñ╛</th>
+                        <th className="text-center">αñ╕αÑïαñ«αñ╡αñ╛αñ░</th>
+                        <th className="text-center">αñ«αñéαñùαñ│αñ╡αñ╛αñ░</th>
+                        <th className="text-center">αñ¼αÑüαñºαñ╡αñ╛αñ░</th>
+                        <th className="text-center">αñùαÑüαñ░αÑüαñ╡αñ╛αñ░</th>
+                        <th className="text-center">αñ╢αÑüαñòαÑìαñ░αñ╡αñ╛αñ░</th>
+                        <th className="text-center">αñ╢αñ¿αñ┐αñ╡αñ╛αñ░</th>
+                        <th className="text-center">αñÅαñòαÑéαñú</th>
+                        <th className="text-center">αñ░αñ╡αñ┐αñ╡αñ╛αñ░ αñ╡ αñ╕αÑüαñƒαÑìαñƒαÑÇ</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr>
-                        <td className="font-bold text-center">जून</td>
-                        <td className="text-center">३</td>
-                        <td className="text-center">३</td>
-                        <td className="text-center">२</td>
-                        <td className="text-center">२</td>
-                        <td className="text-center">१</td>
-                        <td className="text-center">२</td>
-                        <td className="text-center font-bold">१३</td>
-                        <td className="text-center">४ व १३</td>
+                        <td className="font-bold text-center">αñ£αÑéαñ¿</td>
+                        <td className="text-center">αÑ⌐</td>
+                        <td className="text-center">αÑ⌐</td>
+                        <td className="text-center">αÑ¿</td>
+                        <td className="text-center">αÑ¿</td>
+                        <td className="text-center">αÑº</td>
+                        <td className="text-center">αÑ¿</td>
+                        <td className="text-center font-bold">αÑºαÑ⌐</td>
+                        <td className="text-center">αÑ¬ αñ╡ αÑºαÑ⌐</td>
                       </tr>
                       <tr>
-                        <td className="font-bold text-center">जुलै</td>
-                        <td className="text-center">४</td>
-                        <td className="text-center">४</td>
-                        <td className="text-center">५</td>
-                        <td className="text-center">५</td>
-                        <td className="text-center">५</td>
-                        <td className="text-center">४</td>
-                        <td className="text-center font-bold">२७</td>
-                        <td className="text-center">४</td>
+                        <td className="font-bold text-center">αñ£αÑüαñ▓αÑê</td>
+                        <td className="text-center">αÑ¬</td>
+                        <td className="text-center">αÑ¬</td>
+                        <td className="text-center">αÑ½</td>
+                        <td className="text-center">αÑ½</td>
+                        <td className="text-center">αÑ½</td>
+                        <td className="text-center">αÑ¬</td>
+                        <td className="text-center font-bold">αÑ¿αÑ¡</td>
+                        <td className="text-center">αÑ¬</td>
                       </tr>
                       <tr>
-                        <td className="font-bold text-center">ऑगस्ट</td>
-                        <td className="text-center">४</td>
-                        <td className="text-center">४</td>
-                        <td className="text-center">३</td>
-                        <td className="text-center">४</td>
-                        <td className="text-center">३</td>
-                        <td className="text-center">४</td>
-                        <td className="text-center font-bold">२२</td>
-                        <td className="text-center">५ व ४</td>
+                        <td className="font-bold text-center">αñæαñùαñ╕αÑìαñƒ</td>
+                        <td className="text-center">αÑ¬</td>
+                        <td className="text-center">αÑ¬</td>
+                        <td className="text-center">αÑ⌐</td>
+                        <td className="text-center">αÑ¬</td>
+                        <td className="text-center">αÑ⌐</td>
+                        <td className="text-center">αÑ¬</td>
+                        <td className="text-center font-bold">αÑ¿αÑ¿</td>
+                        <td className="text-center">αÑ½ αñ╡ αÑ¬</td>
                       </tr>
                       <tr>
-                        <td className="font-bold text-center">सप्टेंबर</td>
-                        <td className="text-center">३</td>
-                        <td className="text-center">३</td>
-                        <td className="text-center">३</td>
-                        <td className="text-center">२</td>
-                        <td className="text-center">२</td>
-                        <td className="text-center">१</td>
-                        <td className="text-center font-bold">१४</td>
-                        <td className="text-center">४ व १२</td>
+                        <td className="font-bold text-center">αñ╕αñ¬αÑìαñƒαÑçαñéαñ¼αñ░</td>
+                        <td className="text-center">αÑ⌐</td>
+                        <td className="text-center">αÑ⌐</td>
+                        <td className="text-center">αÑ⌐</td>
+                        <td className="text-center">αÑ¿</td>
+                        <td className="text-center">αÑ¿</td>
+                        <td className="text-center">αÑº</td>
+                        <td className="text-center font-bold">αÑºαÑ¬</td>
+                        <td className="text-center">αÑ¬ αñ╡ αÑºαÑ¿</td>
                       </tr>
                       <tr>
-                        <td className="font-bold text-center">ऑक्टोबर</td>
-                        <td className="text-center">४</td>
-                        <td className="text-center">३</td>
-                        <td className="text-center">४</td>
-                        <td className="text-center">५</td>
-                        <td className="text-center">४</td>
-                        <td className="text-center">५</td>
-                        <td className="text-center font-bold">२५</td>
-                        <td className="text-center">४ व २</td>
+                        <td className="font-bold text-center">αñæαñòαÑìαñƒαÑïαñ¼αñ░</td>
+                        <td className="text-center">αÑ¬</td>
+                        <td className="text-center">αÑ⌐</td>
+                        <td className="text-center">αÑ¬</td>
+                        <td className="text-center">αÑ½</td>
+                        <td className="text-center">αÑ¬</td>
+                        <td className="text-center">αÑ½</td>
+                        <td className="text-center font-bold">αÑ¿αÑ½</td>
+                        <td className="text-center">αÑ¬ αñ╡ αÑ¿</td>
                       </tr>
                       <tr>
-                        <td className="font-bold text-center">नोव्हेंबर</td>
-                        <td className="text-center">४</td>
-                        <td className="text-center">२</td>
-                        <td className="text-center">३</td>
-                        <td className="text-center">३</td>
-                        <td className="text-center">२</td>
-                        <td className="text-center">२</td>
-                        <td className="text-center font-bold">१७</td>
-                        <td className="text-center">५ व ९</td>
+                        <td className="font-bold text-center">αñ¿αÑïαñ╡αÑìαñ╣αÑçαñéαñ¼αñ░</td>
+                        <td className="text-center">αÑ¬</td>
+                        <td className="text-center">αÑ¿</td>
+                        <td className="text-center">αÑ⌐</td>
+                        <td className="text-center">αÑ⌐</td>
+                        <td className="text-center">αÑ¿</td>
+                        <td className="text-center">αÑ¿</td>
+                        <td className="text-center font-bold">αÑºαÑ¡</td>
+                        <td className="text-center">αÑ½ αñ╡ αÑ»</td>
                       </tr>
                       <tr>
-                        <td className="font-bold text-center">डिसेंबर</td>
-                        <td className="text-center">४</td>
-                        <td className="text-center">५</td>
-                        <td className="text-center">४</td>
-                        <td className="text-center">५</td>
-                        <td className="text-center">३</td>
-                        <td className="text-center">३</td>
-                        <td className="text-center font-bold">२४</td>
-                        <td className="text-center">४ व ३</td>
+                        <td className="font-bold text-center">αñíαñ┐αñ╕αÑçαñéαñ¼αñ░</td>
+                        <td className="text-center">αÑ¬</td>
+                        <td className="text-center">αÑ½</td>
+                        <td className="text-center">αÑ¬</td>
+                        <td className="text-center">αÑ½</td>
+                        <td className="text-center">αÑ⌐</td>
+                        <td className="text-center">αÑ⌐</td>
+                        <td className="text-center font-bold">αÑ¿αÑ¬</td>
+                        <td className="text-center">αÑ¬ αñ╡ αÑ⌐</td>
                       </tr>
                       <tr>
-                        <td className="font-bold text-center">जानेवारी</td>
-                        <td className="text-center">४</td>
-                        <td className="text-center">४</td>
-                        <td className="text-center">४</td>
-                        <td className="text-center">३</td>
-                        <td className="text-center">५</td>
-                        <td className="text-center">५</td>
-                        <td className="text-center font-bold">२५</td>
-                        <td className="text-center">५ व १</td>
+                        <td className="font-bold text-center">αñ£αñ╛αñ¿αÑçαñ╡αñ╛αñ░αÑÇ</td>
+                        <td className="text-center">αÑ¬</td>
+                        <td className="text-center">αÑ¬</td>
+                        <td className="text-center">αÑ¬</td>
+                        <td className="text-center">αÑ⌐</td>
+                        <td className="text-center">αÑ½</td>
+                        <td className="text-center">αÑ½</td>
+                        <td className="text-center font-bold">αÑ¿αÑ½</td>
+                        <td className="text-center">αÑ½ αñ╡ αÑº</td>
                       </tr>
                       <tr>
-                        <td className="font-bold text-center">फेब्रुवारी</td>
-                        <td className="text-center">४</td>
-                        <td className="text-center">४</td>
-                        <td className="text-center">४</td>
-                        <td className="text-center">३</td>
-                        <td className="text-center">४</td>
-                        <td className="text-center">४</td>
-                        <td className="text-center font-bold">२२</td>
-                        <td className="text-center">४ व २</td>
+                        <td className="font-bold text-center">αñ½αÑçαñ¼αÑìαñ░αÑüαñ╡αñ╛αñ░αÑÇ</td>
+                        <td className="text-center">αÑ¬</td>
+                        <td className="text-center">αÑ¬</td>
+                        <td className="text-center">αÑ¬</td>
+                        <td className="text-center">αÑ⌐</td>
+                        <td className="text-center">αÑ¬</td>
+                        <td className="text-center">αÑ¬</td>
+                        <td className="text-center font-bold">αÑ¿αÑ¿</td>
+                        <td className="text-center">αÑ¬ αñ╡ αÑ¿</td>
                       </tr>
                       <tr>
-                        <td className="font-bold text-center">मार्च</td>
-                        <td className="text-center">५</td>
-                        <td className="text-center">४</td>
-                        <td className="text-center">४</td>
-                        <td className="text-center">४</td>
-                        <td className="text-center">३</td>
-                        <td className="text-center">४</td>
-                        <td className="text-center font-bold">२४</td>
-                        <td className="text-center">४ व ३</td>
+                        <td className="font-bold text-center">αñ«αñ╛αñ░αÑìαñÜ</td>
+                        <td className="text-center">αÑ½</td>
+                        <td className="text-center">αÑ¬</td>
+                        <td className="text-center">αÑ¬</td>
+                        <td className="text-center">αÑ¬</td>
+                        <td className="text-center">αÑ⌐</td>
+                        <td className="text-center">αÑ¬</td>
+                        <td className="text-center font-bold">αÑ¿αÑ¬</td>
+                        <td className="text-center">αÑ¬ αñ╡ αÑ⌐</td>
                       </tr>
                       <tr>
-                        <td className="font-bold text-center">एप्रिल</td>
-                        <td className="text-center">५</td>
-                        <td className="text-center">३</td>
-                        <td className="text-center">३</td>
-                        <td className="text-center">३</td>
-                        <td className="text-center">३</td>
-                        <td className="text-center">४</td>
-                        <td className="text-center font-bold">२१</td>
-                        <td className="text-center">५ व ४</td>
+                        <td className="font-bold text-center">αñÅαñ¬αÑìαñ░αñ┐αñ▓</td>
+                        <td className="text-center">αÑ½</td>
+                        <td className="text-center">αÑ⌐</td>
+                        <td className="text-center">αÑ⌐</td>
+                        <td className="text-center">αÑ⌐</td>
+                        <td className="text-center">αÑ⌐</td>
+                        <td className="text-center">αÑ¬</td>
+                        <td className="text-center font-bold">αÑ¿αÑº</td>
+                        <td className="text-center">αÑ½ αñ╡ αÑ¬</td>
                       </tr>
                       <tr className="bg-slate-100 font-bold">
-                        <td className="text-center">एकूण</td>
-                        <td className="text-center">४४</td>
-                        <td className="text-center">३९</td>
-                        <td className="text-center">३९</td>
-                        <td className="text-center">३९</td>
-                        <td className="text-center">३५</td>
-                        <td className="text-center">३८</td>
-                        <td className="text-center text-[#D6B97A]">२३४</td>
-                        <td className="text-center">५२ व ८५</td>
+                        <td className="text-center">αñÅαñòαÑéαñú</td>
+                        <td className="text-center">αÑ¬αÑ¬</td>
+                        <td className="text-center">αÑ⌐αÑ»</td>
+                        <td className="text-center">αÑ⌐αÑ»</td>
+                        <td className="text-center">αÑ⌐αÑ»</td>
+                        <td className="text-center">αÑ⌐αÑ½</td>
+                        <td className="text-center">αÑ⌐αÑ«</td>
+                        <td className="text-center text-[#D6B97A]">αÑ¿αÑ⌐αÑ¬</td>
+                        <td className="text-center">αÑ½αÑ¿ αñ╡ αÑ«αÑ½</td>
                       </tr>
                       <tr className="bg-slate-150 font-bold">
-                        <td colSpan={7} className="text-right">प्राप्त आठवडे</td>
-                        <td colSpan={2} className="text-center text-[#D6B97A]">३८.००</td>
+                        <td colSpan={7} className="text-right">αñ¬αÑìαñ░αñ╛αñ¬αÑìαññ αñåαñáαñ╡αñíαÑç</td>
+                        <td colSpan={2} className="text-center text-[#D6B97A]">αÑ⌐αÑ«.αÑªαÑª</td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
 
-                {/* Table 2: साप्ताहिक तासिका */}
+                {/* Table 2: αñ╕αñ╛αñ¬αÑìαññαñ╛αñ╣αñ┐αñò αññαñ╛αñ╕αñ┐αñòαñ╛ */}
                 <div className="space-y-3">
                   <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider border-b border-slate-300 pb-1 text-center">
-                    साप्ताहिक तासिका – २०२६/२०२७
+                    αñ╕αñ╛αñ¬αÑìαññαñ╛αñ╣αñ┐αñò αññαñ╛αñ╕αñ┐αñòαñ╛ ΓÇô αÑ¿αÑªαÑ¿αÑ¼/αÑ¿αÑªαÑ¿αÑ¡
                   </h3>
                   <table>
                     <thead>
                       <tr>
-                        <th>विषय</th>
-                        <th className="text-center">१ ली</th>
-                        <th className="text-center">२ री</th>
-                        <th className="text-center">३ री</th>
-                        <th className="text-center">४ थी</th>
-                        <th className="text-center">५ वी</th>
-                        <th className="text-center">६ वी</th>
-                        <th className="text-center">७ वी</th>
-                        <th className="text-center">८ वी</th>
+                        <th>αñ╡αñ┐αñ╖αñ»</th>
+                        <th className="text-center">αÑº αñ▓αÑÇ</th>
+                        <th className="text-center">αÑ¿ αñ░αÑÇ</th>
+                        <th className="text-center">αÑ⌐ αñ░αÑÇ</th>
+                        <th className="text-center">αÑ¬ αñÑαÑÇ</th>
+                        <th className="text-center">αÑ½ αñ╡αÑÇ</th>
+                        <th className="text-center">αÑ¼ αñ╡αÑÇ</th>
+                        <th className="text-center">αÑ¡ αñ╡αÑÇ</th>
+                        <th className="text-center">αÑ« αñ╡αÑÇ</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr>
-                        <td className="font-bold">मराठी</td>
-                        <td className={getCellClass("1st")}>१६</td>
-                        <td className={getCellClass("2nd")}>१६</td>
-                        <td className={getCellClass("3rd")}>१२</td>
-                        <td className={getCellClass("4th")}>१२</td>
-                        <td className={getCellClass("5th")}>६</td>
-                        <td className={getCellClass("6th")}>६</td>
-                        <td className={getCellClass("7th")}>६</td>
-                        <td className={getCellClass("8th")}>६</td>
+                        <td className="font-bold">αñ«αñ░αñ╛αñáαÑÇ</td>
+                        <td className={getCellClass("1st")}>αÑºαÑ¼</td>
+                        <td className={getCellClass("2nd")}>αÑºαÑ¼</td>
+                        <td className={getCellClass("3rd")}>αÑºαÑ¿</td>
+                        <td className={getCellClass("4th")}>αÑºαÑ¿</td>
+                        <td className={getCellClass("5th")}>αÑ¼</td>
+                        <td className={getCellClass("6th")}>αÑ¼</td>
+                        <td className={getCellClass("7th")}>αÑ¼</td>
+                        <td className={getCellClass("8th")}>αÑ¼</td>
                       </tr>
                       <tr>
-                        <td className="font-bold">हिंदी</td>
-                        <td className={getCellClass("1st")}>०</td>
-                        <td className={getCellClass("2nd")}>०</td>
-                        <td className={getCellClass("3rd")}>०</td>
-                        <td className={getCellClass("4th")}>०</td>
-                        <td className={getCellClass("5th")}>६</td>
-                        <td className={getCellClass("6th")}>६</td>
-                        <td className={getCellClass("7th")}>६</td>
-                        <td className={getCellClass("8th")}>६</td>
+                        <td className="font-bold">αñ╣αñ┐αñéαñªαÑÇ</td>
+                        <td className={getCellClass("1st")}>αÑª</td>
+                        <td className={getCellClass("2nd")}>αÑª</td>
+                        <td className={getCellClass("3rd")}>αÑª</td>
+                        <td className={getCellClass("4th")}>αÑª</td>
+                        <td className={getCellClass("5th")}>αÑ¼</td>
+                        <td className={getCellClass("6th")}>αÑ¼</td>
+                        <td className={getCellClass("7th")}>αÑ¼</td>
+                        <td className={getCellClass("8th")}>αÑ¼</td>
                       </tr>
                       <tr>
-                        <td className="font-bold">इंग्रजी</td>
-                        <td className={getCellClass("1st")}>७</td>
-                        <td className={getCellClass("2nd")}>७</td>
-                        <td className={getCellClass("3rd")}>७</td>
-                        <td className={getCellClass("4th")}>७</td>
-                        <td className={getCellClass("5th")}>७</td>
-                        <td className={getCellClass("6th")}>६</td>
-                        <td className={getCellClass("7th")}>६</td>
-                        <td className={getCellClass("8th")}>६</td>
+                        <td className="font-bold">αñçαñéαñùαÑìαñ░αñ£αÑÇ</td>
+                        <td className={getCellClass("1st")}>αÑ¡</td>
+                        <td className={getCellClass("2nd")}>αÑ¡</td>
+                        <td className={getCellClass("3rd")}>αÑ¡</td>
+                        <td className={getCellClass("4th")}>αÑ¡</td>
+                        <td className={getCellClass("5th")}>αÑ¡</td>
+                        <td className={getCellClass("6th")}>αÑ¼</td>
+                        <td className={getCellClass("7th")}>αÑ¼</td>
+                        <td className={getCellClass("8th")}>αÑ¼</td>
                       </tr>
                       <tr>
-                        <td className="font-bold">गणित</td>
-                        <td className={getCellClass("1st")}>१३</td>
-                        <td className={getCellClass("2nd")}>१३</td>
-                        <td className={getCellClass("3rd")}>९</td>
-                        <td className={getCellClass("4th")}>९</td>
-                        <td className={getCellClass("5th")}>८</td>
-                        <td className={getCellClass("6th")}>७</td>
-                        <td className={getCellClass("7th")}>७</td>
-                        <td className={getCellClass("8th")}>७</td>
+                        <td className="font-bold">αñùαñúαñ┐αññ</td>
+                        <td className={getCellClass("1st")}>αÑºαÑ⌐</td>
+                        <td className={getCellClass("2nd")}>αÑºαÑ⌐</td>
+                        <td className={getCellClass("3rd")}>αÑ»</td>
+                        <td className={getCellClass("4th")}>αÑ»</td>
+                        <td className={getCellClass("5th")}>αÑ«</td>
+                        <td className={getCellClass("6th")}>αÑ¡</td>
+                        <td className={getCellClass("7th")}>αÑ¡</td>
+                        <td className={getCellClass("8th")}>αÑ¡</td>
                       </tr>
                       <tr>
-                        <td className="font-bold">विज्ञान</td>
-                        <td className={getCellClass("1st")}>०</td>
-                        <td className={getCellClass("2nd")}>०</td>
-                        <td className={getCellClass("3rd")}>६</td>
-                        <td className={getCellClass("4th")}>६</td>
-                        <td className={getCellClass("5th")}>६</td>
-                        <td className={getCellClass("6th")}>७</td>
-                        <td className={getCellClass("7th")}>७</td>
-                        <td className={getCellClass("8th")}>७</td>
+                        <td className="font-bold">αñ╡αñ┐αñ£αÑìαñ₧αñ╛αñ¿</td>
+                        <td className={getCellClass("1st")}>αÑª</td>
+                        <td className={getCellClass("2nd")}>αÑª</td>
+                        <td className={getCellClass("3rd")}>αÑ¼</td>
+                        <td className={getCellClass("4th")}>αÑ¼</td>
+                        <td className={getCellClass("5th")}>αÑ¼</td>
+                        <td className={getCellClass("6th")}>αÑ¡</td>
+                        <td className={getCellClass("7th")}>αÑ¡</td>
+                        <td className={getCellClass("8th")}>αÑ¡</td>
                       </tr>
                       <tr>
-                        <td className="font-bold">समाजशास्त्र</td>
-                        <td className={getCellClass("1st")}>०</td>
-                        <td className={getCellClass("2nd")}>०</td>
-                        <td className={getCellClass("3rd")}>४</td>
-                        <td className={getCellClass("4th")}>४</td>
-                        <td className={getCellClass("5th")}>४</td>
-                        <td className={getCellClass("6th")}>६</td>
-                        <td className={getCellClass("7th")}>६</td>
-                        <td className={getCellClass("8th")}>६</td>
+                        <td className="font-bold">αñ╕αñ«αñ╛αñ£αñ╢αñ╛αñ╕αÑìαññαÑìαñ░</td>
+                        <td className={getCellClass("1st")}>αÑª</td>
+                        <td className={getCellClass("2nd")}>αÑª</td>
+                        <td className={getCellClass("3rd")}>αÑ¬</td>
+                        <td className={getCellClass("4th")}>αÑ¬</td>
+                        <td className={getCellClass("5th")}>αÑ¬</td>
+                        <td className={getCellClass("6th")}>αÑ¼</td>
+                        <td className={getCellClass("7th")}>αÑ¼</td>
+                        <td className={getCellClass("8th")}>αÑ¼</td>
                       </tr>
                       <tr>
-                        <td className="font-bold">कला</td>
-                        <td className={getCellClass("1st")}>४</td>
-                        <td className={getCellClass("2nd")}>४</td>
-                        <td className={getCellClass("3rd")}>३</td>
-                        <td className={getCellClass("4th")}>३</td>
-                        <td className={getCellClass("5th")}>३</td>
-                        <td className={getCellClass("6th")}>४</td>
-                        <td className={getCellClass("7th")}>४</td>
-                        <td className={getCellClass("8th")}>४</td>
+                        <td className="font-bold">αñòαñ▓αñ╛</td>
+                        <td className={getCellClass("1st")}>αÑ¬</td>
+                        <td className={getCellClass("2nd")}>αÑ¬</td>
+                        <td className={getCellClass("3rd")}>αÑ⌐</td>
+                        <td className={getCellClass("4th")}>αÑ⌐</td>
+                        <td className={getCellClass("5th")}>αÑ⌐</td>
+                        <td className={getCellClass("6th")}>αÑ¬</td>
+                        <td className={getCellClass("7th")}>αÑ¬</td>
+                        <td className={getCellClass("8th")}>αÑ¬</td>
                       </tr>
                       <tr>
-                        <td className="font-bold">कार्यानुभव</td>
-                        <td className={getCellClass("1st")}>४</td>
-                        <td className={getCellClass("2nd")}>४</td>
-                        <td className={getCellClass("3rd")}>४</td>
-                        <td className={getCellClass("4th")}>४</td>
-                        <td className={getCellClass("5th")}>३</td>
-                        <td className={getCellClass("6th")}>२</td>
-                        <td className={getCellClass("7th")}>२</td>
-                        <td className={getCellClass("8th")}>२</td>
+                        <td className="font-bold">αñòαñ╛αñ░αÑìαñ»αñ╛αñ¿αÑüαñ¡αñ╡</td>
+                        <td className={getCellClass("1st")}>αÑ¬</td>
+                        <td className={getCellClass("2nd")}>αÑ¬</td>
+                        <td className={getCellClass("3rd")}>αÑ¬</td>
+                        <td className={getCellClass("4th")}>αÑ¬</td>
+                        <td className={getCellClass("5th")}>αÑ⌐</td>
+                        <td className={getCellClass("6th")}>αÑ¿</td>
+                        <td className={getCellClass("7th")}>αÑ¿</td>
+                        <td className={getCellClass("8th")}>αÑ¿</td>
                       </tr>
                       <tr>
-                        <td className="font-bold">शा.शिक्षण</td>
-                        <td className={getCellClass("1st")}>४</td>
-                        <td className={getCellClass("2nd")}>४</td>
-                        <td className={getCellClass("3rd")}>३</td>
-                        <td className={getCellClass("4th")}>३</td>
-                        <td className={getCellClass("5th")}>३</td>
-                        <td className={getCellClass("6th")}>४</td>
-                        <td className={getCellClass("7th")}>४</td>
-                        <td className={getCellClass("8th")}>४</td>
+                        <td className="font-bold">αñ╢αñ╛.αñ╢αñ┐αñòαÑìαñ╖αñú</td>
+                        <td className={getCellClass("1st")}>αÑ¬</td>
+                        <td className={getCellClass("2nd")}>αÑ¬</td>
+                        <td className={getCellClass("3rd")}>αÑ⌐</td>
+                        <td className={getCellClass("4th")}>αÑ⌐</td>
+                        <td className={getCellClass("5th")}>αÑ⌐</td>
+                        <td className={getCellClass("6th")}>αÑ¬</td>
+                        <td className={getCellClass("7th")}>αÑ¬</td>
+                        <td className={getCellClass("8th")}>αÑ¬</td>
                       </tr>
                       <tr className="bg-slate-100 font-black">
-                        <td>एकूण</td>
-                        <td className={getCellClass("1st")}>४८</td>
-                        <td className={getCellClass("2nd")}>४८</td>
-                        <td className={getCellClass("3rd")}>४८</td>
-                        <td className={getCellClass("4th")}>४८</td>
-                        <td className={getCellClass("5th")}>४८</td>
-                        <td className={getCellClass("6th")}>४८</td>
-                        <td className={getCellClass("7th")}>४८</td>
-                        <td className={getCellClass("8th")}>४८</td>
+                        <td>αñÅαñòαÑéαñú</td>
+                        <td className={getCellClass("1st")}>αÑ¬αÑ«</td>
+                        <td className={getCellClass("2nd")}>αÑ¬αÑ«</td>
+                        <td className={getCellClass("3rd")}>αÑ¬αÑ«</td>
+                        <td className={getCellClass("4th")}>αÑ¬αÑ«</td>
+                        <td className={getCellClass("5th")}>αÑ¬αÑ«</td>
+                        <td className={getCellClass("6th")}>αÑ¬αÑ«</td>
+                        <td className={getCellClass("7th")}>αÑ¬αÑ«</td>
+                        <td className={getCellClass("8th")}>αÑ¬αÑ«</td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
 
-                {/* Table 3: अध्ययन निष्पत्ती संख्या */}
+                {/* Table 3: αñàαñºαÑìαñ»αñ»αñ¿ αñ¿αñ┐αñ╖αÑìαñ¬αññαÑìαññαÑÇ αñ╕αñéαñûαÑìαñ»αñ╛ */}
                 <div className="space-y-3">
                   <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider border-b border-slate-300 pb-1 text-center">
-                    अध्ययन निष्पत्ती संख्या ( 1 ली ते ८ वी )
+                    αñàαñºαÑìαñ»αñ»αñ¿ αñ¿αñ┐αñ╖αÑìαñ¬αññαÑìαññαÑÇ αñ╕αñéαñûαÑìαñ»αñ╛ ( 1 αñ▓αÑÇ αññαÑç αÑ« αñ╡αÑÇ )
                   </h3>
                   <table>
                     <thead>
                       <tr>
-                        <th>विषय</th>
-                        <th className="text-center">विषय कोड</th>
-                        <th className="text-center">1 ली</th>
-                        <th className="text-center">२ री</th>
-                        <th className="text-center">३ री</th>
-                        <th className="text-center">४ थी</th>
-                        <th className="text-center">५ वी</th>
-                        <th className="text-center">६ वी</th>
-                        <th className="text-center">७ वी</th>
-                        <th className="text-center">८ वी</th>
-                        <th className="text-center">एकूण</th>
+                        <th>αñ╡αñ┐αñ╖αñ»</th>
+                        <th className="text-center">αñ╡αñ┐αñ╖αñ» αñòαÑïαñí</th>
+                        <th className="text-center">1 αñ▓αÑÇ</th>
+                        <th className="text-center">αÑ¿ αñ░αÑÇ</th>
+                        <th className="text-center">αÑ⌐ αñ░αÑÇ</th>
+                        <th className="text-center">αÑ¬ αñÑαÑÇ</th>
+                        <th className="text-center">αÑ½ αñ╡αÑÇ</th>
+                        <th className="text-center">αÑ¼ αñ╡αÑÇ</th>
+                        <th className="text-center">αÑ¡ αñ╡αÑÇ</th>
+                        <th className="text-center">αÑ« αñ╡αÑÇ</th>
+                        <th className="text-center">αñÅαñòαÑéαñú</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr>
-                        <td className="font-bold">मराठी</td>
+                        <td className="font-bold">αñ«αñ░αñ╛αñáαÑÇ</td>
                         <td className="text-center">1</td>
                         <td className={getCellClass("1st")}>14</td>
                         <td className={getCellClass("2nd")}>17</td>
@@ -4373,7 +4373,7 @@ function AnnualMonthlyPlanningEditor({
                         <td className="text-center font-bold">151</td>
                       </tr>
                       <tr>
-                        <td className="font-bold">हिंदी</td>
+                        <td className="font-bold">αñ╣αñ┐αñéαñªαÑÇ</td>
                         <td className="text-center">15</td>
                         <td className={getCellClass("1st")}>--</td>
                         <td className={getCellClass("2nd")}>--</td>
@@ -4386,7 +4386,7 @@ function AnnualMonthlyPlanningEditor({
                         <td className="text-center font-bold">54</td>
                       </tr>
                       <tr>
-                        <td className="font-bold">इंग्रजी</td>
+                        <td className="font-bold">αñçαñéαñùαÑìαñ░αñ£αÑÇ</td>
                         <td className="text-center">17</td>
                         <td className={getCellClass("1st")}>19</td>
                         <td className={getCellClass("2nd")}>16</td>
@@ -4399,7 +4399,7 @@ function AnnualMonthlyPlanningEditor({
                         <td className="text-center font-bold">243</td>
                       </tr>
                       <tr>
-                        <td className="font-bold">गणित</td>
+                        <td className="font-bold">αñùαñúαñ┐αññ</td>
                         <td className="text-center">71</td>
                         <td className={getCellClass("1st")}>13</td>
                         <td className={getCellClass("2nd")}>10</td>
@@ -4412,7 +4412,7 @@ function AnnualMonthlyPlanningEditor({
                         <td className="text-center font-bold">154</td>
                       </tr>
                       <tr>
-                        <td className="font-bold">प.अभ्यास भाग ०१</td>
+                        <td className="font-bold">αñ¬.αñàαñ¡αÑìαñ»αñ╛αñ╕ αñ¡αñ╛αñù αÑªαÑº</td>
                         <td className="text-center">95 A</td>
                         <td className={getCellClass("1st")}>--</td>
                         <td className={getCellClass("2nd")}>--</td>
@@ -4425,7 +4425,7 @@ function AnnualMonthlyPlanningEditor({
                         <td className="text-center font-bold">42</td>
                       </tr>
                       <tr>
-                        <td className="font-bold">प.अभ्यास भाग ०२</td>
+                        <td className="font-bold">αñ¬.αñàαñ¡αÑìαñ»αñ╛αñ╕ αñ¡αñ╛αñù αÑªαÑ¿</td>
                         <td className="text-center">95 B</td>
                         <td className={getCellClass("1st")}>--</td>
                         <td className={getCellClass("2nd")}>--</td>
@@ -4438,7 +4438,7 @@ function AnnualMonthlyPlanningEditor({
                         <td className="text-center font-bold">11</td>
                       </tr>
                       <tr>
-                        <td className="font-bold">विज्ञान</td>
+                        <td className="font-bold">αñ╡αñ┐αñ£αÑìαñ₧αñ╛αñ¿</td>
                         <td className="text-center">72</td>
                         <td className={getCellClass("1st")}>--</td>
                         <td className={getCellClass("2nd")}>--</td>
@@ -4451,7 +4451,7 @@ function AnnualMonthlyPlanningEditor({
                         <td className="text-center font-bold">56</td>
                       </tr>
                       <tr>
-                        <td className="font-bold">इतिहास</td>
+                        <td className="font-bold">αñçαññαñ┐αñ╣αñ╛αñ╕</td>
                         <td className="text-center">73 H</td>
                         <td className={getCellClass("1st")}>--</td>
                         <td className={getCellClass("2nd")}>--</td>
@@ -4464,7 +4464,7 @@ function AnnualMonthlyPlanningEditor({
                         <td className="text-center font-bold">37</td>
                       </tr>
                       <tr>
-                        <td className="font-bold">ना.शास्त्र</td>
+                        <td className="font-bold">αñ¿αñ╛.αñ╢αñ╛αñ╕αÑìαññαÑìαñ░</td>
                         <td className="text-center">73 H</td>
                         <td className={getCellClass("1st")}>--</td>
                         <td className={getCellClass("2nd")}>--</td>
@@ -4477,7 +4477,7 @@ function AnnualMonthlyPlanningEditor({
                         <td className="text-center font-bold">32</td>
                       </tr>
                       <tr>
-                        <td className="font-bold">भूगोल</td>
+                        <td className="font-bold">αñ¡αÑéαñùαÑïαñ▓</td>
                         <td className="text-center">73 G</td>
                         <td className={getCellClass("1st")}>--</td>
                         <td className={getCellClass("2nd")}>--</td>
@@ -4490,17 +4490,17 @@ function AnnualMonthlyPlanningEditor({
                         <td className="text-center font-bold">74</td>
                       </tr>
                       <tr className="bg-slate-100 font-black text-center">
-                        <td className="font-bold text-left">एकूण</td>
+                        <td className="font-bold text-left">αñÅαñòαÑéαñú</td>
                         <td></td>
-                        <td className={getCellClass("1st")}>४६</td>
-                        <td className={getCellClass("2nd")}>४३</td>
-                        <td className={getCellClass("3rd")}>५९</td>
-                        <td className={getCellClass("4th")}>८५</td>
-                        <td className={getCellClass("5th")}>८५</td>
-                        <td className={getCellClass("6th")}>१७१</td>
-                        <td className={getCellClass("7th")}>२११</td>
-                        <td className={getCellClass("8th")}>१५४</td>
-                        <td className="font-bold text-[#D6B97A]">८५४</td>
+                        <td className={getCellClass("1st")}>αÑ¬αÑ¼</td>
+                        <td className={getCellClass("2nd")}>αÑ¬αÑ⌐</td>
+                        <td className={getCellClass("3rd")}>αÑ½αÑ»</td>
+                        <td className={getCellClass("4th")}>αÑ«αÑ½</td>
+                        <td className={getCellClass("5th")}>αÑ«αÑ½</td>
+                        <td className={getCellClass("6th")}>αÑºαÑ¡αÑº</td>
+                        <td className={getCellClass("7th")}>αÑ¿αÑºαÑº</td>
+                        <td className={getCellClass("8th")}>αÑºαÑ½αÑ¬</td>
+                        <td className="font-bold text-[#D6B97A]">αÑ«αÑ½αÑ¬</td>
                       </tr>
                     </tbody>
                   </table>
@@ -4519,47 +4519,47 @@ function AnnualMonthlyPlanningEditor({
                   <div key={subject} className="space-y-3">
                     <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider border-b-2 border-slate-300 pb-1">
                       {isClass1Mr
-                        ? `वार्षिक नियोजन सन - २०२६/२०२७ (इयत्ता – ${classNames[selectedClass]?.mr} | विषय – ${subject})`
-                        : `विषय (Subject) — ${subject}`
+                        ? `αñ╡αñ╛αñ░αÑìαñ╖αñ┐αñò αñ¿αñ┐αñ»αÑïαñ£αñ¿ αñ╕αñ¿ - αÑ¿αÑªαÑ¿αÑ¼/αÑ¿αÑªαÑ¿αÑ¡ (αñçαñ»αññαÑìαññαñ╛ ΓÇô ${classNames[selectedClass]?.mr} | αñ╡αñ┐αñ╖αñ» ΓÇô ${subject})`
+                        : `αñ╡αñ┐αñ╖αñ» (Subject) ΓÇö ${subject}`
                       }
                     </h3>
                     <table>
                       <thead>
                         <tr>
                           <th className="w-[100px] text-center">
-                            {isClass1Mr ? "महिना" : "महिना (Month)"}
+                            {isClass1Mr ? "αñ«αñ╣αñ┐αñ¿αñ╛" : "αñ«αñ╣αñ┐αñ¿αñ╛ (Month)"}
                           </th>
                           <th className="w-[70px] text-center">
-                            {isClass1Mr ? "कामाचे दिवस" : "कामाचे दिवस (Days)"}
+                            {isClass1Mr ? "αñòαñ╛αñ«αñ╛αñÜαÑç αñªαñ┐αñ╡αñ╕" : "αñòαñ╛αñ«αñ╛αñÜαÑç αñªαñ┐αñ╡αñ╕ (Days)"}
                           </th>
                           <th className="w-[70px] text-center">
-                            {isClass1Mr ? "प्राप्त तासिका" : "प्राप्त तासिका (Periods)"}
+                            {isClass1Mr ? "αñ¬αÑìαñ░αñ╛αñ¬αÑìαññ αññαñ╛αñ╕αñ┐αñòαñ╛" : "αñ¬αÑìαñ░αñ╛αñ¬αÑìαññ αññαñ╛αñ╕αñ┐αñòαñ╛ (Periods)"}
                           </th>
                           <th>
-                            {isClass1Mr ? "घटक" : "घटक (Topics)"}
+                            {isClass1Mr ? "αñÿαñƒαñò" : "αñÿαñƒαñò (Topics)"}
                           </th>
                           <th className="w-[70px] text-center">
-                            {isClass1Mr ? "पुरा /अपुरा" : "पुर्ण / अपुर्ण"}
+                            {isClass1Mr ? "αñ¬αÑüαñ░αñ╛ /αñàαñ¬αÑüαñ░αñ╛" : "αñ¬αÑüαñ░αÑìαñú / αñàαñ¬αÑüαñ░αÑìαñú"}
                           </th>
                           <th className="w-[85px] text-center">
-                            {isClass1Mr ? "शिक्षक स्वाक्षरी" : "शिक्षक स्वाक्षरी"}
+                            {isClass1Mr ? "αñ╢αñ┐αñòαÑìαñ╖αñò αñ╕αÑìαñ╡αñ╛αñòαÑìαñ╖αñ░αÑÇ" : "αñ╢αñ┐αñòαÑìαñ╖αñò αñ╕αÑìαñ╡αñ╛αñòαÑìαñ╖αñ░αÑÇ"}
                           </th>
                           <th className="w-[100px] text-center">
-                            {isClass1Mr ? "मुख्याध्यापक स्वाक्षरी" : "मुख्याध्यापक स्वाक्षरी"}
+                            {isClass1Mr ? "αñ«αÑüαñûαÑìαñ»αñ╛αñºαÑìαñ»αñ╛αñ¬αñò αñ╕αÑìαñ╡αñ╛αñòαÑìαñ╖αñ░αÑÇ" : "αñ«αÑüαñûαÑìαñ»αñ╛αñºαÑìαñ»αñ╛αñ¬αñò αñ╕αÑìαñ╡αñ╛αñòαÑìαñ╖αñ░αÑÇ"}
                           </th>
                         </tr>
                       </thead>
                       <tbody>
                         {syllabus.months.map(m => {
-                          const monthData = (syllabus.syllabusBySubject[subject]?.[m.en] || { topic: "—", objectives: "—", activity: "—" }) as any;
+                          const monthData = (syllabus.syllabusBySubject[subject]?.[m.en] || { topic: "ΓÇö", objectives: "ΓÇö", activity: "ΓÇö" }) as any;
                           const workingDays = isClass1Mr ? class1WorkingDays[m.en] : (monthData.workingDays || (m.en === "June" ? 13 : m.en === "September" ? 14 : m.en === "November" ? 17 : m.en === "April" ? 21 : m.en === "February" ? 22 : (m.en === "December" || m.en === "March") ? 24 : 25));
-                          const defaultPeriods = subject.includes("मराठी") ? 60 : (subject.includes("Math") || subject.includes("गणित") || subject.includes("Mathematics")) ? 50 : 30;
+                          const defaultPeriods = subject.includes("αñ«αñ░αñ╛αñáαÑÇ") ? 60 : (subject.includes("Math") || subject.includes("αñùαñúαñ┐αññ") || subject.includes("Mathematics")) ? 50 : 30;
                           const periods = isClass1Mr ? (getPeriodsForMonth(subject, selectedClass, m.en) || 30) : (monthData.periods || defaultPeriods);
 
                           const extraRow = (m.en === "November" && isClass1Mr) ? (
                             <tr key="diwali-holiday">
                               <td colSpan={7} className="bg-slate-50 text-center font-bold text-slate-800 text-xs py-3">
-                                सराव व प्रथम सत्र संकलित मूल्यमापन – दिवाळी सुट्टी
+                                αñ╕αñ░αñ╛αñ╡ αñ╡ αñ¬αÑìαñ░αñÑαñ« αñ╕αññαÑìαñ░ αñ╕αñéαñòαñ▓αñ┐αññ αñ«αÑéαñ▓αÑìαñ»αñ«αñ╛αñ¬αñ¿ ΓÇô αñªαñ┐αñ╡αñ╛αñ│αÑÇ αñ╕αÑüαñƒαÑìαñƒαÑÇ
                               </td>
                             </tr>
                           ) : null;
@@ -4577,7 +4577,7 @@ function AnnualMonthlyPlanningEditor({
                               {extraRow}
                               <tr>
                                 <td className="font-bold text-slate-900 text-center">
-                                  {m.mr} {isClass1Mr ? (m.en === "June" || m.en === "July" || m.en === "August" || m.en === "September" || m.en === "October" || m.en === "November" || m.en === "December" ? "२०२६" : "२०२७") : ""}
+                                  {m.mr} {isClass1Mr ? (m.en === "June" || m.en === "July" || m.en === "August" || m.en === "September" || m.en === "October" || m.en === "November" || m.en === "December" ? "αÑ¿αÑªαÑ¿αÑ¼" : "αÑ¿αÑªαÑ¿αÑ¡") : ""}
                                 </td>
                                 <td className="text-center font-bold text-slate-700 p-1">
                                   <input
@@ -4614,10 +4614,10 @@ function AnnualMonthlyPlanningEditor({
                       {isClass1Mr && (
                         <tfoot>
                           <tr className="bg-slate-100 font-bold">
-                            <td className="text-center">एकूण</td>
-                            <td className="text-center">२३४</td>
+                            <td className="text-center">αñÅαñòαÑéαñú</td>
+                            <td className="text-center">αÑ¿αÑ⌐αÑ¬</td>
                             <td className="text-center text-[#D6B97A]">
-                              {getWeeklyPeriods(subject, selectedClass) * 38 || "—"}
+                              {getWeeklyPeriods(subject, selectedClass) * 38 || "ΓÇö"}
                             </td>
                             <td colSpan={4}></td>
                           </tr>
@@ -4653,15 +4653,15 @@ function AnnualMonthlyPlanningEditor({
                               <div className="flex justify-between items-center border-b-2 border-slate-900 pb-2">
                                 <div className="text-left">
                                   <h2 className="text-lg font-black text-slate-900 font-devanagari">
-                                    दैनिक टाचण / नियोजन
+                                    αñªαÑêαñ¿αñ┐αñò αñƒαñ╛αñÜαñú / αñ¿αñ┐αñ»αÑïαñ£αñ¿
                                   </h2>
                                   <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">
-                                    विषय – {subject} | वर्ग – {classNames[selectedClass]?.mr}
+                                    αñ╡αñ┐αñ╖αñ» ΓÇô {subject} | αñ╡αñ░αÑìαñù ΓÇô {classNames[selectedClass]?.mr}
                                   </p>
                                 </div>
                                 <div className="text-right">
                                   <p className="text-xs font-bold text-slate-800 font-devanagari">
-                                    महिना: {m.mr} – {actualYear}
+                                    αñ«αñ╣αñ┐αñ¿αñ╛: {m.mr} ΓÇô {actualYear}
                                   </p>
                                   <p className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">
                                     Academic Session: {safeData.academicYear}
@@ -4674,20 +4674,20 @@ function AnnualMonthlyPlanningEditor({
                                 <table className="monthly-planning-table">
                                   <thead>
                                     <tr>
-                                      <th className="w-[45px] text-center">दि.</th>
-                                      <th className="w-[35px] text-center">वार</th>
-                                      <th className="w-[155px]">अध्ययन मुद्दा / पाठ्यांश</th>
-                                      <th className="w-[175px]">अध्ययन अनुभव स्वरूप</th>
-                                      <th className="w-[90px]">मूल्यमापनाची साधन तंत्रे</th>
-                                      <th className="w-[90px]">आवश्यक साहित्य</th>
-                                      <th className="w-[144px]">अध्ययन निष्पत्ती</th>
+                                      <th className="w-[45px] text-center">αñªαñ┐.</th>
+                                      <th className="w-[35px] text-center">αñ╡αñ╛αñ░</th>
+                                      <th className="w-[155px]">αñàαñºαÑìαñ»αñ»αñ¿ αñ«αÑüαñªαÑìαñªαñ╛ / αñ¬αñ╛αñáαÑìαñ»αñ╛αñéαñ╢</th>
+                                      <th className="w-[175px]">αñàαñºαÑìαñ»αñ»αñ¿ αñàαñ¿αÑüαñ¡αñ╡ αñ╕αÑìαñ╡αñ░αÑéαñ¬</th>
+                                      <th className="w-[90px]">αñ«αÑéαñ▓αÑìαñ»αñ«αñ╛αñ¬αñ¿αñ╛αñÜαÑÇ αñ╕αñ╛αñºαñ¿ αññαñéαññαÑìαñ░αÑç</th>
+                                      <th className="w-[90px]">αñåαñ╡αñ╢αÑìαñ»αñò αñ╕αñ╛αñ╣αñ┐αññαÑìαñ»</th>
+                                      <th className="w-[144px]">αñàαñºαÑìαñ»αñ»αñ¿ αñ¿αñ┐αñ╖αÑìαñ¬αññαÑìαññαÑÇ</th>
                                     </tr>
                                   </thead>
                                   <tbody>
                                     {dates.map((date) => {
                                       const plan = getDefaultDailyPlan(selectedClass, selectedMedium, subject, m.en, date.dateNum, date.dayMr);
                                       const isHoliday = !!plan.isHolidayText || date.isSunday;
-                                      const holidayText = date.isSunday ? "रविवार सुट्टी" : plan.isHolidayText;
+                                      const holidayText = date.isSunday ? "αñ░αñ╡αñ┐αñ╡αñ╛αñ░ αñ╕αÑüαñƒαÑìαñƒαÑÇ" : plan.isHolidayText;
 
                                       const tKey = `${selectedClass}_${selectedMedium}_${subject}_${m.en}_${date.dateNum}_topic`;
                                       const eKey = `${selectedClass}_${selectedMedium}_${subject}_${m.en}_${date.dateNum}_experience`;
@@ -4701,17 +4701,17 @@ function AnnualMonthlyPlanningEditor({
                                       const valMaterials = planningData[mKey] !== undefined ? planningData[mKey] : plan.materials;
                                       const valOutcome = planningData[oKey] !== undefined ? planningData[oKey] : plan.outcome;
 
-                                      const dateStr = `${date.dateNum < 10 ? "०" : ""}${date.dateNum}/${m.en === "June" ? "०६" :
-                                        m.en === "July" ? "०७" :
-                                          m.en === "August" ? "०८" :
-                                            m.en === "September" ? "०९" :
-                                              m.en === "October" ? "१०" :
-                                                m.en === "November" ? "११" :
-                                                  m.en === "December" ? "१२" :
-                                                    m.en === "January" ? "०१" :
-                                                      m.en === "February" ? "०२" :
-                                                        m.en === "March" ? "०३" :
-                                                          m.en === "April" ? "०४" : "०५"}`;
+                                      const dateStr = `${date.dateNum < 10 ? "αÑª" : ""}${date.dateNum}/${m.en === "June" ? "αÑªαÑ¼" :
+                                        m.en === "July" ? "αÑªαÑ¡" :
+                                          m.en === "August" ? "αÑªαÑ«" :
+                                            m.en === "September" ? "αÑªαÑ»" :
+                                              m.en === "October" ? "αÑºαÑª" :
+                                                m.en === "November" ? "αÑºαÑº" :
+                                                  m.en === "December" ? "αÑºαÑ¿" :
+                                                    m.en === "January" ? "αÑªαÑº" :
+                                                      m.en === "February" ? "αÑªαÑ¿" :
+                                                        m.en === "March" ? "αÑªαÑ⌐" :
+                                                          m.en === "April" ? "αÑªαÑ¬" : "αÑªαÑ½"}`;
 
                                       return (
                                         <tr key={date.dateNum} className={date.isSunday ? "bg-red-50/20" : ""}>
@@ -4776,11 +4776,11 @@ function AnnualMonthlyPlanningEditor({
                             {/* Signature & Footer Block */}
                             <div className="mt-4">
                               <div className="grid grid-cols-2 gap-4 text-center font-bold text-slate-700 mb-2">
-                                <div>वर्गशिक्षक स्वाक्षरी</div>
-                                <div>मुख्याध्यापक स्वाक्षरी</div>
+                                <div>αñ╡αñ░αÑìαñùαñ╢αñ┐αñòαÑìαñ╖αñò αñ╕αÑìαñ╡αñ╛αñòαÑìαñ╖αñ░αÑÇ</div>
+                                <div>αñ«αÑüαñûαÑìαñ»αñ╛αñºαÑìαñ»αñ╛αñ¬αñò αñ╕αÑìαñ╡αñ╛αñòαÑìαñ╖αñ░αÑÇ</div>
                               </div>
                               <div className="pt-2 border-t border-amber-900 flex justify-between items-center text-[10px] text-slate-650 font-bold">
-                                <span>ukguruji app हे play store वरून डाऊनलोड करा.</span>
+                                <span>ukguruji app αñ╣αÑç play store αñ╡αñ░αÑéαñ¿ αñíαñ╛αñèαñ¿αñ▓αÑïαñí αñòαñ░αñ╛.</span>
                                 <span>Page {pageNum}</span>
                               </div>
                             </div>
@@ -4797,9 +4797,9 @@ function AnnualMonthlyPlanningEditor({
   };
 
   const stepsList = [
-    { id: "class", label: "वर्ग", en: "Class" },
-    { id: "medium", label: "माध्यम", en: "Medium" },
-    { id: "planType", label: "प्रकार", en: "Plan Type" },
+    { id: "class", label: "αñ╡αñ░αÑìαñù", en: "Class" },
+    { id: "medium", label: "αñ«αñ╛αñºαÑìαñ»αñ«", en: "Medium" },
+    { id: "planType", label: "αñ¬αÑìαñ░αñòαñ╛αñ░", en: "Plan Type" },
   ] as const;
 
   return (
@@ -5004,7 +5004,7 @@ function AnnualMonthlyPlanningEditor({
             className="space-y-8"
           >
             <div className="text-center space-y-2">
-              <h2 className="text-3xl font-black text-slate-900 tracking-tight">Select Class / इयत्ता निवडा</h2>
+              <h2 className="text-3xl font-black text-slate-900 tracking-tight">Select Class / αñçαñ»αññαÑìαññαñ╛ αñ¿αñ┐αñ╡αñíαñ╛</h2>
               <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest">Step 2: Choose the target standard</p>
             </div>
 
@@ -5036,13 +5036,13 @@ function AnnualMonthlyPlanningEditor({
                       {cls}
                     </div>
                     <div>
-                      <h4 className="font-black text-lg text-white">इयत्ता {classNames[cls]?.mr}</h4>
+                      <h4 className="font-black text-lg text-white">αñçαñ»αññαÑìαññαñ╛ {classNames[cls]?.mr}</h4>
                       <p className="text-[10px] text-violet-100/70 font-black uppercase tracking-widest mt-1">
                         {classNames[cls]?.en}
                       </p>
                     </div>
                     <div className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-violet-200 mt-2 opacity-80 group-hover:opacity-100 transition-opacity">
-                      प्रवेश करा <span className="transform group-hover:translate-x-1 transition-transform">→</span>
+                      αñ¬αÑìαñ░αñ╡αÑçαñ╢ αñòαñ░αñ╛ <span className="transform group-hover:translate-x-1 transition-transform">ΓåÆ</span>
                     </div>
                   </motion.button>
                 );
@@ -5060,7 +5060,7 @@ function AnnualMonthlyPlanningEditor({
             className="space-y-8"
           >
             <div className="text-center space-y-2">
-              <h2 className="text-3xl font-black text-slate-900 tracking-tight">Select Medium / माध्यम निवडा</h2>
+              <h2 className="text-3xl font-black text-slate-900 tracking-tight">Select Medium / αñ«αñ╛αñºαÑìαñ»αñ« αñ¿αñ┐αñ╡αñíαñ╛</h2>
               <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest">
                 Class: {selectedClass ? `${classNames[selectedClass as string]?.mr} (${classNames[selectedClass as string]?.en})` : ""}
               </p>
@@ -5103,7 +5103,7 @@ function AnnualMonthlyPlanningEditor({
                 onClick={() => setStep("class")}
                 className="flex items-center gap-2 text-indigo-600 hover:text-indigo-900 text-xs font-black uppercase tracking-wider transition-colors cursor-pointer"
               >
-                <ChevronLeft className="size-4" /> मागे जा / Back
+                <ChevronLeft className="size-4" /> αñ«αñ╛αñùαÑç αñ£αñ╛ / Back
               </button>
             </div>
           </motion.div>
@@ -5119,7 +5119,7 @@ function AnnualMonthlyPlanningEditor({
             className="space-y-8"
           >
             <div className="text-center space-y-2">
-              <h2 className="text-3xl font-black text-slate-900 tracking-tight">Select Type / प्रकार निवडा</h2>
+              <h2 className="text-3xl font-black text-slate-900 tracking-tight">Select Type / αñ¬αÑìαñ░αñòαñ╛αñ░ αñ¿αñ┐αñ╡αñíαñ╛</h2>
               <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest">
                 Class: {selectedClass ? `${classNames[selectedClass as string]?.mr}` : ""} | Medium: {selectedMedium}
               </p>
@@ -5128,7 +5128,7 @@ function AnnualMonthlyPlanningEditor({
             <div className="flex items-center gap-3">
               <div className="size-7 rounded-full bg-[#8b5cf6] text-white flex items-center justify-center font-black text-xs">3</div>
               <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-800">
-                PLANNING FILES / नियोजन फाइल्स
+                PLANNING FILES / αñ¿αñ┐αñ»αÑïαñ£αñ¿ αñ½αñ╛αñçαñ▓αÑìαñ╕
               </h3>
             </div>
 
@@ -5147,7 +5147,7 @@ function AnnualMonthlyPlanningEditor({
                   </div>
                   <div>
                     <p className="text-xl font-black text-white leading-snug">Annual Planning</p>
-                    <p className="text-[11px] text-violet-100/70 font-semibold mt-1">वार्षिक नियोजन | इयत्ता {classNames[selectedClass as string]?.mr}</p>
+                    <p className="text-[11px] text-violet-100/70 font-semibold mt-1">αñ╡αñ╛αñ░αÑìαñ╖αñ┐αñò αñ¿αñ┐αñ»αÑïαñ£αñ¿ | αñçαñ»αññαÑìαññαñ╛ {classNames[selectedClass as string]?.mr}</p>
                   </div>
                 </div>
 
@@ -5184,7 +5184,7 @@ function AnnualMonthlyPlanningEditor({
                   </div>
                   <div>
                     <p className="text-xl font-black text-white leading-snug">Monthly Planning</p>
-                    <p className="text-[11px] text-violet-100/70 font-semibold mt-1">मासिक नियोजन | इयत्ता {classNames[selectedClass as string]?.mr}</p>
+                    <p className="text-[11px] text-violet-100/70 font-semibold mt-1">αñ«αñ╛αñ╕αñ┐αñò αñ¿αñ┐αñ»αÑïαñ£αñ¿ | αñçαñ»αññαÑìαññαñ╛ {classNames[selectedClass as string]?.mr}</p>
                   </div>
                 </div>
 
@@ -5195,7 +5195,7 @@ function AnnualMonthlyPlanningEditor({
                     className="w-full py-3 px-4 bg-white text-indigo-900 rounded-2xl text-[10px] font-black uppercase tracking-wider hover:bg-violet-100 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
                   >
                     <Calendar className="size-3.5" />
-                    Select Month / महिना निवडा
+                    Select Month / αñ«αñ╣αñ┐αñ¿αñ╛ αñ¿αñ┐αñ╡αñíαñ╛
                   </button>
                 </div>
               </div>
@@ -5214,7 +5214,7 @@ function AnnualMonthlyPlanningEditor({
                   </div>
                   <div>
                     <p className="text-xl font-black text-white leading-snug">Question Bank</p>
-                    <p className="text-[11px] text-violet-100/70 font-semibold mt-1">प्रश्नपेढी | इयत्ता {classNames[selectedClass as string]?.mr}</p>
+                    <p className="text-[11px] text-violet-100/70 font-semibold mt-1">αñ¬αÑìαñ░αñ╢αÑìαñ¿αñ¬αÑçαñóαÑÇ | αñçαñ»αññαÑìαññαñ╛ {classNames[selectedClass as string]?.mr}</p>
                   </div>
                 </div>
 
@@ -5258,7 +5258,7 @@ function AnnualMonthlyPlanningEditor({
                 onClick={() => setStep("medium")}
                 className="flex items-center gap-2 text-indigo-600 hover:text-indigo-900 text-xs font-black uppercase tracking-wider transition-colors cursor-pointer"
               >
-                <ChevronLeft className="size-4" /> मागे जा / Back
+                <ChevronLeft className="size-4" /> αñ«αñ╛αñùαÑç αñ£αñ╛ / Back
               </button>
             </div>
           </motion.div>
@@ -5273,7 +5273,7 @@ function AnnualMonthlyPlanningEditor({
             className="space-y-8"
           >
             <div className="text-center space-y-2">
-              <h2 className="text-3xl font-black text-slate-900 tracking-tight">Select Month / महिना निवडा</h2>
+              <h2 className="text-3xl font-black text-slate-900 tracking-tight">Select Month / αñ«αñ╣αñ┐αñ¿αñ╛ αñ¿αñ┐αñ╡αñíαñ╛</h2>
               <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest">
                 Class: {selectedClass ? `${classNames[selectedClass as string]?.mr}` : ""} | Medium: {selectedMedium}
               </p>
@@ -5314,7 +5314,7 @@ function AnnualMonthlyPlanningEditor({
                 onClick={() => setStep("planType")}
                 className="flex items-center gap-2 text-indigo-600 hover:text-indigo-900 text-xs font-black uppercase tracking-wider transition-colors cursor-pointer"
               >
-                <ChevronLeft className="size-4" /> मागे जा / Back
+                <ChevronLeft className="size-4" /> αñ«αñ╛αñùαÑç αñ£αñ╛ / Back
               </button>
             </div>
           </motion.div>
@@ -5338,7 +5338,7 @@ function AnnualMonthlyPlanningEditor({
                 </div>
                 <div>
                   <h3 className="font-black text-base text-[#D6B97A]">
-                    {viewingPlan === "annual" ? "Annual Planning Preview (वार्षिक नियोजन)" : "Monthly Planning Preview (मासिक नियोजन)"}
+                    {viewingPlan === "annual" ? "Annual Planning Preview (αñ╡αñ╛αñ░αÑìαñ╖αñ┐αñò αñ¿αñ┐αñ»αÑïαñ£αñ¿)" : "Monthly Planning Preview (αñ«αñ╛αñ╕αñ┐αñò αñ¿αñ┐αñ»αÑïαñ£αñ¿)"}
                   </h3>
                   <p className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">
                     Class: {selectedClass ? classNames[selectedClass as string]?.mr : ""} | Medium: {selectedMedium}
@@ -5358,7 +5358,7 @@ function AnnualMonthlyPlanningEditor({
                   onClick={() => setViewingPlan(null)}
                   className="size-10 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-900 transition-colors cursor-pointer border border-slate-200"
                 >
-                  ✕
+                  Γ£ò
                 </button>
               </div>
             </div>
@@ -5366,7 +5366,7 @@ function AnnualMonthlyPlanningEditor({
             {/* Config panel / Dynamic Editor inputs */}
             <div className="bg-slate-50 p-6 md:p-8 border-b border-slate-200 grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-2">
-                <label className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em]">School Name / शाळेचे नाव</label>
+                <label className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em]">School Name / αñ╢αñ╛αñ│αÑçαñÜαÑç αñ¿αñ╛αñ╡</label>
                 <input
                   type="text"
                   value={safeData.schoolName}
@@ -5376,7 +5376,7 @@ function AnnualMonthlyPlanningEditor({
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em]">Academic Year / शैक्षणिक वर्ष</label>
+                <label className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em]">Academic Year / αñ╢αÑêαñòαÑìαñ╖αñúαñ┐αñò αñ╡αñ░αÑìαñ╖</label>
                 <input
                   type="text"
                   value={safeData.academicYear}
@@ -5386,7 +5386,7 @@ function AnnualMonthlyPlanningEditor({
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em]">Class Teacher / वर्गशिक्षक</label>
+                <label className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em]">Class Teacher / αñ╡αñ░αÑìαñùαñ╢αñ┐αñòαÑìαñ╖αñò</label>
                 <input
                   type="text"
                   value={safeData.classTeacher}
@@ -5564,19 +5564,19 @@ function TeachingDiaryManager({
   };
 
   const classes = [
-    { id: "Class 1", badge: "1ST", mr: "इयत्ता पहिली", color: "from-blue-500 to-indigo-600" },
-    { id: "Class 2", badge: "2ND", mr: "इयत्ता दुसरी", color: "from-purple-500 to-indigo-600" },
-    { id: "Class 3", badge: "3RD", mr: "इयत्ता तिसरी", color: "from-pink-500 to-rose-600" },
-    { id: "Class 4", badge: "4TH", mr: "इयत्ता चौथी", color: "from-amber-500 to-orange-600" },
-    { id: "Class 5", badge: "5TH", mr: "इयत्ता पाचवी", color: "from-emerald-500 to-teal-600" },
-    { id: "Class 6", badge: "6TH", mr: "इयत्ता सहावी", color: "from-cyan-500 to-blue-600" },
-    { id: "Class 7", badge: "7TH", mr: "इयत्ता सातवी", color: "from-indigo-500 to-violet-600" },
-    { id: "Class 8", badge: "8TH", mr: "इयत्ता आठवी", color: "from-slate-600 to-slate-800" },
+    { id: "Class 1", badge: "1ST", mr: "αñçαñ»αññαÑìαññαñ╛ αñ¬αñ╣αñ┐αñ▓αÑÇ", color: "from-blue-500 to-indigo-600" },
+    { id: "Class 2", badge: "2ND", mr: "αñçαñ»αññαÑìαññαñ╛ αñªαÑüαñ╕αñ░αÑÇ", color: "from-purple-500 to-indigo-600" },
+    { id: "Class 3", badge: "3RD", mr: "αñçαñ»αññαÑìαññαñ╛ αññαñ┐αñ╕αñ░αÑÇ", color: "from-pink-500 to-rose-600" },
+    { id: "Class 4", badge: "4TH", mr: "αñçαñ»αññαÑìαññαñ╛ αñÜαÑîαñÑαÑÇ", color: "from-amber-500 to-orange-600" },
+    { id: "Class 5", badge: "5TH", mr: "αñçαñ»αññαÑìαññαñ╛ αñ¬αñ╛αñÜαñ╡αÑÇ", color: "from-emerald-500 to-teal-600" },
+    { id: "Class 6", badge: "6TH", mr: "αñçαñ»αññαÑìαññαñ╛ αñ╕αñ╣αñ╛αñ╡αÑÇ", color: "from-cyan-500 to-blue-600" },
+    { id: "Class 7", badge: "7TH", mr: "αñçαñ»αññαÑìαññαñ╛ αñ╕αñ╛αññαñ╡αÑÇ", color: "from-indigo-500 to-violet-600" },
+    { id: "Class 8", badge: "8TH", mr: "αñçαñ»αññαÑìαññαñ╛ αñåαñáαñ╡αÑÇ", color: "from-slate-600 to-slate-800" },
   ];
 
   const mediums = [
-    { id: "Marathi", badge: "M", title: "MARATHI", mr: "मराठी माध्यम" },
-    { id: "Semi English", badge: "S", title: "SEMI ENGLISH", mr: "सेमी इंग्रजी" },
+    { id: "Marathi", badge: "M", title: "MARATHI", mr: "αñ«αñ░αñ╛αñáαÑÇ αñ«αñ╛αñºαÑìαñ»αñ«" },
+    { id: "Semi English", badge: "S", title: "SEMI ENGLISH", mr: "αñ╕αÑçαñ«αÑÇ αñçαñéαñùαÑìαñ░αñ£αÑÇ" },
   ];
 
   return (
@@ -5592,7 +5592,7 @@ function TeachingDiaryManager({
             className="space-y-6"
           >
             <div className="text-center space-y-1">
-              <h3 className="text-2xl font-black text-slate-800">Select Class / वर्ग निवडा</h3>
+              <h3 className="text-2xl font-black text-slate-800">Select Class / αñ╡αñ░αÑìαñù αñ¿αñ┐αñ╡αñíαñ╛</h3>
               <p className="text-xs font-bold text-indigo-600 uppercase tracking-wider">Step 1: Standard Selection</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto w-full">
@@ -5628,7 +5628,7 @@ function TeachingDiaryManager({
             className="space-y-6"
           >
             <div className="text-center space-y-1">
-              <h3 className="text-2xl font-black text-slate-800">Select Medium / माध्यम निवडा</h3>
+              <h3 className="text-2xl font-black text-slate-800">Select Medium / αñ«αñ╛αñºαÑìαñ»αñ« αñ¿αñ┐αñ╡αñíαñ╛</h3>
               <p className="text-xs font-bold text-indigo-600 uppercase tracking-wider">Class Selected: {selectedClass}</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl mx-auto w-full">
@@ -5809,7 +5809,7 @@ function TeachingDiaryManager({
 
               {isFullscreen && (
                 <div className="absolute top-4 left-4 bg-black/60 px-3 py-1.5 rounded-lg text-white text-[10px] font-bold">
-                  {selectedClass} — {selectedMedium} — {format(selectedDate, "dd/MM/yyyy")}
+                  {selectedClass} ΓÇö {selectedMedium} ΓÇö {format(selectedDate, "dd/MM/yyyy")}
                 </div>
               )}
             </div>
