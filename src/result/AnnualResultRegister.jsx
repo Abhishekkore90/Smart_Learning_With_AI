@@ -3,7 +3,8 @@ import { ArrowLeft, Printer, Loader2, RefreshCw } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { getTeacherId } from "@/lib/teacherIsolationHelper";
-import { fetchStudentsForClass, getDefaultSubjectsForClass } from "./firestoreMarksHelper";
+import { fetchStudentsForClass } from "./firestoreMarksHelper";
+import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
 
 // Marathi Grade Calculation Helper
 const getMarathiGrade = (percent) => {
