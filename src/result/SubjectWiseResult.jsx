@@ -52,68 +52,80 @@ const OutcomeTable = ({ title, outcomes, subjectName, getUserSelectedLevel, stud
 
   return (
     <div className="mb-3">
+      {/* Subject Title Banner */}
       <h3
-        className="text-xs font-black text-blue-950 mb-1 text-center bg-blue-100/90 py-1 rounded border border-blue-300"
+        className="text-sm font-black text-slate-900 mb-2.5 text-center bg-amber-100 py-1.5 rounded-lg border border-amber-300 shadow-sm"
         style={{ breakAfter: "avoid", pageBreakAfter: "avoid" }}
       >
         {title}
       </h3>
-      <table className="w-full border-collapse border border-blue-400 text-xs font-medium table-fixed">
-        <colgroup>
-          <col style={{ width: "65px" }} />
-          <col style={{ width: "auto" }} />
-          <col style={{ width: "30px" }} />
-          <col style={{ width: "30px" }} />
-          <col style={{ width: "30px" }} />
-          <col style={{ width: "30px" }} />
-        </colgroup>
-        <thead style={{ display: "table-header-group", breakAfter: "avoid", pageBreakAfter: "avoid" }}>
-          <tr className="bg-blue-100 text-blue-950 font-bold text-center text-[10px]">
-            <th rowSpan={2} style={{ width: "65px", minWidth: "65px", maxWidth: "65px" }} className="border border-blue-400 p-0.5 text-center align-middle leading-tight">
-              अध्ययन<br />निष्पत्ती क्र.
-            </th>
-            <th rowSpan={2} style={{ width: "auto" }} className="border border-blue-400 p-1 text-left align-middle">
-              अध्ययन निष्पत्ती
-            </th>
-            <th colSpan={4} style={{ width: "120px", minWidth: "120px", maxWidth: "120px" }} className="border border-blue-400 p-0.5 text-center align-middle">
+
+      {/* Flexbox Container for Outcomes Table */}
+      <div className="w-full border border-slate-400 rounded-lg overflow-hidden bg-white">
+        {/* Table Header Row (Flexbox) */}
+        <div className="flex bg-slate-100 text-slate-900 font-bold border-b border-slate-400 text-[11px]">
+          {/* Column 1: Outcome Code */}
+          <div className="w-[70px] min-w-[70px] border-r border-slate-400 p-2 flex items-center justify-center text-center font-black leading-tight">
+            अध्ययन<br />निष्पत्ती क्र.
+          </div>
+
+          {/* Column 2: Outcome Text */}
+          <div className="flex-1 border-r border-slate-400 p-2 flex items-center font-black text-[11.5px]">
+            अध्ययन निष्पत्ती
+          </div>
+
+          {/* Column 3: Levels Header (Flex Column with Sub-headers) */}
+          <div className="w-[128px] min-w-[128px] flex flex-col">
+            <div className="border-b border-slate-400 p-1 text-center font-black text-[11px]">
               स्तर
-            </th>
-          </tr>
-          <tr className="bg-blue-50 text-blue-950 font-bold text-center text-[9px]">
-            <th style={{ width: "30px", minWidth: "30px", maxWidth: "30px" }} className="border border-blue-400 p-0.5 text-center">1</th>
-            <th style={{ width: "30px", minWidth: "30px", maxWidth: "30px" }} className="border border-blue-400 p-0.5 text-center">2</th>
-            <th style={{ width: "30px", minWidth: "30px", maxWidth: "30px" }} className="border border-blue-400 p-0.5 text-center">3</th>
-            <th style={{ width: "30px", minWidth: "30px", maxWidth: "30px" }} className="border border-blue-400 p-0.5 text-center">4</th>
-          </tr>
-        </thead>
-        <tbody>
-          {outcomes.map((item) => {
-            const level = getUserSelectedLevel(student, item.code, subjectName);
-            return (
-              <tr key={item.code} className="border-b border-blue-300 hover:bg-slate-50" style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
-                <td style={{ width: "65px", minWidth: "65px", maxWidth: "65px" }} className="border border-blue-400 py-0.5 px-0.5 text-center font-bold text-slate-900 text-[10px] whitespace-nowrap align-middle">
-                  {item.code}
-                </td>
-                <td style={{ width: "auto" }} className="border border-blue-400 py-0.5 px-1.5 text-slate-800 text-[10px] leading-tight break-words align-middle">
-                  {item.text}
-                </td>
-                <td style={{ width: "30px", minWidth: "30px", maxWidth: "30px" }} className="border border-blue-400 p-0 text-center font-black text-blue-700 text-[11px] align-middle">
+            </div>
+            <div className="flex flex-1 text-[10.5px]">
+              <div className="w-1/4 border-r border-slate-400 py-1 flex items-center justify-center font-bold">1</div>
+              <div className="w-1/4 border-r border-slate-400 py-1 flex items-center justify-center font-bold">2</div>
+              <div className="w-1/4 border-r border-slate-400 py-1 flex items-center justify-center font-bold">3</div>
+              <div className="w-1/4 py-1 flex items-center justify-center font-bold">4</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Table Body Rows (Flexbox) */}
+        {outcomes.map((item, idx) => {
+          const level = getUserSelectedLevel(student, item.code, subjectName);
+          const isLast = idx === outcomes.length - 1;
+          return (
+            <div
+              key={item.code}
+              className={`flex ${!isLast ? "border-b border-slate-300" : ""}`}
+            >
+              {/* Code */}
+              <div className="w-[70px] min-w-[70px] border-r border-slate-300 p-1.5 flex items-center justify-center text-center font-bold text-slate-900 text-[10px] whitespace-nowrap">
+                {item.code}
+              </div>
+
+              {/* Text */}
+              <div className="flex-1 border-r border-slate-300 p-1.5 px-2 flex items-center text-slate-900 text-[11px] font-medium leading-snug">
+                {item.text}
+              </div>
+
+              {/* Level Ticks */}
+              <div className="w-[128px] min-w-[128px] flex text-[13px] font-black text-blue-700">
+                <div className="w-1/4 border-r border-slate-300 flex items-center justify-center">
                   {level === 1 ? "✓" : ""}
-                </td>
-                <td style={{ width: "30px", minWidth: "30px", maxWidth: "30px" }} className="border border-blue-400 p-0 text-center font-black text-blue-700 text-[11px] align-middle">
+                </div>
+                <div className="w-1/4 border-r border-slate-300 flex items-center justify-center">
                   {level === 2 ? "✓" : ""}
-                </td>
-                <td style={{ width: "30px", minWidth: "30px", maxWidth: "30px" }} className="border border-blue-400 p-0 text-center font-black text-blue-700 text-[11px] align-middle">
+                </div>
+                <div className="w-1/4 border-r border-slate-300 flex items-center justify-center">
                   {level === 3 ? "✓" : ""}
-                </td>
-                <td style={{ width: "30px", minWidth: "30px", maxWidth: "30px" }} className="border border-blue-400 p-0 text-center font-black text-blue-700 text-[11px] align-middle">
+                </div>
+                <div className="w-1/4 flex items-center justify-center">
                   {level === 4 ? "✓" : ""}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };
@@ -396,19 +408,42 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
   const handleDownloadPdf = async () => {
     if (!printRef.current) return;
     setDownloading(true);
-    toast.info("PDF निर्मिती सुरू आहे, कृपया वाट पाहा...");
+    toast.info("अध्ययन निष्पती PDF तयार होत आहे, कृपया वाट पाहा...");
     try {
-      const { default: html2pdf } = await import("html2pdf.js");
-      const element = printRef.current;
-      const opt = {
-        margin: [4, 4, 4, 4],
-        filename: `अध्ययन_निष्पत्ती_प्रगतीदर्शक_${selectedClass}_${academicYear}.pdf`,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        pagebreak: { mode: ["css", "legacy"] },
-      };
-      await html2pdf().set(opt).from(element).save();
+      const html2canvas = (await import("html2canvas")).default;
+      const { jsPDF } = await import("jspdf");
+
+      const pageElements = printRef.current.querySelectorAll(".pdf-page");
+      if (!pageElements || pageElements.length === 0) {
+        toast.error("कोणतेही पान सापडले नाही!");
+        setDownloading(false);
+        return;
+      }
+
+      const pdf = new jsPDF({
+        unit: "mm",
+        format: "a4",
+        orientation: "portrait",
+        compress: true,
+      });
+
+      for (let i = 0; i < pageElements.length; i++) {
+        const pageEl = pageElements[i];
+
+        const canvas = await html2canvas(pageEl, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: "#ffffff",
+        });
+
+        // Compressed high-efficiency JPEG encoding (keeps multi-page PDF < 10 MB)
+        const imgData = canvas.toDataURL("image/jpeg", 0.72);
+        if (i > 0) pdf.addPage();
+        pdf.addImage(imgData, "JPEG", 0, 0, 210, 297, undefined, "FAST");
+      }
+
+      pdf.save(`अध्ययन_निष्पत्ती_प्रगतीदर्शक_${selectedClass}_${academicYear}.pdf`);
       toast.success("PDF यशस्वीरित्या डाऊनलोड झाली!");
     } catch (err) {
       console.error("PDF generation error:", err);
@@ -528,34 +563,6 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
       }
     }
 
-    // 3. Derive level from student's entered subject marks if user filled marks
-    for (const stdKey of possibleStudentKeys) {
-      const stdMarks = marksData[stdKey];
-      if (stdMarks && typeof stdMarks === "object") {
-        let subMarks = null;
-        for (const subKey of possibleSubKeys) {
-          if (stdMarks[subKey]) {
-            subMarks = stdMarks[subKey];
-            break;
-          }
-        }
-        if (subMarks) {
-          const oral = Number(subMarks.oral || subMarks.tondiKaam || 0);
-          const act = Number(subMarks.activity || subMarks.upakramKriti || subMarks.pratyakshikPrayog || 0);
-          const test = Number(subMarks.test || subMarks.chaachaniLekhi || 0);
-          const semW = Number(subMarks.semesterWritten || subMarks.sankalitLekhi || 0);
-          const obtTotal = oral + act + test + semW;
-          if (obtTotal > 0) {
-            const pct = (obtTotal / 100) * 100;
-            if (pct >= 81) return 4;
-            if (pct >= 61) return 3;
-            if (pct >= 41) return 2;
-            return 1;
-          }
-        }
-      }
-    }
-
     return null;
   };
 
@@ -628,103 +635,82 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
 
       {/* -------------------- PRINT CONTAINER (CLASS-SPECIFIC OUTCOMES & USER SELECTED LEVELS) -------------------- */}
       <div ref={printRef} className="cce-pdf-container max-w-4xl mx-auto">
+        {students.map((student, sIdx) => {
+          const activeSubjectSections = [
+            { key: "मराठी", title: "प्रथम भाषा: मराठी", outcomes: marathiOutcomes, subjectName: "मराठी" },
+            { key: "हिंदी", title: "द्वितीय भाषा: हिंदी", outcomes: hindiOutcomes, subjectName: "हिंदी" },
+            { key: "गणित", title: "गणित", outcomes: mathsOutcomes, subjectName: "गणित" },
+            { key: "इंग्रजी", title: "तृतीय भाषा: इंग्रजी", outcomes: englishOutcomes, subjectName: "इंग्रजी" },
+            { key: "परिसर अभ्यास १", title: "परिसर अभ्यास १", outcomes: evs1Outcomes, subjectName: "परिसर अभ्यास १" },
+            { key: "परिसर अभ्यास २", title: "परिसर अभ्यास २", outcomes: evs2Outcomes, subjectName: "परिसर अभ्यास २" },
+            { key: "सामान्य विज्ञान", title: "सामान्य विज्ञान", outcomes: scienceOutcomes, subjectName: "सामान्य विज्ञान" },
+            { key: "इतिहास व नागरिकशास्त्र", title: "इतिहास व नागरिकशास्त्र", outcomes: historyOutcomes, subjectName: "इतिहास व नागरिकशास्त्र" },
+            { key: "भूगोल", title: "भूगोल", outcomes: geographyOutcomes, subjectName: "भूगोल" },
+            { key: "कला", title: "कला", outcomes: kalaOutcomes, subjectName: "कला" },
+            { key: "कार्यानुभव", title: "कार्यानुभव / कार्यशिक्षण", outcomes: karyanubhavOutcomes, subjectName: "कार्यानुभव" },
+            { key: "शारीरिक", title: "शारीरिक शिक्षण व आरोग्य", outcomes: sharirikOutcomes, subjectName: "शारीरिक" },
+          ].filter((sec) => isSubjectActive(sec.key) && sec.outcomes && sec.outcomes.length > 0);
 
-        {students.map((student, idx) => (
-          <div
-            key={student.id}
-            className="pdf-page bg-white p-5 border border-slate-200 rounded-2xl shadow-sm flex flex-col justify-between mb-4"
-            style={idx < students.length - 1 ? { pageBreakAfter: "always", breakAfter: "page" } : { pageBreakAfter: "auto", breakAfter: "auto" }}
-          >
-            <div>
-              {/* Header Title */}
-              <h1 className="text-xl font-black text-blue-900 text-center mb-4 border-b-2 border-blue-900 pb-2 tracking-tight">
-                अध्ययन निष्पत्तीनिहाय संपादणूक प्रगतीदर्शक नोंदतक्ता
-              </h1>
+          return activeSubjectSections.map((sec, subIdx) => {
+            const isFirstPage = sIdx === 0 && subIdx === 0;
+            return (
+              <div
+                key={`${student.id}_${sec.key}`}
+                className={`pdf-page bg-white p-5 border border-slate-200 rounded-xl shadow-sm flex flex-col justify-between mb-4 ${
+                  !isFirstPage ? "pdf-page-break" : ""
+                }`}
+                style={{
+                  minHeight: "275mm",
+                  boxSizing: "border-box",
+                  pageBreakBefore: isFirstPage ? "auto" : "always",
+                  breakBefore: isFirstPage ? "auto" : "page",
+                  pageBreakInside: "avoid",
+                  breakInside: "avoid",
+                }}
+              >
+                <div>
+                  {/* Header Title */}
+                  <h1 className="text-lg font-black text-blue-900 text-center mb-2.5 border-b-2 border-blue-900 pb-1 tracking-tight">
+                    अध्ययन निष्पत्तीनिहाय संपादणूक प्रगतीदर्शक नोंदतक्ता
+                  </h1>
 
-              {/* Student Metadata Bar */}
-              <div className="flex items-center justify-between text-xs font-extrabold text-slate-800 bg-blue-50/70 p-3 rounded-xl border border-blue-100 mb-6">
-                <span>विद्यार्थ्याचे नाव - <b className="text-blue-700">{student.name}</b></span>
-                <span>इयत्ता - <b>{selectedClass}</b></span>
-                <span>तुकडी - <b>{division}</b></span>
-                <span>हजेरी क्र. <b>{student.rollNo}</b></span>
-                <span>{selectedSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
+                  {/* Student Metadata Bar */}
+                  <div className="flex items-center justify-between text-xs font-black text-slate-800 bg-slate-100 p-2.5 px-3.5 rounded-lg border border-slate-300 mb-3">
+                    <span>विद्यार्थ्याचे नाव - <b className="text-slate-900 font-black">{student.name}</b></span>
+                    <span>इयत्ता - <b>{selectedClass}</b></span>
+                    <span>तुकडी - <b>{division}</b></span>
+                    <span>हजेरी क्र. <b>{student.rollNo}</b></span>
+                    <span>{selectedSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
+                  </div>
+
+                  {/* Single Subject Table on New Dedicated Page */}
+                  <OutcomeTable
+                    title={sec.title}
+                    outcomes={sec.outcomes}
+                    subjectName={sec.subjectName}
+                    getUserSelectedLevel={getUserSelectedLevel}
+                    student={student}
+                  />
+                </div>
+
+                {/* Signatures Footer */}
+                <div
+                  className="flex items-center justify-between pt-2.5 border-t border-slate-200 mt-2 text-[11px] font-bold text-slate-800"
+                  style={{ breakInside: "avoid", pageBreakInside: "avoid" }}
+                >
+                  <div className="text-center">
+                    <p className="font-extrabold">{schoolData.teacherName || "वर्गशिक्षक"}</p>
+                    <p className="text-[10px] text-slate-500 font-medium">वर्गशिक्षक</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="font-extrabold">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
+                    <p className="text-[10px] text-slate-500 font-medium">मुख्याध्यापक</p>
+                  </div>
+                </div>
               </div>
-
-              {/* 1. प्रथम भाषा: मराठी Section */}
-              {isSubjectActive("मराठी") && (
-                <OutcomeTable title="प्रथम भाषा: मराठी" outcomes={marathiOutcomes} subjectName="मराठी" getUserSelectedLevel={getUserSelectedLevel} student={student} />
-              )}
-
-              {/* 2. द्वितीय भाषा: हिंदी Section */}
-              {isSubjectActive("हिंदी") && (
-                <OutcomeTable title="द्वितीय भाषा: हिंदी" outcomes={hindiOutcomes} subjectName="हिंदी" getUserSelectedLevel={getUserSelectedLevel} student={student} />
-              )}
-
-              {/* 3. गणित Section */}
-              {isSubjectActive("गणित") && (
-                <OutcomeTable title="गणित" outcomes={mathsOutcomes} subjectName="गणित" getUserSelectedLevel={getUserSelectedLevel} student={student} />
-              )}
-
-              {/* 4. तृतीय भाषा: इंग्रजी Section */}
-              {isSubjectActive("इंग्रजी") && (
-                <OutcomeTable title="तृतीय भाषा: इंग्रजी" outcomes={englishOutcomes} subjectName="इंग्रजी" getUserSelectedLevel={getUserSelectedLevel} student={student} />
-              )}
-
-              {/* 5. परिसर अभ्यास १ Section */}
-              {isSubjectActive("परिसर अभ्यास १") && (
-                <OutcomeTable title="परिसर अभ्यास १" outcomes={evs1Outcomes} subjectName="परिसर अभ्यास १" getUserSelectedLevel={getUserSelectedLevel} student={student} />
-              )}
-
-              {/* 6. परिसर अभ्यास २ Section */}
-              {isSubjectActive("परिसर अभ्यास २") && (
-                <OutcomeTable title="परिसर अभ्यास २" outcomes={evs2Outcomes} subjectName="परिसर अभ्यास २" getUserSelectedLevel={getUserSelectedLevel} student={student} />
-              )}
-
-              {/* 7. सामान्य विज्ञान Section */}
-              {isSubjectActive("सामान्य विज्ञान") && (
-                <OutcomeTable title="सामान्य विज्ञान" outcomes={scienceOutcomes} subjectName="सामान्य विज्ञान" getUserSelectedLevel={getUserSelectedLevel} student={student} />
-              )}
-
-              {/* 8. इतिहास व नागरिकशास्त्र Section */}
-              {isSubjectActive("इतिहास व नागरिकशास्त्र") && (
-                <OutcomeTable title="इतिहास व नागरिकशास्त्र" outcomes={historyOutcomes} subjectName="इतिहास व नागरिकशास्त्र" getUserSelectedLevel={getUserSelectedLevel} student={student} />
-              )}
-
-              {/* 9. भूगोल Section */}
-              {isSubjectActive("भूगोल") && (
-                <OutcomeTable title="भूगोल" outcomes={geographyOutcomes} subjectName="भूगोल" getUserSelectedLevel={getUserSelectedLevel} student={student} />
-              )}
-
-              {/* 10. कला Section */}
-              {isSubjectActive("कला") && (
-                <OutcomeTable title="कला" outcomes={kalaOutcomes} subjectName="कला" getUserSelectedLevel={getUserSelectedLevel} student={student} />
-              )}
-
-              {/* 11. कार्यानुभव / कार्यशिक्षण Section */}
-              {isSubjectActive("कार्यानुभव") && (
-                <OutcomeTable title="कार्यानुभव / कार्यशिक्षण" outcomes={karyanubhavOutcomes} subjectName="कार्यानुभव" getUserSelectedLevel={getUserSelectedLevel} student={student} />
-              )}
-
-              {/* 12. शारीरिक शिक्षण व आरोग्य Section */}
-              {isSubjectActive("शारीरिक") && (
-                <OutcomeTable title="शारीरिक शिक्षण व आरोग्य" outcomes={sharirikOutcomes} subjectName="शारीरिक" getUserSelectedLevel={getUserSelectedLevel} student={student} />
-              )}
-            </div>
-
-            {/* Signatures */}
-            <div className="flex items-center justify-between pt-6 border-t border-slate-200 mt-6 text-xs font-bold text-slate-800">
-              <div className="text-center">
-                <p className="font-extrabold">{schoolData.teacherName || "वर्गशिक्षक"}</p>
-                <p className="text-[11px] text-slate-500 font-medium">वर्गशिक्षक</p>
-              </div>
-              <div className="text-center">
-                <p className="font-extrabold">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
-                <p className="text-[11px] text-slate-500 font-medium">मुख्याध्यापक</p>
-              </div>
-            </div>
-          </div>
-        ))}
-
+            );
+          });
+        })}
       </div>
     </div>
   );

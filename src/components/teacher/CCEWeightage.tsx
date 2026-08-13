@@ -69,10 +69,28 @@ const getSubjectKeyFallback = (subjectName: string): string => {
 const ensureSubjectWeightages = (item: WeightageItem, dynamicSubjects: string[]): WeightageItem => {
   const subjects = item.subjects || {};
   dynamicSubjects.forEach((sub) => {
+    const isPracticalSub =
+      sub.includes("कला") ||
+      sub.includes("कार्यानुभव") ||
+      sub.includes("शारीरिक");
+
     if (!subjects[sub]) {
       const oldKey = getSubjectKeyFallback(sub);
       if (subjects[oldKey]) {
         subjects[sub] = subjects[oldKey];
+      } else if (isPracticalSub) {
+        subjects[sub] = {
+          tondiKaam: "10",
+          pratyakshikPrayog: "20",
+          upakramKriti: "20",
+          prakalpa: "20",
+          chaachaniLekhi: "10",
+          swadhyayVargakarya: "10",
+          itar: "10",
+          sankalitTondi: "0",
+          sankalitPratyakshik: "0",
+          sankalitLekhi: "0",
+        };
       } else {
         subjects[sub] = {
           tondiKaam: "",
@@ -86,6 +104,21 @@ const ensureSubjectWeightages = (item: WeightageItem, dynamicSubjects: string[])
           sankalitPratyakshik: "",
           sankalitLekhi: "",
         };
+      }
+    }
+
+    if (isPracticalSub && subjects[sub]) {
+      subjects[sub].sankalitTondi = "0";
+      subjects[sub].sankalitPratyakshik = "0";
+      subjects[sub].sankalitLekhi = "0";
+      if (getAkarikTotal(subjects[sub]) === 0) {
+        subjects[sub].tondiKaam = "10";
+        subjects[sub].pratyakshikPrayog = "20";
+        subjects[sub].upakramKriti = "20";
+        subjects[sub].prakalpa = "20";
+        subjects[sub].chaachaniLekhi = "10";
+        subjects[sub].swadhyayVargakarya = "10";
+        subjects[sub].itar = "10";
       }
     }
   });
@@ -290,6 +323,32 @@ export function CCEWeightage({
   }, [selectedClass]);
 
   const save = async () => {
+    // Validate all items in activeSemester before saving
+    for (const item of data[activeSemester]) {
+      for (const sub of dynamicSubjects) {
+        const subWeightage = item.subjects[sub];
+        if (!subWeightage) continue;
+
+        const subExpected = getExpectedMarks(selectedClass, sub);
+        const subAkarik = getAkarikTotal(subWeightage);
+        const subSankalit = getSankalitTotal(subWeightage);
+
+        if (subAkarik !== subExpected.akarik) {
+          toast.error(
+            `'${item.name}' मध्ये '${sub}' विषयासाठी आकारिक घटकांची एकूण बेरीज अचूक ${subExpected.akarik} असावी! (सध्या: ${subAkarik})`
+          );
+          return;
+        }
+
+        if (subExpected.sankalit > 0 && subSankalit !== subExpected.sankalit) {
+          toast.error(
+            `'${item.name}' मध्ये '${sub}' विषयासाठी संकलित घटकांची एकूण बेरीज अचूक ${subExpected.sankalit} असावी! (सध्या: ${subSankalit})`
+          );
+          return;
+        }
+      }
+    }
+
     setSaving(true);
     try {
       const teacherId = getTeacherId();
@@ -308,6 +367,7 @@ export function CCEWeightage({
       try {
         localStorage.setItem(`cce_weightage_cache_${docKey}`, JSON.stringify(data));
         localStorage.setItem(`cce_weightage_cache_${generalKey}`, JSON.stringify(data));
+        window.dispatchEvent(new Event("cce_weightage_updated"));
       } catch (e) { }
 
       await setDoc(doc(db, "cce_weightage_v2", docKey), weightageDoc, { merge: true });
@@ -363,6 +423,7 @@ export function CCEWeightage({
     try {
       localStorage.setItem(`cce_weightage_cache_${docKey}`, JSON.stringify(updatedData));
       localStorage.setItem(`cce_weightage_cache_${generalKey}`, JSON.stringify(updatedData));
+      window.dispatchEvent(new Event("cce_weightage_updated"));
     } catch (e) { }
 
     await setDoc(doc(db, "cce_weightage_v2", docKey), docData, { merge: true });
@@ -431,12 +492,53 @@ export function CCEWeightage({
       sankalitLekhi: "",
     };
 
-    const updateField = (field: keyof SubjectWeightage, val: string) => {
+    const currSub = dynamicSubjects[subjectIndex] || "";
+    const expectedMarks = getExpectedMarks(selectedClass, currSub);
+
+    const updateField = (field: keyof SubjectWeightage, rawVal: string) => {
+      const akarikFields: (keyof SubjectWeightage)[] = [
+        "tondiKaam",
+        "pratyakshikPrayog",
+        "upakramKriti",
+        "prakalpa",
+        "chaachaniLekhi",
+        "swadhyayVargakarya",
+        "itar",
+      ];
+      const sankalitFields: (keyof SubjectWeightage)[] = [
+        "sankalitTondi",
+        "sankalitPratyakshik",
+        "sankalitLekhi",
+      ];
+
+      const isAkarik = akarikFields.includes(field);
+      const isSankalit = sankalitFields.includes(field);
+      const maxLimit = isAkarik ? expectedMarks.akarik : isSankalit ? expectedMarks.sankalit : 100;
+
+      const numVal = parseInt(rawVal) || 0;
+      let finalVal = rawVal;
+
+      if (rawVal !== "" && maxLimit > 0) {
+        const fieldsGroup = isAkarik ? akarikFields : sankalitFields;
+        const otherFieldsSum = fieldsGroup
+          .filter((f) => f !== field)
+          .reduce((sum, f) => sum + (parseInt(sw[f]) || 0), 0);
+
+        const maxAllowedForThisField = Math.max(0, maxLimit - otherFieldsSum);
+
+        if (numVal > maxAllowedForThisField) {
+          finalVal = String(maxAllowedForThisField);
+          toast.warning(
+            `मर्यादा पूर्ण! (शिल्लक मर्यादा: ${maxAllowedForThisField} गुण ऑटो-सेट केले)`
+          );
+        }
+      }
+
       const updatedSubjects = {
         ...editingItem.subjects,
         [currentSubject]: {
           ...sw,
-          [field]: val,
+          [field]: finalVal,
         },
       };
       setEditingItem({
@@ -445,12 +547,38 @@ export function CCEWeightage({
       });
     };
 
-    const currSub = dynamicSubjects[subjectIndex] || "";
-    const expectedMarks = getExpectedMarks(selectedClass, currSub);
     const akarikSum = getAkarikTotal(sw);
     const sankalitSum = getSankalitTotal(sw);
 
     const handleSaveItem = async (saveAndClose: boolean = false) => {
+      // Validate every subject in editingItem before saving
+      for (const sub of dynamicSubjects) {
+        const subWeightage = editingItem.subjects[sub];
+        if (!subWeightage) continue;
+
+        const subExpected = getExpectedMarks(selectedClass, sub);
+        const subAkarik = getAkarikTotal(subWeightage);
+        const subSankalit = getSankalitTotal(subWeightage);
+
+        if (subAkarik !== subExpected.akarik) {
+          toast.error(
+            `'${sub}' विषयासाठी आकारिक घटकांची एकूण बेरीज अचूक ${subExpected.akarik} असावी! (सध्या: ${subAkarik})`
+          );
+          const subIdx = dynamicSubjects.indexOf(sub);
+          if (subIdx >= 0) setSubjectIndex(subIdx);
+          return;
+        }
+
+        if (subExpected.sankalit > 0 && subSankalit !== subExpected.sankalit) {
+          toast.error(
+            `'${sub}' विषयासाठी संकलित घटकांची एकूण बेरीज अचूक ${subExpected.sankalit} असावी! (सध्या: ${subSankalit})`
+          );
+          const subIdx = dynamicSubjects.indexOf(sub);
+          if (subIdx >= 0) setSubjectIndex(subIdx);
+          return;
+        }
+      }
+
       const nameToSave = editingItem.name.trim() || `भारांश निश्चिती ${data[activeSemester].length + 1}`;
       const itemToSave = { ...editingItem, name: nameToSave };
 
@@ -544,9 +672,11 @@ export function CCEWeightage({
               <span className={`px-2.5 py-1 rounded-xl border ${akarikSum === expectedMarks.akarik ? "bg-emerald-100 text-emerald-800 border-emerald-300" : "bg-amber-100 text-amber-800 border-amber-300"}`}>
                 आकारिक: {akarikSum} / {expectedMarks.akarik}
               </span>
-              <span className={`px-2.5 py-1 rounded-xl border ${sankalitSum === expectedMarks.sankalit ? "bg-emerald-100 text-emerald-800 border-emerald-300" : "bg-amber-100 text-amber-800 border-amber-300"}`}>
-                संकलित: {sankalitSum} / {expectedMarks.sankalit}
-              </span>
+              {expectedMarks.sankalit > 0 && (
+                <span className={`px-2.5 py-1 rounded-xl border ${sankalitSum === expectedMarks.sankalit ? "bg-emerald-100 text-emerald-800 border-emerald-300" : "bg-amber-100 text-amber-800 border-amber-300"}`}>
+                  संकलित: {sankalitSum} / {expectedMarks.sankalit}
+                </span>
+              )}
             </div>
           </div>
 
@@ -564,15 +694,17 @@ export function CCEWeightage({
             </div>
           </div>
 
-          {/* Sankalit Section */}
-          <div className="bg-slate-50 p-5 rounded-3xl border border-slate-200 space-y-4">
-            <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider">संकलित मूल्यमापन घटक (Sankalit)</h4>
-            <div className="grid grid-cols-3 gap-3">
-              <WeightageInput label="तोंडी काम" value={sw.sankalitTondi} onChange={(v) => updateField("sankalitTondi", v)} />
-              <WeightageInput label="प्रात्यक्षिक" value={sw.sankalitPratyakshik} onChange={(v) => updateField("sankalitPratyakshik", v)} />
-              <WeightageInput label="लेखी परीक्षा" value={sw.sankalitLekhi} onChange={(v) => updateField("sankalitLekhi", v)} />
+          {/* Sankalit Section (Hidden for subjects with 0 Sankalit marks) */}
+          {expectedMarks.sankalit > 0 && (
+            <div className="bg-slate-50 p-5 rounded-3xl border border-slate-200 space-y-4">
+              <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider">संकलित मूल्यमापन घटक (Sankalit)</h4>
+              <div className="grid grid-cols-3 gap-3">
+                <WeightageInput label="तोंडी काम" value={sw.sankalitTondi} onChange={(v) => updateField("sankalitTondi", v)} />
+                <WeightageInput label="प्रात्यक्षिक" value={sw.sankalitPratyakshik} onChange={(v) => updateField("sankalitPratyakshik", v)} />
+                <WeightageInput label="लेखी परीक्षा" value={sw.sankalitLekhi} onChange={(v) => updateField("sankalitLekhi", v)} />
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="pt-4 pb-6">
             <button
@@ -693,15 +825,22 @@ export function CCEWeightage({
                   const sTot = getSankalitTotal(sw);
                   if (aTot === 0 && sTot === 0) return null;
 
+                  const isPracticalSub =
+                    sub.includes("कला") ||
+                    sub.includes("कार्यानुभव") ||
+                    sub.includes("शारीरिक");
+
                   return (
                     <div key={sub} className="p-3 bg-slate-50/80 rounded-2xl border border-slate-100 text-xs font-bold text-slate-700">
                       <p className="text-blue-900 font-extrabold mb-1">{sub}</p>
                       <p className="text-[11px] text-slate-600 font-medium leading-relaxed">
                         <span className="font-bold text-slate-800">आकारिक ({aTot}):</span> तोंडी: {sw.tondiKaam || 0}, प्रात्याक्षिक: {sw.pratyakshikPrayog || 0}, उपक्रम: {sw.upakramKriti || 0}, प्रकल्प: {sw.prakalpa || 0}, चाचणी: {sw.chaachaniLekhi || 0}, स्वाध्याय: {sw.swadhyayVargakarya || 0}, इतर: {sw.itar || 0}
                       </p>
-                      <p className="text-[11px] text-slate-600 font-medium leading-relaxed mt-0.5">
-                        <span className="font-bold text-slate-800">संकलित ({sTot}):</span> तोंडी: {sw.sankalitTondi || 0}, प्रात्यक्षिक: {sw.sankalitPratyakshik || 0}, लेखी: {sw.sankalitLekhi || 0}
-                      </p>
+                      {!isPracticalSub && (
+                        <p className="text-[11px] text-slate-600 font-medium leading-relaxed mt-0.5">
+                          <span className="font-bold text-slate-800">संकलित ({sTot}):</span> तोंडी: {sw.sankalitTondi || 0}, प्रात्यक्षिक: {sw.sankalitPratyakshik || 0}, लेखी: {sw.sankalitLekhi || 0}
+                        </p>
+                      )}
                     </div>
                   );
                 })}

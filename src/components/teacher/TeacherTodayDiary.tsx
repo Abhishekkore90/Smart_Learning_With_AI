@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { format, addDays, subDays } from "date-fns";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -12,7 +12,9 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
-  RotateCcw
+  RotateCcw,
+  Printer,
+  Download
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -48,17 +50,27 @@ export const TeacherTodayDiary: React.FC<Props> = ({
   selectedClass = "Class 1", 
   selectedMedium = "Marathi" 
 }) => {
-  const [activeDate, setActiveDate] = useState<Date>(new Date());
+  const [activeDate, setActiveDate] = useState<Date | null>(null);
   const [todayDiary, setTodayDiary] = useState<DailyDiary | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const printRef = useRef<HTMLDivElement>(null);
 
-  const isoDate = format(activeDate, "yyyy-MM-dd");
-  const displayFormattedDate = format(activeDate, "eeee, dd MMMM yyyy");
-  const isToday = format(new Date(), "yyyy-MM-dd") === isoDate;
+  // Initialize date client-side only to avoid SSR hydration mismatch
+  useEffect(() => {
+    if (!activeDate) {
+      setActiveDate(new Date());
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const isoDate = activeDate ? format(activeDate, "yyyy-MM-dd") : "";
+  const displayFormattedDate = activeDate ? format(activeDate, "eeee, dd MMMM yyyy") : "...";
+  const isToday = activeDate ? format(new Date(), "yyyy-MM-dd") === isoDate : false;
 
   useEffect(() => {
     async function fetchDiaryForDate() {
+      if (!isoDate) return; // not yet initialized client-side
       setLoading(true);
       try {
         const docId = `${selectedClass}_${selectedMedium}_${isoDate}`;
@@ -81,14 +93,109 @@ export const TeacherTodayDiary: React.FC<Props> = ({
     fetchDiaryForDate();
   }, [selectedClass, selectedMedium, isoDate]);
 
-  const handlePrevDay = () => setActiveDate((prev) => subDays(prev, 1));
-  const handleNextDay = () => setActiveDate((prev) => addDays(prev, 1));
+  const handlePrevDay = () => setActiveDate((prev) => subDays(prev ?? new Date(), 1));
+  const handleNextDay = () => setActiveDate((prev) => addDays(prev ?? new Date(), 1));
   const handleResetToday = () => setActiveDate(new Date());
 
+  // ── Build the printable HTML content ─────────────────────────────────────
+  const buildPrintableHTML = () => {
+    if (!todayDiary || !activeDate) return "";
+    const rows = todayDiary.periods
+      .map(
+        (item, idx) =>
+          `<tr style="background:${idx % 2 === 0 ? "#fff" : "#f9fafb"}">
+            <td style="text-align:center;font-weight:700;color:#4f46e5">${item.period}</td>
+            <td style="font-weight:600">${item.subject}</td>
+            <td>${item.topic}</td>
+            <td>${item.experience || "-"}</td>
+            <td>${item.tools || "-"}</td>
+            <td style="color:#059669">${item.outcome || "-"}</td>
+          </tr>`
+      )
+      .join("");
+
+    return `<!DOCTYPE html>
+<html lang="mr">
+<head>
+  <meta charset="UTF-8" />
+  <title>दैनंदिन पाठ टाचण — ${todayDiary.displayDate}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700;900&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Noto Sans Devanagari', sans-serif; background: #fff; color: #1e293b; padding: 24px; }
+    h1 { font-size: 22px; font-weight: 900; text-align: center; margin-bottom: 4px; }
+    .subtitle { text-align: center; font-size: 12px; color: #64748b; margin-bottom: 6px; }
+    .meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin: 12px 0; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; font-size: 12px; }
+    .meta span { font-weight: 700; color: #0f172a; }
+    .thought { margin: 10px 0 16px; padding: 10px 14px; background: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 6px; font-size: 12px; font-style: italic; color: #92400e; }
+    table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+    thead th { background: #1e293b; color: #fff; padding: 9px 10px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+    tbody td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; vertical-align: top; line-height: 1.4; }
+    tbody tr:last-child td { border-bottom: none; }
+    @media print { body { padding: 12px; } }
+  </style>
+</head>
+<body>
+  <h1>दैनंदिन पाठ टाचण</h1>
+  <p class="subtitle">Daily Teaching Diary</p>
+  <div class="meta">
+    <div>दिनांक: <span>${todayDiary.displayDate}</span></div>
+    <div>वार: <span>${todayDiary.day || format(activeDate, "eeee")}</span></div>
+    <div>इयत्ता: <span>${todayDiary.className || selectedClass}</span></div>
+    <div>माध्यम: <span>${todayDiary.medium || selectedMedium}</span></div>
+  </div>
+  ${todayDiary.thought ? `<div class="thought">💬 आजचा सुविचार: "${todayDiary.thought}"</div>` : ""}
+  <table>
+    <thead>
+      <tr>
+        <th style="width:60px">तासिका</th>
+        <th>विषय</th>
+        <th>घटक / उपघटक</th>
+        <th>अध्यापन अनुभव / कृती</th>
+        <th>साधने</th>
+        <th>अध्ययन निष्पत्ती</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
+</body>
+</html>`;
+  };
+
+  // ── Print Handler ─────────────────────────────────────────────────────────
+  const handlePrint = () => {
+    if (!todayDiary || !activeDate) return;
+    const html = buildPrintableHTML();
+    const printWindow = window.open("", "_blank", "width=900,height=650");
+    if (!printWindow) return;
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 600);
+  };
+
+  // ── Download Handler ──────────────────────────────────────────────────────
+  const handleDownload = () => {
+    if (!todayDiary || !activeDate) return;
+    const html = buildPrintableHTML();
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Teaching_Diary_${todayDiary.displayDate?.replace(/[/\\:]/g, "-") || isoDate}.html`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6" ref={printRef} suppressHydrationWarning>
       {/* Top Controls & Navigation Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl bg-slate-900/90 border border-slate-800 backdrop-blur-md">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-xl bg-slate-900/90 border border-slate-800 backdrop-blur-md">
         <div className="flex items-center gap-2">
           <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
             <Sun className="w-5 h-5" />
@@ -108,8 +215,8 @@ export const TeacherTodayDiary: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* Date Selector and Nav Buttons */}
-        <div className="flex items-center gap-2">
+        {/* Date Selector, Nav Buttons & Action Buttons */}
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           <button
             onClick={handlePrevDay}
             className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors border border-slate-700"
@@ -128,7 +235,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
             <PopoverContent className="w-auto p-0 bg-slate-900 border-slate-800" align="center">
               <CalendarComponent
                 mode="single"
-                selected={activeDate}
+                selected={activeDate ?? undefined}
                 onSelect={(d) => {
                   if (d) {
                     setActiveDate(d);
@@ -156,6 +263,28 @@ export const TeacherTodayDiary: React.FC<Props> = ({
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Today</span>
             </button>
+          )}
+
+          {/* ── Print & Download ── */}
+          {todayDiary && !loading && (
+            <>
+              <button
+                onClick={handleDownload}
+                title="Download as HTML file"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow transition-colors cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Download
+              </button>
+              <button
+                onClick={handlePrint}
+                title="Print Teaching Diary"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold shadow transition-colors cursor-pointer"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                Print
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -195,7 +324,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <span className="text-xs font-semibold text-indigo-400 uppercase tracking-wider">
-                  {todayDiary.day || format(activeDate, "eeee")}
+                  {todayDiary.day || format(activeDate ?? new Date(), "eeee")}
                 </span>
                 <h1 className="text-2xl md:text-3xl font-extrabold text-white mt-0.5">
                   {todayDiary.displayDate}

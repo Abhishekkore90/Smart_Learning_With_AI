@@ -836,8 +836,8 @@ function TeachingRecordPage() {
 
             {/* Document Live Preview Modal Backdrop & Frame */}
             {isPreviewOpen && selectedRecordForPreview && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-955/80 backdrop-blur-sm">
-                <div className="bg-white rounded-3xl overflow-hidden shadow-2xl w-full max-w-5xl border border-slate-100 flex flex-col h-[85vh]">
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-955/80 backdrop-blur-sm">
+                <div className="bg-white rounded-3xl overflow-hidden shadow-2xl w-full max-w-[96vw] border border-slate-100 flex flex-col h-[93vh]">
                   {/* Modal Header */}
                   <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between gap-3 shrink-0">
                     <div className="flex items-center gap-3 min-w-0">

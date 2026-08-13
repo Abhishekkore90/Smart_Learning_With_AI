@@ -96,16 +96,22 @@ function MarksInput({
   max: number;
   onChange: (v: number) => void;
 }) {
+  const displayVal = max > 0 && value > max ? max : value;
+
   return (
     <div className="flex items-center rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
       <input
         type="text"
         inputMode="numeric"
         pattern="[0-9]*"
-        value={value === 0 ? "" : value}
+        value={displayVal === 0 ? "" : displayVal}
         onChange={(e) => {
           const raw = e.target.value.replace(/[^0-9]/g, "");
-          const num = raw === "" ? 0 : parseInt(raw, 10) || 0;
+          let num = raw === "" ? 0 : parseInt(raw, 10) || 0;
+          if (max > 0 && num > max) {
+            num = max;
+            toast.warning(`गुणांची मर्यादा जास्तीत जास्त ${max} आहे! (आपोआप ${max} धरले गेले)`);
+          }
           onChange(num);
         }}
         placeholder="0"
@@ -312,8 +318,31 @@ export function CCEMarksEntry({
       });
     };
 
+    const handleCustomWeightageUpdate = () => {
+      for (const dId of docIds) {
+        try {
+          const cached = localStorage.getItem(`cce_weightage_cache_${dId}`);
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (parsed && (parsed.semester1 || parsed.semester2 || parsed.data)) {
+              setWeightages(parsed.data || parsed);
+              break;
+            }
+          }
+        } catch (e) {}
+      }
+      initWeightages();
+    };
+
     initWeightages();
-    return () => unsub();
+    window.addEventListener("cce_weightage_updated", handleCustomWeightageUpdate);
+    window.addEventListener("storage", handleCustomWeightageUpdate);
+
+    return () => {
+      unsub();
+      window.removeEventListener("cce_weightage_updated", handleCustomWeightageUpdate);
+      window.removeEventListener("storage", handleCustomWeightageUpdate);
+    };
   }, [selectedClass, academicYear]);
 
   // Sync subjects directly from Weightage configuration if available
@@ -727,8 +756,8 @@ export function CCEMarksEntry({
     const akarikMax = akarikCols.reduce((sum, c) => sum + c.max, 0);
     const sankalitMax = sankalitCols.reduce((sum, c) => sum + c.max, 0);
 
-    const akarikTotal = akarikCols.reduce((sum, c) => sum + (sm[c.key] || 0), 0);
-    const sankalitTotal = sankalitCols.reduce((sum, c) => sum + (sm[c.key] || 0), 0);
+    const akarikTotal = akarikCols.reduce((sum, c) => sum + Math.min(sm[c.key] || 0, c.max), 0);
+    const sankalitTotal = sankalitCols.reduce((sum, c) => sum + Math.min(sm[c.key] || 0, c.max), 0);
 
     const handleNextStudent = () => {
       if (studentIdx < students.length - 1) {
