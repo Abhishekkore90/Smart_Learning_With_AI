@@ -132,6 +132,21 @@ function TeacherMDMPage() {
     "palash123@gmail.com": "22334455667788",
   };
 
+  const sanitizeFirestorePayload = (obj: any): any => {
+    if (obj === null || obj === undefined) return null;
+    if (typeof obj === "function" || typeof obj === "symbol") return null;
+    if (typeof obj !== "object") return obj;
+    if (Array.isArray(obj)) return obj.map(sanitizeFirestorePayload);
+    const cleaned: Record<string, any> = {};
+    for (const key of Object.keys(obj)) {
+      const val = obj[key];
+      if (val !== undefined) {
+        cleaned[key] = sanitizeFirestorePayload(val);
+      }
+    }
+    return cleaned;
+  };
+
   const getUdise = () => {
     if (profile?.udise) return profile.udise;
     if (typeof window !== "undefined") {
@@ -5203,58 +5218,60 @@ function TeacherMDMPage() {
       };
       setStockRecordsHistory(updatedHistory);
 
+      const registerPayload = sanitizeFirestorePayload({
+        dailyRecord: dailyRecord || {},
+        weeklyMenu: weeklyMenu || {},
+        stockInventory: stockInventory || {},
+        helpers: helpers || [],
+        incomingRecord: {
+          year: incomingYear || "",
+          month: incomingMonth || "",
+          class: incomingClass || "",
+          quantities: incomingQuantities || {},
+        },
+        menuRecord: {
+          day: menuDay || "",
+          type: menuType || "",
+          selectedItems: selectedMenuItems || {},
+        },
+        menuRecords: menuRecords || {},
+        stockRecord: {
+          year: stockYear || "",
+          month: stockMonth || "",
+          class: stockClass || "",
+        },
+        demandRecord: {
+          fromDate: demandFromDate || "",
+          toDate: demandToDate || "",
+          content: demandContent || "",
+          quantity: demandQty || "",
+          records: demandRecords || {},
+        },
+        eggBananaRecord: {
+          date: eggBananaDate || "",
+          remark: eggBananaRemark || "",
+          egg15: eggBeneficiary15 || 0,
+          egg68: eggBeneficiary68 || 0,
+          banana15: bananaBeneficiary15 || 0,
+          banana68: bananaBeneficiary68 || 0,
+          records: eggBananaRecords || {},
+        },
+        registerRecord: {
+          date: registerDate || "",
+          class: registerClass || "",
+          day: registerDay || "",
+          beneficiary: registerBeneficiary || "0",
+        },
+        registerRecords: updatedRecords,
+        stockRecords: stockRecords || {},
+        stockRecordsHistory: updatedHistory,
+        updatedAt: new Date().toISOString(),
+        updatedBy: user.uid,
+      });
+
       await setDoc(
         doc(db, "school_data", `${getUdise()}_mdm`),
-        {
-          dailyRecord,
-          weeklyMenu,
-          stockInventory,
-          helpers,
-          incomingRecord: {
-            year: incomingYear,
-            month: incomingMonth,
-            class: incomingClass,
-            quantities: incomingQuantities,
-          },
-          menuRecord: {
-            day: menuDay,
-            type: menuType,
-            selectedItems: selectedMenuItems,
-          },
-          menuRecords,
-          stockRecord: {
-            year: stockYear,
-            month: stockMonth,
-            class: stockClass,
-          },
-          demandRecord: {
-            fromDate: demandFromDate,
-            toDate: demandToDate,
-            content: demandContent,
-            quantity: demandQty,
-            records: demandRecords,
-          },
-          eggBananaRecord: {
-            date: eggBananaDate,
-            remark: eggBananaRemark,
-            egg15: eggBeneficiary15,
-            egg68: eggBeneficiary68,
-            banana15: bananaBeneficiary15,
-            banana68: bananaBeneficiary68,
-            records: eggBananaRecords,
-          },
-          registerRecord: {
-            date: registerDate,
-            class: registerClass,
-            day: registerDay,
-            beneficiary: registerBeneficiary,
-          },
-          registerRecords: updatedRecords,
-          stockRecords,
-          stockRecordsHistory: updatedHistory,
-          updatedAt: new Date().toISOString(),
-          updatedBy: user.uid,
-        },
+        registerPayload,
         { merge: true },
       );
       toast.success(t("माहिती यशस्वीरित्या जतन केली!", "Saved Successfully!"));
