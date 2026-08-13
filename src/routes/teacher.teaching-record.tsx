@@ -88,12 +88,54 @@ const weeks = [
 function TeachingRecordPage() {
   const { activeJobs } = useDiaryProcessing();
   
+  const [activeMainTab, setActiveMainTab] = useState<"diary" | "school_profile">("diary");
+  
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
   const [selectedMedium, setSelectedMedium] = useState<string | null>(null);
-  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [selectedYear, setSelectedYear] = useState<number>(2026);
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+  const [schoolProfile, setSchoolProfile] = useState<{
+    schoolName: string;
+    teacherName: string;
+    headmasterName: string;
+    className: string;
+    academicYear: string;
+  }>({
+    schoolName: "",
+    teacherName: "",
+    headmasterName: "",
+    className: "Class 1",
+    academicYear: "2026-27",
+  });
+
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("teaching_diary_school_profile");
+      if (stored) {
+        setSchoolProfile((prev) => ({ ...prev, ...JSON.parse(stored) }));
+      }
+    } catch (e) {
+      console.error("Error reading profile:", e);
+    }
+  }, []);
+
+  const handleSaveSchoolProfile = () => {
+    setSavingProfile(true);
+    try {
+      localStorage.setItem("teaching_diary_school_profile", JSON.stringify(schoolProfile));
+      toast.success("शाळेची माहिती यशस्वीरित्या जतन केली!");
+      setActiveMainTab("diary");
+    } catch (err: any) {
+      toast.error("माहिती सेव्ह करण्यात अडचण आली.");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
   
   // Upload States
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -300,7 +342,167 @@ function TeachingRecordPage() {
       <main className="lg:pl-64 pt-16 min-h-screen print:pl-0 print:pt-0 pb-24">
         <PinGate sectionKey="teaching_record">
           <div className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto space-y-6 print:p-0 print:max-w-full">
-            <AnimatePresence mode="wait">
+            
+            {/* Top Navigation Bar with School Profile Tab */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-3.5 sm:p-4 rounded-3xl border border-slate-200/80 shadow-sm print:hidden">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => setActiveMainTab("diary")}
+                  className={`flex-1 sm:flex-initial px-5 py-2.5 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                    activeMainTab === "diary"
+                      ? "bg-slate-900 text-white shadow-md"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
+                  }`}
+                >
+                  <BookOpen className="size-4 text-orange-400" />
+                  <span>पाठ टाचणवही (Teaching Diary)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveMainTab("school_profile")}
+                  className={`flex-1 sm:flex-initial px-5 py-2.5 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                    activeMainTab === "school_profile"
+                      ? "bg-orange-600 text-white shadow-md shadow-orange-500/20"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
+                  }`}
+                >
+                  <GraduationCap className="size-4 text-amber-300" />
+                  <span>🏫 शाळेची माहिती (School Details)</span>
+                </button>
+              </div>
+
+              {/* Saved profile status badge */}
+              {schoolProfile.schoolName && (
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-600 bg-slate-50 px-3.5 py-1.5 rounded-xl border border-slate-200">
+                  <span className="text-orange-600 font-extrabold">{schoolProfile.schoolName}</span>
+                  <span>•</span>
+                  <span>इयत्ता: <strong className="text-slate-900">{schoolProfile.className}</strong></span>
+                  <span>•</span>
+                  <span>सन: <strong className="text-emerald-600 font-black">{schoolProfile.academicYear || "2026-27"}</strong></span>
+                </div>
+              )}
+            </div>
+
+            {activeMainTab === "school_profile" ? (
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key="school-profile-tab"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm max-w-3xl mx-auto space-y-6"
+                >
+                  <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+                    <div className="size-12 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-600 font-black border border-orange-100">
+                      <GraduationCap className="size-6" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">शाळेची माहिती (School Details)</h2>
+                      <p className="text-xs text-slate-500 font-medium">ही माहिती सेव्ह केल्यावर दैनिक व आठवड्याच्या पाठ टाचणमध्ये आपोआप दिसेल.</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {/* शाळेचे नाव */}
+                    <div className="space-y-1.5 md:col-span-2">
+                      <label className="text-xs font-black text-slate-700 flex items-center gap-1">
+                        <span>शाळेचे नाव (School Name)</span>
+                        <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={schoolProfile.schoolName}
+                        onChange={(e) => setSchoolProfile({ ...schoolProfile, schoolName: e.target.value })}
+                        placeholder="उदा. जि. प. प्राथमिक शाळा..."
+                        className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-slate-50/50"
+                      />
+                    </div>
+
+                    {/* वर्गशिक्षकाचे नाव */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-black text-slate-700 flex items-center gap-1">
+                        <span>वर्गशिक्षकाचे नाव (Class Teacher)</span>
+                        <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={schoolProfile.teacherName}
+                        onChange={(e) => setSchoolProfile({ ...schoolProfile, teacherName: e.target.value })}
+                        placeholder="उदा. श्री. नामदेव शिंदे..."
+                        className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-slate-50/50"
+                      />
+                    </div>
+
+                    {/* मुख्याध्यापकांचे नाव */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-black text-slate-700 flex items-center gap-1">
+                        <span>मुख्याध्यापकांचे नाव (Headmaster Name)</span>
+                        <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={schoolProfile.headmasterName}
+                        onChange={(e) => setSchoolProfile({ ...schoolProfile, headmasterName: e.target.value })}
+                        placeholder="उदा. श्री. राजू पाटील..."
+                        className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-slate-50/50"
+                      />
+                    </div>
+
+                    {/* इयत्ता / वर्ग */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-black text-slate-700 flex items-center gap-1">
+                        <span>इयत्ता / वर्ग (Class)</span>
+                        <span className="text-rose-500">*</span>
+                      </label>
+                      <select
+                        value={schoolProfile.className}
+                        onChange={(e) => setSchoolProfile({ ...schoolProfile, className: e.target.value })}
+                        className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-slate-50/50 cursor-pointer"
+                      >
+                        {DIARY_CLASSES.map((cls) => (
+                          <option key={cls.id} value={cls.id}>
+                            {cls.mr} ({cls.id})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* शैक्षणिक वर्ष (Academic Year) */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-black text-slate-700 flex items-center gap-1">
+                        <span>शैक्षणिक वर्ष (Academic Year)</span>
+                        <span className="text-rose-500">*</span>
+                      </label>
+                      <select
+                        value={schoolProfile.academicYear}
+                        onChange={(e) => setSchoolProfile({ ...schoolProfile, academicYear: e.target.value })}
+                        className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-slate-50/50 text-emerald-700 cursor-pointer"
+                      >
+                        <option value="2025-26">2025-26</option>
+                        <option value="2026-27">2026-27 (Default)</option>
+                        <option value="2027-28">2027-28</option>
+                        <option value="2028-29">2028-29</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={handleSaveSchoolProfile}
+                      disabled={savingProfile}
+                      className="px-8 py-3.5 bg-orange-600 hover:bg-orange-700 disabled:bg-slate-300 text-white rounded-2xl font-black text-sm shadow-md shadow-orange-500/20 transition-all flex items-center gap-2 cursor-pointer"
+                    >
+                      {savingProfile ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
+                      <span>माहिती जतन करा (Save Details)</span>
+                    </button>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            ) : (
+              <AnimatePresence mode="wait">
 
               {/* Step 1: Select Medium (Orange Cards) */}
               {!selectedMedium && (
@@ -651,10 +853,11 @@ function TeachingRecordPage() {
                     <div className="flex items-center gap-3">
                       <button
                         onClick={() => setSelectedWeek(null)}
-                        className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition-colors cursor-pointer"
-                        title="Back to Week Selection"
+                        className="flex items-center gap-1.5 px-3.5 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-black shadow-sm transition-all cursor-pointer"
+                        title="मागे जा (Back to Week Selection)"
                       >
                         <ArrowLeft className="size-4" />
+                        <span>← मागे जा (Back)</span>
                       </button>
                       <div className="flex items-center gap-2">
                         <Layers className="size-4 text-orange-400" />
@@ -709,7 +912,7 @@ function TeachingRecordPage() {
                   </div>
 
                   {activeViewTab === "today" ? (
-                    <TeacherTodayDiary selectedClass={selectedClass} selectedMedium={selectedMedium} />
+                    <TeacherTodayDiary selectedClass={selectedClass} selectedMedium={selectedMedium} schoolProfile={schoolProfile} />
                   ) : (
                     <div className="grid grid-cols-1 gap-6">
                       {/* Upload Form */}
@@ -833,6 +1036,7 @@ function TeachingRecordPage() {
                 </motion.div>
               )}
             </AnimatePresence>
+          )}
 
             {/* Document Live Preview Modal Backdrop & Frame */}
             {isPreviewOpen && selectedRecordForPreview && (
@@ -872,7 +1076,6 @@ function TeachingRecordPage() {
                 </div>
               </div>
             )}
-
           </div>
         </PinGate>
       </main>

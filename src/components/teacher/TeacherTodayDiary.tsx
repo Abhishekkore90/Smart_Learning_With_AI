@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { format, addDays, subDays } from "date-fns";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { toast } from "sonner";
 import { 
   Calendar as CalendarIcon, 
   BookOpen, 
@@ -44,17 +45,51 @@ interface DailyDiary {
 interface Props {
   selectedClass?: string;
   selectedMedium?: string;
+  schoolProfile?: {
+    schoolName?: string;
+    teacherName?: string;
+    headmasterName?: string;
+    className?: string;
+    academicYear?: string;
+  };
 }
 
 export const TeacherTodayDiary: React.FC<Props> = ({ 
   selectedClass = "Class 1", 
-  selectedMedium = "Marathi" 
+  selectedMedium = "Marathi",
+  schoolProfile: propSchoolProfile
 }) => {
   const [activeDate, setActiveDate] = useState<Date | null>(null);
   const [todayDiary, setTodayDiary] = useState<DailyDiary | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [localProfile, setLocalProfile] = useState<{
+    schoolName?: string;
+    teacherName?: string;
+    headmasterName?: string;
+    className?: string;
+    academicYear?: string;
+  }>({});
   const printRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("teaching_diary_school_profile");
+      if (stored) {
+        setLocalProfile(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.error("Error loading profile:", e);
+    }
+  }, []);
+
+  const activeProfile = {
+    schoolName: propSchoolProfile?.schoolName || localProfile.schoolName || "",
+    teacherName: propSchoolProfile?.teacherName || localProfile.teacherName || "",
+    headmasterName: propSchoolProfile?.headmasterName || localProfile.headmasterName || "",
+    className: propSchoolProfile?.className || localProfile.className || selectedClass,
+    academicYear: propSchoolProfile?.academicYear || localProfile.academicYear || "2026-27",
+  };
 
   // Initialize date client-side only to avoid SSR hydration mismatch
   useEffect(() => {
@@ -104,12 +139,12 @@ export const TeacherTodayDiary: React.FC<Props> = ({
       .map(
         (item, idx) =>
           `<tr style="background:${idx % 2 === 0 ? "#fff" : "#f9fafb"}">
-            <td style="text-align:center;font-weight:700;color:#4f46e5">${item.period}</td>
-            <td style="font-weight:600">${item.subject}</td>
-            <td>${item.topic}</td>
-            <td>${item.experience || "-"}</td>
-            <td>${item.tools || "-"}</td>
-            <td style="color:#059669">${item.outcome || "-"}</td>
+            <td style="text-align:center;font-weight:700;color:#4f46e5;width:6%;font-size:13px">${item.period}</td>
+            <td style="font-weight:700;color:#0f172a;width:11%;font-size:13px">${item.subject}</td>
+            <td style="font-weight:600;color:#334155;width:14%;font-size:13px">${item.topic}</td>
+            <td style="color:#1e293b;line-height:1.5;width:24%;font-size:13px">${item.experience || "-"}</td>
+            <td style="color:#475569;width:13%;font-size:13px">${item.tools || "-"}</td>
+            <td style="color:#047857;font-weight:600;line-height:1.5;width:32%;font-size:13px">${item.outcome || "-"}</td>
           </tr>`
       )
       .join("");
@@ -128,32 +163,51 @@ export const TeacherTodayDiary: React.FC<Props> = ({
     .meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin: 12px 0; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; font-size: 12px; }
     .meta span { font-weight: 700; color: #0f172a; }
     .thought { margin: 10px 0 16px; padding: 10px 14px; background: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 6px; font-size: 12px; font-style: italic; color: #92400e; }
-    table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
-    thead th { background: #1e293b; color: #fff; padding: 9px 10px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
-    tbody td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; vertical-align: top; line-height: 1.4; }
-    tbody tr:last-child td { border-bottom: none; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; border: 2px solid #475569; }
+    thead th { background: #1e293b; color: #fff; padding: 10px 12px; text-align: left; font-size: 13px; font-weight: 800; border: 1.5px solid #475569; }
+    tbody td { padding: 10px 12px; border: 1.5px solid #94a3b8; vertical-align: top; line-height: 1.5; font-size: 13px; word-wrap: break-word; }
     @media print { body { padding: 12px; } }
   </style>
 </head>
 <body>
   <h1>दैनंदिन पाठ टाचण</h1>
   <p class="subtitle">Daily Teaching Diary</p>
-  <div class="meta">
-    <div>दिनांक: <span>${todayDiary.displayDate}</span></div>
-    <div>वार: <span>${todayDiary.day || format(activeDate, "eeee")}</span></div>
-    <div>इयत्ता: <span>${todayDiary.className || selectedClass}</span></div>
-    <div>माध्यम: <span>${todayDiary.medium || selectedMedium}</span></div>
+  <div class="meta" style="display: grid; grid-template-columns: repeat(6, 1fr); text-align: center; gap: 8px; margin: 12px 0; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; font-size: 11px;">
+    <div style="border-right: 1px solid #cbd5e1; padding: 4px; text-align: center;">
+      <div style="font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase;">वार व दिनांक</div>
+      <div style="font-weight: 800; color: #1e293b; margin-top: 2px;">${todayDiary.day || format(activeDate, "eeee")} (${todayDiary.displayDate})</div>
+    </div>
+    <div style="border-right: 1px solid #cbd5e1; padding: 4px; text-align: center;">
+      <div style="font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase;">वर्गशिक्षक</div>
+      <div style="font-weight: 800; color: #1e293b; margin-top: 2px;">${activeProfile.teacherName || "—"}</div>
+    </div>
+    <div style="border-right: 1px solid #cbd5e1; padding: 4px; text-align: center;">
+      <div style="font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase;">शाळा</div>
+      <div style="font-weight: 800; color: #1e293b; margin-top: 2px;">${activeProfile.schoolName || "—"}</div>
+    </div>
+    <div style="border-right: 1px solid #cbd5e1; padding: 4px; text-align: center;">
+      <div style="font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase;">इयत्ता</div>
+      <div style="font-weight: 800; color: #1e293b; margin-top: 2px;">${activeProfile.className || todayDiary.className || selectedClass}</div>
+    </div>
+    <div style="border-right: 1px solid #cbd5e1; padding: 4px; text-align: center;">
+      <div style="font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase;">सन</div>
+      <div style="font-weight: 800; color: #047857; margin-top: 2px;">${activeProfile.academicYear || "2026-27"}</div>
+    </div>
+    <div style="padding: 4px; text-align: center;">
+      <div style="font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase;">मुख्याध्यापक</div>
+      <div style="font-weight: 800; color: #1e293b; margin-top: 2px;">${activeProfile.headmasterName || "—"}</div>
+    </div>
   </div>
   ${todayDiary.thought ? `<div class="thought">💬 आजचा सुविचार: "${todayDiary.thought}"</div>` : ""}
   <table>
     <thead>
       <tr>
-        <th style="width:60px">तासिका</th>
-        <th>विषय</th>
-        <th>घटक / उपघटक</th>
-        <th>अध्यापन अनुभव / कृती</th>
-        <th>साधने</th>
-        <th>अध्ययन निष्पत्ती</th>
+        <th style="width:6%;text-align:center">तासिका</th>
+        <th style="width:11%">विषय</th>
+        <th style="width:14%">घटक / उपघटक</th>
+        <th style="width:24%">अध्यापन अनुभव / कृती (अध्ययनाचे स्वरूप)</th>
+        <th style="width:13%">साधन तंत्रे / साधने</th>
+        <th style="width:32%">अध्ययन निष्पत्ती</th>
       </tr>
     </thead>
     <tbody>${rows}</tbody>
@@ -177,19 +231,42 @@ export const TeacherTodayDiary: React.FC<Props> = ({
     }, 600);
   };
 
-  // ── Download Handler ──────────────────────────────────────────────────────
+  // ── Download Handler (Word .doc) ──────────────────────────────────────────
   const handleDownload = () => {
     if (!todayDiary || !activeDate) return;
     const html = buildPrintableHTML();
-    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const wordHtml = `<!DOCTYPE html>
+      <html xmlns:o='urn:schemas-microsoft-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <meta charset="utf-8" />
+        <title>Teaching Diary</title>
+        <!--[if gte mso 9]>
+        <xml>
+          <w:WordDocument>
+            <w:View>Print</w:View>
+            <w:Zoom>100</w:Zoom>
+            <w:DoNotOptimizeForBrowser/>
+          </w:WordDocument>
+        </xml>
+        <![endif]-->
+        <style>
+          body { font-family: Arial, 'Calibri', 'Segoe UI', 'Nirmala UI', 'Mangal', 'Arial Unicode MS', sans-serif; }
+        </style>
+      </head>
+      <body>${html}</body>
+      </html>
+    `;
+    const blob = new Blob(['\ufeff', wordHtml], { type: "application/msword;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `Teaching_Diary_${todayDiary.displayDate?.replace(/[/\\:]/g, "-") || isoDate}.html`;
+    a.download = `Teaching_Diary_${isoDate}.doc`;
     document.body.appendChild(a);
     a.click();
     a.remove();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast.success("✅ Word फाईल (.doc) डाउनलोड झाली!");
   };
 
   return (
@@ -319,37 +396,52 @@ export const TeacherTodayDiary: React.FC<Props> = ({
       ) : (
         /* SUCCESS STATE: Render Today's Diary Table & Metadata */
         <div className="space-y-6">
-          {/* Info Banner */}
-          <div className="p-6 rounded-2xl bg-gradient-to-r from-indigo-950/80 via-slate-900 to-purple-950/40 border border-indigo-500/30 text-white shadow-xl relative overflow-hidden">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <span className="text-xs font-semibold text-indigo-400 uppercase tracking-wider">
-                  {todayDiary.day || format(activeDate ?? new Date(), "eeee")}
-                </span>
-                <h1 className="text-2xl md:text-3xl font-extrabold text-white mt-0.5">
-                  {todayDiary.displayDate}
-                </h1>
-                <p className="text-slate-400 text-xs mt-1">
-                  इयत्ता: <span className="text-slate-200 font-medium">{todayDiary.className}</span> | माध्यम: <span className="text-slate-200 font-medium">{todayDiary.medium}</span>
-                </p>
+          {/* Info Banner - Center Aligned Header Information */}
+          <div className="p-5 rounded-2xl bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 border border-indigo-500/30 text-white shadow-xl space-y-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 text-center">
+              <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800 flex flex-col justify-center items-center text-center">
+                <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider">वार व दिनांक</span>
+                <span className="text-xs md:text-sm font-extrabold text-white mt-0.5">{todayDiary.day || format(activeDate ?? new Date(), "eeee")}</span>
+                <span className="text-[10px] font-semibold text-slate-400">{todayDiary.displayDate}</span>
               </div>
+              <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800 flex flex-col justify-center items-center text-center">
+                <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider">वर्गशिक्षक</span>
+                <span className="text-xs md:text-sm font-extrabold text-white mt-0.5">{activeProfile.teacherName || "—"}</span>
+              </div>
+              <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800 flex flex-col justify-center items-center text-center">
+                <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider">शाळा</span>
+                <span className="text-xs md:text-sm font-extrabold text-white mt-0.5">{activeProfile.schoolName || "—"}</span>
+              </div>
+              <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800 flex flex-col justify-center items-center text-center">
+                <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider">इयत्ता</span>
+                <span className="text-xs md:text-sm font-extrabold text-amber-300 mt-0.5">{activeProfile.className || todayDiary.className || selectedClass}</span>
+              </div>
+              <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800 flex flex-col justify-center items-center text-center">
+                <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider">सन</span>
+                <span className="text-xs md:text-sm font-extrabold text-emerald-400 mt-0.5">{activeProfile.academicYear || "2026-27"}</span>
+              </div>
+              <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800 flex flex-col justify-center items-center text-center">
+                <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider">मुख्याध्यापक</span>
+                <span className="text-xs md:text-sm font-extrabold text-white mt-0.5">{activeProfile.headmasterName || "—"}</span>
+              </div>
+            </div>
 
-              {/* Dinvishesh & Thought */}
-              <div className="bg-slate-950/70 p-4 rounded-xl border border-slate-800/80 max-w-md space-y-2 text-xs">
+            {(todayDiary.dinvishesh || todayDiary.thought) && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2.5 border-t border-slate-800/80 text-xs">
                 {todayDiary.dinvishesh && (
-                  <div className="flex items-start gap-2 text-amber-300">
-                    <Sparkles className="w-4 h-4 shrink-0 mt-0.5" />
+                  <div className="flex items-center gap-2 text-amber-300 font-semibold">
+                    <Sparkles className="w-4 h-4 shrink-0 text-amber-400" />
                     <span><strong>दिनविशेष:</strong> {todayDiary.dinvishesh}</span>
                   </div>
                 )}
                 {todayDiary.thought && (
-                  <div className="flex items-start gap-2 text-slate-300 italic">
-                    <BookOpen className="w-4 h-4 shrink-0 text-indigo-400 mt-0.5" />
+                  <div className="flex items-center gap-2 text-slate-300 italic font-medium">
+                    <BookOpen className="w-4 h-4 shrink-0 text-indigo-400" />
                     <span>"{todayDiary.thought}"</span>
                   </div>
                 )}
               </div>
-            </div>
+            )}
           </div>
 
           {/* Periods Table */}
@@ -364,43 +456,43 @@ export const TeacherTodayDiary: React.FC<Props> = ({
               </span>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-slate-300">
-                <thead className="bg-slate-950 text-slate-400 uppercase text-[11px] tracking-wider font-semibold border-b border-slate-800">
+            <div className="overflow-x-auto p-1">
+              <table className="w-full text-left text-sm text-slate-200 border-collapse table-fixed min-w-[750px] border-2 border-slate-700/90 rounded-xl overflow-hidden shadow-md">
+                <thead className="bg-slate-950 text-slate-200 uppercase text-xs md:text-sm tracking-wider font-extrabold border-b-2 border-slate-700/90">
                   <tr>
-                    <th className="py-3 px-4 w-16 text-center">तासिका</th>
-                    <th className="py-3 px-4">विषय</th>
-                    <th className="py-3 px-4">घटक / उपघटक</th>
-                    <th className="py-3 px-4">अध्यापन अनुभव / कृती</th>
-                    <th className="py-3 px-4">शैक्षणिक साधने</th>
-                    <th className="py-3 px-4">अध्ययन निष्पत्ती</th>
+                    <th className="py-3.5 px-3 w-[6%] text-center border-r-2 border-slate-700/90 bg-slate-950">तासिका</th>
+                    <th className="py-3.5 px-3.5 w-[11%] border-r-2 border-slate-700/90 bg-slate-950">विषय</th>
+                    <th className="py-3.5 px-3.5 w-[14%] border-r-2 border-slate-700/90 bg-slate-950">घटक / उपघटक</th>
+                    <th className="py-3.5 px-4 w-[24%] border-r-2 border-slate-700/90 bg-slate-950">अध्ययनाचे स्वरूप (अध्यापन अनुभव / कृती)</th>
+                    <th className="py-3.5 px-3.5 w-[13%] border-r-2 border-slate-700/90 bg-slate-950">साधन तंत्रे / साधने</th>
+                    <th className="py-3.5 px-4 w-[32%] bg-slate-950">अध्ययन निष्पत्ती</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y-2 divide-slate-800 text-sm md:text-base">
                   {todayDiary.periods.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-slate-800/40 transition-colors">
-                      <td className="py-4 px-4 text-center font-bold text-indigo-400">
-                        <span className="w-7 h-7 rounded-full bg-indigo-500/10 border border-indigo-500/20 inline-flex items-center justify-center">
+                    <tr key={idx} className="hover:bg-slate-800/40 transition-colors border-b-2 border-slate-800/90">
+                      <td className="py-4 px-3 text-center font-bold text-indigo-400 align-top border-r-2 border-slate-800/90 bg-slate-950/40">
+                        <span className="w-8 h-8 rounded-full bg-indigo-500/10 border border-indigo-500/20 inline-flex items-center justify-center text-sm font-black">
                           {item.period}
                         </span>
                       </td>
-                      <td className="py-4 px-4 font-semibold text-white">
+                      <td className="py-4 px-3.5 font-bold text-white text-sm md:text-base align-top border-r-2 border-slate-800/90">
                         {item.subject}
                       </td>
-                      <td className="py-4 px-4 text-indigo-200 font-medium">
+                      <td className="py-4 px-3.5 text-indigo-200 font-semibold text-sm md:text-base leading-snug align-top border-r-2 border-slate-800/90">
                         {item.topic}
                       </td>
-                      <td className="py-4 px-4 text-slate-300 leading-relaxed">
+                      <td className="py-4 px-4 text-slate-100 leading-relaxed text-sm md:text-base font-normal align-top border-r-2 border-slate-800/90">
                         {item.experience || "-"}
                       </td>
-                      <td className="py-4 px-4 text-slate-400">
+                      <td className="py-4 px-3.5 text-slate-300 text-sm md:text-base align-top border-r-2 border-slate-800/90">
                         {item.tools ? (
-                          <span className="inline-block px-2.5 py-1 bg-slate-800 rounded border border-slate-700 text-xs">
+                          <span className="inline-block px-2.5 py-1 bg-slate-800/90 rounded-lg border border-slate-700/80 text-xs md:text-sm font-medium leading-relaxed">
                             {item.tools}
                           </span>
                         ) : "-"}
                       </td>
-                      <td className="py-4 px-4 text-emerald-400/90 text-xs font-medium">
+                      <td className="py-4 px-4 text-emerald-300 font-semibold text-sm md:text-base leading-relaxed align-top">
                         {item.outcome || "-"}
                       </td>
                     </tr>
