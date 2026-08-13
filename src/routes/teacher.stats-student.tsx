@@ -2778,10 +2778,44 @@ function StudentPortfolioPage() {
                 setCustomPages((prev) => [...prev, newPage]);
                 setCurrentTab(pageNames.length);
               }}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs md:text-sm font-semibold rounded-lg text-white border border-[#c9a227]/30 bg-gradient-to-r from-[#0f172a] to-[#1e293b] hover:from-[#1e293b] hover:to-[#334155] shadow-md transition-all active:scale-95"
+              className="flex items-center gap-1.5 px-3 py-2 text-xs md:text-sm font-semibold rounded-lg text-white border border-[#c9a227]/30 bg-gradient-to-r from-[#0f172a] to-[#1e293b] hover:from-[#1e293b] hover:to-[#334155] shadow-md transition-all active:scale-95 cursor-pointer"
               style={{ fontFamily: "'Noto Sans Devanagari', sans-serif" }}
             >
               ➕ नवीन पान जोडा
+            </button>
+            <button
+              onClick={() => {
+                if (pageNames.length <= 1) {
+                  alert("⚠️ किमान एक पान असणे आवश्यक आहे");
+                  return;
+                }
+                if (currentTab === 0) {
+                  alert("⚠️ मुखपृष्ठ (Cover Page) काढून टाकता येणार नाही");
+                  return;
+                }
+                if (confirm(`तुम्हाला खात्री आहे की तुम्ही हे पान (${pageNames[currentTab]}) काढून टाकू इच्छिता?`)) {
+                  const staticCount = 10;
+                  if (currentTab >= staticCount) {
+                    const customIdx = currentTab - staticCount;
+                    const updated = customPages.filter((_, idx) => idx !== customIdx);
+                    setCustomPages(updated);
+                    localStorage.setItem("student_sanchika_custom_pages", JSON.stringify(updated));
+                  } else {
+                    let deleted = JSON.parse(localStorage.getItem("student_sanchika_deleted_pages") || "[]");
+                    if (!deleted.includes(currentTab)) {
+                      deleted.push(currentTab);
+                    }
+                    localStorage.setItem("student_sanchika_deleted_pages", JSON.stringify(deleted));
+                  }
+                  alert("🗑️ पान यशस्वीरीत्या काढून टाकले!");
+                  setCurrentTab((prev) => Math.max(0, prev - 1));
+                }
+              }}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs md:text-sm font-semibold rounded-lg text-white border border-[#c9a227]/30 bg-gradient-to-r from-[#c62828] to-[#d32f2f] hover:from-[#d32f2f] hover:to-[#e53935] shadow-md transition-all active:scale-95 cursor-pointer"
+              style={{ fontFamily: "'Noto Sans Devanagari', sans-serif" }}
+              title="चालू पान काढून टाका"
+            >
+              🗑️ हे पान काढा
             </button>
             <button
               onClick={handleSaveData}
@@ -2825,34 +2859,35 @@ function StudentPortfolioPage() {
           className="bg-[#0d1b4b]/30 p-4 md:p-4 pb-2 rounded-3xl border border-[#c9a227]/20 shadow-inner flex flex-col items-center relative mx-auto"
           style={{ width: "100%", maxWidth: "930px", height: "fit-content" }}
         >
-          {/* Floating Next/Prev Arrow Controllers on the sides */}
+          {/* Floating Next/Prev Arrow Controllers anchored symmetrically on left and right upper sides */}
           {!isPrinting && (
             <>
               {currentTab > 0 && (
                 <button
                   onClick={() => setCurrentTab((prev) => Math.max(0, prev - 1))}
-                  className="nav-arrow prev-arrow flex fixed left-5 lg:left-[276px] top-1/2 -translate-y-1/2 z-50 w-14 h-14 rounded-full items-center justify-center cursor-pointer transition-all duration-300"
+                  className="nav-arrow prev-arrow flex absolute -left-3 sm:-left-6 md:-left-8 lg:-left-10 top-6 md:top-8 z-50 w-11 h-11 md:w-14 md:h-14 rounded-full items-center justify-center cursor-pointer transition-all duration-300 active:scale-90"
                   style={{
-                    background: "rgba(13, 27, 75, 0.8)",
+                    background: "rgba(13, 27, 75, 0.9)",
                     border: "2px solid #c9a227",
                     color: "#f5d060",
                     fontSize: "20px",
-                    boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
                     backdropFilter: "blur(8px)",
                   }}
+                  title="मागील पान (Previous Page)"
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "rgba(13, 27, 75, 0.95)";
+                    e.currentTarget.style.background = "rgba(13, 27, 75, 1)";
                     e.currentTarget.style.borderColor = "#fff";
                     e.currentTarget.style.color = "#fff";
                     e.currentTarget.style.boxShadow =
                       "0 0 15px rgba(255,255,255,0.4)";
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "rgba(13, 27, 75, 0.8)";
+                    e.currentTarget.style.background = "rgba(13, 27, 75, 0.9)";
                     e.currentTarget.style.borderColor = "#c9a227";
                     e.currentTarget.style.color = "#f5d060";
                     e.currentTarget.style.boxShadow =
-                      "0 4px 20px rgba(0,0,0,0.3)";
+                      "0 4px 20px rgba(0,0,0,0.4)";
                   }}
                 >
                   ◀
@@ -2865,28 +2900,29 @@ function StudentPortfolioPage() {
                       Math.min(pageNames.length - 1, prev + 1),
                     )
                   }
-                  className="nav-arrow next-arrow flex fixed right-5 top-1/2 -translate-y-1/2 z-50 w-14 h-14 rounded-full items-center justify-center cursor-pointer transition-all duration-300"
+                  className="nav-arrow next-arrow flex absolute -right-3 sm:-right-6 md:-right-8 lg:-right-10 top-6 md:top-8 z-50 w-11 h-11 md:w-14 md:h-14 rounded-full items-center justify-center cursor-pointer transition-all duration-300 active:scale-90"
                   style={{
-                    background: "rgba(13, 27, 75, 0.8)",
+                    background: "rgba(13, 27, 75, 0.9)",
                     border: "2px solid #c9a227",
                     color: "#f5d060",
                     fontSize: "20px",
-                    boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
                     backdropFilter: "blur(8px)",
                   }}
+                  title="पुढील पान (Next Page)"
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "rgba(13, 27, 75, 0.95)";
+                    e.currentTarget.style.background = "rgba(13, 27, 75, 1)";
                     e.currentTarget.style.borderColor = "#fff";
                     e.currentTarget.style.color = "#fff";
                     e.currentTarget.style.boxShadow =
                       "0 0 15px rgba(255,255,255,0.4)";
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "rgba(13, 27, 75, 0.8)";
+                    e.currentTarget.style.background = "rgba(13, 27, 75, 0.9)";
                     e.currentTarget.style.borderColor = "#c9a227";
                     e.currentTarget.style.color = "#f5d060";
                     e.currentTarget.style.boxShadow =
-                      "0 4px 20px rgba(0,0,0,0.3)";
+                      "0 4px 20px rgba(0,0,0,0.4)";
                   }}
                 >
                   ▶
