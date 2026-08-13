@@ -170,13 +170,13 @@ export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
             <ArrowLeft className="size-5" />
           </button>
           <h2 className="text-lg font-bold text-slate-800">
-            प्रगती पत्रक ({selectedTerm === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}) PDF
+            प्रगती पत्रक (Progress Sheet) PDF
           </h2>
         </div>
         <div className="flex-1 overflow-x-auto">
           <PdfErrorBoundary title="प्रगती पत्रक">
             <Suspense fallback={renderLoading()}>
-              <ProgressSheet initialClass={selectedClass} initialYear={academicYear} initialSemester={selectedTerm} onBack={() => setSelectedOption(null)} />
+              <ProgressSheet initialClass={selectedClass} initialYear={academicYear} onBack={() => setSelectedOption(null)} />
             </Suspense>
           </PdfErrorBoundary>
         </div>
@@ -277,7 +277,7 @@ export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
         </div>
 
         <div className="text-[11px] font-extrabold text-slate-600 flex items-center gap-1.5">
-          <span>CCE नोंदवही व प्रगती पत्रक:</span>
+          <span>CCE नोंदवही:</span>
           <span className={selectedTerm === "sem1" ? "text-amber-700 font-black" : "text-emerald-700 font-black"}>
             {selectedTerm === "sem1" ? "📘 प्रथम सत्र PDF उघडेल" : "📗 द्वितीय सत्र PDF उघडेल"}
           </span>
@@ -301,7 +301,7 @@ export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
                   <h3 className="text-[15px] font-bold text-slate-800 group-hover:text-blue-600 transition-colors leading-snug whitespace-pre-line">
                     {option.label}
                   </h3>
-                  {["cce_register", "progress_card"].includes(option.id) && (
+                  {option.id === "cce_register" && (
                     <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${
                       selectedTerm === "sem1"
                         ? "bg-amber-100 text-amber-800 border-amber-300"
