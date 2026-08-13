@@ -117,17 +117,33 @@
       transform: translateY(-1px);
       box-shadow: 0 4px 14px rgba(230,74,25,0.5);
     }
+    .delete-page-btn {
+      background: linear-gradient(135deg, #c62828, #d32f2f);
+      color: #fff; border: 1px solid rgba(255,255,255,0.2);
+      padding: 8px 16px; border-radius: 8px; font-size: 13px;
+      font-family: 'Noto Sans Devanagari', sans-serif;
+      cursor: pointer; font-weight: 700;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(198,40,40,0.4);
+    }
+    .delete-page-btn:hover {
+      background: linear-gradient(135deg, #d32f2f, #e53935);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(211,47,47,0.5);
+    }
 
     .pages-wrapper {
       padding-top: 90px;
       padding-bottom: 40px;
       width: 100%;
+      max-width: 960px;
+      margin: 0 auto;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: flex-start;
       position: relative;
-      overflow-x: hidden;
+      overflow-x: visible;
     }
 
     /* Responsive styling for mobile view */
@@ -711,15 +727,15 @@
 
     /* Slider layout classes */
     .nav-arrow {
-      position: fixed;
-      top: 55%;
-      transform: translateY(-50%);
-      width: 56px;
-      height: 56px;
-      background: rgba(13, 27, 75, 0.75);
+      position: absolute;
+      top: 105px;
+      transform: none;
+      width: 52px;
+      height: 52px;
+      background: rgba(13, 27, 75, 0.92);
       border: 2px solid var(--gold);
       color: var(--gold-light);
-      font-size: 24px;
+      font-size: 22px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -727,21 +743,21 @@
       cursor: pointer;
       z-index: 2000;
       transition: all 0.3s ease;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
       backdrop-filter: blur(8px);
       user-select: none;
     }
     .nav-arrow:hover {
-      background: rgba(13, 27, 75, 0.95);
+      background: rgba(13, 27, 75, 1);
       color: #ffffff;
       border-color: #ffffff;
       box-shadow: 0 0 15px rgba(255,255,255,0.4);
     }
     .nav-arrow.prev-arrow {
-      left: 30px;
+      left: 12px;
     }
     .nav-arrow.next-arrow {
-      right: 30px;
+      right: 12px;
     }
 
     .bottom-controller {
@@ -873,32 +889,29 @@
 
     @media (max-width: 800px) {
       .nav-arrow {
-        width: 46px;
-        height: 46px;
-        font-size: 20px;
-        top: auto;
-        bottom: 24px;
+        width: 44px;
+        height: 44px;
+        font-size: 18px;
+        top: 105px;
+        bottom: auto;
         transform: none;
       }
       .nav-arrow.prev-arrow {
-        left: 20px;
+        left: 8px;
       }
       .nav-arrow.next-arrow {
-        right: 20px;
+        right: 8px;
       }
     }
   </style>
 <body>
-
-<!-- Slider navigation controls (only visible on screen, hidden in print) -->
-<button class="nav-arrow prev-arrow no-print" id="slider-prev-arrow" onclick="changeSlide(-1)">◀</button>
-<button class="nav-arrow next-arrow no-print" id="slider-next-arrow" onclick="changeSlide(1)">▶</button>
 
 <!-- Print Bar -->
 <div class="print-bar">
   <h2>शिक्षक संचिका - Shikshak Sanchika</h2>
   <div class="bar-btns">
     <button class="add-page-header-btn no-print" onclick="addNewPage()">➕ नवीन पान जोडा</button>
+    <button class="delete-page-btn no-print" onclick="deleteCurrentPage()" title="चालू पान काढून टाका">🗑️ हे पान काढा</button>
     <button class="save-btn" onclick="saveData()">💾 माहिती जतन करा</button>
     <button class="print-btn" onclick="downloadPDF()">📥 PDF डाउनलोड करा</button>
     <button class="clear-btn" onclick="clearData()">🗑️ Clear</button>
@@ -906,6 +919,10 @@
 </div>
 
 <div class="pages-wrapper">
+
+<!-- Slider navigation controls (only visible on screen, hidden in print) -->
+<button class="nav-arrow prev-arrow no-print" id="slider-prev-arrow" onclick="changeSlide(-1)" title="मागील पान">◀</button>
+<button class="nav-arrow next-arrow no-print" id="slider-next-arrow" onclick="changeSlide(1)" title="पुढील पान">▶</button>
 
 <!-- ===== PAGE 1: COVER PAGE ===== -->
 <div class="page">
@@ -1761,6 +1778,56 @@ function adjustPageScale() {
 }
 window.addEventListener('resize', adjustPageScale);
 
+// ===== DELETE CURRENT PAGE =====
+function deleteCurrentPage() {
+  const pages = document.querySelectorAll('.page');
+  if (pages.length <= 1) {
+    showMsg('⚠️ किमान एक पान असणे आवश्यक आहे (पान काढून टाकता येणार नाही)', '#9b1c1c');
+    return;
+  }
+
+  if (currentSlideIndex === 0) {
+    showMsg('⚠️ मुखपृष्ठ (Cover Page) काढून टाकता येणार नाही', '#9b1c1c');
+    return;
+  }
+
+  const targetPage = pages[currentSlideIndex];
+  if (!targetPage) return;
+
+  const header = targetPage.querySelector('.page-header');
+  const pageTitle = header ? header.textContent.trim() : `पृष्ठ ${currentSlideIndex + 1}`;
+
+  if (!confirm(`तुम्हाला खात्री आहे की तुम्ही "${pageTitle}" (पृष्ठ ${currentSlideIndex + 1}) हे पान काढून टाकू इच्छिता?`)) {
+    return;
+  }
+
+  if (targetPage.classList.contains('dynamic-page')) {
+    const pageId = targetPage.id;
+    const pageNum = parseInt(pageId.replace('page-dynamic-', ''), 10);
+    activePages = activePages.filter(p => p !== pageNum);
+    localStorage.setItem('sanchika_dynamic_pages', JSON.stringify(activePages));
+    localStorage.removeItem('sanchika_docs_dynamic_' + pageNum);
+    if (dynamicDocs[pageNum]) delete dynamicDocs[pageNum];
+    targetPage.remove();
+  } else {
+    const pageKey = targetPage.dataset.pageKey || `static-page-${currentSlideIndex}`;
+    let deletedPages = JSON.parse(localStorage.getItem('sanchika_deleted_pages') || '[]');
+    if (!deletedPages.includes(pageKey)) {
+      deletedPages.push(pageKey);
+    }
+    localStorage.setItem('sanchika_deleted_pages', JSON.stringify(deletedPages));
+    targetPage.remove();
+  }
+
+  showMsg(`🗑️ "${pageTitle}" यशस्वीरीत्या काढून टाकले!`, '#9b1c1c');
+  
+  const remainingPages = document.querySelectorAll('.page');
+  currentSlideIndex = Math.min(currentSlideIndex, remainingPages.length - 1);
+  if (currentSlideIndex < 0) currentSlideIndex = 0;
+  initSlider();
+  saveData();
+}
+
 // ===== SAVE DATA to localStorage =====
 function saveData() {
   const all = document.querySelectorAll('[contenteditable]');
@@ -1781,6 +1848,17 @@ function loadData() {
   }
   
   updateDynamicPageLabels();
+
+  // Handle deleted static pages
+  const deletedPages = JSON.parse(localStorage.getItem('sanchika_deleted_pages') || '[]');
+  const staticPages = document.querySelectorAll('.page:not(.dynamic-page)');
+  staticPages.forEach((page, idx) => {
+    const pageKey = `static-page-${idx}`;
+    page.dataset.pageKey = pageKey;
+    if (deletedPages.includes(pageKey)) {
+      page.remove();
+    }
+  });
 
   const saved = localStorage.getItem('sanchika_data');
   if (saved) {
@@ -1808,11 +1886,12 @@ function loadData() {
 
 // ===== CLEAR DATA =====
 function clearData() {
-  if (confirm('सर्व माहिती clear करायची आहे?')) {
+  if (confirm('सर्व माहिती clear करायची आहे? (यामुळे काढून टाकलेली पाने देखील पूर्ववत होतील)')) {
     activePages.forEach(pageNum => {
       localStorage.removeItem('sanchika_docs_dynamic_' + pageNum);
     });
     localStorage.removeItem('sanchika_dynamic_pages');
+    localStorage.removeItem('sanchika_deleted_pages');
     
     localStorage.removeItem('sanchika_data');
     localStorage.removeItem('sanchika_photo');
@@ -1832,7 +1911,8 @@ function clearData() {
     if (img && ph) { img.src = ''; img.style.display = 'none'; ph.style.display = 'flex'; }
     renderDocList();
     renderDocList2();
-    showMsg('🗑️ सर्व माहिती साफ केली', '#9b1c1c');
+    showMsg('🗑️ सर्व माहिती व पाने पूर्ववत केली!', '#9b1c1c');
+    setTimeout(() => { location.reload(); }, 600);
   }
 }
 

@@ -92,11 +92,12 @@ export function TeacherHeader() {
         {!isDashboard && (
           <Link
             to="/teacher"
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 text-indigo-700 hover:text-indigo-900 border border-indigo-200/80 rounded-xl text-xs font-black transition-all shadow-sm active:scale-95 cursor-pointer ml-1 sm:ml-2"
+            className="flex items-center gap-1 px-2 py-1.5 sm:px-3 sm:py-1.5 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 text-indigo-700 hover:text-indigo-900 border border-indigo-200/80 rounded-xl text-xs font-black transition-all shadow-sm active:scale-95 cursor-pointer ml-1 sm:ml-2 shrink-0"
             title="मुख्य डॅशबोर्डवर मागे जा (Back to Teacher Dashboard)"
           >
-            <ArrowLeft className="size-4 shrink-0" />
-            <span className="font-bold">मागे जा (Back)</span>
+            <ArrowLeft className="size-3.5 sm:size-4 shrink-0" />
+            <span className="font-bold hidden min-[360px]:inline">मागे जा (Back)</span>
+            <span className="font-bold min-[360px]:hidden">मागे</span>
           </Link>
         )}
       </div>
