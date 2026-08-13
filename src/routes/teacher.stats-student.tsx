@@ -368,7 +368,7 @@ function Page1() {
         >
           विद्यार्थी व शाळा तपशील
         </div>
-        <div style={{ display: "flex", flexDirection: "column" }}>
+        <div style={{ display: "flex", flexDirection: "column", padding: "6px 0 16px 0" }}>
           <div
             style={{
               display: "flex",
@@ -381,8 +381,11 @@ function Page1() {
               style={{
                 fontWeight: "700",
                 color: "#0d1b4b",
-                minWidth: "190px",
                 fontSize: "18px",
+                lineHeight: "1.4",
+                whiteSpace: "nowrap",
+                minWidth: "210px",
+                display: "inline-block",
               }}
             >
               ◆ विद्यार्थ्याचे नाव:
@@ -399,6 +402,9 @@ function Page1() {
                 fontSize: "18px",
                 color: "#0d1b4b",
                 fontWeight: "700",
+                height: "26px",
+                minHeight: "26px",
+                display: "inline-block",
               }}
             ></span>
           </div>
@@ -414,8 +420,11 @@ function Page1() {
               style={{
                 fontWeight: "700",
                 color: "#0d1b4b",
-                minWidth: "190px",
                 fontSize: "18px",
+                lineHeight: "1.4",
+                whiteSpace: "nowrap",
+                minWidth: "210px",
+                display: "inline-block",
               }}
             >
               ◆ शाळेचे नाव:
@@ -432,6 +441,9 @@ function Page1() {
                 fontSize: "18px",
                 color: "#0d1b4b",
                 fontWeight: "700",
+                height: "26px",
+                minHeight: "26px",
+                display: "inline-block",
               }}
             ></span>
           </div>
@@ -446,8 +458,11 @@ function Page1() {
               style={{
                 fontWeight: "700",
                 color: "#0d1b4b",
-                minWidth: "190px",
                 fontSize: "18px",
+                lineHeight: "1.4",
+                whiteSpace: "nowrap",
+                minWidth: "210px",
+                display: "inline-block",
               }}
             >
               ◆ तालुका व जिल्हा:
@@ -464,6 +479,9 @@ function Page1() {
                 fontSize: "18px",
                 color: "#0d1b4b",
                 fontWeight: "700",
+                height: "26px",
+                minHeight: "26px",
+                display: "inline-block",
               }}
             ></span>
           </div>
