@@ -1955,31 +1955,37 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                         </tr>
                       </thead>
                       <tbody>
-                        {subjects.map((sub, idx) => {
-                          const gradeCounts = { a1: 0, a2: 0, b1: 0, b2: 0, c1: 0, c2: 0, d: 0, i1: 0, i2: 0 };
-                          let presentCount = 0;
-                          students.forEach((std) => {
-                            const stats = getStudentSubjectStats(std, sub);
-                            gradeCounts[getGradeKeyFromScore(stats.grandTotal)]++;
-                            if (stats.grandTotal > 0 || getStudentAttendanceDays(std) > 0) presentCount++;
-                          });
-                          // If no data found at all, default to total students count
-                          const displayPresent = presentCount > 0 ? presentCount : students.length;
+                        {(() => {
+                          // Calculate overall class-wide present student count:
+                          // If a student has attendance > 0 OR has marks > 0 in ANY subject, count them present for all subjects
+                          const classPresentCount = students.filter((std) => {
+                            if (getStudentAttendanceDays(std) > 0) return true;
+                            return subjects.some((subKey) => getStudentSubjectStats(std, subKey).grandTotal > 0);
+                          }).length;
+                          const displayPresent = classPresentCount > 0 ? classPresentCount : students.length;
 
-                          return (
-                            <tr key={sub} className="border-b border-amber-400 hover:bg-amber-50/40">
-                              <td className="border border-amber-500 p-1.5 font-bold w-10">{idx + 1}</td>
-                              <td className="border border-amber-500 p-1 text-left font-bold text-slate-900 text-[11px] leading-tight w-44">{getSubjectDisplayName(sub)}</td>
-                              <td className="border border-amber-500 p-1.5 font-bold w-12">{students.length}</td>
-                              <td className="border border-amber-500 p-1.5 font-bold w-12">{displayPresent}</td>
-                              {GRADE_KEYS.map((g) => (
-                                <td key={g} className="border border-amber-500 p-1.5 font-bold text-center w-12 min-w-[44px]">
-                                  {gradeCounts[g]}
-                                </td>
-                              ))}
-                            </tr>
-                          );
-                        })}
+                          return subjects.map((sub, idx) => {
+                            const gradeCounts = { a1: 0, a2: 0, b1: 0, b2: 0, c1: 0, c2: 0, d: 0, i1: 0, i2: 0 };
+                            students.forEach((std) => {
+                              const stats = getStudentSubjectStats(std, sub);
+                              gradeCounts[getGradeKeyFromScore(stats.grandTotal)]++;
+                            });
+
+                            return (
+                              <tr key={sub} className="border-b border-amber-400 hover:bg-amber-50/40">
+                                <td className="border border-amber-500 p-1.5 font-bold w-10">{idx + 1}</td>
+                                <td className="border border-amber-500 p-1 text-left font-bold text-slate-900 text-[11px] leading-tight w-44">{getSubjectDisplayName(sub)}</td>
+                                <td className="border border-amber-500 p-1.5 font-bold w-12">{students.length}</td>
+                                <td className="border border-amber-500 p-1.5 font-bold w-12">{displayPresent}</td>
+                                {GRADE_KEYS.map((g) => (
+                                  <td key={g} className="border border-amber-500 p-1.5 font-bold text-center w-12 min-w-[44px]">
+                                    {gradeCounts[g]}
+                                  </td>
+                                ))}
+                              </tr>
+                            );
+                          });
+                        })()}
                       </tbody>
                     </table>
                   </div>
@@ -2007,38 +2013,43 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                         </tr>
                       </thead>
                       <tbody>
-                        {subjects.map((sub, idx) => {
-                          const boyCounts = { a1: 0, a2: 0, b1: 0, b2: 0, c1: 0, c2: 0, d: 0, i1: 0, i2: 0 };
-                          const girlCounts = { a1: 0, a2: 0, b1: 0, b2: 0, c1: 0, c2: 0, d: 0, i1: 0, i2: 0 };
-                          let presentCount = 0;
+                        {(() => {
+                          const classPresentCount2 = students.filter((std) => {
+                            if (getStudentAttendanceDays(std) > 0) return true;
+                            return subjects.some((subKey) => getStudentSubjectStats(std, subKey).grandTotal > 0);
+                          }).length;
+                          const displayPresent2 = classPresentCount2 > 0 ? classPresentCount2 : students.length;
 
-                          students.forEach((std) => {
-                            const stats = getStudentSubjectStats(std, sub);
-                            const gKey = getGradeKeyFromScore(stats.grandTotal);
-                            if (isBoyStudent(std)) {
-                              boyCounts[gKey]++;
-                            } else {
-                              girlCounts[gKey]++;
-                            }
-                            if (stats.grandTotal > 0 || getStudentAttendanceDays(std) > 0) presentCount++;
+                          return subjects.map((sub, idx) => {
+                            const boyCounts = { a1: 0, a2: 0, b1: 0, b2: 0, c1: 0, c2: 0, d: 0, i1: 0, i2: 0 };
+                            const girlCounts = { a1: 0, a2: 0, b1: 0, b2: 0, c1: 0, c2: 0, d: 0, i1: 0, i2: 0 };
+
+                            students.forEach((std) => {
+                              const stats = getStudentSubjectStats(std, sub);
+                              const gKey = getGradeKeyFromScore(stats.grandTotal);
+                              if (isBoyStudent(std)) {
+                                boyCounts[gKey]++;
+                              } else {
+                                girlCounts[gKey]++;
+                              }
+                            });
+
+                            return (
+                              <tr key={sub} className="border-b border-amber-400 hover:bg-amber-50/40">
+                                <td className="border border-amber-500 p-1 font-bold w-8">{idx + 1}</td>
+                                <td className="border border-amber-500 p-1 text-left font-bold text-slate-900 text-[10px] leading-tight w-40">{getSubjectDisplayName(sub)}</td>
+                                <td className="border border-amber-500 p-1 font-bold w-10">{students.length}</td>
+                                <td className="border border-amber-500 p-1 font-bold w-10">{displayPresent2}</td>
+                                {GRADE_KEYS.map((g) => (
+                                  <React.Fragment key={g}>
+                                    <td className="border border-amber-500 p-0.5 font-bold text-center w-8 min-w-[28px]">{boyCounts[g]}</td>
+                                    <td className="border border-amber-500 p-0.5 font-bold text-center w-8 min-w-[28px]">{girlCounts[g]}</td>
+                                  </React.Fragment>
+                                ))}
+                              </tr>
+                            );
                           });
-                          const displayPresent2 = presentCount > 0 ? presentCount : students.length;
-
-                          return (
-                            <tr key={sub} className="border-b border-amber-400 hover:bg-amber-50/40">
-                              <td className="border border-amber-500 p-1 font-bold w-8">{idx + 1}</td>
-                              <td className="border border-amber-500 p-1 text-left font-bold text-slate-900 text-[10px] leading-tight w-40">{getSubjectDisplayName(sub)}</td>
-                              <td className="border border-amber-500 p-1 font-bold w-10">{students.length}</td>
-                              <td className="border border-amber-500 p-1 font-bold w-10">{displayPresent2}</td>
-                              {GRADE_KEYS.map((g) => (
-                                <React.Fragment key={g}>
-                                  <td className="border border-amber-500 p-0.5 font-bold text-center w-8 min-w-[28px]">{boyCounts[g]}</td>
-                                  <td className="border border-amber-500 p-0.5 font-bold text-center w-8 min-w-[28px]">{girlCounts[g]}</td>
-                                </React.Fragment>
-                              ))}
-                            </tr>
-                          );
-                        })}
+                        })()}
                       </tbody>
                     </table>
                   </div>

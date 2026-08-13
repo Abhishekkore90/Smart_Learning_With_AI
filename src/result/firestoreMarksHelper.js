@@ -88,39 +88,42 @@ export const fetchStudentsForClass = async (selectedClass, medium, teacherId = n
   const activeTeacherId = teacherId || (typeof localStorage !== "undefined" ? localStorage.getItem("current_teacher_id") : null);
 
   try {
-    const uQuery = query(collection(db, "users"), where("role", "==", "student"));
-    const uSnap = await getDocs(uQuery);
-    uSnap.forEach((docSnap) => {
-      const d = docSnap.data();
-      const studentObj = { id: docSnap.id, ...d };
-      if (matchStudentClassAndMedium(studentObj, targetClassNorm, selectedMedium, activeTeacherId)) {
-        loadedStudents.push({
-          id: docSnap.id,
-          srNo: String(d.rollNo || d.srNo || loadedStudents.length + 1),
-          rollNo: String(d.rollNo || d.srNo || loadedStudents.length + 1),
-          name: d.fullName || d.name || d.studentName || "",
-          fullName: d.fullName || d.name || d.studentName || "",
-          stdName: d.name || d.fullName || "",
-          stdFather: d.fatherName || d.stdFather || "",
-          stdSurname: d.surname || d.stdSurname || "",
-          stdMother: d.motherName || d.stdMother || "",
-          currentClass: d.class || d.currentClass || selectedClass,
-          medium: d.medium,
-          isSemiEnglish: d.isSemiEnglish,
-          teacherId: d.teacherId || d.createdById,
-          division: d.division || "1",
-          dob: d.dob || d.birthDate || "",
-          caste: d.caste || d.category || "",
-          gender: d.gender || d.sex || d.ling || d.genderType || d.studentGender || "",
-          studentId: d.studentId || docSnap.id,
-        });
-      }
-    });
-  } catch (e) {}
+    const [uSnap, studentsSnap] = await Promise.all([
+      getDocs(query(collection(db, "users"), where("role", "==", "student"))).catch(() => null),
+      getDocs(collection(db, "students")).catch(() => null),
+    ]);
 
-  if (loadedStudents.length === 0) {
-    try {
-      const studentsSnap = await getDocs(collection(db, "students"));
+    if (uSnap) {
+      uSnap.forEach((docSnap) => {
+        const d = docSnap.data();
+        const studentObj = { id: docSnap.id, ...d };
+        if (matchStudentClassAndMedium(studentObj, targetClassNorm, selectedMedium, activeTeacherId)) {
+          loadedStudents.push({
+            id: docSnap.id,
+            srNo: String(d.rollNo || d.srNo || loadedStudents.length + 1),
+            rollNo: String(d.rollNo || d.srNo || loadedStudents.length + 1),
+            name: d.fullName || d.name || d.studentName || "",
+            fullName: d.fullName || d.name || d.studentName || "",
+            stdName: d.name || d.fullName || "",
+            stdFather: d.fatherName || d.stdFather || "",
+            stdSurname: d.surname || d.stdSurname || "",
+            stdMother: d.motherName || d.stdMother || "",
+            currentClass: d.class || d.currentClass || selectedClass,
+            medium: d.medium,
+            isSemiEnglish: d.isSemiEnglish,
+            teacherId: d.teacherId || d.createdById,
+            division: d.division || "1",
+            dob: d.dob || d.birthDate || "",
+            caste: d.caste || d.category || "",
+            gender: d.gender || d.sex || d.ling || d.genderType || d.studentGender || "",
+            studentId: d.studentId || docSnap.id,
+            photoUrl: d.photoUrl || d.profilePhoto || d.photoURL || d.studentPhoto || d.photo || d.imageUrl || d.profileImage || "",
+          });
+        }
+      });
+    }
+
+    if (studentsSnap) {
       studentsSnap.forEach((docSnap) => {
         const d = docSnap.data();
         const studentObj = { id: docSnap.id, ...d };
@@ -143,11 +146,12 @@ export const fetchStudentsForClass = async (selectedClass, medium, teacherId = n
             caste: d.caste || d.category || "",
             gender: d.gender || d.sex || d.ling || d.genderType || d.studentGender || "",
             studentId: d.studentId || docSnap.id,
+            photoUrl: d.photoUrl || d.profilePhoto || d.photoURL || d.studentPhoto || d.photo || d.imageUrl || d.profileImage || "",
           });
         }
       });
-    } catch (e) {}
-  }
+    }
+  } catch (e) {}
 
   // Fetch detailed student profiles from student_details collection
   const detailsMap = new Map();
@@ -179,6 +183,7 @@ export const fetchStudentsForClass = async (selectedClass, medium, teacherId = n
         gender: det.gender || det.sex || det.ling || s.gender || s.sex || s.ling || s.genderType || s.studentGender || "",
         address: det.address || s.address || "",
         mobile: det.phone || s.phone || s.mobile || "",
+        photoUrl: det.photoUrl || det.profilePhoto || det.photoURL || det.studentPhoto || det.photo || det.imageUrl || det.profileImage || s.photoUrl || s.profilePhoto || s.photoURL || s.studentPhoto || s.photo || s.imageUrl || s.profileImage || "",
         studentId: det.studentId || s.studentId || s.id || "",
         aparId: det.aparId || "",
         height: det.height || "",

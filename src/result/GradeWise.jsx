@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from "react";
 import { ArrowLeft, Download, Printer, Loader2, RefreshCw } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
-import { matchStudentClassAndMedium } from "./firestoreMarksHelper";
+import { matchStudentClassAndMedium, fetchStudentsForClass, fetchFirestoreMarks } from "./firestoreMarksHelper";
 import { getTeacherId } from "@/lib/teacherIsolationHelper";
-import { DEFAULT_MARATHI_SUBJECTS_MAP } from "@/data/cceSubjects";
+import { DEFAULT_MARATHI_SUBJECTS_MAP, getDefaultSubjectsForClass } from "@/data/cceSubjects";
 import { toast } from "sonner";
 
 // Default Class Definitions
@@ -83,27 +83,11 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
   const printRef = useRef(null);
 
   useEffect(() => {
-    // 0ms Instant Cache Load
-    try {
-      const cached = localStorage.getItem(`gradewise_matrix_cache_${academicYear}_${selectedTerm}`);
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setGradeMatrix(parsed);
-          setLoading(false);
-        }
-      }
-    } catch (e) { }
-
     fetchSchoolDataAndCalculate();
   }, [academicYear, selectedTerm]);
 
   const fetchSchoolDataAndCalculate = async () => {
-    // If we already loaded from cache, don't show full-page spinner while background refreshing
-    const cachedExists = localStorage.getItem(`gradewise_matrix_cache_${academicYear}_${selectedTerm}`);
-    if (!cachedExists) {
-      setLoading(true);
-    }
+    setLoading(true);
 
     try {
       // 1. Fetch School Name from Settings / LocalStorage / Firebase
@@ -163,41 +147,10 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
         e2: { boys: 0, girls: 0 },
       }));
 
-      // 3. Parallel query for student records
+      // 3. Query for student records & marks across all 8 classes
       try {
         const currentTeacherId = getTeacherId();
         const currentMedium = localStorage.getItem("cce_selected_medium") || "marathi";
-        const detailsMap = new Map();
-
-        const [detailsRes, usersRes] = await Promise.allSettled([
-          getDocs(collection(db, "student_details")),
-          getDocs(query(collection(db, "users"), where("role", "==", "student"))),
-        ]);
-
-        if (detailsRes.status === "fulfilled" && detailsRes.value) {
-          detailsRes.value.forEach((docSnap) => {
-            detailsMap.set(docSnap.id, docSnap.data());
-          });
-        }
-
-        const studentsByClass = {};
-        if (usersRes.status === "fulfilled" && usersRes.value) {
-          usersRes.value.forEach((docSnap) => {
-            const rawData = docSnap.data();
-            const det = detailsMap.get(docSnap.id) || detailsMap.get(rawData.name) || detailsMap.get(rawData.fullName) || {};
-            const sData = { ...rawData, ...det };
-
-            const rawClass = String(sData.class || sData.currentClass || "").toLowerCase();
-            const idx = getClassIndex(rawClass);
-            if (idx >= 0 && idx < INITIAL_CLASSES.length) {
-              const classId = INITIAL_CLASSES[idx].id;
-              if (matchStudentClassAndMedium({ id: docSnap.id, ...sData }, classId, currentMedium, currentTeacherId)) {
-                if (!studentsByClass[idx]) studentsByClass[idx] = [];
-                studentsByClass[idx].push({ id: docSnap.id, ...sData });
-              }
-            }
-          });
-        }
 
         // Determine Term key & Alt Term key
         let termKey = "sem1";
@@ -207,10 +160,10 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
           altTermKey = "second";
         }
 
-        // 4. Parallel fetch for all 8 classes marks from Firestore cce_marks_v2 and LocalStorage
+        // 4. Parallel fetch for all 8 classes (students & marks) from Firestore and LocalStorage
         await Promise.all(
           INITIAL_CLASSES.map(async (clsObj, idx) => {
-            const classStudents = studentsByClass[idx] || [];
+            const classStudents = (await fetchStudentsForClass(clsObj.id, currentMedium, currentTeacherId)) || [];
             let semMarks = {};
 
             const mergeDoc = (d) => {
@@ -236,7 +189,12 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
               if (cached) mergeDoc(JSON.parse(cached));
             } catch (e) { }
 
-            // Fetch from Firestore cce_marks_v2
+            // Fetch from Firestore cce_marks_v2 and Bunny CDN using helper
+            try {
+              const fsMarks = await fetchFirestoreMarks(clsObj.id, academicYear, termKey, currentTeacherId) || {};
+              semMarks = { ...fsMarks };
+            } catch (e) { }
+
             const docsToFetch = [
               ...(currentTeacherId ? [
                 `${currentTeacherId}_${clsObj.id}_${academicYear}`,
@@ -263,7 +221,7 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
               }
             });
 
-            const classSubjects = DEFAULT_MARATHI_SUBJECTS_MAP[clsObj.id] || DEFAULT_MARATHI_SUBJECTS_MAP["1st"];
+            const classSubjects = getDefaultSubjectsForClass(clsObj.id, currentMedium) || DEFAULT_MARATHI_SUBJECTS_MAP[clsObj.id] || DEFAULT_MARATHI_SUBJECTS_MAP["1st"];
             const totalMax = classSubjects.length * 100;
 
             classStudents.forEach((st) => {
@@ -276,13 +234,17 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
               const genderKey = isGirl ? "girls" : "boys";
               newMatrix[idx].pat[genderKey] += 1;
 
-              // Extract student marks object matching BoardResult.jsx
+              // Extract student marks object matching all possible student identifiers
               const studentMarksObj =
                 semMarks[st.id] ||
+                semMarks[st.studentId] ||
                 semMarks[st.rollNo] ||
                 semMarks[String(st.rollNo)] ||
+                semMarks[st.srNo] ||
+                semMarks[String(st.srNo)] ||
                 semMarks[st.name] ||
                 semMarks[st.fullName] ||
+                semMarks[st.stdName] ||
                 st.marks ||
                 st.cce_marks ||
                 st.marksData ||
@@ -370,11 +332,10 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
                 grandObtainedTotal += grandTotal;
               });
 
-              if (hasAnyMarkData) {
-                const percent = totalMax > 0 ? (grandObtainedTotal / totalMax) * 100 : 0;
-                const gradeCat = getGradeCategory(percent);
-                newMatrix[idx][gradeCat][genderKey] += 1;
-              }
+              // Assign every student in the roster to their percentage grade category
+              const percent = (hasAnyMarkData && totalMax > 0) ? (grandObtainedTotal / totalMax) * 100 : 0;
+              const gradeCat = getGradeCategory(percent);
+              newMatrix[idx][gradeCat][genderKey] += 1;
             });
           })
         );

@@ -130,11 +130,11 @@ export function CCEPdfFiles({
             <ArrowLeft className="size-5" />
           </button>
           <h2 className="text-base font-bold text-slate-800">
-            प्रगती पत्रक - इयत्ता {activeClass} ({selectedTerm === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"})
+            प्रगती पत्रक - इयत्ता {activeClass}
           </h2>
         </div>
         <Suspense fallback={renderLoading()}>
-          <ProgressSheet initialClass={activeClass} initialYear={academicYear} initialSemester={selectedTerm} onBack={() => setViewingReportId(null)} />
+          <ProgressSheet initialClass={activeClass} initialYear={academicYear} onBack={() => setViewingReportId(null)} />
         </Suspense>
       </div>
     );
@@ -272,7 +272,7 @@ export function CCEPdfFiles({
         </div>
 
         <div className="text-[11px] font-extrabold text-slate-600 flex items-center gap-1.5">
-          <span>CCE नोंदवही व प्रगती पत्रक:</span>
+          <span>CCE नोंदवही:</span>
           <span className={selectedTerm === "sem1" ? "text-amber-700" : "text-emerald-700"}>
             {selectedTerm === "sem1" ? "📘 प्रथम सत्र PDF निवडली आहे" : "📗 द्वितीय सत्र PDF निवडली आहे"}
           </span>
