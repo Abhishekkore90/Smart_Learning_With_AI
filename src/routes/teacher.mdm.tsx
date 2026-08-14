@@ -11068,18 +11068,12 @@ function TeacherMDMPage() {
                       </div>
 
                       {/* Buttons Row */}
-                      <div className="flex justify-center items-center gap-6 py-4 w-full">
+                      <div className="flex justify-center items-center py-4 w-full">
                         <button
                           onClick={handleViewStockData}
-                          className="px-6 py-2 bg-[#4CAF50] hover:bg-[#43A047] text-white rounded text-sm font-semibold transition-colors"
+                          className="px-6 py-2 bg-[#4CAF50] hover:bg-[#43A047] text-white rounded text-sm font-semibold transition-colors cursor-pointer"
                         >
                           {t("माहिती पहा", "View Data")}
-                        </button>
-                        <button
-                          onClick={handleStockReport}
-                          className="px-6 py-2 bg-[#D4A017] hover:bg-[#B8860B] text-white rounded text-sm font-semibold transition-colors"
-                        >
-                          {t("अहवाल", "Report")}
                         </button>
                       </div>
 
