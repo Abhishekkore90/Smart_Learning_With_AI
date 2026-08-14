@@ -916,14 +916,14 @@ export function MonthlyParipathRegister() {
                     </colgroup>
                     <thead>
                       <tr className="bg-slate-100 border-b-2 border-slate-900 text-center font-black text-slate-900 uppercase text-[11px]">
-                        <th className="p-2 border-r border-slate-900 align-middle">दिनांक</th>
-                        <th className="p-2 border-r border-slate-900 align-middle">वार</th>
-                        <th className="p-2 border-r border-slate-900 align-middle">राष्ट्रगीत</th>
-                        <th className="p-2 border-r border-slate-900 align-middle">प्रतिज्ञा</th>
-                        <th className="p-2 border-r border-slate-900 align-middle">भारताचे संविधान</th>
-                        <th className="p-2 border-r border-slate-900 align-middle">प्रार्थना</th>
-                        <th className="p-2 border-r border-slate-900 align-middle">श्लोक</th>
-                        <th className="p-2 align-middle">सुविचार</th>
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">दिनांक</th>
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">वार</th>
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">राष्ट्रगीत</th>
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">प्रतिज्ञा</th>
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">भारताचे संविधान</th>
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">प्रार्थना</th>
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">श्लोक</th>
+                        <th className="p-2 text-center align-middle">सुविचार</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-900 font-medium">
@@ -1049,20 +1049,20 @@ export function MonthlyParipathRegister() {
                     </colgroup>
                     <thead>
                       <tr className="bg-slate-100 border-b-2 border-slate-900 text-center font-black text-slate-900 uppercase text-[11px]">
-                        <th className="p-2 border-r border-slate-900 align-middle">
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">
                           सुसंस्कारक्षम बातम्या
                         </th>
-                        <th className="p-2 border-r border-slate-900 align-middle">दिनविशेष</th>
-                        <th className="p-2 border-r border-slate-900 align-middle">म्हण</th>
-                        <th className="p-2 border-r border-slate-900 align-middle">बोधकथा</th>
-                        <th className="p-2 border-r border-slate-900 align-middle">समूहगीत</th>
-                        <th className="p-2 border-r border-slate-900 align-middle">
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">दिनविशेष</th>
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">म्हण</th>
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">बोधकथा</th>
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">समूहगीत</th>
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">
                           देशभक्ती गीत
                         </th>
-                        <th className="p-2 border-r border-slate-900 align-middle">
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">
                           मौन पसायदान
                         </th>
-                        <th className="p-2 align-middle">वर्गशिक्षकांची स्वाक्षरी</th>
+                        <th className="p-2 text-center align-middle">वर्गशिक्षकांची स्वाक्षरी</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-900 font-medium">
