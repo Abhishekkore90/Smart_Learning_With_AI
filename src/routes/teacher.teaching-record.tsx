@@ -89,13 +89,16 @@ function TeachingRecordPage() {
   const navigate = useNavigate();
   const { activeJobs } = useDiaryProcessing();
   
+  const [activeMainTab, setActiveMainTab] = useState<"diary" | "school_profile">("diary");
+  
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
   const [selectedMedium, setSelectedMedium] = useState<string | null>(null);
-  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [selectedYear, setSelectedYear] = useState<number>(2026);
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
+<<<<<<< HEAD
   const handleBack = () => {
     if (selectedWeek) {
       setSelectedWeek(null);
@@ -111,6 +114,45 @@ function TeachingRecordPage() {
       } else {
         navigate({ to: "/teacher" });
       }
+=======
+  const [schoolProfile, setSchoolProfile] = useState<{
+    schoolName: string;
+    teacherName: string;
+    headmasterName: string;
+    className: string;
+    academicYear: string;
+  }>({
+    schoolName: "",
+    teacherName: "",
+    headmasterName: "",
+    className: "Class 1",
+    academicYear: "2026-27",
+  });
+
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("teaching_diary_school_profile");
+      if (stored) {
+        setSchoolProfile((prev) => ({ ...prev, ...JSON.parse(stored) }));
+      }
+    } catch (e) {
+      console.error("Error reading profile:", e);
+    }
+  }, []);
+
+  const handleSaveSchoolProfile = () => {
+    setSavingProfile(true);
+    try {
+      localStorage.setItem("teaching_diary_school_profile", JSON.stringify(schoolProfile));
+      toast.success("शाळेची माहिती यशस्वीरित्या जतन केली!");
+      setActiveMainTab("diary");
+    } catch (err: any) {
+      toast.error("माहिती सेव्ह करण्यात अडचण आली.");
+    } finally {
+      setSavingProfile(false);
+>>>>>>> dfd1b4f096edb901ee0a38a1854113cfe2ebaee3
     }
   };
   
@@ -353,6 +395,7 @@ function TeachingRecordPage() {
       <main className="lg:pl-64 pt-16 min-h-screen print:pl-0 print:pt-0 pb-24">
         <PinGate sectionKey="teaching_record">
           <div className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto space-y-6 print:p-0 print:max-w-full">
+<<<<<<< HEAD
             {/* Top Navigation Bar with Back Button & Breadcrumbs */}
             <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3.5 px-5 rounded-2xl border border-slate-200 shadow-sm print:hidden">
               <button
@@ -395,6 +438,169 @@ function TeachingRecordPage() {
             </div>
 
             <AnimatePresence mode="wait">
+=======
+            
+            {/* Top Navigation Bar with School Profile Tab */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-3.5 sm:p-4 rounded-3xl border border-slate-200/80 shadow-sm print:hidden">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => setActiveMainTab("diary")}
+                  className={`flex-1 sm:flex-initial px-5 py-2.5 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                    activeMainTab === "diary"
+                      ? "bg-slate-900 text-white shadow-md"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
+                  }`}
+                >
+                  <BookOpen className="size-4 text-orange-400" />
+                  <span>पाठ टाचणवही (Teaching Diary)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveMainTab("school_profile")}
+                  className={`flex-1 sm:flex-initial px-5 py-2.5 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                    activeMainTab === "school_profile"
+                      ? "bg-orange-600 text-white shadow-md shadow-orange-500/20"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
+                  }`}
+                >
+                  <GraduationCap className="size-4 text-amber-300" />
+                  <span>🏫 शाळेची माहिती (School Details)</span>
+                </button>
+              </div>
+
+              {/* Saved profile status badge */}
+              {schoolProfile.schoolName && (
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-600 bg-slate-50 px-3.5 py-1.5 rounded-xl border border-slate-200">
+                  <span className="text-orange-600 font-extrabold">{schoolProfile.schoolName}</span>
+                  <span>•</span>
+                  <span>इयत्ता: <strong className="text-slate-900">{schoolProfile.className}</strong></span>
+                  <span>•</span>
+                  <span>सन: <strong className="text-emerald-600 font-black">{schoolProfile.academicYear || "2026-27"}</strong></span>
+                </div>
+              )}
+            </div>
+
+            {activeMainTab === "school_profile" ? (
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key="school-profile-tab"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm max-w-3xl mx-auto space-y-6"
+                >
+                  <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+                    <div className="size-12 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-600 font-black border border-orange-100">
+                      <GraduationCap className="size-6" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">शाळेची माहिती (School Details)</h2>
+                      <p className="text-xs text-slate-500 font-medium">ही माहिती सेव्ह केल्यावर दैनिक व आठवड्याच्या पाठ टाचणमध्ये आपोआप दिसेल.</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {/* शाळेचे नाव */}
+                    <div className="space-y-1.5 md:col-span-2">
+                      <label className="text-xs font-black text-slate-700 flex items-center gap-1">
+                        <span>शाळेचे नाव (School Name)</span>
+                        <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={schoolProfile.schoolName}
+                        onChange={(e) => setSchoolProfile({ ...schoolProfile, schoolName: e.target.value })}
+                        placeholder="उदा. जि. प. प्राथमिक शाळा..."
+                        className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-slate-50/50"
+                      />
+                    </div>
+
+                    {/* वर्गशिक्षकाचे नाव */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-black text-slate-700 flex items-center gap-1">
+                        <span>वर्गशिक्षकाचे नाव (Class Teacher)</span>
+                        <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={schoolProfile.teacherName}
+                        onChange={(e) => setSchoolProfile({ ...schoolProfile, teacherName: e.target.value })}
+                        placeholder="उदा. श्री. नामदेव शिंदे..."
+                        className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-slate-50/50"
+                      />
+                    </div>
+
+                    {/* मुख्याध्यापकांचे नाव */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-black text-slate-700 flex items-center gap-1">
+                        <span>मुख्याध्यापकांचे नाव (Headmaster Name)</span>
+                        <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={schoolProfile.headmasterName}
+                        onChange={(e) => setSchoolProfile({ ...schoolProfile, headmasterName: e.target.value })}
+                        placeholder="उदा. श्री. राजू पाटील..."
+                        className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-slate-50/50"
+                      />
+                    </div>
+
+                    {/* इयत्ता / वर्ग */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-black text-slate-700 flex items-center gap-1">
+                        <span>इयत्ता / वर्ग (Class)</span>
+                        <span className="text-rose-500">*</span>
+                      </label>
+                      <select
+                        value={schoolProfile.className}
+                        onChange={(e) => setSchoolProfile({ ...schoolProfile, className: e.target.value })}
+                        className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-slate-50/50 cursor-pointer"
+                      >
+                        {DIARY_CLASSES.map((cls) => (
+                          <option key={cls.id} value={cls.id}>
+                            {cls.mr} ({cls.id})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* शैक्षणिक वर्ष (Academic Year) */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-black text-slate-700 flex items-center gap-1">
+                        <span>शैक्षणिक वर्ष (Academic Year)</span>
+                        <span className="text-rose-500">*</span>
+                      </label>
+                      <select
+                        value={schoolProfile.academicYear}
+                        onChange={(e) => setSchoolProfile({ ...schoolProfile, academicYear: e.target.value })}
+                        className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-slate-50/50 text-emerald-700 cursor-pointer"
+                      >
+                        <option value="2025-26">2025-26</option>
+                        <option value="2026-27">2026-27 (Default)</option>
+                        <option value="2027-28">2027-28</option>
+                        <option value="2028-29">2028-29</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={handleSaveSchoolProfile}
+                      disabled={savingProfile}
+                      className="px-8 py-3.5 bg-orange-600 hover:bg-orange-700 disabled:bg-slate-300 text-white rounded-2xl font-black text-sm shadow-md shadow-orange-500/20 transition-all flex items-center gap-2 cursor-pointer"
+                    >
+                      {savingProfile ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
+                      <span>माहिती जतन करा (Save Details)</span>
+                    </button>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            ) : (
+              <AnimatePresence mode="wait">
+>>>>>>> dfd1b4f096edb901ee0a38a1854113cfe2ebaee3
 
               {/* Step 1: Select Medium (Orange Cards) */}
               {!selectedMedium && (
@@ -608,10 +814,198 @@ function TeachingRecordPage() {
                   exit={{ opacity: 0, scale: 0.98 }}
                   className="max-w-5xl mx-auto w-full space-y-6"
                 >
+<<<<<<< HEAD
                   <TeacherTodayDiary selectedClass={selectedClass} selectedMedium={selectedMedium} selectedMonth={selectedMonth} onBack={handleBack} />
+=======
+                  <div className="flex items-center justify-between gap-4 bg-slate-900 text-white p-3 rounded-2xl border border-slate-800 shadow-md">
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setSelectedWeek(null)}
+                        className="flex items-center gap-1.5 px-3.5 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-black shadow-sm transition-all cursor-pointer"
+                        title="मागे जा (Back to Week Selection)"
+                      >
+                        <ArrowLeft className="size-4" />
+                        <span>← मागे जा (Back)</span>
+                      </button>
+                      <div className="flex items-center gap-2">
+                        <Layers className="size-4 text-orange-400" />
+                        <span className="text-xs font-black">
+                          {selectedMedium === "Marathi" ? "मराठी माध्यम" : "सेमी इंग्रजी"} • {selectedClass} • {months.find(m => m.id === selectedMonth)?.mr} • {weeks.find(w => w.id === selectedWeek)?.mr}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => { setSelectedWeek(null); setSelectedMonth(null); }}
+                        className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+                      >
+                        Change Month
+                      </button>
+                      <button
+                        onClick={() => { setSelectedWeek(null); setSelectedMonth(null); setSelectedClass(null); }}
+                        className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+                      >
+                        Change Class
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-4 bg-slate-900 text-white p-2 rounded-2xl border border-slate-850 shadow-sm">
+                    <div className="flex items-center gap-2 w-full">
+                      <button
+                        type="button"
+                        onClick={() => setActiveViewTab("today")}
+                        className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                          activeViewTab === "today"
+                            ? "bg-orange-600 text-white shadow-md shadow-orange-500/20"
+                            : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                        }`}
+                      >
+                        <Sparkles className="size-4 text-amber-300" />
+                        <span>आजचे टाचण (Today)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveViewTab("document")}
+                        className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                          activeViewTab === "document"
+                            ? "bg-orange-600 text-white shadow-md shadow-orange-500/20"
+                            : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                        }`}
+                      >
+                        <FileText className="size-4" />
+                        <span>दस्तऐवज अहवाल (PDF / Doc / Upload)</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {activeViewTab === "today" ? (
+                    <TeacherTodayDiary selectedClass={selectedClass} selectedMedium={selectedMedium} schoolProfile={schoolProfile} />
+                  ) : (
+                    <div className="grid grid-cols-1 gap-6">
+                      {/* Upload Form */}
+                      <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
+                        <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+                          <div className="size-10 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-600 font-black">
+                            <Upload className="size-5" />
+                          </div>
+                          <div>
+                            <h2 className="text-base font-extrabold text-slate-900">Upload Teaching Diary</h2>
+                            <p className="text-xs text-slate-500">{selectedClass} ({selectedMedium}) — {months.find(m => m.id === selectedMonth)?.mr} • {weeks.find(w => w.id === selectedWeek)?.mr}</p>
+                          </div>
+                        </div>
+                        <div className="space-y-5 max-w-xl mx-auto w-full">
+                          <div className="relative border-2 border-dashed border-slate-200 hover:border-orange-500 bg-slate-50 hover:bg-orange-50/20 rounded-2xl p-6 text-center cursor-pointer transition-all">
+                            <input type="file" accept=".pdf, .doc, .docx" disabled={uploading} onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+                            <div className="space-y-2">
+                              <div className="size-12 rounded-2xl bg-white flex items-center justify-center text-orange-600 mx-auto shadow-sm border border-slate-100">
+                                <Upload className="size-6" />
+                              </div>
+                              {selectedFile ? (
+                                <p className="text-xs font-extrabold text-slate-800">{selectedFile.name}</p>
+                              ) : (
+                                <p className="text-xs font-bold text-slate-600">Click or Drop File Here</p>
+                              )}
+                            </div>
+                          </div>
+
+                          {uploading && (
+                            <div className="space-y-2 bg-orange-50/70 border border-orange-100 rounded-2xl p-4">
+                              <div className="flex justify-between items-center text-xs font-bold text-orange-700">
+                                <span className="animate-pulse">{uploadStatus}</span>
+                                <span>{uploadProgress}%</span>
+                              </div>
+                              <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                                <div className="bg-orange-600 h-full transition-all duration-300 rounded-full" style={{ width: `${uploadProgress}%` }} />
+                              </div>
+                            </div>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={handleUpload}
+                            disabled={uploading || !selectedFile}
+                            className="w-full py-4 px-6 bg-orange-600 hover:bg-orange-700 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-2xl font-black text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                          >
+                            {uploading ? (
+                              <><Loader2 className="size-4 animate-spin" /> Uploading...</>
+                            ) : (
+                              <><Sparkles className="size-4" /> Upload Teaching Diary</>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* List of Uploaded Diaries */}
+                      <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm space-y-4">
+                        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                          <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                            <BookOpen className="size-4 text-orange-600" />
+                            Uploaded Records: {selectedClass} ({selectedMedium}) — {months.find(m => m.id === selectedMonth)?.mr} • {weeks.find(w => w.id === selectedWeek)?.mr}
+                          </h3>
+                          <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-full text-[10px] font-black">
+                            Total {diaryRecords.filter(rec => rec.diaryDate === "master_diary" || (rec.diaryDate.split("-")[1] === selectedMonth && getRecordWeek(rec) === selectedWeek)).length}
+                          </span>
+                        </div>
+
+                        {loading ? (
+                          <div className="flex items-center justify-center py-8 text-xs font-bold text-slate-400 gap-2">
+                            <Loader2 className="size-4 animate-spin text-orange-600" /> Loading records...
+                          </div>
+                        ) : diaryRecords.filter(rec => rec.diaryDate === "master_diary" || (rec.diaryDate.split("-")[1] === selectedMonth && getRecordWeek(rec) === selectedWeek)).length > 0 ? (
+                          <div className="space-y-2 max-h-[350px] overflow-y-auto pr-1">
+                            {diaryRecords
+                              .filter(rec => rec.diaryDate === "master_diary" || (rec.diaryDate.split("-")[1] === selectedMonth && getRecordWeek(rec) === selectedWeek))
+                              .map((rec) => {
+                                const isWord = isWordDoc(rec.fileName || rec.pageUrl);
+                                return (
+                                  <div
+                                    key={rec.id}
+                                    className="p-3.5 rounded-2xl border bg-slate-50 border-slate-200/60 hover:bg-slate-100 text-slate-700 flex items-center justify-between gap-3"
+                                  >
+                                    <div className="flex items-center gap-3 min-w-0">
+                                      {isWord ? <FileText className="size-5 text-blue-600 shrink-0" /> : <BookOpen className="size-5 text-orange-600 shrink-0" />}
+                                      <div className="min-w-0">
+                                        <div className="flex items-center gap-2">
+                                          <p className="text-xs font-extrabold truncate">{rec.fileName}</p>
+                                          {isWord && <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[9px] font-black rounded uppercase">DOC</span>}
+                                        </div>
+                                        <p className="text-[10px] text-slate-505 font-semibold">
+                                          Date: <span className="font-bold text-slate-800">{rec.diaryDate}</span> • Uploaded {format(new Date(rec.uploadedAt), "dd/MM/yyyy HH:mm")}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setSelectedRecordForPreview(rec);
+                                          setIsPreviewOpen(true);
+                                        }}
+                                        className="p-1.5 bg-white border border-slate-205 hover:bg-orange-50 text-orange-600 rounded-lg cursor-pointer flex items-center gap-1 text-xs font-bold"
+                                        title="View Record"
+                                      >
+                                        <Eye className="size-3.5" /> View / प्रिव्ह्यू
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 text-slate-400 space-y-2">
+                            <AlertTriangle className="size-6 text-amber-500 mx-auto" />
+                            <p className="text-xs font-bold text-slate-500">No teaching diary uploaded yet for {selectedClass} ({selectedMedium}) in {months.find(m => m.id === selectedMonth)?.mr} • {weeks.find(w => w.id === selectedWeek)?.mr}.</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+>>>>>>> dfd1b4f096edb901ee0a38a1854113cfe2ebaee3
                 </motion.div>
               )}
             </AnimatePresence>
+          )}
 
             {/* Document Live Preview Modal Backdrop & Frame */}
             {isPreviewOpen && selectedRecordForPreview && (
@@ -633,7 +1027,6 @@ function TeachingRecordPage() {
                 </div>
               </div>
             )}
-
           </div>
         </PinGate>
       </main>

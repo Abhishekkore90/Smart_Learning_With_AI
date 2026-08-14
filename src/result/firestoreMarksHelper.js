@@ -31,27 +31,51 @@ export const isStudentSemiEnglish = (s) => {
   return false;
 };
 
-export const matchStudentClassAndMedium = (student, targetClass, targetMedium, currentTeacherId = null) => {
+export const normalizeAcademicYear = (yr) => {
+  if (!yr) return "";
+  const s = String(yr).trim();
+  const m = s.match(/(\d{4})\s*[-–/]\s*(\d{2,4})/);
+  if (m) {
+    const start = m[1];
+    const end = m[2].length === 2 ? `20${m[2]}` : m[2];
+    return `${start}-${end}`;
+  }
+  return s;
+};
+
+export const matchStudentClassAndMedium = (student, targetClass, targetMedium, currentTeacherId = null, targetAcademicYear = null) => {
   if (!student) return false;
 
-  // Strict Multi-Tenant Franchise Isolation:
-  // ONLY allow students assigned/created by the logged-in teacher.
-  const tId = currentTeacherId || (typeof localStorage !== "undefined" ? localStorage.getItem("current_teacher_id") : null);
+  // 1. Strict Teacher ID Isolation: Each teacher ONLY sees their OWN students
+  const activeTeacherId = currentTeacherId || (typeof localStorage !== "undefined" ? localStorage.getItem("current_teacher_id") : null);
   const sTeacherId = student.teacherId || student.createdById || student.userId;
 
-  if (tId && tId !== "default_teacher") {
-    if (!sTeacherId || sTeacherId !== tId) {
+  if (activeTeacherId && activeTeacherId !== "admin" && activeTeacherId !== "super_admin") {
+    if (!sTeacherId || (sTeacherId !== activeTeacherId && sTeacherId !== "global")) {
       return false;
     }
   }
 
-  const stdClass = normalizeClassKey(student.class || student.currentClass || student.className);
+  // 2. Strict Class Matching
+  const stdClass = normalizeClassKey(student.class || student.currentClass || student.className || student.stdClass);
   const tgtClass = normalizeClassKey(targetClass);
-  if (stdClass !== tgtClass) return false;
+  if (tgtClass && stdClass && stdClass !== tgtClass) return false;
 
-  const isSemi = isStudentSemiEnglish(student);
+  // 3. Strict Academic Year Matching
+  if (targetAcademicYear && student.academicYear) {
+    const stdYr = normalizeAcademicYear(student.academicYear);
+    const tgtYr = normalizeAcademicYear(targetAcademicYear);
+    if (stdYr && tgtYr && stdYr !== tgtYr) return false;
+  }
+
+  // 4. Strict Medium Isolation: Marathi vs Semi-English MUST NEVER MIX
   const targetIsSemi = String(targetMedium || "marathi").toLowerCase().trim() === "semi";
-  return targetIsSemi ? isSemi : !isSemi;
+  const studentIsSemi = isStudentSemiEnglish(student);
+  if (targetIsSemi !== studentIsSemi) {
+    return false;
+  }
+
+  return true;
 };
 
 /**
@@ -64,38 +88,42 @@ export const fetchStudentsForClass = async (selectedClass, medium, teacherId = n
   const activeTeacherId = teacherId || (typeof localStorage !== "undefined" ? localStorage.getItem("current_teacher_id") : null);
 
   try {
-    const uQuery = query(collection(db, "users"), where("role", "==", "student"));
-    const uSnap = await getDocs(uQuery);
-    uSnap.forEach((docSnap) => {
-      const d = docSnap.data();
-      const studentObj = { id: docSnap.id, ...d };
-      if (matchStudentClassAndMedium(studentObj, targetClassNorm, selectedMedium, activeTeacherId)) {
-        loadedStudents.push({
-          id: docSnap.id,
-          srNo: String(d.rollNo || d.srNo || loadedStudents.length + 1),
-          rollNo: String(d.rollNo || d.srNo || loadedStudents.length + 1),
-          name: d.fullName || d.name || d.studentName || "",
-          fullName: d.fullName || d.name || d.studentName || "",
-          stdName: d.name || d.fullName || "",
-          stdFather: d.fatherName || d.stdFather || "",
-          stdSurname: d.surname || d.stdSurname || "",
-          stdMother: d.motherName || d.stdMother || "",
-          currentClass: d.class || d.currentClass || selectedClass,
-          medium: d.medium,
-          isSemiEnglish: d.isSemiEnglish,
-          teacherId: d.teacherId || d.createdById,
-          division: d.division || "1",
-          dob: d.dob || d.birthDate || "",
-          caste: d.caste || d.category || "",
-          studentId: d.studentId || docSnap.id,
-        });
-      }
-    });
-  } catch (e) {}
+    const [uSnap, studentsSnap] = await Promise.all([
+      getDocs(query(collection(db, "users"), where("role", "==", "student"))).catch(() => null),
+      getDocs(collection(db, "students")).catch(() => null),
+    ]);
 
-  if (loadedStudents.length === 0) {
-    try {
-      const studentsSnap = await getDocs(collection(db, "students"));
+    if (uSnap) {
+      uSnap.forEach((docSnap) => {
+        const d = docSnap.data();
+        const studentObj = { id: docSnap.id, ...d };
+        if (matchStudentClassAndMedium(studentObj, targetClassNorm, selectedMedium, activeTeacherId)) {
+          loadedStudents.push({
+            id: docSnap.id,
+            srNo: String(d.rollNo || d.srNo || loadedStudents.length + 1),
+            rollNo: String(d.rollNo || d.srNo || loadedStudents.length + 1),
+            name: d.fullName || d.name || d.studentName || "",
+            fullName: d.fullName || d.name || d.studentName || "",
+            stdName: d.name || d.fullName || "",
+            stdFather: d.fatherName || d.stdFather || "",
+            stdSurname: d.surname || d.stdSurname || "",
+            stdMother: d.motherName || d.stdMother || "",
+            currentClass: d.class || d.currentClass || selectedClass,
+            medium: d.medium,
+            isSemiEnglish: d.isSemiEnglish,
+            teacherId: d.teacherId || d.createdById,
+            division: d.division || "1",
+            dob: d.dob || d.birthDate || "",
+            caste: d.caste || d.category || "",
+            gender: d.gender || d.sex || d.ling || d.genderType || d.studentGender || "",
+            studentId: d.studentId || docSnap.id,
+            photoUrl: d.photoUrl || d.profilePhoto || d.photoURL || d.studentPhoto || d.photo || d.imageUrl || d.profileImage || "",
+          });
+        }
+      });
+    }
+
+    if (studentsSnap) {
       studentsSnap.forEach((docSnap) => {
         const d = docSnap.data();
         const studentObj = { id: docSnap.id, ...d };
@@ -116,12 +144,14 @@ export const fetchStudentsForClass = async (selectedClass, medium, teacherId = n
             division: d.division || "1",
             dob: d.dob || d.birthDate || "",
             caste: d.caste || d.category || "",
+            gender: d.gender || d.sex || d.ling || d.genderType || d.studentGender || "",
             studentId: d.studentId || docSnap.id,
+            photoUrl: d.photoUrl || d.profilePhoto || d.photoURL || d.studentPhoto || d.photo || d.imageUrl || d.profileImage || "",
           });
         }
       });
-    } catch (e) {}
-  }
+    }
+  } catch (e) {}
 
   // Fetch detailed student profiles from student_details collection
   const detailsMap = new Map();
@@ -150,8 +180,10 @@ export const fetchStudentsForClass = async (selectedClass, medium, teacherId = n
         motherTongue: det.motherTongue || s.motherTongue || "",
         caste: det.caste || s.caste || "",
         religion: det.religion || s.religion || "",
+        gender: det.gender || det.sex || det.ling || s.gender || s.sex || s.ling || s.genderType || s.studentGender || "",
         address: det.address || s.address || "",
         mobile: det.phone || s.phone || s.mobile || "",
+        photoUrl: det.photoUrl || det.profilePhoto || det.photoURL || det.studentPhoto || det.photo || det.imageUrl || det.profileImage || s.photoUrl || s.profilePhoto || s.photoURL || s.studentPhoto || s.photo || s.imageUrl || s.profileImage || "",
         studentId: det.studentId || s.studentId || s.id || "",
         aparId: det.aparId || "",
         height: det.height || "",

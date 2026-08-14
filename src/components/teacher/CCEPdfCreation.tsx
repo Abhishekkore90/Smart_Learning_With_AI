@@ -27,6 +27,8 @@ const Result5th8th = safeLazy(() => import("@/result/Result5th8th"));
 const ResultSSC = safeLazy(() => import("@/result/ResultSSC"));
 // @ts-ignore
 const ResultHSC = safeLazy(() => import("@/result/ResultHSC"));
+// @ts-ignore
+const AnnualResultRegister = safeLazy(() => import("@/result/AnnualResultRegister"));
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -109,6 +111,7 @@ export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
   selectedClass: string; academicYear: string; onBack: () => void;
 }) {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [selectedTerm, setSelectedTerm] = useState<"sem1" | "sem2">("sem2");
 
   const renderLoading = () => (
     <div className="flex flex-col items-center justify-center min-h-[350px] text-slate-500">
@@ -124,12 +127,14 @@ export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
           <button onClick={() => setSelectedOption(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors cursor-pointer text-slate-600">
             <ArrowLeft className="size-5" />
           </button>
-          <h2 className="text-lg font-bold text-slate-800">CCE मूल्यांकन नोंदवही PDF</h2>
+          <h2 className="text-lg font-bold text-slate-800">
+            CCE मूल्यांकन नोंदवही ({selectedTerm === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}) PDF
+          </h2>
         </div>
         <div className="flex-1 overflow-x-auto">
           <PdfErrorBoundary title="CCE मूल्यांकन नोंदवही">
             <Suspense fallback={renderLoading()}>
-              <BoardResult initialClass={selectedClass} initialYear={academicYear} />
+              <BoardResult initialClass={selectedClass} initialYear={academicYear} initialTerm={selectedTerm} />
             </Suspense>
           </PdfErrorBoundary>
         </div>
@@ -164,7 +169,9 @@ export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
           <button onClick={() => setSelectedOption(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors cursor-pointer text-slate-600">
             <ArrowLeft className="size-5" />
           </button>
-          <h2 className="text-lg font-bold text-slate-800">प्रगती पत्रक PDF</h2>
+          <h2 className="text-lg font-bold text-slate-800">
+            प्रगती पत्रक (Progress Sheet) PDF
+          </h2>
         </div>
         <div className="flex-1 overflow-x-auto">
           <PdfErrorBoundary title="प्रगती पत्रक">
@@ -194,7 +201,7 @@ export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
               ) : selectedClass === "12th" ? (
                 <ResultHSC initialClass={selectedClass} initialYear={academicYear} />
               ) : (
-                <GradeWise initialClass={selectedClass} initialYear={academicYear} onBack={() => setSelectedOption(null)} />
+                <AnnualResultRegister initialClass={selectedClass} initialYear={academicYear} onBack={() => setSelectedOption(null)} />
               )}
             </Suspense>
           </PdfErrorBoundary>
@@ -239,6 +246,44 @@ export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
         </div>
       </div>
 
+      {/* Top Term Toggle Switch Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-6 py-3.5 bg-gradient-to-r from-amber-50/90 via-slate-50 to-blue-50/90 border-b border-slate-200 flex-shrink-0">
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-black text-slate-800">सत्र (Semester) निवडा:</span>
+          <div className="flex items-center bg-white p-1 rounded-2xl border border-slate-300 shadow-sm">
+            <button
+              onClick={() => setSelectedTerm("sem1")}
+              className={`px-4 py-1.5 rounded-xl font-black text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
+                selectedTerm === "sem1"
+                  ? "bg-amber-500 text-white shadow-md shadow-amber-500/20"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <span>📘</span>
+              <span>प्रथम सत्र</span>
+            </button>
+            <button
+              onClick={() => setSelectedTerm("sem2")}
+              className={`px-4 py-1.5 rounded-xl font-black text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
+                selectedTerm === "sem2"
+                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <span>📗</span>
+              <span>द्वितीय सत्र</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="text-[11px] font-extrabold text-slate-600 flex items-center gap-1.5">
+          <span>CCE नोंदवही:</span>
+          <span className={selectedTerm === "sem1" ? "text-amber-700 font-black" : "text-emerald-700 font-black"}>
+            {selectedTerm === "sem1" ? "📘 प्रथम सत्र PDF उघडेल" : "📗 द्वितीय सत्र PDF उघडेल"}
+          </span>
+        </div>
+      </div>
+
       {/* PDF Options List */}
       <div className="flex-1 overflow-y-auto p-4 space-y-2.5">
         {PDF_OPTIONS.map((option) => (
@@ -252,9 +297,20 @@ export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
                 <FileText className="size-5" />
               </div>
               <div>
-                <h3 className="text-[15px] font-bold text-slate-800 group-hover:text-blue-600 transition-colors leading-snug whitespace-pre-line">
-                  {option.label}
-                </h3>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-[15px] font-bold text-slate-800 group-hover:text-blue-600 transition-colors leading-snug whitespace-pre-line">
+                    {option.label}
+                  </h3>
+                  {option.id === "cce_register" && (
+                    <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${
+                      selectedTerm === "sem1"
+                        ? "bg-amber-100 text-amber-800 border-amber-300"
+                        : "bg-emerald-100 text-emerald-800 border-emerald-300"
+                    }`}>
+                      {selectedTerm === "sem1" ? "📘 प्रथम सत्र" : "📗 द्वितीय सत्र"}
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-slate-500 font-medium mt-0.5">{option.description}</p>
               </div>
             </div>

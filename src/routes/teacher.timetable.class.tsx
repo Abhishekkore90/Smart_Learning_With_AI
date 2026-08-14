@@ -490,27 +490,31 @@ function ClassTimetablePage() {
   const [savingGrid, setSavingGrid] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const [zoomMode, setZoomMode] = useState<'scroll' | 'fit'>('scroll');
   const [scale, setScale] = useState(1);
+  const [containerHeight, setContainerHeight] = useState(0);
 
   useEffect(() => {
     const handleResize = () => {
       if (!containerRef.current) return;
-      const parentWidth = containerRef.current.parentElement?.clientWidth || window.innerWidth;
+      const parentWidth = containerRef.current.clientWidth || window.innerWidth;
       const targetWidth = 1000;
-      if (parentWidth < targetWidth) {
-        setScale(parentWidth / targetWidth);
-      } else {
-        setScale(1);
+      const calculatedScale = parentWidth / targetWidth;
+      setScale(calculatedScale < 1 ? calculatedScale : 1);
+
+      const tableEl = document.getElementById("editable-timetable-container");
+      if (tableEl) {
+        setContainerHeight(tableEl.scrollHeight);
       }
     };
     handleResize();
     window.addEventListener("resize", handleResize);
-    const timer = setTimeout(handleResize, 100);
+    const timer = setTimeout(handleResize, 200);
     return () => {
       window.removeEventListener("resize", handleResize);
       clearTimeout(timer);
     };
-  }, [gridData]);
+  }, [gridData, zoomMode]);
 
   const cellInputStyle = {
     border: 'none',
@@ -713,6 +717,17 @@ function ClassTimetablePage() {
     const element = document.getElementById("editable-timetable-container");
     if (!element) return;
 
+    const parentContainer = element.parentElement;
+    const isHiddenOnScreen = parentContainer && parentContainer.classList.contains('hidden');
+
+    if (isHiddenOnScreen && parentContainer) {
+      parentContainer.classList.remove('hidden');
+      parentContainer.style.position = 'absolute';
+      parentContainer.style.left = '-9999px';
+      parentContainer.style.top = '0';
+      parentContainer.style.display = 'block';
+    }
+
     const inputs = element.querySelectorAll('input');
     const tempSpans: { input: HTMLInputElement; span: HTMLSpanElement }[] = [];
 
@@ -793,6 +808,13 @@ function ClassTimetablePage() {
         input.style.display = '';
         span.parentNode?.removeChild(span);
       });
+      if (isHiddenOnScreen && parentContainer) {
+        parentContainer.classList.add('hidden');
+        parentContainer.style.position = '';
+        parentContainer.style.left = '';
+        parentContainer.style.top = '';
+        parentContainer.style.display = '';
+      }
     }
   };
 
@@ -801,11 +823,11 @@ function ClassTimetablePage() {
   return (
     <div className="min-h-screen bg-slate-50/50 font-sans flex flex-col">
       <TeacherHeader />
-      <div className="flex flex-1 mt-16">
+      <div className="flex flex-1 mt-16 w-full max-w-full min-w-0 overflow-x-hidden">
         <TeacherSidebar />
-        <main className="flex-1 lg:pl-0 p-4 md:p-6 space-y-6">
+        <main className="flex-1 min-w-0 lg:pl-0 p-3 sm:p-4 md:p-6 space-y-6 w-full max-w-full">
 
-          <div className="bg-white border border-slate-200 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 md:p-8 shadow-sm space-y-6 w-full max-w-full overflow-hidden">
+          <div className="bg-white border border-slate-200 rounded-2xl sm:rounded-[2.5rem] p-3 sm:p-6 md:p-8 shadow-sm space-y-6 w-full max-w-full min-w-0">
             <div className="flex items-center">
               <Link
                 to="/teacher/timetable"
@@ -877,19 +899,69 @@ function ClassTimetablePage() {
                   </div>
                 </div>
 
-                <div className="block lg:hidden text-center text-[11px] font-bold text-indigo-500 animate-pulse pb-1">
-                  {lang === "mr" ? "← पूर्ण वेळापत्रक पाहण्यासाठी डावीकडे/उजवीकडे स्क्रोल करा →" : "← Scroll horizontally to view full timetable →"}
+                {/* Mobile View Mode Controls (< 1024px) */}
+                <div className="block lg:hidden space-y-2">
+                  <div className="flex flex-col sm:flex-row items-center justify-between bg-gradient-to-r from-indigo-50 to-purple-50 p-2.5 rounded-xl border border-indigo-100/80 gap-2">
+                    <span className="text-xs font-bold text-indigo-900 text-center sm:text-left">
+                      {zoomMode === 'scroll'
+                        ? '↔️ पूर्ण वेळापत्रक पाहण्यासाठी डावीकडे/उजवीकडे स्क्रोल करा'
+                        : '📱 संपूर्ण वेळापत्रक स्क्रीनवर फिट केले आहे'}
+                    </span>
+                    <div className="flex gap-1 bg-white p-1 rounded-lg border border-slate-200 shadow-sm shrink-0">
+                      <button
+                        onClick={() => setZoomMode('scroll')}
+                        className={`px-3 py-1.5 rounded-md text-xs font-black transition-all cursor-pointer ${
+                          zoomMode === 'scroll'
+                            ? 'bg-indigo-600 text-white shadow-sm'
+                            : 'text-slate-600 hover:bg-slate-100'
+                        }`}
+                      >
+                        ↔️ स्क्रोल करा (Scroll)
+                      </button>
+                      <button
+                        onClick={() => setZoomMode('fit')}
+                        className={`px-3 py-1.5 rounded-md text-xs font-black transition-all cursor-pointer ${
+                          zoomMode === 'fit'
+                            ? 'bg-indigo-600 text-white shadow-md'
+                            : 'text-slate-600 hover:bg-slate-100'
+                        }`}
+                      >
+                        📱 स्क्रीनवर बसवा (Fit)
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="w-full overflow-x-auto pb-4" ref={containerRef}>
+                {/* Main Timetable Table Container */}
+                <div
+                  className="w-full max-w-full min-w-0 overflow-x-auto pb-4"
+                  ref={containerRef}
+                  style={{
+                    WebkitOverflowScrolling: 'touch',
+                    ...(zoomMode === 'fit' && scale < 1
+                      ? {
+                          height: containerHeight ? `${containerHeight * scale + 20}px` : 'auto',
+                          overflow: 'hidden'
+                        }
+                      : {})
+                  }}
+                >
                   <div
                     id="editable-timetable-container"
-                    className="p-4 bg-white text-slate-900 border border-black shadow-sm font-sans space-y-2 w-[1000px] mx-auto overflow-hidden origin-top"
-                    style={{
-                      ["zoom" as any]: scale,
-                      ["WebkitZoom" as any]: scale,
-                      transformOrigin: "top center",
-                    }}
+                    className="p-4 bg-white text-slate-900 border border-black shadow-sm font-sans space-y-2 w-[1000px] min-w-[1000px] mx-auto overflow-hidden"
+                    style={
+                      zoomMode === 'fit' && scale < 1
+                        ? {
+                            transform: `scale(${scale})`,
+                            transformOrigin: 'top left',
+                            width: '1000px',
+                            minWidth: '1000px'
+                          }
+                        : {
+                            width: '1000px',
+                            minWidth: '1000px'
+                          }
+                    }
                   >
                     <div
                       className="flex items-center justify-between p-2 border border-black rounded-lg"

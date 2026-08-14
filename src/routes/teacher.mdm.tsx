@@ -132,6 +132,21 @@ function TeacherMDMPage() {
     "palash123@gmail.com": "22334455667788",
   };
 
+  const sanitizeFirestorePayload = (obj: any): any => {
+    if (obj === null || obj === undefined) return null;
+    if (typeof obj === "function" || typeof obj === "symbol") return null;
+    if (typeof obj !== "object") return obj;
+    if (Array.isArray(obj)) return obj.map(sanitizeFirestorePayload);
+    const cleaned: Record<string, any> = {};
+    for (const key of Object.keys(obj)) {
+      const val = obj[key];
+      if (val !== undefined) {
+        cleaned[key] = sanitizeFirestorePayload(val);
+      }
+    }
+    return cleaned;
+  };
+
   const getUdise = () => {
     if (profile?.udise) return profile.udise;
     if (typeof window !== "undefined") {
@@ -191,6 +206,7 @@ function TeacherMDMPage() {
   const [stockDemandWorkingDays, setStockDemandWorkingDays] = useState<string>("21");
   const [monthlyMdmReportType, setMonthlyMdmReportType] = useState<string>("daily_tandul_register");
   const [monthlyMdmReportMonth, setMonthlyMdmReportMonth] = useState<string>("जून सन 2026/27");
+  const [swayampakiMandhan, setSwayampakiMandhan] = useState<string>("2500.00");
 
   const [certMonthName, setCertMonthName] = useState<string>("");
   const [certPrimaryCookedDays, setCertPrimaryCookedDays] = useState<string>("");
@@ -259,7 +275,15 @@ function TeacherMDMPage() {
       const { default: html2canvas } = await import("html2canvas");
       const { jsPDF } = await import("jspdf");
 
-      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      const repKey = String(monthlyMdmReportType || selectedReportCategory || "");
+      const isPortraitReport =
+        repKey === "masik_goshwara" ||
+        repKey === "masik_tandul_bill" ||
+        repKey === "demand_report" ||
+        repKey === "certificate";
+
+      const pdfOrientation = isPortraitReport ? "portrait" : "landscape";
+      const pdf = new jsPDF({ orientation: pdfOrientation, unit: "mm", format: "a4" });
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
       const margin = 4;
@@ -268,7 +292,9 @@ function TeacherMDMPage() {
 
       for (let i = 0; i < pages.length; i++) {
         const pageEl = pages[i];
-        const exactContentWidth = Math.ceil(Math.max(pageEl.scrollWidth || 0, pageEl.offsetWidth || 0, 800));
+        const exactContentWidth = isPortraitReport
+          ? 800
+          : Math.ceil(Math.max(pageEl.scrollWidth || 0, pageEl.offsetWidth || 0, 800));
 
         const canvas = await html2canvas(pageEl, {
           scale: 2,
@@ -288,8 +314,8 @@ function TeacherMDMPage() {
 
             const targetEl = element || clonedDoc.querySelector(".print-page") || clonedDoc.body.firstElementChild;
             if (targetEl) {
-              targetEl.style.width = `${exactContentWidth}px`;
-              targetEl.style.maxWidth = `${exactContentWidth}px`;
+              targetEl.style.width = isPortraitReport ? "100%" : `${exactContentWidth}px`;
+              targetEl.style.maxWidth = isPortraitReport ? "100%" : `${exactContentWidth}px`;
               targetEl.style.margin = "0 auto";
               targetEl.style.boxSizing = "border-box";
             }
@@ -351,7 +377,7 @@ function TeacherMDMPage() {
         const xPos = (pdfWidth - imgWidth) / 2;
         const yPos = 7;
 
-        if (i > 0) pdf.addPage('a4', 'l');
+        if (i > 0) pdf.addPage('a4', isPortraitReport ? 'p' : 'l');
         pdf.addImage(imgData, "JPEG", xPos, yPos, imgWidth, imgHeight);
       }
 
@@ -1177,6 +1203,18 @@ function TeacherMDMPage() {
       // Clone element to body to avoid parent viewport/flex constraints and scrollbars
       clone = element.cloneNode(true) as HTMLElement;
 
+      const clonedInputs = clone.querySelectorAll("input");
+      const origInputs = element.querySelectorAll("input");
+      clonedInputs.forEach((input: HTMLInputElement, idx: number) => {
+        const origVal = origInputs[idx] ? origInputs[idx].value : input.value;
+        const span = document.createElement("span");
+        span.textContent = origVal || " ";
+        span.className = "inline-block text-center font-black";
+        if (input.parentNode) {
+          input.parentNode.replaceChild(span, input);
+        }
+      });
+
       const isCertificate = monthlyMdmReportType === "certificate";
       let maxScrollWidth = 0;
       element.querySelectorAll('table, .print-page').forEach((el) => {
@@ -1254,91 +1292,49 @@ function TeacherMDMPage() {
         ? `दैनंदिन-तांदूळ-खर्च-नोंदवही-${monthShort}-${monthlyMdmReportMonth.includes('2026') ? '2026' : '2027'}.pdf`
         : `मासिक_अहवाल_${monthlyMdmReportMonth.replace(/\s+/g, '_')}.pdf`;
 
-      if (isPoshanReport) {
-        const { default: html2canvas } = await import("html2canvas");
-        const { jsPDF } = await import("jspdf");
+      const { default: html2canvas } = await import("html2canvas");
+      const { jsPDF } = await import("jspdf");
 
-        const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
-        const pageEls = clone.querySelectorAll('.poshan-pdf-page');
-        const elementsToRender = pageEls.length > 0 ? Array.from(pageEls) : [clone];
+      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      const printPages = clone.querySelectorAll('.print-page, .poshan-pdf-page');
+      const elementsToRender = printPages.length > 0 ? Array.from(printPages) : [clone];
 
-        for (let i = 0; i < elementsToRender.length; i++) {
-          const pageEl = elementsToRender[i] as HTMLElement;
-          const canvas = await html2canvas(pageEl, {
-            scale: 2,
-            useCORS: true,
-            logging: false,
-            backgroundColor: "#ffffff",
-            windowWidth: totalRenderWidth,
-            width: totalRenderWidth,
-            scrollY: 0,
-            scrollX: 0,
-          });
-
-          const imgData = canvas.toDataURL("image/jpeg", 0.98);
-          const pdfWidth = pdf.internal.pageSize.getWidth();
-          const pdfHeight = pdf.internal.pageSize.getHeight();
-          const margin = 4;
-          const availWidth = pdfWidth - (margin * 2);
-          const availHeight = pdfHeight - (margin * 2);
-
-          let imgWidth = availWidth;
-          let imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-          if (imgHeight > availHeight) {
-            imgHeight = availHeight;
-            imgWidth = (canvas.width * imgHeight) / canvas.height;
-          }
-
-          const xPos = (pdfWidth - imgWidth) / 2;
-          const yPos = (pdfHeight - imgHeight) / 2;
-
-          if (i > 0) pdf.addPage('a4', 'l');
-          pdf.addImage(imgData, "JPEG", xPos, yPos, imgWidth, imgHeight);
-        }
-
-        pdf.save(filename);
-      } else {
-        const { default: html2canvas } = await import("html2canvas");
-        const { jsPDF } = await import("jspdf");
-
-        const canvas = await html2canvas(clone, {
+      for (let i = 0; i < elementsToRender.length; i++) {
+        const pageEl = elementsToRender[i] as HTMLElement;
+        const canvas = await html2canvas(pageEl, {
           scale: 2,
           useCORS: true,
           logging: false,
           backgroundColor: "#ffffff",
-          windowWidth: totalRenderWidth,
-          width: totalRenderWidth,
+          windowWidth: Math.max(pageEl.scrollWidth, totalRenderWidth),
+          width: Math.max(pageEl.scrollWidth, totalRenderWidth),
           scrollY: 0,
           scrollX: 0,
         });
 
         const imgData = canvas.toDataURL("image/jpeg", 0.98);
-        const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
-        const pdfWidth = pdf.internal.pageSize.getWidth(); // 297mm
-        const pdfHeight = pdf.internal.pageSize.getHeight(); // 210mm
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const margin = 4;
+        const availWidth = pdfWidth - (margin * 2);
+        const availHeight = pdfHeight - (margin * 2);
 
-        const margin = 5;
-        const availWidth = pdfWidth - (margin * 2); // 287mm
-        const availHeight = pdfHeight - (margin * 2); // 200mm
+        let imgWidth = availWidth;
+        let imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-        const imgWidth = availWidth;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-        let finalWidth = imgWidth;
-        let finalHeight = imgHeight;
-
-        if (finalHeight > availHeight) {
-          finalHeight = availHeight;
-          finalWidth = (canvas.width * finalHeight) / canvas.height;
+        if (imgHeight > availHeight) {
+          imgHeight = availHeight;
+          imgWidth = (canvas.width * imgHeight) / canvas.height;
         }
 
-        const xPos = (pdfWidth - finalWidth) / 2;
-        const yPos = 7;
+        const xPos = (pdfWidth - imgWidth) / 2;
+        const yPos = (pdfHeight - imgHeight) / 2;
 
-        pdf.addImage(imgData, "JPEG", xPos, yPos, finalWidth, finalHeight);
-        pdf.save(filename);
+        if (i > 0) pdf.addPage('a4', 'l');
+        pdf.addImage(imgData, "JPEG", xPos, yPos, imgWidth, imgHeight);
       }
+
+      pdf.save(filename);
 
       if (toastId) toast.dismiss(toastId);
       toast.success("PDF यशस्वीपणे डाऊनलोड झाली!");
@@ -1828,7 +1824,7 @@ function TeacherMDMPage() {
       aliases: ["व्हेजीटेबल पुलाव", "व्हेज पुलाव", "व्हेजिटेबल पुलाव", "Vegetable Pulav", "Veg Pulav"],
       defaultIngredients: {
         Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
-        Vegetables: true, "Onion Garlic Masala": true
+        Vegetables: true, Pease: true, "Onion Garlic Masala": true
       }
     },
     {
@@ -1838,7 +1834,7 @@ function TeacherMDMPage() {
       aliases: ["मसाले भात", "Masala Rice", "मसाला भात"],
       defaultIngredients: {
         Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
-        "Onion Garlic Masala": true, "Garam Masala": true
+        Vegetables: true, Pease: true, "Onion Garlic Masala": true, "Garam Masala": true
       }
     },
     {
@@ -1848,7 +1844,7 @@ function TeacherMDMPage() {
       aliases: ["मटार पुलाव", "मटार/वाटाणा पुलाव", "Matar Pulav", "वाटाणा पुलाव"],
       defaultIngredients: {
         Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
-        Pease: true, "Onion Garlic Masala": true
+        Vegetables: true, Pease: true, "Onion Garlic Masala": true
       }
     },
     {
@@ -1858,7 +1854,7 @@ function TeacherMDMPage() {
       aliases: ["मुगडाळ खिचडी", "मूग डाळ खिचडी", "मूग-डाळ खिचडी", "डाळ खिचडी", "Mungdal Khichadi", "Moong Dal Khichdi"],
       defaultIngredients: {
         Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
-        Mugdal: true, "Onion Garlic Masala": true
+        Vegetables: true, Mugdal: true, "Onion Garlic Masala": true
       }
     },
     {
@@ -1868,7 +1864,7 @@ function TeacherMDMPage() {
       aliases: ["चवळी खिचडी", "चवळी उसळ व भात", "Cowpea Khichadi"],
       defaultIngredients: {
         Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
-        Cowpea: true, "Onion Garlic Masala": true
+        Vegetables: true, Cowpea: true, "Onion Garlic Masala": true
       }
     },
     {
@@ -1878,7 +1874,7 @@ function TeacherMDMPage() {
       aliases: ["चणा पुलाव", "चणा/हरभरा पुलाव", "चना पुलाव", "Chana Pulav"],
       defaultIngredients: {
         Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
-        Gram: true, "Onion Garlic Masala": true, "Garam Masala": true
+        Vegetables: true, Gram: true, "Onion Garlic Masala": true, "Garam Masala": true
       }
     },
     {
@@ -1888,7 +1884,7 @@ function TeacherMDMPage() {
       aliases: ["सोयाबीन पुलाव", "सोयाबीन भात", "Soyabean Rice", "Soyabin Pulav"],
       defaultIngredients: {
         Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
-        "Soyabean Wadi": true, "Onion Garlic Masala": true
+        Vegetables: true, "Soyabean Wadi": true, "Onion Garlic Masala": true
       }
     },
     {
@@ -1898,7 +1894,7 @@ function TeacherMDMPage() {
       aliases: ["मसूरी पुलाव", "मसुरी पुलाव", "Masuri Pulav", "Masoor Pulav"],
       defaultIngredients: {
         Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
-        Masurdal: true, "Onion Garlic Masala": true, "Garam Masala": true
+        Vegetables: true, Masurdal: true, "Onion Garlic Masala": true, "Garam Masala": true
       }
     },
     {
@@ -1908,7 +1904,7 @@ function TeacherMDMPage() {
       aliases: ["मूग शेवगा वरण भात", "मूग/तूर शेवग्याचे वरण आणि भात", "Mug Shevaga Varan Bhat"],
       defaultIngredients: {
         Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
-        Moong: true, Turdal: true
+        Vegetables: true, Moong: true, Turdal: true
       }
     },
     {
@@ -1918,7 +1914,7 @@ function TeacherMDMPage() {
       aliases: ["मोड आलेल्या मटकीचे उसळ", "मोड आलेल्या मटकीची उसळ व साधा शिजवलेला भात", "मटकी उसळ भात", "Sprouted Matki Usal", "मटकी उसळ", "मूग उसळ व भात", "मूग उसळ भात", "Moong Usal & Rice (Sprouts & Rice)"],
       defaultIngredients: {
         Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
-        Matki: true, "Onion Garlic Masala": true
+        Vegetables: true, Matki: true, "Onion Garlic Masala": true
       }
     },
     {
@@ -1928,7 +1924,7 @@ function TeacherMDMPage() {
       aliases: ["अंडा पुलाव", "अंडी पुलाव", "Egg Pulav"],
       defaultIngredients: {
         Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
-        "Onion Garlic Masala": true, "Garam Masala": true
+        Vegetables: true, "Onion Garlic Masala": true, "Garam Masala": true
       }
     },
     {
@@ -1950,16 +1946,6 @@ function TeacherMDMPage() {
       }
     },
     {
-      id: "recipe_9",
-      name: "वरण भात",
-      nameEn: "Dal Rice",
-      aliases: ["वरण भात", "Dal Rice"],
-      defaultIngredients: {
-        Rice: true, Salt: true, Oil: true, Turmeric: true, Cumin: true, Mustard: true,
-        Turdal: true
-      }
-    },
-    {
       id: "recipe_12",
       name: "तांदळाची खीर",
       nameEn: "Rice Kheer",
@@ -1974,7 +1960,7 @@ function TeacherMDMPage() {
       nameEn: "Other",
       aliases: ["इतर", "Other"],
       defaultIngredients: {
-        Rice: true, Salt: true, Oil: true, Turmeric: true
+        Rice: true, Salt: true, Oil: true, Turmeric: true, Vegetables: true
       }
     }
   ];
@@ -2058,9 +2044,17 @@ function TeacherMDMPage() {
       Cumin: true,
       Mustard: true,
       Chili: true,
+      Vegetables: true, // BY DEFAULT SELECTED for all savory recipes
     };
 
-    if (nameLower.includes("तूर") || nameLower.includes("turdal") || nameLower.includes("वरण")) {
+    if (nameLower.includes("वरण-भात") || nameLower.includes("वरण भात") || nameLower.includes("varan bhat") || nameLower.includes("वरण")) {
+      items["Turdal"] = true;
+      items["Moong"] = true;
+    }
+    if (nameLower.includes("मटार पुलाव") || nameLower.includes("व्हेजिटेबल पुलाव") || nameLower.includes("मसाले भात") || nameLower.includes("मसालेभात") || nameLower.includes("matar pulav") || nameLower.includes("veg pulav") || nameLower.includes("masale bhat")) {
+      items["Pease"] = true;
+    }
+    if (nameLower.includes("तूर") || nameLower.includes("turdal")) {
       items["Turdal"] = true;
     }
     if (nameLower.includes("मूग") || nameLower.includes("mung") || nameLower.includes("moong")) {
@@ -4119,10 +4113,26 @@ function TeacherMDMPage() {
       }
 
       // Check if this item was used
-      const wasSelected =
+      let wasSelected =
         !!activeSelected[itemName] ||
         !!activeSelected[itemKey] ||
         (daily.selectedItems ? (!!daily.selectedItems[itemName] || !!daily.selectedItems[itemKey]) : false);
+
+      if (!wasSelected && daily.selectedItems) {
+        Object.keys(daily.selectedItems).forEach((selKey) => {
+          if (daily.selectedItems[selKey]) {
+            const resolvedKey = getItemKeyFromName(selKey);
+            if (
+              resolvedKey === itemKey ||
+              resolvedKey === itemName ||
+              selKey.toLowerCase() === itemName.toLowerCase() ||
+              selKey.toLowerCase() === itemKey.toLowerCase()
+            ) {
+              wasSelected = true;
+            }
+          }
+        });
+      }
 
       if (!wasSelected) continue;
 
@@ -5169,58 +5179,60 @@ function TeacherMDMPage() {
       };
       setStockRecordsHistory(updatedHistory);
 
+      const registerPayload = sanitizeFirestorePayload({
+        dailyRecord: dailyRecord || {},
+        weeklyMenu: weeklyMenu || {},
+        stockInventory: stockInventory || {},
+        helpers: helpers || [],
+        incomingRecord: {
+          year: incomingYear || "",
+          month: incomingMonth || "",
+          class: incomingClass || "",
+          quantities: incomingQuantities || {},
+        },
+        menuRecord: {
+          day: menuDay || "",
+          type: menuType || "",
+          selectedItems: selectedMenuItems || {},
+        },
+        menuRecords: menuRecords || {},
+        stockRecord: {
+          year: stockYear || "",
+          month: stockMonth || "",
+          class: stockClass || "",
+        },
+        demandRecord: {
+          fromDate: demandFromDate || "",
+          toDate: demandToDate || "",
+          content: demandContent || "",
+          quantity: demandQty || "",
+          records: demandRecords || {},
+        },
+        eggBananaRecord: {
+          date: eggBananaDate || "",
+          remark: eggBananaRemark || "",
+          egg15: eggBeneficiary15 || 0,
+          egg68: eggBeneficiary68 || 0,
+          banana15: bananaBeneficiary15 || 0,
+          banana68: bananaBeneficiary68 || 0,
+          records: eggBananaRecords || {},
+        },
+        registerRecord: {
+          date: registerDate || "",
+          class: registerClass || "",
+          day: registerDay || "",
+          beneficiary: registerBeneficiary || "0",
+        },
+        registerRecords: updatedRecords,
+        stockRecords: stockRecords || {},
+        stockRecordsHistory: updatedHistory,
+        updatedAt: new Date().toISOString(),
+        updatedBy: user.uid,
+      });
+
       await setDoc(
         doc(db, "school_data", `${getUdise()}_mdm`),
-        {
-          dailyRecord,
-          weeklyMenu,
-          stockInventory,
-          helpers,
-          incomingRecord: {
-            year: incomingYear,
-            month: incomingMonth,
-            class: incomingClass,
-            quantities: incomingQuantities,
-          },
-          menuRecord: {
-            day: menuDay,
-            type: menuType,
-            selectedItems: selectedMenuItems,
-          },
-          menuRecords,
-          stockRecord: {
-            year: stockYear,
-            month: stockMonth,
-            class: stockClass,
-          },
-          demandRecord: {
-            fromDate: demandFromDate,
-            toDate: demandToDate,
-            content: demandContent,
-            quantity: demandQty,
-            records: demandRecords,
-          },
-          eggBananaRecord: {
-            date: eggBananaDate,
-            remark: eggBananaRemark,
-            egg15: eggBeneficiary15,
-            egg68: eggBeneficiary68,
-            banana15: bananaBeneficiary15,
-            banana68: bananaBeneficiary68,
-            records: eggBananaRecords,
-          },
-          registerRecord: {
-            date: registerDate,
-            class: registerClass,
-            day: registerDay,
-            beneficiary: registerBeneficiary,
-          },
-          registerRecords: updatedRecords,
-          stockRecords,
-          stockRecordsHistory: updatedHistory,
-          updatedAt: new Date().toISOString(),
-          updatedBy: user.uid,
-        },
+        registerPayload,
         { merge: true },
       );
       toast.success(t("माहिती यशस्वीरित्या जतन केली!", "Saved Successfully!"));
@@ -11056,18 +11068,12 @@ function TeacherMDMPage() {
                       </div>
 
                       {/* Buttons Row */}
-                      <div className="flex justify-center items-center gap-6 py-4 w-full">
+                      <div className="flex justify-center items-center py-4 w-full">
                         <button
                           onClick={handleViewStockData}
-                          className="px-6 py-2 bg-[#4CAF50] hover:bg-[#43A047] text-white rounded text-sm font-semibold transition-colors"
+                          className="px-6 py-2 bg-[#4CAF50] hover:bg-[#43A047] text-white rounded text-sm font-semibold transition-colors cursor-pointer"
                         >
                           {t("माहिती पहा", "View Data")}
-                        </button>
-                        <button
-                          onClick={handleStockReport}
-                          className="px-6 py-2 bg-[#D4A017] hover:bg-[#B8860B] text-white rounded text-sm font-semibold transition-colors"
-                        >
-                          {t("अहवाल", "Report")}
                         </button>
                       </div>
 
@@ -11616,6 +11622,10 @@ function TeacherMDMPage() {
 
                           <style>{`
                             @media print {
+                              @page {
+                                size: A4 portrait;
+                                margin: 8mm;
+                              }
                               body * {
                                 visibility: hidden;
                               }
@@ -12082,6 +12092,10 @@ function TeacherMDMPage() {
 
                           <style>{`
                               @media print {
+                                @page {
+                                  size: A4 portrait;
+                                  margin: 8mm;
+                                }
                                 body * {
                                   visibility: hidden;
                                 }
@@ -12512,6 +12526,12 @@ function TeacherMDMPage() {
                                       <div className="p-2">तालुका<br/><span className="font-black text-slate-900">{profile?.taluka || ""}</span></div>
                                       <div className="p-2">जिल्हा<br/><span className="font-black text-slate-900">{profile?.district || ""}</span></div>
                                       <div className="p-2">पिन कोड<br/><span className="font-black text-slate-900">{profile?.pinCode || profile?.pincode || ""}</span></div>
+                                    </div>
+                                    <div className="flex w-full divide-x divide-black text-center border border-slate-700 mt-2 text-xs font-bold bg-slate-50">
+                                       <div className="w-[35%] p-1.5 text-left pl-3">स्वयंपाकी तथा मदतनीस मानधन रु.</div>
+                                       <div className="w-[15%] p-1.5 font-black">₹2500.00</div>
+                                       <div className="w-[35%] p-1.5 text-left pl-3">पूरक आहार (0.73 पै.)</div>
+                                       <div className="w-[15%] p-1.5 font-black">{monthlyTotalTat ? `₹${(monthlyTotalTat * 0.73).toFixed(2)}` : ""}</div>
                                     </div>
                                     <div className="mt-1 border border-slate-700 text-xs font-bold text-left p-1 bg-amber-50/50 rounded-lg">
                                       <span className="font-black">मागील शिल्लक :</span> तांदूळ — <span className="font-black text-slate-900">{prevRiceStock.toFixed(4)}</span> kg
@@ -12964,7 +12984,15 @@ function TeacherMDMPage() {
                                 </div>
                                 <div className="flex w-full divide-x divide-black text-center">
                                   <div className="w-[35%] p-1.5 text-left pl-3">स्वयंपाकी तथा मदतनीस मानधन रु.</div>
-                                  <div className="w-[15%] p-1.5 font-black">{(labharthi > 0 && helpers.length > 0) ? `₹${(helpers.length * 1000).toFixed(2)}` : ""}</div>
+                                  <div className="w-[15%] p-1 flex items-center justify-center font-black">
+                                    <span className="mr-0.5">₹</span>
+                                    <input
+                                      type="text"
+                                      value={swayampakiMandhan}
+                                      onChange={(e) => setSwayampakiMandhan(e.target.value)}
+                                      className="w-20 text-center font-black bg-emerald-50/50 hover:bg-emerald-100/50 focus:bg-white border border-emerald-300 focus:border-emerald-600 rounded px-1 py-0.5 outline-none transition-all print:border-none print:bg-transparent print:w-auto"
+                                    />
+                                  </div>
                                   <div className="w-[35%] p-1.5 text-left pl-3">पूरक आहार (0.73 पै.)</div>
                                   <div className="w-[15%] p-1.5 font-black">{labharthi ? `₹${(labharthi * 0.73).toFixed(2)}` : ""}</div>
                                 </div>
@@ -14205,8 +14233,8 @@ function TeacherMDMPage() {
                               }
                               @media print {
                                 @page { 
-                                  size: A4 landscape; 
-                                  margin: 5mm; 
+                                  size: ${(["masik_goshwara", "masik_tandul_bill", "demand_report", "certificate"].includes(String(monthlyMdmReportType || "")) || ["masik_goshwara", "masik_tandul_bill", "demand_report", "certificate"].includes(String(selectedReportCategory || ""))) ? "A4 portrait" : "A4 landscape"}; 
+                                  margin: ${(["masik_goshwara", "masik_tandul_bill", "demand_report", "certificate"].includes(String(monthlyMdmReportType || "")) || ["masik_goshwara", "masik_tandul_bill", "demand_report", "certificate"].includes(String(selectedReportCategory || ""))) ? "8mm" : "5mm"}; 
                                 }
                                 body * { 
                                   visibility: hidden; 

@@ -376,22 +376,26 @@ export function CCERemarks({
   const [remarkSearchQuery, setRemarkSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "completed" | "pending">("all");
 
+  // Keep selectedMedium in sync with propMedium or localStorage (without infinite re-render loop)
   useEffect(() => {
-    let isMounted = true;
-    let newMedium: Medium | null = null;
+    let targetMedium: Medium | null = null;
     if (propMedium === "semi" || propMedium === "marathi") {
-      newMedium = propMedium as Medium;
+      targetMedium = propMedium as Medium;
     } else {
       const stored = localStorage.getItem("cce_selected_medium") || localStorage.getItem("selectedMedium");
       if (stored === "semi" || stored === "marathi") {
-        newMedium = stored as Medium;
+        targetMedium = stored as Medium;
       }
     }
-    if (newMedium && newMedium !== selectedMedium) {
-      setSelectedMedium(newMedium);
+
+    if (targetMedium) {
+      if (targetMedium !== selectedMedium) {
+        setSelectedMedium(targetMedium);
+      }
       return;
     }
 
+    let isMounted = true;
     async function checkSchoolConfig() {
       try {
         const udise = localStorage.getItem("teacher_udise") || localStorage.getItem("udiseNumber");
@@ -414,7 +418,7 @@ export function CCERemarks({
     return () => {
       isMounted = false;
     };
-  }, [propMedium, selectedClass, selectedMedium]);
+  }, [propMedium, selectedClass]);
 
   // Load master remarks for the standard
   // Load master remarks for the standard (Sync with Firestore real-time & Bunny CDN)

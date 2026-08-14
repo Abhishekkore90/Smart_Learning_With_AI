@@ -20,7 +20,7 @@ import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import { ModulePaywall } from "@/components/teacher/ModulePaywall";
 // @ts-ignore
-import { matchStudentClassAndMedium } from "@/result/firestoreMarksHelper";
+import { matchStudentClassAndMedium, fetchStudentsForClass } from "@/result/firestoreMarksHelper";
 // @ts-ignore
 import { getTeacherId, matchStudentTeacherClassAndMedium } from "@/lib/teacherIsolationHelper";
 import { useState, useMemo, useEffect } from "react";
@@ -197,19 +197,36 @@ function TeacherResultsPage() {
 
   // Real-time student count sync for selected class AND medium (isolated by teacherId)
   useEffect(() => {
-    const q = query(
-      collection(db, "users"),
-      where("role", "==", "student")
-    );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const raw = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      const filtered = raw.filter((s: any) => {
-        return matchStudentTeacherClassAndMedium(s, teacherId, selectedClass, selectedMedium);
-      });
-      setStudentsCount(filtered.length);
+    let isSubscribed = true;
+
+    const syncCount = async () => {
+      try {
+        const list = await fetchStudentsForClass(selectedClass, selectedMedium, teacherId, academicYear);
+        if (isSubscribed) {
+          setStudentsCount(list.length);
+        }
+      } catch (e) {
+        console.error("Error syncing student count:", e);
+      }
+    };
+
+    syncCount();
+
+    const q1 = query(collection(db, "users"), where("role", "==", "student"));
+    const unsub1 = onSnapshot(q1, () => {
+      syncCount();
     });
-    return () => unsubscribe();
-  }, [selectedClass, selectedMedium, teacherId]);
+
+    const unsub2 = onSnapshot(collection(db, "students"), () => {
+      syncCount();
+    });
+
+    return () => {
+      isSubscribed = false;
+      unsub1();
+      unsub2();
+    };
+  }, [selectedClass, selectedMedium, academicYear, teacherId]);
 
   // Custom File Uploader List States
   const [searchTerm, setSearchTerm] = useState("");
@@ -530,19 +547,18 @@ function TeacherResultsPage() {
                       </select>
                     </div>
 
-                    {/* Medium Indicator (Configured from School Info Settings) */}
+                    {/* Medium Selector */}
                     <div className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-500/20 rounded-2xl px-4 py-2 ring-2 ring-purple-100/50">
                       <span className="text-xs font-bold text-purple-200 uppercase tracking-wider">माध्यम:</span>
-                      <span className="text-xs font-black text-white">
-                        {selectedMedium === "semi" ? "सेमी इंग्रजी (Semi-English)" : "मराठी माध्यम (Marathi)"}
-                      </span>
+                      <select
+                        className="bg-transparent text-white text-xs font-extrabold outline-none cursor-pointer border-none"
+                        value={selectedMedium}
+                        onChange={(e) => setSelectedMedium(e.target.value)}
+                      >
+                        <option value="marathi" className="text-slate-800 font-bold">मराठी माध्यम (Marathi)</option>
+                        <option value="semi" className="text-slate-800 font-bold">सेमी इंग्रजी (Semi-English)</option>
+                      </select>
                     </div>
-                  <div className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-500/20 rounded-2xl px-4 py-2 ring-2 ring-purple-100/50">
-                    <span className="text-xs font-bold text-purple-200 uppercase tracking-wider">माध्यम:</span>
-                    <span className="text-xs font-black text-white">
-                      {selectedMedium === "semi" ? "सेमी इंग्रजी (Semi-English)" : "मराठी माध्यम (Marathi)"}
-                    </span>
-                  </div>
                 </div>
               </div>
 

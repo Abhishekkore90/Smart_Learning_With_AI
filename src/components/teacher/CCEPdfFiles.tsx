@@ -8,7 +8,7 @@ const safeLazy = (factory: () => Promise<any>) =>
     factory().catch((err) => {
       console.warn("Failed to fetch dynamically imported module. Reloading page...", err);
       window.location.reload();
-      return new Promise(() => {});
+      return new Promise(() => { });
     })
   );
 
@@ -50,6 +50,9 @@ const CLASS_OPTIONS = [
   { value: "8th", label: "इयत्ता ८ वी (8th)" },
 ];
 
+// Reports that need सत्र (term) selection before opening
+const TERM_BASED_REPORTS = ["cce_register"];
+
 export function CCEPdfFiles({
   selectedClass: defaultClass,
   academicYear: defaultYear,
@@ -62,6 +65,10 @@ export function CCEPdfFiles({
   const [activeClass, setActiveClass] = useState(defaultClass || "1st");
   const [academicYear, setAcademicYear] = useState(defaultYear || "2025-26");
   const [viewingReportId, setViewingReportId] = useState<string | null>(null);
+
+  // Term selection dialog state
+  const [termDialogPendingId, setTermDialogPendingId] = useState<string | null>(null);
+  const [selectedTerm, setSelectedTerm] = useState<"sem1" | "sem2">("sem2");
 
   // Available Generated PDF Files List
   const pdfFiles = [
@@ -109,6 +116,11 @@ export function CCEPdfFiles({
     </div>
   );
 
+  // Handle click — directly open using currently selected top term toggle
+  const handleOpenReport = (fileId: string) => {
+    setViewingReportId(fileId);
+  };
+
   // When a report is selected to view / download
   if (viewingReportId === "progress_card") {
     return (
@@ -117,7 +129,9 @@ export function CCEPdfFiles({
           <button onClick={() => setViewingReportId(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-600 cursor-pointer">
             <ArrowLeft className="size-5" />
           </button>
-          <h2 className="text-base font-bold text-slate-800">प्रगती पत्रक - इयत्ता {activeClass}</h2>
+          <h2 className="text-base font-bold text-slate-800">
+            प्रगती पत्रक - इयत्ता {activeClass}
+          </h2>
         </div>
         <Suspense fallback={renderLoading()}>
           <ProgressSheet initialClass={activeClass} initialYear={academicYear} onBack={() => setViewingReportId(null)} />
@@ -133,10 +147,12 @@ export function CCEPdfFiles({
           <button onClick={() => setViewingReportId(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-600 cursor-pointer">
             <ArrowLeft className="size-5" />
           </button>
-          <h2 className="text-base font-bold text-slate-800">CCE मूल्यांकन नोंदवही - इयत्ता {activeClass}</h2>
+          <h2 className="text-base font-bold text-slate-800">
+            CCE मूल्यांकन नोंदवही - इयत्ता {activeClass} ({selectedTerm === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"})
+          </h2>
         </div>
         <Suspense fallback={renderLoading()}>
-          <BoardResult initialClass={activeClass} initialYear={academicYear} />
+          <BoardResult initialClass={activeClass} initialYear={academicYear} initialTerm={selectedTerm} />
         </Suspense>
       </div>
     );
@@ -227,6 +243,42 @@ export function CCEPdfFiles({
         </div>
       </div>
 
+      {/* Top Term Toggle Switch Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-6 py-3 bg-gradient-to-r from-amber-50/90 via-slate-50 to-blue-50/90 border-b border-slate-200">
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-black text-slate-800">सत्र (Semester) निवडा:</span>
+          <div className="flex items-center bg-white p-1 rounded-2xl border border-slate-300 shadow-sm">
+            <button
+              onClick={() => setSelectedTerm("sem1")}
+              className={`px-4 py-1.5 rounded-xl font-black text-xs transition-all cursor-pointer flex items-center gap-1.5 ${selectedTerm === "sem1"
+                ? "bg-amber-500 text-white shadow-md shadow-amber-500/20"
+                : "text-slate-600 hover:text-slate-900"
+                }`}
+            >
+              <span>📘</span>
+              <span>प्रथम सत्र</span>
+            </button>
+            <button
+              onClick={() => setSelectedTerm("sem2")}
+              className={`px-4 py-1.5 rounded-xl font-black text-xs transition-all cursor-pointer flex items-center gap-1.5 ${selectedTerm === "sem2"
+                ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
+                : "text-slate-600 hover:text-slate-900"
+                }`}
+            >
+              <span>📗</span>
+              <span>द्वितीय सत्र</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="text-[11px] font-extrabold text-slate-600 flex items-center gap-1.5">
+          <span>CCE नोंदवही:</span>
+          <span className={selectedTerm === "sem1" ? "text-amber-700" : "text-emerald-700"}>
+            {selectedTerm === "sem1" ? "📘 प्रथम सत्र PDF निवडली आहे" : "📗 द्वितीय सत्र PDF निवडली आहे"}
+          </span>
+        </div>
+      </div>
+
       {/* PDF Files List */}
       <div className="flex-1 overflow-y-auto p-5 space-y-3.5">
         {pdfFiles.map((file) => (
@@ -246,6 +298,15 @@ export function CCEPdfFiles({
                   <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${file.badgeColor}`}>
                     {file.category}
                   </span>
+                  {/* Show selected term badge for term-based reports */}
+                  {TERM_BASED_REPORTS.includes(file.id) && (
+                    <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${selectedTerm === "sem1"
+                      ? "bg-amber-100 text-amber-800 border-amber-300"
+                      : "bg-emerald-100 text-emerald-800 border-emerald-300"
+                      }`}>
+                      {selectedTerm === "sem1" ? "📘 प्रथम सत्र PDF" : "📗 द्वितीय सत्र PDF"}
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs text-slate-500 font-mono break-all leading-tight">
                   {file.name}
@@ -256,7 +317,7 @@ export function CCEPdfFiles({
             {/* Action Buttons: View and Download */}
             <div className="flex items-center gap-2 self-end sm:self-center">
               <button
-                onClick={() => setViewingReportId(file.id)}
+                onClick={() => handleOpenReport(file.id)}
                 className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-all cursor-pointer"
                 title="पहा"
               >
@@ -265,7 +326,7 @@ export function CCEPdfFiles({
               </button>
 
               <button
-                onClick={() => setViewingReportId(file.id)}
+                onClick={() => handleOpenReport(file.id)}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold text-xs shadow-md shadow-blue-500/20 transition-all cursor-pointer"
                 title="PDF डाऊनलोड करा"
               >

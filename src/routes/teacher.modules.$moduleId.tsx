@@ -1,4 +1,4 @@
-﻿import {
+import {
   createFileRoute,
   Link,
   useParams,
@@ -250,61 +250,63 @@ function ModulePage() {
         <div className="absolute -bottom-64 left-1/4 size-[800px] bg-[#D6B97A]/10 rounded-full blur-[100px] animate-blob animation-delay-2000" />
       </div>
 
-      <header className="bg-white/40 backdrop-blur-2xl border-b border-[#E8DFD1]/50 fixed top-0 left-0 right-0 h-16 z-30 px-4 md:px-8 flex items-center">
-        <div className="max-w-full w-full mx-auto flex items-center justify-between relative z-10">
-          <div className="flex items-center gap-3 md:gap-8">
-            <button
-              onClick={() => window.history.back()}
-              className="size-10 md:size-12 flex items-center justify-center bg-white/50 hover:bg-white rounded-xl md:rounded-2xl transition-all border border-[#E8DFD1]/50 text-[#D6B97A] shadow-sm hover:shadow-md"
-            >
-              <ChevronLeft className="size-5 md:size-6" />
-            </button>
-            <div className="flex items-center gap-3 md:gap-6">
-              <div
-                className={`size-10 md:size-14 ${config.color} rounded-xl md:rounded-[1.5rem] flex items-center justify-center text-white shadow-2xl shadow-[#D6B97A]/20 ring-4 ring-white/50`}
+      {moduleId !== "daily-assembly" && moduleId !== "special-day" && (
+        <header className="bg-white/40 backdrop-blur-2xl border-b border-[#E8DFD1]/50 fixed top-0 left-0 right-0 h-16 z-30 px-4 md:px-8 flex items-center">
+          <div className="max-w-full w-full mx-auto flex items-center justify-between relative z-10">
+            <div className="flex items-center gap-3 md:gap-8">
+              <button
+                onClick={() => window.history.back()}
+                className="size-10 md:size-12 flex items-center justify-center bg-white/50 hover:bg-white rounded-xl md:rounded-2xl transition-all border border-[#E8DFD1]/50 text-[#D6B97A] shadow-sm hover:shadow-md"
               >
-                <config.icon className="size-5 md:size-7" />
-              </div>
-              <div>
-                <h1 className="font-black text-[#1A1A1A] text-lg md:text-2xl tracking-tight leading-none">
-                  {config.m}
-                </h1>
-                <p className="text-[8px] md:text-[11px] font-bold text-[#D6B97A] uppercase tracking-[0.3em] mt-1 md:mt-2">
-                  {config.e}
-                </p>
+                <ChevronLeft className="size-5 md:size-6" />
+              </button>
+              <div className="flex items-center gap-3 md:gap-6">
+                <div
+                  className={`size-10 md:size-14 ${config.color} rounded-xl md:rounded-[1.5rem] flex items-center justify-center text-white shadow-2xl shadow-[#D6B97A]/20 ring-4 ring-white/50`}
+                >
+                  <config.icon className="size-5 md:size-7" />
+                </div>
+                <div>
+                  <h1 className="font-black text-[#1A1A1A] text-lg md:text-2xl tracking-tight leading-none">
+                    {config.m}
+                  </h1>
+                  <p className="text-[8px] md:text-[11px] font-bold text-[#D6B97A] uppercase tracking-[0.3em] mt-1 md:mt-2">
+                    {config.e}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-2 md:gap-4">
-            {moduleId === "teacher-statistics" && (
-              <button
-                onClick={() => window.dispatchEvent(new Event("download-teacher-portfolio-pdf"))}
-                className="group flex items-center gap-2 md:gap-4 px-6 md:px-12 py-3 md:py-5 bg-white text-slate-800 text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] rounded-full hover:bg-[#D6B97A] hover:text-white hover:border-[#D6B97A] border border-slate-200 transition-all duration-700 shadow-xl cursor-pointer"
-              >
-                <Download className="size-3 md:size-4 text-[#D6B97A] group-hover:text-white" />
-                <span className="hidden sm:inline">Download PDF</span>
-                <span className="sm:hidden">PDF</span>
-              </button>
-            )}
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="group flex items-center gap-2 md:gap-4 px-6 md:px-12 py-3 md:py-5 bg-[#1A1A1A] text-white text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] rounded-full hover:bg-[#D6B97A] transition-all duration-700 shadow-2xl disabled:opacity-50"
-            >
-              {saving ? (
-                <Loader2 className="size-3 md:size-4 animate-spin" />
-              ) : (
-                <Save className="size-3 md:size-4 group-hover:rotate-12 transition-transform text-[#D6B97A] group-hover:text-white" />
+            <div className="flex items-center gap-2 md:gap-4">
+              {moduleId === "teacher-statistics" && (
+                <button
+                  onClick={() => window.dispatchEvent(new Event("download-teacher-portfolio-pdf"))}
+                  className="group flex items-center gap-2 md:gap-4 px-6 md:px-12 py-3 md:py-5 bg-white text-slate-800 text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] rounded-full hover:bg-[#D6B97A] hover:text-white hover:border-[#D6B97A] border border-slate-200 transition-all duration-700 shadow-xl cursor-pointer"
+                >
+                  <Download className="size-3 md:size-4 text-[#D6B97A] group-hover:text-white" />
+                  <span className="hidden sm:inline">Download PDF</span>
+                  <span className="sm:hidden">PDF</span>
+                </button>
               )}
-              <span className="hidden sm:inline">Commit Sync</span>
-              <span className="sm:hidden">Save</span>
-            </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="group flex items-center gap-2 md:gap-4 px-6 md:px-12 py-3 md:py-5 bg-[#1A1A1A] text-white text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] rounded-full hover:bg-[#D6B97A] transition-all duration-700 shadow-2xl disabled:opacity-50"
+              >
+                {saving ? (
+                  <Loader2 className="size-3 md:size-4 animate-spin" />
+                ) : (
+                  <Save className="size-3 md:size-4 group-hover:rotate-12 transition-transform text-[#D6B97A] group-hover:text-white" />
+                )}
+                <span className="hidden sm:inline">Commit Sync</span>
+                <span className="sm:hidden">Save</span>
+              </button>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
-      <main className="flex-1 lg:pl-0 px-2 sm:px-4 md:px-6 py-4 md:py-6 max-w-full pt-24 mx-auto w-full relative z-10">
+      <main className={`flex-1 lg:pl-0 px-2 sm:px-4 md:px-6 py-4 md:py-6 max-w-full ${moduleId === 'daily-assembly' || moduleId === 'special-day' ? 'pt-4' : 'pt-24'} mx-auto w-full relative z-10`}>
         <ModulePaywall moduleId={moduleId} defaultTitle={config.m}>
           <PinGate sectionKey="planning" enabled={moduleId === "annual-monthly-planning"}>
           <motion.div
@@ -1746,6 +1748,7 @@ function AssemblyBookViewer() {
    DailyAssemblyContent ΓÇö Full Paripath / परीपाठ Structured View
    ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */
 function DailyAssemblyContent() {
+  const navigate = useNavigate();
   const [assemblyMode, setAssemblyMode] = useState<"daily" | "monthly">("daily");
   const [lang, setLang] = useState<"mr" | "en" | "hi">("mr");
 
@@ -1960,38 +1963,25 @@ function DailyAssemblyContent() {
         </div>
       ` : '';
 
-      // --- All content data ---
-      const nationalAnthem = data.nationalAnthem || data.nationalAnthem_mr || assemblyItems[0]?.content || "";
-      const stateAnthem = data.stateAnthem || data.stateAnthem_mr || assemblyItems[1]?.content || "";
-      const pledge = data.pledge || data.pledge_mr || assemblyItems[2]?.content || "";
+      // --- All 14 Monthly Paripath Register Content Sections ---
+      const rashtrageet = data.nationalAnthem || data.rashtrageet || data.nationalAnthem_mr || assemblyItems[0]?.content || "";
+      const pratigya = data.pledge || data.pratigya || data.pledge_mr || assemblyItems[2]?.content || "";
+      const sanvidhan = data.preamble || data.sanvidhan || data.preamble_mr || assemblyItems[3]?.content || "";
+      const prarthana = data.prayer || data.prarthana || data.prayer_mr || assemblyItems[4]?.content || "";
+      const shlok = data.shlok || data.shlok_mr || "";
+      const suvichar = data.thought || data.suvichar || "";
+      const batmya = data.valueNews || data.batmya || data.news || "";
+      const dinvishesh = data.events || data.dinvishesh || "";
+      const mhan = data.proverb || data.mhan || "";
+      const mhanMeaning = data.proverbMeaning || "";
+      const bodhkatha = data.story || data.bodhkatha || "";
+      const storyTitle = data.storyTitle || "";
+      const moral = data.moral || "";
+      const samuhgeet = data.samuhgeet || data.songTitle || data.patrioticSong || "";
+      const deshbhaktigeet = data.deshbhaktigeet || data.patrioticSong || "";
+      const maun = data.silentPasayadan || data.maun || assemblyItems[5]?.content || "";
 
-      // --- ALL REMAINING CONTENT flows continuously (no forced page breaks) ---
-      const preamble = data.preamble || data.preamble_mr || assemblyItems[3]?.content || "";
-      const prayer = data.prayer || data.prayer_mr || assemblyItems[4]?.content || "";
-      const silentPasayadan = data.silentPasayadan || assemblyItems[5]?.content || "";
-
-      const panchangItems = [
-        { label: "वार", value: data.day },
-        { label: "मास", value: data.month },
-        { label: "पक्ष", value: data.paksha },
-        { label: "तिथी", value: data.tithi },
-        { label: "नक्षत्र", value: data.nakshatra },
-        { label: "योग", value: data.yog },
-        { label: "सूर्योदय", value: data.sunrise },
-        { label: "सूर्यास्त", value: data.sunset },
-      ].filter(item => Boolean(item.value));
-
-      const eventsContent = data.events || data.dinvishesh || "";
-      const newsContent = data.valueNews || data.batmya || data.news || "";
-
-      const gkItems = [1, 2, 3, 4].map(num => data[`gkQ${num}`] ? `
-        <div style="background: #f5f3ff; border: 1px solid #ede9fe; border-radius: 8px; padding: 8px 12px; margin-bottom: 6px;">
-          <div style="font-size: 13px; font-weight: 800; color: #5b21b6; font-family: 'Noto Sans Devanagari', sans-serif;">प्रश्न ${num}: ${data[`gkQ${num}`]}</div>
-          <div style="font-size: 13px; font-weight: 700; color: #166534; margin-top: 4px; font-family: 'Noto Sans Devanagari', sans-serif;">उत्तर: ${data[`gkA${num}`] || "-"}</div>
-        </div>
-      ` : '').join('');
-
-      // Build ALL content as one continuous flow (no forced page breaks - html2pdf paginates automatically)
+      // Build ALL 14 content sections in exact sequence
       const allContent = `
         <style>
           #temp-pdf-render, #temp-pdf-render * {
@@ -2003,137 +1993,86 @@ function DailyAssemblyContent() {
         <div style="padding: 14px 22px; width: 100%; box-sizing: border-box;">
           ${pageHeader}
           ${schoolHeader}
-          ${greenBar("परिपाठ सुरुवात")}
+
           <div style="${sectionBox('#bbf7d0')}">
-            ${greenBar(assemblyItems[0]?.label || 'राष्ट्रगीत')}
-            <div style="${contentText} font-weight: 700;">${nl2br(nationalAnthem)}</div>
+            ${greenBar('१. राष्ट्रगीत')}
+            <div style="${contentText} font-weight: 700;">${nl2br(rashtrageet || 'जन गण मन...')}</div>
           </div>
+
           <div style="${sectionBox('#bbf7d0')}">
-            ${greenBar(assemblyItems[1]?.label || 'राज्यगीत')}
-            <div style="${contentText} font-size: 12px; line-height: 1.5;">${nl2br(stateAnthem)}</div>
-          </div>
-          <div style="${sectionBox('#bbf7d0')}">
-            ${greenBar(assemblyItems[2]?.label || 'प्रतिज्ञा')}
-            <div style="${contentText}">${nl2br(pledge)}</div>
+            ${greenBar('२. प्रतिज्ञा')}
+            <div style="${contentText}">${nl2br(pratigya || 'भारत माझा देश आहे...')}</div>
           </div>
 
           <div style="${sectionBox('#fed7aa')}">
-            ${greenBar(assemblyItems[3]?.label || 'संविधान उद्देशिका')}
-            <div style="${contentText}">${nl2br(preamble)}</div>
+            ${greenBar('३. भारताचे संविधान')}
+            <div style="${contentText}">${nl2br(sanvidhan || 'आम्ही भारताचे लोक...')}</div>
           </div>
 
           <div style="${sectionBox('#bbf7d0')}">
-            ${greenBar(assemblyItems[4]?.label || 'प्रार्थना')}
-            <div style="${contentText}">${nl2br(prayer)}</div>
+            ${greenBar('४. प्रार्थना')}
+            <div style="${contentText}">${nl2br(prarthana)}</div>
           </div>
 
-          ${silentPasayadan ? `
-          <div style="${sectionBox('#fde68a')}">
-            ${greenBar(assemblyItems[5]?.label || 'पसायदान')}
-            <div style="${contentText} font-size: 12px; line-height: 1.55;">${nl2br(silentPasayadan)}</div>
-          </div>
-          ` : ''}
-
-          ${panchangItems.length > 0 ? `
-          <div style="${sectionBox('#fed7aa')}">
-            ${greenBar("आजचे पंचांग")}
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
-              ${panchangItems.map(item => `
-                <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 6px; text-align: center;">
-                  <div style="font-size: 10px; font-weight: 700; color: #92400e; text-transform: uppercase; font-family: 'Noto Sans Devanagari', sans-serif;">${item.label}</div>
-                  <div style="font-size: 13px; font-weight: 800; color: #1f2937; font-family: 'Noto Sans Devanagari', sans-serif;">${item.value}</div>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-          ` : ''}
-
-          ${data.thought ? `
-          <div style="${sectionBox('#ede9fe')}">
-            ${greenBar("सुविचार")}
-            <div style="padding: 14px; background: #faf5ff; border: 1px solid #ede9fe; border-radius: 8px; text-align: center;">
-              <div style="font-size: 16px; font-weight: 800; color: #1f2937; font-style: italic; font-family: 'Noto Sans Devanagari', sans-serif;">"${data.thought}"</div>
-            </div>
-          </div>
-          ` : ''}
-
-          ${data.shlok ? `
           <div style="${sectionBox('#fecaca')}">
-            ${greenBar("श्लोक")}
-            <div style="padding: 14px; background: #fff5f5; border: 1px solid #fecaca; border-radius: 8px; text-align: center;">
-              <div style="${contentText} font-size: 14px;">${nl2br(data.shlok)}</div>
-            </div>
+            ${greenBar('५. श्लोक')}
+            <div style="${contentText}">${nl2br(shlok || 'माहिती उपलब्ध नाही')}</div>
           </div>
-          ` : ''}
 
-          ${data.proverb ? `
-          <div style="${sectionBox('#ccfbf1')}">
-            ${greenBar("म्हण व अर्थ")}
-            <div style="padding: 12px; background: #f0fdfa; border: 1px solid #ccfbf1; border-radius: 8px; text-align: center; margin-bottom: 6px;">
-              <div style="font-size: 10px; font-weight: 700; color: #0d9488; text-transform: uppercase; margin-bottom: 4px; font-family: 'Noto Sans Devanagari', sans-serif;">म्हण</div>
-              <div style="font-size: 15px; font-weight: 800; color: #1f2937; font-family: 'Noto Sans Devanagari', sans-serif;">"${data.proverb}"</div>
-            </div>
-            ${data.proverbMeaning ? `
-            <div style="padding: 10px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; text-align: center;">
-              <div style="font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; margin-bottom: 4px; font-family: 'Noto Sans Devanagari', sans-serif;">म्हणीचा अर्थ</div>
-              <div style="font-size: 13px; font-weight: 600; color: #4b5563; font-family: 'Noto Sans Devanagari', sans-serif;">${data.proverbMeaning}</div>
-            </div>
-            ` : ''}
+          <div style="${sectionBox('#ede9fe')}">
+            ${greenBar('६. सुविचार')}
+            <div style="${contentText} font-style: italic;">${suvichar ? `"${suvichar}"` : 'माहिती उपलब्ध नाही'}</div>
           </div>
-          ` : ''}
 
-          ${eventsContent ? `
-          <div style="${sectionBox('#bfdbfe')}">
-            ${greenBar(`${data.dateMonth ? data.dateMonth + ' ' : ''}दिनविशेष`)}
-            ${data.yearDay ? `<div style="font-size: 12px; font-weight: 700; color: #3b82f6; text-align: center; background: #dbeafe; border-radius: 20px; padding: 4px 12px; display: inline-block; margin: 0 auto 8px auto; font-family: 'Noto Sans Devanagari', sans-serif;">हा वर्षातील ${data.yearDay} वा दिवस आहे.</div>` : ''}
-            <div style="${contentText} text-align: left; font-size: 13px;">${nl2br(eventsContent)}</div>
-          </div>
-          ` : ''}
-
-          ${newsContent ? `
           <div style="${sectionBox('#a7f3d0')}">
-            ${greenBar("सुसंस्कारक्षम बातम्या")}
-            <div style="${contentText} text-align: left; font-size: 13px;">${nl2br(newsContent)}</div>
+            ${greenBar('७. सुसंस्कारक्षम बातम्या')}
+            <div style="${contentText} text-align: left;">${nl2br(batmya || 'माहिती उपलब्ध नाही')}</div>
           </div>
-          ` : ''}
 
-          ${data.patrioticSong ? `
-          <div style="${sectionBox('#c7d2fe')}">
-            ${greenBar(`देशभक्ती गीत${data.songTitle ? ': ' + data.songTitle : ''}`)}
-            <div style="${contentText} font-size: 13px;">${nl2br(data.patrioticSong)}</div>
+          <div style="${sectionBox('#bfdbfe')}">
+            ${greenBar('८. दिनविशेष')}
+            ${data.yearDay ? `<div style="font-size: 11px; font-weight: 700; color: #1e40af; text-align: center; margin-bottom: 4px;">हा वर्षातील ${data.yearDay} वा दिवस आहे.</div>` : ''}
+            <div style="${contentText} text-align: left;">${nl2br(dinvishesh || 'माहिती उपलब्ध नाही')}</div>
           </div>
-          ` : ''}
 
-          ${data.story ? `
-          <div style="${sectionBox('#fecdd3')}">
-            ${greenBar(`बोधकथा${data.storyTitle ? ': ' + data.storyTitle : ''}`)}
-            <div style="${contentText} text-align: left; font-size: 13px;">${nl2br(data.story)}</div>
-            ${data.moral ? `
-            <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 8px 14px; border-radius: 0 6px 6px 0; margin-top: 8px;">
-              <span style="font-size: 12px; font-weight: 800; color: #92400e; font-family: 'Noto Sans Devanagari', sans-serif;">Γ¡É तात्पर्य: </span>
-              <span style="font-size: 13px; font-weight: 700; color: #1f2937; font-family: 'Noto Sans Devanagari', sans-serif;">${data.moral}</span>
-            </div>
-            ` : ''}
-          </div>
-          ` : ''}
-
-          ${gkItems ? `
-          <div style="${sectionBox('#f3e8ff')}">
-            ${greenBar("सामान्य ज्ञान (G.K.)")}
-            ${gkItems}
-          </div>
-          ` : ''}
-
-          ${data.personalityTitle || data.personality ? `
           <div style="${sectionBox('#ccfbf1')}">
-            ${greenBar(`थोरव्यक्ती परिचय${data.personalityTitle ? ': ' + data.personalityTitle : ''}`)}
-            <div style="${contentText} text-align: left;">${nl2br(data.personality || "-")}</div>
+            ${greenBar('९. म्हण')}
+            <div style="${contentText} font-weight: 800;">${mhan ? `"${mhan}"` : 'माहिती उपलब्ध नाही'}</div>
+            ${mhanMeaning ? `<div style="font-size: 12px; color: #4b5563; text-align: center; margin-top: 6px;"><b>अर्थ:</b> ${mhanMeaning}</div>` : ''}
           </div>
-          ` : ''}
+
+          <div style="${sectionBox('#fecdd3')}">
+            ${greenBar(`१०. बोधकथा${storyTitle ? ': ' + storyTitle : ''}`)}
+            <div style="${contentText} text-align: left;">${nl2br(bodhkatha || 'माहिती उपलब्ध नाही')}</div>
+            ${moral ? `<div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 6px 12px; border-radius: 4px; margin-top: 6px; font-size: 12px; font-weight: 700; color: #92400e;"><b>तात्पर्य:</b> ${moral}</div>` : ''}
+          </div>
+
+          <div style="${sectionBox('#e0e7ff')}">
+            ${greenBar('११. समूहगीत')}
+            <div style="${contentText}">${nl2br(samuhgeet || 'माहिती उपलब्ध नाही')}</div>
+          </div>
+
+          <div style="${sectionBox('#c7d2fe')}">
+            ${greenBar('१२. देशभक्ती गीत')}
+            <div style="${contentText}">${nl2br(deshbhaktigeet || 'माहिती उपलब्ध नाही')}</div>
+          </div>
+
+          <div style="${sectionBox('#fde68a')}">
+            ${greenBar('१३. मौन पसायदान')}
+            <div style="${contentText}">${nl2br(maun || 'पसायदान')}</div>
+          </div>
+
+          <div style="${sectionBox('#e2e8f0')}">
+            ${greenBar('१४. वर्गशिक्षकांची स्वाक्षरी')}
+            <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 800; color: #1e293b; padding: 25px 20px 5px 20px;">
+              <span>वर्गशिक्षक स्वाक्षरी</span>
+              <span>मुख्याध्यापक स्वाक्षरी</span>
+            </div>
+          </div>
 
           <div style="width: 100%; height: 1.5px; background: linear-gradient(90deg, transparent, #cbd5e1, transparent); margin: 14px 0;"></div>
           <div style="text-align: center; padding: 8px 0; font-size: 10px; font-weight: 700; color: #9ca3af; font-family: 'Noto Sans Devanagari', sans-serif;">
-            निर्मिती: ${data.creator || "Smart Learning With AI"} | ┬⌐ दैनिक परिपाठ ${new Date().getFullYear()}
+            निर्मिती: ${data.creator || "Smart Learning With AI"} | © दैनिक परिपाठ ${new Date().getFullYear()}
           </div>
         </div>
       `;
@@ -2238,7 +2177,16 @@ function DailyAssemblyContent() {
       `}</style>
 
       {/* Mode Switcher: Daily Assembly vs Monthly Assembly Register */}
-      <div className="flex justify-center p-3 bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-800 pdf-hide">
+      <div className="flex items-center justify-between p-3 bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-800 pdf-hide gap-3">
+        <button
+          onClick={() => navigate({ to: "/teacher" })}
+          className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs md:text-sm uppercase tracking-wider border border-white/20 transition-all shadow-md active:scale-95 group shrink-0"
+          title="मागे जा (Back to Dashboard)"
+        >
+          <ArrowLeft className="size-5 group-hover:-translate-x-1 transition-transform text-amber-400" />
+          <span>मागे जा</span>
+        </button>
+
         <div className="flex p-1.5 bg-slate-800/80 rounded-2xl border border-slate-700/60 w-full max-w-2xl">
           <button
             onClick={() => setAssemblyMode("daily")}
@@ -2264,6 +2212,7 @@ function DailyAssemblyContent() {
             {lang === "en" ? "Monthly Assembly" : "मासिक परिपाठ (रजिस्टर)"}
           </button>
         </div>
+        <div className="w-24 hidden md:block" />
       </div>
 
       {assemblyMode === "monthly" ? (
@@ -2351,38 +2300,38 @@ function DailyAssemblyContent() {
           </Dialog>
 
           {/* Header with Language Toggle */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-8 bg-slate-900 rounded-[3rem] shadow-xl border border-slate-800 relative overflow-hidden pdf-hide">
-            <div className="flex items-center gap-5 relative z-10">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-6 md:p-8 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-[3rem] shadow-xl border border-indigo-900/40 relative overflow-hidden pdf-hide">
+            <div className="flex items-center gap-4 relative z-10">
               <div>
                 <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight drop-shadow-md">
-                  दैनिक परिपाठ
+                  Daily Assembly (परिपाठ)
                 </h2>
-                <p className="text-xs font-black text-indigo-200 uppercase tracking-[0.3em] mt-1.5 opacity-80">
-                  आजचा परिपाठ
+                <p className="text-xs font-black text-indigo-200/90 uppercase tracking-[0.2em] mt-1">
+                  दैनिक व वस्तूनिष्ठ परिपाठ उपक्रम
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-3 relative z-10 pdf-hide">
-              <div className="flex items-center gap-2.5 bg-white/5 px-4 py-2.5 rounded-2xl border border-white/10 text-white shadow-inner">
+              <div className="flex items-center gap-2.5 bg-white/10 px-4 py-2.5 rounded-2xl border border-white/15 text-white shadow-inner">
                 <Calendar className="size-4 text-indigo-300" />
                 <input
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="bg-transparent border-none text-xs font-black outline-none cursor-pointer text-indigo-200"
+                  className="bg-transparent border-none text-xs font-black outline-none cursor-pointer text-indigo-100"
                 />
               </div>
               <button
                 onClick={() => setShowSchoolInfoModal(true)}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-black text-xs md:text-sm uppercase tracking-wider transition-all border border-white/20"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 font-bold text-xs uppercase tracking-wider transition-all border border-amber-400/30 shadow-md active:scale-95"
                 title="शाळेची माहिती भरा / बदला"
               >
-                <School className="size-4" />
+                <School className="size-4 text-amber-300" />
                 <span className="hidden sm:inline">शाळेची माहिती</span>
               </button>
               <button
                 onClick={handleDownloadPdf}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-black text-xs md:text-sm uppercase tracking-wider transition-all shadow-lg shadow-indigo-500/25 active:scale-95 border border-indigo-400/30"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black text-xs md:text-sm uppercase tracking-wider transition-all shadow-lg shadow-orange-500/25 active:scale-95 border border-orange-400/30"
               >
                 <Download className="size-4" />
                 <span>{lang === "en" ? "Download PDF" : "PDF डाउनलोड"}</span>
@@ -2424,9 +2373,9 @@ function DailyAssemblyContent() {
             </div>
           ) : (
             <>
-              {/* School Info Display for PDF and UI */}
+              {/* School Info Display for PDF only */}
               {(schoolInfo.schoolName || schoolInfo.udise || schoolInfo.kendra || schoolInfo.taluka || schoolInfo.jilha) && (
-                <div className="bg-[#f0fdf4] border-[2px] border-[#2e7d32] rounded-xl p-4 md:p-6 mb-6 w-full text-center shadow-sm">
+                <div className="hidden print:block bg-[#f0fdf4] border-[2px] border-[#2e7d32] rounded-xl p-4 md:p-6 mb-6 w-full text-center shadow-sm">
                   {schoolInfo.schoolName && (
                     <h3 className="text-lg md:text-xl font-black text-[#166534] mb-3 drop-shadow-sm">
                       शाळेचे नाव: {schoolInfo.schoolName}
@@ -2445,338 +2394,201 @@ function DailyAssemblyContent() {
                 </div>
               )}
 
-              {/* Assembly Start Items (Anthem, State Song, Pledge, Preamble, Prayer) */}
-              <div className="flex justify-center mb-4 pdf-hide">
-                <h4 className="text-xl md:text-2xl font-black text-green-800 inline-flex items-center justify-center gap-3 px-8 py-4 bg-green-50 rounded-full shadow-sm border border-green-100 uppercase tracking-widest">
-                  {t.assemblyStart}
-                </h4>
-              </div>
 
+
+
+
+          {/* Exact 14 Headings Sequence matching Monthly Paripath Register */}
           {[
-            { key: 'nationalAnthem', fallbackIdx: 0 },
-            { key: 'stateAnthem', fallbackIdx: 1 },
-            { key: 'pledge', fallbackIdx: 2 },
-            { key: 'preamble', fallbackIdx: 3 },
-            { key: 'prayer', fallbackIdx: 4 },
-            { key: 'silentPasayadan', fallbackIdx: 5 },
-          ].map((itemDef, idx) => {
-            const fallbackItem = assemblyItems[itemDef.fallbackIdx];
-            const content =
-              formData[itemDef.key] ||
-              formData[`${itemDef.key}_mr`] ||
-              formData[`${itemDef.key}_en`] ||
-              formData[`${itemDef.key}_hi`] ||
-              fallbackItem.content;
-
-            return (
-              <div key={idx} id={itemDef.key} className="assembly-section-card bg-white p-4 md:p-8 rounded-[2rem] border border-green-100 shadow-md text-center mb-4">
-                <div className="flex justify-center mb-4">
-                  <label className="inline-flex items-center justify-center gap-2 px-5 py-2 bg-green-50 text-green-700 rounded-full text-sm font-black uppercase tracking-wider border border-green-100">
-                    {fallbackItem.label}
-                  </label>
-                </div>
-                <div className="text-base md:text-xl text-slate-900 font-extrabold leading-relaxed font-sans text-center">
-                  {content.split('\n').map((line: string, i: number) => (
-                    <React.Fragment key={i}>
-                      {line}
-                      <br />
-                    </React.Fragment>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Panchang */}
-          {(formData.month || formData.tithi || formData.nakshatra || formData.yog || formData.sunrise || formData.sunset) && (
+            {
+              id: 'rashtrageet',
+              title: 'राष्ट्रगीत',
+              emoji: '🇮🇳',
+              gradient: 'from-emerald-100/80 via-teal-50/60 to-green-100/80',
+              content: formData.nationalAnthem || formData.rashtrageet || formData.nationalAnthem_mr || assemblyItems[0]?.content || "",
+            },
+            {
+              id: 'pratigya',
+              title: 'प्रतिज्ञा',
+              emoji: '✋',
+              gradient: 'from-blue-100/80 via-indigo-50/60 to-cyan-100/80',
+              content: formData.pledge || formData.pratigya || formData.pledge_mr || assemblyItems[2]?.content || "",
+            },
+            {
+              id: 'sanvidhan',
+              title: 'भारताचे संविधान',
+              emoji: '📜',
+              gradient: 'from-amber-100/80 via-orange-50/60 to-yellow-100/80',
+              content: formData.preamble || formData.sanvidhan || formData.preamble_mr || assemblyItems[3]?.content || "",
+            },
+            {
+              id: 'prarthana',
+              title: 'प्रार्थना',
+              emoji: '🙏🏻',
+              gradient: 'from-rose-100/80 via-pink-50/60 to-purple-100/80',
+              content: formData.prayer || formData.prarthana || formData.prayer_mr || assemblyItems[4]?.content || "",
+            },
+            {
+              id: 'shlok',
+              title: 'श्लोक',
+              emoji: '🕉️',
+              gradient: 'from-amber-100/80 via-rose-50/60 to-orange-100/80',
+              content: formData.shlok || formData.shlok_mr || "",
+            },
+            {
+              id: 'suvichar',
+              title: 'सुविचार',
+              emoji: '🪔',
+              gradient: 'from-violet-100/80 via-fuchsia-50/60 to-purple-100/80',
+              content: formData.thought || formData.suvichar || "",
+            },
+            {
+              id: 'batmya',
+              title: 'सुसंस्कारक्षम बातम्या',
+              emoji: '📰',
+              gradient: 'from-emerald-100/80 via-teal-50/60 to-emerald-50/80',
+              content: formData.valueNews || formData.batmya || formData.news || "",
+            },
+            {
+              id: 'dinvishesh',
+              title: 'दिनविशेष',
+              emoji: '📅',
+              gradient: 'from-blue-100/80 via-indigo-50/60 to-sky-100/80',
+              content: formData.events || formData.dinvishesh || "",
+              extra: formData.yearDay ? `हा वर्षातील ${formData.yearDay} वा दिवस आहे.` : "",
+            },
+            {
+              id: 'mhan',
+              title: 'म्हण',
+              emoji: '💡',
+              gradient: 'from-teal-100/80 via-emerald-50/60 to-cyan-100/80',
+              content: formData.proverb || formData.mhan || "",
+              meaning: formData.proverbMeaning,
+            },
+            {
+              id: 'bodhkatha',
+              title: 'बोधकथा',
+              emoji: '📖',
+              gradient: 'from-pink-100/80 via-rose-50/60 to-red-100/80',
+              storyTitle: formData.storyTitle,
+              content: formData.story || formData.bodhkatha || "",
+              moral: formData.moral,
+            },
+            {
+              id: 'samuhgeet',
+              title: 'समूहगीत',
+              emoji: '🎵',
+              gradient: 'from-sky-100/80 via-indigo-50/60 to-purple-100/80',
+              songTitle: formData.songTitle,
+              content: formData.samuhgeet || formData.patrioticSong || "",
+            },
+            {
+              id: 'deshbhaktigeet',
+              title: 'देशभक्ती गीत',
+              emoji: '🇮🇳',
+              gradient: 'from-orange-100/80 via-red-50/60 to-amber-100/80',
+              songTitle: formData.songTitle,
+              content: formData.deshbhaktigeet || formData.patrioticSong || "",
+            },
+            {
+              id: 'maun',
+              title: 'मौन पसायदान',
+              emoji: '✨',
+              gradient: 'from-yellow-100/80 via-amber-50/60 to-orange-100/80',
+              content: formData.silentPasayadan || formData.maun || assemblyItems[5]?.content || "",
+            },
+            {
+              id: 'swakshari',
+              title: 'वर्गशिक्षकांची स्वाक्षरी',
+              emoji: '✍️',
+              gradient: 'from-slate-100 via-gray-50 to-zinc-100',
+              isSignature: true,
+            },
+          ].map((sec) => (
             <SectionCard
-              id="panchang"
-              emoji="🪔"
-              title={t.panchang}
-              icon={Calendar}
-              gradient="from-amber-100/80 via-orange-50/60 to-yellow-100/80"
-              pageBreak={false}
-            >
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-                {[
-                  { label: t.day, value: formData.day, icon: Calendar, color: "text-amber-500", bg: "bg-amber-50", border: "border-amber-100" },
-                  { label: t.month, value: formData.month, icon: Clock, color: "text-orange-500", bg: "bg-orange-50", border: "border-orange-100" },
-                  { label: t.paksha, value: formData.paksha, icon: Star, color: "text-yellow-500", bg: "bg-yellow-50", border: "border-yellow-100" },
-                  { label: t.tithi, value: formData.tithi, icon: Star, color: "text-red-400", bg: "bg-red-50", border: "border-red-100" },
-                  { label: t.nakshatra, value: formData.nakshatra, icon: Sparkles, color: "text-rose-500", bg: "bg-rose-50", border: "border-rose-100" },
-                  { label: t.yog, value: formData.yog, icon: Sparkles, color: "text-pink-500", bg: "bg-pink-50", border: "border-pink-100" },
-                  { label: t.sunrise, value: formData.sunrise, icon: Sunrise, color: "text-amber-600", bg: "bg-amber-50", border: "border-amber-100" },
-                  { label: t.sunset, value: formData.sunset, icon: Sunset, color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-100" },
-                ].filter(item => Boolean(item.value)).map((item, i) => (
-                  <div
-                    key={i}
-                    className={`p-3 md:p-4 bg-white/80 backdrop-blur-xl border border-white rounded-xl md:rounded-2xl text-center shadow-lg shadow-amber-900/5 hover:scale-105 hover:shadow-xl hover:shadow-amber-900/10 transition-all duration-300 relative overflow-hidden group`}
-                  >
-                    <div className={`absolute -right-4 -top-4 size-16 ${item.bg} rounded-full blur-2xl opacity-50 group-hover:opacity-100 transition-opacity`} />
-                    <div className={`size-10 rounded-xl ${item.bg} ${item.border} border flex items-center justify-center mx-auto mb-2 relative z-10 group-hover:rotate-6 transition-transform`}>
-                      <item.icon className={`size-5 ${item.color}`} />
-                    </div>
-                    <div className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5 relative z-10">
-                      {item.label}
-                    </div>
-                    <div className="text-sm md:text-lg font-black text-slate-800 relative z-10">{item.value}</div>
-                  </div>
-                ))}
-              </div>
-            </SectionCard>
-          )}
-
-          {/* Suvichar */}
-          {formData.thought && (
-            <SectionCard
-              id="thought"
-              emoji="🪔"
-              title={t.thought}
-              icon={Quote}
-              gradient="from-violet-100/80 via-fuchsia-50/60 to-purple-100/80"
-              pageBreak={false}
-            >
-              <div className="p-6 md:p-10 bg-white/60 backdrop-blur-xl border border-white rounded-[2rem] flex flex-col items-center justify-center text-center shadow-xl shadow-violet-900/5 hover:shadow-2xl hover:shadow-violet-900/10 transition-all duration-500 relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-48 h-48 bg-violet-200/40 rounded-full blur-[60px] -translate-y-1/2 translate-x-1/2 group-hover:bg-violet-300/40 transition-colors" />
-                <div className="absolute bottom-0 left-0 w-48 h-48 bg-fuchsia-200/40 rounded-full blur-[60px] translate-y-1/2 -translate-x-1/2 group-hover:bg-fuchsia-300/40 transition-colors" />
-
-                <div className="size-14 rounded-full bg-violet-100 border border-violet-200 flex items-center justify-center mb-5 relative z-10 shadow-inner">
-                  <Quote className="size-7 text-violet-500" />
-                </div>
-                <p className="text-xl md:text-2xl font-black text-slate-800 leading-relaxed italic relative z-10 drop-shadow-sm">
-                  "{formData.thought}"
-                </p>
-              </div>
-            </SectionCard>
-          )}
-
-          {/* Shlok */}
-          {formData.shlok && (
-            <SectionCard
-              id="shlok"
-              emoji="🕉️"
-              title={(t as any).shlok || "श्लोक"}
-              icon={Quote}
-              gradient="from-amber-100/80 via-rose-50/60 to-orange-100/80"
-              pageBreak={false}
-            >
-              <div className="p-6 md:p-10 bg-white/60 backdrop-blur-xl border border-white rounded-[2rem] flex flex-col items-center justify-center text-center shadow-xl shadow-amber-900/5 hover:shadow-2xl hover:shadow-amber-900/10 transition-all duration-500 relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-48 h-48 bg-amber-200/40 rounded-full blur-[60px] -translate-y-1/2 translate-x-1/2 group-hover:bg-amber-300/40 transition-colors" />
-                <div className="absolute bottom-0 left-0 w-48 h-48 bg-rose-200/40 rounded-full blur-[60px] translate-y-1/2 -translate-x-1/2 group-hover:bg-rose-300/40 transition-colors" />
-
-                <div className="size-14 rounded-full bg-amber-100 border border-amber-200 flex items-center justify-center mb-5 relative z-10 shadow-inner">
-                  <Quote className="size-7 text-amber-600" />
-                </div>
-                <p className="text-xl md:text-2xl font-black text-slate-800 leading-relaxed relative z-10 drop-shadow-sm whitespace-pre-line">
-                  "{formData.shlok}"
-                </p>
-              </div>
-            </SectionCard>
-          )}
-
-          {/* M'han & Arth */}
-          {formData.proverb && (
-            <SectionCard
-              id="proverb"
-              emoji="🪔"
-              title={t.proverbTitle}
+              key={sec.id}
+              id={sec.id}
+              emoji={sec.emoji}
+              title={sec.title}
               icon={BookOpen}
-              gradient="from-teal-100/80 via-emerald-50/60 to-cyan-100/80"
-              pageBreak={true}
-            >
-              <div className="space-y-4">
-                <div className="p-5 md:p-8 bg-white/60 backdrop-blur-xl border border-white rounded-[2rem] text-center shadow-xl shadow-teal-900/5 hover:shadow-teal-900/10 transition-all relative overflow-hidden group">
-                  <div className="absolute right-0 top-0 w-24 h-24 bg-teal-200/30 blur-[40px] rounded-full" />
-                  <div className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-teal-50 border border-teal-200 text-[10px] font-black text-teal-600 uppercase tracking-wider mb-4 relative z-10">
-                    {t.proverb}
-                  </div>
-                  <p className="text-lg md:text-2xl font-black text-slate-800 relative z-10 leading-relaxed">"{formData.proverb}"</p>
-                </div>
-                {formData.proverbMeaning && (
-                  <div className="p-5 md:p-8 bg-white border border-white/80 rounded-[2rem] text-center shadow-lg shadow-slate-200/50">
-                    <div className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-slate-50 border border-slate-200 text-[10px] font-black text-slate-500 uppercase tracking-wider mb-3">
-                      {t.proverbMeaning}
-                    </div>
-                    <p className="text-base md:text-lg font-bold text-slate-600 leading-relaxed max-w-3xl mx-auto">{formData.proverbMeaning}</p>
-                  </div>
-                )}
-              </div>
-            </SectionCard>
-          )}
-
-          {/* Dinvishesh */}
-          {(formData.events || formData.dinvishesh) && (
-            <SectionCard
-              id="events"
-              emoji="🪔"
-              title={`${formData.dateMonth ? formData.dateMonth + ' ' : ''}${t.eventsTitle || 'दिनविशेष'}`}
-              icon={Calendar}
-              gradient="from-blue-100/80 via-indigo-50/60 to-sky-100/80"
+              gradient={sec.gradient}
               pageBreak={false}
             >
-              <div className="space-y-6">
-                {formData.yearDay && (
-                  <div className="flex justify-center mb-4">
-                    <span className="text-sm font-black text-blue-800 bg-blue-50 border border-blue-100 px-6 py-2 rounded-full uppercase tracking-widest">
-                      {t.yearDayStr.replace("${yearDay}", formData.yearDay)}
-                    </span>
+              {sec.isSignature ? (
+                <div className="p-6 md:p-8 bg-white border-2 border-dashed border-slate-300 rounded-[2rem] flex justify-between items-center text-slate-800 font-extrabold text-sm md:text-base pt-10">
+                  <div className="text-center">
+                    <p className="text-slate-400 font-normal mb-6">_______________________</p>
+                    <p>वर्गशिक्षक स्वाक्षरी</p>
                   </div>
-                )}
-
-                <div className="p-5 md:p-8 bg-white/60 backdrop-blur-xl border border-white rounded-[2rem] shadow-xl shadow-blue-900/5">
-                  <div className="text-sm md:text-base font-bold text-slate-800 leading-relaxed font-sans">
-                    {((formData.events || formData.dinvishesh) as string).split('\n').map((line: string, i: number) => (
-                      <React.Fragment key={i}>
-                        {line}
-                        <br />
-                      </React.Fragment>
-                    ))}
+                  <div className="text-center">
+                    <p className="text-slate-400 font-normal mb-6">_______________________</p>
+                    <p>मुख्याध्यापक स्वाक्षरी</p>
                   </div>
                 </div>
-              </div>
-            </SectionCard>
-          )}
+              ) : sec.content ? (
+                <div className="space-y-4">
+                  {sec.storyTitle && (
+                    <div className="flex justify-center mb-2">
+                      <span className="text-sm font-black text-pink-700 bg-pink-50 border border-pink-200 px-6 py-2 rounded-full uppercase tracking-widest">
+                        {sec.storyTitle}
+                      </span>
+                    </div>
+                  )}
+                  {sec.songTitle && (sec.id === 'samuhgeet' || sec.id === 'deshbhaktigeet') && (
+                    <div className="flex justify-center mb-2">
+                      <span className="text-sm font-black text-orange-700 bg-orange-50 border border-orange-200 px-6 py-2 rounded-full uppercase tracking-widest">
+                        {sec.songTitle}
+                      </span>
+                    </div>
+                  )}
+                  {sec.extra && (
+                    <div className="flex justify-center mb-2">
+                      <span className="text-xs font-black text-blue-800 bg-blue-50 border border-blue-100 px-4 py-1.5 rounded-full uppercase tracking-wider">
+                        {sec.extra}
+                      </span>
+                    </div>
+                  )}
 
-          {/* Patriotic Song */}
-          {formData.patrioticSong && (
-            <SectionCard
-              id="song"
-              emoji="🪔"
-              title={t.patrioticSongTitle}
-              icon={Music}
-              gradient="from-orange-100/80 via-red-50/60 to-amber-100/80"
-              pageBreak={true}
-            >
-              <div className="space-y-6">
-                {formData.songTitle && (
-                  <div className="flex justify-center">
-                    <div className="inline-flex items-center justify-center gap-3 px-8 py-3 bg-white/80 backdrop-blur-xl border border-white shadow-xl shadow-orange-900/5 rounded-full">
-                      <div className="size-8 rounded-full bg-orange-100 flex items-center justify-center">
-                        <Music className="size-4 text-orange-600" />
+                  <div className="p-5 md:p-8 bg-white/70 backdrop-blur-xl border border-white rounded-[2rem] text-center shadow-lg shadow-slate-900/5">
+                    <div className="text-base md:text-xl font-bold text-slate-900 leading-relaxed font-sans">
+                      {sec.content.split('\n').map((line: string, i: number) => (
+                        <React.Fragment key={i}>
+                          {line}
+                          <br />
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </div>
+
+                  {sec.meaning && (
+                    <div className="p-4 md:p-6 bg-white border border-slate-200 rounded-[2rem] text-center shadow-md">
+                      <div className="inline-block px-3 py-1 rounded-full bg-slate-100 text-[10px] font-black text-slate-600 uppercase tracking-wider mb-2">
+                        म्हणीचा अर्थ
                       </div>
-                      <span className="text-sm font-black text-orange-700 uppercase tracking-widest">{formData.songTitle}</span>
+                      <p className="text-sm md:text-base font-bold text-slate-700 leading-relaxed max-w-3xl mx-auto">
+                        {sec.meaning}
+                      </p>
                     </div>
-                  </div>
-                )}
-                <div className="p-5 md:p-8 bg-white/60 backdrop-blur-xl border border-white rounded-[2rem] text-center shadow-xl shadow-orange-900/5 relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-b from-orange-50/30 to-transparent pointer-events-none" />
-                  <div className="text-base md:text-xl font-bold text-slate-800 leading-relaxed font-sans relative z-10">
-                    {formData.patrioticSong.split('\n').map((line: string, i: number) => (
-                      <React.Fragment key={i}>
-                        {line}
-                        <br />
-                      </React.Fragment>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </SectionCard>
-          )}
+                  )}
 
-          {/* Moral Story */}
-          {formData.story && (
-            <SectionCard
-              id="story"
-              emoji="🪔"
-              title={t.storyTitle}
-              icon={BookOpen}
-              gradient="from-pink-100/80 via-rose-50/60 to-red-100/80"
-              pageBreak={false}
-            >
-              <div className="space-y-6">
-                {formData.storyTitle && (
-                  <div className="flex justify-center">
-                    <div className="inline-flex items-center justify-center gap-3 px-8 py-3 bg-white/80 backdrop-blur-xl border border-white shadow-xl shadow-pink-900/5 rounded-full">
-                      <div className="size-8 rounded-full bg-pink-100 flex items-center justify-center">
-                        <BookOpen className="size-4 text-pink-600" />
+                  {sec.moral && (
+                    <div className="p-4 md:p-6 bg-amber-50 border border-amber-200 rounded-[2rem] text-center shadow-md">
+                      <div className="inline-block px-3 py-1 rounded-full bg-amber-200/60 text-[10px] font-black text-amber-800 uppercase tracking-wider mb-2">
+                        तात्पर्य
                       </div>
-                      <span className="text-sm font-black text-pink-700 uppercase tracking-widest">{formData.storyTitle}</span>
+                      <p className="text-base md:text-lg font-black text-amber-900 leading-relaxed max-w-3xl mx-auto">
+                        {sec.moral}
+                      </p>
                     </div>
-                  </div>
-                )}
-                <div className="p-5 md:p-8 bg-white/60 backdrop-blur-xl border border-white rounded-[2rem] text-center shadow-xl shadow-pink-900/5">
-                  <div className="text-sm md:text-base font-bold text-slate-800 leading-relaxed">
-                    {formData.story.split('\n').map((line: string, i: number) => (
-                      <React.Fragment key={i}>
-                        {line}
-                        <br />
-                      </React.Fragment>
-                    ))}
-                  </div>
+                  )}
                 </div>
-                {formData.moral && (
-                  <div className="p-5 md:p-6 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/60 rounded-[2rem] flex flex-col items-center text-center gap-3 shadow-lg shadow-amber-900/5 relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-white/40 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <div className="size-12 rounded-full bg-amber-100 flex items-center justify-center shadow-inner relative z-10">
-                      <Star className="size-6 text-amber-500" />
-                    </div>
-                    <div className="relative z-10">
-                      <div className="inline-block px-3 py-1 rounded-full bg-amber-200/50 text-[10px] font-black text-amber-700 uppercase tracking-wider mb-3">{t.moral}</div>
-                      <p className="text-lg md:text-xl font-black text-amber-900 leading-relaxed">{formData.moral}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </SectionCard>
-          )}
-
-          {/* Value News */}
-          {formData.valueNews && (
-            <SectionCard
-              id="valueNews"
-              emoji="📰"
-              title={(t as any).valueNews || "सुसंस्कारक्षम बातम्या"}
-              icon={BookOpen}
-              gradient="from-emerald-100/80 via-teal-50/60 to-emerald-50/80"
-              pageBreak={false}
-            >
-              <div className="p-5 md:p-8 bg-white/60 backdrop-blur-xl border border-white rounded-[2rem] text-center shadow-xl shadow-emerald-900/5">
-                <div className="text-base md:text-xl font-bold text-slate-800 leading-relaxed font-sans">
-                  {formData.valueNews.split('\n').map((line: string, i: number) => (
-                    <React.Fragment key={i}>
-                      {line}
-                      <br />
-                    </React.Fragment>
-                  ))}
+              ) : (
+                <div className="p-6 bg-white/40 border border-dashed border-slate-200 rounded-[2rem] text-center text-slate-400 font-bold text-sm">
+                  माहिती उपलब्ध नाही
                 </div>
-              </div>
+              )}
             </SectionCard>
-          )}
-
-          {/* General Knowledge */}
-          {(formData.gkQ1 || formData.gkQ2 || formData.gkQ3 || formData.gkQ4) && (
-            <SectionCard
-              id="gk"
-              emoji="🪔"
-              title={t.gkTitle}
-              icon={HelpCircle}
-              gradient="from-cyan-100/80 via-sky-50/60 to-blue-100/80"
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {[
-                  { q: formData.gkQ1, a: formData.gkA1, label: t.q1, aLabel: t.a1, iconColor: "text-cyan-500", bg: "bg-cyan-50", border: "border-cyan-200" },
-                  { q: formData.gkQ2, a: formData.gkA2, label: t.q2, aLabel: t.a2, iconColor: "text-sky-500", bg: "bg-sky-50", border: "border-sky-200" },
-                  { q: formData.gkQ3, a: formData.gkA3, label: t.q3, aLabel: t.a3, iconColor: "text-blue-500", bg: "bg-blue-50", border: "border-blue-200" },
-                  { q: formData.gkQ4, a: formData.gkA4, label: t.q4, aLabel: t.a4, iconColor: "text-indigo-500", bg: "bg-indigo-50", border: "border-indigo-200" },
-                ].filter(item => item.q).map((item, i) => (
-                  <div
-                    key={i}
-                    className="p-5 md:p-6 bg-white/80 backdrop-blur-xl border border-white rounded-[2rem] shadow-xl shadow-cyan-900/5 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 text-center flex flex-col items-center relative overflow-hidden group"
-                  >
-                    <div className={`absolute inset-0 ${item.bg} opacity-30 group-hover:opacity-60 transition-opacity`} />
-                    <div className={`size-12 rounded-full bg-white border ${item.border} flex items-center justify-center mb-4 shadow-sm relative z-10`}>
-                      <HelpCircle className={`size-5 ${item.iconColor}`} />
-                    </div>
-                    <p className="text-base md:text-lg font-black text-slate-800 mb-5 relative z-10 flex-grow leading-relaxed">{item.q}</p>
-                    <div className={`w-full px-4 py-3 bg-white border ${item.border} rounded-xl relative z-10 shadow-sm`}>
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">{t.ans}</span>
-                      <span className={`text-sm md:text-base font-black ${item.iconColor} drop-shadow-sm`}>{item.a}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </SectionCard>
-          )}
+          ))}
 
 
         </>

@@ -791,13 +791,13 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
               दैनंदिन पाठ टाचण
             </h2>
             
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 text-xs font-bold text-slate-700 bg-slate-50/80 p-4 rounded-2xl border border-slate-200 text-left">
-              <div><span className="text-slate-400 font-medium block text-[10px] uppercase">दिनांक</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "date", e.currentTarget.textContent || "")} className="text-indigo-600 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.date || "-"}</span></div>
-              <div><span className="text-slate-400 font-medium block text-[10px] uppercase">वार</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "day", e.currentTarget.textContent || "")} className="text-slate-900 font-bold outline-indigo-500 focus:bg-white px-1 rounded block">{p.day || "-"}</span></div>
-              <div><span className="text-slate-400 font-medium block text-[10px] uppercase">वर्गशिक्षक</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "teacher", e.currentTarget.textContent || "")} className="text-slate-900 font-bold outline-indigo-500 focus:bg-white px-1 rounded block">{p.teacher || "-"}</span></div>
-              <div><span className="text-slate-400 font-medium block text-[10px] uppercase">शाळा</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "school", e.currentTarget.textContent || "")} className="text-slate-900 font-bold outline-indigo-500 focus:bg-white px-1 rounded block">{p.school || "-"}</span></div>
-              <div><span className="text-slate-400 font-medium block text-[10px] uppercase">इयत्ता</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "std", e.currentTarget.textContent || "")} className="text-slate-900 font-bold outline-indigo-500 focus:bg-white px-1 rounded block">{p.std || "-"}</span></div>
-              <div><span className="text-slate-400 font-medium block text-[10px] uppercase">सन</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "year", e.currentTarget.textContent || "")} className="text-slate-900 font-bold outline-indigo-500 focus:bg-white px-1 rounded block">{p.year || "-"}</span></div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 text-xs font-bold text-slate-900 bg-slate-100/80 p-4 rounded-2xl border-2 border-slate-400 shadow-sm text-left">
+              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">दिनांक</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "date", e.currentTarget.textContent || "")} className="text-indigo-700 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.date || "-"}</span></div>
+              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">वार</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "day", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.day || "-"}</span></div>
+              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">वर्गशिक्षक</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "teacher", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.teacher || "-"}</span></div>
+              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">शाळा</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "school", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.school || "-"}</span></div>
+              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">इयत्ता</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "std", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.std || "-"}</span></div>
+              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">सन</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "year", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.year || "-"}</span></div>
             </div>
 
             {p.thought && (
@@ -812,37 +812,39 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
           </div>
 
           {p.periods.length > 0 ? (
-            <div className="overflow-x-auto rounded-2xl border border-slate-300 shadow-sm">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-slate-100 text-slate-900 font-bold text-[11px] border-b border-slate-200">
+            <div className="overflow-x-auto rounded-2xl border-2 border-slate-400 shadow-md">
+              <table className="w-full text-left text-sm border-collapse table-fixed min-w-[850px] border-2 border-slate-400">
+                <thead className="bg-slate-100 text-slate-900 font-extrabold text-xs md:text-sm border-b-2 border-slate-400">
                   <tr>
                     {(p.columnHeaders && p.columnHeaders.length > 0
                       ? p.columnHeaders
-                      : ["तासिका", "विषय", "अध्ययन मुद्दा पाठ्यांश / पाठ्यघटक", "अध्ययन निष्पत्ती / अध्ययन दर्शक", "अध्ययन अनुभवाचे स्वरूप", "साधन तंत्रे", "शैक्षणिक साहित्य"]
-                    ).map((header: string, hIdx: number, arr: string[]) => (
-                      <th
-                        key={hIdx}
-                        className={`p-2.5 bg-slate-100 text-slate-900 font-extrabold ${hIdx === 0 ? "text-center w-14 bg-slate-200" : ""} ${hIdx < arr.length - 1 ? "border-r border-slate-200" : ""}`}
-                      >
-                        {header}
-                      </th>
-                    ))}
+                      : ["तासिका", "विषय", "अध्ययन मुद्दा / पाठ्यघटक", "अध्ययन निष्पत्ती / अध्ययन दर्शक", "अध्ययनाचे स्वरूप (अनुभव / कृती)", "साधन तंत्रे", "शैक्षणिक साहित्य"]
+                    ).map((header: string, hIdx: number, arr: string[]) => {
+                      const colWidths = ["w-[5%]", "w-[10%]", "w-[13%]", "w-[27%]", "w-[25%]", "w-[10%]", "w-[10%]"];
+                      return (
+                        <th
+                          key={hIdx}
+                          className={`p-3 bg-slate-200 text-slate-900 font-black ${colWidths[hIdx] || ""} ${hIdx === 0 ? "text-center bg-slate-300" : ""} border-r-2 border-slate-400 ${hIdx < arr.length - 1 ? "" : ""}`}
+                        >
+                          {header}
+                        </th>
+                      );
+                    })}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 font-medium text-slate-800 bg-white">
+                <tbody className="divide-y-2 divide-slate-300 font-medium text-slate-800 bg-white text-xs md:text-sm">
                   {p.periods.map((row: any, rIdx: number) => (
                     <tr 
                       key={rIdx} 
-                      className="hover:bg-indigo-50/40 transition-colors group"
-                      style={{ pageBreakInside: "avoid", breakInside: "avoid" }}
+                      className="hover:bg-indigo-50/40 transition-colors group border-b-2 border-slate-300"
                     >
-                      <td className="p-3 border-r border-slate-200 text-center font-black text-indigo-700 bg-indigo-50/50">{row.period}</td>
-                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "subject", e.currentTarget.textContent || "")} className="p-3 border-r border-slate-200 font-bold text-slate-900 outline-indigo-500 focus:bg-white">{row.subject}</td>
-                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "topic", e.currentTarget.textContent || "")} className="p-3 border-r border-slate-200 font-medium text-slate-800 leading-relaxed outline-indigo-500 focus:bg-white">{row.topic}</td>
-                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "outcome", e.currentTarget.textContent || "")} className="p-3 border-r border-slate-200 text-slate-700 leading-relaxed outline-indigo-500 focus:bg-white">{row.outcome}</td>
-                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "experience", e.currentTarget.textContent || "")} className="p-3 border-r border-slate-200 text-slate-700 leading-relaxed outline-indigo-500 focus:bg-white">{row.experience}</td>
-                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "tools", e.currentTarget.textContent || "")} className="p-3 border-r border-slate-200 text-slate-600 outline-indigo-500 focus:bg-white">{row.tools}</td>
-                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "materials", e.currentTarget.textContent || "")} className="p-3 text-slate-600 outline-indigo-500 focus:bg-white">{row.materials}</td>
+                      <td className="p-3 border-r-2 border-slate-300 text-center font-black text-indigo-700 bg-indigo-50/50 align-top">{row.period}</td>
+                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "subject", e.currentTarget.textContent || "")} className="p-3 border-r-2 border-slate-300 font-bold text-slate-900 outline-indigo-500 focus:bg-white text-xs md:text-sm align-top">{row.subject}</td>
+                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "topic", e.currentTarget.textContent || "")} className="p-3 border-r-2 border-slate-300 font-semibold text-slate-800 leading-snug outline-indigo-500 focus:bg-white text-xs md:text-sm align-top">{row.topic}</td>
+                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "outcome", e.currentTarget.textContent || "")} className="p-3 border-r-2 border-slate-300 font-medium text-emerald-800 leading-relaxed outline-indigo-500 focus:bg-white text-xs md:text-sm align-top">{row.outcome}</td>
+                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "experience", e.currentTarget.textContent || "")} className="p-3 border-r-2 border-slate-300 text-slate-800 leading-relaxed outline-indigo-500 focus:bg-white text-xs md:text-sm align-top">{row.experience}</td>
+                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "tools", e.currentTarget.textContent || "")} className="p-3 border-r-2 border-slate-300 text-slate-700 outline-indigo-500 focus:bg-white text-xs md:text-sm align-top">{row.tools}</td>
+                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "materials", e.currentTarget.textContent || "")} className="p-3 text-slate-700 outline-indigo-500 focus:bg-white text-xs md:text-sm align-top">{row.materials}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1191,8 +1193,124 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
   const hasStructuredView = pagesToDisplay && pagesToDisplay.length > 0;
   const downloadUrl = savedRecord?.pageUrl || (selectedFile ? localPdfBlobUrl : null);
 
-  const handleInnerDownload = async () => {
-    if (!downloadUrl || isInnerDownloading) return;
+  const handleDownloadWord = async () => {
+    const pagesToUse = structuredListRef.current?.getEditedData() || structuredPages;
+    const cleanText = (txt: any) => {
+      if (!txt || txt === "-") return "-";
+      return String(txt)
+        .replace(/[\uFFFD]/g, "")
+        .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
+    };
+
+    // 1. If structured pages exist, generate a formatted Word Document (.doc) directly
+    if (pagesToUse && pagesToUse.length > 0) {
+      setIsInnerDownloading(true);
+      toast.success("Word दस्तऐवज डाउनलोड तयार होत आहे... (Generating Word file...)");
+      try {
+        const defaultHeaders = ["तासिका", "विषय", "अध्ययन मुद्दा / पाठ्यघटक", "अध्ययन निष्पत्ती", "अध्ययन अनुभव", "साधन तंत्रे", "शैक्षणिक साहित्य"];
+        const dayBlocks = pagesToUse.map((p: any, idx: number) => {
+          const rows = (p.periods || []).map((row: any, rIdx: number) => `
+            <tr style="background:${rIdx % 2 === 0 ? "#ffffff" : "#f8fafc"};">
+              <td style="text-align:center;font-weight:bold;color:#4338ca;width:50px;border:1.5pt solid #475569;padding:8px;">${cleanText(row.period)}</td>
+              <td style="font-weight:bold;border:1.5pt solid #94a3b8;padding:8px;">${cleanText(row.subject)}</td>
+              <td style="border:1.5pt solid #94a3b8;padding:8px;">${cleanText(row.topic)}</td>
+              <td style="border:1.5pt solid #94a3b8;padding:8px;">${cleanText(row.outcome)}</td>
+              <td style="border:1.5pt solid #94a3b8;padding:8px;">${cleanText(row.experience)}</td>
+              <td style="border:1.5pt solid #94a3b8;padding:8px;">${cleanText(row.tools)}</td>
+              <td style="border:1.5pt solid #94a3b8;padding:8px;">${cleanText(row.materials)}</td>
+            </tr>`).join("");
+
+          const headers = (p.columnHeaders && p.columnHeaders.length > 0 ? p.columnHeaders : defaultHeaders)
+            .map((h: string) => `<th style="background-color:#1e293b;color:#ffffff;padding:10px;text-align:left;font-weight:bold;border:1.5pt solid #475569;">${cleanText(h)}</th>`).join("");
+
+          return `
+            <div style="margin-bottom: 25px; page-break-after: always;">
+              <h2 style="font-size: 20px; font-weight: 900; text-align: center; color: #0f172a; margin-bottom: 10px;">दैनंदिन पाठ टाचण</h2>
+              <table style="width:100%; border-collapse:collapse; margin-bottom:15px; background:#f1f5f9; border:2pt solid #475569; font-size:11px;">
+                <tr>
+                  <td style="padding:6px 10px; border:1.5pt solid #64748b;"><b>दिनांक:</b> <span style="color:#4338ca;">${cleanText(p.date)}</span></td>
+                  <td style="padding:6px 10px; border:1.5pt solid #64748b;"><b>वार:</b> ${cleanText(p.day)}</td>
+                  <td style="padding:6px 10px; border:1.5pt solid #64748b;"><b>वर्गशिक्षक:</b> ${cleanText(p.teacher)}</td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 10px; border:1.5pt solid #64748b;"><b>शाळा:</b> ${cleanText(p.school)}</td>
+                  <td style="padding:6px 10px; border:1.5pt solid #64748b;"><b>इयत्ता:</b> ${cleanText(p.std)}</td>
+                  <td style="padding:6px 10px; border:1.5pt solid #64748b;"><b>सन:</b> ${cleanText(p.year)}</td>
+                </tr>
+              </table>
+              ${p.thought ? `<div style="font-size:11px; font-style:italic; color:#78350f; background:#fffbeb; border-left:4px solid #f59e0b; padding:8px 12px; margin-bottom:12px;">💬 <b>आजचा सुविचार :</b> '${cleanText(p.thought)}'</div>` : ""}
+              <table style="width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 15px;">
+                <thead>
+                  <tr>${headers}</tr>
+                </thead>
+                <tbody>${rows}</tbody>
+              </table>
+              <div style="border-top:1.5pt solid #cbd5e1; padding-top:15px; margin-top:10px;">
+                <p style="font-weight:bold; font-size:11px; margin-bottom:6px;">दिवसभरातील वैशिष्टपूर्ण बाबी:</p>
+                <p style="color:#cbd5e1;">________________________________________________________________________________________</p>
+                <br/>
+                <table style="width:100%; border:none; font-weight:bold; font-size:12px; margin-top:20px;">
+                  <tr>
+                    <td style="border:none; text-align:left;">वर्गशिक्षक स्वाक्षरी</td>
+                    <td style="border:none; text-align:right;">मुख्याध्यापक स्वाक्षरी</td>
+                  </tr>
+                </table>
+              </div>
+            </div>`;
+        }).join("");
+
+        const wordHTML = `<!DOCTYPE html>
+          <html xmlns:o='urn:schemas-microsoft-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+          <head>
+            <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+            <meta charset="utf-8" />
+            <title>Teaching Diary</title>
+            <!--[if gte mso 9]>
+            <xml>
+              <w:WordDocument>
+                <w:View>Print</w:View>
+                <w:Zoom>100</w:Zoom>
+                <w:DoNotOptimizeForBrowser/>
+              </w:WordDocument>
+            </xml>
+            <![endif]-->
+            <style>
+              body { font-family: Arial, 'Calibri', 'Segoe UI', 'Nirmala UI', 'Mangal', 'Arial Unicode MS', sans-serif; padding: 20px; color: #1e293b; }
+              table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 11pt; }
+              th { background-color: #1e293b; color: #ffffff; padding: 8px 10px; text-align: left; font-weight: bold; border: 1.5pt solid #475569; }
+              td { padding: 8px 10px; border: 1.5pt solid #94a3b8; vertical-align: top; font-size: 10pt; line-height: 1.4; }
+            </style>
+          </head>
+          <body>
+            ${dayBlocks}
+          </body>
+          </html>
+        `;
+
+        const blob = new Blob(['\ufeff', wordHTML], { type: 'application/msword;charset=utf-8' });
+        const blobUrl = URL.createObjectURL(blob);
+        const rawBase = activeFileName.replace(/\.[^/.]+$/, "") || "Teaching_Diary";
+        const baseName = rawBase.endsWith(".doc") || rawBase.endsWith(".docx") ? rawBase : `${rawBase}.doc`;
+
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = baseName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+        toast.success(`✅ "${baseName}" वर्ड फाईल डाउनलोड झाली!`);
+      } catch (err) {
+        console.error("Word generation error:", err);
+        toast.error("Word फाइल डाउनलोड करताना अडचण आली.");
+      } finally {
+        setIsInnerDownloading(false);
+      }
+      return;
+    }
+
+    // 2. Fallback: If downloading original file from server URL
+    if (!downloadUrl) return;
     setIsInnerDownloading(true);
     try {
       let blob: Blob | null = null;
@@ -1211,20 +1329,31 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
           headers["AccessKey"] = import.meta.env.VITE_BUNNY_STORAGE_API_KEY || "";
         }
         const res = await fetch(proxyUrl, { headers });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        blob = await res.blob();
+        if (res.ok) blob = await res.blob();
       }
 
-      const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = blobUrl;
-      a.download = activeFileName;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+      if (blob) {
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = activeFileName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+        toast.success(`✅ "${activeFileName}" फाईल डाउनलोड झाली!`);
+      } else {
+        const a = document.createElement("a");
+        a.href = downloadUrl;
+        a.download = activeFileName;
+        a.target = "_self";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        toast.success(`✅ "${activeFileName}" फाईल डाउनलोड झाली!`);
+      }
     } catch (err: any) {
-      try { window.open(downloadUrl, "_blank"); } catch { }
+      toast.error("फाइल डाउनलोड करताना अडचण आली.");
     } finally {
       setIsInnerDownloading(false);
     }
@@ -1233,7 +1362,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
   const handleLocalDownloadPdf = async () => {
     const pagesToUse = structuredListRef.current?.getEditedData() || pagesToDisplay;
     if (!pagesToUse || pagesToUse.length === 0) {
-      return handleInnerDownload();
+      return handleDownloadWord();
     }
 
     setIsGeneratingPdf(true);
@@ -1266,13 +1395,13 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
               </span>
             </div>
             <h2 style="font-size: 18px; font-weight: 900; text-align: center; color: #0f172a; margin: 8px 0 12px 0;">दैनंदिन पाठ टाचण</h2>
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; font-size: 11px;">
-              <div><span style="color:#94a3b8; font-size:9px; text-transform:uppercase; font-weight:600; display:block;">दिनांक</span><span style="font-weight:700; color:#4338ca; font-size:12px;">${p.date || "-"}</span></div>
-              <div><span style="color:#94a3b8; font-size:9px; text-transform:uppercase; font-weight:600; display:block;">वार</span><span style="font-weight:700; color:#0f172a;">${p.day || "-"}</span></div>
-              <div><span style="color:#94a3b8; font-size:9px; text-transform:uppercase; font-weight:600; display:block;">वर्गशिक्षक</span><span style="font-weight:700; color:#0f172a;">${p.teacher || "-"}</span></div>
-              <div><span style="color:#94a3b8; font-size:9px; text-transform:uppercase; font-weight:600; display:block;">शाळा</span><span style="font-weight:700; color:#0f172a;">${p.school || "-"}</span></div>
-              <div><span style="color:#94a3b8; font-size:9px; text-transform:uppercase; font-weight:600; display:block;">इयत्ता</span><span style="font-weight:700; color:#0f172a;">${p.std || "-"}</span></div>
-              <div><span style="color:#94a3b8; font-size:9px; text-transform:uppercase; font-weight:600; display:block;">सन</span><span style="font-weight:700; color:#0f172a;">${p.year || "-"}</span></div>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; background: #f1f5f9; border: 2px solid #475569; border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; font-size: 11px;">
+              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">दिनांक</span><span style="font-weight:900; color:#4338ca; font-size:12px;">${p.date || "-"}</span></div>
+              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">वार</span><span style="font-weight:900; color:#0f172a;">${p.day || "-"}</span></div>
+              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">वर्गशिक्षक</span><span style="font-weight:900; color:#0f172a;">${p.teacher || "-"}</span></div>
+              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">शाळा</span><span style="font-weight:900; color:#0f172a;">${p.school || "-"}</span></div>
+              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">इयत्ता</span><span style="font-weight:900; color:#0f172a;">${p.std || "-"}</span></div>
+              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">सन</span><span style="font-weight:900; color:#0f172a;">${p.year || "-"}</span></div>
             </div>
             ${p.thought ? `<div style="font-size:10.5px; font-style:italic; color:#78350f; background:#fffbeb; border-left:3px solid #f59e0b; padding:7px 12px; margin-bottom:10px; border-radius:4px;">✨ आजचा सुविचार : '${p.thought}'</div>` : ""}
             <table style="width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 12px;">
@@ -1298,10 +1427,10 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
       element.innerHTML = `
         <div style="font-family: 'Noto Sans Devanagari', Arial, sans-serif; color: #1e293b; line-height: 1.4; padding: 10px;">
           <style>
-            table th { background-color: #f1f5f9 !important; color: #0f172a !important; padding: 7px 8px !important; text-align: left; font-size: 10px !important; text-transform: uppercase; border-right: 1px solid #cbd5e1; }
+            table { width: 100%; border-collapse: collapse; margin-top: 4px; font-size: 10.5px; border: 2px solid #475569; }
+            table th { background-color: #f1f5f9 !important; color: #0f172a !important; font-weight: 800 !important; font-size: 10.5px !important; padding: 8px !important; border: 1.5px solid #475569 !important; text-align: left; }
             table th:first-child { text-align: center; width: 45px; background-color: #e2e8f0 !important; }
-            table td { padding: 7px 8px !important; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #f1f5f9; vertical-align: top; font-size: 10px !important; line-height: 1.35 !important; }
-            table th:last-child, table td:last-child { border-right: none; }
+            table td { padding: 7px 8px !important; border: 1.5px solid #94a3b8 !important; vertical-align: top; font-size: 10px !important; line-height: 1.4 !important; }
             thead { display: table-header-group; }
             tr { page-break-inside: avoid; break-inside: avoid; }
           </style>
@@ -1391,15 +1520,15 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
             </div>
           )}
 
-          {downloadUrl && (
+          {(downloadUrl || hasStructuredView) && (
             <div className="flex items-center gap-2">
               <button
-                onClick={handleInnerDownload}
+                onClick={handleDownloadWord}
                 disabled={isInnerDownloading}
-                className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shrink-0 shadow-sm cursor-pointer"
+                className="px-3.5 py-1.5 bg-orange-600 hover:bg-orange-500 disabled:opacity-60 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shrink-0 shadow-sm cursor-pointer"
               >
                 {isInnerDownloading ? (
-                  <><Loader2 className="size-3.5 animate-spin" /> Downloading...</>
+                  <><Loader2 className="size-3.5 animate-spin" /> Word तयार होत आहे...</>
                 ) : (
                   <><Download className="size-3.5" /> Download to Word</>
                 )}
@@ -1529,7 +1658,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
               {downloadUrl && (
                 <div className="pt-3">
                   <button
-                    onClick={handleInnerDownload}
+                    onClick={handleDownloadWord}
                     disabled={isInnerDownloading}
                     className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white rounded-xl text-xs font-black shadow-md transition-all cursor-pointer"
                   >
