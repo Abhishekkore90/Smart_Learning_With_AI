@@ -52,10 +52,8 @@ interface DailyDiary {
 interface Props {
   selectedClass?: string;
   selectedMedium?: string;
-<<<<<<< HEAD
   selectedMonth?: string | null;
   onBack?: () => void;
-=======
   schoolProfile?: {
     schoolName?: string;
     teacherName?: string;
@@ -63,31 +61,23 @@ interface Props {
     className?: string;
     academicYear?: string;
   };
->>>>>>> dfd1b4f096edb901ee0a38a1854113cfe2ebaee3
 }
 
 export const TeacherTodayDiary: React.FC<Props> = ({ 
   selectedClass = "Class 1", 
   selectedMedium = "Marathi",
-<<<<<<< HEAD
   selectedMonth = null,
-  onBack
-=======
+  onBack,
   schoolProfile: propSchoolProfile
->>>>>>> dfd1b4f096edb901ee0a38a1854113cfe2ebaee3
 }) => {
   const [activeDate, setActiveDate] = useState<Date | null>(null);
   const [todayDiary, setTodayDiary] = useState<DailyDiary | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-<<<<<<< HEAD
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
-
   const [availableDates, setAvailableDates] = useState<{ dateStr: string; day: string }[]>([]);
 
-  // Discover all available uploaded dates for the selected Class & Medium
-=======
   const [localProfile, setLocalProfile] = useState<{
     schoolName?: string;
     teacherName?: string;
@@ -95,7 +85,6 @@ export const TeacherTodayDiary: React.FC<Props> = ({
     className?: string;
     academicYear?: string;
   }>({});
-  const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     try {
@@ -115,9 +104,6 @@ export const TeacherTodayDiary: React.FC<Props> = ({
     className: propSchoolProfile?.className || localProfile.className || selectedClass,
     academicYear: propSchoolProfile?.academicYear || localProfile.academicYear || "2026-27",
   };
-
-  // Initialize date client-side only to avoid SSR hydration mismatch
->>>>>>> dfd1b4f096edb901ee0a38a1854113cfe2ebaee3
   useEffect(() => {
     async function discoverAvailableDates() {
       try {
@@ -573,39 +559,6 @@ export const TeacherTodayDiary: React.FC<Props> = ({
       ) : (
         /* SUCCESS STATE: Show Selected Date's Diary */
         <div className="space-y-6">
-<<<<<<< HEAD
-          {/* Suvichar & Dinvishesh Header if available */}
-          {(todayDiary.dinvishesh || todayDiary.thought) && (
-            <div className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 text-white shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              {todayDiary.dinvishesh && (
-                <div className="flex items-center gap-2 text-amber-300 text-xs font-semibold">
-                  <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span><strong>दिनविशेष:</strong> {todayDiary.dinvishesh}</span>
-                </div>
-              )}
-              {todayDiary.thought && (
-                <div className="flex items-center gap-2 text-slate-300 italic text-xs">
-                  <BookOpen className="w-4 h-4 text-indigo-400 shrink-0" />
-                  <span>"{todayDiary.thought}"</span>
-                </div>
-              )}
-            </div>
-          )}
-
-
-
-          {/* Periods Table (if periods present) */}
-          {todayDiary.periods && todayDiary.periods.length > 0 && (
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
-              <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/80">
-                <h3 className="font-semibold text-slate-200 text-base flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-indigo-400" />
-                  दैनिक तासिका नियोजन (Daily Period Plan)
-                </h3>
-                <span className="text-xs bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-3 py-1 rounded-full font-medium">
-                  {todayDiary.periods.length} Periods
-                </span>
-=======
           {/* Info Banner - Center Aligned Header Information */}
           <div className="p-5 rounded-2xl bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 border border-indigo-500/30 text-white shadow-xl space-y-4">
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 text-center">
@@ -613,7 +566,6 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                 <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider">वार व दिनांक</span>
                 <span className="text-xs md:text-sm font-extrabold text-white mt-0.5">{todayDiary.day || format(activeDate ?? new Date(), "eeee")}</span>
                 <span className="text-[10px] font-semibold text-slate-400">{todayDiary.displayDate}</span>
->>>>>>> dfd1b4f096edb901ee0a38a1854113cfe2ebaee3
               </div>
               <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800 flex flex-col justify-center items-center text-center">
                 <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider">वर्गशिक्षक</span>
@@ -637,11 +589,6 @@ export const TeacherTodayDiary: React.FC<Props> = ({
               </div>
             </div>
 
-<<<<<<< HEAD
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-slate-300">
-                <thead className="bg-slate-950 text-slate-400 uppercase text-[11px] tracking-wider font-semibold border-b border-slate-800">
-=======
             {(todayDiary.dinvishesh || todayDiary.thought) && (
               <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2.5 border-t border-slate-800/80 text-xs">
                 {todayDiary.dinvishesh && (
@@ -661,63 +608,63 @@ export const TeacherTodayDiary: React.FC<Props> = ({
           </div>
 
           {/* Periods Table */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
-            <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/80">
-              <h3 className="font-semibold text-slate-200 text-base flex items-center gap-2">
-                <Clock className="w-4 h-4 text-indigo-400" />
-                दैनिक तासिका नियोजन (Daily Period Plan)
-              </h3>
-              <span className="text-xs bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-3 py-1 rounded-full font-medium">
-                {todayDiary.periods.length} Periods
-              </span>
-            </div>
+          {todayDiary.periods && todayDiary.periods.length > 0 && (
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
+              <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/80">
+                <h3 className="font-semibold text-slate-200 text-base flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-indigo-400" />
+                  दैनिक तासिका नियोजन (Daily Period Plan)
+                </h3>
+                <span className="text-xs bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-3 py-1 rounded-full font-medium">
+                  {todayDiary.periods.length} Periods
+                </span>
+              </div>
 
-            <div className="overflow-x-auto p-1">
-              <table className="w-full text-left text-sm text-slate-200 border-collapse table-fixed min-w-[750px] border-2 border-slate-700/90 rounded-xl overflow-hidden shadow-md">
-                <thead className="bg-slate-950 text-slate-200 uppercase text-xs md:text-sm tracking-wider font-extrabold border-b-2 border-slate-700/90">
->>>>>>> dfd1b4f096edb901ee0a38a1854113cfe2ebaee3
-                  <tr>
-                    <th className="py-3.5 px-3 w-[6%] text-center border-r-2 border-slate-700/90 bg-slate-950">तासिका</th>
-                    <th className="py-3.5 px-3.5 w-[11%] border-r-2 border-slate-700/90 bg-slate-950">विषय</th>
-                    <th className="py-3.5 px-3.5 w-[14%] border-r-2 border-slate-700/90 bg-slate-950">घटक / उपघटक</th>
-                    <th className="py-3.5 px-4 w-[24%] border-r-2 border-slate-700/90 bg-slate-950">अध्ययनाचे स्वरूप (अध्यापन अनुभव / कृती)</th>
-                    <th className="py-3.5 px-3.5 w-[13%] border-r-2 border-slate-700/90 bg-slate-950">साधन तंत्रे / साधने</th>
-                    <th className="py-3.5 px-4 w-[32%] bg-slate-950">अध्ययन निष्पत्ती</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y-2 divide-slate-800 text-sm md:text-base">
-                  {todayDiary.periods.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-slate-800/40 transition-colors border-b-2 border-slate-800/90">
-                      <td className="py-4 px-3 text-center font-bold text-indigo-400 align-top border-r-2 border-slate-800/90 bg-slate-950/40">
-                        <span className="w-8 h-8 rounded-full bg-indigo-500/10 border border-indigo-500/20 inline-flex items-center justify-center text-sm font-black">
-                          {item.period}
-                        </span>
-                      </td>
-                      <td className="py-4 px-3.5 font-bold text-white text-sm md:text-base align-top border-r-2 border-slate-800/90">
-                        {item.subject}
-                      </td>
-                      <td className="py-4 px-3.5 text-indigo-200 font-semibold text-sm md:text-base leading-snug align-top border-r-2 border-slate-800/90">
-                        {item.topic}
-                      </td>
-                      <td className="py-4 px-4 text-slate-100 leading-relaxed text-sm md:text-base font-normal align-top border-r-2 border-slate-800/90">
-                        {item.experience || "-"}
-                      </td>
-                      <td className="py-4 px-3.5 text-slate-300 text-sm md:text-base align-top border-r-2 border-slate-800/90">
-                        {item.tools ? (
-                          <span className="inline-block px-2.5 py-1 bg-slate-800/90 rounded-lg border border-slate-700/80 text-xs md:text-sm font-medium leading-relaxed">
-                            {item.tools}
-                          </span>
-                        ) : "-"}
-                      </td>
-                      <td className="py-4 px-4 text-emerald-300 font-semibold text-sm md:text-base leading-relaxed align-top">
-                        {item.outcome || "-"}
-                      </td>
+              <div className="overflow-x-auto p-1">
+                <table className="w-full text-left text-sm text-slate-200 border-collapse table-fixed min-w-[750px] border-2 border-slate-700/90 rounded-xl overflow-hidden shadow-md">
+                  <thead className="bg-slate-950 text-slate-200 uppercase text-xs md:text-sm tracking-wider font-extrabold border-b-2 border-slate-700/90">
+                    <tr>
+                      <th className="py-3.5 px-3 w-[6%] text-center border-r-2 border-slate-700/90 bg-slate-950">तासिका</th>
+                      <th className="py-3.5 px-3.5 w-[11%] border-r-2 border-slate-700/90 bg-slate-950">विषय</th>
+                      <th className="py-3.5 px-3.5 w-[14%] border-r-2 border-slate-700/90 bg-slate-950">घटक / उपघटक</th>
+                      <th className="py-3.5 px-4 w-[24%] border-r-2 border-slate-700/90 bg-slate-950">अध्ययनाचे स्वरूप (अध्यापन अनुभव / कृती)</th>
+                      <th className="py-3.5 px-3.5 w-[13%] border-r-2 border-slate-700/90 bg-slate-950">साधन तंत्रे / साधने</th>
+                      <th className="py-3.5 px-4 w-[32%] bg-slate-950">अध्ययन निष्पत्ती</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y-2 divide-slate-800 text-sm md:text-base">
+                    {todayDiary.periods.map((item, idx) => (
+                      <tr key={idx} className="hover:bg-slate-800/40 transition-colors border-b-2 border-slate-800/90">
+                        <td className="py-4 px-3 text-center font-bold text-indigo-400 align-top border-r-2 border-slate-800/90 bg-slate-950/40">
+                          <span className="w-8 h-8 rounded-full bg-indigo-500/10 border border-indigo-500/20 inline-flex items-center justify-center text-sm font-black">
+                            {item.period}
+                          </span>
+                        </td>
+                        <td className="py-4 px-3.5 font-bold text-white text-sm md:text-base align-top border-r-2 border-slate-800/90">
+                          {item.subject}
+                        </td>
+                        <td className="py-4 px-3.5 text-indigo-200 font-semibold text-sm md:text-base leading-snug align-top border-r-2 border-slate-800/90">
+                          {item.topic}
+                        </td>
+                        <td className="py-4 px-4 text-slate-100 leading-relaxed text-sm md:text-base font-normal align-top border-r-2 border-slate-800/90">
+                          {item.experience || "-"}
+                        </td>
+                        <td className="py-4 px-3.5 text-slate-300 text-sm md:text-base align-top border-r-2 border-slate-800/90">
+                          {item.tools ? (
+                            <span className="inline-block px-2.5 py-1 bg-slate-800/90 rounded-lg border border-slate-700/80 text-xs md:text-sm font-medium leading-relaxed">
+                              {item.tools}
+                            </span>
+                          ) : "-"}
+                        </td>
+                        <td className="py-4 px-4 text-emerald-300 font-semibold text-sm md:text-base leading-relaxed align-top">
+                          {item.outcome || "-"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
           )}
         </div>
       )}
