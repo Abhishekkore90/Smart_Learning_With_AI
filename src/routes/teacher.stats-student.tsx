@@ -155,7 +155,6 @@ const PageHeader = ({ title }: { title: string }) => (
       fontSize: "20px",
       fontWeight: "800",
       marginBottom: "16px",
-      letterSpacing: "1px",
       boxShadow: "0 4px 15px rgba(13,27,75,0.25)",
       position: "relative",
       overflow: "hidden",
@@ -192,7 +191,6 @@ const SectionHeader = ({ title }: { title: string }) => (
       justifyContent: "center",
       boxShadow: "0 3px 10px rgba(155,28,28,0.25)",
       border: "1px solid rgba(255,255,255,0.1)",
-      letterSpacing: "0.5px",
     }}
   >
     {title}
@@ -292,7 +290,6 @@ function Page1() {
         style={{
           color: "#c9a227",
           fontSize: "24px",
-          letterSpacing: "12px",
           opacity: 0.8,
           textAlign: "center",
           marginTop: "12px",
@@ -332,7 +329,6 @@ function Page1() {
           borderRadius: "8px",
           border: "4px double #c9a227",
           boxShadow: "0 8px 24px rgba(13,27,75,0.25)",
-          letterSpacing: "3px",
           textShadow: "0 2px 4px rgba(0,0,0,0.4)",
           marginTop: "16px",
           position: "relative",
@@ -363,7 +359,6 @@ function Page1() {
             color: "#f5d060",
             fontSize: "18px",
             fontWeight: "700",
-            letterSpacing: "0.5px",
           }}
         >
           विद्यार्थी व शाळा तपशील

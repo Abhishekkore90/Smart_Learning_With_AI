@@ -429,7 +429,6 @@
       font-size: 23px;
       font-weight: 800;
       margin-bottom: 18px;
-      letter-spacing: 1.5px;
       box-shadow: 0 4px 15px rgba(13,27,75,0.25);
       position: relative;
       overflow: hidden;
@@ -458,7 +457,6 @@
       font-weight: 800;
       margin-bottom: 12px;
       box-shadow: 0 3px 10px rgba(155,28,28,0.25);
-      letter-spacing: 0.5px;
       border: 1px solid rgba(255,255,255,0.1);
     }
 
@@ -1832,7 +1830,16 @@ function deleteCurrentPage() {
 function saveData() {
   const all = document.querySelectorAll('[contenteditable]');
   const arr = [];
-  all.forEach(el => arr.push(el.innerHTML));
+  all.forEach(el => {
+    // Normalize content editable text before saving
+    if (el.children.length === 0 && el.textContent) {
+      const cleaned = normalizeText(el.textContent);
+      if (cleaned !== el.textContent) {
+        el.textContent = cleaned;
+      }
+    }
+    arr.push(el.innerHTML);
+  });
   localStorage.setItem('sanchika_data', JSON.stringify(arr));
   showMsg('✅ माहिती यशस्वीरीत्या जतन केली!', '#1b5e20');
 }
@@ -1860,12 +1867,29 @@ function loadData() {
     }
   });
 
+  // Clean and normalize all static page headers, labels, and titles in DOM
+  document.querySelectorAll('.page-header, .page-subheader, .cover-title, .cover-info-label, .label-cell').forEach(el => {
+    if (el.childNodes.length === 1 && el.childNodes[0].nodeType === Node.TEXT_NODE) {
+      el.textContent = normalizeText(el.textContent);
+    }
+  });
+
   const saved = localStorage.getItem('sanchika_data');
   if (saved) {
     try {
       const arr = JSON.parse(saved);
       const all = document.querySelectorAll('[contenteditable]');
-      all.forEach((el, i) => { if (arr[i] !== undefined && arr[i] !== '') el.innerHTML = arr[i]; });
+      all.forEach((el, i) => { 
+        if (arr[i] !== undefined && arr[i] !== '') {
+          el.innerHTML = arr[i];
+          if (el.children.length === 0 && el.textContent) {
+            const cleaned = normalizeText(el.textContent);
+            if (cleaned !== el.textContent) {
+              el.textContent = cleaned;
+            }
+          }
+        }
+      });
     } catch(e) {}
   }
   const photo = localStorage.getItem('sanchika_photo');
@@ -2077,6 +2101,11 @@ function initSlider() {
   adjustPageScale();
 }
 
+function normalizeText(text) {
+  if (!text) return "";
+  return text.trim().replace(/\s+/g, ' ');
+}
+
 function updatePageSelector(pages) {
   const dropdown = document.getElementById('slider-page-select');
   if (!dropdown) return;
@@ -2088,14 +2117,14 @@ function updatePageSelector(pages) {
     if (idx === 0) {
       title = '१: मुखपृष्ठ (Cover Page)';
     } else if (header) {
-      title = `${idx + 1}: ${header.textContent.trim()}`;
+      title = `${idx + 1}: ${normalizeText(header.textContent)}`;
     } else {
       title = `पृष्ठ ${idx + 1}`;
     }
     
     const opt = document.createElement('option');
     opt.value = idx;
-    opt.textContent = title;
+    opt.textContent = normalizeText(title);
     if (idx === currentSlideIndex) {
       opt.selected = true;
     }
@@ -2173,6 +2202,17 @@ function handleSwipe() {
     changeSlide(-1); // Swiped right -> prev page
   }
 }
+
+document.addEventListener('blur', function(e) {
+  if (e.target && e.target.hasAttribute('contenteditable')) {
+    if (e.target.innerHTML) {
+      const text = e.target.textContent;
+      if (text && (text.startsWith(' ') || text.endsWith(' ') || /\s{2,}/.test(text))) {
+        e.target.textContent = normalizeText(text);
+      }
+    }
+  }
+}, true);
 
 document.addEventListener('input', function(e) {
   if (e.target.hasAttribute('contenteditable')) {
