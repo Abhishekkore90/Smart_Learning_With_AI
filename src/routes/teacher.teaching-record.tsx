@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import React, { useState, useEffect, useRef } from "react";
@@ -86,6 +86,7 @@ const weeks = [
 ];
 
 function TeachingRecordPage() {
+  const navigate = useNavigate();
   const { activeJobs } = useDiaryProcessing();
   
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
@@ -94,6 +95,24 @@ function TeachingRecordPage() {
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+  const handleBack = () => {
+    if (selectedWeek) {
+      setSelectedWeek(null);
+    } else if (selectedMonth) {
+      setSelectedMonth(null);
+    } else if (selectedClass) {
+      setSelectedClass(null);
+    } else if (selectedMedium) {
+      setSelectedMedium(null);
+    } else {
+      if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        navigate({ to: "/teacher" });
+      }
+    }
+  };
   
   // Upload States
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -159,27 +178,61 @@ function TeachingRecordPage() {
       const collectionRef = collection(db, "teacher_diaries", cls, med);
       const querySnapshot = await getDocs(collectionRef);
 
-      if (!querySnapshot.empty) {
-        const allDocs: any[] = querySnapshot.docs.map((docSnap) => {
-          const data = docSnap.data();
-          const rawUrl = data.pageUrl || data.masterPdfUrl || data.pageURL || "";
-          const sanitizedUrl = rawUrl.replace(/vz-7a00d099-4a8\.b-cdn\.net/g, "sgkbrainova.b-cdn.net");
-          const dateKey = data.diaryDate || docSnap.id;
-          return {
-            id: docSnap.id,
-            diaryDate: dateKey,
-            pageNumber: data.pageNumber || 1,
-            pageUrl: sanitizedUrl,
-            fileName: data.fileName || "Teaching_Diary.pdf",
-            uploadedAt: data.uploadedAt || 0,
-            ...data,
-          };
+      const docsMap = new Map<string, any>();
+
+      querySnapshot.docs.forEach((docSnap) => {
+        const data = docSnap.data();
+        const rawUrl = data.pageUrl || data.masterPdfUrl || data.pageURL || "";
+        const sanitizedUrl = rawUrl.replace(/vz-7a00d099-4a8\.b-cdn\.net/g, "sgkbrainova.b-cdn.net");
+        const dateKey = data.diaryDate || docSnap.id;
+        docsMap.set(dateKey, {
+          id: docSnap.id,
+          diaryDate: dateKey,
+          pageNumber: data.pageNumber || 1,
+          pageUrl: sanitizedUrl,
+          fileName: data.fileName || "Teaching_Diary.pdf",
+          uploadedAt: data.uploadedAt || 0,
+          ...data,
         });
-        allDocs.sort((a, b) => (a.diaryDate || a.id).localeCompare(b.diaryDate || b.id));
-        setDiaryRecords(allDocs);
-      } else {
-        setDiaryRecords([]);
-      }
+      });
+
+      // Also query teaching_diaries
+      const tdColRef = collection(db, "teaching_diaries");
+      const tdSnap = await getDocs(tdColRef);
+      const prefix = `${cls}_${med}_`;
+      tdSnap.docs.forEach((docSnap) => {
+        if (docSnap.id.startsWith(prefix)) {
+          const dateKey = docSnap.id.replace(prefix, "");
+          const data = docSnap.data();
+          if (!docsMap.has(dateKey)) {
+            docsMap.set(dateKey, {
+              id: docSnap.id,
+              diaryDate: dateKey,
+              pageNumber: 1,
+              pageUrl: data.pageUrl || "",
+              fileName: data.fileName || `Teaching_Diary_${dateKey}.pdf`,
+              uploadedAt: data.uploadedAt || 0,
+              ...data,
+            });
+          }
+        }
+      });
+
+      const allDocs = Array.from(docsMap.values())
+        .filter((rec: any) => {
+          if (rec.diaryDate) {
+            const parts = rec.diaryDate.split("-");
+            if (parts.length === 3) {
+              const dObj = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+              if (!isNaN(dObj.getTime()) && dObj.getDay() === 0) return false;
+            }
+          }
+          if (rec.day === "रविवार" || rec.day?.toLowerCase() === "sunday") return false;
+          return true;
+        });
+
+      allDocs.sort((a, b) => (a.diaryDate || a.id).localeCompare(b.diaryDate || b.id));
+      setDiaryRecords(allDocs);
     } catch (err: any) {
       console.error("Error loading teaching diary record:", err);
       setError("Failed to load teaching diary record.");
@@ -300,6 +353,47 @@ function TeachingRecordPage() {
       <main className="lg:pl-64 pt-16 min-h-screen print:pl-0 print:pt-0 pb-24">
         <PinGate sectionKey="teaching_record">
           <div className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto space-y-6 print:p-0 print:max-w-full">
+            {/* Top Navigation Bar with Back Button & Breadcrumbs */}
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3.5 px-5 rounded-2xl border border-slate-200 shadow-sm print:hidden">
+              <button
+                type="button"
+                onClick={handleBack}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl text-xs font-black shadow-md transition-all active:scale-95 cursor-pointer"
+              >
+                <ArrowLeft className="size-4 shrink-0" />
+                <span>मागे जा (Back)</span>
+              </button>
+
+              {/* Dynamic Breadcrumbs */}
+              <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold text-slate-600">
+                <span className="text-slate-400 font-semibold">टाचणवही</span>
+                {selectedMedium && (
+                  <>
+                    <ChevronRight className="size-3 text-slate-400" />
+                    <span className="text-orange-600 font-extrabold">{selectedMedium === "Marathi" ? "मराठी माध्यम" : "सेमी इंग्रजी"}</span>
+                  </>
+                )}
+                {selectedClass && (
+                  <>
+                    <ChevronRight className="size-3 text-slate-400" />
+                    <span className="text-orange-600 font-extrabold">{selectedClass}</span>
+                  </>
+                )}
+                {selectedMonth && (
+                  <>
+                    <ChevronRight className="size-3 text-slate-400" />
+                    <span className="text-pink-600 font-extrabold">{months.find(m => m.id === selectedMonth)?.mr}</span>
+                  </>
+                )}
+                {selectedWeek && (
+                  <>
+                    <ChevronRight className="size-3 text-slate-400" />
+                    <span className="text-indigo-600 font-extrabold">{weeks.find(w => w.id === selectedWeek)?.mr}</span>
+                  </>
+                )}
+              </div>
+            </div>
+
             <AnimatePresence mode="wait">
 
               {/* Step 1: Select Medium (Orange Cards) */}
@@ -475,6 +569,7 @@ function TeachingRecordPage() {
                         whileTap={{ scale: 0.97 }}
                         onClick={() => {
                           setSelectedMonth(m.id);
+                          setSelectedWeek("Week 1");
                           const updatedDate = new Date(selectedDate);
                           updatedDate.setFullYear(selectedYear);
                           updatedDate.setMonth(parseInt(m.id, 10) - 1);
@@ -504,332 +599,16 @@ function TeachingRecordPage() {
                 </motion.div>
               )}
 
-              {/* Step 4: Select Week (Light Orange Cards) */}
-              {selectedMedium && selectedClass && selectedYear && selectedMonth && !selectedWeek && (
-                <motion.div
-                  key="week-selection"
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -15 }}
-                  className="space-y-8"
-                >
-                  <div className="relative overflow-hidden bg-gradient-to-r from-slate-900 via-purple-950 to-slate-900 rounded-[2.5rem] p-8 md:p-12 text-white shadow-2xl border border-white/5">
-                    <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                      <div className="space-y-3">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/10 text-xs font-semibold tracking-wider text-purple-200">
-                          <Sparkles className="size-3.5 text-amber-300 animate-pulse" />
-                          REPORTS & REGISTERS (शासकीय अहवाल व नोंदी)
-                        </div>
-                        <h2 className="text-4xl md:text-5xl font-black tracking-tight">
-                          Teaching Diary <span className="text-indigo-400">टाचणवही अहवाल.</span>
-                        </h2>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="text-center space-y-2 pt-2">
-                    <h2 className="text-3xl font-black text-slate-900 tracking-tight italic">Select Week / आठवडा निवडा</h2>
-                    <p className="text-xs font-bold text-slate-500">
-                      निवडलेले माध्यम: <span className="text-orange-600 font-black">{selectedMedium === "Marathi" ? "मराठी माध्यम" : "सेमी इंग्रजी"}</span> • इयत्ता: <span className="text-orange-600 font-black">{selectedClass}</span> • महिना: <span className="text-pink-600 font-black">{months.find(m => m.id === selectedMonth)?.mr}</span>
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto w-full">
-                    {weeks.map((wk) => {
-                      const record = diaryRecords.find(rec => rec.diaryDate === "master_diary" || (rec.diaryDate.split("-")[1] === selectedMonth && getRecordWeek(rec) === wk.id));
-                      const isWord = isWordDoc(record?.fileName || record?.pageUrl);
-                      
-                      return (
-                        <motion.div
-                          key={wk.id}
-                          whileHover={{ scale: 1.02 }}
-                          className={`group relative p-6 rounded-[2rem] border-2 transition-all duration-500 overflow-hidden flex flex-col gap-4 shadow-sm ${record ? 'bg-white border-green-200 hover:border-green-400' : 'bg-orange-50/40 border-orange-200 hover:border-orange-400 hover:bg-orange-100/30 cursor-pointer'}`}
-                          onClick={() => { if (!record) setSelectedWeek(wk.id); }}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className={`size-12 rounded-xl flex items-center justify-center border ${record ? 'bg-green-100 border-green-200 text-green-600' : 'bg-orange-100 border-orange-200 text-orange-600'}`}>
-                                <Calendar className="size-6" />
-                              </div>
-                              <div>
-                                <h3 className={`text-lg font-black leading-tight tracking-tight ${record ? 'text-slate-900' : 'text-slate-850'}`}>{wk.mr}</h3>
-                                <p className={`text-[10px] font-bold uppercase tracking-wider ${record ? 'text-green-600' : 'text-orange-500'}`}>{wk.label}</p>
-                              </div>
-                            </div>
-                            {record && (
-                              <div className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-[10px] font-black uppercase tracking-wider shrink-0">
-                                Uploaded
-                              </div>
-                            )}
-                          </div>
-                          
-                          {record ? (
-                            <div className="mt-2 space-y-4">
-                              <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl flex items-center gap-3">
-                                  {isWord ? <FileText className="size-6 text-blue-600 shrink-0" /> : <BookOpen className="size-6 text-orange-600 shrink-0" />}
-                                  <div className="min-w-0">
-                                    <p className="text-xs font-extrabold truncate text-slate-800">{record.fileName || "Teaching Diary Document"}</p>
-                                    <p className="text-[10px] text-slate-500 font-semibold">{record.uploadedAt ? format(new Date(record.uploadedAt), "dd/MM/yyyy") : record.diaryDate}</p>
-                                  </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedRecordForPreview(record);
-                                      setIsPreviewOpen(true);
-                                    }}
-                                    className="flex-1 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer"
-                                  >
-                                    <Eye className="size-4" /> View
-                                  </button>
-                                  <a
-                                    href={record.pageUrl}
-                                    download={record.fileName || "document"}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="flex-1 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer"
-                                  >
-                                    <Download className="size-4" /> Download
-                                  </a>
-                              </div>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedWeek(wk.id);
-                                }}
-                                className="w-full py-2 mt-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-wider transition-colors cursor-pointer"
-                              >
-                                Re-upload / Change
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="mt-2 space-y-4 flex-1 flex flex-col justify-end">
-                              <div className="flex items-center gap-2">
-                                <button
-                                  disabled
-                                  className="flex-1 py-2.5 bg-white/50 text-orange-300 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-not-allowed border border-orange-100"
-                                >
-                                  <Eye className="size-4" /> View
-                                </button>
-                                <button
-                                  disabled
-                                  className="flex-1 py-2.5 bg-white/50 text-orange-300 rounded-xl text-xs font-bold flex items-center justify-center gap-2 cursor-not-allowed border border-orange-100"
-                                >
-                                  <Download className="size-4" /> Download
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </motion.div>
-                      );
-                    })}
-                  </div>
-
-                  <div className="flex justify-center pt-2">
-                    <button
-                      onClick={() => setSelectedMonth(null)}
-                      className="flex items-center gap-2 px-5 py-2.5 text-orange-600 hover:text-orange-900 bg-white hover:bg-orange-50 border border-orange-200 rounded-2xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-sm"
-                    >
-                      <ArrowLeft className="size-4" /> मागे या (Back to Month)
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* Step 5: Main View (Upload Form & List) */}
-              {selectedClass && selectedMedium && selectedYear && selectedMonth && selectedWeek && (
+              {/* Step 5: Main View */}
+              {selectedClass && selectedMedium && selectedYear && selectedMonth && (
                 <motion.div
                   key="diary-content"
                   initial={{ opacity: 0, scale: 0.98 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.98 }}
-                  className="max-w-4xl mx-auto w-full space-y-6"
+                  className="max-w-5xl mx-auto w-full space-y-6"
                 >
-                  <div className="flex items-center justify-between gap-4 bg-slate-900 text-white p-3 rounded-2xl border border-slate-800 shadow-md">
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => setSelectedWeek(null)}
-                        className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition-colors cursor-pointer"
-                        title="Back to Week Selection"
-                      >
-                        <ArrowLeft className="size-4" />
-                      </button>
-                      <div className="flex items-center gap-2">
-                        <Layers className="size-4 text-orange-400" />
-                        <span className="text-xs font-black">
-                          {selectedMedium === "Marathi" ? "मराठी माध्यम" : "सेमी इंग्रजी"} • {selectedClass} • {months.find(m => m.id === selectedMonth)?.mr} • {weeks.find(w => w.id === selectedWeek)?.mr}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => { setSelectedWeek(null); setSelectedMonth(null); }}
-                        className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
-                      >
-                        Change Month
-                      </button>
-                      <button
-                        onClick={() => { setSelectedWeek(null); setSelectedMonth(null); setSelectedClass(null); }}
-                        className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
-                      >
-                        Change Class
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-4 bg-slate-900 text-white p-2 rounded-2xl border border-slate-850 shadow-sm">
-                    <div className="flex items-center gap-2 w-full">
-                      <button
-                        type="button"
-                        onClick={() => setActiveViewTab("today")}
-                        className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                          activeViewTab === "today"
-                            ? "bg-orange-600 text-white shadow-md shadow-orange-500/20"
-                            : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
-                        }`}
-                      >
-                        <Sparkles className="size-4 text-amber-300" />
-                        <span>आजचे टाचण (Today)</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setActiveViewTab("document")}
-                        className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                          activeViewTab === "document"
-                            ? "bg-orange-600 text-white shadow-md shadow-orange-500/20"
-                            : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
-                        }`}
-                      >
-                        <FileText className="size-4" />
-                        <span>दस्तऐवज अहवाल (PDF / Doc / Upload)</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {activeViewTab === "today" ? (
-                    <TeacherTodayDiary selectedClass={selectedClass} selectedMedium={selectedMedium} />
-                  ) : (
-                    <div className="grid grid-cols-1 gap-6">
-                      {/* Upload Form */}
-                      <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
-                        <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
-                          <div className="size-10 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-600 font-black">
-                            <Upload className="size-5" />
-                          </div>
-                          <div>
-                            <h2 className="text-base font-extrabold text-slate-900">Upload Teaching Diary</h2>
-                            <p className="text-xs text-slate-500">{selectedClass} ({selectedMedium}) — {months.find(m => m.id === selectedMonth)?.mr} • {weeks.find(w => w.id === selectedWeek)?.mr}</p>
-                          </div>
-                        </div>
-                        <div className="space-y-5 max-w-xl mx-auto w-full">
-                          <div className="relative border-2 border-dashed border-slate-200 hover:border-orange-500 bg-slate-50 hover:bg-orange-50/20 rounded-2xl p-6 text-center cursor-pointer transition-all">
-                            <input type="file" accept=".pdf, .doc, .docx" disabled={uploading} onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
-                            <div className="space-y-2">
-                              <div className="size-12 rounded-2xl bg-white flex items-center justify-center text-orange-600 mx-auto shadow-sm border border-slate-100">
-                                <Upload className="size-6" />
-                              </div>
-                              {selectedFile ? (
-                                <p className="text-xs font-extrabold text-slate-800">{selectedFile.name}</p>
-                              ) : (
-                                <p className="text-xs font-bold text-slate-600">Click or Drop File Here</p>
-                              )}
-                            </div>
-                          </div>
-
-                          {uploading && (
-                            <div className="space-y-2 bg-orange-50/70 border border-orange-100 rounded-2xl p-4">
-                              <div className="flex justify-between items-center text-xs font-bold text-orange-700">
-                                <span className="animate-pulse">{uploadStatus}</span>
-                                <span>{uploadProgress}%</span>
-                              </div>
-                              <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                                <div className="bg-orange-600 h-full transition-all duration-300 rounded-full" style={{ width: `${uploadProgress}%` }} />
-                              </div>
-                            </div>
-                          )}
-
-                          <button
-                            type="button"
-                            onClick={handleUpload}
-                            disabled={uploading || !selectedFile}
-                            className="w-full py-4 px-6 bg-orange-600 hover:bg-orange-700 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-2xl font-black text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
-                          >
-                            {uploading ? (
-                              <><Loader2 className="size-4 animate-spin" /> Uploading...</>
-                            ) : (
-                              <><Sparkles className="size-4" /> Upload Teaching Diary</>
-                            )}
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* List of Uploaded Diaries */}
-                      <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm space-y-4">
-                        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                          <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-2">
-                            <BookOpen className="size-4 text-orange-600" />
-                            Uploaded Records: {selectedClass} ({selectedMedium}) — {months.find(m => m.id === selectedMonth)?.mr} • {weeks.find(w => w.id === selectedWeek)?.mr}
-                          </h3>
-                          <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-full text-[10px] font-black">
-                            Total {diaryRecords.filter(rec => rec.diaryDate === "master_diary" || (rec.diaryDate.split("-")[1] === selectedMonth && getRecordWeek(rec) === selectedWeek)).length}
-                          </span>
-                        </div>
-
-                        {loading ? (
-                          <div className="flex items-center justify-center py-8 text-xs font-bold text-slate-400 gap-2">
-                            <Loader2 className="size-4 animate-spin text-orange-600" /> Loading records...
-                          </div>
-                        ) : diaryRecords.filter(rec => rec.diaryDate === "master_diary" || (rec.diaryDate.split("-")[1] === selectedMonth && getRecordWeek(rec) === selectedWeek)).length > 0 ? (
-                          <div className="space-y-2 max-h-[350px] overflow-y-auto pr-1">
-                            {diaryRecords
-                              .filter(rec => rec.diaryDate === "master_diary" || (rec.diaryDate.split("-")[1] === selectedMonth && getRecordWeek(rec) === selectedWeek))
-                              .map((rec) => {
-                                const isWord = isWordDoc(rec.fileName || rec.pageUrl);
-                                return (
-                                  <div
-                                    key={rec.id}
-                                    className="p-3.5 rounded-2xl border bg-slate-50 border-slate-200/60 hover:bg-slate-100 text-slate-700 flex items-center justify-between gap-3"
-                                  >
-                                    <div className="flex items-center gap-3 min-w-0">
-                                      {isWord ? <FileText className="size-5 text-blue-600 shrink-0" /> : <BookOpen className="size-5 text-orange-600 shrink-0" />}
-                                      <div className="min-w-0">
-                                        <div className="flex items-center gap-2">
-                                          <p className="text-xs font-extrabold truncate">{rec.fileName}</p>
-                                          {isWord && <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[9px] font-black rounded uppercase">DOC</span>}
-                                        </div>
-                                        <p className="text-[10px] text-slate-505 font-semibold">
-                                          Date: <span className="font-bold text-slate-800">{rec.diaryDate}</span> • Uploaded {format(new Date(rec.uploadedAt), "dd/MM/yyyy HH:mm")}
-                                        </p>
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center gap-2 shrink-0">
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setSelectedRecordForPreview(rec);
-                                          setIsPreviewOpen(true);
-                                        }}
-                                        className="p-1.5 bg-white border border-slate-205 hover:bg-orange-50 text-orange-600 rounded-lg cursor-pointer flex items-center gap-1 text-xs font-bold"
-                                        title="View Record"
-                                      >
-                                        <Eye className="size-3.5" /> View / प्रिव्ह्यू
-                                      </button>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                          </div>
-                        ) : (
-                          <div className="text-center py-8 text-slate-400 space-y-2">
-                            <AlertTriangle className="size-6 text-amber-500 mx-auto" />
-                            <p className="text-xs font-bold text-slate-500">No teaching diary uploaded yet for {selectedClass} ({selectedMedium}) in {months.find(m => m.id === selectedMonth)?.mr} • {weeks.find(w => w.id === selectedWeek)?.mr}.</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                  <TeacherTodayDiary selectedClass={selectedClass} selectedMedium={selectedMedium} selectedMonth={selectedMonth} onBack={handleBack} />
                 </motion.div>
               )}
             </AnimatePresence>
@@ -838,35 +617,17 @@ function TeachingRecordPage() {
             {isPreviewOpen && selectedRecordForPreview && (
               <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-955/80 backdrop-blur-sm">
                 <div className="bg-white rounded-3xl overflow-hidden shadow-2xl w-full max-w-[96vw] border border-slate-100 flex flex-col h-[93vh]">
-                  {/* Modal Header */}
-                  <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between gap-3 shrink-0">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="size-9 rounded-xl bg-orange-600 flex items-center justify-center shrink-0">
-                        <FileText className="size-4 text-white" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold truncate">{selectedRecordForPreview.fileName || "Teaching Diary Document"}</p>
-                        <p className="text-[10px] text-slate-400">{selectedClass} ({selectedMedium}) — {months.find(m => m.id === selectedMonth)?.mr} • {weeks.find(w => w.id === selectedWeek)?.mr}</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setIsPreviewOpen(false);
-                        setSelectedRecordForPreview(null);
-                      }}
-                      className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-extrabold transition-colors cursor-pointer"
-                    >
-                      Close ×
-                    </button>
-                  </div>
-
-                  {/* Modal Body */}
-                  <div className="flex-1 overflow-hidden bg-slate-100 p-4">
+                  {/* Modal Body with single unified navbar */}
+                  <div className="flex-1 overflow-hidden bg-slate-100 p-2 sm:p-4">
                     <DocumentLivePreview
                       selectedFile={null}
                       savedRecord={selectedRecordForPreview}
                       authenticatedPdfUrl={authenticatedPreviewUrl}
                       loadingPdf={loadingPreview}
+                      onBack={() => {
+                        setIsPreviewOpen(false);
+                        setSelectedRecordForPreview(null);
+                      }}
                     />
                   </div>
                 </div>

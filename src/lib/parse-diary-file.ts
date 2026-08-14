@@ -125,14 +125,38 @@ function parseTextToDiary(rawText: string, className: string): ParsedDiaryConten
   // ─── Extract day ───
   let day = "";
   const dayPatterns = [
-    /दिवस\s*[:：]?\s*(सोमवार|मंगळवार|बुधवार|गुरुवार|शुक्रवार|शनिवार|रविवार)/i,
-    /Day\s*[:：]?\s*(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/i,
+    /(?:दिवस|वार)\s*[:：\-]?\s*(सोमवार|मंगळवार|बुधवार|गुरुवार|शुक्रवार|शनिवार|रविवार)/i,
+    /Day\s*[:：\-]?\s*(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/i,
   ];
   for (const pattern of dayPatterns) {
     const match = fullText.match(pattern);
     if (match) {
       day = match[1];
       break;
+    }
+  }
+
+  // Automatic computation of day from date
+  if (date) {
+    const cleaned = date.replace(/\s+/g, "");
+    const parts = cleaned.split(/[\/\-\.]/);
+    if (parts.length === 3) {
+      let d = 0, m = 0, y = 0;
+      if (parts[0].length === 4) {
+        y = parseInt(parts[0], 10);
+        m = parseInt(parts[1], 10) - 1;
+        d = parseInt(parts[2], 10);
+      } else {
+        d = parseInt(parts[0], 10);
+        m = parseInt(parts[1], 10) - 1;
+        y = parseInt(parts[2], 10);
+        if (y < 100) y += 2000;
+      }
+      const dateObj = new Date(y, m, d);
+      if (!isNaN(dateObj.getTime())) {
+        const daysInMarathi = ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
+        day = daysInMarathi[dateObj.getDay()];
+      }
     }
   }
 
