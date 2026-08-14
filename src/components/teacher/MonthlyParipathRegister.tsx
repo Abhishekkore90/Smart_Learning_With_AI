@@ -125,6 +125,28 @@ export function MonthlyParipathRegister() {
   const [academicYear, setAcademicYear] = useState("२०२५-२०२६");
   const [selectedMonthIndex, setSelectedMonthIndex] = useState(now.getMonth());
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [schoolInfo, setSchoolInfo] = useState({
+    schoolName: "",
+    udise: "",
+    kendra: "",
+    taluka: "",
+    jilha: "",
+  });
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("paripathSchoolInfo");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setSchoolInfo(parsed);
+        if (parsed.schoolName) {
+          setSchoolName(parsed.schoolName);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load paripathSchoolInfo", e);
+    }
+  }, []);
 
   const [tableData, setTableData] = useState<Record<number, DayRowData>>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -668,6 +690,8 @@ export function MonthlyParipathRegister() {
         textarea {
           overflow: hidden !important;
           resize: none !important;
+          white-space: pre-wrap !important;
+          word-break: break-word !important;
         }
 
         @media print {
@@ -694,13 +718,21 @@ export function MonthlyParipathRegister() {
             break-before: page !important;
           }
           table {
-            font-size: 10px !important;
+            font-size: 10.5px !important;
             border-collapse: collapse !important;
+            width: 100% !important;
           }
           td, th {
-            padding: 2px 3px !important;
+            padding: 4px 5px !important;
             border: 1px solid #000000 !important;
             word-break: break-word !important;
+            vertical-align: middle !important;
+          }
+          textarea {
+            border: none !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            height: auto !important;
           }
         }
       `}</style>
@@ -865,131 +897,165 @@ export function MonthlyParipathRegister() {
 
               <div className={`page-chunk-box space-y-4 ${chunkIdx > 0 ? "page-break" : ""}`}>
                 {/* ---------- SINGLE UNIFIED HEADER ---------- */}
-                <div className="flex items-center justify-between border-b-2 border-slate-900 pb-3">
-                  <div className="space-y-1 font-black text-slate-900 text-xs md:text-sm">
-                    <div>
-                      शाळेचे नाव :{" "}
-                      <span className="border-b border-dotted border-slate-700 px-2 py-0.5 text-indigo-900">
-                        {schoolName || "..................................................."}
-                      </span>
+                <div className="flex flex-col gap-1 border-b-2 border-slate-900 pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1 font-black text-slate-900 text-xs md:text-sm">
+                      <div>
+                        शाळेचे नाव :{" "}
+                        <span className="border-b border-dotted border-slate-700 px-2 py-0.5 text-indigo-900">
+                          {schoolName || schoolInfo.schoolName || "..................................................."}
+                        </span>
+                      </div>
+                      <div>
+                        सन :{" "}
+                        <span className="border-b border-dotted border-slate-700 px-2 py-0.5 text-indigo-900">
+                          {academicYear || ".........................................."}
+                        </span>
+                      </div>
                     </div>
-                    <div>
-                      सन :{" "}
-                      <span className="border-b border-dotted border-slate-700 px-2 py-0.5 text-indigo-900">
-                        {academicYear || ".........................................."}
-                      </span>
+
+                    <div className="text-right">
+                      <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-wider">
+                        दैनिक व परिपाठातील उपक्रम ({chunk.label})
+                      </h2>
+                      <p className="text-[10px] font-bold text-slate-500 uppercase">
+                        महिना: {MARATHI_MONTHS[selectedMonthIndex]} {selectedYear}
+                      </p>
                     </div>
                   </div>
 
-                  <div className="text-right">
-                    <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-wider">
-                      दैनिक व परिपाठातील उपक्रम ({chunk.label})
-                    </h2>
-                    <p className="text-[10px] font-bold text-slate-500 uppercase">
-                      महिना: {MARATHI_MONTHS[selectedMonthIndex]} {selectedYear}
-                    </p>
-                  </div>
+                  {/* School Metadata Info Row */}
+                  {(schoolInfo.udise || schoolInfo.kendra || schoolInfo.taluka || schoolInfo.jilha) && (
+                    <div className="flex flex-wrap gap-x-6 gap-y-1 text-[11px] font-bold text-slate-700 pt-1 border-t border-slate-200">
+                      {schoolInfo.udise && <div>युडायस : <span className="font-extrabold text-slate-900">{schoolInfo.udise}</span></div>}
+                      {schoolInfo.kendra && <div>केंद्र : <span className="font-extrabold text-slate-900">{schoolInfo.kendra}</span></div>}
+                      {schoolInfo.taluka && <div>तालुका : <span className="font-extrabold text-slate-900">{schoolInfo.taluka}</span></div>}
+                      {schoolInfo.jilha && <div>जिल्हा : <span className="font-extrabold text-slate-900">{schoolInfo.jilha}</span></div>}
+                    </div>
+                  )}
                 </div>
 
                 {/* ---------- TABLE 1: दैनिक ---------- */}
-                <div className="overflow-x-auto border-2 border-slate-900 rounded-none bg-white">
-                  <table className="w-full table-fixed text-left text-[10px] text-slate-900 border-collapse">
+                <div className="overflow-x-auto border-2 border-slate-900 bg-white shadow-sm mb-4 w-full">
+                  <table className="w-full text-left text-[11px] text-slate-900 border-collapse align-middle table-fixed min-w-[950px]">
+                    <colgroup>
+                      <col style={{ width: "5%" }} />
+                      <col style={{ width: "11%" }} />
+                      <col style={{ width: "14%" }} />
+                      <col style={{ width: "14%" }} />
+                      <col style={{ width: "14%" }} />
+                      <col style={{ width: "14%" }} />
+                      <col style={{ width: "14%" }} />
+                      <col style={{ width: "14%" }} />
+                    </colgroup>
                     <thead>
-                      <tr className="bg-slate-100 border-b-2 border-slate-900 text-center font-black text-slate-900 uppercase text-xs">
-                        <th className="p-1.5 border-r border-slate-900 w-[4%]">दिनांक</th>
-                        <th className="p-1.5 border-r border-slate-900 w-[6%]">वार</th>
-                        <th className="p-1.5 border-r border-slate-900 w-[10%]">राष्ट्रगीत</th>
-                        <th className="p-1.5 border-r border-slate-900 w-[10%]">प्रतिज्ञा</th>
-                        <th className="p-1.5 border-r border-slate-900 w-[11%]">भारताचे संविधान</th>
-                        <th className="p-1.5 border-r border-slate-900 w-[11%]">प्रार्थना</th>
-                        <th className="p-1.5 border-r border-slate-900 w-[16%]">श्लोक</th>
-                        <th className="p-1.5 w-[32%]">सुविचार</th>
+                      <tr className="bg-slate-100 border-b-2 border-slate-900 text-center font-black text-slate-900 uppercase text-[11px]">
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">दिनांक</th>
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">वार</th>
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">राष्ट्रगीत</th>
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">प्रतिज्ञा</th>
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">भारताचे संविधान</th>
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">प्रार्थना</th>
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">श्लोक</th>
+                        <th className="p-2 text-center align-middle">सुविचार</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-800 font-medium">
+                    <tbody className="divide-y divide-slate-900 font-medium">
                       {chunkRows.map((row) => (
                         <tr
                           key={row.date}
                           className={`${
                             row.isSunday || row.isHoliday
-                              ? "bg-rose-50/70 text-rose-900 font-bold"
-                              : "hover:bg-slate-50"
+                              ? "bg-rose-50 text-rose-900 font-bold"
+                              : "hover:bg-slate-50/80"
                           }`}
                         >
-                          <td className={`p-1 border-r border-slate-800 text-center font-black ${row.isSunday || row.isHoliday ? 'text-rose-800' : 'text-slate-900'}`}>
-                            {row.date}
-                          </td>
-                          <td className={`p-1 border-r border-slate-800 text-center font-bold text-[11px] ${row.isSunday || row.isHoliday ? 'text-rose-800' : ''}`}>
-                            {row.day}
-                          </td>
                           {row.isSunday ? (
-                            <td colSpan={6} className="p-1 text-center font-black text-rose-700 text-[13px] tracking-widest">
+                            <td colSpan={8} className="p-2.5 text-center font-black text-rose-700 text-[13px] tracking-widest align-middle border-b border-slate-900">
                               रविवार
                             </td>
                           ) : row.isHoliday ? (
-                            <td colSpan={6} className="p-1 text-center font-black text-rose-700 text-[13px] tracking-wider">
+                            <td colSpan={8} className="p-2.5 text-center font-black text-rose-700 text-[13px] tracking-wider align-middle border-b border-slate-900">
                               सुट्टी ({row.holidayReason || "शाळेस सुट्टी"})
                             </td>
                           ) : (
                             <>
-                              <td className="p-0.5 border-r border-slate-800">
+                              <td className="p-2 border-r border-slate-900 text-center font-black align-middle text-slate-900">
+                                {row.date}
+                              </td>
+                              <td className="p-2 border-r border-slate-900 text-center font-bold text-[11px] align-middle text-slate-900">
+                                {row.day}
+                              </td>
+                              <td className="p-1 border-r border-slate-900 align-middle">
                                 <textarea
                                   value={row.rashtrageet}
-                                  onChange={(e) =>
-                                    handleCellChange(row.date, "rashtrageet", e.target.value)
-                                  }
-                                  className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                  onChange={(e) => {
+                                    handleCellChange(row.date, "rashtrageet", e.target.value);
+                                    e.target.style.height = "auto";
+                                    e.target.style.height = `${e.target.scrollHeight}px`;
+                                  }}
+                                  className="w-full bg-transparent text-center outline-none font-bold text-[11px] leading-snug overflow-hidden resize-none py-1 px-1 border-0 focus:ring-1 focus:ring-indigo-500 rounded"
                                   rows={1}
                                 />
                               </td>
-                              <td className="p-0.5 border-r border-slate-800">
+                              <td className="p-1 border-r border-slate-900 align-middle">
                                 <textarea
                                   value={row.pratigya}
-                                  onChange={(e) =>
-                                    handleCellChange(row.date, "pratigya", e.target.value)
-                                  }
-                                  className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                  onChange={(e) => {
+                                    handleCellChange(row.date, "pratigya", e.target.value);
+                                    e.target.style.height = "auto";
+                                    e.target.style.height = `${e.target.scrollHeight}px`;
+                                  }}
+                                  className="w-full bg-transparent text-center outline-none font-bold text-[11px] leading-snug overflow-hidden resize-none py-1 px-1 border-0 focus:ring-1 focus:ring-indigo-500 rounded"
                                   rows={1}
                                 />
                               </td>
-                              <td className="p-0.5 border-r border-slate-800">
+                              <td className="p-1 border-r border-slate-900 align-middle">
                                 <textarea
                                   value={row.sanvidhan}
-                                  onChange={(e) =>
-                                    handleCellChange(row.date, "sanvidhan", e.target.value)
-                                  }
-                                  className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                  onChange={(e) => {
+                                    handleCellChange(row.date, "sanvidhan", e.target.value);
+                                    e.target.style.height = "auto";
+                                    e.target.style.height = `${e.target.scrollHeight}px`;
+                                  }}
+                                  className="w-full bg-transparent text-center outline-none font-bold text-[11px] leading-snug overflow-hidden resize-none py-1 px-1 border-0 focus:ring-1 focus:ring-indigo-500 rounded"
                                   rows={1}
                                 />
                               </td>
-                              <td className="p-0.5 border-r border-slate-800">
+                              <td className="p-1 border-r border-slate-900 align-middle">
                                 <textarea
                                   value={row.prarthana}
-                                  onChange={(e) =>
-                                    handleCellChange(row.date, "prarthana", e.target.value)
-                                  }
-                                  className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                  onChange={(e) => {
+                                    handleCellChange(row.date, "prarthana", e.target.value);
+                                    e.target.style.height = "auto";
+                                    e.target.style.height = `${e.target.scrollHeight}px`;
+                                  }}
+                                  className="w-full bg-transparent text-center outline-none font-bold text-[11px] leading-snug overflow-hidden resize-none py-1 px-1 border-0 focus:ring-1 focus:ring-indigo-500 rounded"
                                   rows={1}
                                 />
                               </td>
-                              <td className="p-0.5 border-r border-slate-800">
+                              <td className="p-1 border-r border-slate-900 align-middle">
                                 <textarea
                                   value={row.shlok}
-                                  onChange={(e) =>
-                                    handleCellChange(row.date, "shlok", e.target.value)
-                                  }
-                                  className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[10px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                  onChange={(e) => {
+                                    handleCellChange(row.date, "shlok", e.target.value);
+                                    e.target.style.height = "auto";
+                                    e.target.style.height = `${e.target.scrollHeight}px`;
+                                  }}
+                                  className="w-full bg-transparent text-left px-1.5 py-1 outline-none font-medium text-[11px] leading-snug overflow-hidden resize-none whitespace-pre-wrap break-words border-0 focus:ring-1 focus:ring-indigo-500 rounded"
                                   rows={2}
                                   placeholder="श्लोक..."
                                 />
                               </td>
-                              <td className="p-0.5">
+                              <td className="p-1 align-middle">
                                 <textarea
                                   value={row.suvichar}
-                                  onChange={(e) =>
-                                    handleCellChange(row.date, "suvichar", e.target.value)
-                                  }
-                                  className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[10px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                  onChange={(e) => {
+                                    handleCellChange(row.date, "suvichar", e.target.value);
+                                    e.target.style.height = "auto";
+                                    e.target.style.height = `${e.target.scrollHeight}px`;
+                                  }}
+                                  className="w-full bg-transparent text-left px-1.5 py-1 outline-none font-medium text-[11px] leading-snug overflow-hidden resize-none whitespace-pre-wrap break-words border-0 focus:ring-1 focus:ring-indigo-500 rounded"
                                   rows={2}
                                   placeholder="सुविचार..."
                                 />
@@ -1003,123 +1069,147 @@ export function MonthlyParipathRegister() {
                 </div>
 
                 {/* ---------- TABLE 2: परिपाठातील उपक्रम ---------- */}
-                <div className="overflow-x-auto border-2 border-slate-900 rounded-none bg-white">
-                  <table className="w-full text-left text-[10px] text-slate-900 border-collapse">
+                <div className="overflow-x-auto border-2 border-slate-900 bg-white shadow-sm w-full">
+                  <table className="w-full text-left text-[11px] text-slate-900 border-collapse align-middle table-fixed min-w-[950px]">
+                    <colgroup>
+                      <col style={{ width: "5%" }} />
+                      <col style={{ width: "11%" }} />
+                      <col style={{ width: "14%" }} />
+                      <col style={{ width: "14%" }} />
+                      <col style={{ width: "14%" }} />
+                      <col style={{ width: "14%" }} />
+                      <col style={{ width: "14%" }} />
+                      <col style={{ width: "14%" }} />
+                    </colgroup>
                     <thead>
                       <tr className="bg-slate-100 border-b-2 border-slate-900 text-center font-black text-slate-900 uppercase text-[11px]">
-                        <th className="p-1.5 border-r border-slate-900 w-[14%]">
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">
                           सुसंस्कारक्षम बातम्या
                         </th>
-                        <th className="p-1.5 border-r border-slate-900 w-[14%]">दिनविशेष</th>
-                        <th className="p-1.5 border-r border-slate-900 w-[13%]">म्हण</th>
-                        <th className="p-1.5 border-r border-slate-900 w-[12%]">बोधकथा</th>
-                        <th className="p-1.5 border-r border-slate-900 w-[12%]">समूहगीत</th>
-                        <th className="p-1.5 border-r border-slate-900 w-[13%]">
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">दिनविशेष</th>
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">म्हण</th>
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">बोधकथा</th>
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">समूहगीत</th>
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">
                           देशभक्ती गीत
                         </th>
-                        <th className="p-1.5 border-r border-slate-900 w-[10%]">
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">
                           मौन पसायदान
                         </th>
-                        <th className="p-1.5 w-[12%]">वर्गशिक्षकांची स्वाक्षरी</th>
+                        <th className="p-2 text-center align-middle">वर्गशिक्षकांची स्वाक्षरी</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-800 font-medium">
+                    <tbody className="divide-y divide-slate-900 font-medium">
                       {chunkRows.map((row) => (
                         <tr
                           key={row.date}
                           className={`${
                             row.isSunday || row.isHoliday
-                              ? "bg-rose-50/70 text-rose-900 font-bold"
-                              : "hover:bg-slate-50"
+                              ? "bg-rose-50 text-rose-900 font-bold"
+                              : "hover:bg-slate-50/80"
                           }`}
                         >
                           {row.isSunday ? (
-                            <td colSpan={8} className="p-1 text-center font-black text-rose-700 text-[13px] tracking-widest">
+                            <td colSpan={8} className="p-2.5 text-center font-black text-rose-700 text-[13px] tracking-widest align-middle border-b border-slate-900">
                               रविवार
                             </td>
                           ) : row.isHoliday ? (
-                            <td colSpan={8} className="p-1 text-center font-black text-rose-700 text-[13px] tracking-wider">
+                            <td colSpan={8} className="p-2.5 text-center font-black text-rose-700 text-[13px] tracking-wider align-middle border-b border-slate-900">
                               सुट्टी ({row.holidayReason || "शाळेस सुट्टी"})
                             </td>
                           ) : (
                             <>
-                              <td className="p-0.5 border-r border-slate-800">
+                              <td className="p-1 border-r border-slate-900 align-middle">
                                 <textarea
                                   value={row.batmya}
-                                  onChange={(e) =>
-                                    handleCellChange(row.date, "batmya", e.target.value)
-                                  }
-                                  className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[10px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                  onChange={(e) => {
+                                    handleCellChange(row.date, "batmya", e.target.value);
+                                    e.target.style.height = "auto";
+                                    e.target.style.height = `${e.target.scrollHeight}px`;
+                                  }}
+                                  className="w-full bg-transparent text-left px-1.5 py-1 outline-none font-medium text-[11px] leading-snug overflow-hidden resize-none whitespace-pre-wrap break-words border-0 focus:ring-1 focus:ring-indigo-500 rounded"
                                   rows={2}
                                   placeholder="बातम्या..."
                                 />
                               </td>
-                              <td className="p-0.5 border-r border-slate-800">
+                              <td className="p-1 border-r border-slate-900 align-middle">
                                 <textarea
                                   value={row.dinvishesh}
-                                  onChange={(e) =>
-                                    handleCellChange(row.date, "dinvishesh", e.target.value)
-                                  }
-                                  className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[10px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                  onChange={(e) => {
+                                    handleCellChange(row.date, "dinvishesh", e.target.value);
+                                    e.target.style.height = "auto";
+                                    e.target.style.height = `${e.target.scrollHeight}px`;
+                                  }}
+                                  className="w-full bg-transparent text-left px-1.5 py-1 outline-none font-medium text-[11px] leading-snug overflow-hidden resize-none whitespace-pre-wrap break-words border-0 focus:ring-1 focus:ring-indigo-500 rounded"
                                   rows={2}
                                   placeholder="दिनविशेष..."
                                 />
                               </td>
-                              <td className="p-0.5 border-r border-slate-800">
+                              <td className="p-1 border-r border-slate-900 align-middle">
                                 <textarea
                                   value={row.mhan}
-                                  onChange={(e) =>
-                                    handleCellChange(row.date, "mhan", e.target.value)
-                                  }
-                                  className="w-full bg-transparent text-left px-0.5 outline-none font-medium text-[10px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                  onChange={(e) => {
+                                    handleCellChange(row.date, "mhan", e.target.value);
+                                    e.target.style.height = "auto";
+                                    e.target.style.height = `${e.target.scrollHeight}px`;
+                                  }}
+                                  className="w-full bg-transparent text-left px-1.5 py-1 outline-none font-medium text-[11px] leading-snug overflow-hidden resize-none whitespace-pre-wrap break-words border-0 focus:ring-1 focus:ring-indigo-500 rounded"
                                   rows={2}
                                   placeholder="म्हण..."
                                 />
                               </td>
-                              <td className="p-0.5 border-r border-slate-800">
+                              <td className="p-1 border-r border-slate-900 align-middle">
                                 <textarea
                                   value={row.bodhkatha}
-                                  onChange={(e) =>
-                                    handleCellChange(row.date, "bodhkatha", e.target.value)
-                                  }
-                                  className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                  onChange={(e) => {
+                                    handleCellChange(row.date, "bodhkatha", e.target.value);
+                                    e.target.style.height = "auto";
+                                    e.target.style.height = `${e.target.scrollHeight}px`;
+                                  }}
+                                  className="w-full bg-transparent text-center outline-none font-bold text-[11px] leading-snug overflow-hidden resize-none py-1 px-1 border-0 focus:ring-1 focus:ring-indigo-500 rounded"
                                   rows={1}
                                   placeholder="शीर्षक..."
                                 />
                               </td>
-                              <td className="p-0.5 border-r border-slate-800">
+                              <td className="p-1 border-r border-slate-900 align-middle">
                                 <textarea
                                   value={row.samuhgeet}
-                                  onChange={(e) =>
-                                    handleCellChange(row.date, "samuhgeet", e.target.value)
-                                  }
-                                  className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                  onChange={(e) => {
+                                    handleCellChange(row.date, "samuhgeet", e.target.value);
+                                    e.target.style.height = "auto";
+                                    e.target.style.height = `${e.target.scrollHeight}px`;
+                                  }}
+                                  className="w-full bg-transparent text-center outline-none font-bold text-[11px] leading-snug overflow-hidden resize-none py-1 px-1 border-0 focus:ring-1 focus:ring-indigo-500 rounded"
                                   rows={1}
                                   placeholder="गीत शीर्षक..."
                                 />
                               </td>
-                              <td className="p-0.5 border-r border-slate-800">
+                              <td className="p-1 border-r border-slate-900 align-middle">
                                 <textarea
                                   value={row.deshbhaktigeet}
-                                  onChange={(e) =>
-                                    handleCellChange(row.date, "deshbhaktigeet", e.target.value)
-                                  }
-                                  className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                  onChange={(e) => {
+                                    handleCellChange(row.date, "deshbhaktigeet", e.target.value);
+                                    e.target.style.height = "auto";
+                                    e.target.style.height = `${e.target.scrollHeight}px`;
+                                  }}
+                                  className="w-full bg-transparent text-center outline-none font-bold text-[11px] leading-snug overflow-hidden resize-none py-1 px-1 border-0 focus:ring-1 focus:ring-indigo-500 rounded"
                                   rows={1}
                                   placeholder="गीत शीर्षक..."
                                 />
                               </td>
-                              <td className="p-0.5 border-r border-slate-800">
+                              <td className="p-1 border-r border-slate-900 align-middle">
                                 <textarea
                                   value={row.maun}
-                                  onChange={(e) =>
-                                    handleCellChange(row.date, "maun", e.target.value)
-                                  }
-                                  className="w-full bg-transparent text-center outline-none font-bold text-[11px] resize-none leading-tight overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                  onChange={(e) => {
+                                    handleCellChange(row.date, "maun", e.target.value);
+                                    e.target.style.height = "auto";
+                                    e.target.style.height = `${e.target.scrollHeight}px`;
+                                  }}
+                                  className="w-full bg-transparent text-center outline-none font-bold text-[11px] leading-snug overflow-hidden resize-none py-1 px-1 border-0 focus:ring-1 focus:ring-indigo-500 rounded"
                                   rows={1}
                                 />
                               </td>
-                              <td className="p-1">
+                              <td className="p-1 align-middle">
                                 <div className="h-6 w-full"></div>
                               </td>
                             </>

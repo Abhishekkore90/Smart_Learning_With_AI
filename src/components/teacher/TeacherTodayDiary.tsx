@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { format, addDays, subDays } from "date-fns";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
 import { 
@@ -15,10 +15,14 @@ import {
   ChevronRight,
   RotateCcw,
   Printer,
-  Download
+  Download,
+  ArrowLeft,
+  FileText,
+  Eye
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { DocumentLivePreview } from "@/components/DocumentLivePreview";
 
 interface PeriodItem {
   period: string;
@@ -40,11 +44,18 @@ interface DailyDiary {
   isHoliday?: boolean;
   holidayReason?: string;
   periods: PeriodItem[];
+  pageUrl?: string;
+  fileName?: string;
+  uploadedAt?: number;
 }
 
 interface Props {
   selectedClass?: string;
   selectedMedium?: string;
+<<<<<<< HEAD
+  selectedMonth?: string | null;
+  onBack?: () => void;
+=======
   schoolProfile?: {
     schoolName?: string;
     teacherName?: string;
@@ -52,17 +63,31 @@ interface Props {
     className?: string;
     academicYear?: string;
   };
+>>>>>>> dfd1b4f096edb901ee0a38a1854113cfe2ebaee3
 }
 
 export const TeacherTodayDiary: React.FC<Props> = ({ 
   selectedClass = "Class 1", 
   selectedMedium = "Marathi",
+<<<<<<< HEAD
+  selectedMonth = null,
+  onBack
+=======
   schoolProfile: propSchoolProfile
+>>>>>>> dfd1b4f096edb901ee0a38a1854113cfe2ebaee3
 }) => {
   const [activeDate, setActiveDate] = useState<Date | null>(null);
   const [todayDiary, setTodayDiary] = useState<DailyDiary | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+<<<<<<< HEAD
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const printRef = useRef<HTMLDivElement>(null);
+
+  const [availableDates, setAvailableDates] = useState<{ dateStr: string; day: string }[]>([]);
+
+  // Discover all available uploaded dates for the selected Class & Medium
+=======
   const [localProfile, setLocalProfile] = useState<{
     schoolName?: string;
     teacherName?: string;
@@ -92,12 +117,73 @@ export const TeacherTodayDiary: React.FC<Props> = ({
   };
 
   // Initialize date client-side only to avoid SSR hydration mismatch
+>>>>>>> dfd1b4f096edb901ee0a38a1854113cfe2ebaee3
   useEffect(() => {
-    if (!activeDate) {
-      setActiveDate(new Date());
+    async function discoverAvailableDates() {
+      try {
+        const foundDates = new Set<string>();
+
+        // Query teacher_diaries collection
+        const colRef = collection(db, "teacher_diaries", selectedClass, selectedMedium);
+        const snap = await getDocs(colRef);
+        snap.docs.forEach((dSnap) => {
+          const data = dSnap.data();
+          const dStr = data.diaryDate || dSnap.id;
+          if (dStr && dStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            if (!selectedMonth || dStr.split("-")[1] === selectedMonth) {
+              foundDates.add(dStr);
+            }
+          }
+        });
+
+        // Also query teaching_diaries collection
+        const tdColRef = collection(db, "teaching_diaries");
+        const tdSnap = await getDocs(tdColRef);
+        tdSnap.docs.forEach((dSnap) => {
+          const id = dSnap.id;
+          const prefix = `${selectedClass}_${selectedMedium}_`;
+          if (id.startsWith(prefix)) {
+            const dStr = id.replace(prefix, "");
+            if (dStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+              if (!selectedMonth || dStr.split("-")[1] === selectedMonth) {
+                foundDates.add(dStr);
+              }
+            }
+          }
+        });
+
+        const dateArray = Array.from(foundDates).sort();
+        if (dateArray.length > 0) {
+          const daysOfWeek = ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
+          const formatted = dateArray.map((dStr) => {
+            const parts = dStr.split("-");
+            const dObj = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+            const dayName = !isNaN(dObj.getTime()) ? daysOfWeek[dObj.getDay()] : "";
+            return { dateStr: dStr, day: dayName };
+          });
+          setAvailableDates(formatted);
+
+          // If activeDate has no record or belongs to another month, auto-select the first available date!
+          const currentIso = activeDate ? format(activeDate, "yyyy-MM-dd") : "";
+          if (!activeDate || !foundDates.has(currentIso)) {
+            const firstDateStr = dateArray[0];
+            const parts = firstDateStr.split("-");
+            const firstDateObj = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+            if (!isNaN(firstDateObj.getTime())) {
+              setActiveDate(firstDateObj);
+            }
+          }
+        } else if (!activeDate) {
+          setActiveDate(new Date());
+        }
+      } catch (e) {
+        console.error("Error discovering available dates:", e);
+        if (!activeDate) setActiveDate(new Date());
+      }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+
+    discoverAvailableDates();
+  }, [selectedClass, selectedMedium, selectedMonth]);
 
   const isoDate = activeDate ? format(activeDate, "yyyy-MM-dd") : "";
   const displayFormattedDate = activeDate ? format(activeDate, "eeee, dd MMMM yyyy") : "...";
@@ -107,16 +193,106 @@ export const TeacherTodayDiary: React.FC<Props> = ({
     async function fetchDiaryForDate() {
       if (!isoDate) return; // not yet initialized client-side
       setLoading(true);
+
+      // Sunday Check: Government schools are closed on Sunday, do NOT fetch or display Sunday data.
+      if (activeDate && activeDate.getDay() === 0) {
+        setTodayDiary(null);
+        setLoading(false);
+        return;
+      }
+
       try {
+        // 1. Check primary teaching_diaries collection
         const docId = `${selectedClass}_${selectedMedium}_${isoDate}`;
         const docRef = doc(db, "teaching_diaries", docId);
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-          setTodayDiary(docSnap.data() as DailyDiary);
-        } else {
-          setTodayDiary(null);
+          const data = docSnap.data() as DailyDiary;
+          setTodayDiary(data);
+          setLoading(false);
+          return;
         }
+
+        // 2. Fallback check teacher_diaries collection (teacher_diaries/{selectedClass}/{selectedMedium}/{isoDate})
+        const altRef = doc(db, "teacher_diaries", selectedClass, selectedMedium, isoDate);
+        const altSnap = await getDoc(altRef);
+
+        if (altSnap.exists()) {
+          const altData = altSnap.data();
+          const parsed = altData.parsedContent || altData;
+          
+          let periodList: PeriodItem[] = [];
+          if (parsed.periods && Array.isArray(parsed.periods) && parsed.periods.length > 0) {
+            periodList = parsed.periods;
+          } else if (parsed.subject || parsed.topic) {
+            periodList = [{
+              period: parsed.period || "1",
+              subject: parsed.subject || "-",
+              topic: parsed.topic || "-",
+              experience: parsed.experience || "-",
+              tools: parsed.tools || "-",
+              outcome: parsed.outcome || "-",
+            }];
+          }
+
+          setTodayDiary({
+            date: isoDate,
+            displayDate: displayFormattedDate,
+            day: parsed.day || altData.day || "",
+            thought: parsed.thought || "",
+            dinvishesh: parsed.dinvishesh || "",
+            className: selectedClass,
+            medium: selectedMedium,
+            periods: periodList,
+            pageUrl: altData.pageUrl || altData.masterPdfUrl || parsed.pageUrl || "",
+            fileName: altData.fileName || parsed.fileName || "Teaching_Diary.docx",
+            uploadedAt: altData.uploadedAt || Date.now(),
+          } as any);
+          setLoading(false);
+          return;
+        }
+
+        // 3. Fallback: Search all uploaded records for selectedClass & selectedMedium for an uploaded file
+        const colRef = collection(db, "teacher_diaries", selectedClass, selectedMedium);
+        const snap = await getDocs(colRef);
+        
+        let masterDoc: any = null;
+        snap.docs.forEach((dSnap) => {
+          const data = dSnap.data();
+          const dStr = data.diaryDate || dSnap.id;
+          if (dStr === "master_diary" || (selectedMonth && dStr.split("-")[1] === selectedMonth) || data.pageUrl || data.masterPdfUrl) {
+            if (!masterDoc || (data.uploadedAt && data.uploadedAt > (masterDoc.uploadedAt || 0))) {
+              masterDoc = { id: dSnap.id, ...data };
+            }
+          }
+        });
+
+        if (masterDoc && (masterDoc.pageUrl || masterDoc.masterPdfUrl)) {
+          const parsed = masterDoc.parsedContent || masterDoc;
+          let periodList: PeriodItem[] = [];
+          if (parsed.periods && Array.isArray(parsed.periods) && parsed.periods.length > 0) {
+            periodList = parsed.periods;
+          }
+
+          setTodayDiary({
+            date: isoDate,
+            displayDate: displayFormattedDate,
+            day: parsed.day || "",
+            thought: parsed.thought || "",
+            dinvishesh: parsed.dinvishesh || "",
+            className: selectedClass,
+            medium: selectedMedium,
+            periods: periodList,
+            pageUrl: masterDoc.pageUrl || masterDoc.masterPdfUrl || "",
+            fileName: masterDoc.fileName || "Teaching_Diary.docx",
+            uploadedAt: masterDoc.uploadedAt || Date.now(),
+          } as any);
+          setLoading(false);
+          return;
+        }
+
+        setTodayDiary(null);
       } catch (err) {
         console.error("Failed to load teaching diary:", err);
         setTodayDiary(null);
@@ -271,32 +447,38 @@ export const TeacherTodayDiary: React.FC<Props> = ({
 
   return (
     <div className="max-w-5xl mx-auto space-y-6" ref={printRef} suppressHydrationWarning>
-      {/* Top Controls & Navigation Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-xl bg-slate-900/90 border border-slate-800 backdrop-blur-md">
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-            <Sun className="w-5 h-5" />
+      {/* ═══ Single Clean Attractive Control Header Card ═══ */}
+      <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
+        {/* Left: Info */}
+        <div className="flex items-center gap-3">
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="p-2.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all cursor-pointer border border-white/10 shrink-0"
+              title="मागे जा (Back)"
+            >
+              <ArrowLeft className="size-4" />
+            </button>
+          )}
+          <div className="p-3 rounded-2xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 shrink-0">
+            <Sun className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-slate-100 flex items-center gap-2">
-              {isToday ? "आजची टाचणवही (Today's Teaching Diary)" : "टाचणवही पाहणी (Teaching Diary)"}
-              {isToday && (
-                <span className="px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                  Today
-                </span>
-              )}
+            <h2 className="text-lg font-extrabold text-white flex items-center gap-2">
+              टाचणवही पाहणी (Teaching Diary)
             </h2>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-400 font-semibold mt-0.5">
               {selectedClass} • {selectedMedium} Medium
             </p>
           </div>
         </div>
 
-        {/* Date Selector, Nav Buttons & Action Buttons */}
-        <div className="flex items-center gap-2 flex-wrap justify-end">
+        {/* Center: Single Date Selector */}
+        <div className="flex items-center gap-2 bg-slate-950 p-1.5 rounded-2xl border border-slate-800 shadow-inner">
           <button
             onClick={handlePrevDay}
-            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors border border-slate-700"
+            className="p-2 rounded-xl bg-slate-850 hover:bg-slate-750 text-slate-300 transition-colors border border-slate-750 cursor-pointer"
             title="मागील दिवस (Previous Day)"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -304,8 +486,8 @@ export const TeacherTodayDiary: React.FC<Props> = ({
 
           <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
             <PopoverTrigger asChild>
-              <button className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium">
-                <CalendarIcon className="w-4 h-4 text-indigo-400" />
+              <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 text-xs font-extrabold cursor-pointer shadow-sm">
+                <CalendarIcon className="w-4 h-4 text-amber-400" />
                 <span>{displayFormattedDate}</span>
               </button>
             </PopoverTrigger>
@@ -326,67 +508,62 @@ export const TeacherTodayDiary: React.FC<Props> = ({
 
           <button
             onClick={handleNextDay}
-            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors border border-slate-700"
+            className="p-2 rounded-xl bg-slate-850 hover:bg-slate-750 text-slate-300 transition-colors border border-slate-750 cursor-pointer"
             title="पुढील दिवस (Next Day)"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
+        </div>
 
-          {!isToday && (
+        {/* Right: Actions */}
+        <div className="flex items-center gap-2 shrink-0">
+          {(todayDiary as any)?.pageUrl && (
             <button
-              onClick={handleResetToday}
-              className="flex items-center gap-1 px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md transition-colors"
+              type="button"
+              onClick={() => setIsPreviewModalOpen(true)}
+              className="px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-md shadow-orange-500/20 cursor-pointer"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Today</span>
+              <Eye className="size-4" /> <span>दस्तऐवज पहा (View Live)</span>
             </button>
           )}
 
-          {/* ── Print & Download ── */}
-          {todayDiary && !loading && (
-            <>
-              <button
-                onClick={handleDownload}
-                title="Download as HTML file"
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow transition-colors cursor-pointer"
-              >
-                <Download className="w-3.5 h-3.5" />
-                Download
-              </button>
-              <button
-                onClick={handlePrint}
-                title="Print Teaching Diary"
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold shadow transition-colors cursor-pointer"
-              >
-                <Printer className="w-3.5 h-3.5" />
-                Print
-              </button>
-            </>
+          {todayDiary && (
+            <button
+              type="button"
+              onClick={handleDownload}
+              className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-md shadow-emerald-600/20 cursor-pointer"
+            >
+              <Download className="size-4" /> <span>PDF डाऊनलोड</span>
+            </button>
           )}
         </div>
       </div>
 
       {/* Loading Skeleton */}
       {loading ? (
-        <div className="p-12 rounded-2xl bg-slate-900 border border-slate-800 text-white shadow-2xl flex flex-col items-center justify-center min-h-[300px]">
+        <div className="p-12 rounded-3xl bg-slate-900 border border-slate-800 text-white shadow-2xl flex flex-col items-center justify-center min-h-[300px]">
           <Loader2 className="w-10 h-10 animate-spin text-indigo-400 mb-4" />
-          <p className="text-slate-400 font-medium text-sm">टाचणवही लोड होत आहे... (Fetching Diary Data)</p>
+          <p className="text-slate-400 font-medium text-sm">निवडलेल्या दिनांकाची टाचण नोंद शोधत आहे... (Fetching Diary Data)</p>
         </div>
-      ) : !todayDiary || todayDiary.isHoliday || todayDiary.periods.length === 0 ? (
+      ) : !todayDiary || todayDiary.isHoliday || (todayDiary.periods.length === 0 && !(todayDiary as any).pageUrl) ? (
         /* FALLBACK UI: Holiday or Missing Data */
-        <div className="p-10 rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 text-white shadow-xl text-center">
-          <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-full flex items-center justify-center mx-auto mb-4">
+        <div className="p-10 rounded-3xl bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 text-white shadow-xl text-center space-y-4">
+          <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-full flex items-center justify-center mx-auto mb-2">
             <CalendarOff className="w-8 h-8" />
           </div>
-          <h3 className="text-xl font-bold text-slate-100 mb-2">
-            या तारखेस टाचण नोंद उपलब्ध नाही (No Teaching Diary Found)
+          <h3 className="text-xl font-bold text-slate-100">
+            {activeDate?.getDay() === 0 
+              ? "रविवार — शासकीय सुट्टी (Sunday School Holiday)"
+              : "या तारखेस टाचण नोंद उपलब्ध नाही (No Teaching Diary Found)"}
           </h3>
-          <p className="text-slate-400 max-w-md mx-auto mb-6 text-sm leading-relaxed">
-            {todayDiary?.holidayReason 
-              ? todayDiary.holidayReason 
-              : `${displayFormattedDate} या दिवसासाठी कोणतेही टाचण उपलब्ध नाही किंवा शासकीय सुट्टी असू शकते.`}
+          <p className="text-slate-400 max-w-md mx-auto text-sm leading-relaxed">
+            {activeDate?.getDay() === 0
+              ? "रविवार या दिवशी शासकीय शाळा व महाविद्यालयांना सुट्टी असल्यामुळे कोणतीही टाचण नोंद उपलब्ध नसते."
+              : todayDiary?.holidayReason 
+                ? todayDiary.holidayReason 
+                : `${displayFormattedDate} या दिवसासाठी कोणतीही टाचण नोंद उपलब्ध नाही. दुसरं दिनांक निवडा किंवा टाचण अपलोड करा.`}
           </p>
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800/80 border border-slate-700/50 rounded-lg text-xs text-slate-300">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800/80 border border-slate-700/50 rounded-xl text-xs text-slate-300">
             <CalendarIcon className="w-4 h-4 text-indigo-400" />
             <span>Selected Date: {displayFormattedDate}</span>
             <span className="mx-1">•</span>
@@ -394,8 +571,41 @@ export const TeacherTodayDiary: React.FC<Props> = ({
           </div>
         </div>
       ) : (
-        /* SUCCESS STATE: Render Today's Diary Table & Metadata */
+        /* SUCCESS STATE: Show Selected Date's Diary */
         <div className="space-y-6">
+<<<<<<< HEAD
+          {/* Suvichar & Dinvishesh Header if available */}
+          {(todayDiary.dinvishesh || todayDiary.thought) && (
+            <div className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 text-white shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              {todayDiary.dinvishesh && (
+                <div className="flex items-center gap-2 text-amber-300 text-xs font-semibold">
+                  <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span><strong>दिनविशेष:</strong> {todayDiary.dinvishesh}</span>
+                </div>
+              )}
+              {todayDiary.thought && (
+                <div className="flex items-center gap-2 text-slate-300 italic text-xs">
+                  <BookOpen className="w-4 h-4 text-indigo-400 shrink-0" />
+                  <span>"{todayDiary.thought}"</span>
+                </div>
+              )}
+            </div>
+          )}
+
+
+
+          {/* Periods Table (if periods present) */}
+          {todayDiary.periods && todayDiary.periods.length > 0 && (
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
+              <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/80">
+                <h3 className="font-semibold text-slate-200 text-base flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-indigo-400" />
+                  दैनिक तासिका नियोजन (Daily Period Plan)
+                </h3>
+                <span className="text-xs bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-3 py-1 rounded-full font-medium">
+                  {todayDiary.periods.length} Periods
+                </span>
+=======
           {/* Info Banner - Center Aligned Header Information */}
           <div className="p-5 rounded-2xl bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 border border-indigo-500/30 text-white shadow-xl space-y-4">
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 text-center">
@@ -403,6 +613,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                 <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider">वार व दिनांक</span>
                 <span className="text-xs md:text-sm font-extrabold text-white mt-0.5">{todayDiary.day || format(activeDate ?? new Date(), "eeee")}</span>
                 <span className="text-[10px] font-semibold text-slate-400">{todayDiary.displayDate}</span>
+>>>>>>> dfd1b4f096edb901ee0a38a1854113cfe2ebaee3
               </div>
               <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800 flex flex-col justify-center items-center text-center">
                 <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider">वर्गशिक्षक</span>
@@ -426,6 +637,11 @@ export const TeacherTodayDiary: React.FC<Props> = ({
               </div>
             </div>
 
+<<<<<<< HEAD
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm text-slate-300">
+                <thead className="bg-slate-950 text-slate-400 uppercase text-[11px] tracking-wider font-semibold border-b border-slate-800">
+=======
             {(todayDiary.dinvishesh || todayDiary.thought) && (
               <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2.5 border-t border-slate-800/80 text-xs">
                 {todayDiary.dinvishesh && (
@@ -459,6 +675,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
             <div className="overflow-x-auto p-1">
               <table className="w-full text-left text-sm text-slate-200 border-collapse table-fixed min-w-[750px] border-2 border-slate-700/90 rounded-xl overflow-hidden shadow-md">
                 <thead className="bg-slate-950 text-slate-200 uppercase text-xs md:text-sm tracking-wider font-extrabold border-b-2 border-slate-700/90">
+>>>>>>> dfd1b4f096edb901ee0a38a1854113cfe2ebaee3
                   <tr>
                     <th className="py-3.5 px-3 w-[6%] text-center border-r-2 border-slate-700/90 bg-slate-950">तासिका</th>
                     <th className="py-3.5 px-3.5 w-[11%] border-r-2 border-slate-700/90 bg-slate-950">विषय</th>
@@ -499,6 +716,29 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+          )}
+        </div>
+      )}
+
+      {/* Document Live Preview Modal */}
+      {isPreviewModalOpen && todayDiary && (todayDiary as any).pageUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl overflow-hidden shadow-2xl w-full max-w-[96vw] border border-slate-100 flex flex-col h-[93vh]">
+            <div className="flex-1 overflow-hidden bg-slate-100 p-2 sm:p-4">
+              <DocumentLivePreview
+                selectedFile={null}
+                savedRecord={{
+                  id: (todayDiary as any).id || isoDate,
+                  diaryDate: isoDate,
+                  fileName: (todayDiary as any).fileName || "Teaching_Diary.docx",
+                  pageUrl: (todayDiary as any).pageUrl,
+                  className: selectedClass,
+                  medium: selectedMedium,
+                }}
+                onBack={() => setIsPreviewModalOpen(false)}
+              />
             </div>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, forwardRef, useImperativeHandle, useRef } from "react";
+import React, { useState, useEffect, forwardRef, useImperativeHandle, useRef, useMemo } from "react";
 import * as XLSX from "xlsx";
 import { 
   FileText, 
@@ -11,12 +11,32 @@ import {
   Table as TableIcon,
   Eye,
   LayoutGrid,
-  FileCheck
+  FileCheck,
+  ArrowLeft,
+  X
 } from "lucide-react";
 import { getBunnyStorageUrl } from "@/lib/bunny-auth-pdf";
 import { showToast as toast } from "@/lib/custom-toast";
 import { db } from "@/lib/firebase";
 import { doc, updateDoc } from "firebase/firestore";
+
+const normalizeDateStr = (raw: string | undefined | null) => {
+  if (!raw) return "";
+  const cleaned = raw.trim().replace(/[.\-]/g, "/");
+  const parts = cleaned.split("/");
+  if (parts.length === 3) {
+    let d = parseInt(parts[0], 10);
+    let m = parseInt(parts[1], 10);
+    let y = parseInt(parts[2], 10);
+    if (parts[0].length === 4) {
+      y = parseInt(parts[0], 10);
+      d = parseInt(parts[2], 10);
+    }
+    if (y < 100) y += 2000;
+    return `${d}/${m}/${y}`;
+  }
+  return cleaned;
+};
 
 interface Props {
   selectedFile?: File | null;
@@ -58,6 +78,90 @@ export interface StructuredDayPage {
 }
 
 /**
+ * Utility to extract date string from text, normalize format, and automatically compute Marathi Day Name.
+ */
+export function getMarathiDayFromDate(dateStr: string): string {
+  if (!dateStr) return "";
+  const cleaned = dateStr.replace(/\s+/g, "");
+  const parts = cleaned.split(/[\/\-\.]/);
+  if (parts.length === 3) {
+    let d = 0, m = 0, y = 0;
+    if (parts[0].length === 4) {
+      // YYYY-MM-DD format
+      y = parseInt(parts[0], 10);
+      m = parseInt(parts[1], 10) - 1;
+      d = parseInt(parts[2], 10);
+    } else {
+      // DD-MM-YYYY format
+      d = parseInt(parts[0], 10);
+      m = parseInt(parts[1], 10) - 1;
+      y = parseInt(parts[2], 10);
+      if (y < 100) y += 2000;
+    }
+    const dateObj = new Date(y, m, d);
+    if (!isNaN(dateObj.getTime())) {
+      const daysInMarathi = ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
+      return daysInMarathi[dateObj.getDay()];
+    }
+  }
+  return "";
+}
+
+export function extractDateFromText(text: string): string {
+  if (!text) return "";
+  // Match dates like "दिनांक: 01/08/2026" or "दिनांक 01-08-2026" or "Date: 2026-08-01"
+  const matchWithKeyword = text.match(/(?:दिनांक|तारीख|Date)\s*[:：\-]?\s*(\d{1,4}\s*[\/\-\.]\s*\d{1,2}\s*[\/\-\.]\s*\d{1,4})/i);
+  if (matchWithKeyword) {
+    return matchWithKeyword[1].replace(/\s+/g, "");
+  }
+  // Standalone date pattern: DD/MM/YYYY or YYYY-MM-DD
+  const standaloneMatch = text.match(/\b(\d{1,2}\s*[\/\-\.]\s*\d{1,2}\s*[\/\-\.]\s*\d{2,4})\b/);
+  if (standaloneMatch) {
+    return standaloneMatch[1].replace(/\s+/g, "");
+  }
+  return "";
+}
+
+/**
+ * Helper to check if a day or date string corresponds to Sunday (रविवार).
+ * Government schools and colleges are closed on Sunday, so Sunday data must NOT be fetched or displayed.
+ */
+export function isSunday(dayStr?: string, dateStr?: string): boolean {
+  if (dayStr) {
+    const trimmed = dayStr.trim().toLowerCase();
+    if (
+      trimmed === "रविवार" ||
+      trimmed === "sunday" ||
+      trimmed.includes("रविवार") ||
+      trimmed.includes("sunday")
+    ) {
+      return true;
+    }
+  }
+  if (dateStr) {
+    const cleaned = dateStr.trim();
+    const parts = cleaned.split(/[\/\-\.]/);
+    if (parts.length === 3) {
+      let d = parseInt(parts[0], 10);
+      let m = parseInt(parts[1], 10) - 1;
+      let y = parseInt(parts[2], 10);
+
+      // Handle YYYY-MM-DD format vs DD-MM-YYYY
+      if (parts[0].length === 4) {
+        y = parseInt(parts[0], 10);
+        d = parseInt(parts[2], 10);
+      }
+
+      const dateObj = new Date(y < 100 ? y + 2000 : y, m, d);
+      if (!isNaN(dateObj.getTime()) && dateObj.getDay() === 0) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
  * Enhanced multi-page Marathi Teacher Diary Text Parser
  */
 export function parseMultiPageTextToStructuredDiaries(fullText: string): StructuredDayPage[] {
@@ -80,28 +184,24 @@ export function parseMultiPageTextToStructuredDiaries(fullText: string): Structu
   return finalChunks.map((chunkText, pageIdx) => {
     const lines = chunkText.split(/\n+/).map((l) => l.trim()).filter(Boolean);
 
-    let date = "";
-    const dateMatch = chunkText.match(/(?:दिनांक|तारीख|Date)\s*[:：]?\s*(\d{1,2}\s*[\/\-\.]\s*\d{1,2}\s*[\/\-\.]\s*\d{2,4})/i);
-    if (dateMatch) {
-      date = dateMatch[1].replace(/\s+/g, "");
+    let date = extractDateFromText(chunkText);
+    let day = "";
+    const dayMatch = chunkText.match(/(?:वार|Day)\s*[:：\-]?\s*(सोमवार|मंगळवार|बुधवार|गुरुवार|शुक्रवार|शनिवार|रविवार|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Mon|Tue|Wed|Thu|Fri|Sat|Sun)/i);
+    if (dayMatch) {
+      const matched = dayMatch[1].trim().toLowerCase();
+      const dayMap: Record<string, string> = {
+        "monday": "सोमवार", "tuesday": "मंगळवार", "wednesday": "बुधवार",
+        "thursday": "गुरुवार", "friday": "शुक्रवार", "saturday": "शनिवार", "sunday": "रविवार",
+        "mon": "सोमवार", "tue": "मंगळवार", "wed": "बुधवार", "thu": "गुरुवार", "fri": "शुक्रवार", "sat": "शनिवार", "sun": "रविवार",
+        "सोमवार": "सोमवार", "मंगळवार": "मंगळवार", "बुधवार": "बुधवार",
+        "गुरुवार": "गुरुवार", "शुक्रवार": "शुक्रवार", "शनिवार": "शनिवार", "रविवार": "रविवार"
+      };
+      day = dayMap[matched] || dayMatch[1].trim();
     }
 
-    let day = "";
-    const dayMatch = chunkText.match(/(?:वार|Day)\s*[:：]?\s*(सोमवार|मंगळवार|बुधवार|गुरुवार|शुक्रवार|शनिवार|रविवार|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/i);
-    if (dayMatch) {
-      day = dayMatch[1];
-    } else if (date) {
-      const parts = date.split(/[\/\-\.]/);
-      if (parts.length === 3) {
-        const d = parseInt(parts[0], 10);
-        const m = parseInt(parts[1], 10) - 1;
-        const y = parseInt(parts[2], 10);
-        const dateObj = new Date(y, m, d);
-        if (!isNaN(dateObj.getTime())) {
-          const daysInMarathi = ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
-          day = daysInMarathi[dateObj.getDay()];
-        }
-      }
+    if (date) {
+      const computed = getMarathiDayFromDate(date);
+      if (computed) day = computed;
     }
 
     let std = "";
@@ -206,7 +306,7 @@ export function parseMultiPageTextToStructuredDiaries(fullText: string): Structu
       periods,
       rawText: chunkText,
     };
-  });
+  }).filter((page) => !isSunday(page.day, page.date));
 }
 
 /**
@@ -241,35 +341,34 @@ export function parseHtmlToStructuredDiaries(htmlString: string): StructuredDayP
     }
   }
 
-  // Helper: extract metadata from a section's text elements
-  function extractSectionMetadata(textEls: Element[]) {
-    const sectionText = textEls.map((el) => el.textContent || "").join("\n");
+  // Helper: extract metadata from a section's text elements and table
+  function extractSectionMetadata(textEls: Element[], table?: HTMLTableElement) {
+    const textElsText = textEls.map((el) => el.textContent || "").join("\n");
+    const tableText = table ? Array.from(table.rows).map(r => Array.from(r.cells).map(c => c.textContent || "").join(" ")).join("\n") : "";
+    const sectionText = textElsText + "\n" + tableText;
 
-    let date = "";
-    // Match dates like "1/ 8 /2026" or "2 / 8 /2026" or "6/ 8 /2026"
-    const dateMatch = sectionText.match(
-      /(?:दिनांक|तारीख|Date)\s*[:：]?\s*(\d{1,2}\s*[\/\-\.]\s*\d{1,2}\s*[\/\-\.]\s*\d{2,4})/i
-    );
-    if (dateMatch) date = dateMatch[1].replace(/\s+/g, "");
+    let date = extractDateFromText(sectionText);
 
     let day = "";
     const dayMatch = sectionText.match(
-      /(?:वार|Day)\s*[:：]?\s*(सोमवार|मंगळवार|बुधवार|गुरुवार|शुक्रवार|शनिवार|रविवार|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/i
+      /(?:वार|Day)\s*[:：\-]?\s*(सोमवार|मंगळवार|बुधवार|गुरुवार|शुक्रवार|शनिवार|रविवार|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Mon|Tue|Wed|Thu|Fri|Sat|Sun)/i
     );
     if (dayMatch) {
-      day = dayMatch[1];
-    } else if (date) {
-      const parts = date.split(/[\/\-\.]/);
-      if (parts.length === 3) {
-        const d = parseInt(parts[0], 10);
-        const m = parseInt(parts[1], 10) - 1;
-        const y = parseInt(parts[2], 10);
-        const dateObj = new Date(y < 100 ? y + 2000 : y, m, d);
-        if (!isNaN(dateObj.getTime())) {
-          const daysInMarathi = ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
-          day = daysInMarathi[dateObj.getDay()];
-        }
-      }
+      const matched = dayMatch[1].trim().toLowerCase();
+      const dayMap: Record<string, string> = {
+        "monday": "सोमवार", "tuesday": "मंगळवार", "wednesday": "बुधवार",
+        "thursday": "गुरुवार", "friday": "शुक्रवार", "saturday": "शनिवार", "sunday": "रविवार",
+        "mon": "सोमवार", "tue": "मंगळवार", "wed": "बुधवार", "thu": "गुरुवार", "fri": "शुक्रवार", "sat": "शनिवार", "sun": "रविवार",
+        "सोमवार": "सोमवार", "मंगळवार": "मंगळवार", "बुधवार": "बुधवार",
+        "गुरुवार": "गुरुवार", "शुक्रवार": "शुक्रवार", "शनिवार": "शनिवार", "रविवार": "रविवार"
+      };
+      day = dayMap[matched] || dayMatch[1].trim();
+    }
+
+    // AUTOMATIC CALCULATION: Compute exact day from date
+    if (date) {
+      const computedDay = getMarathiDayFromDate(date);
+      if (computedDay) day = computedDay;
     }
 
     let std = "";
@@ -430,16 +529,53 @@ export function parseHtmlToStructuredDiaries(htmlString: string): StructuredDayP
 
   // Process each day section
   const pages: StructuredDayPage[] = [];
+  let currentDateCursor: Date | null = null;
 
   daySections.forEach((section, idx) => {
-    const meta = extractSectionMetadata(section.textElements);
+    const meta = extractSectionMetadata(section.textElements, section.table);
     const { periods, columnHeaders } = extractPeriodsFromTable(section.table);
 
-    if (periods.length > 0) {
+    let finalDate = meta.date;
+    let finalDay = meta.day;
+
+    if (finalDate) {
+      const parts = finalDate.split(/[\/\-\.]/);
+      if (parts.length === 3) {
+        let d = parseInt(parts[0], 10);
+        let m = parseInt(parts[1], 10) - 1;
+        let y = parseInt(parts[2], 10);
+        if (parts[0].length === 4) {
+          y = parseInt(parts[0], 10);
+          d = parseInt(parts[2], 10);
+        }
+        if (y < 100) y += 2000;
+        const dObj = new Date(y, m, d);
+        if (!isNaN(dObj.getTime())) {
+          currentDateCursor = dObj;
+        }
+      }
+    } else if (currentDateCursor) {
+      currentDateCursor = new Date(currentDateCursor);
+      currentDateCursor.setDate(currentDateCursor.getDate() + 1);
+      if (currentDateCursor.getDay() === 0) {
+        currentDateCursor.setDate(currentDateCursor.getDate() + 1);
+      }
+      const d = String(currentDateCursor.getDate()).padStart(2, "0");
+      const m = String(currentDateCursor.getMonth() + 1).padStart(2, "0");
+      const y = currentDateCursor.getFullYear();
+      finalDate = `${d}/${m}/${y}`;
+      finalDay = getMarathiDayFromDate(finalDate);
+    }
+
+    if (!finalDay && finalDate) {
+      finalDay = getMarathiDayFromDate(finalDate);
+    }
+
+    if (periods.length > 0 && !isSunday(finalDay, finalDate)) {
       pages.push({
         pageNumber: idx + 1,
-        date: meta.date,
-        day: meta.day,
+        date: finalDate,
+        day: finalDay,
         std: meta.std || "पहिली",
         year: meta.year || "2025-26",
         teacher: meta.teacher || "-",
@@ -475,6 +611,10 @@ export function groupStructuredPagesByDay(pages: StructuredDayPage[]): GroupedDa
   const list: GroupedDayRecord[] = [];
 
   pages.forEach((p) => {
+    // Strictly filter out Sunday (No data / no display for Sunday)
+    if (isSunday(p.day, p.date)) {
+      return;
+    }
     // Group key based on parsed date, fallback to unique page key if date is not available
     const dateKey = p.date ? p.date.trim() : `unknown_page_${p.pageNumber}`;
     
@@ -782,6 +922,7 @@ export interface DocumentLivePreviewProps {
   savedRecord?: any;
   authenticatedPdfUrl?: string | null;
   loadingPdf?: boolean;
+  onBack?: () => void;
 }
 
 export interface DocumentLivePreviewRef {
@@ -792,7 +933,8 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
   selectedFile,
   savedRecord,
   authenticatedPdfUrl,
-  loadingPdf = false
+  loadingPdf = false,
+  onBack
 }, ref) => {
   const [htmlContent, setHtmlContent] = useState<string | null>(null);
   const [structuredPages, setStructuredPages] = useState<StructuredDayPage[]>([]);
@@ -1028,7 +1170,27 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
     ? localPdfBlobUrl
     : (authenticatedPdfUrl || savedRecord?.pageUrl || null);
 
-  const hasStructuredView = structuredPages && structuredPages.length > 0;
+  const targetNormalizedDate = useMemo(() => {
+    return normalizeDateStr(savedRecord?.diaryDate);
+  }, [savedRecord?.diaryDate]);
+
+  const pagesToDisplay = useMemo(() => {
+    if (!structuredPages || structuredPages.length === 0) return [];
+    if (!targetNormalizedDate) return structuredPages;
+
+    const matched = structuredPages.filter((p) => {
+      const pageNorm = normalizeDateStr(p.date);
+      return pageNorm === targetNormalizedDate;
+    });
+
+    if (matched.length > 0) {
+      return matched;
+    }
+
+    return [structuredPages[0]];
+  }, [structuredPages, targetNormalizedDate]);
+
+  const hasStructuredView = pagesToDisplay && pagesToDisplay.length > 0;
   const downloadUrl = savedRecord?.pageUrl || (selectedFile ? localPdfBlobUrl : null);
 
   const handleDownloadWord = async () => {
@@ -1198,7 +1360,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
   };
 
   const handleLocalDownloadPdf = async () => {
-    const pagesToUse = structuredListRef.current?.getEditedData() || structuredPages;
+    const pagesToUse = structuredListRef.current?.getEditedData() || pagesToDisplay;
     if (!pagesToUse || pagesToUse.length === 0) {
       return handleDownloadWord();
     }
@@ -1208,7 +1370,9 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
 
     try {
       const defaultHeaders = ["तासिका", "विषय", "अध्ययन मुद्दा / पाठ्यघटक", "अध्ययन निष्पत्ती", "अध्ययन अनुभव", "साधन तंत्रे", "शैक्षणिक साहित्य"];
-      const dayBlocks = pagesToUse.map((p: any, idx: number) => {
+      const dayBlocks = pagesToUse
+        .filter((p: any) => !isSunday(p.day, p.date))
+        .map((p: any, idx: number) => {
         const rows = (p.periods || []).map((row: any, rIdx: number) => `
           <tr style="background:${rIdx % 2 === 0 ? "#fff" : "#f8fafc"}; page-break-inside: avoid; break-inside: avoid;">
             <td style="text-align:center;font-weight:700;color:#4338ca;width:50px">${row.period}</td>
@@ -1296,10 +1460,27 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
     }
   };
 
+  const handleBackNavigation = () => {
+    if (onBack) {
+      onBack();
+    } else if (window.history.length > 1) {
+      window.history.back();
+    }
+  };
+
   return (
     <div className="w-full bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm flex flex-col h-full min-h-[500px]">
       <div className="p-4 bg-slate-900 text-white flex items-center justify-between gap-3 shrink-0 flex-wrap">
         <div className="flex items-center gap-3 min-w-0">
+          <button
+            type="button"
+            onClick={handleBackNavigation}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all shadow-sm cursor-pointer border border-slate-700 shrink-0"
+            title="मागे जा (Back)"
+          >
+            <ArrowLeft className="size-4 text-indigo-400" />
+            <span>मागे जा (Back)</span>
+          </button>
           <div className="size-9 rounded-xl bg-indigo-600 flex items-center justify-center shrink-0 shadow-md">
             <FileText className="size-5 text-white" />
           </div>
@@ -1401,9 +1582,9 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
               className="w-full h-full border-none rounded-2xl bg-white"
             />
           </div>
-        ) : viewMode === "structured" && structuredPages.length > 0 ? (
+        ) : viewMode === "structured" && pagesToDisplay.length > 0 ? (
           <div className="w-full">
-            <StructuredDayPageList ref={structuredListRef} pages={structuredPages} />
+            <StructuredDayPageList ref={structuredListRef} pages={pagesToDisplay} />
           </div>
         ) : htmlContent ? (
           <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm max-w-3xl mx-auto prose prose-slate text-sm font-sans leading-relaxed text-slate-800">

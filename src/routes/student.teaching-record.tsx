@@ -10,7 +10,8 @@ import {
   AlertTriangle,
   Loader2,
   ChevronRight,
-  GraduationCap
+  GraduationCap,
+  ArrowLeft
 } from "lucide-react";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
 import { StudentHeader } from "@/components/student/StudentHeader";
@@ -109,19 +110,31 @@ function StudentTeachingRecordPage() {
       const querySnapshot = await getDocs(collectionRef);
 
       if (!querySnapshot.empty) {
-        const allDocs: any[] = querySnapshot.docs.map((docSnap) => {
-          const data = docSnap.data();
-          const rawUrl = data.pageUrl || data.masterPdfUrl || data.pageURL || "";
-          const sanitizedUrl = rawUrl.replace(/vz-7a00d099-4a8\.b-cdn\.net/g, "sgkbrainova.b-cdn.net");
-          return {
-            id: docSnap.id,
-            diaryDate: data.diaryDate || docSnap.id,
-            pageUrl: sanitizedUrl,
-            fileName: data.fileName || "Teaching_Diary.pdf",
-            uploadedAt: data.uploadedAt || 0,
-            ...data,
-          };
-        });
+        const allDocs: any[] = querySnapshot.docs
+          .map((docSnap) => {
+            const data = docSnap.data();
+            const rawUrl = data.pageUrl || data.masterPdfUrl || data.pageURL || "";
+            const sanitizedUrl = rawUrl.replace(/vz-7a00d099-4a8\.b-cdn\.net/g, "sgkbrainova.b-cdn.net");
+            return {
+              id: docSnap.id,
+              diaryDate: data.diaryDate || docSnap.id,
+              pageUrl: sanitizedUrl,
+              fileName: data.fileName || "Teaching_Diary.pdf",
+              uploadedAt: data.uploadedAt || 0,
+              ...data,
+            };
+          })
+          .filter((rec: any) => {
+            if (rec.diaryDate) {
+              const parts = rec.diaryDate.split("-");
+              if (parts.length === 3) {
+                const dObj = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+                if (!isNaN(dObj.getTime()) && dObj.getDay() === 0) return false;
+              }
+            }
+            if (rec.day === "रविवार" || rec.day?.toLowerCase() === "sunday") return false;
+            return true;
+          });
         allDocs.sort((a, b) => b.diaryDate.localeCompare(a.diaryDate)); // sort descending
         setDiaryRecords(allDocs);
       } else {
@@ -168,7 +181,28 @@ function StudentTeachingRecordPage() {
       <StudentSidebar />
 
       <main className="lg:pl-64 pt-16 min-h-screen">
-        <div className="p-6 md:p-10 space-y-10 max-w-7xl mx-auto">
+        <div className="p-6 md:p-10 space-y-6 max-w-7xl mx-auto">
+          {/* Top Navigation Bar with Back Button */}
+          <div className="flex items-center justify-between gap-3 bg-white p-3.5 px-5 rounded-2xl border border-slate-200 shadow-sm">
+            <button
+              type="button"
+              onClick={() => {
+                if (window.history.length > 1) {
+                  window.history.back();
+                } else {
+                  navigate({ to: "/student" });
+                }
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl text-xs font-black shadow-md transition-all active:scale-95 cursor-pointer"
+            >
+              <ArrowLeft className="size-4 shrink-0" />
+              <span>मागे जा (Back)</span>
+            </button>
+            <span className="text-xs font-bold text-slate-500 hidden sm:inline">
+              विद्यार्थी टाचणवही अहवाल (Student Teaching Record)
+            </span>
+          </div>
+
           {/* Header */}
           <div className="bg-white rounded-[3rem] shadow-sm border border-slate-200 overflow-hidden">
             <div className="p-10 md:p-12 pb-6 border-b border-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -315,6 +349,18 @@ function StudentTeachingRecordPage() {
           <div className="bg-white rounded-3xl overflow-hidden shadow-2xl w-full max-w-5xl border border-slate-100 flex flex-col h-[85vh]">
             <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between gap-3 shrink-0">
               <div className="flex items-center gap-3 min-w-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsPreviewOpen(false);
+                    setSelectedRecordForPreview(null);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs font-bold transition-all border border-slate-700 cursor-pointer shadow-sm shrink-0"
+                  title="मागे जा (Back)"
+                >
+                  <ArrowLeft className="size-4 text-indigo-400" />
+                  <span>मागे जा (Back)</span>
+                </button>
                 <div className="size-9 rounded-xl bg-indigo-600 flex items-center justify-center shrink-0">
                   <FileText className="size-4 text-white" />
                 </div>
@@ -328,9 +374,11 @@ function StudentTeachingRecordPage() {
                   setIsPreviewOpen(false);
                   setSelectedRecordForPreview(null);
                 }}
-                className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-extrabold transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-extrabold transition-colors cursor-pointer border border-slate-700"
               >
-                Close
+                <ArrowLeft className="size-3.5 text-indigo-400" />
+                <span>मागे जा</span>
+                <span className="text-slate-400 text-xs">×</span>
               </button>
             </div>
             <div className="flex-1 bg-slate-100 relative overflow-hidden">
