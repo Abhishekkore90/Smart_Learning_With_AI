@@ -33,7 +33,7 @@
 
     body {
       font-family: 'Noto Sans Devanagari', Arial, sans-serif;
-      background: linear-gradient(135deg, #0d1b4b 0%, #1a2e6e 40%, #0d1b4b 100%);
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%);
       background-attachment: fixed;
       color: #111;
       max-width: 100%;
@@ -44,11 +44,11 @@
     /* ===== PRINT BAR ===== */
     .print-bar {
       position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
-      background: linear-gradient(90deg, #0d1b4b 0%, #1a2e6e 50%, #0d1b4b 100%);
+      background: #ffffff;
       padding: 0 24px;
       height: 56px;
       display: flex; align-items: center; justify-content: space-between;
-      box-shadow: 0 3px 20px rgba(0,0,0,0.5);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.06);
       gap: 12px; flex-wrap: wrap;
       border-bottom: 2px solid var(--gold);
     }
@@ -59,12 +59,11 @@
       background: linear-gradient(90deg, transparent, var(--gold), var(--gold-light), var(--gold), transparent);
     }
     .print-bar h2 {
-      color: var(--gold-light);
+      color: #0f172a;
       font-size: 16px;
       font-family: 'Noto Sans Devanagari', sans-serif;
-      font-weight: 700;
+      font-weight: 800;
       letter-spacing: 0.5px;
-      text-shadow: 0 1px 4px rgba(0,0,0,0.4);
       display: flex;
       align-items: center;
       gap: 8px;
@@ -130,6 +129,20 @@
       background: linear-gradient(135deg, #d32f2f, #e53935);
       transform: translateY(-1px);
       box-shadow: 0 4px 14px rgba(211,47,47,0.5);
+    }
+    .restore-page-btn {
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      color: #fff; border: 1px solid rgba(255,255,255,0.2);
+      padding: 8px 16px; border-radius: 8px; font-size: 13px;
+      font-family: 'Noto Sans Devanagari', sans-serif;
+      cursor: pointer; font-weight: 700;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(2,132,199,0.4);
+    }
+    .restore-page-btn:hover {
+      background: linear-gradient(135deg, #0369a1, #075985);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(3,105,161,0.5);
     }
 
     .pages-wrapper {
@@ -906,10 +919,16 @@
 
 <!-- Print Bar -->
 <div class="print-bar">
-  <h2>शिक्षक संचिका - Shikshak Sanchika</h2>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <a href="/teacher" target="_top" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:rgba(245,208,96,0.15);color:#92400e;border:1px solid #f59e0b;border-radius:12px;font-size:12px;font-weight:800;text-decoration:none;transition:all 0.2s;" title="मुख्य डॅशबोर्डवर मागे जा">
+      ← मागे जा (Dashboard)
+    </a>
+    <h2 id="sanchika-title-heading">शिक्षक संचिका - Shikshak Sanchika</h2>
+  </div>
   <div class="bar-btns">
     <button class="add-page-header-btn no-print" onclick="addNewPage()">➕ नवीन पान जोडा</button>
     <button class="delete-page-btn no-print" onclick="deleteCurrentPage()" title="चालू पान काढून टाका">🗑️ हे पान काढा</button>
+    <button class="restore-page-btn no-print" onclick="restoreDeletedPages()" title="काढून टाकलेले पान पूर्ववत करा">↩️ पान पूर्ववत करा</button>
     <button class="save-btn" onclick="saveData()">💾 माहिती जतन करा</button>
     <button class="print-btn" onclick="downloadPDF()">📥 PDF डाउनलोड करा</button>
     <button class="clear-btn" onclick="clearData()">🗑️ Clear</button>
@@ -1826,6 +1845,20 @@ function deleteCurrentPage() {
   saveData();
 }
 
+// ===== RESTORE DELETED PAGES =====
+function restoreDeletedPages() {
+  let deletedPages = JSON.parse(localStorage.getItem('sanchika_deleted_pages') || '[]');
+  if (!deletedPages || deletedPages.length === 0) {
+    showMsg('ℹ️ एकही डिलीट केलेले पान आढळले नाही', '#0284c7');
+    return;
+  }
+
+  const lastDeletedKey = deletedPages.pop();
+  localStorage.setItem('sanchika_deleted_pages', JSON.stringify(deletedPages));
+  showMsg('↩️ काढून टाकलेले पान यशस्वीरीत्या पूर्ववत (Restore) केले!', '#0284c7');
+  setTimeout(() => { location.reload(); }, 600);
+}
+
 // ===== SAVE DATA to localStorage =====
 function saveData() {
   const all = document.querySelectorAll('[contenteditable]');
@@ -2221,7 +2254,27 @@ document.addEventListener('input', function(e) {
   }
 });
 
-window.addEventListener('load', loadData);
+function updateHeaderTitle() {
+  try {
+    const lang = localStorage.getItem('app_lang') || 'mr';
+    const headingEl = document.getElementById('sanchika-title-heading');
+    if (headingEl) {
+      if (lang === 'en') {
+        headingEl.textContent = 'Shikshak Sanchika';
+      } else {
+        headingEl.textContent = 'शिक्षक संचिका';
+      }
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+window.addEventListener('load', function() {
+  loadData();
+  updateHeaderTitle();
+});
+window.addEventListener('storage', updateHeaderTitle);
 </script>
 </body>
 </html>

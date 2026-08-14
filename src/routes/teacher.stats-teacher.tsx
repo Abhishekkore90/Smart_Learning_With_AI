@@ -9,29 +9,13 @@ export const Route = createFileRoute("/teacher/stats-teacher")({
 
 function TeacherStatsPage() {
   return (
-    <div className="h-screen overflow-hidden bg-slate-100">
-      <TeacherHeader />
-      <TeacherSidebar />
-
-      <main className="lg:pl-0 pt-16 h-screen flex flex-col">
-        {/* Top bar */}
-        <div className="flex items-center gap-3 px-4 py-2 bg-white border-b border-slate-200 shadow-sm shrink-0">
-          <Link
-            to="/teacher"
-            className="inline-flex items-center gap-1 text-xs font-black text-slate-500 hover:text-indigo-600 uppercase tracking-widest transition-colors"
-          >
-            <ChevronLeft className="size-3.5" /> Back
-          </Link>
-          <span className="text-sm font-black text-slate-700">शिक्षक संचिका</span>
-        </div>
-
-        {/* Full-screen iframe showing the sanchika directly */}
-        <iframe
-          src="/shikshak-sanchika.html"
-          className="flex-1 w-full border-none"
-          title="शिक्षक संचिका"
-        />
-      </main>
+    <div className="h-screen overflow-hidden bg-slate-100 flex flex-col">
+      {/* Full-screen iframe showing the sanchika directly */}
+      <iframe
+        src="/shikshak-sanchika.html"
+        className="flex-1 w-full border-none"
+        title="शिक्षक संचिका"
+      />
     </div>
   );
 }

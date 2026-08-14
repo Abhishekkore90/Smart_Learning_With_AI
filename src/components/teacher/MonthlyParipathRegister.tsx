@@ -125,6 +125,28 @@ export function MonthlyParipathRegister() {
   const [academicYear, setAcademicYear] = useState("२०२५-२०२६");
   const [selectedMonthIndex, setSelectedMonthIndex] = useState(now.getMonth());
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [schoolInfo, setSchoolInfo] = useState({
+    schoolName: "",
+    udise: "",
+    kendra: "",
+    taluka: "",
+    jilha: "",
+  });
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("paripathSchoolInfo");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setSchoolInfo(parsed);
+        if (parsed.schoolName) {
+          setSchoolName(parsed.schoolName);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load paripathSchoolInfo", e);
+    }
+  }, []);
 
   const [tableData, setTableData] = useState<Record<number, DayRowData>>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -875,30 +897,42 @@ export function MonthlyParipathRegister() {
 
               <div className={`page-chunk-box space-y-4 ${chunkIdx > 0 ? "page-break" : ""}`}>
                 {/* ---------- SINGLE UNIFIED HEADER ---------- */}
-                <div className="flex items-center justify-between border-b-2 border-slate-900 pb-3">
-                  <div className="space-y-1 font-black text-slate-900 text-xs md:text-sm">
-                    <div>
-                      शाळेचे नाव :{" "}
-                      <span className="border-b border-dotted border-slate-700 px-2 py-0.5 text-indigo-900">
-                        {schoolName || "..................................................."}
-                      </span>
+                <div className="flex flex-col gap-1 border-b-2 border-slate-900 pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1 font-black text-slate-900 text-xs md:text-sm">
+                      <div>
+                        शाळेचे नाव :{" "}
+                        <span className="border-b border-dotted border-slate-700 px-2 py-0.5 text-indigo-900">
+                          {schoolName || schoolInfo.schoolName || "..................................................."}
+                        </span>
+                      </div>
+                      <div>
+                        सन :{" "}
+                        <span className="border-b border-dotted border-slate-700 px-2 py-0.5 text-indigo-900">
+                          {academicYear || ".........................................."}
+                        </span>
+                      </div>
                     </div>
-                    <div>
-                      सन :{" "}
-                      <span className="border-b border-dotted border-slate-700 px-2 py-0.5 text-indigo-900">
-                        {academicYear || ".........................................."}
-                      </span>
+
+                    <div className="text-right">
+                      <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-wider">
+                        दैनिक व परिपाठातील उपक्रम ({chunk.label})
+                      </h2>
+                      <p className="text-[10px] font-bold text-slate-500 uppercase">
+                        महिना: {MARATHI_MONTHS[selectedMonthIndex]} {selectedYear}
+                      </p>
                     </div>
                   </div>
 
-                  <div className="text-right">
-                    <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-wider">
-                      दैनिक व परिपाठातील उपक्रम ({chunk.label})
-                    </h2>
-                    <p className="text-[10px] font-bold text-slate-500 uppercase">
-                      महिना: {MARATHI_MONTHS[selectedMonthIndex]} {selectedYear}
-                    </p>
-                  </div>
+                  {/* School Metadata Info Row */}
+                  {(schoolInfo.udise || schoolInfo.kendra || schoolInfo.taluka || schoolInfo.jilha) && (
+                    <div className="flex flex-wrap gap-x-6 gap-y-1 text-[11px] font-bold text-slate-700 pt-1 border-t border-slate-200">
+                      {schoolInfo.udise && <div>युडायस : <span className="font-extrabold text-slate-900">{schoolInfo.udise}</span></div>}
+                      {schoolInfo.kendra && <div>केंद्र : <span className="font-extrabold text-slate-900">{schoolInfo.kendra}</span></div>}
+                      {schoolInfo.taluka && <div>तालुका : <span className="font-extrabold text-slate-900">{schoolInfo.taluka}</span></div>}
+                      {schoolInfo.jilha && <div>जिल्हा : <span className="font-extrabold text-slate-900">{schoolInfo.jilha}</span></div>}
+                    </div>
+                  )}
                 </div>
 
                 {/* ---------- TABLE 1: दैनिक ---------- */}

@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas-pro";
+import { useLanguage } from "@/hooks/use-language";
 
 export const Route = createFileRoute("/teacher/stats-student")({
   component: StudentPortfolioPage,
@@ -2479,6 +2480,7 @@ function Page9() {
    MAIN PAGE
 ════════════════════════════════════════════════════ */
 function StudentPortfolioPage() {
+  const { lang } = useLanguage();
   const [downloading, setDownloading] = useState(false);
   const [studentPhoto, setStudentPhoto] = useState<string | null>(null);
   const [currentTab, setCurrentTab] = useState(0);
@@ -2660,7 +2662,7 @@ function StudentPortfolioPage() {
       className="min-h-screen"
       style={{
         background:
-          "linear-gradient(135deg, #0d1b4b 0%, #1a2e6e 40%, #0d1b4b 100%)",
+          "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%)",
         backgroundAttachment: "fixed",
         height: "fit-content",
       }}
@@ -2735,15 +2737,15 @@ function StudentPortfolioPage() {
           user-select: none;
         }
       `}</style>
-      {/* Custom Vidyarthi Sanchika Navbar styled exactly like the teacher portfolio */}
+      {/* Custom Vidyarthi Sanchika Navbar styled with light theme */}
       {!isPrinting && (
-        <header className="bg-gradient-to-r from-[#0d1b4b] via-[#1a2e6e] to-[#0d1b4b] border-b-2 border-[#c9a227] text-white h-16 fixed top-0 left-0 right-0 z-[60] px-4 md:px-6 flex items-center justify-between shadow-[0_4px_25px_rgba(0,0,0,0.3)] transition-all">
+        <header className="bg-white border-b-2 border-[#c9a227] text-slate-900 h-16 fixed top-0 left-0 right-0 z-[60] px-4 md:px-6 flex items-center justify-between shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-all">
           <div className="flex items-center gap-4">
             <button
               onClick={() =>
                 window.dispatchEvent(new CustomEvent("toggle-teacher-sidebar"))
               }
-              className="lg:hidden size-10 rounded-xl bg-[#0d1b4b] hover:bg-[#1a2e6e] border border-[#c9a227]/40 flex items-center justify-center text-[#f5d060] transition-all active:scale-95 shadow-sm"
+              className="lg:hidden size-10 rounded-xl bg-slate-100 hover:bg-slate-200 border border-[#c9a227]/40 flex items-center justify-center text-slate-800 transition-all active:scale-95 shadow-sm"
             >
               <svg
                 className="size-5"
@@ -2760,24 +2762,28 @@ function StudentPortfolioPage() {
                 ></path>
               </svg>
             </button>
-            <div className="flex items-center gap-3">
-              <span className="text-xl">📚</span>
-              <h2
-                className="font-bold tracking-tight text-[#f5d060] font-poppins drop-shadow-md text-sm md:text-base"
-                style={{ fontFamily: "'Noto Sans Devanagari', sans-serif" }}
-              >
-                विद्यार्थी संचिका - Vidyarthi Sanchika
-              </h2>
-            </div>
             <Link
               to="/teacher"
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#f5d060]/10 hover:bg-[#f5d060]/20 text-[#f5d060] border border-[#c9a227]/50 rounded-xl text-xs font-black transition-all shadow-sm active:scale-95 cursor-pointer ml-1 sm:ml-2"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-900 border border-amber-400/50 rounded-xl text-xs font-black transition-all shadow-sm active:scale-95 cursor-pointer mr-1 sm:mr-2"
               style={{ fontFamily: "'Noto Sans Devanagari', sans-serif" }}
               title="मुख्य डॅशबोर्डवर मागे जा (Back to Teacher Dashboard)"
             >
-              <ArrowLeft className="size-4 shrink-0" />
+              <ArrowLeft className="size-4 shrink-0 text-amber-700" />
               <span>मागे जा (Dashboard)</span>
             </Link>
+            <div className="flex items-center gap-3">
+              <span className="text-xl">📚</span>
+              <h2
+                className="font-bold tracking-tight text-slate-900 font-poppins drop-shadow-sm text-sm md:text-base"
+                style={{ fontFamily: "'Noto Sans Devanagari', sans-serif" }}
+              >
+                {lang === "en"
+                  ? "Vidyarthi Sanchika"
+                  : lang === "hi"
+                  ? "छात्र संचिका"
+                  : "विद्यार्थी संचिका"}
+              </h2>
+            </div>
           </div>
 
           <div className="flex items-center gap-2 md:gap-3">
@@ -2829,6 +2835,21 @@ function StudentPortfolioPage() {
               title="चालू पान काढून टाका"
             >
               🗑️ हे पान काढा
+            </button>
+            <button
+              onClick={() => {
+                if (customPages.length > 0) {
+                  alert("↩️ काढून टाकलेले पान किंवा माहिती पूर्ववत केली जात आहे!");
+                  window.location.reload();
+                } else {
+                  alert("ℹ️ पूर्ववत (Restore) करण्यासाठी कोणतीही डिलीट झालेली पाने आढळली नाहीत.");
+                }
+              }}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs md:text-sm font-semibold rounded-lg text-white border border-[#c9a227]/30 bg-gradient-to-r from-[#0284c7] to-[#0369a1] hover:from-[#0369a1] hover:to-[#075985] shadow-md transition-all active:scale-95 cursor-pointer"
+              style={{ fontFamily: "'Noto Sans Devanagari', sans-serif" }}
+              title="काढून टाकलेले पान पूर्ववत करा"
+            >
+              ↩️ पान पूर्ववत करा
             </button>
             <button
               onClick={handleSaveData}

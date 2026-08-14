@@ -250,61 +250,63 @@ function ModulePage() {
         <div className="absolute -bottom-64 left-1/4 size-[800px] bg-[#D6B97A]/10 rounded-full blur-[100px] animate-blob animation-delay-2000" />
       </div>
 
-      <header className="bg-white/40 backdrop-blur-2xl border-b border-[#E8DFD1]/50 fixed top-0 left-0 right-0 h-16 z-30 px-4 md:px-8 flex items-center">
-        <div className="max-w-full w-full mx-auto flex items-center justify-between relative z-10">
-          <div className="flex items-center gap-3 md:gap-8">
-            <button
-              onClick={() => window.history.back()}
-              className="size-10 md:size-12 flex items-center justify-center bg-white/50 hover:bg-white rounded-xl md:rounded-2xl transition-all border border-[#E8DFD1]/50 text-[#D6B97A] shadow-sm hover:shadow-md"
-            >
-              <ChevronLeft className="size-5 md:size-6" />
-            </button>
-            <div className="flex items-center gap-3 md:gap-6">
-              <div
-                className={`size-10 md:size-14 ${config.color} rounded-xl md:rounded-[1.5rem] flex items-center justify-center text-white shadow-2xl shadow-[#D6B97A]/20 ring-4 ring-white/50`}
+      {moduleId !== "daily-assembly" && moduleId !== "special-day" && (
+        <header className="bg-white/40 backdrop-blur-2xl border-b border-[#E8DFD1]/50 fixed top-0 left-0 right-0 h-16 z-30 px-4 md:px-8 flex items-center">
+          <div className="max-w-full w-full mx-auto flex items-center justify-between relative z-10">
+            <div className="flex items-center gap-3 md:gap-8">
+              <button
+                onClick={() => window.history.back()}
+                className="size-10 md:size-12 flex items-center justify-center bg-white/50 hover:bg-white rounded-xl md:rounded-2xl transition-all border border-[#E8DFD1]/50 text-[#D6B97A] shadow-sm hover:shadow-md"
               >
-                <config.icon className="size-5 md:size-7" />
-              </div>
-              <div>
-                <h1 className="font-black text-[#1A1A1A] text-lg md:text-2xl tracking-tight leading-none">
-                  {config.m}
-                </h1>
-                <p className="text-[8px] md:text-[11px] font-bold text-[#D6B97A] uppercase tracking-[0.3em] mt-1 md:mt-2">
-                  {config.e}
-                </p>
+                <ChevronLeft className="size-5 md:size-6" />
+              </button>
+              <div className="flex items-center gap-3 md:gap-6">
+                <div
+                  className={`size-10 md:size-14 ${config.color} rounded-xl md:rounded-[1.5rem] flex items-center justify-center text-white shadow-2xl shadow-[#D6B97A]/20 ring-4 ring-white/50`}
+                >
+                  <config.icon className="size-5 md:size-7" />
+                </div>
+                <div>
+                  <h1 className="font-black text-[#1A1A1A] text-lg md:text-2xl tracking-tight leading-none">
+                    {config.m}
+                  </h1>
+                  <p className="text-[8px] md:text-[11px] font-bold text-[#D6B97A] uppercase tracking-[0.3em] mt-1 md:mt-2">
+                    {config.e}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-2 md:gap-4">
-            {moduleId === "teacher-statistics" && (
-              <button
-                onClick={() => window.dispatchEvent(new Event("download-teacher-portfolio-pdf"))}
-                className="group flex items-center gap-2 md:gap-4 px-6 md:px-12 py-3 md:py-5 bg-white text-slate-800 text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] rounded-full hover:bg-[#D6B97A] hover:text-white hover:border-[#D6B97A] border border-slate-200 transition-all duration-700 shadow-xl cursor-pointer"
-              >
-                <Download className="size-3 md:size-4 text-[#D6B97A] group-hover:text-white" />
-                <span className="hidden sm:inline">Download PDF</span>
-                <span className="sm:hidden">PDF</span>
-              </button>
-            )}
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="group flex items-center gap-2 md:gap-4 px-6 md:px-12 py-3 md:py-5 bg-[#1A1A1A] text-white text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] rounded-full hover:bg-[#D6B97A] transition-all duration-700 shadow-2xl disabled:opacity-50"
-            >
-              {saving ? (
-                <Loader2 className="size-3 md:size-4 animate-spin" />
-              ) : (
-                <Save className="size-3 md:size-4 group-hover:rotate-12 transition-transform text-[#D6B97A] group-hover:text-white" />
+            <div className="flex items-center gap-2 md:gap-4">
+              {moduleId === "teacher-statistics" && (
+                <button
+                  onClick={() => window.dispatchEvent(new Event("download-teacher-portfolio-pdf"))}
+                  className="group flex items-center gap-2 md:gap-4 px-6 md:px-12 py-3 md:py-5 bg-white text-slate-800 text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] rounded-full hover:bg-[#D6B97A] hover:text-white hover:border-[#D6B97A] border border-slate-200 transition-all duration-700 shadow-xl cursor-pointer"
+                >
+                  <Download className="size-3 md:size-4 text-[#D6B97A] group-hover:text-white" />
+                  <span className="hidden sm:inline">Download PDF</span>
+                  <span className="sm:hidden">PDF</span>
+                </button>
               )}
-              <span className="hidden sm:inline">Commit Sync</span>
-              <span className="sm:hidden">Save</span>
-            </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="group flex items-center gap-2 md:gap-4 px-6 md:px-12 py-3 md:py-5 bg-[#1A1A1A] text-white text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] rounded-full hover:bg-[#D6B97A] transition-all duration-700 shadow-2xl disabled:opacity-50"
+              >
+                {saving ? (
+                  <Loader2 className="size-3 md:size-4 animate-spin" />
+                ) : (
+                  <Save className="size-3 md:size-4 group-hover:rotate-12 transition-transform text-[#D6B97A] group-hover:text-white" />
+                )}
+                <span className="hidden sm:inline">Commit Sync</span>
+                <span className="sm:hidden">Save</span>
+              </button>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
-      <main className="flex-1 lg:pl-0 px-2 sm:px-4 md:px-6 py-4 md:py-6 max-w-full pt-24 mx-auto w-full relative z-10">
+      <main className={`flex-1 lg:pl-0 px-2 sm:px-4 md:px-6 py-4 md:py-6 max-w-full ${moduleId === 'daily-assembly' || moduleId === 'special-day' ? 'pt-4' : 'pt-24'} mx-auto w-full relative z-10`}>
         <ModulePaywall moduleId={moduleId} defaultTitle={config.m}>
           <PinGate sectionKey="planning" enabled={moduleId === "annual-monthly-planning"}>
           <motion.div
@@ -1746,6 +1748,7 @@ function AssemblyBookViewer() {
    DailyAssemblyContent ΓÇö Full Paripath / परीपाठ Structured View
    ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */
 function DailyAssemblyContent() {
+  const navigate = useNavigate();
   const [assemblyMode, setAssemblyMode] = useState<"daily" | "monthly">("daily");
   const [lang, setLang] = useState<"mr" | "en" | "hi">("mr");
 
@@ -2174,7 +2177,16 @@ function DailyAssemblyContent() {
       `}</style>
 
       {/* Mode Switcher: Daily Assembly vs Monthly Assembly Register */}
-      <div className="flex justify-center p-3 bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-800 pdf-hide">
+      <div className="flex items-center justify-between p-3 bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-800 pdf-hide gap-3">
+        <button
+          onClick={() => navigate({ to: "/teacher" })}
+          className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs md:text-sm uppercase tracking-wider border border-white/20 transition-all shadow-md active:scale-95 group shrink-0"
+          title="मागे जा (Back to Dashboard)"
+        >
+          <ArrowLeft className="size-5 group-hover:-translate-x-1 transition-transform text-amber-400" />
+          <span>मागे जा</span>
+        </button>
+
         <div className="flex p-1.5 bg-slate-800/80 rounded-2xl border border-slate-700/60 w-full max-w-2xl">
           <button
             onClick={() => setAssemblyMode("daily")}
@@ -2200,6 +2212,7 @@ function DailyAssemblyContent() {
             {lang === "en" ? "Monthly Assembly" : "मासिक परिपाठ (रजिस्टर)"}
           </button>
         </div>
+        <div className="w-24 hidden md:block" />
       </div>
 
       {assemblyMode === "monthly" ? (
@@ -2287,38 +2300,38 @@ function DailyAssemblyContent() {
           </Dialog>
 
           {/* Header with Language Toggle */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-8 bg-slate-900 rounded-[3rem] shadow-xl border border-slate-800 relative overflow-hidden pdf-hide">
-            <div className="flex items-center gap-5 relative z-10">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-6 md:p-8 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-[3rem] shadow-xl border border-indigo-900/40 relative overflow-hidden pdf-hide">
+            <div className="flex items-center gap-4 relative z-10">
               <div>
                 <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight drop-shadow-md">
-                  दैनिक परिपाठ
+                  Daily Assembly (परिपाठ)
                 </h2>
-                <p className="text-xs font-black text-indigo-200 uppercase tracking-[0.3em] mt-1.5 opacity-80">
-                  आजचा परिपाठ
+                <p className="text-xs font-black text-indigo-200/90 uppercase tracking-[0.2em] mt-1">
+                  दैनिक व वस्तूनिष्ठ परिपाठ उपक्रम
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-3 relative z-10 pdf-hide">
-              <div className="flex items-center gap-2.5 bg-white/5 px-4 py-2.5 rounded-2xl border border-white/10 text-white shadow-inner">
+              <div className="flex items-center gap-2.5 bg-white/10 px-4 py-2.5 rounded-2xl border border-white/15 text-white shadow-inner">
                 <Calendar className="size-4 text-indigo-300" />
                 <input
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="bg-transparent border-none text-xs font-black outline-none cursor-pointer text-indigo-200"
+                  className="bg-transparent border-none text-xs font-black outline-none cursor-pointer text-indigo-100"
                 />
               </div>
               <button
                 onClick={() => setShowSchoolInfoModal(true)}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-black text-xs md:text-sm uppercase tracking-wider transition-all border border-white/20"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 font-bold text-xs uppercase tracking-wider transition-all border border-amber-400/30 shadow-md active:scale-95"
                 title="शाळेची माहिती भरा / बदला"
               >
-                <School className="size-4" />
+                <School className="size-4 text-amber-300" />
                 <span className="hidden sm:inline">शाळेची माहिती</span>
               </button>
               <button
                 onClick={handleDownloadPdf}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-black text-xs md:text-sm uppercase tracking-wider transition-all shadow-lg shadow-indigo-500/25 active:scale-95 border border-indigo-400/30"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black text-xs md:text-sm uppercase tracking-wider transition-all shadow-lg shadow-orange-500/25 active:scale-95 border border-orange-400/30"
               >
                 <Download className="size-4" />
                 <span>{lang === "en" ? "Download PDF" : "PDF डाउनलोड"}</span>
@@ -2360,9 +2373,9 @@ function DailyAssemblyContent() {
             </div>
           ) : (
             <>
-              {/* School Info Display for PDF and UI */}
+              {/* School Info Display for PDF only */}
               {(schoolInfo.schoolName || schoolInfo.udise || schoolInfo.kendra || schoolInfo.taluka || schoolInfo.jilha) && (
-                <div className="bg-[#f0fdf4] border-[2px] border-[#2e7d32] rounded-xl p-4 md:p-6 mb-6 w-full text-center shadow-sm">
+                <div className="hidden print:block bg-[#f0fdf4] border-[2px] border-[#2e7d32] rounded-xl p-4 md:p-6 mb-6 w-full text-center shadow-sm">
                   {schoolInfo.schoolName && (
                     <h3 className="text-lg md:text-xl font-black text-[#166534] mb-3 drop-shadow-sm">
                       शाळेचे नाव: {schoolInfo.schoolName}
