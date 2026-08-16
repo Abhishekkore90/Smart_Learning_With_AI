@@ -164,6 +164,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [availableDates, setAvailableDates] = useState<{ dateStr: string; day: string }[]>([]);
   const { user, profile } = useAuth();
+  const printRef = useRef<HTMLDivElement>(null);
   const [localProfile, setLocalProfile] = useState<{
     udiseCode?: string;
     schoolName?: string;
@@ -172,7 +173,6 @@ export const TeacherTodayDiary: React.FC<Props> = ({
     className?: string;
     academicYear?: string;
   }>({});
-  const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     try {

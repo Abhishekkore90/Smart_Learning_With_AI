@@ -14,7 +14,10 @@ import {
   Loader2,
   CheckCircle2,
   Layers,
-  GraduationCap
+  Eye,
+  Upload,
+  GraduationCap,
+  User
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { showToast as toast } from "@/lib/custom-toast";
@@ -525,22 +528,23 @@ function TeachingRecordPage() {
                 <button
                   type="button"
                   onClick={() => setActiveMainTab("diary")}
-                  className={`px-4 py-2 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${activeMainTab === "diary"
+                  className={`px-4 py-2 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                    activeMainTab === "diary"
                       ? "bg-slate-900 text-white shadow-md"
                       : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
-                    }`}
+                  }`}
                 >
-                  <BookOpen className="size-4 text-orange-400" />
-                  <span>पाठ टाचणवही (Teaching Diary)</span>
+                  <BookOpen className="size-4" />
+                  <span>दैनिक टाचणवही</span>
                 </button>
-
                 <button
                   type="button"
                   onClick={() => setActiveMainTab("school_profile")}
-                  className={`px-4 py-2 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${activeMainTab === "school_profile"
+                  className={`px-4 py-2 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                    activeMainTab === "school_profile"
                       ? "bg-orange-600 text-white shadow-md shadow-orange-500/20"
                       : "bg-orange-100 text-orange-900 hover:bg-orange-200 border border-orange-300"
-                    }`}
+                  }`}
                 >
                   <GraduationCap className="size-4 text-amber-500" />
                   <span>🏫 यू-डायस व शाळा माहिती (UDISE & School Info)</span>
@@ -589,8 +593,19 @@ function TeachingRecordPage() {
               </div>
             </div>
 
-            {activeMainTab === "school_profile" ? (
-              <AnimatePresence mode="wait">
+            {/* Saved profile status badge */}
+            {schoolProfile.schoolName && (
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-600 bg-slate-50 px-3.5 py-1.5 rounded-xl border border-slate-200">
+                <span className="text-orange-600 font-extrabold">{schoolProfile.schoolName}</span>
+                <span>•</span>
+                <span>इयत्ता: <strong className="text-slate-900">{schoolProfile.className}</strong></span>
+                <span>•</span>
+                <span>सन: <strong className="text-emerald-600 font-black">{schoolProfile.academicYear || "2026-27"}</strong></span>
+              </div>
+            )}
+
+            <AnimatePresence mode="wait">
+              {activeMainTab === "school_profile" ? (
                 <motion.div
                   key="school-profile-tab"
                   initial={{ opacity: 0, y: 10 }}
@@ -724,9 +739,8 @@ function TeachingRecordPage() {
                     </button>
                   </div>
                 </motion.div>
-              </AnimatePresence>
-            ) : (
-              <AnimatePresence mode="wait">
+              ) : (
+                <>
 
                 {/* Step 1: Select Medium (Orange Cards) */}
                 {!selectedMedium && (
@@ -740,7 +754,7 @@ function TeachingRecordPage() {
                     <div className="relative overflow-hidden bg-gradient-to-r from-slate-900 via-purple-950 to-slate-900 rounded-[2.5rem] p-8 md:p-12 text-white shadow-2xl border border-white/5">
                       <div className="absolute -left-10 -top-10 size-40 bg-indigo-500/25 rounded-full blur-[50px] pointer-events-none" />
                       <div className="absolute -right-10 -bottom-10 size-40 bg-purple-500/25 rounded-full blur-[50px] pointer-events-none" />
-
+                      
                       <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                         <div className="space-y-3">
                           <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/10 text-xs font-semibold tracking-wider text-purple-200">
@@ -931,26 +945,27 @@ function TeachingRecordPage() {
                   </motion.div>
                 )}
 
-                {/* Step 5: Main View */}
-                {selectedClass && selectedMedium && selectedYear && selectedMonth && (
-                  <motion.div
-                    key="diary-content"
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.98 }}
-                    className="max-w-5xl mx-auto w-full space-y-6"
-                  >
-                    <TeacherTodayDiary
-                      selectedClass={selectedClass}
-                      selectedMedium={selectedMedium}
-                      selectedMonth={selectedMonth}
-                      onBack={handleBack}
-                      schoolProfile={schoolProfile}
-                    />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            )}
+              {/* Step 5: Main View */}
+              {selectedClass && selectedMedium && selectedYear && selectedMonth && (
+                <motion.div
+                  key="diary-content"
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.98 }}
+                  className="max-w-5xl mx-auto w-full space-y-6"
+                >
+                  <TeacherTodayDiary
+                    selectedClass={selectedClass}
+                    selectedMedium={selectedMedium}
+                    selectedMonth={selectedMonth}
+                    onBack={handleBack}
+                    schoolProfile={schoolProfile}
+                  />
+                </motion.div>
+              )}
+            </>
+          )}
+        </AnimatePresence>
 
             {/* Document Live Preview Modal Backdrop & Frame */}
             {isPreviewOpen && selectedRecordForPreview && (
