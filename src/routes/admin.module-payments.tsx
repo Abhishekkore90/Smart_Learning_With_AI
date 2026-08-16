@@ -92,7 +92,7 @@ const DEFAULT_MODULES: { id: string; title: string; defaultPrice: number }[] = [
   { id: "timetable", title: "वेळापत्रक व्यवस्थापन (School Timetable)", defaultPrice: 0 },
 ];
 
-export function AdminModulePaymentsPage() {
+function AdminModulePaymentsPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"pricing" | "history" | "access">("access");
   const [loading, setLoading] = useState(true);

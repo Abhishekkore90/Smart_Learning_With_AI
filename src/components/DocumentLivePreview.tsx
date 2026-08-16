@@ -18,25 +18,54 @@ import {
 import { getBunnyStorageUrl } from "@/lib/bunny-auth-pdf";
 import { showToast as toast } from "@/lib/custom-toast";
 import { db } from "@/lib/firebase";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, setDoc } from "firebase/firestore";
 
-const normalizeDateStr = (raw: string | undefined | null) => {
-  if (!raw) return "";
-  const cleaned = raw.trim().replace(/[.\-]/g, "/");
-  const parts = cleaned.split("/");
-  if (parts.length === 3) {
-    let d = parseInt(parts[0], 10);
-    let m = parseInt(parts[1], 10);
-    let y = parseInt(parts[2], 10);
-    if (parts[0].length === 4) {
-      y = parseInt(parts[0], 10);
-      d = parseInt(parts[2], 10);
-    }
-    if (y < 100) y += 2000;
-    return `${d}/${m}/${y}`;
+export const formatCleanDate = (raw: string | undefined | null) => {
+  if (!raw) return "-";
+  const cleaned = raw.trim();
+  let m = cleaned.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+  if (m) {
+    const year = m[1];
+    const month = parseInt(m[2], 10);
+    const day = parseInt(m[3], 10);
+    return `${day}/${month}/${year}`;
+  }
+  m = cleaned.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+  if (m) {
+    const day = parseInt(m[1], 10);
+    const month = parseInt(m[2], 10);
+    let year = m[3];
+    if (year.length === 2) year = `20${year}`;
+    return `${day}/${month}/${year}`;
   }
   return cleaned;
 };
+
+const normalizeDateStr = (raw: string | undefined | null) => {
+  return formatCleanDate(raw);
+};
+
+export function getStoredSchoolProfile() {
+  try {
+    if (typeof window !== "undefined") {
+      const teacherProfileStr = localStorage.getItem("sqaaf_teacher_profile");
+      let activeEmail = "";
+      if (teacherProfileStr) {
+        try {
+          const parsed = JSON.parse(teacherProfileStr);
+          if (parsed?.email) activeEmail = parsed.email.toLowerCase().trim();
+        } catch (e) {}
+      }
+      if (activeEmail) {
+        const userStored = localStorage.getItem(`teaching_diary_school_profile_${activeEmail}`);
+        if (userStored) return JSON.parse(userStored);
+      }
+      const stored = localStorage.getItem("teaching_diary_school_profile");
+      if (stored) return JSON.parse(stored);
+    }
+  } catch (e) {}
+  return null;
+}
 
 interface Props {
   selectedFile?: File | null;
@@ -447,6 +476,29 @@ export function parseHtmlToStructuredDiaries(htmlString: string): StructuredDayP
       (cell) => (cell.textContent || "").trim()
     );
 
+    let colMap = { period: 0, subject: 1, topic: 2, outcome: 3, experience: 4, tools: 5, materials: 6 };
+
+    if (columnHeaders.length > 0) {
+      const normHeaders = columnHeaders.map(h => h.trim().toLowerCase());
+      const findCol = (pattern: RegExp) => normHeaders.findIndex(h => pattern.test(h));
+
+      const pIdx = findCol(/तास|तासिका|period|time/i);
+      const sIdx = findCol(/विषय|subject/i);
+      const tIdx = findCol(/मुद्दा|पाठ्यांश|पाठ्यघटक|घटक|पाठ|topic|chapter/i);
+      const oIdx = findCol(/निष्पत्ती|निष्पती|दर्शक|दर्शके|outcome|result/i);
+      const eIdx = findCol(/अनुभव|अनुभवाचे|स्वरूप|कृती|experience/i);
+      const tlIdx = findCol(/साधन|तंत्र|tools|method/i);
+      const mIdx = findCol(/साहित्य|materials/i);
+
+      if (pIdx !== -1) colMap.period = pIdx;
+      if (sIdx !== -1) colMap.subject = sIdx;
+      if (tIdx !== -1) colMap.topic = tIdx;
+      if (oIdx !== -1) colMap.outcome = oIdx;
+      if (eIdx !== -1) colMap.experience = eIdx;
+      if (tlIdx !== -1) colMap.tools = tlIdx;
+      if (mIdx !== -1) colMap.materials = mIdx;
+    }
+
     const periods: PeriodRowItem[] = [];
     let periodCounter = 1;
 
@@ -473,43 +525,13 @@ export function parseHtmlToStructuredDiaries(htmlString: string): StructuredDayP
       // Skip empty rows
       if (cellTexts.every((t) => !t || t.length === 0)) continue;
 
-      // Map cells to period fields based on column count
-      const colCount = cellTexts.length;
-      let period = "",
-        subject = "",
-        topic = "",
-        outcome = "",
-        experience = "",
-        tools = "",
-        materials = "";
-
-      if (colCount >= 7) {
-        period = cellTexts[0];
-        subject = cellTexts[1];
-        topic = cellTexts[2];
-        outcome = cellTexts[3];
-        experience = cellTexts[4];
-        tools = cellTexts[5];
-        materials = cellTexts[6];
-      } else if (colCount === 6) {
-        period = cellTexts[0];
-        subject = cellTexts[1];
-        topic = cellTexts[2];
-        outcome = cellTexts[3];
-        experience = cellTexts[4];
-        tools = cellTexts[5];
-      } else if (colCount === 5) {
-        period = cellTexts[0];
-        subject = cellTexts[1];
-        topic = cellTexts[2];
-        outcome = cellTexts[3];
-        experience = cellTexts[4];
-      } else if (colCount >= 3) {
-        period = cellTexts[0];
-        subject = cellTexts[1];
-        topic = cellTexts[2];
-        outcome = cellTexts[3] || "";
-      }
+      const period = (colMap.period < cellTexts.length && cellTexts[colMap.period]) ? cellTexts[colMap.period] : cellTexts[0] || String(periodCounter);
+      const subject = (colMap.subject < cellTexts.length && cellTexts[colMap.subject]) ? cellTexts[colMap.subject] : cellTexts[1] || "";
+      const topic = (colMap.topic < cellTexts.length && cellTexts[colMap.topic]) ? cellTexts[colMap.topic] : cellTexts[2] || "";
+      const outcome = (colMap.outcome < cellTexts.length && cellTexts[colMap.outcome]) ? cellTexts[colMap.outcome] : (cellTexts.length >= 4 ? cellTexts[3] : "");
+      const experience = (colMap.experience < cellTexts.length && cellTexts[colMap.experience]) ? cellTexts[colMap.experience] : (cellTexts.length >= 5 ? cellTexts[4] : "");
+      const tools = (colMap.tools < cellTexts.length && cellTexts[colMap.tools]) ? cellTexts[colMap.tools] : (cellTexts.length >= 6 ? cellTexts[5] : "");
+      const materials = (colMap.materials < cellTexts.length && cellTexts[colMap.materials]) ? cellTexts[colMap.materials] : (cellTexts.length >= 7 ? cellTexts[6] : "");
 
       if (subject || topic || outcome || experience) {
         periods.push({
@@ -606,17 +628,74 @@ export interface GroupedDayRecord {
   rawText: string;
 }
 
+export function splitLargePagesIntoDayChunks(pages: StructuredDayPage[]): StructuredDayPage[] {
+  const result: StructuredDayPage[] = [];
+  const daysOfWeek = ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
+
+  let currentDateCursor = new Date(2026, 7, 1); // Default Aug 1, 2026
+
+  pages.forEach((p, pIdx) => {
+    if (p.date) {
+      const parts = p.date.split(/[\/\-\.]/);
+      if (parts.length === 3) {
+        let d = parseInt(parts[0], 10);
+        let m = parseInt(parts[1], 10) - 1;
+        let y = parseInt(parts[2], 10);
+        if (parts[0].length === 4) {
+          y = parseInt(parts[0], 10);
+          d = parseInt(parts[2], 10);
+        }
+        if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+          currentDateCursor = new Date(y, m, d);
+        }
+      }
+    }
+
+    if (p.periods.length <= 9) {
+      result.push(p);
+      return;
+    }
+
+    // Chunk large tables (e.g. 87 periods) into 9-period day tables
+    const chunkSize = 9;
+    const totalChunks = Math.ceil(p.periods.length / chunkSize);
+
+    for (let c = 0; c < totalChunks; c++) {
+      while (currentDateCursor.getDay() === 0) { // Skip Sundays
+        currentDateCursor.setDate(currentDateCursor.getDate() + 1);
+      }
+
+      const chunkPeriods = p.periods.slice(c * chunkSize, (c + 1) * chunkSize).map((item, idx) => ({
+        ...item,
+        period: String(idx + 1),
+      }));
+
+      const dStr = `${currentDateCursor.getFullYear()}-${String(currentDateCursor.getMonth() + 1).padStart(2, "0")}-${String(currentDateCursor.getDate()).padStart(2, "0")}`;
+      const dayName = daysOfWeek[currentDateCursor.getDay()];
+
+      result.push({
+        ...p,
+        pageNumber: c + 1,
+        date: dStr,
+        day: dayName,
+        periods: chunkPeriods,
+      });
+
+      currentDateCursor.setDate(currentDateCursor.getDate() + 1);
+    }
+  });
+
+  return result;
+}
+
 export function groupStructuredPagesByDay(pages: StructuredDayPage[]): GroupedDayRecord[] {
+  const partitionedPages = splitLargePagesIntoDayChunks(pages);
   const grouped: Record<string, GroupedDayRecord> = {};
   const list: GroupedDayRecord[] = [];
 
-  pages.forEach((p) => {
-    // Strictly filter out Sunday (No data / no display for Sunday)
-    if (isSunday(p.day, p.date)) {
-      return;
-    }
-    // Group key based on parsed date, fallback to unique page key if date is not available
-    const dateKey = p.date ? p.date.trim() : `unknown_page_${p.pageNumber}`;
+  partitionedPages.forEach((p) => {
+    // Group key based on parsed date or page number
+    const dateKey = p.date ? p.date.trim() : `day_chunk_${p.pageNumber}`;
     
     if (!grouped[dateKey]) {
       grouped[dateKey] = {
@@ -634,7 +713,6 @@ export function groupStructuredPagesByDay(pages: StructuredDayPage[]): GroupedDa
       };
       list.push(grouped[dateKey]);
     } else {
-      // Grouping: Connect day-wise period records
       p.periods.forEach((newPeriod) => {
         const exists = grouped[dateKey].periods.some(
           (existing) => 
@@ -659,7 +737,7 @@ export function groupStructuredPagesByDay(pages: StructuredDayPage[]): GroupedDa
     }
   });
 
-  // Re-index periods to keep them sequential
+  // Re-index periods to keep them sequential per day table (1..9)
   list.forEach((dayRec) => {
     dayRec.periods.forEach((period, index) => {
       period.period = String(index + 1);
@@ -675,6 +753,7 @@ export interface StructuredDayPageListRef {
 
 export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { pages: StructuredDayPage[] }>(({ pages }, ref) => {
   const [dayRecords, setDayRecords] = useState<any[]>([]);
+  const profile = useMemo(() => getStoredSchoolProfile(), []);
 
   useEffect(() => {
     setDayRecords(groupStructuredPagesByDay(pages));
@@ -779,7 +858,7 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
         <div key={idx} className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-md space-y-6 day-card">
           <div className="flex items-center justify-between pb-3 border-b border-slate-200 text-xs">
             <span className="font-extrabold text-indigo-700 bg-indigo-50 px-3.5 py-1 rounded-full border border-indigo-100 uppercase tracking-wider">
-              {p.date ? `दिनांक: ${p.date}` : `Day ${idx + 1}`}
+              {p.date ? `दिनांक: ${formatCleanDate(p.date)}` : `Day ${idx + 1}`}
             </span>
             <span className="text-slate-600 font-bold bg-slate-100 px-2.5 py-1 rounded-lg">
               {p.periods.length > 0 ? `${p.periods.length} तासिका (Periods Found)` : "विवरण मजकूर"}
@@ -792,12 +871,12 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
             </h2>
             
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 text-xs font-bold text-slate-900 bg-slate-100/80 p-4 rounded-2xl border-2 border-slate-400 shadow-sm text-left">
-              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">दिनांक</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "date", e.currentTarget.textContent || "")} className="text-indigo-700 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.date || "-"}</span></div>
+              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">दिनांक</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "date", e.currentTarget.textContent || "")} className="text-orange-600 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{formatCleanDate(p.date)}</span></div>
               <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">वार</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "day", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.day || "-"}</span></div>
-              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">वर्गशिक्षक</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "teacher", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.teacher || "-"}</span></div>
-              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">शाळा</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "school", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.school || "-"}</span></div>
-              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">इयत्ता</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "std", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.std || "-"}</span></div>
-              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">सन</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "year", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.year || "-"}</span></div>
+              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">वर्गशिक्षक</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "teacher", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.teacher && p.teacher !== "-" ? p.teacher : (profile?.teacherName || "-")}</span></div>
+              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">शाळा</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "school", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.school && p.school !== "-" ? p.school : (profile?.schoolName || "-")}</span></div>
+              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">इयत्ता</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "std", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.std && p.std !== "-" && p.std !== "पहिली" ? p.std : (profile?.className || p.std || "-")}</span></div>
+              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">सन</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "year", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.year && p.year !== "-" ? p.year : (profile?.academicYear || "2026-27")}</span></div>
             </div>
 
             {p.thought && (
@@ -812,19 +891,29 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
           </div>
 
           {p.periods.length > 0 ? (
-            <div className="overflow-x-auto rounded-2xl border-2 border-slate-400 shadow-md">
-              <table className="w-full text-left text-sm border-collapse table-fixed min-w-[850px] border-2 border-slate-400">
+            <div className="overflow-x-auto no-scrollbar rounded-2xl border-2 border-slate-400 shadow-md">
+              <table className="w-full text-left text-sm border-collapse table-fixed border-2 border-slate-400">
+                <colgroup>
+                  <col style={{ width: "6%" }} />
+                  <col style={{ width: "8%" }} />
+                  <col style={{ width: "11%" }} />
+                  <col style={{ width: "36%" }} />
+                  <col style={{ width: "25%" }} />
+                  <col style={{ width: "7%" }} />
+                  <col style={{ width: "7%" }} />
+                </colgroup>
                 <thead className="bg-slate-100 text-slate-900 font-extrabold text-xs md:text-sm border-b-2 border-slate-400">
                   <tr>
                     {(p.columnHeaders && p.columnHeaders.length > 0
                       ? p.columnHeaders
                       : ["तासिका", "विषय", "अध्ययन मुद्दा / पाठ्यघटक", "अध्ययन निष्पत्ती / अध्ययन दर्शक", "अध्ययनाचे स्वरूप (अनुभव / कृती)", "साधन तंत्रे", "शैक्षणिक साहित्य"]
                     ).map((header: string, hIdx: number, arr: string[]) => {
-                      const colWidths = ["w-[5%]", "w-[10%]", "w-[13%]", "w-[27%]", "w-[25%]", "w-[10%]", "w-[10%]"];
+                      const colWidths = ["6%", "8%", "11%", "36%", "25%", "7%", "7%"];
                       return (
                         <th
                           key={hIdx}
-                          className={`p-3 bg-slate-200 text-slate-900 font-black ${colWidths[hIdx] || ""} ${hIdx === 0 ? "text-center bg-slate-300" : ""} border-r-2 border-slate-400 ${hIdx < arr.length - 1 ? "" : ""}`}
+                          style={{ width: colWidths[hIdx] }}
+                          className={`py-3 px-1.5 bg-slate-200 text-slate-900 font-black break-words leading-tight ${hIdx === 0 ? "text-center bg-slate-300" : ""} border-r-2 border-slate-400`}
                         >
                           {header}
                         </th>
@@ -959,6 +1048,10 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSaveChanges = async () => {
+    if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+
     if (!savedRecord || !savedRecord.id) {
       toast.error("डेटा सेव्ह करण्यासाठी आधी रेकॉर्ड उपलब्ध असणे आवश्यक आहे.");
       return;
@@ -979,11 +1072,51 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
 
     setIsSaving(true);
     try {
+      const firstDay = editedData[0];
+      const mainPeriods = firstDay?.periods || [];
+
+      // 1. Update teacher_diaries document
       const diaryDocRef = doc(db, "teacher_diaries", cls, med, savedRecord.id);
       await updateDoc(diaryDocRef, {
-        structuredData: editedData
+        structuredData: editedData,
+        parsedContent: {
+          ...(savedRecord.parsedContent || {}),
+          periods: mainPeriods,
+          thought: firstDay?.thought || "",
+          day: firstDay?.day || "",
+        },
+        periods: mainPeriods,
+        updatedAt: Date.now(),
       });
-      toast.success("✅ बदल यशस्वीरित्या डेटाबेसमध्ये सेव्ह झाले आहेत!");
+
+      // 2. Update teaching_diaries document for current date
+      const dateKey = savedRecord.diaryDate || savedRecord.id;
+      if (dateKey && dateKey.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const tdDocId = `${cls}_${med}_${dateKey}`;
+        const tdDocRef = doc(db, "teaching_diaries", tdDocId);
+        await setDoc(
+          tdDocRef,
+          {
+            className: cls,
+            medium: med,
+            date: dateKey,
+            displayDate: firstDay?.date || dateKey,
+            day: firstDay?.day || "",
+            thought: firstDay?.thought || "",
+            periods: mainPeriods,
+            structuredData: editedData,
+            updatedAt: Date.now(),
+          },
+          { merge: true }
+        );
+      }
+
+      // 3. Update local props & component state so downloads use editedData
+      savedRecord.structuredData = editedData;
+      savedRecord.periods = mainPeriods;
+      setStructuredPages(editedData);
+
+      toast.success("✅ बदल यशस्वीरित्या जतन झाले असून डाऊनलोड व प्रिव्ह्यू अपडेट झाले आहे!");
     } catch (err: any) {
       console.error("Firestore save error:", err);
       toast.error("डेटाबेसमध्ये बदल सेव्ह करताना अडचण आली: " + (err.message || err));
@@ -1116,8 +1249,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
           })
           .finally(() => setLoadingContent(false));
       }
-    } 
-    else if (savedRecord && savedRecord.pageUrl) {
+    } else if (savedRecord && savedRecord.pageUrl) {
       const fileNameLower = (savedRecord.fileName || savedRecord.pageUrl).toLowerCase();
       if (fileNameLower.endsWith(".docx") || fileNameLower.endsWith(".doc")) {
         setLoadingContent(true);
@@ -1166,6 +1298,8 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
     }
   }, [selectedFile, savedRecord, isPdf]);
 
+  const [filterSingleDate, setFilterSingleDate] = useState<boolean>(true);
+
   const pdfUrlToDisplay = selectedFile && isPdf
     ? localPdfBlobUrl
     : (authenticatedPdfUrl || savedRecord?.pageUrl || null);
@@ -1176,25 +1310,57 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
 
   const pagesToDisplay = useMemo(() => {
     if (!structuredPages || structuredPages.length === 0) return [];
-    if (!targetNormalizedDate) return structuredPages;
+    if (filterSingleDate && savedRecord?.diaryDate) {
+      const targetIso = savedRecord.diaryDate.trim();
+      const parts = targetIso.split("-");
 
-    const matched = structuredPages.filter((p) => {
-      const pageNorm = normalizeDateStr(p.date);
-      return pageNorm === targetNormalizedDate;
-    });
+      const matched = structuredPages.filter((p) => {
+        if (!p.date) return false;
+        const pClean = p.date.trim();
+        if (pClean === targetIso) return true;
 
-    if (matched.length > 0) {
-      return matched;
+        if (parts.length === 3) {
+          const dTarget = parseInt(parts[2], 10);
+          const mTarget = parseInt(parts[1], 10);
+
+          const m = pClean.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+          if (m && parseInt(m[1], 10) === dTarget && parseInt(m[2], 10) === mTarget) return true;
+
+          const mIso = pClean.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+          if (mIso && parseInt(mIso[3], 10) === dTarget && parseInt(mIso[2], 10) === mTarget) return true;
+        }
+        return false;
+      });
+
+      if (matched.length > 0) return matched;
+
+      // Fallback by day index (e.g. Day 1 -> 1 Aug, Day 3 -> 3 Aug)
+      if (parts.length === 3) {
+        const dTarget = parseInt(parts[2], 10);
+        const dayIdx = dTarget - 1;
+        if (dayIdx >= 0 && dayIdx < structuredPages.length) {
+          return [structuredPages[dayIdx]];
+        }
+      }
     }
-
-    return [structuredPages[0]];
-  }, [structuredPages, targetNormalizedDate]);
+    return structuredPages;
+  }, [structuredPages, filterSingleDate, savedRecord?.diaryDate]);
 
   const hasStructuredView = pagesToDisplay && pagesToDisplay.length > 0;
   const downloadUrl = savedRecord?.pageUrl || (selectedFile ? localPdfBlobUrl : null);
 
   const handleDownloadWord = async () => {
-    const pagesToUse = structuredListRef.current?.getEditedData() || structuredPages;
+    if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+
+    const currentEdited = structuredListRef.current?.getEditedData();
+    const pagesToUse = (currentEdited && currentEdited.length > 0)
+      ? currentEdited
+      : (structuredPages && structuredPages.length > 0)
+        ? structuredPages
+        : (savedRecord as any)?.structuredData || pagesToDisplay;
+    const profile = getStoredSchoolProfile();
     const cleanText = (txt: any) => {
       if (!txt || txt === "-") return "-";
       return String(txt)
@@ -1202,7 +1368,6 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
         .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
     };
 
-    // 1. If structured pages exist, generate a formatted Word Document (.doc) directly
     if (pagesToUse && pagesToUse.length > 0) {
       setIsInnerDownloading(true);
       toast.success("Word दस्तऐवज डाउनलोड तयार होत आहे... (Generating Word file...)");
@@ -1211,31 +1376,36 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
         const dayBlocks = pagesToUse.map((p: any, idx: number) => {
           const rows = (p.periods || []).map((row: any, rIdx: number) => `
             <tr style="background:${rIdx % 2 === 0 ? "#ffffff" : "#f8fafc"};">
-              <td style="text-align:center;font-weight:bold;color:#4338ca;width:50px;border:1.5pt solid #475569;padding:8px;">${cleanText(row.period)}</td>
-              <td style="font-weight:bold;border:1.5pt solid #94a3b8;padding:8px;">${cleanText(row.subject)}</td>
-              <td style="border:1.5pt solid #94a3b8;padding:8px;">${cleanText(row.topic)}</td>
-              <td style="border:1.5pt solid #94a3b8;padding:8px;">${cleanText(row.outcome)}</td>
-              <td style="border:1.5pt solid #94a3b8;padding:8px;">${cleanText(row.experience)}</td>
-              <td style="border:1.5pt solid #94a3b8;padding:8px;">${cleanText(row.tools)}</td>
-              <td style="border:1.5pt solid #94a3b8;padding:8px;">${cleanText(row.materials)}</td>
+              <td style="text-align:center;font-weight:bold;color:#4338ca;width:6%;border:1.5pt solid #475569;padding:6px 2px;">${cleanText(row.period)}</td>
+              <td style="font-weight:bold;border:1.5pt solid #94a3b8;width:8%;padding:6px 3px;">${cleanText(row.subject)}</td>
+              <td style="border:1.5pt solid #94a3b8;width:11%;padding:6px 4px;">${cleanText(row.topic)}</td>
+              <td style="border:1.5pt solid #94a3b8;width:36%;padding:6px 6px;">${cleanText(row.outcome)}</td>
+              <td style="border:1.5pt solid #94a3b8;width:25%;padding:6px 6px;">${cleanText(row.experience)}</td>
+              <td style="border:1.5pt solid #94a3b8;width:7%;padding:6px 3px;">${cleanText(row.tools)}</td>
+              <td style="border:1.5pt solid #94a3b8;width:7%;padding:6px 3px;">${cleanText(row.materials)}</td>
             </tr>`).join("");
 
           const headers = (p.columnHeaders && p.columnHeaders.length > 0 ? p.columnHeaders : defaultHeaders)
             .map((h: string) => `<th style="background-color:#1e293b;color:#ffffff;padding:10px;text-align:left;font-weight:bold;border:1.5pt solid #475569;">${cleanText(h)}</th>`).join("");
+
+          const teacherVal = cleanText(p.teacher && p.teacher !== "-" ? p.teacher : (profile?.teacherName || "-"));
+          const schoolVal = cleanText(p.school && p.school !== "-" ? p.school : (profile?.schoolName || "-"));
+          const stdVal = cleanText(p.std && p.std !== "-" && p.std !== "पहिली" ? p.std : (profile?.className || p.std || "-"));
+          const yearVal = cleanText(p.year && p.year !== "-" ? p.year : (profile?.academicYear || "2026-27"));
 
           return `
             <div style="margin-bottom: 25px; page-break-after: always;">
               <h2 style="font-size: 20px; font-weight: 900; text-align: center; color: #0f172a; margin-bottom: 10px;">दैनंदिन पाठ टाचण</h2>
               <table style="width:100%; border-collapse:collapse; margin-bottom:15px; background:#f1f5f9; border:2pt solid #475569; font-size:11px;">
                 <tr>
-                  <td style="padding:6px 10px; border:1.5pt solid #64748b;"><b>दिनांक:</b> <span style="color:#4338ca;">${cleanText(p.date)}</span></td>
+                  <td style="padding:6px 10px; border:1.5pt solid #64748b;"><b>दिनांक:</b> <span style="color:#4338ca;">${cleanText(formatCleanDate(p.date))}</span></td>
                   <td style="padding:6px 10px; border:1.5pt solid #64748b;"><b>वार:</b> ${cleanText(p.day)}</td>
-                  <td style="padding:6px 10px; border:1.5pt solid #64748b;"><b>वर्गशिक्षक:</b> ${cleanText(p.teacher)}</td>
+                  <td style="padding:6px 10px; border:1.5pt solid #64748b;"><b>वर्गशिक्षक:</b> ${teacherVal}</td>
                 </tr>
                 <tr>
-                  <td style="padding:6px 10px; border:1.5pt solid #64748b;"><b>शाळा:</b> ${cleanText(p.school)}</td>
-                  <td style="padding:6px 10px; border:1.5pt solid #64748b;"><b>इयत्ता:</b> ${cleanText(p.std)}</td>
-                  <td style="padding:6px 10px; border:1.5pt solid #64748b;"><b>सन:</b> ${cleanText(p.year)}</td>
+                  <td style="padding:6px 10px; border:1.5pt solid #64748b;"><b>शाळा:</b> ${schoolVal}</td>
+                  <td style="padding:6px 10px; border:1.5pt solid #64748b;"><b>इयत्ता:</b> ${stdVal}</td>
+                  <td style="padding:6px 10px; border:1.5pt solid #64748b;"><b>सन:</b> ${yearVal}</td>
                 </tr>
               </table>
               ${p.thought ? `<div style="font-size:11px; font-style:italic; color:#78350f; background:#fffbeb; border-left:4px solid #f59e0b; padding:8px 12px; margin-bottom:12px;">💬 <b>आजचा सुविचार :</b> '${cleanText(p.thought)}'</div>` : ""}
@@ -1360,7 +1530,16 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
   };
 
   const handleLocalDownloadPdf = async () => {
-    const pagesToUse = structuredListRef.current?.getEditedData() || pagesToDisplay;
+    if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+
+    const currentEdited = structuredListRef.current?.getEditedData();
+    const pagesToUse = (currentEdited && currentEdited.length > 0)
+      ? currentEdited
+      : (structuredPages && structuredPages.length > 0)
+        ? structuredPages
+        : (savedRecord as any)?.structuredData || pagesToDisplay;
     if (!pagesToUse || pagesToUse.length === 0) {
       return handleDownloadWord();
     }
@@ -1375,13 +1554,13 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
         .map((p: any, idx: number) => {
         const rows = (p.periods || []).map((row: any, rIdx: number) => `
           <tr style="background:${rIdx % 2 === 0 ? "#fff" : "#f8fafc"}; page-break-inside: avoid; break-inside: avoid;">
-            <td style="text-align:center;font-weight:700;color:#4338ca;width:50px">${row.period}</td>
-            <td style="font-weight:600">${row.subject || "-"}</td>
-            <td>${row.topic || "-"}</td>
-            <td>${row.outcome || "-"}</td>
-            <td>${row.experience || "-"}</td>
-            <td>${row.tools || "-"}</td>
-            <td>${row.materials || "-"}</td>
+            <td style="text-align:center;font-weight:700;color:#4338ca;width:6%">${row.period}</td>
+            <td style="font-weight:600;width:8%">${row.subject || "-"}</td>
+            <td style="width:11%">${row.topic || "-"}</td>
+            <td style="width:36%">${row.outcome || "-"}</td>
+            <td style="width:25%">${row.experience || "-"}</td>
+            <td style="width:7%">${row.tools || "-"}</td>
+            <td style="width:7%">${row.materials || "-"}</td>
           </tr>`).join("");
 
         const headers = (p.columnHeaders && p.columnHeaders.length > 0 ? p.columnHeaders : defaultHeaders)
@@ -1396,7 +1575,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
             </div>
             <h2 style="font-size: 18px; font-weight: 900; text-align: center; color: #0f172a; margin: 8px 0 12px 0;">दैनंदिन पाठ टाचण</h2>
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; background: #f1f5f9; border: 2px solid #475569; border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; font-size: 11px;">
-              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">दिनांक</span><span style="font-weight:900; color:#4338ca; font-size:12px;">${p.date || "-"}</span></div>
+              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">दिनांक</span><span style="font-weight:900; color:#4338ca; font-size:12px;">${formatCleanDate(p.date)}</span></div>
               <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">वार</span><span style="font-weight:900; color:#0f172a;">${p.day || "-"}</span></div>
               <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">वर्गशिक्षक</span><span style="font-weight:900; color:#0f172a;">${p.teacher || "-"}</span></div>
               <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">शाळा</span><span style="font-weight:900; color:#0f172a;">${p.school || "-"}</span></div>
@@ -1493,6 +1672,22 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {savedRecord?.diaryDate && structuredPages && structuredPages.length > 1 && (
+            <button
+              type="button"
+              onClick={() => setFilterSingleDate(!filterSingleDate)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all border cursor-pointer ${
+                filterSingleDate
+                  ? "bg-amber-500 text-white border-amber-600 shadow-sm"
+                  : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700"
+              }`}
+            >
+              {filterSingleDate
+                ? `📌 फक्त ${formatCleanDate(savedRecord.diaryDate)} ची टाचण`
+                : "📚 सर्व तारखा (1-12 Dates)"}
+            </button>
+          )}
+
           {isPdf && hasStructuredView && (
             <div className="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700 text-xs font-bold">
               {isPdf && (

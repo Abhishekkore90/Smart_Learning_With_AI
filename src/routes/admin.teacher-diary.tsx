@@ -49,6 +49,7 @@ interface DiaryRecordItem {
   uploadedAt: number;
   className: string;
   medium: string;
+  structuredData?: any[];
 }
 
 function TeacherDiaryAdmin() {
@@ -228,13 +229,13 @@ function TeacherDiaryAdmin() {
     try {
       const collectionRef = collection(db, "teacher_diaries", cls, med);
       const snapshot = await getDocs(collectionRef);
-      const records: DiaryRecordItem[] = [];
+      const uniqueMap = new Map<string, DiaryRecordItem>();
 
       snapshot.docs.forEach((docSnap) => {
         const data = docSnap.data();
         const diaryDate = data.diaryDate || docSnap.id;
 
-        // Skip Sunday records (No data / no display for Sunday)
+        // Skip Sunday records
         if (diaryDate) {
           const parts = diaryDate.split("-");
           if (parts.length === 3) {
@@ -244,19 +245,33 @@ function TeacherDiaryAdmin() {
         }
         if (data.day === "रविवार" || data.day?.toLowerCase() === "sunday") return;
 
-        records.push({
-          id: docSnap.id,
-          diaryDate: diaryDate,
-          fileName: data.fileName || "Teaching_Diary.pdf",
-          pageUrl: data.pageUrl || data.masterPdfUrl || "",
-          uploadedAt: data.uploadedAt || Date.now(),
-          className: data.className || cls,
-          medium: data.medium || med,
-        });
+        const rawUrl = data.pageUrl || data.masterPdfUrl || "";
+        const groupKey = rawUrl ? rawUrl.split("?")[0] : (data.fileName || docSnap.id);
+
+        if (!uniqueMap.has(groupKey)) {
+          uniqueMap.set(groupKey, {
+            id: docSnap.id,
+            diaryDate: diaryDate,
+            fileName: data.fileName || "Teaching_Diary.docx",
+            pageUrl: rawUrl,
+            uploadedAt: data.uploadedAt || Date.now(),
+            className: data.className || cls,
+            medium: data.medium || med,
+            ...data,
+          });
+        } else {
+          const existing = uniqueMap.get(groupKey)!;
+          if (!existing.structuredData && data.structuredData) {
+            existing.structuredData = data.structuredData;
+          }
+          if ((data.uploadedAt || 0) > (existing.uploadedAt || 0)) {
+            existing.uploadedAt = data.uploadedAt;
+          }
+        }
       });
 
-      // Sort records descending by date
-      records.sort((a, b) => b.diaryDate.localeCompare(a.diaryDate));
+      const records = Array.from(uniqueMap.values());
+      records.sort((a, b) => (b.uploadedAt || 0) - (a.uploadedAt || 0));
       setExistingRecords(records);
 
       // Auto select saved preview record from localStorage or latest record
@@ -344,40 +359,43 @@ function TeacherDiaryAdmin() {
       console.log("UPLOAD_COMPLETED: File uploaded successfully.");
       const fileUrl = result.url;
       console.log("DOWNLOAD_URL_CREATED: ", fileUrl);
-      console.log("DATABASE_SAVE_STARTED: Saving record to Firestore...");
-      setUploadStatus("Saving record in database...");
+      setUploadStatus("Parsing multi-day diary file...");
+      setUploadProgress(90);
+
+      // Parse multi-day diary entries from file
+      let parsedEntries: any[] | null = null;
+      try {
+        const arrayBuffer = await selectedFile.arrayBuffer();
+        const { parseDiaryFileFromArrayBuffer } = await import("@/lib/parse-diary-file");
+        parsedEntries = await parseDiaryFileFromArrayBuffer(arrayBuffer, selectedFile.name, selectedClass);
+      } catch (pErr) {
+        console.warn("Client multi-day parse note:", pErr);
+      }
+
+      setUploadStatus("Saving date records (1-12) to database...");
       setUploadProgress(95);
 
-      // 2. Save/Update record in Firestore (Doc ID = YYYY-MM-DD for fast date-based lookup)
-      const diaryDocRef = doc(db, "teacher_diaries", selectedClass, selectedMedium, dateStr);
-      
-      const isUpdate = existingRecords.some((r) => r.id === dateStr || r.diaryDate === dateStr);
-
-      await setDoc(diaryDocRef, {
-        pageUrl: fileUrl,
-        masterPdfUrl: fileUrl,
+      const { saveParsedEntriesToFirestore } = await import("@/lib/parse-diary-file");
+      const savedDates = await saveParsedEntriesToFirestore({
+        entries: parsedEntries,
+        fileUrl,
         fileName: selectedFile.name,
-        uploadedAt: Date.now(),
-        diaryDate: dateStr,
-        className: selectedClass,
-        medium: selectedMedium,
-        pageNumber: 1,
-        week: selectedWeek,
-        month: selectedMonth,
+        selectedClass,
+        selectedMedium,
+        selectedYear: String(selectedYear),
+        selectedMonth,
+        selectedWeek,
       });
 
-      localStorage.setItem(`admin_diary_preview_${selectedClass}_${selectedMedium}`, dateStr);
-      console.log("DATABASE_SAVE_COMPLETED: Record saved successfully.");
+      if (savedDates.length > 0) {
+        localStorage.setItem(`admin_diary_preview_${selectedClass}_${selectedMedium}`, savedDates[0]);
+      }
+
+      console.log("DATABASE_SAVE_COMPLETED: Saved records for dates:", savedDates);
       setUploadProgress(100);
       setUploadStatus("Upload completed!");
-      console.log("UPLOAD_SUCCESS: Complete flow finished perfectly.");
 
-
-      if (isUpdate) {
-        toast.success(`Updated Teaching Diary for ${selectedClass} (${selectedMedium}) on ${dateStr}`);
-      } else {
-        toast.success(`Successfully uploaded Teaching Diary for ${selectedClass} (${selectedMedium}) on ${dateStr}`);
-      }
+      toast.success(`✅ ${savedDates.length} दिवसांच्या टाचण नोंदी यशस्वीरित्या सेव्ह झाल्या! (Uploaded ${savedDates.length} date records)`);
 
       // Reset selection state & refresh list
       setSelectedFile(null);
@@ -394,21 +412,75 @@ function TeacherDiaryAdmin() {
     }
   };
 
-  // Delete an existing diary record
+  // Delete an existing diary record (and all related date docs for that file)
   const handleDeleteRecord = async (record: DiaryRecordItem) => {
     if (!selectedClass || !selectedMedium) return;
-    if (!confirm(`Are you sure you want to delete the diary record for ${record.diaryDate}?`)) {
+    const displayName = record.fileName || record.diaryDate || "ही फाईल";
+    if (!confirm(`तुम्हाला नक्की "${displayName}" व तिच्या सर्व पाठ टाचण नोंदी डिलीट करायच्या आहेत का?`)) {
       return;
     }
 
     try {
-      const docRef = doc(db, "teacher_diaries", selectedClass, selectedMedium, record.id);
-      await deleteDoc(docRef);
-      toast.success(`Deleted diary record for ${record.diaryDate}`);
+      const batch = writeBatch(db);
+
+      const targetUrl = record.pageUrl ? record.pageUrl.split("?")[0] : "";
+      const targetFile = record.fileName || "";
+
+      // 1. Delete all matching documents in teacher_diaries/{selectedClass}/{selectedMedium}
+      const colRef = collection(db, "teacher_diaries", selectedClass, selectedMedium);
+      const snap = await getDocs(colRef);
+
+      snap.docs.forEach((docSnap) => {
+        const data = docSnap.data();
+        const rawUrl = data.pageUrl || data.masterPdfUrl || "";
+        const docUrl = rawUrl ? rawUrl.split("?")[0] : "";
+
+        if (
+          docSnap.id === record.id ||
+          (targetUrl && docUrl === targetUrl) ||
+          (targetFile && data.fileName === targetFile)
+        ) {
+          batch.delete(docSnap.ref);
+        }
+      });
+
+      // 2. Delete all matching documents in teaching_diaries
+      const tdColRef = collection(db, "teaching_diaries");
+      const tdSnap = await getDocs(tdColRef);
+      const prefix = `${selectedClass}_${selectedMedium}_`;
+
+      tdSnap.docs.forEach((docSnap) => {
+        if (docSnap.id.startsWith(prefix)) {
+          const data = docSnap.data();
+          const rawUrl = data.pageUrl || data.masterPdfUrl || "";
+          const docUrl = rawUrl ? rawUrl.split("?")[0] : "";
+
+          if (
+            (targetUrl && docUrl === targetUrl) ||
+            (targetFile && data.fileName === targetFile)
+          ) {
+            batch.delete(docSnap.ref);
+          }
+        }
+      });
+
+      await batch.commit();
+
+      // Immediately remove from local state so UI updates instantly
+      setExistingRecords((prev) =>
+        prev.filter(
+          (r) =>
+            r.id !== record.id &&
+            (!targetFile || r.fileName !== targetFile) &&
+            (!targetUrl || (r.pageUrl && !r.pageUrl.includes(targetUrl)))
+        )
+      );
+
+      toast.success(`✅ "${displayName}" फाईल व तिच्या सर्व नोंदी यशस्वीरित्या डिलीट झाल्या!`);
       await fetchExistingRecords(selectedClass, selectedMedium);
     } catch (err: any) {
       console.error("Delete error:", err);
-      toast.error("Failed to delete diary record.");
+      toast.error("फाईल डिलीट करताना अडचण आली: " + (err.message || err));
     }
   };
 
