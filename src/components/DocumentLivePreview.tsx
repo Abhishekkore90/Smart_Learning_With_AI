@@ -1334,12 +1334,22 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
 
       if (matched.length > 0) return matched;
 
-      // Fallback by day index (e.g. Day 1 -> 1 Aug, Day 3 -> 3 Aug)
+      // Fallback by working day index (excluding Sundays)
       if (parts.length === 3) {
+        const yTarget = parseInt(parts[0], 10);
+        const mTarget = parseInt(parts[1], 10);
         const dTarget = parseInt(parts[2], 10);
-        const dayIdx = dTarget - 1;
-        if (dayIdx >= 0 && dayIdx < structuredPages.length) {
-          return [structuredPages[dayIdx]];
+
+        if (!isNaN(yTarget) && !isNaN(mTarget) && !isNaN(dTarget)) {
+          let workingCount = 0;
+          for (let d = 1; d <= dTarget; d++) {
+            const testD = new Date(yTarget, mTarget - 1, d);
+            if (testD.getDay() !== 0) workingCount++;
+          }
+          const dayIdx = Math.max(0, workingCount - 1);
+          if (dayIdx >= 0 && dayIdx < structuredPages.length) {
+            return [structuredPages[dayIdx]];
+          }
         }
       }
     }

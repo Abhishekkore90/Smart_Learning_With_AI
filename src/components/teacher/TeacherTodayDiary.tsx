@@ -51,19 +51,31 @@ interface DailyDiary {
   uploadedAt?: number;
 }
 
+function calculateWorkingDayIndex(year: number, month: number, day: number): number {
+  let workingCount = 0;
+  for (let d = 1; d <= day; d++) {
+    const testD = new Date(year, month - 1, d);
+    if (testD.getDay() !== 0) { // Skip Sundays
+      workingCount++;
+    }
+  }
+  return Math.max(0, workingCount - 1);
+}
+
 function findMatchingEntryForDate(entries: any[], targetIsoDate: string): any | null {
   if (!entries || !Array.isArray(entries) || entries.length === 0) return null;
 
   const targetParts = targetIsoDate.split("-");
   if (targetParts.length !== 3) return entries[0] || null;
 
+  const targetYear = parseInt(targetParts[0], 10);
   const targetMonth = parseInt(targetParts[1], 10);
   const targetDay = parseInt(targetParts[2], 10);
 
   // 1. Match by date string
   for (const entry of entries) {
-    if (!entry.date) continue;
-    const cleanDate = String(entry.date).trim();
+    if (!entry.date && !entry.displayDate) continue;
+    const cleanDate = String(entry.date || entry.displayDate).trim();
 
     if (cleanDate === targetIsoDate) return entry;
 
@@ -82,8 +94,8 @@ function findMatchingEntryForDate(entries: any[], targetIsoDate: string): any | 
     }
   }
 
-  // 2. Fallback: match by day index (e.g. 1st Aug = index 0, 3rd Aug = index 2)
-  const dayIdx = targetDay - 1;
+  // 2. Fallback: match by working day index (excluding Sundays)
+  const dayIdx = calculateWorkingDayIndex(targetYear, targetMonth, targetDay);
   if (dayIdx >= 0 && dayIdx < entries.length) {
     return entries[dayIdx];
   }
@@ -117,14 +129,14 @@ function extractSingleDayPeriods(allPeriods: PeriodItem[], targetIsoDate: string
     return allPeriods;
   }
 
-  // Determine which day chunk to display based on selected date
+  // Determine which day chunk to display based on selected date (skipping Sundays)
   let dayIdx = 0;
   if (activeDate) {
-    dayIdx = Math.max(0, activeDate.getDate() - 1);
+    dayIdx = calculateWorkingDayIndex(activeDate.getFullYear(), activeDate.getMonth() + 1, activeDate.getDate());
   } else if (targetIsoDate) {
     const parts = targetIsoDate.split("-");
     if (parts.length === 3) {
-      dayIdx = Math.max(0, parseInt(parts[2], 10) - 1);
+      dayIdx = calculateWorkingDayIndex(parseInt(parts[0], 10), parseInt(parts[1], 10), parseInt(parts[2], 10));
     }
   }
 
