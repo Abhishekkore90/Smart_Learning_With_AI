@@ -3044,9 +3044,9 @@ function TeacherMDMPage() {
     if (cleaned.includes("masurdal") || cleaned.includes("masoor dal") || cleaned.includes("मसूरडाळ") || cleaned.includes("मसूर") || cleaned.includes("मसुरी")) return "Masurdal";
     if (cleaned.includes("matki") || cleaned.includes("मटकी")) return "Matki";
     if (cleaned.includes("moong") || cleaned.includes("मूग")) return "Moong";
-    if (cleaned.includes("cowpea") || cleaned.includes("चवळी")) return "Cowpea";
-    if (cleaned.includes("gram") || cleaned.includes("chana") || cleaned.includes("हरभरा")) return "Gram";
-    if (cleaned.includes("pease") || cleaned.includes("peas") || cleaned.includes("वाटाणा")) return "Pease";
+    if (cleaned.includes("cowpea") || cleaned.includes("chavali") || cleaned.includes("chawali") || cleaned.includes("चवळी")) return "Cowpea";
+    if (cleaned.includes("gram") || cleaned.includes("chana") || cleaned.includes("harbhara") || cleaned.includes("हरभरा")) return "Gram";
+    if (cleaned.includes("pease") || cleaned.includes("peas") || cleaned.includes("vatana") || cleaned.includes("matar") || cleaned.includes("मटार") || cleaned.includes("वाटाणा")) return "Pease";
     if (cleaned.includes("soyabean") || cleaned.includes("सोयाबीन")) return "Soyabean Wadi";
     if (cleaned.includes("cumin") || cleaned.includes("जिरे")) return "Cumin";
     if (cleaned.includes("mustard") || cleaned.includes("मोहरी")) return "Mustard";
@@ -4188,6 +4188,20 @@ function TeacherMDMPage() {
     return Number(totalUsed.toFixed(6));
   };
 
+  const getInitialOpeningStockValue = (name: string): number => {
+    const itemKey = getItemKeyFromName(name);
+    let found = parseFloat(openingStockValues[name] || openingStockValues[itemKey] || "0") || 0;
+    if (found === 0) {
+      Object.keys(openingStockValues || {}).forEach((k) => {
+        if (getItemKeyFromName(k) === itemKey) {
+          const v = parseFloat(openingStockValues[k] || "0");
+          if (!isNaN(v) && v > found) found = v;
+        }
+      });
+    }
+    return found;
+  };
+
   // Returns the opening (previous month closing) balance for an item.
   // Looks up history chain up to 12 months back, never reads current month's saved prev.
   const getOpeningStock = (
@@ -4201,20 +4215,20 @@ function TeacherMDMPage() {
   ): number => {
     if (depth > 12) {
       const itemKey = getItemKeyFromName(itemName);
-      return parseFloat(openingStockValues[itemName] || openingStockValues[itemKey] || "0") || 0;
+      return getInitialOpeningStockValue(itemName);
     }
 
     const prevKey = getPreviousMonthKey(monthName, yearStr, classStr);
     if (!prevKey) {
       const itemKey = getItemKeyFromName(itemName);
-      return parseFloat(openingStockValues[itemName] || openingStockValues[itemKey] || "0") || 0;
+      return getInitialOpeningStockValue(itemName);
     }
 
     const firstUnderscore = prevKey.indexOf("_");
     const secondUnderscore = prevKey.indexOf("_", firstUnderscore + 1);
     if (firstUnderscore === -1 || secondUnderscore === -1) {
       const itemKey = getItemKeyFromName(itemName);
-      return parseFloat(openingStockValues[itemName] || openingStockValues[itemKey] || "0") || 0;
+      return getInitialOpeningStockValue(itemName);
     }
 
     const prevYear = prevKey.substring(0, firstUnderscore);
@@ -4269,7 +4283,7 @@ function TeacherMDMPage() {
       );
       if (prevStockVal > 0) return prevStockVal;
       const itemKey = getItemKeyFromName(itemName);
-      return parseFloat(openingStockValues[itemName] || openingStockValues[itemKey] || "0") || 0;
+      return getInitialOpeningStockValue(itemName);
     }
 
     // No saved snapshot or we have active data → calculate previous month's closing on the fly
@@ -13528,10 +13542,10 @@ function TeacherMDMPage() {
                                 { key: "Mugdal", nameMr: "मूगडाळ", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
                                 { key: "Turdal", nameMr: "तूरडाळ", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
                                 { key: "Matki", nameMr: "मटकी", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
-                                { key: "Chavali", nameMr: "चवळी", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
+                                { key: "Cowpea", nameMr: "चवळी", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
                                 { key: "Masurdal", nameMr: "मसूरडाळ", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
-                                { key: "Vatana", nameMr: "वाटाणा", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
-                                { key: "Harbhara", nameMr: "हरभरा", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
+                                { key: "Pease", nameMr: "वाटाणा", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
+                                { key: "Gram", nameMr: "हरभरा", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
                                 { key: "Moong", nameMr: "मूग", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
                                 { key: "Cumin", nameMr: "जिरे", unit: "कि.ग्रॅ.", qty15: "0.0005 कि.ग्रॅ.", qty68: "0.0007 कि.ग्रॅ." },
                                 { key: "Mustard", nameMr: "मोहरी", unit: "कि.ग्रॅ.", qty15: "0.0005 कि.ग्रॅ.", qty68: "0.0007 कि.ग्रॅ." },
@@ -13557,7 +13571,8 @@ function TeacherMDMPage() {
                               const upperAvgBeneficiary = upperCookedDays > 0 ? Math.round(upperBeneficiarySum / upperCookedDays) : 0;
 
                               const getBFormStockData = (itemKey: string, cls: "1 To 5" | "6 To 8") => {
-                                const stockData = getStockDataForItem(itemKey, monthlyReportMonth || "April", calcYear, cls);
+                                const targetKey = getItemKeyFromName(itemKey);
+                                const stockData = getStockDataForItem(targetKey, monthlyReportMonth || "April", calcYear, cls);
                                 const opening = stockData?.prev || 0;
                                 const received = stockData?.received || 0;
                                 const borrowed = getLokForMonth(itemKey, monthlyReportMonth || "April", calcYear);
