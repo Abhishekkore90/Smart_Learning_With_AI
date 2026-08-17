@@ -40,7 +40,7 @@ export interface MDMCertificateProps {
 }
 
 // Marathi number converter helper
-export const toMarathiNumbers = (str: string | number): string => {
+const toMarathiNumbers = (str: string | number): string => {
   if (str === undefined || str === null) return "";
   const numStr = str.toString();
   const marathiDigits = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
@@ -48,7 +48,7 @@ export const toMarathiNumbers = (str: string | number): string => {
 };
 
 // English number converter helper
-export const toEnglishNumbers = (str: string | number): string => {
+const toEnglishNumbers = (str: string | number): string => {
   if (str === undefined || str === null) return "";
   const numStr = str.toString();
   const marathiDigits = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
