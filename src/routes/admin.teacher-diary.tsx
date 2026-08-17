@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   BookOpen,
   ChevronLeft,
+  ChevronRight,
   Upload,
   Trash2,
   Calendar,
@@ -48,6 +49,7 @@ interface DiaryRecordItem {
   uploadedAt: number;
   className: string;
   medium: string;
+  structuredData?: any[];
 }
 
 function TeacherDiaryAdmin() {
@@ -64,6 +66,24 @@ function TeacherDiaryAdmin() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  const handleBack = () => {
+    if (selectedWeek) {
+      setSelectedWeek(null);
+    } else if (selectedMonth) {
+      setSelectedMonth(null);
+    } else if (selectedClass) {
+      setSelectedClass(null);
+    } else if (selectedMedium) {
+      setSelectedMedium(null);
+    } else {
+      if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        navigate({ to: "/admin" });
+      }
+    }
+  };
 
   const getDaysForWeek = (year: number, monthStr: string, weekStr: string) => {
     const monthIdx = parseInt(monthStr, 10) - 1;
@@ -87,6 +107,9 @@ function TeacherDiaryAdmin() {
     for (let d = startDay; d <= endDay; d++) {
       const dateObj = new Date(year, monthIdx, d);
       if (dateObj.getMonth() === monthIdx) {
+        // Skip Sunday completely (Government schools & colleges are closed on Sunday)
+        if (dateObj.getDay() === 0) continue;
+
         const dateStr = format(dateObj, "yyyy-MM-dd");
         const dayNameMr = dayNamesMr[dateObj.getDay()];
         const monthMr = monthNamesMr[monthStr] || "";
@@ -206,24 +229,49 @@ function TeacherDiaryAdmin() {
     try {
       const collectionRef = collection(db, "teacher_diaries", cls, med);
       const snapshot = await getDocs(collectionRef);
-      const records: DiaryRecordItem[] = [];
+      const uniqueMap = new Map<string, DiaryRecordItem>();
 
       snapshot.docs.forEach((docSnap) => {
         const data = docSnap.data();
         const diaryDate = data.diaryDate || docSnap.id;
-        records.push({
-          id: docSnap.id,
-          diaryDate: diaryDate,
-          fileName: data.fileName || "Teaching_Diary.pdf",
-          pageUrl: data.pageUrl || data.masterPdfUrl || "",
-          uploadedAt: data.uploadedAt || Date.now(),
-          className: data.className || cls,
-          medium: data.medium || med,
-        });
+
+        // Skip Sunday records
+        if (diaryDate) {
+          const parts = diaryDate.split("-");
+          if (parts.length === 3) {
+            const dObj = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+            if (!isNaN(dObj.getTime()) && dObj.getDay() === 0) return;
+          }
+        }
+        if (data.day === "रविवार" || data.day?.toLowerCase() === "sunday") return;
+
+        const rawUrl = data.pageUrl || data.masterPdfUrl || "";
+        const groupKey = rawUrl ? rawUrl.split("?")[0] : (data.fileName || docSnap.id);
+
+        if (!uniqueMap.has(groupKey)) {
+          uniqueMap.set(groupKey, {
+            id: docSnap.id,
+            diaryDate: diaryDate,
+            fileName: data.fileName || "Teaching_Diary.docx",
+            pageUrl: rawUrl,
+            uploadedAt: data.uploadedAt || Date.now(),
+            className: data.className || cls,
+            medium: data.medium || med,
+            ...data,
+          });
+        } else {
+          const existing = uniqueMap.get(groupKey)!;
+          if (!existing.structuredData && data.structuredData) {
+            existing.structuredData = data.structuredData;
+          }
+          if ((data.uploadedAt || 0) > (existing.uploadedAt || 0)) {
+            existing.uploadedAt = data.uploadedAt;
+          }
+        }
       });
 
-      // Sort records descending by date
-      records.sort((a, b) => b.diaryDate.localeCompare(a.diaryDate));
+      const records = Array.from(uniqueMap.values());
+      records.sort((a, b) => (b.uploadedAt || 0) - (a.uploadedAt || 0));
       setExistingRecords(records);
 
       // Auto select saved preview record from localStorage or latest record
@@ -311,40 +359,43 @@ function TeacherDiaryAdmin() {
       console.log("UPLOAD_COMPLETED: File uploaded successfully.");
       const fileUrl = result.url;
       console.log("DOWNLOAD_URL_CREATED: ", fileUrl);
-      console.log("DATABASE_SAVE_STARTED: Saving record to Firestore...");
-      setUploadStatus("Saving record in database...");
+      setUploadStatus("Parsing multi-day diary file...");
+      setUploadProgress(90);
+
+      // Parse multi-day diary entries from file
+      let parsedEntries: any[] | null = null;
+      try {
+        const arrayBuffer = await selectedFile.arrayBuffer();
+        const { parseDiaryFileFromArrayBuffer } = await import("@/lib/parse-diary-file");
+        parsedEntries = await parseDiaryFileFromArrayBuffer(arrayBuffer, selectedFile.name, selectedClass);
+      } catch (pErr) {
+        console.warn("Client multi-day parse note:", pErr);
+      }
+
+      setUploadStatus("Saving date records (1-12) to database...");
       setUploadProgress(95);
 
-      // 2. Save/Update record in Firestore (Doc ID = YYYY-MM-DD for fast date-based lookup)
-      const diaryDocRef = doc(db, "teacher_diaries", selectedClass, selectedMedium, dateStr);
-      
-      const isUpdate = existingRecords.some((r) => r.id === dateStr || r.diaryDate === dateStr);
-
-      await setDoc(diaryDocRef, {
-        pageUrl: fileUrl,
-        masterPdfUrl: fileUrl,
+      const { saveParsedEntriesToFirestore } = await import("@/lib/parse-diary-file");
+      const savedDates = await saveParsedEntriesToFirestore({
+        entries: parsedEntries,
+        fileUrl,
         fileName: selectedFile.name,
-        uploadedAt: Date.now(),
-        diaryDate: dateStr,
-        className: selectedClass,
-        medium: selectedMedium,
-        pageNumber: 1,
-        week: selectedWeek,
-        month: selectedMonth,
+        selectedClass,
+        selectedMedium,
+        selectedYear: String(selectedYear),
+        selectedMonth,
+        selectedWeek,
       });
 
-      localStorage.setItem(`admin_diary_preview_${selectedClass}_${selectedMedium}`, dateStr);
-      console.log("DATABASE_SAVE_COMPLETED: Record saved successfully.");
+      if (savedDates.length > 0) {
+        localStorage.setItem(`admin_diary_preview_${selectedClass}_${selectedMedium}`, savedDates[0]);
+      }
+
+      console.log("DATABASE_SAVE_COMPLETED: Saved records for dates:", savedDates);
       setUploadProgress(100);
       setUploadStatus("Upload completed!");
-      console.log("UPLOAD_SUCCESS: Complete flow finished perfectly.");
 
-
-      if (isUpdate) {
-        toast.success(`Updated Teaching Diary for ${selectedClass} (${selectedMedium}) on ${dateStr}`);
-      } else {
-        toast.success(`Successfully uploaded Teaching Diary for ${selectedClass} (${selectedMedium}) on ${dateStr}`);
-      }
+      toast.success(`✅ ${savedDates.length} दिवसांच्या टाचण नोंदी यशस्वीरित्या सेव्ह झाल्या! (Uploaded ${savedDates.length} date records)`);
 
       // Reset selection state & refresh list
       setSelectedFile(null);
@@ -361,21 +412,75 @@ function TeacherDiaryAdmin() {
     }
   };
 
-  // Delete an existing diary record
+  // Delete an existing diary record (and all related date docs for that file)
   const handleDeleteRecord = async (record: DiaryRecordItem) => {
     if (!selectedClass || !selectedMedium) return;
-    if (!confirm(`Are you sure you want to delete the diary record for ${record.diaryDate}?`)) {
+    const displayName = record.fileName || record.diaryDate || "ही फाईल";
+    if (!confirm(`तुम्हाला नक्की "${displayName}" व तिच्या सर्व पाठ टाचण नोंदी डिलीट करायच्या आहेत का?`)) {
       return;
     }
 
     try {
-      const docRef = doc(db, "teacher_diaries", selectedClass, selectedMedium, record.id);
-      await deleteDoc(docRef);
-      toast.success(`Deleted diary record for ${record.diaryDate}`);
+      const batch = writeBatch(db);
+
+      const targetUrl = record.pageUrl ? record.pageUrl.split("?")[0] : "";
+      const targetFile = record.fileName || "";
+
+      // 1. Delete all matching documents in teacher_diaries/{selectedClass}/{selectedMedium}
+      const colRef = collection(db, "teacher_diaries", selectedClass, selectedMedium);
+      const snap = await getDocs(colRef);
+
+      snap.docs.forEach((docSnap) => {
+        const data = docSnap.data();
+        const rawUrl = data.pageUrl || data.masterPdfUrl || "";
+        const docUrl = rawUrl ? rawUrl.split("?")[0] : "";
+
+        if (
+          docSnap.id === record.id ||
+          (targetUrl && docUrl === targetUrl) ||
+          (targetFile && data.fileName === targetFile)
+        ) {
+          batch.delete(docSnap.ref);
+        }
+      });
+
+      // 2. Delete all matching documents in teaching_diaries
+      const tdColRef = collection(db, "teaching_diaries");
+      const tdSnap = await getDocs(tdColRef);
+      const prefix = `${selectedClass}_${selectedMedium}_`;
+
+      tdSnap.docs.forEach((docSnap) => {
+        if (docSnap.id.startsWith(prefix)) {
+          const data = docSnap.data();
+          const rawUrl = data.pageUrl || data.masterPdfUrl || "";
+          const docUrl = rawUrl ? rawUrl.split("?")[0] : "";
+
+          if (
+            (targetUrl && docUrl === targetUrl) ||
+            (targetFile && data.fileName === targetFile)
+          ) {
+            batch.delete(docSnap.ref);
+          }
+        }
+      });
+
+      await batch.commit();
+
+      // Immediately remove from local state so UI updates instantly
+      setExistingRecords((prev) =>
+        prev.filter(
+          (r) =>
+            r.id !== record.id &&
+            (!targetFile || r.fileName !== targetFile) &&
+            (!targetUrl || (r.pageUrl && !r.pageUrl.includes(targetUrl)))
+        )
+      );
+
+      toast.success(`✅ "${displayName}" फाईल व तिच्या सर्व नोंदी यशस्वीरित्या डिलीट झाल्या!`);
       await fetchExistingRecords(selectedClass, selectedMedium);
     } catch (err: any) {
       console.error("Delete error:", err);
-      toast.error("Failed to delete diary record.");
+      toast.error("फाईल डिलीट करताना अडचण आली: " + (err.message || err));
     }
   };
 
@@ -407,6 +512,47 @@ function TeacherDiaryAdmin() {
             >
               <Eye className="size-4" /> View User Portal View
             </Link>
+          </div>
+        </div>
+
+        {/* Top Navigation Bar with Back Button & Breadcrumbs */}
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3.5 px-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
+          <button
+            type="button"
+            onClick={handleBack}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl text-xs font-black shadow-md transition-all active:scale-95 cursor-pointer"
+          >
+            <ArrowLeft className="size-4 shrink-0" />
+            <span>मागे जा (Back)</span>
+          </button>
+
+          {/* Dynamic Breadcrumbs */}
+          <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold text-slate-600">
+            <span className="text-slate-400 font-semibold">Admin Diary</span>
+            {selectedMedium && (
+              <>
+                <ChevronRight className="size-3 text-slate-400" />
+                <span className="text-indigo-600 font-extrabold">{selectedMedium === "Marathi" ? "मराठी माध्यम" : "सेमी इंग्रजी"}</span>
+              </>
+            )}
+            {selectedClass && (
+              <>
+                <ChevronRight className="size-3 text-slate-400" />
+                <span className="text-purple-600 font-extrabold">{selectedClass}</span>
+              </>
+            )}
+            {selectedMonth && (
+              <>
+                <ChevronRight className="size-3 text-slate-400" />
+                <span className="text-pink-600 font-extrabold">{months.find(m => m.id === selectedMonth)?.mr}</span>
+              </>
+            )}
+            {selectedWeek && (
+              <>
+                <ChevronRight className="size-3 text-slate-400" />
+                <span className="text-teal-600 font-extrabold">{weeks.find(w => w.id === selectedWeek)?.mr}</span>
+              </>
+            )}
           </div>
         </div>
 
@@ -594,6 +740,7 @@ function TeacherDiaryAdmin() {
                     whileTap={{ scale: 0.97 }}
                     onClick={() => {
                       setSelectedMonth(m.id);
+                      setSelectedWeek("Week 1");
                       const updatedDate = new Date(selectedDate);
                       updatedDate.setFullYear(selectedYear);
                       updatedDate.setMonth(parseInt(m.id, 10) - 1);
@@ -623,72 +770,6 @@ function TeacherDiaryAdmin() {
               </div>
             </motion.div>
           )}
-
-          {/* ═══ STEP 5: Select Week (Week Cards) ═══ */}
-          {selectedMedium && selectedClass && selectedYear && selectedMonth && !selectedWeek && (
-            <motion.div
-              key="week-selection"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              className="space-y-8"
-            >
-              {/* Hero Banner */}
-              <div className="relative overflow-hidden bg-gradient-to-r from-slate-900 via-purple-950 to-slate-900 rounded-[2.5rem] p-8 md:p-12 text-white shadow-2xl border border-white/5">
-                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                  <div className="space-y-3">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/10 text-xs font-semibold tracking-wider text-purple-200">
-                      <Sparkles className="size-3.5 text-amber-300 animate-pulse" />
-                      ADMIN PANEL — Teaching Diary Management
-                    </div>
-                    <h2 className="text-4xl md:text-5xl font-black tracking-tight">
-                      Teaching Diary <span className="text-indigo-400">Management.</span>
-                    </h2>
-                  </div>
-                </div>
-              </div>
-
-              {/* Title */}
-              <div className="text-center space-y-2 pt-2">
-                <h2 className="text-3xl font-black text-slate-900 tracking-tight italic">Select Week / आठवडा निवडा</h2>
-                <p className="text-xs font-bold text-slate-500">
-                  निवडलेले माध्यम: <span className="text-indigo-600 font-black">{selectedMedium === "Marathi" ? "मराठी माध्यम" : "सेमी इंग्रजी"}</span> • इयत्ता: <span className="text-purple-600 font-black">{selectedClass}</span> • वर्ष: <span className="text-teal-600 font-black">{selectedYear}</span> • महिना: <span className="text-pink-600 font-black">{months.find(m => m.id === selectedMonth)?.mr}</span>
-                </p>
-              </div>
-
-              {/* Week Cards (Premium Lavender/Indigo Theme) */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 max-w-5xl mx-auto w-full">
-                {weeks.map((wk) => (
-                  <motion.button
-                    key={wk.id}
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
-                    onClick={() => setSelectedWeek(wk.id)}
-                    className="group relative p-6 rounded-2xl border-2 text-center transition-all duration-500 cursor-pointer overflow-hidden bg-indigo-50/40 border-indigo-100 hover:border-indigo-300 hover:bg-indigo-100/30 text-slate-800 flex flex-col items-center gap-2 shadow-sm"
-                  >
-                    <div className="size-10 bg-indigo-200/50 rounded-xl flex items-center justify-center border border-indigo-200 group-hover:scale-110 transition-transform">
-                      <Calendar className="size-5 text-indigo-600" />
-                    </div>
-                    <div className="space-y-0.5">
-                      <h3 className="text-base font-black leading-tight tracking-tight text-slate-850">{wk.mr}</h3>
-                      <p className="text-[10px] text-indigo-500 font-bold uppercase tracking-wider">{wk.label}</p>
-                    </div>
-                  </motion.button>
-                ))}
-              </div>
-
-              {/* Back Button */}
-              <div className="flex justify-center pt-2">
-                <button
-                  onClick={() => setSelectedMonth(null)}
-                  className="flex items-center gap-2 px-5 py-2.5 text-indigo-600 hover:text-indigo-900 bg-white hover:bg-indigo-50 border border-indigo-200 rounded-2xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-sm"
-                >
-                  <ArrowLeft className="size-4" /> मागे या (Back to Month)
-                </button>
-              </div>
-            </motion.div>
-          )}
-
 
           {/* ═══ STEP 5: Upload & Records List (Centered layout) ═══ */}
           {selectedMedium && selectedClass && selectedMonth && selectedWeek && (
@@ -792,10 +873,10 @@ function TeacherDiaryAdmin() {
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                   <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-2">
                     <BookOpen className="size-4 text-indigo-600" />
-                    Uploaded Records: {selectedClass} ({selectedMedium}) — {months.find(m => m.id === selectedMonth)?.mr} • {weeks.find(w => w.id === selectedWeek)?.mr}
+                    Uploaded Records: {selectedClass} ({selectedMedium}) — {months.find(m => m.id === selectedMonth)?.mr}
                   </h3>
                   <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-full text-[10px] font-black">
-                    Total {existingRecords.filter(rec => rec.diaryDate === "master_diary" || (rec.diaryDate.split("-")[1] === selectedMonth && getRecordWeek(rec) === selectedWeek)).length}
+                    Total {existingRecords.filter(rec => rec.diaryDate === "master_diary" || rec.diaryDate.split("-")[1] === selectedMonth || !rec.diaryDate.includes("-")).length}
                   </span>
                 </div>
 
@@ -803,10 +884,10 @@ function TeacherDiaryAdmin() {
                   <div className="flex items-center justify-center py-8 text-xs font-bold text-slate-400 gap-2">
                     <Loader2 className="size-4 animate-spin text-indigo-600" /> Loading records...
                   </div>
-                ) : existingRecords.filter(rec => rec.diaryDate === "master_diary" || (rec.diaryDate.split("-")[1] === selectedMonth && getRecordWeek(rec) === selectedWeek)).length > 0 ? (
+                ) : existingRecords.filter(rec => rec.diaryDate === "master_diary" || rec.diaryDate.split("-")[1] === selectedMonth || !rec.diaryDate.includes("-")).length > 0 ? (
                   <div className="space-y-2 max-h-[350px] overflow-y-auto pr-1">
                     {existingRecords
-                      .filter(rec => rec.diaryDate === "master_diary" || (rec.diaryDate.split("-")[1] === selectedMonth && getRecordWeek(rec) === selectedWeek))
+                      .filter(rec => rec.diaryDate === "master_diary" || rec.diaryDate.split("-")[1] === selectedMonth || !rec.diaryDate.includes("-"))
                       .map((rec) => {
                         const isWord = isWordDoc(rec.fileName || rec.pageUrl);
                         return (
@@ -857,7 +938,7 @@ function TeacherDiaryAdmin() {
                 ) : (
                   <div className="text-center py-8 text-slate-400 space-y-2">
                     <AlertTriangle className="size-6 text-amber-500 mx-auto" />
-                    <p className="text-xs font-bold text-slate-500">No teaching diary uploaded yet for {selectedClass} ({selectedMedium}) in {months.find(m => m.id === selectedMonth)?.mr} • {weeks.find(w => w.id === selectedWeek)?.mr}.</p>
+                    <p className="text-xs font-bold text-slate-500">No teaching diary uploaded yet for {selectedClass} ({selectedMedium}) in {months.find(m => m.id === selectedMonth)?.mr}.</p>
                   </div>
                 )}
               </div>
@@ -868,35 +949,17 @@ function TeacherDiaryAdmin() {
           {isPreviewOpen && selectedRecordForPreview && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-sm">
               <div className="bg-white rounded-3xl overflow-hidden shadow-2xl w-full max-w-[96vw] border border-slate-100 flex flex-col h-[93vh]">
-                {/* Modal Header */}
-                <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between gap-3 shrink-0">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="size-9 rounded-xl bg-indigo-600 flex items-center justify-center shrink-0">
-                      <FileText className="size-4 text-white" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold truncate">{selectedRecordForPreview.fileName || "Teaching Diary Document"}</p>
-                      <p className="text-[10px] text-slate-400">{selectedClass} ({selectedMedium}) — {months.find(m => m.id === selectedMonth)?.mr} • {weeks.find(w => w.id === selectedWeek)?.mr}</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setIsPreviewOpen(false);
-                      setSelectedRecordForPreview(null);
-                    }}
-                    className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-extrabold transition-colors cursor-pointer"
-                  >
-                    Close ×
-                  </button>
-                </div>
-
-                {/* Modal Body */}
-                <div className="flex-1 overflow-hidden bg-slate-100 p-4">
+                {/* Modal Body with single unified navbar */}
+                <div className="flex-1 overflow-hidden bg-slate-100 p-2 sm:p-4">
                   <DocumentLivePreview
                     selectedFile={null}
                     savedRecord={selectedRecordForPreview}
                     authenticatedPdfUrl={authenticatedPreviewUrl}
                     loadingPdf={loadingPreview}
+                    onBack={() => {
+                      setIsPreviewOpen(false);
+                      setSelectedRecordForPreview(null);
+                    }}
                   />
                 </div>
               </div>

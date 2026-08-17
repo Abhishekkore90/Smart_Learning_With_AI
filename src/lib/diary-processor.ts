@@ -92,21 +92,33 @@ export async function processDiaryJob(jobId: string, jobData: DiaryJob) {
         await updateDoc(jobRef, { status: "uploading_pages", lastUpdatedAt: Date.now() });
         
         const startDateObj = new Date(jobData.startDate);
-        
-        // Write each parsed entry to Firestore
+        let dateCursor = new Date(startDateObj);
+
+        // Write each parsed entry to Firestore (skipping Sundays)
         for (let idx = 0; idx < parsedEntries.length; idx++) {
           const entry = parsedEntries[idx];
           
           let targetDateStr = entry.date;
           if (!targetDateStr) {
-            const nextDate = new Date(startDateObj);
-            nextDate.setDate(startDateObj.getDate() + idx);
-            targetDateStr = format(nextDate, "yyyy-MM-dd");
+            // Advance dateCursor skipping Sundays (Sunday = 0)
+            while (dateCursor.getDay() === 0) {
+              dateCursor.setDate(dateCursor.getDate() + 1);
+            }
+            targetDateStr = format(dateCursor, "yyyy-MM-dd");
+            dateCursor.setDate(dateCursor.getDate() + 1);
           }
           
           const daysOfWeek = ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
           const entryDateObj = new Date(targetDateStr);
-          const marathiDay = daysOfWeek[entryDateObj.getDay()];
+          const dayIdx = entryDateObj.getDay();
+
+          // Strictly skip Sunday entry! Sunday is a school holiday.
+          if (dayIdx === 0 || entry.day === "रविवार" || entry.day?.toLowerCase() === "sunday") {
+            console.log(`Skipping Sunday entry for date ${targetDateStr}`);
+            continue;
+          }
+
+          const marathiDay = daysOfWeek[dayIdx];
           
           // Save mapping to Firestore under teacher_diaries/{class}/{medium}/{date}
           const pageRef = doc(db, "teacher_diaries", jobData.className, jobData.medium, targetDateStr);
@@ -207,7 +219,16 @@ async function processSinglePage(
 ) {
   const pageNum = pageIndex + 1;
   const currentDate = new Date(startDateObj);
-  currentDate.setDate(startDateObj.getDate() + pageIndex);
+  let workingDaysAdded = 0;
+  while (workingDaysAdded < pageIndex) {
+    currentDate.setDate(currentDate.getDate() + 1);
+    if (currentDate.getDay() !== 0) {
+      workingDaysAdded++;
+    }
+  }
+  if (currentDate.getDay() === 0) {
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
   const dateStr = format(currentDate, "yyyy-MM-dd");
 
   const docId = dateStr;

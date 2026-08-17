@@ -125,14 +125,38 @@ function parseTextToDiary(rawText: string, className: string): ParsedDiaryConten
   // ─── Extract day ───
   let day = "";
   const dayPatterns = [
-    /दिवस\s*[:：]?\s*(सोमवार|मंगळवार|बुधवार|गुरुवार|शुक्रवार|शनिवार|रविवार)/i,
-    /Day\s*[:：]?\s*(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/i,
+    /(?:दिवस|वार)\s*[:：\-]?\s*(सोमवार|मंगळवार|बुधवार|गुरुवार|शुक्रवार|शनिवार|रविवार)/i,
+    /Day\s*[:：\-]?\s*(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/i,
   ];
   for (const pattern of dayPatterns) {
     const match = fullText.match(pattern);
     if (match) {
       day = match[1];
       break;
+    }
+  }
+
+  // Automatic computation of day from date
+  if (date) {
+    const cleaned = date.replace(/\s+/g, "");
+    const parts = cleaned.split(/[\/\-\.]/);
+    if (parts.length === 3) {
+      let d = 0, m = 0, y = 0;
+      if (parts[0].length === 4) {
+        y = parseInt(parts[0], 10);
+        m = parseInt(parts[1], 10) - 1;
+        d = parseInt(parts[2], 10);
+      } else {
+        d = parseInt(parts[0], 10);
+        m = parseInt(parts[1], 10) - 1;
+        y = parseInt(parts[2], 10);
+        if (y < 100) y += 2000;
+      }
+      const dateObj = new Date(y, m, d);
+      if (!isNaN(dateObj.getTime())) {
+        const daysInMarathi = ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
+        day = daysInMarathi[dateObj.getDay()];
+      }
     }
   }
 
@@ -200,10 +224,10 @@ function parseTextToDiary(rawText: string, className: string): ParsedDiaryConten
         class: className,
         subject: tableMatch[2]?.trim() || "",
         topic: tableMatch[3]?.trim() || "",
-        experience: tableMatch[4]?.trim() || "",
-        tools: tableMatch[5]?.trim() || "",
-        materials: tableMatch[6]?.trim() || "",
-        outcome: tableMatch[7]?.trim() || "",
+        outcome: tableMatch[4]?.trim() || "",
+        experience: tableMatch[5]?.trim() || "",
+        tools: tableMatch[6]?.trim() || "",
+        materials: tableMatch[7]?.trim() || "",
       });
     }
   }
@@ -567,14 +591,16 @@ function createFallbackStructure(className: string): ParsedDiaryContent {
   };
 }
 
-function parseAndStandardizeDate(dateStr: string): string | null {
+export function parseAndStandardizeDate(dateStr: string | undefined | null): string | null {
+  if (!dateStr) return null;
   const clean = dateStr.trim();
   // Match DD/MM/YYYY or DD-MM-YYYY
-  let m = clean.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+  let m = clean.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
   if (m) {
     const day = m[1].padStart(2, '0');
     const month = m[2].padStart(2, '0');
-    const year = m[3];
+    let year = m[3];
+    if (year.length === 2) year = `20${year}`;
     return `${year}-${month}-${day}`;
   }
   // Match YYYY-MM-DD
@@ -641,11 +667,11 @@ export function parseExcelToDiaries(arrayBuffer: ArrayBuffer, className: string)
       date: headers.findIndex(h => /तारीख|दिनांक|date/i.test(h)),
       period: headers.findIndex(h => /तास|तासिका|period|time/i.test(h)),
       subject: headers.findIndex(h => /विषय|subject/i.test(h)),
-      topic: headers.findIndex(h => /घटक|पाठ|topic|chapter/i.test(h)),
-      experience: headers.findIndex(h => /अनुभव|अध्ययन अनुभव|experience/i.test(h)),
+      topic: headers.findIndex(h => /मुद्दा|पाठ्यांश|पाठ्यघटक|घटक|पाठ|topic|chapter/i.test(h)),
+      outcome: headers.findIndex(h => /निष्पत्ती|निष्पती|दर्शक|दर्शके|outcome|result/i.test(h)),
+      experience: headers.findIndex(h => /अनुभव|अनुभवाचे|स्वरूप|कृती|experience/i.test(h)),
       tools: headers.findIndex(h => /साधन|तंत्र|tools|method/i.test(h)),
       materials: headers.findIndex(h => /साहित्य|materials/i.test(h)),
-      outcome: headers.findIndex(h => /निष्पत्ती|outcome/i.test(h)),
       thought: headers.findIndex(h => /सुविचार|thought/i.test(h)),
       dinvishesh: headers.findIndex(h => /दिनविशेष|special/i.test(h)),
       highlights: headers.findIndex(h => /प्रमुख उपक्रम|highlights/i.test(h)),
@@ -792,24 +818,27 @@ function parseHtmlSection(sec: { dateStr: string; elements: Element[] }, classNa
           }
         }
 
-        let colMap = { period: 0, subject: 1, topic: 2, experience: 3, tools: 4, materials: 5, outcome: 6 };
+        let colMap = { period: 0, subject: 1, topic: 2, outcome: 3, experience: 4, tools: 5, materials: 6 };
 
         if (headerRowIndex !== -1) {
           const headerCells = Array.from(rows[headerRowIndex].querySelectorAll("td, th")).map(c => (c.textContent || "").trim().toLowerCase());
           colMap = {
             period: headerCells.findIndex(h => /तास|तासिका|period|time/i.test(h)),
             subject: headerCells.findIndex(h => /विषय|subject/i.test(h)),
-            topic: headerCells.findIndex(h => /घटक|पाठ|topic|chapter/i.test(h)),
-            experience: headerCells.findIndex(h => /अनुभव|अध्ययन अनुभव|experience/i.test(h)),
-            tools: headerCells.findIndex(h => /साधन|तपशील|tools|method/i.test(h)),
+            topic: headerCells.findIndex(h => /मुद्दा|पाठ्यांश|पाठ्यघटक|घटक|पाठ|topic|chapter/i.test(h)),
+            outcome: headerCells.findIndex(h => /निष्पत्ती|निष्पती|दर्शक|दर्शके|outcome|result/i.test(h)),
+            experience: headerCells.findIndex(h => /अनुभव|अनुभवाचे|स्वरूप|कृती|experience/i.test(h)),
+            tools: headerCells.findIndex(h => /साधन|तंत्र|tools|method/i.test(h)),
             materials: headerCells.findIndex(h => /साहित्य|materials/i.test(h)),
-            outcome: headerCells.findIndex(h => /निष्पत्ती|outcome/i.test(h)),
           };
 
           if (colMap.period === -1) colMap.period = 0;
           if (colMap.subject === -1) colMap.subject = 1;
           if (colMap.topic === -1) colMap.topic = 2;
-          if (colMap.experience === -1) colMap.experience = 3;
+          if (colMap.outcome === -1) colMap.outcome = 3;
+          if (colMap.experience === -1) colMap.experience = 4;
+          if (colMap.tools === -1) colMap.tools = 5;
+          if (colMap.materials === -1) colMap.materials = 6;
         }
 
         const startRow = headerRowIndex !== -1 ? headerRowIndex + 1 : 0;
@@ -820,12 +849,12 @@ function parseHtmlSection(sec: { dateStr: string; elements: Element[] }, classNa
           const periodNum = colMap.period !== -1 && cells[colMap.period] ? cells[colMap.period] : (periods.length + 1).toString();
           const subject = colMap.subject !== -1 && cells[colMap.subject] ? cells[colMap.subject] : "";
           const topic = colMap.topic !== -1 && cells[colMap.topic] ? cells[colMap.topic] : "";
+          const outcome = colMap.outcome !== -1 && cells[colMap.outcome] ? cells[colMap.outcome] : "";
           const experience = colMap.experience !== -1 && cells[colMap.experience] ? cells[colMap.experience] : "";
           const tools = colMap.tools !== -1 && cells[colMap.tools] ? cells[colMap.tools] : "";
           const materials = colMap.materials !== -1 && cells[colMap.materials] ? cells[colMap.materials] : "";
-          const outcome = colMap.outcome !== -1 && cells[colMap.outcome] ? cells[colMap.outcome] : "";
 
-          if (subject || topic || experience) {
+          if (subject || topic || outcome || experience) {
             periods.push({
               period: periodNum,
               class: className,
@@ -1046,4 +1075,139 @@ export async function parseDiaryFile(
     console.error("Error parsing diary file, falling back:", err);
     return createFallbackStructure(className);
   }
+}
+
+export async function saveParsedEntriesToFirestore({
+  entries,
+  fileUrl,
+  fileName,
+  selectedClass,
+  selectedMedium,
+  selectedYear,
+  selectedMonth,
+  selectedWeek,
+}: {
+  entries: ParsedDiaryContent[] | null;
+  fileUrl: string;
+  fileName: string;
+  selectedClass: string;
+  selectedMedium: string;
+  selectedYear: string;
+  selectedMonth: string;
+  selectedWeek: string;
+}): Promise<string[]> {
+  const { doc, setDoc } = await import("firebase/firestore");
+  const { db } = await import("@/lib/firebase");
+
+  const monthStr = selectedMonth || "01";
+  const daysOfWeek = ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
+
+  let baseDay = 1;
+  if (selectedWeek === "Week 2") baseDay = 8;
+  else if (selectedWeek === "Week 3") baseDay = 15;
+  else if (selectedWeek === "Week 4") baseDay = 22;
+  else if (selectedWeek === "Week 5") baseDay = 29;
+
+  const validEntries = entries && entries.length > 0 ? entries : [];
+  const dateCursor = new Date(parseInt(selectedYear, 10), parseInt(monthStr, 10) - 1, baseDay);
+  const savedDates: string[] = [];
+
+  // Save primary file record in teacher_diaries so it represents the uploaded file
+  const masterDocId = `file_${Date.now()}`;
+  const masterDocRef = doc(db, "teacher_diaries", selectedClass, selectedMedium, masterDocId);
+  const primaryDateStr = `${selectedYear}-${monthStr}-${String(baseDay).padStart(2, "0")}`;
+
+  const masterData = {
+    id: masterDocId,
+    pageUrl: fileUrl,
+    masterPdfUrl: fileUrl,
+    fileName,
+    uploadedAt: Date.now(),
+    diaryDate: primaryDateStr,
+    date: primaryDateStr,
+    displayDate: primaryDateStr,
+    className: selectedClass,
+    medium: selectedMedium,
+    week: selectedWeek,
+    month: selectedMonth,
+    structuredData: validEntries.length > 0 ? validEntries : undefined,
+    periods: validEntries[0]?.periods || [],
+  };
+
+  try {
+    await setDoc(masterDocRef, masterData, { merge: true });
+  } catch (e) {
+    console.error("Failed to save master record:", e);
+  }
+
+  const count = validEntries.length > 0 ? validEntries.length : 12;
+
+  for (let idx = 0; idx < count; idx++) {
+    const entry = validEntries[idx] || null;
+
+    let targetDateStr = "";
+    if (entry?.date) {
+      targetDateStr = parseAndStandardizeDate(entry.date) || "";
+    }
+
+    if (!targetDateStr) {
+      while (dateCursor.getDay() === 0) { // skip Sundays
+        dateCursor.setDate(dateCursor.getDate() + 1);
+      }
+      targetDateStr = format(dateCursor, "yyyy-MM-dd");
+      dateCursor.setDate(dateCursor.getDate() + 1);
+    }
+
+    const parts = targetDateStr.split("-");
+    let dObj: Date | null = null;
+    if (parts.length === 3) {
+      dObj = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    }
+
+    // Skip Sundays (School holiday)
+    if (dObj && !isNaN(dObj.getTime()) && dObj.getDay() === 0) {
+      continue;
+    }
+
+    const dayName = dObj && !isNaN(dObj.getTime()) ? daysOfWeek[dObj.getDay()] : (entry?.day || "");
+    const periods = entry?.periods || (validEntries[0]?.periods || []);
+
+    const recordData = {
+      pageUrl: fileUrl,
+      masterPdfUrl: fileUrl,
+      fileName,
+      uploadedAt: Date.now(),
+      diaryDate: targetDateStr,
+      date: targetDateStr,
+      displayDate: targetDateStr,
+      day: dayName,
+      className: selectedClass,
+      medium: selectedMedium,
+      pageNumber: idx + 1,
+      week: selectedWeek,
+      month: selectedMonth,
+      thought: entry?.thought || validEntries[0]?.thought || "",
+      dinvishesh: entry?.dinvishesh || validEntries[0]?.dinvishesh || "",
+      periods: periods,
+      parsedContent: entry || { date: targetDateStr, day: dayName, periods },
+      structuredData: validEntries.length > 0 ? validEntries : undefined,
+    };
+
+    try {
+      // 1. Save to teacher_diaries doc for specific date
+      const teacherDocRef = doc(db, "teacher_diaries", selectedClass, selectedMedium, targetDateStr);
+      await setDoc(teacherDocRef, recordData, { merge: true });
+
+      // 2. Save to teaching_diaries doc for specific date
+      const tdDocId = `${selectedClass}_${selectedMedium}_${targetDateStr}`;
+      const tdDocRef = doc(db, "teaching_diaries", tdDocId);
+      await setDoc(tdDocRef, recordData, { merge: true });
+
+      savedDates.push(targetDateStr);
+    } catch (e) {
+      console.error(`Failed to save record for date ${targetDateStr}:`, e);
+    }
+  }
+
+  return savedDates;
 }

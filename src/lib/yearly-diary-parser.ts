@@ -94,6 +94,19 @@ export async function parseAndSaveYearlyDiary(
     const { isoDate, displayDate } = normalized;
 
     const dayStr = String(row["Day"] || row["वार"] || row["day"] || "").trim();
+
+    // Skip Sunday completely! Sunday is a school/college holiday (No data / no display for Sunday)
+    const dateObj = new Date(isoDate);
+    const isSun = (!isNaN(dateObj.getTime()) && dateObj.getDay() === 0) ||
+                  dayStr.toLowerCase() === "sunday" ||
+                  dayStr === "रविवार" ||
+                  dayStr.includes("रविवार") ||
+                  dayStr.toLowerCase().includes("sunday");
+
+    if (isSun) {
+      continue;
+    }
+
     const thought = String(row["Thought"] || row["विचार"] || row["thought"] || "").trim();
     const dinvishesh = String(row["Dinvishesh"] || row["दिनविशेष"] || row["dinvishesh"] || "").trim();
     const isHoliday = String(row["IsHoliday"] || row["सुट्टी"] || "").toLowerCase() === "true" || String(row["IsHoliday"]) === "1";
