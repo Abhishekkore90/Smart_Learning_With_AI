@@ -116,13 +116,22 @@ function detectLanguage(content: string | undefined): string {
   return "मराठी";
 }
 
+function getCurrentAcademicYearStr(): string {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const startYear = month >= 3 ? year : year - 1;
+  const endYear = startYear + 1;
+  return `सन ${startYear}-${endYear.toString().slice(-2)}`;
+}
+
 // ---------- Main Component ----------
 export function MonthlyParipathRegister() {
   const printRef = useRef<HTMLDivElement>(null);
   const now = new Date();
 
   const [schoolName, setSchoolName] = useState("जि. प. प्राथमिक शाळा");
-  const [academicYear, setAcademicYear] = useState("२०२५-२०२६");
+  const [academicYear, setAcademicYear] = useState(getCurrentAcademicYearStr());
   const [selectedMonthIndex, setSelectedMonthIndex] = useState(now.getMonth());
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [schoolInfo, setSchoolInfo] = useState({
@@ -132,19 +141,59 @@ export function MonthlyParipathRegister() {
     taluka: "",
     jilha: "",
   });
+  const [headmasterName, setHeadmasterName] = useState("");
+  const [teacherName, setTeacherName] = useState("");
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("paripathSchoolInfo");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setSchoolInfo(parsed);
-        if (parsed.schoolName) {
-          setSchoolName(parsed.schoolName);
-        }
+      const savedInfoStr = localStorage.getItem("paripathSchoolInfo");
+      let infoObj: any = savedInfoStr ? JSON.parse(savedInfoStr) : {};
+
+      const teacherProfileStr = localStorage.getItem("teacher_profile");
+      if (teacherProfileStr) {
+        try {
+          const tp = JSON.parse(teacherProfileStr);
+          infoObj.schoolName = infoObj.schoolName || tp.schoolName || tp.school || "";
+          infoObj.udise = infoObj.udise || tp.udise || tp.udiseNo || tp.udiseNumber || "";
+          infoObj.kendra = infoObj.kendra || tp.kendra || tp.center || "";
+          infoObj.taluka = infoObj.taluka || tp.taluka || "";
+          infoObj.jilha = infoObj.jilha || tp.jilha || tp.district || "";
+          infoObj.headmasterName = infoObj.headmasterName || tp.headmasterName || tp.principalName || tp.hmName || "";
+          infoObj.teacherName = infoObj.teacherName || tp.teacherName || tp.name || "";
+        } catch (e) {}
       }
+
+      const sqafStr = localStorage.getItem("sqaaf_school_info") || localStorage.getItem("sqaf_school_info");
+      if (sqafStr) {
+        try {
+          const sq = JSON.parse(sqafStr);
+          infoObj.schoolName = infoObj.schoolName || sq.schoolName || "";
+          infoObj.udise = infoObj.udise || sq.udise || "";
+          infoObj.kendra = infoObj.kendra || sq.kendra || "";
+          infoObj.taluka = infoObj.taluka || sq.taluka || "";
+          infoObj.jilha = infoObj.jilha || sq.jilha || sq.district || "";
+          infoObj.headmasterName = infoObj.headmasterName || sq.headmasterName || "";
+          infoObj.teacherName = infoObj.teacherName || sq.teacherName || "";
+        } catch (e) {}
+      }
+
+      const finalSchoolName = infoObj.schoolName || localStorage.getItem("teacher_school_name") || "जि. प. प्राथमिक शाळा";
+      const finalUdise = infoObj.udise || localStorage.getItem("teacher_udise") || localStorage.getItem("udiseNumber") || "";
+
+      setSchoolInfo({
+        schoolName: finalSchoolName,
+        udise: finalUdise,
+        kendra: infoObj.kendra || "",
+        taluka: infoObj.taluka || "",
+        jilha: infoObj.jilha || "",
+      });
+
+      if (finalSchoolName) setSchoolName(finalSchoolName);
+      if (infoObj.headmasterName) setHeadmasterName(infoObj.headmasterName);
+      if (infoObj.teacherName) setTeacherName(infoObj.teacherName);
+      if (infoObj.academicYear) setAcademicYear(infoObj.academicYear);
     } catch (e) {
-      console.error("Failed to load paripathSchoolInfo", e);
+      console.error("Failed to load school info", e);
     }
   }, []);
 
@@ -517,41 +566,41 @@ export function MonthlyParipathRegister() {
         // 1. Hide non-printables
         clonedChunk.querySelectorAll(".non-printable").forEach((el: any) => el.remove());
 
-        // 2. Replace textareas with plain text divs
+        // 2. Replace textareas with plain text divs with exact desktop text formatting
         clonedChunk.querySelectorAll("textarea").forEach((ta: HTMLTextAreaElement) => {
           const div = document.createElement("div");
           div.textContent = ta.value || "";
+          const isCenter = ta.classList.contains("text-center") || ta.style.textAlign === "center";
           div.style.cssText = `
-            font-family: 'Noto Sans Devanagari', sans-serif;
-            font-size: 8px;
+            font-family: 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 11px;
             font-weight: 600;
-            line-height: 1.15;
-            text-align: ${ta.classList.contains("text-center") ? "center" : "left"};
-            padding: 0.5px 1px;
+            line-height: 1.3;
+            text-align: ${isCenter ? "center" : "left"};
+            padding: 2px 3px;
             word-break: break-word;
-            overflow: hidden;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            max-height: 20px;
+            white-space: pre-wrap;
+            color: #0f172a;
+            box-sizing: border-box;
+            width: 100%;
           `;
           ta.parentNode?.replaceChild(div, ta);
         });
 
-        // 3. Wrap in a clean printable container matching A4 landscape canvas
+        // 3. Wrap in a clean printable container matching Desktop preview width
         const container = document.createElement("div");
         container.style.cssText = `
           position: absolute;
           left: -9999px;
           top: -9999px;
-          width: 1040px;
+          width: 1120px;
           background: #ffffff;
-          padding: 8px;
+          padding: 16px;
           box-sizing: border-box;
-          font-family: 'Noto Sans Devanagari', sans-serif;
+          font-family: 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, sans-serif;
         `;
 
-        // Inject PDF specific styling to ensure clean borders & text
+        // Inject PDF specific styling to match Desktop preview exactly
         const style = document.createElement("style");
         style.textContent = `
           * {
@@ -563,28 +612,30 @@ export function MonthlyParipathRegister() {
             width: 100% !important;
             border-collapse: collapse !important;
             table-layout: fixed !important;
-            font-size: 8px !important;
+            font-size: 11px !important;
             margin: 0 !important;
           }
           th {
-            padding: 3px 2px !important;
-            border: 1.2px solid #0f172a !important;
+            padding: 5px 4px !important;
+            border: 1.5px solid #0f172a !important;
             background-color: #f1f5f9 !important;
-            font-weight: 900 !important;
-            font-size: 8.5px !important;
+            font-weight: 800 !important;
+            font-size: 11px !important;
             text-align: center !important;
             font-family: 'Noto Sans Devanagari', sans-serif !important;
             color: #0f172a !important;
+            vertical-align: middle !important;
           }
           td {
-            padding: 2px 2.5px !important;
+            padding: 3px 4px !important;
             border: 1px solid #334155 !important;
-            font-size: 8px !important;
+            font-size: 11px !important;
             font-family: 'Noto Sans Devanagari', sans-serif !important;
             vertical-align: middle !important;
             word-break: break-word !important;
+            white-space: pre-wrap !important;
             color: #1e293b !important;
-            line-height: 1.15 !important;
+            line-height: 1.3 !important;
           }
           tr[class*="bg-rose"] td {
             background-color: #fff1f2 !important;
@@ -597,7 +648,7 @@ export function MonthlyParipathRegister() {
             border: 1.5px solid #0f172a !important;
             border-radius: 0 !important;
             margin-top: 6px !important;
-            margin-bottom: 16px !important;
+            margin-bottom: 12px !important;
           }
         `;
         container.appendChild(style);
@@ -608,7 +659,7 @@ export function MonthlyParipathRegister() {
           scale: 2,
           useCORS: true,
           logging: false,
-          windowWidth: 1040,
+          windowWidth: 1120,
         });
 
         document.body.removeChild(container);
@@ -859,6 +910,70 @@ export function MonthlyParipathRegister() {
           </div>
         </div>
 
+        {/* Additional School Info & Signatures Controls */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 pt-3 border-t border-white/10 text-xs font-medium">
+          <div className="space-y-1">
+            <label className="text-indigo-200/80 font-bold">तालुका</label>
+            <input
+              type="text"
+              value={schoolInfo.taluka || ""}
+              onChange={(e) => setSchoolInfo(prev => ({ ...prev, taluka: e.target.value }))}
+              className="w-full px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white font-bold outline-none focus:border-indigo-400"
+              placeholder="तालुका"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-indigo-200/80 font-bold">जिल्हा</label>
+            <input
+              type="text"
+              value={schoolInfo.jilha || ""}
+              onChange={(e) => setSchoolInfo(prev => ({ ...prev, jilha: e.target.value }))}
+              className="w-full px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white font-bold outline-none focus:border-indigo-400"
+              placeholder="जिल्हा"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-indigo-200/80 font-bold">केंद्र</label>
+            <input
+              type="text"
+              value={schoolInfo.kendra || ""}
+              onChange={(e) => setSchoolInfo(prev => ({ ...prev, kendra: e.target.value }))}
+              className="w-full px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white font-bold outline-none focus:border-indigo-400"
+              placeholder="केंद्र"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-indigo-200/80 font-bold">UDISE नंबर</label>
+            <input
+              type="text"
+              value={schoolInfo.udise || ""}
+              onChange={(e) => setSchoolInfo(prev => ({ ...prev, udise: e.target.value }))}
+              className="w-full px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white font-bold outline-none focus:border-indigo-400"
+              placeholder="युडायस नंबर"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-indigo-200/80 font-bold">शिक्षकाचे नाव</label>
+            <input
+              type="text"
+              value={teacherName}
+              onChange={(e) => setTeacherName(e.target.value)}
+              className="w-full px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white font-bold outline-none focus:border-indigo-400"
+              placeholder="शिक्षकाचे नाव"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-indigo-200/80 font-bold">मुख्याध्यापकाचे नाव</label>
+            <input
+              type="text"
+              value={headmasterName}
+              onChange={(e) => setHeadmasterName(e.target.value)}
+              className="w-full px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white font-bold outline-none focus:border-indigo-400"
+              placeholder="मुख्याध्यापकाचे नाव"
+            />
+          </div>
+        </div>
+
         {/* Status info */}
         {isFetching && (
           <div className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl">
@@ -897,19 +1012,19 @@ export function MonthlyParipathRegister() {
 
               <div className={`page-chunk-box space-y-4 ${chunkIdx > 0 ? "page-break" : ""}`}>
                 {/* ---------- SINGLE UNIFIED HEADER ---------- */}
-                <div className="flex flex-col gap-1 border-b-2 border-slate-900 pb-3">
+                <div className="flex flex-col gap-1.5 border-b-2 border-slate-900 pb-2">
                   <div className="flex items-center justify-between">
                     <div className="space-y-1 font-black text-slate-900 text-xs md:text-sm">
                       <div>
                         शाळेचे नाव :{" "}
-                        <span className="border-b border-dotted border-slate-700 px-2 py-0.5 text-indigo-900">
+                        <span className="border-b border-dotted border-slate-700 px-2 py-0.5 text-indigo-950 font-extrabold">
                           {schoolName || schoolInfo.schoolName || "..................................................."}
                         </span>
                       </div>
                       <div>
-                        सन :{" "}
-                        <span className="border-b border-dotted border-slate-700 px-2 py-0.5 text-indigo-900">
-                          {academicYear || ".........................................."}
+                        शैक्षणिक वर्ष :{" "}
+                        <span className="border-b border-dotted border-slate-700 px-2 py-0.5 text-indigo-950 font-extrabold">
+                          {academicYear || getCurrentAcademicYearStr()}
                         </span>
                       </div>
                     </div>
@@ -918,21 +1033,20 @@ export function MonthlyParipathRegister() {
                       <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-wider">
                         दैनिक व परिपाठातील उपक्रम ({chunk.label})
                       </h2>
-                      <p className="text-[10px] font-bold text-slate-500 uppercase">
-                        महिना: {MARATHI_MONTHS[selectedMonthIndex]} {selectedYear}
+                      <p className="text-xs font-bold text-slate-700 uppercase mt-0.5">
+                        मासिक परिपाठ नोंदवही • माहे: {MARATHI_MONTHS[selectedMonthIndex]} {selectedYear}
                       </p>
                     </div>
                   </div>
 
                   {/* School Metadata Info Row */}
-                  {(schoolInfo.udise || schoolInfo.kendra || schoolInfo.taluka || schoolInfo.jilha) && (
-                    <div className="flex flex-wrap gap-x-6 gap-y-1 text-[11px] font-bold text-slate-700 pt-1 border-t border-slate-200">
-                      {schoolInfo.udise && <div>युडायस : <span className="font-extrabold text-slate-900">{schoolInfo.udise}</span></div>}
-                      {schoolInfo.kendra && <div>केंद्र : <span className="font-extrabold text-slate-900">{schoolInfo.kendra}</span></div>}
-                      {schoolInfo.taluka && <div>तालुका : <span className="font-extrabold text-slate-900">{schoolInfo.taluka}</span></div>}
-                      {schoolInfo.jilha && <div>जिल्हा : <span className="font-extrabold text-slate-900">{schoolInfo.jilha}</span></div>}
-                    </div>
-                  )}
+                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs font-bold text-slate-900 pt-1.5 border-t border-slate-300">
+                    <div>शाळेचे नाव : <span className="font-extrabold text-indigo-950">{schoolName || schoolInfo.schoolName || "---"}</span></div>
+                    <div>तालुका : <span className="font-extrabold text-indigo-950">{schoolInfo.taluka || "---"}</span></div>
+                    <div>जिल्हा : <span className="font-extrabold text-indigo-950">{schoolInfo.jilha || "---"}</span></div>
+                    <div>केंद्र : <span className="font-extrabold text-indigo-950">{schoolInfo.kendra || "---"}</span></div>
+                    <div>UDISE नंबर : <span className="font-extrabold text-indigo-950">{schoolInfo.udise || "---"}</span></div>
+                  </div>
                 </div>
 
                 {/* ---------- TABLE 1: दैनिक ---------- */}
@@ -1072,14 +1186,14 @@ export function MonthlyParipathRegister() {
                 <div className="overflow-x-auto border-2 border-slate-900 bg-white shadow-sm w-full">
                   <table className="w-full text-left text-[11px] text-slate-900 border-collapse align-middle table-fixed min-w-[950px]">
                     <colgroup>
-                      <col style={{ width: "5%" }} />
-                      <col style={{ width: "11%" }} />
+                      <col style={{ width: "16%" }} />
+                      <col style={{ width: "16%" }} />
                       <col style={{ width: "14%" }} />
                       <col style={{ width: "14%" }} />
-                      <col style={{ width: "14%" }} />
-                      <col style={{ width: "14%" }} />
-                      <col style={{ width: "14%" }} />
-                      <col style={{ width: "14%" }} />
+                      <col style={{ width: "13%" }} />
+                      <col style={{ width: "13%" }} />
+                      <col style={{ width: "7%" }} />
+                      <col style={{ width: "7%" }} />
                     </colgroup>
                     <thead>
                       <tr className="bg-slate-100 border-b-2 border-slate-900 text-center font-black text-slate-900 uppercase text-[11px]">
@@ -1218,6 +1332,18 @@ export function MonthlyParipathRegister() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+
+                {/* ---------- FOOTER SIGNATURE SECTION ---------- */}
+                <div className="pt-3 border-t-2 border-slate-900 mt-3 flex items-center justify-between text-xs font-bold text-slate-900">
+                  <div className="space-y-1">
+                    <div>शिक्षकाचे नाव : <span className="font-extrabold border-b border-dotted border-slate-800 px-3">{teacherName || "________________________"}</span></div>
+                    <div>शिक्षकाची स्वाक्षरी : <span className="font-extrabold border-b border-dotted border-slate-800 px-3">________________________</span></div>
+                  </div>
+                  <div className="space-y-1 text-right">
+                    <div>मुख्याध्यापकाचे नाव : <span className="font-extrabold border-b border-dotted border-slate-800 px-3">{headmasterName || "________________________"}</span></div>
+                    <div>मुख्याध्यापकाची स्वाक्षरी : <span className="font-extrabold border-b border-dotted border-slate-800 px-3">________________________</span></div>
+                  </div>
                 </div>
               </div>
             </React.Fragment>
