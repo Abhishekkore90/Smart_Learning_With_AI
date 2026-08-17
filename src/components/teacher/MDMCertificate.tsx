@@ -253,7 +253,12 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
                     ? (certBeneficiaryPrimary || toMarathiNumbers(primaryBeneficiarySum.toString()))
                     : subTab === "6-8"
                     ? (certBeneficiaryUpper || toMarathiNumbers(upperBeneficiarySum.toString()))
-                    : toMarathiNumbers((primaryBeneficiarySum + upperBeneficiarySum).toString())}
+                    : toMarathiNumbers(
+                        (
+                          (certBeneficiaryPrimary ? parseInt(toEnglishNumbers(certBeneficiaryPrimary), 10) || primaryBeneficiarySum : primaryBeneficiarySum) +
+                          (certBeneficiaryUpper ? parseInt(toEnglishNumbers(certBeneficiaryUpper), 10) || upperBeneficiarySum : upperBeneficiarySum)
+                        ).toString()
+                      )}
                 </td>
                 <td className="border border-black p-1" style={{ border: '1px solid #000000' }}>---</td>
                 <td className="border border-black p-1" style={{ border: '1px solid #000000' }}>---</td>

@@ -234,8 +234,8 @@ function TeacherMDMPage() {
   const [certSupplementaryFood, setCertSupplementaryFood] = useState<string>("");
   const [certPatPrimary, setCertPatPrimary] = useState<string>("");
   const [certPatUpper, setCertPatUpper] = useState<string>("");
-  const [certBeneficiaryPrimary, setCertBeneficiaryPrimary] = useState<string>("0");
-  const [certBeneficiaryUpper, setCertBeneficiaryUpper] = useState<string>("0");
+  const [certBeneficiaryPrimary, setCertBeneficiaryPrimary] = useState<string>("");
+  const [certBeneficiaryUpper, setCertBeneficiaryUpper] = useState<string>("");
   const [certHelperCount, setCertHelperCount] = useState<string>("0");
   const [showCertEditor, setShowCertEditor] = useState<boolean>(true);
 
