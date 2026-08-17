@@ -593,8 +593,10 @@ function createFallbackStructure(className: string): ParsedDiaryContent {
 
 export function parseAndStandardizeDate(dateStr: string | undefined | null): string | null {
   if (!dateStr) return null;
-  const clean = dateStr.trim();
-  // Match DD/MM/YYYY or DD-MM-YYYY
+  // Normalize internal spaces around date separators (e.g. "12/ 8 /2026" -> "12/8/2026")
+  let clean = dateStr.trim().replace(/(\d{1,2})\s*[\/\-\.]\s*(\d{1,2})\s*[\/\-\.]\s*(\d{2,4})/, "$1/$2/$3");
+  
+  // Match DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY
   let m = clean.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
   if (m) {
     const day = m[1].padStart(2, '0');
@@ -603,6 +605,17 @@ export function parseAndStandardizeDate(dateStr: string | undefined | null): str
     if (year.length === 2) year = `20${year}`;
     return `${year}-${month}-${day}`;
   }
+
+  // Also extract date pattern inside longer strings (e.g., "दिनांक: 12/ 8 /2026")
+  m = clean.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);
+  if (m) {
+    const day = m[1].padStart(2, '0');
+    const month = m[2].padStart(2, '0');
+    let year = m[3];
+    if (year.length === 2) year = `20${year}`;
+    return `${year}-${month}-${day}`;
+  }
+
   // Match YYYY-MM-DD
   m = clean.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
   if (m) {
@@ -740,34 +753,108 @@ export function parseDocxHtmlToDiaries(html: string, className: string): ParsedD
   const doc = parser.parseFromString(html, "text/html");
   const bodyElements = Array.from(doc.body.children);
   
+  const dateRegex = /(?:तारीख|दिनांक|Date)?\s*[:：]?\s*(\d{1,2}\s*[\/\-\.]\s*\d{1,2}\s*[\/\-\.]\s*\d{2,4})/gi;
+  const allText = doc.body.textContent || "";
+  const dateMatches: { dateStr: string; index: number }[] = [];
+  let match;
+  while ((match = dateRegex.exec(allText)) !== null) {
+    const std = parseAndStandardizeDate(match[1]);
+    if (std) {
+      dateMatches.push({ dateStr: match[1], index: match.index });
+    }
+  }
+
+  // If 0 or 1 date match found in the whole document, treat the ENTIRE document as a single section!
+  if (dateMatches.length <= 1) {
+    const singleDateStr = dateMatches.length === 1 ? dateMatches[0].dateStr : "";
+    return [parseHtmlSection({ dateStr: singleDateStr, elements: bodyElements }, className)];
+  }
+
+  // If multiple distinct dates found, split elements by date section
   const sections: { dateStr: string; elements: Element[] }[] = [];
-  let currentSection: { dateStr: string; elements: Element[] } | null = null;
-  
-  const dateRegex = /(?:तारीख|दिनांक|Date)\s*[:：]?\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/i;
+  let currentSection: { dateStr: string; elements: Element[] } = { dateStr: dateMatches[0].dateStr, elements: [] };
+  sections.push(currentSection);
 
   bodyElements.forEach((el) => {
     const text = el.textContent || "";
-    const dateMatch = text.match(dateRegex);
-    
-    if (dateMatch) {
-      const dateStr = dateMatch[1];
-      currentSection = { dateStr, elements: [] };
-      sections.push(currentSection);
+    const dMatch = text.match(/(?:तारीख|दिनांक|Date)?\s*[:：]?\s*(\d{1,2}\s*[\/\-\.]\s*\d{1,2}\s*[\/\-\.]\s*\d{2,4})/i);
+    if (dMatch) {
+      const std = parseAndStandardizeDate(dMatch[1]);
+      if (std && currentSection.elements.length > 0) {
+        currentSection = { dateStr: dMatch[1], elements: [] };
+        sections.push(currentSection);
+      }
     }
-    
-    if (currentSection) {
-      currentSection.elements.push(el);
+    currentSection.elements.push(el);
+  });
+
+  const rawParsedList = sections.map(sec => parseHtmlSection(sec, className)).filter(Boolean) as ParsedDiaryContent[];
+
+  // Merge sections with the same date
+  const mergedMap: Record<string, ParsedDiaryContent> = {};
+  rawParsedList.forEach((item) => {
+    const key = item.date || "default";
+    if (!mergedMap[key]) {
+      mergedMap[key] = { ...item, periods: [...(item.periods || [])] };
     } else {
-      currentSection = { dateStr: "", elements: [el] };
-      sections.push(currentSection);
+      if (!mergedMap[key].day && item.day) mergedMap[key].day = item.day;
+      if (!mergedMap[key].thought && item.thought) mergedMap[key].thought = item.thought;
+      if (!mergedMap[key].dinvishesh && item.dinvishesh) mergedMap[key].dinvishesh = item.dinvishesh;
+      if (item.periods && item.periods.length > 0) {
+        mergedMap[key].periods.push(...item.periods);
+      }
     }
   });
 
-  if (sections.length === 0 || (sections.length === 1 && !sections[0].dateStr)) {
-    return [parseHtmlSection({ dateStr: "", elements: bodyElements }, className)];
-  }
+  return Object.values(mergedMap);
+}
 
-  return sections.map(sec => parseHtmlSection(sec, className)).filter(Boolean) as ParsedDiaryContent[];
+function getCellTextWithNewlines(cell: Element): string {
+  if (!cell) return "";
+  const clone = cell.cloneNode(true) as Element;
+  clone.querySelectorAll("br").forEach(br => br.replaceWith("\n"));
+  clone.querySelectorAll("p").forEach(p => {
+    p.prepend(document.createTextNode("\n"));
+  });
+  return (clone.textContent || "")
+    .split("\n")
+    .map(line => line.trim())
+    .filter(Boolean)
+    .join("\n");
+}
+
+function parseHtmlTableToGrid(tableEl: Element): string[][] {
+  const trs = Array.from(tableEl.querySelectorAll("tr"));
+  const grid: string[][] = [];
+
+  trs.forEach((tr, rIdx) => {
+    if (!grid[rIdx]) grid[rIdx] = [];
+    const cells = Array.from(tr.querySelectorAll("td, th"));
+    let cIdx = 0;
+
+    cells.forEach((cell) => {
+      while (grid[rIdx][cIdx] !== undefined) {
+        cIdx++;
+      }
+
+      const cellText = getCellTextWithNewlines(cell);
+      const rowspan = parseInt(cell.getAttribute("rowspan") || "1", 10) || 1;
+      const colspan = parseInt(cell.getAttribute("colspan") || "1", 10) || 1;
+
+      for (let r = 0; r < rowspan; r++) {
+        for (let c = 0; c < colspan; c++) {
+          const targetRow = rIdx + r;
+          const targetCol = cIdx + c;
+          if (!grid[targetRow]) grid[targetRow] = [];
+          grid[targetRow][targetCol] = cellText;
+        }
+      }
+
+      cIdx += colspan;
+    });
+  });
+
+  return grid;
 }
 
 function parseHtmlSection(sec: { dateStr: string; elements: Element[] }, className: string): ParsedDiaryContent {
@@ -805,14 +892,28 @@ function parseHtmlSection(sec: { dateStr: string; elements: Element[] }, classNa
     if (highMatch && !highlights) {
       highlights = highMatch[1].trim();
     }
+  });
 
+  // Extract all tables in sec.elements (including nested tables inside wrapper divs or sections)
+  const tables: Element[] = [];
+  sec.elements.forEach((el) => {
     if (el.tagName === "TABLE") {
-      const rows = Array.from(el.querySelectorAll("tr"));
-      if (rows.length > 0) {
+      tables.push(el);
+    } else {
+      const nestedTables = Array.from(el.querySelectorAll("table"));
+      tables.push(...nestedTables);
+    }
+  });
+
+  const uniqueTables = Array.from(new Set(tables));
+
+  uniqueTables.forEach((tableEl) => {
+    const grid = parseHtmlTableToGrid(tableEl);
+    if (grid.length > 0) {
         let headerRowIndex = -1;
-        for (let r = 0; r < Math.min(3, rows.length); r++) {
-          const cells = Array.from(rows[r].querySelectorAll("td, th"));
-          if (cells.some(c => /तास|तासिका|विषय|घटक|Period|Subject|Topic/i.test(c.textContent || ""))) {
+        for (let r = 0; r < Math.min(10, grid.length); r++) {
+          const rowCells = grid[r] || [];
+          if (rowCells.some(c => /तास|तासिका|विषय|घटक|Period|Subject|Topic/i.test(c))) {
             headerRowIndex = r;
             break;
           }
@@ -821,7 +922,7 @@ function parseHtmlSection(sec: { dateStr: string; elements: Element[] }, classNa
         let colMap = { period: 0, subject: 1, topic: 2, outcome: 3, experience: 4, tools: 5, materials: 6 };
 
         if (headerRowIndex !== -1) {
-          const headerCells = Array.from(rows[headerRowIndex].querySelectorAll("td, th")).map(c => (c.textContent || "").trim().toLowerCase());
+          const headerCells = (grid[headerRowIndex] || []).map(c => c.toLowerCase());
           colMap = {
             period: headerCells.findIndex(h => /तास|तासिका|period|time/i.test(h)),
             subject: headerCells.findIndex(h => /विषय|subject/i.test(h)),
@@ -842,11 +943,14 @@ function parseHtmlSection(sec: { dateStr: string; elements: Element[] }, classNa
         }
 
         const startRow = headerRowIndex !== -1 ? headerRowIndex + 1 : 0;
-        for (let r = startRow; r < rows.length; r++) {
-          const cells = Array.from(rows[r].querySelectorAll("td")).map(c => (c.textContent || "").trim());
+        for (let r = startRow; r < grid.length; r++) {
+          const cells = grid[r] || [];
           if (cells.length < 2) continue;
 
-          const periodNum = colMap.period !== -1 && cells[colMap.period] ? cells[colMap.period] : (periods.length + 1).toString();
+          const rawPeriodStr = colMap.period !== -1 && cells[colMap.period] ? cells[colMap.period] : "";
+          if (rawPeriodStr === "तासिका" || rawPeriodStr === "Period" || rawPeriodStr === "तास") continue;
+
+          const periodNum = rawPeriodStr || (periods.length + 1).toString();
           const subject = colMap.subject !== -1 && cells[colMap.subject] ? cells[colMap.subject] : "";
           const topic = colMap.topic !== -1 && cells[colMap.topic] ? cells[colMap.topic] : "";
           const outcome = colMap.outcome !== -1 && cells[colMap.outcome] ? cells[colMap.outcome] : "";
@@ -868,8 +972,7 @@ function parseHtmlSection(sec: { dateStr: string; elements: Element[] }, classNa
           }
         }
       }
-    }
-  });
+    });
 
   return {
     date,
@@ -1140,7 +1243,7 @@ export async function saveParsedEntriesToFirestore({
     console.error("Failed to save master record:", e);
   }
 
-  const count = validEntries.length > 0 ? validEntries.length : 12;
+  const count = validEntries.length > 0 ? validEntries.length : 10;
 
   for (let idx = 0; idx < count; idx++) {
     const entry = validEntries[idx] || null;

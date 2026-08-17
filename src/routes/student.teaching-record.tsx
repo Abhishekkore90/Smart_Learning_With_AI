@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
 import { StudentHeader } from "@/components/student/StudentHeader";
+import { TeacherTodayDiary } from "@/components/teacher/TeacherTodayDiary";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, doc, query, onSnapshot } from "firebase/firestore";
 import { format } from "date-fns";
@@ -70,6 +71,7 @@ function StudentTeachingRecordPage() {
   const navigate = useNavigate();
   const { user, profile, loading: authLoading } = useAuth();
   
+  const [activeTab, setActiveTab] = useState<"daily" | "weekly">("daily");
   const [selectedMedium, setSelectedMedium] = useState<string>("Marathi");
   const [selectedMonth, setSelectedMonth] = useState<string>(format(new Date(), "MM"));
   const [diaryRecords, setDiaryRecords] = useState<any[]>([]);
@@ -205,9 +207,9 @@ function StudentTeachingRecordPage() {
 
           {/* Header */}
           <div className="bg-white rounded-[3rem] shadow-sm border border-slate-200 overflow-hidden">
-            <div className="p-10 md:p-12 pb-6 border-b border-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="p-8 md:p-10 pb-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-6">
               <div>
-                <h1 className="text-4xl font-black text-slate-900 tracking-tighter italic">
+                <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tighter italic">
                   Teaching Diary (टाचणवही अहवाल)
                 </h1>
                 <div className="flex flex-wrap items-center gap-3 mt-2">
@@ -220,7 +222,7 @@ function StudentTeachingRecordPage() {
                   <select
                     value={selectedMedium}
                     onChange={(e) => setSelectedMedium(e.target.value)}
-                    className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[10px] font-black uppercase tracking-widest text-indigo-600 outline-none cursor-pointer"
+                    className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-indigo-600 outline-none cursor-pointer"
                   >
                     {MEDIUMS.map((med) => (
                       <option key={med.id} value={med.id}>
@@ -234,7 +236,7 @@ function StudentTeachingRecordPage() {
                   <select
                     value={selectedMonth}
                     onChange={(e) => setSelectedMonth(e.target.value)}
-                    className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[10px] font-black uppercase tracking-widest text-indigo-600 outline-none cursor-pointer"
+                    className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-indigo-600 outline-none cursor-pointer"
                   >
                     {months.map((m) => (
                       <option key={m.id} value={m.id}>
@@ -244,13 +246,35 @@ function StudentTeachingRecordPage() {
                   </select>
                 </div>
               </div>
-              <div className="size-16 rounded-3xl bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-inner">
-                <BookOpen className="size-8" />
+
+              {/* View Mode Tabs */}
+              <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl shrink-0 border border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("daily")}
+                  className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${activeTab === "daily" ? "bg-indigo-600 text-white shadow-md" : "text-slate-600 hover:text-slate-900"}`}
+                >
+                  📅 दैनिक तारीख निहाय (Daily Date View)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("weekly")}
+                  className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${activeTab === "weekly" ? "bg-indigo-600 text-white shadow-md" : "text-slate-600 hover:text-slate-900"}`}
+                >
+                  🗓️ आठवडा निहाय (Weekly View)
+                </button>
               </div>
             </div>
 
-            <div className="p-8 md:p-12">
-              {loading ? (
+            <div className="p-6 md:p-10">
+              {activeTab === "daily" ? (
+                <TeacherTodayDiary
+                  selectedClass={studentClass}
+                  selectedMedium={selectedMedium}
+                  selectedMonth={selectedMonth}
+                  isStudent={true}
+                />
+              ) : loading ? (
                 <div className="flex items-center justify-center py-20 text-indigo-600">
                   <Loader2 className="size-10 animate-spin" />
                 </div>
