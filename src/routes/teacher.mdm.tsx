@@ -112,6 +112,21 @@ const DEFAULT_STOCK = [
 
 const DEFAULT_HELPERS: any[] = [];
 
+const MARATHI_TO_ENGLISH_MONTHS: Record<string, string> = {
+  "ऑगस्ट": "August",
+  "सप्टेंबर": "September",
+  "ऑक्टोबर": "October",
+  "नोव्हेंबर": "November",
+  "डिसेंबर": "December",
+  "जानेवारी": "January",
+  "फेब्रुवारी": "February",
+  "मार्च": "March",
+  "एप्रिल": "April",
+  "मे": "May",
+  "जून": "June",
+  "जुलै": "July",
+};
+
 function TeacherMDMPage() {
   const navigate = useNavigate();
   const { user, profile, loading: authLoading } = useAuth();
@@ -192,7 +207,8 @@ function TeacherMDMPage() {
   }, [tab]);
 
   // Monthly Report States
-  const [monthlyReportMonth, setMonthlyReportMonth] = useState<string | null>(null);
+  const [monthlyReportMonth, setMonthlyReportMonth] = useState<string | null>("August");
+  const [monthlyReportYear, setMonthlyReportYear] = useState<string>("2026-27");
   const [selectedReportCategory, setSelectedReportCategory] = useState<"tandul_bhag1" | "dhanyadi_bhag2" | "masik_goshwara" | "anudan_report" | "purak_ahar_report">("masik_goshwara");
   const [reportSchoolName, setReportSchoolName] = useState("");
   const [reportTeacherName, setReportTeacherName] = useState("");
@@ -201,11 +217,14 @@ function TeacherMDMPage() {
   const [annualSubTab, setAnnualSubTab] = useState<"1-5" | "6-8" | "1-8">("1-5");
   const [annualReportType, setAnnualReportType] = useState("तांदूळ उपयोगिता (किलोग्रॅम मध्ये)");
   const [stockDemandMonth, setStockDemandMonth] = useState<string>("सप्टेंबर");
+  const [stockDemandYear, setStockDemandYear] = useState<string>("2026-27");
   const [stockDemandPatSankhya, setStockDemandPatSankhya] = useState<string>("");
   const [stockDemandCategory, setStockDemandCategory] = useState<"1 To 5" | "6 To 8">("1 To 5");
   const [stockDemandWorkingDays, setStockDemandWorkingDays] = useState<string>("21");
   const [monthlyMdmReportType, setMonthlyMdmReportType] = useState<string>("daily_tandul_register");
-  const [monthlyMdmReportMonth, setMonthlyMdmReportMonth] = useState<string>("जून सन 2026/27");
+  const [monthlyMdmReportSelectedMonth, setMonthlyMdmReportSelectedMonth] = useState<string>("जून");
+  const [monthlyMdmReportYear, setMonthlyMdmReportYear] = useState<string>("2026/27");
+  const monthlyMdmReportMonth = `${monthlyMdmReportSelectedMonth} सन ${monthlyMdmReportYear}`;
   const [swayampakiMandhan, setSwayampakiMandhan] = useState<string>("2500.00");
 
   const [certMonthName, setCertMonthName] = useState<string>("");
@@ -260,7 +279,7 @@ function TeacherMDMPage() {
       const pages = Array.from(container.querySelectorAll(".print-page")) as HTMLElement[];
       if (pages.length === 0) return;
 
-      const acadMonths = getAcademicYearMonths("2025-26");
+      const acadMonths = getAcademicYearMonths(monthlyReportYear || "2026-27");
       const selectedMonthObj = acadMonths.find(m => m.month === monthlyReportMonth);
       const reportYear = selectedMonthObj ? selectedMonthObj.year : undefined;
 
@@ -1560,10 +1579,10 @@ function TeacherMDMPage() {
 
   useEffect(() => {
     if (isMonthlyReportGenerated && monthlyReportMonth && profile) {
-      const acadMonths = getAcademicYearMonths("2025-26");
+      const acadMonths = getAcademicYearMonths(monthlyReportYear || "2026-27");
       const selectedMonthObj = acadMonths.find(m => m.month === monthlyReportMonth);
       const reportYear = selectedMonthObj ? selectedMonthObj.year : undefined;
-      const calcYear = selectedMonthObj ? selectedMonthObj.year : 2025;
+      const calcYear = selectedMonthObj ? selectedMonthObj.year : new Date().getFullYear();
 
       const primaryRiceData = getStockDataForItem("Rice", monthlyReportMonth, calcYear, "1 To 5");
       const primaryCookedDaysVal = primaryRiceData?.cookedDays || 0;
@@ -1603,7 +1622,7 @@ function TeacherMDMPage() {
       setCertBeneficiaryUpper(toMarathiNumbers(upperBeneficiarySumVal.toString()));
       setCertHelperCount(toMarathiNumbers(helperCountVal.toString()));
     }
-  }, [isMonthlyReportGenerated, monthlyReportMonth, profile, helpers, registerRecords]);
+  }, [isMonthlyReportGenerated, monthlyReportMonth, monthlyReportYear, profile, helpers, registerRecords]);
 
   const getRegisterMonthYear = () => {
     if (!registerDate) return t("मे २०२६", "May 2026", "मई 2026");
@@ -3537,7 +3556,7 @@ function TeacherMDMPage() {
     if (monthIdx === -1) return;
 
     const chiefCook =
-      helpers.find((h) => h.role === "Chief Cook")?.name || "Sunita Shinde";
+      helpers.find((h: any) => h.role === "Chief Cook")?.name || "Sunita Shinde";
 
     setTasteRows((prevRows) => {
       const updated = prevRows.map((row) => {
@@ -5867,7 +5886,7 @@ function TeacherMDMPage() {
   };
 
   const handleDeleteHelper = (id: string) => {
-    const filtered = helpers.filter((h) => h.id !== id);
+    const filtered = helpers.filter((h: any) => h.id !== id);
     setHelpers(filtered);
     toast.info(t("मदतनीस काढून टाकला", "Helper removed successfully"));
   };
@@ -11689,7 +11708,7 @@ function TeacherMDMPage() {
                       <div className="flex flex-wrap items-center gap-4">
                         <div className="space-y-1">
                           <label className="text-xs font-bold text-slate-700 block">
-                            महिने (सन 2026-27)
+                            महिने
                           </label>
                           <select
                             value={stockDemandMonth}
@@ -11699,6 +11718,24 @@ function TeacherMDMPage() {
                             {["जानेवारी", "फेब्रुवारी", "मार्च", "एप्रिल", "मे", "जून", "जुलै", "ऑगस्ट", "सप्टेंबर", "ऑक्टोबर", "नोव्हेंबर", "डिसेंबर"].map((m) => (
                               <option key={m} value={m}>{m}</option>
                             ))}
+                          </select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-700 block">
+                            वर्ष
+                          </label>
+                          <select
+                            value={stockDemandYear}
+                            onChange={(e) => setStockDemandYear(e.target.value)}
+                            className="h-10 px-3 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none min-w-[120px]"
+                          >
+                            <option value="2023-24">2023-24</option>
+                            <option value="2024-25">2024-25</option>
+                            <option value="2025-26">2025-26</option>
+                            <option value="2026-27">2026-27</option>
+                            <option value="2027-28">2027-28</option>
+                            <option value="2028-29">2028-29</option>
                           </select>
                         </div>
 
@@ -11759,7 +11796,7 @@ function TeacherMDMPage() {
                             {profile?.schoolName || "Z P SCHOOL DHONDEWADI PED"}
                           </h2>
                           <p className="text-xs font-bold text-slate-700">
-                            तांदूळ व धान्यादी मालाची — {stockDemandMonth} 2026 — मागणी किलोग्रॅम मध्ये • प्राथमिक ( इयत्ता १ ते ५ )
+                            तांदूळ व धान्यादी मालाची — {stockDemandMonth} {stockDemandYear.split('-')[0]} — मागणी किलोग्रॅम मध्ये • प्राथमिक ( इयत्ता १ ते ५ )
                           </p>
                         </div>
 
@@ -11789,7 +11826,27 @@ function TeacherMDMPage() {
 
                         {/* 3. Sub-summary Info Bar */}
                         {(() => {
-                          const pat = parseFloat(stockDemandPatSankhya) || (stockDemandCategory === "6 To 8" ? (Number(profile?.patUpper) || 0) : (Number(profile?.patPrimary) || 0));
+                          const monthEng = MARATHI_TO_ENGLISH_MONTHS[stockDemandMonth] || "September";
+                          const yearNum = parseInt((stockDemandYear || "2026-27").split("-")[0], 10) || 2026;
+
+                          const regData = getRegisterDataForMonth(monthEng, yearNum, stockDemandCategory);
+                          const regEnrolled = regData?.enrolled || 0;
+
+                          let latestEnrolled = 0;
+                          Object.values(registerRecords || {}).forEach((rec: any) => {
+                            if (!rec) return;
+                            const subRec = rec[stockDemandCategory] || (stockDemandCategory === "1 To 5" ? rec : null);
+                            if (subRec && subRec.enrolled) {
+                              const val = parseInt(subRec.enrolled, 10);
+                              if (!isNaN(val) && val > latestEnrolled) latestEnrolled = val;
+                            }
+                          });
+
+                          const profP15 = Number(profile?.patPrimary) || Number(profile?.pat1to5) || Number(profile?.totalPat) || 0;
+                          const profP68 = Number(profile?.patUpper) || Number(profile?.pat6to8) || 0;
+                          const profPat = stockDemandCategory === "6 To 8" ? profP68 : profP15;
+
+                          const pat = parseFloat(stockDemandPatSankhya) || regEnrolled || latestEnrolled || profPat || 0;
                           const wDays = parseFloat(stockDemandWorkingDays) || 21;
                           const todayStr = "06-08-2026";
                           const monthStartStr = "01-09-2026";
@@ -11798,7 +11855,7 @@ function TeacherMDMPage() {
                             "मे": "मे", "जून": "जून", "जुलै": "जुलै", "ऑगस्ट": "ऑगस्ट", "सप्टेंबर": "सप्टें",
                             "ऑक्टोबर": "ऑक्टो", "नोव्हेंबर": "नोव्हें", "डिसेंबर": "डिसें"
                           };
-                          const demandPeriodStr = `${monthAbbr[stockDemandMonth] || stockDemandMonth} 2026`;
+                          const demandPeriodStr = `${monthAbbr[stockDemandMonth] || stockDemandMonth} ${stockDemandYear.split('-')[0]}`;
 
                           return (
                             <div className="text-xs font-bold text-slate-800 py-1.5 px-3 bg-slate-50 border border-slate-300 rounded flex flex-wrap justify-between items-center gap-2">
@@ -11832,7 +11889,27 @@ function TeacherMDMPage() {
                             </thead>
                             <tbody>
                               {(() => {
-                                const pat = parseFloat(stockDemandPatSankhya) || (stockDemandCategory === "6 To 8" ? (Number(profile?.patUpper) || 0) : (Number(profile?.patPrimary) || 0));
+                                const monthEng = MARATHI_TO_ENGLISH_MONTHS[stockDemandMonth] || "September";
+                                const yearNum = parseInt((stockDemandYear || "2026-27").split("-")[0], 10) || 2026;
+
+                                const regData = getRegisterDataForMonth(monthEng, yearNum, stockDemandCategory);
+                                const regEnrolled = regData?.enrolled || 0;
+
+                                let latestEnrolled = 0;
+                                Object.values(registerRecords || {}).forEach((rec: any) => {
+                                  if (!rec) return;
+                                  const subRec = rec[stockDemandCategory] || (stockDemandCategory === "1 To 5" ? rec : null);
+                                  if (subRec && subRec.enrolled) {
+                                    const val = parseInt(subRec.enrolled, 10);
+                                    if (!isNaN(val) && val > latestEnrolled) latestEnrolled = val;
+                                  }
+                                });
+
+                                const profP15 = Number(profile?.patPrimary) || Number(profile?.pat1to5) || Number(profile?.totalPat) || 0;
+                                const profP68 = Number(profile?.patUpper) || Number(profile?.pat6to8) || 0;
+                                const profPat = stockDemandCategory === "6 To 8" ? profP68 : profP15;
+
+                                const pat = parseFloat(stockDemandPatSankhya) || regEnrolled || latestEnrolled || profPat || 0;
                                 const wDays = parseFloat(stockDemandWorkingDays) || 21;
                                 const isUpper = stockDemandCategory === "6 To 8";
 
@@ -11861,21 +11938,14 @@ function TeacherMDMPage() {
                                   { key: "Vegetables", name: "भाजीपाला (kg)", qtyP: 0.050, qtyU: 0.050 },
                                 ];
 
-                                const marToEngMonth: Record<string, string> = {
-                                  "ऑगस्ट": "August", "सप्टेंबर": "September", "ऑक्टोबर": "October", "नोव्हेंबर": "November",
-                                  "डिसेंबर": "December", "जानेवारी": "January", "फेब्रुवारी": "February", "मार्च": "March",
-                                  "एप्रिल": "April", "मे": "May", "जून": "June", "जुलै": "July"
-                                };
-                                const selMonthEng = marToEngMonth[stockDemandMonth] || "September";
-
                                 return itemsDef.map((it, idx) => {
-                                  const stock = getOpeningStock(selMonthEng, "2026", stockDemandCategory, it.key);
+                                  const stock = getOpeningStock(monthEng, stockDemandYear.split('-')[0], stockDemandCategory, it.key);
                                   const rule = quantityRules.find(r => r.item.toLowerCase() === it.key.toLowerCase());
                                   const defaultQty = isUpper ? it.qtyU : it.qtyP;
                                   const qVal = rule ? (isUpper ? (parseFloat(rule.qty68) || defaultQty) : (parseFloat(rule.qty15) || defaultQty)) : defaultQty;
                                   const unitQty = qVal >= 1 ? qVal / 1000 : qVal;
 
-                                  const expUsed = unitQty * pat * 3;
+                                  const expUsed = unitQty * pat * wDays;
                                   const reqMonth = unitQty * pat * wDays;
                                   const expBal = stock - expUsed;
                                   const finalDemand = expBal < 0 ? (reqMonth + Math.abs(expBal)) : Math.max(0, reqMonth - expBal);
@@ -12171,22 +12241,40 @@ function TeacherMDMPage() {
                             महिना
                           </label>
                           <select
-                            value={monthlyMdmReportMonth}
-                            onChange={(e) => setMonthlyMdmReportMonth(e.target.value)}
+                            value={monthlyMdmReportSelectedMonth}
+                            onChange={(e) => setMonthlyMdmReportSelectedMonth(e.target.value)}
                             className="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-purple-500 outline-none"
                           >
-                            <option value="जून सन 2026/27">जून</option>
-                            <option value="जुलै सन 2026/27">जुलै</option>
-                            <option value="ऑगस्ट सन 2026/27">ऑगस्ट</option>
-                            <option value="सप्टेंबर सन 2026/27">सप्टेंबर</option>
-                            <option value="ऑक्टोबर सन 2026/27">ऑक्टोबर</option>
-                            <option value="नोव्हेंबर सन 2026/27">नोव्हेंबर</option>
-                            <option value="डिसेंबर सन 2026/27">डिसेंबर</option>
-                            <option value="जानेवारी सन 2026/27">जानेवारी</option>
-                            <option value="फेब्रुवारी सन 2026/27">फेब्रुवारी</option>
-                            <option value="मार्च सन 2026/27">मार्च</option>
-                            <option value="एप्रिल सन 2026/27">एप्रिल</option>
-                            <option value="मे सन 2026/27">मे</option>
+                            <option value="एप्रिल">एप्रिल</option>
+                            <option value="मे">मे</option>
+                            <option value="जून">जून</option>
+                            <option value="जुलै">जुलै</option>
+                            <option value="ऑगस्ट">ऑगस्ट</option>
+                            <option value="सप्टेंबर">सप्टेंबर</option>
+                            <option value="ऑक्टोबर">ऑक्टोबर</option>
+                            <option value="नोव्हेंबर">नोव्हेंबर</option>
+                            <option value="डिसेंबर">डिसेंबर</option>
+                            <option value="जानेवारी">जानेवारी</option>
+                            <option value="फेब्रुवारी">फेब्रुवारी</option>
+                            <option value="मार्च">मार्च</option>
+                          </select>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs font-bold text-slate-700 whitespace-nowrap">
+                            वर्ष
+                          </label>
+                          <select
+                            value={monthlyMdmReportYear}
+                            onChange={(e) => setMonthlyMdmReportYear(e.target.value)}
+                            className="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-purple-500 outline-none"
+                          >
+                            <option value="2023/24">2023/24</option>
+                            <option value="2024/25">2024/25</option>
+                            <option value="2025/26">2025/26</option>
+                            <option value="2026/27">2026/27</option>
+                            <option value="2027/28">2027/28</option>
+                            <option value="2028/29">2028/29</option>
                           </select>
                         </div>
 
@@ -13170,29 +13258,49 @@ function TeacherMDMPage() {
 
                       {/* Top Control Bar matching User Screenshot */}
                       <div className="bg-[#f8fafc] p-3 md:p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
-                        {/* Month Selector */}
-                        <div className="flex items-center gap-2">
-                          <label className="text-xs font-bold text-slate-700 whitespace-nowrap">
-                            माह :
-                          </label>
-                          <select
-                            value={monthlyReportMonth || "April"}
-                            onChange={(e) => setMonthlyReportMonth(e.target.value)}
-                            className="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none shadow-sm cursor-pointer"
-                          >
-                            <option value="April">एप्रिल</option>
-                            <option value="May">मे</option>
-                            <option value="June">जून</option>
-                            <option value="July">जुलै</option>
-                            <option value="August">ऑगस्ट</option>
-                            <option value="September">सप्टेंबर</option>
-                            <option value="October">ऑक्टोबर</option>
-                            <option value="November">नोव्हेंबर</option>
-                            <option value="December">डिसेंबर</option>
-                            <option value="January">जानेवारी</option>
-                            <option value="February">फेब्रुवारी</option>
-                            <option value="March">मार्च</option>
-                          </select>
+                        {/* Month & Year Selectors */}
+                        <div className="flex flex-wrap items-center gap-3">
+                          <div className="flex items-center gap-1.5">
+                            <label className="text-xs font-bold text-slate-700 whitespace-nowrap">
+                              माह :
+                            </label>
+                            <select
+                              value={monthlyReportMonth || "August"}
+                              onChange={(e) => setMonthlyReportMonth(e.target.value)}
+                              className="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none shadow-sm cursor-pointer"
+                            >
+                              <option value="April">एप्रिल</option>
+                              <option value="May">मे</option>
+                              <option value="June">जून</option>
+                              <option value="July">जुलै</option>
+                              <option value="August">ऑगस्ट</option>
+                              <option value="September">सप्टेंबर</option>
+                              <option value="October">ऑक्टोबर</option>
+                              <option value="November">नोव्हेंबर</option>
+                              <option value="December">डिसेंबर</option>
+                              <option value="January">जानेवारी</option>
+                              <option value="February">फेब्रुवारी</option>
+                              <option value="March">मार्च</option>
+                            </select>
+                          </div>
+
+                          <div className="flex items-center gap-1.5">
+                            <label className="text-xs font-bold text-slate-700 whitespace-nowrap">
+                              वर्ष :
+                            </label>
+                            <select
+                              value={monthlyReportYear}
+                              onChange={(e) => setMonthlyReportYear(e.target.value)}
+                              className="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none shadow-sm cursor-pointer"
+                            >
+                              <option value="2023-24">2023-24</option>
+                              <option value="2024-25">2024-25</option>
+                              <option value="2025-26">2025-26</option>
+                              <option value="2026-27">2026-27</option>
+                              <option value="2027-28">2027-28</option>
+                              <option value="2028-29">2028-29</option>
+                            </select>
+                          </div>
                         </div>
 
                         {/* Class Subtabs Pill Group */}
@@ -13380,10 +13488,10 @@ function TeacherMDMPage() {
                       <div className="space-y-6 w-full">
                         <div id="monthly-report-print" className="bg-white p-0 space-y-8 w-full overflow-visible print:p-0 print:bg-white print:space-y-0">
                             {(() => {
-                              const acadMonths = getAcademicYearMonths("2025-26");
+                              const acadMonths = getAcademicYearMonths(monthlyReportYear || "2026-27");
                               const selectedMonthObj = acadMonths.find(m => m.month === monthlyReportMonth);
-                              const reportYear = selectedMonthObj ? selectedMonthObj.year : undefined;
-                              const calcYear = selectedMonthObj ? selectedMonthObj.year : 2025;
+                              const reportYear = selectedMonthObj ? selectedMonthObj.year : (parseInt((monthlyReportYear || "").split("-")[0], 10) || 2026);
+                              const calcYear = reportYear;
 
                               const englishMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
                               const marathiMonths = ["जानेवारी", "फेब्रुवारी", "मार्च", "एप्रिल", "मे", "जून", "जुलै", "ऑगस्ट", "सप्टेंबर", "ऑक्टोबर", "नोव्हेंबर", "डिसेंबर"];
@@ -14318,7 +14426,7 @@ function TeacherMDMPage() {
                           {lang === "mr" ? "शैक्षणिक वर्ष निवडा (Select Year)" : "Select Academic Year"}
                         </h3>
                         <div className="grid grid-cols-2 gap-3">
-                          {["2023-24", "2024-25", "2025-26", "2026-27"].map((y) => (
+                          {["2023-24", "2024-25", "2025-26", "2026-27", "2027-28", "2028-29"].map((y) => (
                             <button
                               key={y}
                               onClick={() => {
@@ -14368,6 +14476,24 @@ function TeacherMDMPage() {
                                 >
                                   <option value="तांदूळ उपयोगिता (किलोग्रॅम मध्ये)">तांदूळ उपयोगिता (किलोग्रॅम मध्ये)</option>
                                   <option value="धान्याची उपयोगिता (किलोग्रॅम मध्ये)">धान्याची उपयोगिता (किलोग्रॅम मध्ये)</option>
+                                </select>
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-xs font-bold text-slate-700 block">{lang === "mr" ? "वर्ष (Year)" : "Year"}</label>
+                                <select
+                                  value={annualReportYear || "2026-27"}
+                                  onChange={(e) => {
+                                    setAnnualReportYear(e.target.value);
+                                  }}
+                                  className="h-10 px-3 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 outline-none cursor-pointer"
+                                >
+                                  <option value="2023-24">2023-24</option>
+                                  <option value="2024-25">2024-25</option>
+                                  <option value="2025-26">2025-26</option>
+                                  <option value="2026-27">2026-27</option>
+                                  <option value="2027-28">2027-28</option>
+                                  <option value="2028-29">2028-29</option>
                                 </select>
                               </div>
 
