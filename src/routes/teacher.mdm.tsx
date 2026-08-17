@@ -12066,20 +12066,20 @@ function TeacherMDMPage() {
                                       "नोव्हें",
                                       "डिसें",
                                     ];
-                                    const monthsHi = [
-                                      "जन",
-                                      "फर",
-                                      "मार्च",
-                                      "अप्रै",
-                                      "मई",
-                                      "जून",
-                                      "जुला",
-                                      "अग",
-                                      "सित",
-                                      "अक्टू",
-                                      "नवं",
-                                      "दिस",
-                                    ];
+                                     const monthsHi = [
+                                       "जनवरी",
+                                       "फरवरी",
+                                       "मार्च",
+                                       "अप्रैल",
+                                       "मई",
+                                       "जून",
+                                       "जुलाई",
+                                       "अगस्त",
+                                       "सितंबर",
+                                       "अक्टूबर",
+                                       "नवंबर",
+                                       "दिसंबर",
+                                     ];
                                     const mIdx = d.getMonth();
                                     return `${day}-${t(monthsMr[mIdx], monthsEn[mIdx], monthsHi[mIdx])}-${d.getFullYear()}`;
                                   };
