@@ -12964,6 +12964,31 @@ function TeacherMDMPage() {
                                  { key: "Vegetables", nameMr: "भाजीपाला", unit: "कि.ग्रॅ.", qty15: "0.050 कि.ग्रॅ.", qty68: "0.050 कि.ग्रॅ." }
                                ];
 
+                          const getMaxDailyEnrolled = (cls: "1 To 5" | "6 To 8") => {
+                            const englishMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                            const mIdx = englishMonths.indexOf(engMonthNames[monthNum]);
+                            if (mIdx === -1) return 0;
+                            const daysInMonth = new Date(year, mIdx + 1, 0).getDate();
+                            const mStr = (mIdx + 1).toString().padStart(2, "0");
+
+                            let maxPat = 0;
+                            for (let d = 1; d <= daysInMonth; d++) {
+                              const dStr = d.toString().padStart(2, "0");
+                              const dateRecordKey = `${year}-${mStr}-${dStr}`;
+                              const rec = getRegisterDataForMonth(engMonthNames[monthNum], year, cls);
+                              if (rec && rec.enrolled) {
+                                const val = typeof rec.enrolled === 'number' ? rec.enrolled : parseInt(String(rec.enrolled), 10);
+                                if (!isNaN(val) && val > maxPat) {
+                                  maxPat = val;
+                                }
+                              }
+                            }
+                            return maxPat || 0;
+                          };
+
+                          const primaryMaxEnrolled = getMaxDailyEnrolled("1 To 5");
+                          const upperMaxEnrolled = getMaxDailyEnrolled("6 To 8");
+
                           const riceData = getStockDataForItem("Rice", engMonthNames[monthNum], year, "1 To 5");
                           const labharthi = riceData.beneficiary;
                           const registerData = getRegisterDataForMonth(engMonthNames[monthNum], year, "1 To 5");
@@ -13394,9 +13419,9 @@ function TeacherMDMPage() {
                           </div>
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 text-xs font-bold text-slate-700">
-                            {/* 1. अध्यक्ष / सचिव नाव */}
+                            {/* 1. स्वयंपाकी नाव */}
                             <div>
-                              <label className="block mb-1 text-slate-700">अध्यक्ष/सचिव नाव</label>
+                              <label className="block mb-1 text-slate-700">स्वयंपाकी नाव</label>
                               <input
                                 type="text"
                                 value={reportPrincipalName}
@@ -13405,9 +13430,9 @@ function TeacherMDMPage() {
                               />
                             </div>
 
-                            {/* 2. शिक्षकाचे / स्वयंपाकी नाव */}
+                            {/* 2. मदतनीस नाव */}
                             <div>
-                              <label className="block mb-1 text-slate-700">शिक्षकाचे/स्वयंपाकी नाव</label>
+                              <label className="block mb-1 text-slate-700">मदतनीस नाव</label>
                               <input
                                 type="text"
                                 value={reportTeacherName}
@@ -13565,22 +13590,57 @@ function TeacherMDMPage() {
                               };
                               const wednesdaysCount = getWednesdaysInMonth(monthlyReportMonth || "April", calcYear);
 
-                              const primaryCenterGrant = primaryBeneficiarySum * 4.07;
-                              const primaryStateGrant = primaryBeneficiarySum * 2.71;
+                              const getMaxDailyEnrolled = (cls: "1 To 5" | "6 To 8") => {
+                                const englishMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                                const mIdx = englishMonths.indexOf(monthlyReportMonth || "July");
+                                if (mIdx === -1) return 0;
+                                const daysInMonth = new Date(calcYear, mIdx + 1, 0).getDate();
+                                const mStr = (mIdx + 1).toString().padStart(2, "0");
+
+                                let maxPat = 0;
+                                for (let d = 1; d <= daysInMonth; d++) {
+                                  const dStr = d.toString().padStart(2, "0");
+                                  const dateRecordKey = `${calcYear}-${mStr}-${dStr}`;
+                                  const rec = registerRecords?.[dateRecordKey];
+                                  const classRec = rec?.[cls] || (cls === "1 To 5" ? rec : null);
+                                  if (classRec && classRec.enrolled) {
+                                    const val = parseInt(classRec.enrolled, 10);
+                                    if (!isNaN(val) && val > maxPat) {
+                                      maxPat = val;
+                                    }
+                                  }
+                                }
+
+                                if (maxPat === 0) {
+                                  const regData = getRegisterDataForMonth(monthlyReportMonth || "July", calcYear, cls);
+                                  maxPat = regData?.enrolled || 0;
+                                }
+                                if (maxPat === 0) {
+                                  const isPrimary = cls === "1 To 5";
+                                  maxPat = isPrimary ? (parseInt(profile?.patPrimary || "0", 10) || 0) : (parseInt(profile?.patUpper || "0", 10) || 0);
+                                }
+                                return maxPat;
+                              };
+
+                              const primaryMaxEnrolled = getMaxDailyEnrolled("1 To 5");
+                              const upperMaxEnrolled = getMaxDailyEnrolled("6 To 8");
+
+                              const primaryCenterGrant = primaryBeneficiarySum * 1.55;
+                              const primaryStateGrant = primaryBeneficiarySum * 1.04;
                               const primaryTotalGrant = primaryCenterGrant + primaryStateGrant;
 
-                              const upperCenterGrant = upperBeneficiarySum * 6.10;
-                              const upperStateGrant = upperBeneficiarySum * 4.07;
+                              const upperCenterGrant = upperBeneficiarySum * 1.55;
+                              const upperStateGrant = upperBeneficiarySum * 1.04;
                               const upperTotalGrant = upperCenterGrant + upperStateGrant;
 
                               const totalCenterGrant = primaryCenterGrant + upperCenterGrant;
                               const totalStateGrant = primaryStateGrant + upperStateGrant;
                               const totalGrantAll = totalCenterGrant + totalStateGrant;
 
-                              const helperCount = helpers?.length || 0;
+                              const helperCount = helpers?.length || 1;
                               const helperCenterPay = helperCount * 600;
-                              const helperStatePay = helperCount * 400;
-                              const helperTotalPay = helperCount * 1000;
+                               const helperStatePay = helperCount * 1900;
+                              const helperTotalPay = helperCount * 2500;
 
                               const renderBFormPage = (cls: "1 To 5" | "6 To 8") => {
                                 const isPrimary = cls === "1 To 5";
@@ -14294,8 +14354,8 @@ function TeacherMDMPage() {
                                         certPrimaryCookedDays={certPrimaryCookedDays}
                                         certUpperCookedDays={certUpperCookedDays}
                                         certWednesdaysCount={certWednesdaysCount}
-                                        primaryEnrolled={parseInt(profile?.patPrimary || "0") || 0}
-                                        upperEnrolled={parseInt(profile?.patUpper || "0") || 0}
+                                        primaryEnrolled={primaryMaxEnrolled}
+                                        upperEnrolled={upperMaxEnrolled}
                                         primaryBeneficiarySum={primaryBeneficiarySum}
                                         upperBeneficiarySum={upperBeneficiarySum}
                                         helperCount={helperCount}
@@ -14306,7 +14366,9 @@ function TeacherMDMPage() {
                                         primaryStateGrant={primaryStateGrant}
                                         upperCenterGrant={upperCenterGrant}
                                         upperStateGrant={upperStateGrant}
-                                        totalGrantAll={totalGrantAll}
+                                         upperKendraShare="1.55"
+                                         upperRajyaShare="1.04"
+                                         totalGrantAll={totalGrantAll}
                                       />
 
                                   {/* 1 to 5 Reconciliation Report View */}
