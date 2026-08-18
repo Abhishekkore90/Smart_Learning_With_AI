@@ -648,7 +648,7 @@ function TeacherMDMPage() {
             const totalReceived = prevStock + receivedSupplier + receivedPublic;
             const usedStock = stockData ? stockData.used : idx === 3 ? 9 : 0;
             const damagedStock = idx === 3 ? 1 : 0;
-            const closingStock = Math.max(0, totalReceived - (usedStock + damagedStock));
+            const closingStock = totalReceived - (usedStock + damagedStock);
 
             totalEnrolled = Math.max(totalEnrolled, enrolled);
             totalWorkingDays += workingDays;
@@ -686,7 +686,7 @@ function TeacherMDMPage() {
                 <td style="border: 1px solid #000000; text-align: center; background-color: #ffff00; font-weight: bold; mso-number-format:'0.0000';">${totalReceived.toFixed(4)}</td>
                 <td style="border: 1px solid #000000; text-align: center; mso-number-format:'0.0000';">${usedStock.toFixed(4)}</td>
                 <td style="border: 1px solid #000000; text-align: center; mso-number-format:'0.0000';">${damagedStock.toFixed(4)}</td>
-                <td style="border: 1px solid #000000; text-align: center; background-color: #ffff00; font-weight: bold; mso-number-format:'0.0000';">${closingStock.toFixed(4)}</td>
+                <td style="border: 1px solid #000000; text-align: center; background-color: ${closingStock < 0 ? '#fee2e2' : '#ffff00'}; color: ${closingStock < 0 ? '#dc2626' : '#000000'}; font-weight: bold; mso-number-format:'0.0000';">${closingStock.toFixed(4)}</td>
                 <td style="border: 1px solid #000000;"></td>
               </tr>
             `;
@@ -852,7 +852,7 @@ function TeacherMDMPage() {
                   const totalRec = prev + recSupp + recPub;
                   const used = stockData ? stockData.used : 0;
                   const damaged = 0;
-                  const closing = Math.max(0, totalRec - (used + damaged));
+                  const closing = totalRec - (used + damaged);
 
                   totalsMap[it.key].prev += prev;
                   totalsMap[it.key].recSupp += recSupp;
@@ -869,7 +869,7 @@ function TeacherMDMPage() {
                     <td style="border: 1px solid #000000; text-align: center; background-color: #ffff00; font-weight: bold; mso-number-format:'0.0000';">${totalRec.toFixed(4)}</td>
                     <td style="border: 1px solid #000000; text-align: center; mso-number-format:'0.0000';">${used.toFixed(4)}</td>
                     <td style="border: 1px solid #000000; text-align: center; mso-number-format:'0.0000';">${damaged.toFixed(4)}</td>
-                    <td style="border: 1px solid #000000; text-align: center; background-color: #ffff00; font-weight: bold; mso-number-format:'0.0000';">${closing.toFixed(4)}</td>
+                    <td style="border: 1px solid #000000; text-align: center; background-color: ${closing < 0 ? '#fee2e2' : '#ffff00'}; color: ${closing < 0 ? '#dc2626' : '#000000'}; font-weight: bold; mso-number-format:'0.0000';">${closing.toFixed(4)}</td>
                   `;
                 })
                 .join("");
@@ -894,7 +894,7 @@ function TeacherMDMPage() {
                 <td style="border: 1px solid #000000; text-align: center; font-weight: bold; background-color: #ffff00; mso-number-format:'0.000';">${tot.totalRec.toFixed(3)}</td>
                 <td style="border: 1px solid #000000; text-align: center; font-weight: bold; background-color: #ffff00; mso-number-format:'0.000';">${tot.used.toFixed(3)}</td>
                 <td style="border: 1px solid #000000; text-align: center; font-weight: bold; background-color: #ffff00; mso-number-format:'0.000';">${tot.damaged.toFixed(3)}</td>
-                <td style="border: 1px solid #000000; text-align: center; font-weight: bold; background-color: #ffff00; mso-number-format:'0.000';">${tot.closing.toFixed(3)}</td>
+                <td style="border: 1px solid #000000; text-align: center; font-weight: bold; background-color: ${tot.closing < 0 ? '#fee2e2' : '#ffff00'}; color: ${tot.closing < 0 ? '#dc2626' : '#000000'}; mso-number-format:'0.000';">${tot.closing.toFixed(3)}</td>
               `;
             })
             .join("");
@@ -3044,9 +3044,9 @@ function TeacherMDMPage() {
     if (cleaned.includes("masurdal") || cleaned.includes("masoor dal") || cleaned.includes("मसूरडाळ") || cleaned.includes("मसूर") || cleaned.includes("मसुरी")) return "Masurdal";
     if (cleaned.includes("matki") || cleaned.includes("मटकी")) return "Matki";
     if (cleaned.includes("moong") || cleaned.includes("मूग")) return "Moong";
-    if (cleaned.includes("cowpea") || cleaned.includes("चवळी")) return "Cowpea";
-    if (cleaned.includes("gram") || cleaned.includes("chana") || cleaned.includes("हरभरा")) return "Gram";
-    if (cleaned.includes("pease") || cleaned.includes("peas") || cleaned.includes("वाटाणा")) return "Pease";
+    if (cleaned.includes("cowpea") || cleaned.includes("chavali") || cleaned.includes("chawali") || cleaned.includes("चवळी")) return "Cowpea";
+    if (cleaned.includes("gram") || cleaned.includes("chana") || cleaned.includes("harbhara") || cleaned.includes("हरभरा")) return "Gram";
+    if (cleaned.includes("pease") || cleaned.includes("peas") || cleaned.includes("vatana") || cleaned.includes("matar") || cleaned.includes("मटार") || cleaned.includes("वाटाणा")) return "Pease";
     if (cleaned.includes("soyabean") || cleaned.includes("सोयाबीन")) return "Soyabean Wadi";
     if (cleaned.includes("cumin") || cleaned.includes("जिरे")) return "Cumin";
     if (cleaned.includes("mustard") || cleaned.includes("मोहरी")) return "Mustard";
@@ -4188,6 +4188,20 @@ function TeacherMDMPage() {
     return Number(totalUsed.toFixed(6));
   };
 
+  const getInitialOpeningStockValue = (name: string): number => {
+    const itemKey = getItemKeyFromName(name);
+    let found = parseFloat(openingStockValues[name] || openingStockValues[itemKey] || "0") || 0;
+    if (found === 0) {
+      Object.keys(openingStockValues || {}).forEach((k) => {
+        if (getItemKeyFromName(k) === itemKey) {
+          const v = parseFloat(openingStockValues[k] || "0");
+          if (!isNaN(v) && v > found) found = v;
+        }
+      });
+    }
+    return found;
+  };
+
   // Returns the opening (previous month closing) balance for an item.
   // Looks up history chain up to 12 months back, never reads current month's saved prev.
   const getOpeningStock = (
@@ -4201,20 +4215,20 @@ function TeacherMDMPage() {
   ): number => {
     if (depth > 12) {
       const itemKey = getItemKeyFromName(itemName);
-      return parseFloat(openingStockValues[itemName] || openingStockValues[itemKey] || "0") || 0;
+      return getInitialOpeningStockValue(itemName);
     }
 
     const prevKey = getPreviousMonthKey(monthName, yearStr, classStr);
     if (!prevKey) {
       const itemKey = getItemKeyFromName(itemName);
-      return parseFloat(openingStockValues[itemName] || openingStockValues[itemKey] || "0") || 0;
+      return getInitialOpeningStockValue(itemName);
     }
 
     const firstUnderscore = prevKey.indexOf("_");
     const secondUnderscore = prevKey.indexOf("_", firstUnderscore + 1);
     if (firstUnderscore === -1 || secondUnderscore === -1) {
       const itemKey = getItemKeyFromName(itemName);
-      return parseFloat(openingStockValues[itemName] || openingStockValues[itemKey] || "0") || 0;
+      return getInitialOpeningStockValue(itemName);
     }
 
     const prevYear = prevKey.substring(0, firstUnderscore);
@@ -4254,7 +4268,7 @@ function TeacherMDMPage() {
             (Number(prevItem.received) || 0) -
             (Number(prevItem.used) || 0) -
             (Number(prevItem.damaged) || 0);
-          return Math.max(0, roundStock(closing));
+          return roundStock(closing);
         }
       }
       // If no saved history exists, carry forward from previous-previous month recursively or initial stock
@@ -4269,7 +4283,7 @@ function TeacherMDMPage() {
       );
       if (prevStockVal > 0) return prevStockVal;
       const itemKey = getItemKeyFromName(itemName);
-      return parseFloat(openingStockValues[itemName] || openingStockValues[itemKey] || "0") || 0;
+      return getInitialOpeningStockValue(itemName);
     }
 
     // No saved snapshot or we have active data → calculate previous month's closing on the fly
@@ -4360,7 +4374,7 @@ function TeacherMDMPage() {
     prevUsed = roundStock(prevUsed);
 
     const closing = prevOpening + prevReceived + prevLok - prevUsed - prevDamaged;
-    return Math.max(0, roundStock(closing));
+    return roundStock(closing);
   };
 
   // Auto-calculate Received, Borrowed, Spent, & Auto Carry-Forward Opening Stock for selected openingStockDate
@@ -6576,22 +6590,22 @@ function TeacherMDMPage() {
 
       <main className="lg:pl-0 pt-20 min-h-screen pb-20 relative z-10">
         <PinGate sectionKey="mdm">
-          <div className="p-4 md:p-8 space-y-6 w-full">
+          <div className="p-2.5 sm:p-4 md:p-8 space-y-4 sm:space-y-6 w-full max-w-full overflow-x-hidden">
 
           {/* ===== MDM CATEGORY GROUPED NAVIGATION BAR ===== */}
           <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xl p-5 md:p-6 space-y-5">
             {/* Title Row */}
-            <div className="flex flex-wrap items-center justify-between pb-4 border-b border-slate-100 gap-4">
-              <div className="flex items-center gap-3.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-4">
+              <div className="flex items-center gap-3 sm:gap-3.5">
                 <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/30 text-white">
                   <Utensils className="w-6 h-6" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-black text-slate-900 tracking-tight">Mid-Day Meal (MDM) Portal</h1>
+                  <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight leading-snug">Mid-Day Meal (MDM) Portal</h1>
                   <p className="text-xs text-emerald-600 font-bold tracking-wide">माध्यान्ह भोजन योजना पोर्टल</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap w-full sm:w-auto justify-start sm:justify-end">
                 {lowStockItems.length > 0 && (
                   <button
                     onClick={() => setShowLowStockModal(true)}
@@ -6616,7 +6630,7 @@ function TeacherMDMPage() {
                   <Package className="w-4 h-4 text-emerald-600" />
                   <span>STOCK (साठा व्यवस्थापन)</span>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3">
                   {[
                     { id: "opening-stock", label: lang === "mr" ? "आरंभीची शिल्लक" : "Initial Stock", icon: Package },
                     { id: "incoming", label: lang === "mr" ? "साहित्य आवक" : "Stock Received", icon: Package },
@@ -6637,7 +6651,7 @@ function TeacherMDMPage() {
                         }`}
                       >
                         <SubIcon className={`w-4 h-4 ${isActive ? "text-white" : "text-emerald-600"}`} />
-                        <span className="whitespace-nowrap">{sub.label}</span>
+                        <span className="whitespace-normal text-center leading-tight">{sub.label}</span>
                       </button>
                     );
                   })}
@@ -6652,7 +6666,7 @@ function TeacherMDMPage() {
                     <ClipboardList className="w-4 h-4 text-amber-600" />
                     <span>MENU SETUP (रेसिपी व मेनू)</span>
                   </div>
-                  <div className="grid grid-cols-3 gap-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     {[
                       { id: "menu", label: lang === "mr" ? "रेसिपी साहित्य" : "Ingredients", icon: ClipboardList },
                       { id: "quantity", label: lang === "mr" ? "प्रमाण" : "Formulas", icon: Activity },
@@ -6684,7 +6698,7 @@ function TeacherMDMPage() {
                     <Calendar className="w-4 h-4 text-blue-600" />
                     <span>DAILY & CALENDAR (कामकाज)</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {[
                       { id: "monthly-calendar", label: lang === "mr" ? "मासिक कॅलेंडर" : "Monthly Calendar", icon: Calendar },
                       { id: "daily-reg", label: lang === "mr" ? "दैनंदिन नोंद" : "Daily Entry", icon: Calendar },
@@ -6715,7 +6729,7 @@ function TeacherMDMPage() {
                     <FileSpreadsheet className="w-4 h-4 text-purple-600" />
                     <span>REPORTS (शासकीय अहवाल)</span>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                     {[
                       { id: "demand", label: lang === "mr" ? "तांदूळ मागणी" : "Demand", icon: FileText },
                       { id: "monthly-report", label: lang === "mr" ? "प्रमाणपत्र" : "Certificate", icon: FileSpreadsheet },
@@ -6761,7 +6775,7 @@ function TeacherMDMPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
                 transition={{ duration: 0.4 }}
-                className="bg-white/60 backdrop-blur-3xl rounded-[3rem] border border-slate-200 shadow-[0_32px_64px_-20px_rgba(0,0,0,0.5)] overflow-hidden p-6 md:p-10"
+                className="bg-white/60 backdrop-blur-3xl rounded-2xl sm:rounded-[3rem] border border-slate-200 shadow-xl overflow-hidden p-3.5 sm:p-6 md:p-10 w-full max-w-full"
               >
                 {/* MONTHLY CALENDAR ATTENDANCE & MDM ENTRY TAB (Learnify Academy Format) */}
                 {activeTab === "monthly-calendar" && (
@@ -7068,7 +7082,7 @@ function TeacherMDMPage() {
                       <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
                         <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200">
                           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-start">
                               <div className="p-2 rounded-xl bg-amber-100 text-amber-700">
                                 <Zap className="w-5 h-5 fill-amber-500" />
                               </div>
@@ -7758,7 +7772,7 @@ function TeacherMDMPage() {
                     <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
                       {/* Top Controls: Filter & Save */}
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100">
-                        <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3 w-full md:w-auto">
                           {/* Year */}
                           <div className="flex items-center gap-2">
                             <label className="text-xs font-black text-slate-700">{lang === "mr" ? "वर्ष:" : "Year:"}</label>
@@ -8550,7 +8564,7 @@ function TeacherMDMPage() {
                               const totalDmgVal = roundStock(typedDmgVal + dmgTabQty);
 
                               // 6. Remaining Stock = Previous Available Stock - Damaged Stock
-                              const totalRemainingStock = Math.max(0, roundStock(prevAvailStock - totalDmgVal));
+                              const totalRemainingStock = roundStock(prevAvailStock - totalDmgVal);
 
                               return (
                                 <tr key={item.key} className={`hover:bg-emerald-50/40 transition-colors ${idx % 2 === 0 ? "bg-white" : "bg-slate-50/50"}`}>
@@ -8593,7 +8607,7 @@ function TeacherMDMPage() {
                                   {/* 4. एकूण शिल्लक साठा (= लोकसहभाग नंतरचा साठा - खराब साठा) */}
                                   <td className="p-2 border-r border-emerald-300 text-center bg-emerald-100/40">
                                     <div className="w-full h-9 flex items-center justify-center font-black text-xs px-2 rounded-lg border bg-emerald-200/80 text-emerald-950 border-emerald-400 shadow-inner select-none">
-                                      {toMarathiNumbers(totalRemainingStock.toFixed(3))} {item.unit}
+                                      <span className={totalRemainingStock < 0 ? "text-red-600 font-bold" : ""}>{toMarathiNumbers(totalRemainingStock.toFixed(3))} {item.unit}</span>
                                     </div>
                                   </td>
                                 </tr>
@@ -10927,7 +10941,7 @@ function TeacherMDMPage() {
 
                 {/* 5. STOCK TAB */}
                 {activeTab === "stock" && (
-                  <div className="bg-white p-12 border border-slate-300 w-full min-h-[800px] flex flex-col items-center">
+                  <div className="bg-white p-3.5 sm:p-6 md:p-12 border border-slate-300 w-full min-h-[500px] flex flex-col items-center overflow-x-hidden">
                     <div className="w-full max-w-[800px] space-y-10">
                       {/* Title */}
                       <div className="text-center py-4 flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-slate-100 pb-4">
@@ -11158,7 +11172,7 @@ function TeacherMDMPage() {
                                   const usedQty = roundStock(itemRec ? itemRec.used : 0);
 
                                   // Final Remaining Stock = Total Available Stock - Used Stock
-                                  const finalRemaining = Math.max(0, roundStock(totalAvail - usedQty));
+                                  const finalRemaining = roundStock(totalAvail - usedQty);
 
                                   return (
                                     <tr
@@ -11705,7 +11719,7 @@ function TeacherMDMPage() {
 
                     {/* Single Control & Filter Card matching Screenshot 1 */}
                     <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-                      <div className="flex flex-wrap items-center gap-4">
+                      <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 sm:gap-4">
                         <div className="space-y-1">
                           <label className="text-xs font-bold text-slate-700 block">
                             महिने
@@ -12217,7 +12231,7 @@ function TeacherMDMPage() {
                     </div>
 
                     {/* Top Control Card matching Screenshot 2 */}
-                    <div className="bg-white p-4 md:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                    <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
                       <div className="flex flex-wrap items-center gap-4">
                         <div className="flex items-center gap-2">
                           <label className="text-xs font-bold text-slate-700 whitespace-nowrap">
@@ -12298,7 +12312,7 @@ function TeacherMDMPage() {
                     </div>
 
                     {/* Official Monthly MDM Report Container matching Screenshot 2 */}
-                    <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-300 shadow-sm space-y-3 print:p-0 print:border-none print:shadow-none">
+                    <div className="bg-white p-2 sm:p-4 md:p-6 rounded-2xl border border-slate-300 shadow-sm space-y-3 print:p-0 print:border-none print:shadow-none w-full max-w-full overflow-x-hidden">
                       <div id="monthly-mdm-report-print" className="space-y-0 bg-white p-2 text-slate-900 font-sans">
                         {/* === DAILY TANDUL EXPENSE REGISTER (BHAG 1) — EXACT PDF 5.pdf & SCREENSHOT FORMAT === */}
                         {monthlyMdmReportType === "daily_tandul_register" && (() => {
@@ -13273,7 +13287,7 @@ function TeacherMDMPage() {
 
                 {/* Certificate Tab */}
                 {activeTab === "monthly-report" && (
-                  <div className="bg-white p-2 md:p-4 border border-slate-300 w-full min-h-[800px] flex flex-col items-stretch">
+                  <div className="bg-white p-2 sm:p-4 border border-slate-300 w-full min-h-[500px] flex flex-col items-stretch overflow-x-auto">
                     <div className="w-full max-w-full space-y-6">
                       <div className="text-center py-2">
                         <h2 className="text-2xl font-black text-[#004C99]">
@@ -13282,7 +13296,7 @@ function TeacherMDMPage() {
                       </div>
 
                       {/* Top Control Bar matching User Screenshot */}
-                      <div className="bg-[#f8fafc] p-3 md:p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
+                      <div className="bg-[#f8fafc] p-3 md:p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3.5 sm:gap-4">
                         {/* Month & Year Selectors */}
                         <div className="flex flex-wrap items-center gap-3">
                           <div className="flex items-center gap-1.5">
@@ -13329,7 +13343,7 @@ function TeacherMDMPage() {
                         </div>
 
                         {/* Class Subtabs Pill Group */}
-                        <div className="flex items-center bg-slate-200/80 p-1 rounded-xl gap-1">
+                        <div className="flex flex-wrap items-center bg-slate-200/80 p-1 rounded-xl gap-1 w-full sm:w-auto justify-center">
                           <button
                             type="button"
                             onClick={() => setMonthlySubTab("1-5")}
@@ -13418,7 +13432,7 @@ function TeacherMDMPage() {
                             </span>
                           </div>
 
-                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 text-xs font-bold text-slate-700">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 text-xs font-bold text-slate-700">
                             {/* 1. स्वयंपाकी नाव */}
                             <div>
                               <label className="block mb-1 text-slate-700">स्वयंपाकी नाव</label>
@@ -13528,10 +13542,10 @@ function TeacherMDMPage() {
                                 { key: "Mugdal", nameMr: "मूगडाळ", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
                                 { key: "Turdal", nameMr: "तूरडाळ", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
                                 { key: "Matki", nameMr: "मटकी", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
-                                { key: "Chavali", nameMr: "चवळी", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
+                                { key: "Cowpea", nameMr: "चवळी", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
                                 { key: "Masurdal", nameMr: "मसूरडाळ", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
-                                { key: "Vatana", nameMr: "वाटाणा", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
-                                { key: "Harbhara", nameMr: "हरभरा", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
+                                { key: "Pease", nameMr: "वाटाणा", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
+                                { key: "Gram", nameMr: "हरभरा", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
                                 { key: "Moong", nameMr: "मूग", unit: "कि.ग्रॅ.", qty15: "0.020 कि.ग्रॅ.", qty68: "0.030 कि.ग्रॅ." },
                                 { key: "Cumin", nameMr: "जिरे", unit: "कि.ग्रॅ.", qty15: "0.0005 कि.ग्रॅ.", qty68: "0.0007 कि.ग्रॅ." },
                                 { key: "Mustard", nameMr: "मोहरी", unit: "कि.ग्रॅ.", qty15: "0.0005 कि.ग्रॅ.", qty68: "0.0007 कि.ग्रॅ." },
@@ -13557,14 +13571,15 @@ function TeacherMDMPage() {
                               const upperAvgBeneficiary = upperCookedDays > 0 ? Math.round(upperBeneficiarySum / upperCookedDays) : 0;
 
                               const getBFormStockData = (itemKey: string, cls: "1 To 5" | "6 To 8") => {
-                                const stockData = getStockDataForItem(itemKey, monthlyReportMonth || "April", calcYear, cls);
+                                const targetKey = getItemKeyFromName(itemKey);
+                                const stockData = getStockDataForItem(targetKey, monthlyReportMonth || "April", calcYear, cls);
                                 const opening = stockData?.prev || 0;
                                 const received = stockData?.received || 0;
                                 const borrowed = getLokForMonth(itemKey, monthlyReportMonth || "April", calcYear);
                                 const total = opening + received + borrowed;
                                 const spent = stockData?.used || 0;
                                 const spoiled = getDamagedForMonth(itemKey, monthlyReportMonth || "April", calcYear);
-                                const closing = Math.max(0, total - spent - spoiled);
+                                const closing = total - spent - spoiled;
                                 return {
                                   opening,
                                   received,
@@ -13841,7 +13856,7 @@ function TeacherMDMPage() {
                                                 const data = getBFormStockData(item.key, cls);
                                                 return (
                                                   <td key={item.key} className="border border-black p-0.5 text-xs leading-tight overflow-hidden text-ellipsis whitespace-nowrap">
-                                                    {data.closing > 0 ? toMarathiNumbers(data.closing.toFixed(3)) : ""}
+                                                    <span className={data.closing < 0 ? "text-red-600 font-bold font-mono" : ""}>{toMarathiNumbers(data.closing.toFixed(3))}</span>
                                                   </td>
                                                 );
                                               })}
@@ -13910,7 +13925,7 @@ function TeacherMDMPage() {
                                   const total = prev + incomingQty;
 
                                   const used = beneficiary > 0 ? beneficiary * ratePerStudent : 0;
-                                  const closing = Math.max(0, total - used);
+                                  const closing = total - used;
                                   currentStock = closing;
 
                                   const isHolidayOrSunday = isSunday || (classRec && classRec.isHoliday);
@@ -13925,7 +13940,7 @@ function TeacherMDMPage() {
                                       <td className="border border-black p-0.5 font-mono font-bold">{total.toFixed(4)}</td>
                                       <td className="border border-black p-0.5 font-semibold">{beneficiary > 0 ? beneficiary : ""}</td>
                                       <td className="border border-black p-0.5 font-mono">{used > 0 ? used.toFixed(4) : ""}</td>
-                                      <td className="border border-black p-0.5 font-mono font-bold text-emerald-800">{closing.toFixed(4)}</td>
+                                      <td className={`border border-black p-0.5 font-mono font-bold ${closing < 0 ? "text-red-600 bg-red-50 font-extrabold" : "text-emerald-800"}`}>{closing.toFixed(4)}</td>
                                       <td className="border border-black p-0.5"></td>
                                     </tr>
                                   );
@@ -14241,7 +14256,7 @@ function TeacherMDMPage() {
                                                               const total = prev + recQty;
                                                               const isItemSelected = classRec?.selectedItems ? !!classRec.selectedItems[it.key] : false;
                                                               const used = (beneficiary > 0 && isItemSelected) ? beneficiary * it.rate : 0;
-                                                              const closing = Math.max(0, total - used);
+                                                              const closing = total - used;
                                                               itemStocks[it.key] = closing;
 
                                                               itemTotals[it.key].prevSum += prev;
@@ -14256,7 +14271,7 @@ function TeacherMDMPage() {
                                                                   <td className="border border-black p-0.5 font-mono">{recQty > 0 ? recQty.toFixed(4) : ""}</td>
                                                                   <td className="border border-black p-0.5 font-mono font-bold">{total.toFixed(4)}</td>
                                                                   <td className="border border-black p-0.5 font-mono">{used > 0 ? used.toFixed(4) : ""}</td>
-                                                                  <td className="border border-black p-0.5 font-mono font-bold text-emerald-800">{closing.toFixed(4)}</td>
+                                                                  <td className={`border border-black p-0.5 font-mono font-bold ${closing < 0 ? "text-red-600 bg-red-50 font-extrabold" : "text-emerald-800"}`}>{closing.toFixed(4)}</td>
                                                                 </React.Fragment>
                                                               );
                                                             })}
@@ -14277,7 +14292,7 @@ function TeacherMDMPage() {
                                                                   <td className="border border-black p-0.5 font-mono font-bold">{tot.recSum.toFixed(4)}</td>
                                                                   <td className="border border-black p-0.5 font-mono font-bold">{tot.totalSum.toFixed(4)}</td>
                                                                   <td className="border border-black p-0.5 font-mono font-bold">{tot.usedSum.toFixed(4)}</td>
-                                                                  <td className="border border-black p-0.5 font-mono font-bold text-emerald-800">{tot.closing.toFixed(4)}</td>
+                                                                  <td className={`border border-black p-0.5 font-mono font-bold ${tot.closing < 0 ? "text-red-600 bg-red-50 font-extrabold" : "text-emerald-800"}`}>{tot.closing.toFixed(4)}</td>
                                                                 </React.Fragment>
                                                               );
                                                             })}
@@ -14459,7 +14474,7 @@ function TeacherMDMPage() {
                 {activeTab === "annual-report" && (
                   <div className="space-y-6">
                     {/* Header */}
-                    <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="bg-white p-3.5 sm:p-5 md:p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
                       <div>
                         <h2 className="text-xl font-extrabold text-slate-800 flex items-center gap-2">
                           <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
@@ -14526,7 +14541,7 @@ function TeacherMDMPage() {
                     ) : (
                       <div className="space-y-6">
                         {/* Learnify Toolbar & Instructions */}
-                        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs space-y-4 print:hidden">
+                        <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200/90 shadow-xs space-y-3 sm:space-y-4 print:hidden">
                           <div className="flex flex-wrap items-center justify-between gap-4">
                             <div className="flex flex-wrap items-center gap-3">
                               <div className="space-y-1">
@@ -14559,7 +14574,7 @@ function TeacherMDMPage() {
                                 </select>
                               </div>
 
-                              <div className="flex items-center gap-2.5 pt-4">
+                              <div className="flex flex-wrap items-center gap-2.5 pt-2 sm:pt-4 w-full sm:w-auto">
                                 <button
                                   onClick={handleAnnualReportDownload}
                                   disabled={isExporting}
@@ -14748,7 +14763,7 @@ function TeacherMDMPage() {
                                     )}
 
                                     {/* Table */}
-                                    <table className="w-full border-collapse border border-black text-center text-xs font-sans table-fixed">
+                                    <table className="w-full min-w-[1200px] border-collapse border border-black text-center text-xs font-sans">
                                       <colgroup>
                                         <col style={{ width: '3%' }} />
                                         <col style={{ width: '7%' }} />
@@ -14773,13 +14788,13 @@ function TeacherMDMPage() {
                                         <tr className="bg-slate-100 text-slate-900 font-extrabold border-b border-black">
                                           {part.items.map((_, i) => (
                                             <React.Fragment key={i}>
-                                              <th className="border border-black px-0.5 py-1 text-[8.5px] font-bold leading-tight align-middle text-center break-normal whitespace-normal tracking-tight">मागील<br/>शिल्लक</th>
-                                              <th className="border border-black px-0.5 py-1 text-[8.5px] font-bold leading-tight align-middle text-center break-normal whitespace-normal tracking-tight">पुरवठा<br/>धारकाकडून<br/>प्राप्त</th>
-                                              <th className="border border-black px-0.5 py-1 text-[8.5px] font-bold leading-tight align-middle text-center break-normal whitespace-normal tracking-tight">लोक<br/>सहभागातून<br/>प्राप्त</th>
-                                              <th className="border border-black px-0.5 py-1 text-[8.5px] font-bold leading-tight align-middle text-center break-normal whitespace-normal tracking-tight">एकूण<br/>प्राप्त</th>
-                                              <th className="border border-black px-0.5 py-1 text-[8.5px] font-bold leading-tight align-middle text-center break-normal whitespace-normal tracking-tight">शिजवण्यात<br/>आलेला<br/>माल</th>
-                                              <th className="border border-black px-0.5 py-1 text-[8.5px] font-bold leading-tight align-middle text-center break-normal whitespace-normal tracking-tight">खराब<br/>झालेने<br/>निर्लेखित<br/>केलेला<br/>माल</th>
-                                              <th className="border border-black px-0.5 py-1 text-[8.5px] font-bold leading-tight align-middle text-center break-normal whitespace-normal tracking-tight">महिना<br/>अखेरीस<br/>शिल्लक<br/>माल</th>
+                                              <th className="border border-black px-1 py-1 text-[9px] font-bold leading-tight align-middle text-center whitespace-nowrap min-w-[50px]">मागील<br/>शिल्लक</th>
+                                              <th className="border border-black px-1 py-1 text-[9px] font-bold leading-tight align-middle text-center whitespace-nowrap min-w-[55px]">पुरवठा<br/>प्राप्त</th>
+                                              <th className="border border-black px-1 py-1 text-[9px] font-bold leading-tight align-middle text-center whitespace-nowrap min-w-[55px]">लोकसहभाग<br/>प्राप्त</th>
+                                              <th className="border border-black px-1 py-1 text-[9px] font-bold leading-tight align-middle text-center whitespace-nowrap min-w-[50px]">एकूण<br/>प्राप्त</th>
+                                              <th className="border border-black px-1 py-1 text-[9px] font-bold leading-tight align-middle text-center whitespace-nowrap min-w-[50px]">शिजवला<br/>माल</th>
+                                              <th className="border border-black px-1 py-1 text-[9px] font-bold leading-tight align-middle text-center whitespace-nowrap min-w-[50px]">खराब<br/>माल</th>
+                                              <th className="border border-black px-1 py-1 text-[9px] font-bold leading-tight align-middle text-center whitespace-nowrap min-w-[55px]">अखेर<br/>शिल्लक</th>
                                             </React.Fragment>
                                           ))}
                                         </tr>
@@ -14812,7 +14827,7 @@ function TeacherMDMPage() {
                                                 const totalRec = prev + recSupp + recPub;
                                                 const used = stockData ? stockData.used : 0;
                                                 const damaged = 0;
-                                                const closing = Math.max(0, totalRec - (used + damaged));
+                                                const closing = totalRec - (used + damaged);
 
                                                 totalsMap[it.key].prev += prev;
                                                 totalsMap[it.key].recSupp += recSupp;
@@ -14824,13 +14839,13 @@ function TeacherMDMPage() {
 
                                                 return (
                                                   <React.Fragment key={it.key}>
-                                                    <td className="border border-black p-0.5 font-sans text-[8.5px] font-medium text-center">{prev.toFixed(4)}</td>
-                                                    <td className="border border-black p-0.5 font-sans text-[8.5px] font-medium text-center">{recSupp.toFixed(4)}</td>
-                                                    <td className="border border-black p-0.5 font-sans text-[8.5px] font-medium text-center">{recPub.toFixed(4)}</td>
-                                                    <td className="border border-black p-0.5 font-sans text-[8.5px] font-medium font-bold text-center">{totalRec.toFixed(4)}</td>
-                                                    <td className="border border-black p-0.5 font-sans text-[8.5px] font-medium font-semibold text-center">{used.toFixed(4)}</td>
-                                                    <td className="border border-black p-0.5 font-sans text-[8.5px] font-medium text-center">{damaged.toFixed(4)}</td>
-                                                    <td className="border border-black p-0.5 font-sans text-[8.5px] font-medium font-bold text-emerald-800 text-center">{closing.toFixed(4)}</td>
+                                                    <td className="border border-black p-0.5 font-sans text-[9.5px] font-medium text-center">{prev.toFixed(4)}</td>
+                                                    <td className="border border-black p-0.5 font-sans text-[9.5px] font-medium text-center">{recSupp.toFixed(4)}</td>
+                                                    <td className="border border-black p-0.5 font-sans text-[9.5px] font-medium text-center">{recPub.toFixed(4)}</td>
+                                                    <td className="border border-black p-0.5 font-sans text-[9.5px] font-medium font-bold text-center">{totalRec.toFixed(4)}</td>
+                                                    <td className="border border-black p-0.5 font-sans text-[9.5px] font-medium font-semibold text-center">{used.toFixed(4)}</td>
+                                                    <td className="border border-black p-0.5 font-sans text-[9.5px] font-medium text-center">{damaged.toFixed(4)}</td>
+                                                    <td className={`border border-black p-0.5 font-sans text-[9.5px] font-medium font-bold text-center ${closing < 0 ? "text-red-600 bg-red-50 font-extrabold" : "text-emerald-800"}`}>{closing.toFixed(4)}</td>
                                                   </React.Fragment>
                                                 );
                                               })}
@@ -14846,13 +14861,13 @@ function TeacherMDMPage() {
                                                   const tot = totalsMap[it.key];
                                                   return (
                                                     <React.Fragment key={it.key}>
-                                                      <td className="border border-black p-0.5 font-sans text-[8.5px] font-medium font-bold text-center">{tot.prev.toFixed(4)}</td>
-                                                      <td className="border border-black p-0.5 font-sans text-[8.5px] font-medium font-bold text-center">{tot.recSupp.toFixed(4)}</td>
-                                                      <td className="border border-black p-0.5 font-sans text-[8.5px] font-medium font-bold text-center">{tot.recPub.toFixed(4)}</td>
-                                                      <td className="border border-black p-0.5 font-sans text-[8.5px] font-medium font-bold text-center">{tot.totalRec.toFixed(4)}</td>
-                                                      <td className="border border-black p-0.5 font-sans text-[8.5px] font-medium font-bold text-center">{tot.used.toFixed(4)}</td>
-                                                      <td className="border border-black p-0.5 font-sans text-[8.5px] font-medium font-bold text-center">{tot.damaged.toFixed(4)}</td>
-                                                      <td className="border border-black p-0.5 font-sans text-[8.5px] font-medium font-bold text-emerald-800 text-center">{tot.closing.toFixed(4)}</td>
+                                                      <td className="border border-black p-0.5 font-sans text-[9.5px] font-medium font-bold text-center">{tot.prev.toFixed(4)}</td>
+                                                      <td className="border border-black p-0.5 font-sans text-[9.5px] font-medium font-bold text-center">{tot.recSupp.toFixed(4)}</td>
+                                                      <td className="border border-black p-0.5 font-sans text-[9.5px] font-medium font-bold text-center">{tot.recPub.toFixed(4)}</td>
+                                                      <td className="border border-black p-0.5 font-sans text-[9.5px] font-medium font-bold text-center">{tot.totalRec.toFixed(4)}</td>
+                                                      <td className="border border-black p-0.5 font-sans text-[9.5px] font-medium font-bold text-center">{tot.used.toFixed(4)}</td>
+                                                      <td className="border border-black p-0.5 font-sans text-[9.5px] font-medium font-bold text-center">{tot.damaged.toFixed(4)}</td>
+                                                      <td className={`border border-black p-0.5 font-sans text-[9.5px] font-medium font-bold text-center ${tot.closing < 0 ? "text-red-600 bg-red-50 font-extrabold" : "text-emerald-800"}`}>{tot.closing.toFixed(4)}</td>
                                                     </React.Fragment>
                                                   );
                                                 })}
@@ -14875,7 +14890,7 @@ function TeacherMDMPage() {
                                 ))}
                               </div>
                             ) : (
-                              <table className="w-full border-collapse border border-black text-center text-sm font-sans style-table-fixed" style={{ tableLayout: "fixed" }}>
+                              <table className="w-full min-w-[1100px] border-collapse border border-black text-center text-xs font-sans">
                                 <colgroup>
                                   <col style={{ width: "2.5%" }} />
                                   <col style={{ width: "6.5%" }} />
@@ -14981,7 +14996,7 @@ function TeacherMDMPage() {
                                       const totalReceived = prevStock + receivedSupplier + receivedPublic;
                                       const usedStock = stockData ? stockData.used : (idx === 3 ? 9 : 0);
                                       const damagedStock = idx === 3 ? 1 : 0;
-                                      const closingStock = Math.max(0, totalReceived - (usedStock + damagedStock));
+                                      const closingStock = totalReceived - (usedStock + damagedStock);
 
                                       // Accumulate totals
                                       totalEnrolled = Math.max(totalEnrolled, enrolled);
@@ -15025,7 +15040,7 @@ function TeacherMDMPage() {
                                           <td className="border border-black p-1 font-bold">{totalReceived}</td>
                                           <td className="border border-black p-1 font-semibold">{usedStock}</td>
                                           <td className="border border-black p-1">{damagedStock}</td>
-                                          <td className="border border-black p-1 font-bold text-emerald-700">{closingStock}</td>
+                                          <td className={`border border-black p-1 font-bold ${closingStock < 0 ? "text-red-600 bg-red-50 font-extrabold" : "text-emerald-700"}`}>{closingStock}</td>
                                           <td className="border border-black p-1"></td>
                                         </tr>
                                       );
@@ -15051,7 +15066,7 @@ function TeacherMDMPage() {
                                           <td className="border border-black p-1">{totalStockCombined}</td>
                                           <td className="border border-black p-1">{totalUsedStock}</td>
                                           <td className="border border-black p-1">{totalDamagedStock}</td>
-                                          <td className="border border-black p-1 text-emerald-800">{totalClosingStock}</td>
+                                          <td className={`border border-black p-1 ${totalClosingStock < 0 ? "text-red-600 bg-red-50 font-extrabold" : "text-emerald-800"}`}>{totalClosingStock}</td>
                                           <td className="border border-black p-1"></td>
                                         </tr>
                                       </>

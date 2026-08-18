@@ -128,7 +128,8 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
   };
 
   return (
-    <div className="print-page border border-slate-300 py-6 px-8 bg-white text-black font-sans text-xs relative w-full max-w-full mx-auto shadow-md flex flex-col justify-between print:w-full print:h-auto print:border-none print:shadow-none print:p-0">
+    <div className="print-page border border-slate-300 py-4 sm:py-6 px-3 sm:px-8 bg-white text-black font-sans text-xs relative w-full max-w-full mx-auto shadow-md flex flex-col justify-between overflow-x-auto print:w-full print:h-auto print:border-none print:shadow-none print:p-0 print:overflow-x-visible">
+      <div className="min-w-[700px] md:min-w-0 w-full flex flex-col justify-between h-full">
       <div>
         {/* Header */}
         <div className="relative flex justify-center items-center font-bold text-sm mb-3 border-b-2 border-black pb-2">
@@ -166,20 +167,20 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
         </div>
 
         {/* 10-Column Data Table */}
-        <div className="mt-4 w-full overflow-x-auto">
-          <table className="w-full border-collapse border border-black text-center text-xs font-sans" style={{ borderCollapse: 'collapse', border: '1px solid #000000' }}>
+        <div className="mt-4 w-full">
+          <table className="w-full min-w-[850px] border-collapse border border-black text-center text-xs font-sans" style={{ borderCollapse: 'collapse', border: '1px solid #000000' }}>
             <thead>
               <tr className="bg-slate-100 font-bold border-b border-black text-xs">
-                <th className="border border-black p-1" style={{ border: '1px solid #000000' }}>इयत्ता</th>
-                <th className="border border-black p-1" style={{ border: '1px solid #000000' }}>पट</th>
-                <th className="border border-black p-1" style={{ border: '1px solid #000000' }}>शिजवलेले दिवस</th>
-                <th className="border border-black p-1" style={{ border: '1px solid #000000' }}>प्रोग्रेसिव्ह लाभार्थी</th>
-                <th className="border border-black p-1" style={{ border: '1px solid #000000' }}>हिस्सा</th>
-                <th className="border border-black p-1" style={{ border: '1px solid #000000' }}>दर</th>
-                <th className="border border-black p-1" style={{ border: '1px solid #000000' }}>इंधन भाजीपाला देय अनुदान</th>
-                <th className="border border-black p-1" style={{ border: '1px solid #000000' }}>स्वयंपाकी तथा मदतनीस संख्या</th>
-                <th className="border border-black p-1" style={{ border: '1px solid #000000' }}>स्वयंपाकी तथा मदतनीस मानधन</th>
-                <th className="border border-black p-1" style={{ border: '1px solid #000000' }}>शेरा</th>
+                <th className="border border-black p-1.5 min-w-[55px]" style={{ border: '1px solid #000000' }}>इयत्ता</th>
+                <th className="border border-black p-1.5 min-w-[45px]" style={{ border: '1px solid #000000' }}>पट</th>
+                <th className="border border-black p-1.5 min-w-[70px]" style={{ border: '1px solid #000000' }}>शिजवलेले दिवस</th>
+                <th className="border border-black p-1.5 min-w-[80px]" style={{ border: '1px solid #000000' }}>प्रोग्रेसिव्ह लाभार्थी</th>
+                <th className="border border-black p-1.5 min-w-[50px]" style={{ border: '1px solid #000000' }}>हिस्सा</th>
+                <th className="border border-black p-1.5 min-w-[45px]" style={{ border: '1px solid #000000' }}>दर</th>
+                <th className="border border-black p-1.5 min-w-[110px]" style={{ border: '1px solid #000000' }}>इंधन भाजीपाला देय अनुदान</th>
+                <th className="border border-black p-1.5 min-w-[100px]" style={{ border: '1px solid #000000' }}>स्वयंपाकी तथा मदतनीस संख्या</th>
+                <th className="border border-black p-1.5 min-w-[110px]" style={{ border: '1px solid #000000' }}>स्वयंपाकी तथा मदतनीस मानधन</th>
+                <th className="border border-black p-1.5 min-w-[65px]" style={{ border: '1px solid #000000' }}>शेरा</th>
               </tr>
             </thead>
             <tbody>
@@ -307,6 +308,7 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
         <div className="text-center pb-2 text-xs font-bold">
           <p>अध्यक्ष</p>
         </div>
+      </div>
       </div>
     </div>
   );
