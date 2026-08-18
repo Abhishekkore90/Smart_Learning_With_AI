@@ -751,7 +751,10 @@ export interface StructuredDayPageListRef {
   getEditedData: () => any[];
 }
 
-export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { pages: StructuredDayPage[] }>(({ pages }, ref) => {
+export const StructuredDayPageList = forwardRef<
+  StructuredDayPageListRef,
+  { pages: StructuredDayPage[]; documentUrl?: string | null; onViewOriginal?: () => void }
+>(({ pages, documentUrl, onViewOriginal }, ref) => {
   const [dayRecords, setDayRecords] = useState<any[]>([]);
   const profile = useMemo(() => getStoredSchoolProfile(), []);
 
@@ -1694,9 +1697,11 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
             >
               {filterSingleDate
                 ? `📌 फक्त ${formatCleanDate(savedRecord.diaryDate)} ची टाचण`
-                : "📚 सर्व तारखा (1-12 Dates)"}
+                : `📚 सर्व तारखा (${structuredPages.length} दिवसांची टाचण)`}
             </button>
           )}
+
+
 
           {isPdf && hasStructuredView && (
             <div className="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700 text-xs font-bold">
@@ -1727,17 +1732,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
 
           {(downloadUrl || hasStructuredView) && (
             <div className="flex items-center gap-2">
-              <button
-                onClick={handleDownloadWord}
-                disabled={isInnerDownloading}
-                className="px-3.5 py-1.5 bg-orange-600 hover:bg-orange-500 disabled:opacity-60 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shrink-0 shadow-sm cursor-pointer"
-              >
-                {isInnerDownloading ? (
-                  <><Loader2 className="size-3.5 animate-spin" /> Word तयार होत आहे...</>
-                ) : (
-                  <><Download className="size-3.5" /> Download to Word</>
-                )}
-              </button>
+
 
               {hasStructuredView && (
                 <button
@@ -1789,7 +1784,12 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
           </div>
         ) : viewMode === "structured" && pagesToDisplay.length > 0 ? (
           <div className="w-full">
-            <StructuredDayPageList ref={structuredListRef} pages={pagesToDisplay} />
+            <StructuredDayPageList 
+              ref={structuredListRef} 
+              pages={pagesToDisplay}
+              documentUrl={savedRecord?.pageUrl ? getBunnyStorageUrl(savedRecord.pageUrl) : (downloadUrl ? (downloadUrl.startsWith("http") ? getBunnyStorageUrl(downloadUrl) : downloadUrl) : null)}
+              onViewOriginal={() => setViewMode("original")}
+            />
           </div>
         ) : htmlContent ? (
           <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm max-w-3xl mx-auto prose prose-slate text-sm font-sans leading-relaxed text-slate-800">

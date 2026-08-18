@@ -751,8 +751,21 @@ export function parseExcelToDiaries(arrayBuffer: ArrayBuffer, className: string)
 export function parseDocxHtmlToDiaries(html: string, className: string): ParsedDiaryContent[] {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, "text/html");
-  const bodyElements = Array.from(doc.body.children);
   
+  // Un-wrap container elements (e.g., <div class="WordSection1">) so we iterate directly over top-level paragraphs and tables
+  let elements: Element[] = [];
+  const topChildren = Array.from(doc.body.children);
+  topChildren.forEach((child) => {
+    if ((child.tagName === "DIV" || child.tagName === "SECTION") && child.children.length > 0) {
+      elements.push(...Array.from(child.children));
+    } else {
+      elements.push(child);
+    }
+  });
+  if (elements.length === 0) {
+    elements = topChildren;
+  }
+
   const dateRegex = /(?:तारीख|दिनांक|Date)?\s*[:：]?\s*(\d{1,2}\s*[\/\-\.]\s*\d{1,2}\s*[\/\-\.]\s*\d{2,4})/gi;
   const allText = doc.body.textContent || "";
   const dateMatches: { dateStr: string; index: number }[] = [];
@@ -767,23 +780,28 @@ export function parseDocxHtmlToDiaries(html: string, className: string): ParsedD
   // If 0 or 1 date match found in the whole document, treat the ENTIRE document as a single section!
   if (dateMatches.length <= 1) {
     const singleDateStr = dateMatches.length === 1 ? dateMatches[0].dateStr : "";
-    return [parseHtmlSection({ dateStr: singleDateStr, elements: bodyElements }, className)];
+    return [parseHtmlSection({ dateStr: singleDateStr, elements }, className)];
   }
 
   // If multiple distinct dates found, split elements by date section
   const sections: { dateStr: string; elements: Element[] }[] = [];
-  let currentSection: { dateStr: string; elements: Element[] } = { dateStr: dateMatches[0].dateStr, elements: [] };
-  sections.push(currentSection);
+  let currentSection: { dateStr: string; elements: Element[] } | null = null;
 
-  bodyElements.forEach((el) => {
+  elements.forEach((el) => {
     const text = el.textContent || "";
     const dMatch = text.match(/(?:तारीख|दिनांक|Date)?\s*[:：]?\s*(\d{1,2}\s*[\/\-\.]\s*\d{1,2}\s*[\/\-\.]\s*\d{2,4})/i);
     if (dMatch) {
       const std = parseAndStandardizeDate(dMatch[1]);
-      if (std && currentSection.elements.length > 0) {
-        currentSection = { dateStr: dMatch[1], elements: [] };
-        sections.push(currentSection);
+      if (std) {
+        if (!currentSection || currentSection.elements.length > 0) {
+          currentSection = { dateStr: dMatch[1], elements: [] };
+          sections.push(currentSection);
+        }
       }
+    }
+    if (!currentSection) {
+      currentSection = { dateStr: dateMatches[0].dateStr, elements: [] };
+      sections.push(currentSection);
     }
     currentSection.elements.push(el);
   });
@@ -1218,7 +1236,12 @@ export async function saveParsedEntriesToFirestore({
   // Save primary file record in teacher_diaries so it represents the uploaded file
   const masterDocId = `file_${Date.now()}`;
   const masterDocRef = doc(db, "teacher_diaries", selectedClass, selectedMedium, masterDocId);
-  const primaryDateStr = `${selectedYear}-${monthStr}-${String(baseDay).padStart(2, "0")}`;
+  const firstValidDate = validEntries.length > 0 && validEntries[0].date ? (parseAndStandardizeDate(validEntries[0].date) || null) : null;
+  let primaryDateStr = firstValidDate || `${selectedYear}-${monthStr}-${String(baseDay).padStart(2, "0")}`;
+  if (primaryDateStr && selectedYear) {
+    const p = primaryDateStr.split("-");
+    if (p.length === 3) primaryDateStr = `${selectedYear}-${p[1]}-${p[2]}`;
+  }
 
   const masterData = {
     id: masterDocId,
@@ -1259,6 +1282,13 @@ export async function saveParsedEntriesToFirestore({
       }
       targetDateStr = format(dateCursor, "yyyy-MM-dd");
       dateCursor.setDate(dateCursor.getDate() + 1);
+    }
+
+    if (targetDateStr && selectedYear) {
+      const parts = targetDateStr.split("-");
+      if (parts.length === 3) {
+        targetDateStr = `${selectedYear}-${parts[1]}-${parts[2]}`;
+      }
     }
 
     const parts = targetDateStr.split("-");
