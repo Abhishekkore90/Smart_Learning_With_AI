@@ -128,7 +128,8 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
   };
 
   return (
-    <div className="print-page border border-slate-300 py-4 sm:py-6 px-3 sm:px-8 bg-white text-black font-sans text-xs relative w-full max-w-full mx-auto shadow-md flex flex-col justify-between print:w-full print:h-auto print:border-none print:shadow-none print:p-0">
+    <div className="print-page border border-slate-300 py-4 sm:py-6 px-3 sm:px-8 bg-white text-black font-sans text-xs relative w-full max-w-full mx-auto shadow-md flex flex-col justify-between overflow-x-auto print:w-full print:h-auto print:border-none print:shadow-none print:p-0 print:overflow-x-visible">
+      <div className="min-w-[700px] md:min-w-0 w-full flex flex-col justify-between h-full">
       <div>
         {/* Header */}
         <div className="relative flex justify-center items-center font-bold text-sm mb-3 border-b-2 border-black pb-2">
@@ -166,7 +167,7 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
         </div>
 
         {/* 10-Column Data Table */}
-        <div className="mt-4 w-full overflow-x-auto">
+        <div className="mt-4 w-full">
           <table className="w-full min-w-[850px] border-collapse border border-black text-center text-xs font-sans" style={{ borderCollapse: 'collapse', border: '1px solid #000000' }}>
             <thead>
               <tr className="bg-slate-100 font-bold border-b border-black text-xs">
@@ -307,6 +308,7 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
         <div className="text-center pb-2 text-xs font-bold">
           <p>अध्यक्ष</p>
         </div>
+      </div>
       </div>
     </div>
   );
