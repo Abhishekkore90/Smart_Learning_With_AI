@@ -24,6 +24,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { DocumentLivePreview } from "@/components/DocumentLivePreview";
+import { parseAndStandardizeDate } from "@/lib/parse-diary-file";
 import { useAuth } from "@/hooks/use-auth";
 
 interface PeriodItem {
@@ -97,8 +98,9 @@ function findMatchingEntryForDate(entries: any[], targetIsoDate: string): any | 
   for (const entry of entries) {
     if (!entry.date && !entry.displayDate) continue;
     const cleanDate = String(entry.date || entry.displayDate).trim();
+    const stdDate = parseAndStandardizeDate(cleanDate);
 
-    if (cleanDate === targetIsoDate) return entry;
+    if (stdDate === targetIsoDate || cleanDate === targetIsoDate) return entry;
 
     const m = cleanDate.match(/^(\d{1,4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,4})$/);
     if (m) {
@@ -112,27 +114,6 @@ function findMatchingEntryForDate(entries: any[], targetIsoDate: string): any | 
       }
       if (d === targetDay && mon === targetMonth) return entry;
     }
-  }
-
-  // 2. Check if entries belong to the SAME month as targetIsoDate
-  const firstEntry = entries[0];
-  if (firstEntry && (firstEntry.date || firstEntry.displayDate)) {
-    const cleanFirst = String(firstEntry.date || firstEntry.displayDate).trim();
-    const parts = cleanFirst.split(/[\/\-\.]/);
-    let entryMonth = 0;
-    if (parts.length === 3) {
-      entryMonth = parts[0].length === 4 ? parseInt(parts[1], 10) : parseInt(parts[1], 10);
-    }
-    if (entryMonth && entryMonth !== targetMonth) {
-      // Month mismatch (e.g., August file viewed in June)! Return null.
-      return null;
-    }
-  }
-
-  // 3. Fallback match by working day index ONLY within the same month
-  const dayIdx = calculateWorkingDayIndex(targetYear, targetMonth, targetDay);
-  if (dayIdx >= 0 && dayIdx < entries.length) {
-    return entries[dayIdx];
   }
 
   return null;
@@ -226,6 +207,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [availableDates, setAvailableDates] = useState<{ dateStr: string; day: string }[]>([]);
+  const [isDownloadingMonthly, setIsDownloadingMonthly] = useState(false);
   const { user, profile } = useAuth();
   const printRef = useRef<HTMLDivElement>(null);
   const [localProfile, setLocalProfile] = useState<{
@@ -284,6 +266,18 @@ export const TeacherTodayDiary: React.FC<Props> = ({
             if (!selectedMonth || dStr.split("-")[1] === selectedMonth) {
               foundDates.add(dStr);
             }
+          }
+          if (data.structuredData && Array.isArray(data.structuredData)) {
+            data.structuredData.forEach((entry: any) => {
+              if (entry.date) {
+                const stdDate = parseAndStandardizeDate(entry.date);
+                if (stdDate && stdDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                  if (!selectedMonth || stdDate.split("-")[1] === selectedMonth) {
+                    foundDates.add(stdDate);
+                  }
+                }
+              }
+            });
           }
         });
 
@@ -436,11 +430,17 @@ export const TeacherTodayDiary: React.FC<Props> = ({
           const docDate = data.diaryDate || data.date || "";
           const docMonth = data.month || (docDate ? docDate.split("-")[1] : "");
 
+          if (data.structuredData && Array.isArray(data.structuredData)) {
+            const match = findMatchingEntryForDate(data.structuredData, isoDate);
+            if (match) {
+              masterDoc = { id: dSnap.id, ...data };
+              matchedEntryFromList = match;
+              return;
+            }
+          }
+
           if (docDate === isoDate || dSnap.id === isoDate) {
             masterDoc = { id: dSnap.id, ...data };
-            if (data.structuredData && Array.isArray(data.structuredData)) {
-              matchedEntryFromList = findMatchingEntryForDate(data.structuredData, isoDate);
-            }
           } else if (docMonth === targetMonthStr) {
             const startDateStr = data.diaryDate || data.date || `${data.year || 2026}-${docMonth}-01`;
             const maxDays = data.structuredData && Array.isArray(data.structuredData) && data.structuredData.length > 0
@@ -498,7 +498,8 @@ export const TeacherTodayDiary: React.FC<Props> = ({
         // If no document exists for this date/month, return null (shows "No Teaching Diary Found")
         setTodayDiary(null);
       } catch (err) {
-        console.error("Failed to load teaching diary:", err);
+        console.error("Error fetching diary:", err);
+        toast.error("Failed to load Teaching Diary data");
         setTodayDiary(null);
       } finally {
         setLoading(false);
@@ -506,12 +507,209 @@ export const TeacherTodayDiary: React.FC<Props> = ({
     }
 
     fetchDiaryForDate();
-  }, [selectedClass, selectedMedium, isoDate]);
+  }, [isoDate, selectedClass, selectedMedium, displayFormattedDate]);
 
   const handlePrevDay = () => setActiveDate((prev) => subDays(prev ?? new Date(), 1));
   const handleNextDay = () => setActiveDate((prev) => addDays(prev ?? new Date(), 1));
   const handleResetToday = () => setActiveDate(new Date());
 
+  const handleDownloadMonthlyPdf = async () => {
+    setIsDownloadingMonthly(true);
+    const targetMonth = selectedMonth || "08";
+    const monthNames: Record<string, string> = {
+      "01": "जानेवारी", "02": "फेब्रुवारी", "03": "मार्च", "04": "एप्रिल",
+      "05": "मे", "06": "जून", "07": "जुलै", "08": "ऑगस्ट",
+      "09": "सप्टेंबर", "10": "ऑक्टोबर", "11": "नोव्हेंबर", "12": "डिसेंबर"
+    };
+    const monthLabel = monthNames[targetMonth] || "ऑगस्ट";
+    const toastId = toast.loading(`${monthLabel} महिन्यातील सर्व टाचण नोंदी गोळा करत आहे...`);
+
+    try {
+      const colRef = collection(db, "teacher_diaries", selectedClass, selectedMedium);
+      const snap = await getDocs(colRef);
+
+      const entriesMap = new Map<string, any>();
+
+      snap.docs.forEach((dSnap) => {
+        const data = dSnap.data();
+        
+        // Extract from structuredData
+        if (data.structuredData && Array.isArray(data.structuredData)) {
+          data.structuredData.forEach((entry: any) => {
+            const dateStr = parseAndStandardizeDate(entry.date || entry.displayDate);
+            if (dateStr && (!targetMonth || dateStr.split("-")[1] === targetMonth)) {
+              if (!entriesMap.has(dateStr)) {
+                entriesMap.set(dateStr, { ...entry, date: dateStr });
+              }
+            }
+          });
+        }
+
+        // Extract from master/single doc
+        const singleDate = parseAndStandardizeDate(data.diaryDate || data.date);
+        if (singleDate && (!targetMonth || singleDate.split("-")[1] === targetMonth)) {
+          if (!entriesMap.has(singleDate) && (data.periods || data.parsedContent)) {
+            const periods = data.periods || data.parsedContent?.periods || [];
+            if (periods.length > 0) {
+              entriesMap.set(singleDate, {
+                date: singleDate,
+                day: data.day || data.parsedContent?.day || "",
+                thought: data.thought || data.parsedContent?.thought || "",
+                dinvishesh: data.dinvishesh || data.parsedContent?.dinvishesh || "",
+                periods: periods,
+                teacher: activeProfile.teacherName,
+                school: activeProfile.schoolName,
+                std: selectedClass,
+                year: activeProfile.academicYear,
+              });
+            }
+          }
+        }
+      });
+
+      // Also check teaching_diaries
+      const tdColRef = collection(db, "teaching_diaries");
+      const tdSnap = await getDocs(tdColRef);
+      const prefix = `${selectedClass}_${selectedMedium}_`;
+
+      tdSnap.docs.forEach((dSnap) => {
+        const id = dSnap.id;
+        if (id.startsWith(prefix)) {
+          const dateStr = id.replace(prefix, "");
+          if (dateStr && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            if (!targetMonth || dateStr.split("-")[1] === targetMonth) {
+              if (!entriesMap.has(dateStr)) {
+                const data = dSnap.data();
+                if (data.periods && data.periods.length > 0) {
+                  entriesMap.set(dateStr, {
+                    date: dateStr,
+                    day: data.day || "",
+                    thought: data.thought || "",
+                    dinvishesh: data.dinvishesh || "",
+                    periods: data.periods,
+                    teacher: activeProfile.teacherName,
+                    school: activeProfile.schoolName,
+                    std: selectedClass,
+                    year: activeProfile.academicYear,
+                  });
+                }
+              }
+            }
+          }
+        }
+      });
+
+      const allEntries = Array.from(entriesMap.values());
+      
+      // Filter out Sundays
+      const validEntries = allEntries.filter((e) => {
+        if (!e.date) return false;
+        const parts = e.date.split("-");
+        if (parts.length === 3) {
+          const dObj = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+          if (!isNaN(dObj.getTime()) && dObj.getDay() === 0) return false;
+        }
+        return e.day !== "रविवार" && e.day?.toLowerCase() !== "sunday";
+      });
+
+      // Sort by date ascending
+      validEntries.sort((a, b) => a.date.localeCompare(b.date));
+
+      if (validEntries.length === 0) {
+        toast.dismiss(toastId);
+        toast.error(`${monthLabel} महिन्यासाठी कोणतीही टाचण नोंद सापडली नाही.`);
+        setIsDownloadingMonthly(false);
+        return;
+      }
+
+      toast.loading(`पीडीएफ तयार होत आहे... (${validEntries.length} दिवसांचे टाचण)`, { id: toastId });
+
+      const formatCleanDate = (dStr: string) => {
+        if (!dStr) return "-";
+        const parts = dStr.split("-");
+        if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        return dStr;
+      };
+
+      const defaultHeaders = ["तासिका", "विषय", "अध्ययन मुद्दा / पाठ्यघटक", "अध्ययन निष्पत्ती", "अध्ययन अनुभव", "साधन तंत्रे", "शैक्षणिक साहित्य"];
+      
+      const dayBlocks = validEntries.map((p: any, idx: number) => {
+        const rows = (p.periods || []).map((row: any, rIdx: number) => `
+          <tr style="background:${rIdx % 2 === 0 ? "#fff" : "#f8fafc"}; page-break-inside: avoid; break-inside: avoid;">
+            <td style="text-align:center;font-weight:700;color:#4338ca;width:6%">${row.period}</td>
+            <td style="font-weight:600;width:8%">${row.subject || "-"}</td>
+            <td style="width:11%">${row.topic || "-"}</td>
+            <td style="width:36%">${row.outcome || "-"}</td>
+            <td style="width:25%">${row.experience || "-"}</td>
+            <td style="width:7%">${row.tools || "-"}</td>
+            <td style="width:7%">${row.materials || "-"}</td>
+          </tr>`).join("");
+
+        const headers = (p.columnHeaders && p.columnHeaders.length > 0 ? p.columnHeaders : defaultHeaders)
+          .map((h: string) => `<th>${h}</th>`).join("");
+
+        return `
+          <div class="day-block" style="margin-bottom: 15px; ${idx > 0 ? "page-break-before: always; break-before: always;" : ""} page-break-inside: avoid; break-inside: avoid;">
+            <div class="day-header" style="display: flex; justify-content: flex-end; margin-bottom: 6px;">
+              <span class="period-count" style="color: #475569; background: #f1f5f9; padding: 4px 10px; border-radius: 20px; font-weight: 600; font-size: 11px;">
+                ${(p.periods || []).length} तासिका (Periods)
+              </span>
+            </div>
+            <h2 style="font-size: 18px; font-weight: 900; text-align: center; color: #0f172a; margin: 8px 0 12px 0;">दैनंदिन पाठ टाचण — ${selectedClass} (${selectedMedium})</h2>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; background: #f1f5f9; border: 2px solid #475569; border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; font-size: 11px;">
+              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">दिनांक</span><span style="font-weight:900; color:#4338ca; font-size:12px;">${formatCleanDate(p.date)}</span></div>
+              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">वार</span><span style="font-weight:900; color:#0f172a;">${p.day || "-"}</span></div>
+              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">वर्गशिक्षक</span><span style="font-weight:900; color:#0f172a;">${p.teacher || activeProfile.teacherName || "-"}</span></div>
+              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">शाळा</span><span style="font-weight:900; color:#0f172a;">${p.school || activeProfile.schoolName || "-"}</span></div>
+              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">इयत्ता</span><span style="font-weight:900; color:#0f172a;">${p.std || selectedClass}</span></div>
+              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">सन</span><span style="font-weight:900; color:#0f172a;">${p.year || activeProfile.academicYear || "2026-27"}</span></div>
+            </div>
+            ${p.thought ? `<div style="font-size:10.5px; font-style:italic; color:#78350f; background:#fffbeb; border-left:3px solid #f59e0b; padding:7px 12px; margin-bottom:10px; border-radius:4px;">✨ आजचा सुविचार : '${p.thought}'</div>` : ""}
+            <table style="width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 12px;">
+              <thead><tr>${headers}</tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>`;
+      }).join("");
+
+      const element = document.createElement("div");
+      element.innerHTML = `
+        <div style="font-family: 'Noto Sans Devanagari', Arial, sans-serif; color: #1e293b; line-height: 1.4; padding: 10px;">
+          <style>
+            table { width: 100%; border-collapse: collapse; margin-top: 4px; font-size: 10.5px; border: 2px solid #475569; }
+            table th { background-color: #f1f5f9 !important; color: #0f172a !important; font-weight: 800 !important; font-size: 10.5px !important; padding: 8px !important; border: 1.5px solid #475569 !important; text-align: left; }
+            table th:first-child { text-align: center; width: 45px; background-color: #e2e8f0 !important; }
+            table td { padding: 7px 8px !important; border: 1.5px solid #94a3b8 !important; vertical-align: top; font-size: 10px !important; line-height: 1.4 !important; }
+            thead { display: table-header-group; }
+            tr { page-break-inside: avoid; break-inside: avoid; }
+          </style>
+          ${dayBlocks}
+        </div>
+      `;
+
+      const html2pdf = (await import("html2pdf.js")).default;
+      const pdfFileName = `${selectedClass}_${selectedMedium}_${monthLabel}_महिन्याचे_संपूर्ण_टाचण`;
+
+      const opt = {
+        margin:       6,
+        filename:     `${pdfFileName}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak:    { mode: ['css'], avoid: '.day-block' }
+      };
+
+      await html2pdf().set(opt).from(element).save();
+      toast.dismiss(toastId);
+      toast.success(`✅ "${pdfFileName}.pdf" यशस्विरित्या डाउनलोड झाली! (${validEntries.length} दिवस)`);
+    } catch (err) {
+      console.error("Monthly PDF generation error:", err);
+      toast.dismiss(toastId);
+      toast.error("महिन्याचे टाचण डाउनलोड करताना अडचण आली.");
+    } finally {
+      setIsDownloadingMonthly(false);
+    }
+  };
   // ── Build the printable HTML content ─────────────────────────────────────
   const buildPrintableHTML = () => {
     if (!todayDiary || !activeDate) return "";
@@ -714,6 +912,15 @@ export const TeacherTodayDiary: React.FC<Props> = ({
     }
   };
 
+  const currentDocUrl = (todayDiary as any)?.pageUrl ||
+    (todayDiary as any)?.pageURL ||
+    (todayDiary as any)?.masterPdfUrl ||
+    (todayDiary as any)?.fileUrl ||
+    (todayDiary as any)?.pdfUrl ||
+    (todayDiary as any)?.documentUrl ||
+    (todayDiary as any)?.structuredData?.[0]?.pageUrl ||
+    null;
+
   return (
     <div className="max-w-5xl mx-auto space-y-6" ref={printRef} suppressHydrationWarning>
       {/* ═══ Single Clean Attractive Control Header Card ═══ */}
@@ -779,40 +986,27 @@ export const TeacherTodayDiary: React.FC<Props> = ({
             </button>
           </div>
 
-          {/* Right: Actions */}
-          <div className="flex items-center gap-2 shrink-0">
-            {(todayDiary as any)?.pageUrl && (
+          {/* Right: Download Monthly PDF Button */}
+          <button
+            onClick={handleDownloadMonthlyPdf}
+            disabled={isDownloadingMonthly}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs shadow-md transition-all border border-emerald-400/40 cursor-pointer active:scale-95 shrink-0"
+            title="संपूर्ण ऑगस्ट महिन्याचे सर्व टाचण पीडीएफ फॉरमॅटमध्ये डाउनलोड करा"
+          >
+            {isDownloadingMonthly ? (
               <>
-                <button
-                  type="button"
-                  onClick={() => setIsPreviewModalOpen(true)}
-                  className="px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-lg shadow-orange-500/25 cursor-pointer active:scale-95"
-                >
-                  <Eye className="size-4" /> <span>दस्तऐवज पहा (View Live)</span>
-                </button>
-                {!isStudent && profile?.role !== "student" && (
-                  <button
-                    type="button"
-                    onClick={handleDeleteCurrentFile}
-                    className="p-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-lg shadow-rose-500/25 cursor-pointer active:scale-95"
-                    title="फाईल डिलीट करा (Delete Uploaded File)"
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
-                )}
+                <Loader2 className="w-4 h-4 animate-spin text-emerald-200" />
+                <span>टाचण डाउनलोड होत आहे...</span>
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4 text-emerald-200" />
+                <span>📥 सर्व ऑगस्ट महिन्याचे टाचण (Monthly PDF)</span>
               </>
             )}
+          </button>
 
-            {todayDiary && (
-              <button
-                type="button"
-                onClick={handleDownload}
-                className="px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-lg shadow-emerald-600/25 cursor-pointer active:scale-95"
-              >
-                <Download className="size-4" /> <span>PDF डाऊनलोड</span>
-              </button>
-            )}
-          </div>
+
         </div>
       </div>
 
@@ -902,133 +1096,31 @@ export const TeacherTodayDiary: React.FC<Props> = ({
             )}
           </div>
 
-          {/* Periods Table OR Live Document Embedded View */}
-          {todayDiary.periods && todayDiary.periods.length > 0 ? (
-            <div className="bg-white border border-slate-200/80 rounded-3xl overflow-hidden shadow-sm space-y-0">
-              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                <h3 className="font-extrabold text-slate-900 text-base flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-orange-500" />
-                  दैनिक तासिका नियोजन (Daily Period Plan)
-                </h3>
-                <span className="text-xs bg-orange-100 text-orange-700 border border-orange-200 px-3 py-1 rounded-full font-black">
-                  {todayDiary.periods.length} तासिका (Periods)
-                </span>
-              </div>
-
-              <div className="overflow-x-auto no-scrollbar p-2">
-                <table className="w-full text-left text-sm text-slate-800 border-collapse table-fixed border-2 border-slate-300 rounded-2xl overflow-hidden shadow-sm">
-                  <colgroup>
-                    <col style={{ width: "6%" }} />
-                    <col style={{ width: "8%" }} />
-                    <col style={{ width: "11%" }} />
-                    <col style={{ width: "25%" }} />
-                    <col style={{ width: "7%" }} />
-                    <col style={{ width: "43%" }} />
-                  </colgroup>
-                  <thead className="bg-slate-100 text-slate-900 uppercase text-xs md:text-sm tracking-wider font-black border-b-2 border-slate-300">
-                    <tr>
-                      <th style={{ width: "6%" }} className="py-3 px-1.5 text-center border-r-2 border-slate-300 bg-slate-200 text-slate-900 break-words leading-tight">तासिका</th>
-                      <th style={{ width: "8%" }} className="py-3 px-1.5 border-r-2 border-slate-300 bg-slate-100 break-words leading-tight">विषय</th>
-                      <th style={{ width: "11%" }} className="py-3 px-2 border-r-2 border-slate-300 bg-slate-100 break-words leading-tight">घटक / उपघटक</th>
-                      <th style={{ width: "25%" }} className="py-3 px-3 border-r-2 border-slate-300 bg-slate-100 break-words leading-tight">अध्यापन अनुभव / कृती (अध्ययनाचे स्वरूप)</th>
-                      <th style={{ width: "7%" }} className="py-3 px-1.5 border-r-2 border-slate-300 bg-slate-100 break-words leading-tight">साधन तंत्रे / साधने</th>
-                      <th style={{ width: "43%" }} className="py-3 px-3 bg-slate-100 break-words leading-tight">अध्ययन निष्पत्ती</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y-2 divide-slate-200 text-sm md:text-base font-medium">
-                    {todayDiary.periods.map((item, idx) => (
-                      <tr key={idx} className="hover:bg-orange-50/30 transition-colors border-b-2 border-slate-200">
-                        <td className="py-4 px-3 text-center font-black text-indigo-700 align-top border-r-2 border-slate-200 bg-indigo-50/40">
-                          <span className="w-8 h-8 rounded-full bg-indigo-100 border border-indigo-200 inline-flex items-center justify-center text-sm font-black text-indigo-800">
-                            {item.period}
-                          </span>
-                        </td>
-                        <td className="py-4 px-3.5 font-extrabold text-slate-900 text-sm md:text-base align-top border-r-2 border-slate-200">
-                          {item.subject}
-                        </td>
-                        <td className="py-4 px-3.5 text-indigo-900 font-bold text-sm md:text-base leading-snug align-top border-r-2 border-slate-200">
-                          {item.topic}
-                        </td>
-                        <td className="py-4 px-4 text-slate-800 leading-relaxed text-sm md:text-base font-normal align-top border-r-2 border-slate-200">
-                          {item.experience || "-"}
-                        </td>
-                        <td className="py-4 px-3.5 text-slate-700 text-sm md:text-base align-top border-r-2 border-slate-200">
-                          {item.tools ? (
-                            <span className="inline-block px-2.5 py-1 bg-slate-100 rounded-lg border border-slate-200 text-xs md:text-sm font-bold text-slate-800 leading-relaxed">
-                              {item.tools}
-                            </span>
-                          ) : "-"}
-                        </td>
-                        <td className="py-4 px-4 text-emerald-800 font-bold text-sm md:text-base leading-relaxed align-top">
-                          {item.outcome || "-"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : todayDiary.pageUrl ? (
-            <div className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-sm space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-bold">
-                    <FileText className="size-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-extrabold text-slate-900 text-base">
-                      अपलोड केलेले पाठ टाचण दस्तऐवज (Uploaded Document View)
-                    </h3>
-                    <p className="text-xs text-slate-500 font-semibold">{todayDiary.fileName || "Teaching_Diary.pdf"}</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsPreviewModalOpen(true)}
-                  className="px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl text-xs font-black shadow-md flex items-center gap-2 cursor-pointer hover:from-orange-600 hover:to-amber-600 active:scale-95 transition-all"
-                >
-                  <Eye className="size-4" /> <span>फुल स्क्रीन पहा (Full Preview)</span>
-                </button>
-              </div>
-              <div className="h-[650px] w-full rounded-2xl overflow-hidden border border-slate-200 bg-slate-50">
-                <DocumentLivePreview
-                  selectedFile={null}
-                  savedRecord={{
-                    id: (todayDiary as any).id || isoDate,
-                    diaryDate: isoDate,
-                    fileName: (todayDiary as any).fileName || "Teaching_Diary.docx",
-                    pageUrl: (todayDiary as any).pageUrl,
-                    className: selectedClass,
-                    medium: selectedMedium,
-                    structuredData: (todayDiary as any).structuredData,
-                  }}
-                  onBack={() => {}}
-                />
-              </div>
-            </div>
-          ) : null}
-        </div>
-      )}
-
-      {/* Document Live Preview Modal */}
-      {isPreviewModalOpen && todayDiary && (todayDiary as any).pageUrl && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl overflow-hidden shadow-2xl w-full max-w-[96vw] border border-slate-100 flex flex-col h-[93vh]">
-            <div className="flex-1 overflow-hidden bg-slate-100 p-2 sm:p-4">
-              <DocumentLivePreview
-                selectedFile={null}
-                savedRecord={{
-                  id: (todayDiary as any).id || isoDate,
-                  diaryDate: isoDate,
-                  fileName: (todayDiary as any).fileName || "Teaching_Diary.docx",
-                  pageUrl: (todayDiary as any).pageUrl,
-                  className: selectedClass,
-                  medium: selectedMedium,
-                  structuredData: (todayDiary as any).structuredData,
-                }}
-                onBack={() => setIsPreviewModalOpen(false)}
-              />
-            </div>
+          {/* Main Structured Day-wise View directly on the front page */}
+          <div className="w-full">
+            <DocumentLivePreview
+              selectedFile={null}
+              savedRecord={{
+                id: (todayDiary as any).id || isoDate,
+                diaryDate: isoDate,
+                fileName: (todayDiary as any).fileName || "Teaching_Diary.docx",
+                pageUrl: currentDocUrl,
+                className: selectedClass,
+                medium: selectedMedium,
+                structuredData: (todayDiary as any).structuredData || (todayDiary.periods && todayDiary.periods.length > 0 ? [{
+                  date: isoDate,
+                  day: todayDiary.day || "",
+                  teacher: activeProfile?.teacherName || (todayDiary as any).teacher || "-",
+                  school: activeProfile?.schoolName || (todayDiary as any).school || "-",
+                  std: activeProfile?.className || todayDiary.className || selectedClass || "-",
+                  year: activeProfile?.academicYear || (todayDiary as any).year || "2026-27",
+                  thought: todayDiary.thought || "",
+                  highlights: todayDiary.dinvishesh || "",
+                  periods: todayDiary.periods
+                }] : []),
+              }}
+              onBack={() => {}}
+            />
           </div>
         </div>
       )}
