@@ -220,7 +220,7 @@ function Page1() {
   };
 
   return (
-    <div className="a4-sheet-card" style={coverBorder}>
+    <div className="a4-sheet-card" style={{ ...coverBorder, transformOrigin: "top center" }}>
       {/* Corner Ornaments */}
       <div
         style={{
@@ -300,19 +300,19 @@ function Page1() {
       </div>
 
       {/* Saraswati Image */}
-      <div style={{ margin: "24px 0" }}>
+      <div style={{ margin: "16px 0 10px 0" }}>
         <img
-          src="/saraswati_lineart.png"
+          src="/saraswati_mata.png"
           alt="Saraswati"
           style={{
             border: "6px double #c9a227",
             borderRadius: "50%",
-            padding: "10px",
+            padding: "8px",
             background: "#ffffff",
             boxShadow:
               "0 6px 18px rgba(13,27,75,0.15), inset 0 2px 6px rgba(201,162,39,0.15)",
-            width: "140px",
-            height: "140px",
+            width: "220px",
+            height: "220px",
             objectFit: "contain",
           }}
         />
@@ -380,7 +380,7 @@ function Page1() {
                 fontSize: "18px",
                 lineHeight: "1.4",
                 whiteSpace: "nowrap",
-                minWidth: "210px",
+                minWidth: "140px",
                 display: "inline-block",
               }}
             >
@@ -419,7 +419,7 @@ function Page1() {
                 fontSize: "18px",
                 lineHeight: "1.4",
                 whiteSpace: "nowrap",
-                minWidth: "210px",
+                minWidth: "140px",
                 display: "inline-block",
               }}
             >
@@ -457,7 +457,7 @@ function Page1() {
                 fontSize: "18px",
                 lineHeight: "1.4",
                 whiteSpace: "nowrap",
-                minWidth: "210px",
+                minWidth: "140px",
                 display: "inline-block",
               }}
             >
@@ -488,8 +488,8 @@ function Page1() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "14px 45px",
+          gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
+          gap: "10px 20px",
           width: "100%",
           marginTop: "45px",
           fontSize: "14pt",
@@ -573,7 +573,7 @@ function Page2({ studentPhoto, onPhotoChange }: Page2Props) {
           justifyContent: "space-evenly",
         }}
       >
-        <div style={{ display: "flex", gap: "20px", alignItems: "flex-start" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "10px 16px", alignItems: "flex-start" }}>
           <div
             style={{
               flex: 1,
@@ -667,7 +667,7 @@ function Page2({ studentPhoto, onPhotoChange }: Page2Props) {
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "flex-end", gap: "10px" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: "8px 12px" }}>
           <span style={{ fontWeight: "700", whiteSpace: "nowrap" }}>
             जन्मदिनांक :
           </span>
@@ -712,7 +712,7 @@ function Page2({ studentPhoto, onPhotoChange }: Page2Props) {
 
         <FieldRow label="जन्मठिकाण :" />
 
-        <div style={{ display: "flex", alignItems: "flex-end", gap: "16px" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: "8px 16px" }}>
           <span style={{ fontWeight: "700", whiteSpace: "nowrap" }}>
             लिंग : स्त्री / पुरुष
           </span>
@@ -737,7 +737,7 @@ function Page2({ studentPhoto, onPhotoChange }: Page2Props) {
           ></span>
         </div>
 
-        <div style={{ display: "flex", alignItems: "flex-end", gap: "16px" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: "8px 16px" }}>
           <span style={{ fontWeight: "700" }}>धर्म :</span>
           <span
             contentEditable={true}
@@ -752,7 +752,7 @@ function Page2({ studentPhoto, onPhotoChange }: Page2Props) {
           ></span>
         </div>
 
-        <div style={{ display: "flex", alignItems: "flex-end", gap: "16px" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: "8px 16px" }}>
           <span style={{ fontWeight: "700", whiteSpace: "nowrap" }}>
             अपंग आहे का ? होय / नाही
           </span>
@@ -810,7 +810,7 @@ function Page3() {
             style={{ ...IB("300px"), outline: "none", minHeight: "22px" }}
           ></span>
         </div>
-        <div style={{ display: "flex", gap: "30px" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "10px 20px" }}>
           <div>
             शिक्षण :&nbsp;
             <span
@@ -862,7 +862,7 @@ function Page3() {
             style={{ ...IB("310px"), outline: "none", minHeight: "22px" }}
           ></span>
         </div>
-        <div style={{ display: "flex", gap: "30px" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "10px 20px" }}>
           <div>
             शिक्षण :&nbsp;
             <span
@@ -897,7 +897,7 @@ function Page3() {
         </div>
         <FieldRow label="नाव :" />
         <FieldRow label="पत्ता :" />
-        <div style={{ display: "flex", gap: "30px" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "10px 20px" }}>
           <div>
             शिक्षण :&nbsp;
             <span
@@ -922,7 +922,7 @@ function Page3() {
         <div style={{ fontWeight: "bold", fontSize: "14pt" }}>
           ४) परिचयाच्या दोन व्यक्तींचा पत्ता व दूरध्वनी क्र. :
         </div>
-        <div style={{ display: "flex", gap: "30px" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "10px 20px" }}>
           <div>
             व्यवसाय :&nbsp;
             <span
@@ -1012,7 +1012,7 @@ function Page4() {
           width: "100%",
         }}
       >
-        <table style={{ ...TBL, tableLayout: "fixed", flex: 1 }}>
+        <div className="w-full overflow-x-auto"><table style={{ ...TBL, tableLayout: "fixed", flex: 1, minWidth: "750px" }}>
           <colgroup>
             <col style={{ width: "7%" }} />
             <col style={{ width: "12%" }} />
@@ -1183,7 +1183,7 @@ function Page4() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </div>
       <PageFooter pageNum={4} />
     </div>
@@ -1216,7 +1216,7 @@ function Page5() {
           width: "100%",
         }}
       >
-        <table style={{ ...TBL, tableLayout: "fixed", flex: 1 }}>
+        <div className="w-full overflow-x-auto"><table style={{ ...TBL, tableLayout: "fixed", flex: 1, minWidth: "750px" }}>
           <colgroup>
             <col style={{ width: "12%" }} />
             <col style={{ width: "12%" }} />
@@ -1708,7 +1708,7 @@ function Page5() {
               ))}
             </tr>
           </tbody>
-        </table>
+        </table></div>
       </div>
       <PageFooter pageNum={5} />
     </div>
@@ -1750,7 +1750,7 @@ function Page6() {
           paddingTop: "10px",
         }}
       >
-        <table style={{ ...TBL, tableLayout: "fixed", fontSize: FONT }}>
+        <div className="w-full overflow-x-auto"><table style={{ ...TBL, tableLayout: "fixed", fontSize: FONT, minWidth: "750px" }}>
           <colgroup>
             <col style={{ width: "8%" }} />
             <col style={{ width: "28%" }} />
@@ -1821,7 +1821,7 @@ function Page6() {
               ))}
             </tr>
           </tbody>
-        </table>
+        </table></div>
       </div>
       <PageFooter pageNum={6} />
     </div>
@@ -1918,7 +1918,7 @@ function Page7A() {
           width: "100%",
         }}
       >
-        <table style={{ ...TBL, tableLayout: "fixed", fontSize: FONT }}>
+        <div className="w-full overflow-x-auto"><table style={{ ...TBL, tableLayout: "fixed", fontSize: FONT, minWidth: "750px" }}>
           <colgroup>
             <col style={{ width: "36%" }} />
             {CLASSES_MR.map((c) => (
@@ -2000,7 +2000,7 @@ function Page7A() {
               </React.Fragment>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </div>
       <PageFooter pageNum={7} />
     </div>
@@ -2096,7 +2096,7 @@ function Page7B() {
           width: "100%",
         }}
       >
-        <table style={{ ...TBL, tableLayout: "fixed", fontSize: FONT }}>
+        <div className="w-full overflow-x-auto"><table style={{ ...TBL, tableLayout: "fixed", fontSize: FONT, minWidth: "750px" }}>
           <colgroup>
             <col style={{ width: "36%" }} />
             {CLASSES_MR.map((c) => (
@@ -2178,7 +2178,7 @@ function Page7B() {
               </React.Fragment>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </div>
       <PageFooter pageNum={8} />
     </div>
@@ -2567,6 +2567,74 @@ function StudentPortfolioPage() {
     }
   }, []);
 
+  // Dynamic mobile page scale adjustment matching teacher portfolio (shikshak-sanchika)
+  React.useLayoutEffect(() => {
+    const adjustPageScale = () => {
+      const windowWidth = window.innerWidth;
+      const container = document.getElementById("student-portfolio-print");
+      if (!container) return;
+
+      const header = document.querySelector("header");
+      const main = document.querySelector("main");
+
+      const baseWidth = 810; // baseline A4 card width matching shikshak-sanchika
+
+      if (windowWidth < 850) {
+        if (header && main) {
+          const barHeight = header.offsetHeight || 120;
+          main.style.paddingTop = `${barHeight + 16}px`;
+        }
+
+        const padding = 12;
+        const availableWidth = Math.max(280, windowWidth - padding);
+        const scale = availableWidth / baseWidth;
+        const scaledWidth = baseWidth * scale;
+        const marginLeft = Math.max(0, (windowWidth - scaledWidth) / 2);
+
+        const allPages = container.querySelectorAll(".a4-sheet-card");
+        allPages.forEach((el) => {
+          const activePage = el as HTMLElement;
+          activePage.style.width = `${baseWidth}px`;
+          activePage.style.minWidth = `${baseWidth}px`;
+          activePage.style.transformOrigin = "top left";
+          activePage.style.transform = `scale(${scale})`;
+          activePage.style.marginLeft = `${marginLeft}px`;
+          activePage.style.marginRight = "0px";
+
+          const unscaledHeight = activePage.offsetHeight || 1300;
+          const scaledHeight = unscaledHeight * scale;
+          const marginBottom = scaledHeight - unscaledHeight;
+          activePage.style.marginBottom = `${marginBottom}px`;
+        });
+      } else {
+        if (main) {
+          main.style.paddingTop = "";
+        }
+        const allPages = container.querySelectorAll(".a4-sheet-card");
+        allPages.forEach((el) => {
+          const activePage = el as HTMLElement;
+          activePage.style.width = "";
+          activePage.style.minWidth = "";
+          activePage.style.transformOrigin = "top center";
+          activePage.style.transform = "";
+          activePage.style.marginLeft = "auto";
+          activePage.style.marginRight = "auto";
+          activePage.style.marginBottom = "0px";
+        });
+      }
+    };
+
+    adjustPageScale();
+    const timer = setTimeout(adjustPageScale, 50);
+    window.addEventListener("resize", adjustPageScale);
+    window.addEventListener("orientationchange", adjustPageScale);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", adjustPageScale);
+      window.removeEventListener("orientationchange", adjustPageScale);
+    };
+  }, [currentTab]);
+
   const pageNames = [
     "मुखपृष्ठ (Cover Page)",
     "अ) वैयक्तिक माहिती",
@@ -2670,6 +2738,16 @@ function StudentPortfolioPage() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap');
         
+        ::-webkit-scrollbar {
+          width: 0px !important;
+          height: 0px !important;
+          display: none !important;
+        }
+        * {
+          -ms-overflow-style: none !important;
+          scrollbar-width: none !important;
+        }
+
         [contenteditable="true"] {
           transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
           cursor: text;
@@ -2698,23 +2776,12 @@ function StudentPortfolioPage() {
           box-shadow: 0 30px 60px -15px rgba(13,27,75,0.3) !important;
         }
         
-        /* Active page transition animation (3D page flip effect) */
-        @keyframes pageFlipIn {
-          0% {
-            opacity: 0;
-            transform: scale(0.96) rotateY(-6deg);
-          }
-          100% {
-            opacity: 1;
-            transform: scale(1) rotateY(0deg);
-          }
-        }
+        /* Active page transition animation - Instant rendering without delay/blank screen */
         .active-slide-animate {
-          animation: pageFlipIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          opacity: 1 !important;
           width: 100%;
           display: flex;
           justify-content: center;
-          perspective: 1500px;
         }
         
         /* Overrides when exporting PDF to guarantee clean page rendering */
@@ -2736,10 +2803,60 @@ function StudentPortfolioPage() {
         .nav-arrow {
           user-select: none;
         }
+
+        /* Mobile responsive auto-scaling matching Teacher Portfolio (shikshak-sanchika) */
+        @media (max-width: 850px) {
+          .active-slide-animate {
+            display: block !important;
+            width: 100% !important;
+          }
+          .a4-sheet-card {
+            width: 810px !important;
+            min-width: 810px !important;
+            box-sizing: border-box !important;
+          }
+          .nav-arrow {
+            position: fixed !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            z-index: 99999 !important;
+            width: 44px !important;
+            height: 44px !important;
+            font-size: 18px !important;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5) !important;
+          }
+          .nav-arrow.prev-arrow {
+            left: 6px !important;
+          }
+          .nav-arrow.next-arrow {
+            right: 6px !important;
+          }
+          header {
+            padding: 8px 12px !important;
+          }
+          main {
+            padding-top: 135px !important;
+          }
+          .table-responsive-wrapper {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+            max-width: 100% !important;
+          }
+        }
+        @media (max-width: 480px) {
+          main {
+            padding-top: 145px !important;
+          }
+        }
+        @media (max-width: 375px) {
+          main {
+            padding-top: 155px !important;
+          }
+        }
       `}</style>
       {/* Custom Vidyarthi Sanchika Navbar styled with light theme */}
       {!isPrinting && (
-        <header className="bg-white border-b-2 border-[#c9a227] text-slate-900 h-16 fixed top-0 left-0 right-0 z-[60] px-4 md:px-6 flex items-center justify-between shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-all">
+        <header className="bg-white border-b-2 border-[#c9a227] text-slate-900 min-h-16 py-2 fixed top-0 left-0 right-0 z-[60] px-3 md:px-6 flex flex-col md:flex-row items-center justify-between gap-2 shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-all">
           <div className="flex items-center gap-4">
             <button
               onClick={() =>
@@ -2786,7 +2903,7 @@ function StudentPortfolioPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 md:gap-3">
+          <div className="flex items-center justify-center gap-1.5 md:gap-3 flex-wrap w-full md:w-auto">
             <button
               onClick={() => {
                 const newPage = {
@@ -2885,20 +3002,23 @@ function StudentPortfolioPage() {
       <TeacherSidebar />
 
       <main
-        className="lg:pl-0 pt-20 px-6 pb-2"
+        className="lg:pl-0 pt-28 md:pt-20 px-2 sm:px-4 md:px-6 pb-2"
         style={{ height: "fit-content" }}
       >
         {/* Sheets presentation workspace */}
         <div
-          className="bg-[#0d1b4b]/30 p-4 md:p-4 pb-2 rounded-3xl border border-[#c9a227]/20 shadow-inner flex flex-col items-center relative mx-auto"
-          style={{ width: "100%", maxWidth: "930px", height: "fit-content" }}
+          className="flex flex-col items-center relative mx-auto max-w-full overflow-x-visible"
+          style={{ width: "100%", maxWidth: "960px", height: "fit-content" }}
         >
           {/* Floating Next/Prev Arrow Controllers anchored symmetrically on left and right upper sides */}
           {!isPrinting && (
             <>
               {currentTab > 0 && (
                 <button
-                  onClick={() => setCurrentTab((prev) => Math.max(0, prev - 1))}
+                  onClick={() => {
+                    setCurrentTab((prev) => Math.max(0, prev - 1));
+                    window.scrollTo({ top: 0, left: 0, behavior: "instant" as any });
+                  }}
                   className="nav-arrow prev-arrow flex absolute -left-3 sm:-left-6 md:-left-8 lg:-left-10 top-6 md:top-8 z-50 w-11 h-11 md:w-14 md:h-14 rounded-full items-center justify-center cursor-pointer transition-all duration-300 active:scale-90"
                   style={{
                     background: "rgba(13, 27, 75, 0.9)",
@@ -2929,11 +3049,12 @@ function StudentPortfolioPage() {
               )}
               {currentTab < pageNames.length - 1 && (
                 <button
-                  onClick={() =>
+                  onClick={() => {
                     setCurrentTab((prev) =>
                       Math.min(pageNames.length - 1, prev + 1),
-                    )
-                  }
+                    );
+                    window.scrollTo({ top: 0, left: 0, behavior: "instant" as any });
+                  }}
                   className="nav-arrow next-arrow flex absolute -right-3 sm:-right-6 md:-right-8 lg:-right-10 top-6 md:top-8 z-50 w-11 h-11 md:w-14 md:h-14 rounded-full items-center justify-center cursor-pointer transition-all duration-300 active:scale-90"
                   style={{
                     background: "rgba(13, 27, 75, 0.9)",
@@ -2967,9 +3088,10 @@ function StudentPortfolioPage() {
 
           <div
             id="student-portfolio-print"
-            className={isPrinting ? "is-printing-pdf w-full" : "w-full"}
+            className={isPrinting ? "is-printing-pdf w-full" : "w-full flex flex-col items-center"}
             style={{
-              maxWidth: "810px",
+              maxWidth: "850px",
+              width: "100%",
               ["--sanchika-font-size" as any]: `${baseFontSize}pt`,
               height: "fit-content",
             }}
