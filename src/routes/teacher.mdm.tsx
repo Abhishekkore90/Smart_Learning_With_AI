@@ -237,6 +237,8 @@ function TeacherMDMPage() {
   const [certBeneficiaryPrimary, setCertBeneficiaryPrimary] = useState<string>("");
   const [certBeneficiaryUpper, setCertBeneficiaryUpper] = useState<string>("");
   const [certHelperCount, setCertHelperCount] = useState<string>("0");
+  const [cookCount, setCookCount] = useState<string>("2");
+  const [helperCountVal, setHelperCountVal] = useState<string>("2");
   const [showCertEditor, setShowCertEditor] = useState<boolean>(true);
 
   const toEnglishNumbers = (str: string) => {
@@ -12832,7 +12834,7 @@ function TeacherMDMPage() {
 
                           const registerData = getRegisterDataForMonth(engMonthNames[monthNum], year, "1 To 5");
                           const pat = registerData.enrolled || labharthi || 0;
-                          const pudheManagi = Math.max(0, parseFloat(((labharthi > 0 ? labharthi : pat) * 0.1 * 20 - shillakTandul).toFixed(1)));
+                          const pudheManagi = Math.max(0, parseFloat(((pat || 0) * (shijvunDivs || 0) * 0.100).toFixed(1)));
 
                           return (
                             <div className="space-y-0">
@@ -12899,6 +12901,7 @@ function TeacherMDMPage() {
                                       <td className="border-r border-slate-700 px-2 py-1.5">{kendraHissa > 0 ? kendraHissa.toFixed(2) : ""}</td>
                                       <td className="border-r border-slate-700 px-2 py-1.5">{rajyaHissa > 0 ? rajyaHissa.toFixed(2) : ""}</td>
                                       <td className="border-r border-slate-700 px-2 py-1.5 font-black">{ekunKharc > 0 ? ekunKharc.toFixed(2) : ""}</td>
+                                      <td className="border-r border-slate-700 px-2 py-1.5">{kamacheDivs > 0 ? kamacheDivs : ""}</td>
                                       <td className="border-r border-slate-700 px-2 py-1.5">{shijvunDivs > 0 ? shijvunDivs : ""}</td>
                                       <td className="border-r border-slate-700 px-2 py-1.5 font-black">{pudheManagi > 0 ? pudheManagi : ""}</td>
                                     </tr>
@@ -13517,6 +13520,30 @@ function TeacherMDMPage() {
                                 type="text"
                                 value={certSupplementaryFood}
                                 onChange={(e) => setCertSupplementaryFood(e.target.value)}
+                                className="w-full h-9 px-3 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+
+                            {/* 8. स्वयंपाकी संख्या */}
+                            <div>
+                              <label className="block mb-1 text-slate-700">स्वयंपाकी संख्या</label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={cookCount}
+                                onChange={(e) => setCookCount(e.target.value)}
+                                className="w-full h-9 px-3 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+
+                            {/* 9. मदतनीस संख्या */}
+                            <div>
+                              <label className="block mb-1 text-slate-700">मदतनीस संख्या</label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={helperCountVal}
+                                onChange={(e) => setHelperCountVal(e.target.value)}
                                 className="w-full h-9 px-3 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
                               />
                             </div>
@@ -14373,7 +14400,10 @@ function TeacherMDMPage() {
                                         upperEnrolled={upperMaxEnrolled}
                                         primaryBeneficiarySum={primaryBeneficiarySum}
                                         upperBeneficiarySum={upperBeneficiarySum}
-                                        helperCount={helperCount}
+                                        cookCount={cookCount}
+                                        helperCount={helperCountVal}
+                                        onCookCountChange={setCookCount}
+                                        onHelperCountChange={setHelperCountVal}
                                         helperCenterPay={helperCenterPay}
                                         helperStatePay={helperStatePay}
                                         helperTotalPay={helperTotalPay}
