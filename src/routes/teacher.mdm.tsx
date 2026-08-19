@@ -499,66 +499,31 @@ function TeacherMDMPage() {
         const { jsPDF } = await import("jspdf");
 
         const canvas = await html2canvas(element, {
-          scale: 2,
+          scale: 3,
           useCORS: true,
           logging: false,
+          backgroundColor: "#ffffff",
           onclone: (clonedDoc: any) => {
-            clonedDoc.body.style.margin = "0";
-            clonedDoc.body.style.padding = "0";
             const reportEl = clonedDoc.getElementById("annual-report-print");
             if (reportEl) {
-              reportEl.className = "bg-white font-sans border-none shadow-none";
-              reportEl.style.width = "1100px";
-              reportEl.style.minWidth = "1100px";
-              reportEl.style.maxWidth = "1100px";
-              reportEl.style.padding = "10px 15px";
-              reportEl.style.margin = "0px auto";
-              reportEl.style.boxSizing = "border-box";
-
-              const headerBlock = reportEl.children[0] as HTMLElement;
-              if (headerBlock) {
-                headerBlock.style.padding = "8px 12px";
-                headerBlock.style.marginBottom = "8px";
-              }
-
-              const footerBlock = reportEl.children[2] as HTMLElement;
-              if (footerBlock) {
-                footerBlock.style.marginTop = "8px";
-                footerBlock.style.paddingTop = "4px";
-              }
-
-              const thCells = reportEl.querySelectorAll("th");
-              thCells.forEach((cell: any) => {
-                cell.style.padding = "3px 1px";
-                cell.style.fontSize = "7pt";
-                cell.style.lineHeight = "1.05";
-                cell.style.backgroundColor = "#f1f5f9";
-              });
-
-              const tdCells = reportEl.querySelectorAll("td");
-              tdCells.forEach((cell: any) => {
-                cell.style.padding = "2px 1px";
-                cell.style.fontSize = "7.5pt";
-                cell.style.lineHeight = "1.05";
-              });
+              reportEl.style.backgroundColor = "#ffffff";
+              reportEl.style.boxShadow = "none";
             }
           }
         });
 
-        const imgData = canvas.toDataURL("image/jpeg", 0.98);
+        const imgData = canvas.toDataURL("image/png");
         const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
         const pdfWidth = pdf.internal.pageSize.getWidth(); // 297mm
         const pdfHeight = pdf.internal.pageSize.getHeight(); // 210mm
 
-        const margin = 5;
-        const availWidth = pdfWidth - (margin * 2); // 287mm
-        const availHeight = pdfHeight - (margin * 2); // 200mm
+        const marginX = 5;
+        const marginY = 5;
+        const availWidth = pdfWidth - (marginX * 2);
+        const availHeight = pdfHeight - (marginY * 2);
 
-        const imgWidth = availWidth;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-        let finalWidth = imgWidth;
-        let finalHeight = imgHeight;
+        let finalWidth = availWidth;
+        let finalHeight = (canvas.height * finalWidth) / canvas.width;
 
         if (finalHeight > availHeight) {
           finalHeight = availHeight;
@@ -568,7 +533,7 @@ function TeacherMDMPage() {
         const xPos = (pdfWidth - finalWidth) / 2;
         const yPos = 6;
 
-        pdf.addImage(imgData, "JPEG", xPos, yPos, finalWidth, finalHeight);
+        pdf.addImage(imgData, "PNG", xPos, yPos, finalWidth, finalHeight, undefined, "FAST");
         pdf.save(filename);
       }
       if (toastId) toast.dismiss(toastId);
@@ -1253,8 +1218,11 @@ function TeacherMDMPage() {
       });
       if (!maxScrollWidth) maxScrollWidth = element.scrollWidth || element.offsetWidth || 800;
 
+      const isPortraitReport = getReportOrientation(monthlyMdmReportType) === "portrait";
       const totalRenderWidth = isCertificate
         ? Math.max(maxScrollWidth, 800)
+        : isPortraitReport
+        ? Math.max(maxScrollWidth, 850)
         : Math.max(maxScrollWidth + 10, 1100);
 
       clone.style.position = 'absolute';
@@ -1331,7 +1299,7 @@ function TeacherMDMPage() {
       for (let i = 0; i < elementsToRender.length; i++) {
         const pageEl = elementsToRender[i] as HTMLElement;
         const canvas = await html2canvas(pageEl, {
-          scale: 2,
+          scale: 2.5,
           useCORS: true,
           logging: false,
           backgroundColor: "#ffffff",
@@ -1341,7 +1309,7 @@ function TeacherMDMPage() {
           scrollX: 0,
         });
 
-        const imgData = canvas.toDataURL("image/jpeg", 0.98);
+        const imgData = canvas.toDataURL("image/png");
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
         const margin = 4;
@@ -1357,10 +1325,10 @@ function TeacherMDMPage() {
         }
 
         const xPos = (pdfWidth - imgWidth) / 2;
-        const yPos = (pdfHeight - imgHeight) / 2;
+        const yPos = 6;
 
-        if (i > 0) pdf.addPage('a4', 'l');
-        pdf.addImage(imgData, "JPEG", xPos, yPos, imgWidth, imgHeight);
+        if (i > 0) pdf.addPage('a4', dynamicOrientation === 'landscape' ? 'l' : 'p');
+        pdf.addImage(imgData, "PNG", xPos, yPos, imgWidth, imgHeight, undefined, "FAST");
       }
 
       pdf.save(filename);
@@ -13019,7 +12987,7 @@ function TeacherMDMPage() {
                           const riceData = getStockDataForItem("Rice", engMonthNames[monthNum], year, "1 To 5");
                           const labharthi = riceData.beneficiary;
                           const registerData = getRegisterDataForMonth(engMonthNames[monthNum], year, "1 To 5");
-                          const enrolledPat = registerData.enrolled || labharthi || 0;
+                          const enrolledPat = (registerData && registerData.enrolled) ? registerData.enrolled : getDynamicPatSankhya(profile, "1 To 5");
 
                           const items = B_FORM_ITEMS.map((def, idx) => {
                             const prev = getOpeningStock(engMonthNames[monthNum], year.toString(), "1 To 5", def.key);
@@ -13069,18 +13037,29 @@ function TeacherMDMPage() {
                               </div>
 
                               <div className="w-full overflow-x-auto">
-                                <table className="min-w-[900px] w-full border-collapse border border-slate-700 text-center text-xs font-medium">
+                                <table className="w-full border-collapse border border-black text-center text-xs font-medium table-fixed">
+                                  <colgroup>
+                                    <col style={{ width: '4%' }} />
+                                    <col style={{ width: '19%' }} />
+                                    <col style={{ width: '10%' }} />
+                                    <col style={{ width: '10%' }} />
+                                    <col style={{ width: '10%' }} />
+                                    <col style={{ width: '12%' }} />
+                                    <col style={{ width: '10%' }} />
+                                    <col style={{ width: '10%' }} />
+                                    <col style={{ width: '15%' }} />
+                                  </colgroup>
                                   <thead>
-                                    <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-700 text-xs">
-                                      <th className="border-r border-black p-1 w-[4%]">अ.न.<br/><span className="font-normal text-xs">1</span></th>
-                                      <th className="border-r border-black p-1 text-left w-[20%]">धान्यादी मालाचे नाव<br/><span className="font-normal text-xs">2</span></th>
-                                      <th className="border-r border-black p-1 w-[10%]">मागील शिल्लक वस्तू<br/><span className="text-xs font-normal">( किलोग्रॅम )</span><br/><span className="font-normal text-xs">3</span></th>
-                                      <th className="border-r border-black p-1 w-[10%]">चालू महिन्यात प्राप्त वस्तू<br/><span className="text-xs font-normal">( किलोग्रॅम )</span><br/><span className="font-normal text-xs">4</span></th>
-                                      <th className="border-r border-black p-1 w-[10%]">एकूण वस्तू<br/><span className="text-xs font-normal">( 3 + 4 ) ( किलोग्रॅम )</span><br/><span className="font-normal text-xs">5</span></th>
-                                      <th className="border-r border-black p-1 w-[13%]">अन्न शिजवण्यासाठी वापरलेल्या वस्तू<br/><span className="text-xs font-normal">( किलोग्रॅम )</span><br/><span className="font-normal text-xs">6</span></th>
-                                      <th className="border-r border-black p-1 w-[10%]">शिल्लक वस्तू<br/><span className="text-xs font-normal">( 5 - 6 ) ( किलोग्रॅम )</span><br/><span className="font-normal text-xs">7</span></th>
-                                      <th className="border-r border-black p-1 w-[10%]">पुढील महिन्यासाठी मागणी<br/><span className="text-xs font-normal">( किलोग्रॅम )</span><br/><span className="font-normal text-xs">8</span></th>
-                                      <th className="border-r border-black p-1 w-[8%]">शेरा<br/><span className="font-normal text-xs">9</span></th>
+                                    <tr className="bg-slate-100 text-slate-900 font-bold border-b border-black text-xs">
+                                      <th className="border-r border-black p-1">अ.न.<br/><span className="font-normal text-xs">1</span></th>
+                                      <th className="border-r border-black p-1 text-left">धान्यादी मालाचे नाव<br/><span className="font-normal text-xs">2</span></th>
+                                      <th className="border-r border-black p-1">मागील शिल्लक वस्तू<br/><span className="text-xs font-normal">( किलोग्रॅम )</span><br/><span className="font-normal text-xs">3</span></th>
+                                      <th className="border-r border-black p-1">चालू महिन्यात प्राप्त वस्तू<br/><span className="text-xs font-normal">( किलोग्रॅम )</span><br/><span className="font-normal text-xs">4</span></th>
+                                      <th className="border-r border-black p-1">एकूण वस्तू<br/><span className="text-xs font-normal">( 3 + 4 ) ( किलोग्रॅम )</span><br/><span className="font-normal text-xs">5</span></th>
+                                      <th className="border-r border-black p-1">अन्न शिजवण्यासाठी वापरलेल्या वस्तू<br/><span className="text-xs font-normal">( किलोग्रॅम )</span><br/><span className="font-normal text-xs">6</span></th>
+                                      <th className="border-r border-black p-1">शिल्लक वस्तू<br/><span className="text-xs font-normal">( 5 - 6 ) ( किलोग्रॅम )</span><br/><span className="font-normal text-xs">7</span></th>
+                                      <th className="border-r border-black p-1">पुढील महिन्यासाठी मागणी<br/><span className="text-xs font-normal">( किलोग्रॅम )</span><br/><span className="font-normal text-xs">8</span></th>
+                                      <th className="border-r border-black p-1">शेरा<br/><span className="font-normal text-xs">9</span></th>
                                     </tr>
                                   </thead>
                                   <tbody>
