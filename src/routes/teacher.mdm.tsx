@@ -48,6 +48,13 @@ import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas-pro";
 import { PinGate } from "@/components/teacher/PinGate";
 import MDMCertificate from "@/components/teacher/MDMCertificate";
+import {
+  calculateCookHelperCount,
+  calculateHonorariumDetails,
+  getFoodGrantRates,
+  getDynamicPatSankhya,
+  getReportOrientation,
+} from "@/utils/mdmPdfUtils";
 
 export const Route = createFileRoute("/teacher/mdm")({
   validateSearch: (search: Record<string, unknown>): { tab?: string } => ({
@@ -237,6 +244,8 @@ function TeacherMDMPage() {
   const [certBeneficiaryPrimary, setCertBeneficiaryPrimary] = useState<string>("");
   const [certBeneficiaryUpper, setCertBeneficiaryUpper] = useState<string>("");
   const [certHelperCount, setCertHelperCount] = useState<string>("0");
+  const [cookCount, setCookCount] = useState<string>("2");
+  const [helperCountVal, setHelperCountVal] = useState<string>("2");
   const [showCertEditor, setShowCertEditor] = useState<boolean>(true);
 
   const toEnglishNumbers = (str: string) => {
@@ -490,66 +499,31 @@ function TeacherMDMPage() {
         const { jsPDF } = await import("jspdf");
 
         const canvas = await html2canvas(element, {
-          scale: 2,
+          scale: 3,
           useCORS: true,
           logging: false,
+          backgroundColor: "#ffffff",
           onclone: (clonedDoc: any) => {
-            clonedDoc.body.style.margin = "0";
-            clonedDoc.body.style.padding = "0";
             const reportEl = clonedDoc.getElementById("annual-report-print");
             if (reportEl) {
-              reportEl.className = "bg-white font-sans border-none shadow-none";
-              reportEl.style.width = "1100px";
-              reportEl.style.minWidth = "1100px";
-              reportEl.style.maxWidth = "1100px";
-              reportEl.style.padding = "10px 15px";
-              reportEl.style.margin = "0px auto";
-              reportEl.style.boxSizing = "border-box";
-
-              const headerBlock = reportEl.children[0] as HTMLElement;
-              if (headerBlock) {
-                headerBlock.style.padding = "8px 12px";
-                headerBlock.style.marginBottom = "8px";
-              }
-
-              const footerBlock = reportEl.children[2] as HTMLElement;
-              if (footerBlock) {
-                footerBlock.style.marginTop = "8px";
-                footerBlock.style.paddingTop = "4px";
-              }
-
-              const thCells = reportEl.querySelectorAll("th");
-              thCells.forEach((cell: any) => {
-                cell.style.padding = "3px 1px";
-                cell.style.fontSize = "7pt";
-                cell.style.lineHeight = "1.05";
-                cell.style.backgroundColor = "#f1f5f9";
-              });
-
-              const tdCells = reportEl.querySelectorAll("td");
-              tdCells.forEach((cell: any) => {
-                cell.style.padding = "2px 1px";
-                cell.style.fontSize = "7.5pt";
-                cell.style.lineHeight = "1.05";
-              });
+              reportEl.style.backgroundColor = "#ffffff";
+              reportEl.style.boxShadow = "none";
             }
           }
         });
 
-        const imgData = canvas.toDataURL("image/jpeg", 0.98);
+        const imgData = canvas.toDataURL("image/png");
         const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
         const pdfWidth = pdf.internal.pageSize.getWidth(); // 297mm
         const pdfHeight = pdf.internal.pageSize.getHeight(); // 210mm
 
-        const margin = 5;
-        const availWidth = pdfWidth - (margin * 2); // 287mm
-        const availHeight = pdfHeight - (margin * 2); // 200mm
+        const marginX = 5;
+        const marginY = 5;
+        const availWidth = pdfWidth - (marginX * 2);
+        const availHeight = pdfHeight - (marginY * 2);
 
-        const imgWidth = availWidth;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-        let finalWidth = imgWidth;
-        let finalHeight = imgHeight;
+        let finalWidth = availWidth;
+        let finalHeight = (canvas.height * finalWidth) / canvas.width;
 
         if (finalHeight > availHeight) {
           finalHeight = availHeight;
@@ -559,7 +533,7 @@ function TeacherMDMPage() {
         const xPos = (pdfWidth - finalWidth) / 2;
         const yPos = 6;
 
-        pdf.addImage(imgData, "JPEG", xPos, yPos, finalWidth, finalHeight);
+        pdf.addImage(imgData, "PNG", xPos, yPos, finalWidth, finalHeight, undefined, "FAST");
         pdf.save(filename);
       }
       if (toastId) toast.dismiss(toastId);
@@ -633,13 +607,13 @@ function TeacherMDMPage() {
             const regData = getRegisterDataForMonth(m.month, m.year, annualSubTab === "6-8" ? "6 To 8" : "1 To 5");
             const stockData = getStockDataForItem("Rice", m.month, m.year, annualSubTab === "6-8" ? "6 To 8" : "1 To 5");
 
-            const enrolled = regData ? regData.enrolled : 0;
+            const enrolled = (regData && regData.enrolled) ? regData.enrolled : getDynamicPatSankhya(profile, annualSubTab);
             const workingDays = regData ? regData.workingDays : 0;
             const cookedDays = workingDays > 0 ? workingDays : 0;
             const leaveDays = Math.max(0, workingDays - cookedDays);
             const beneficiary = regData ? regData.beneficiary : 0;
 
-            const cookHonorarium = 0.0;
+            const cookHonorarium = calculateCookHelperCount(enrolled) * 2500;
             const vegGrant = beneficiary * (annualSubTab === "6-8" ? 3.5 : 2.5);
 
             const prevStock = stockData ? stockData.prev : 10;
@@ -1244,8 +1218,11 @@ function TeacherMDMPage() {
       });
       if (!maxScrollWidth) maxScrollWidth = element.scrollWidth || element.offsetWidth || 800;
 
+      const isPortraitReport = getReportOrientation(monthlyMdmReportType) === "portrait";
       const totalRenderWidth = isCertificate
         ? Math.max(maxScrollWidth, 800)
+        : isPortraitReport
+        ? Math.max(maxScrollWidth, 850)
         : Math.max(maxScrollWidth + 10, 1100);
 
       clone.style.position = 'absolute';
@@ -1314,14 +1291,15 @@ function TeacherMDMPage() {
       const { default: html2canvas } = await import("html2canvas");
       const { jsPDF } = await import("jspdf");
 
-      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      const dynamicOrientation = getReportOrientation(monthlyMdmReportType);
+      const pdf = new jsPDF({ orientation: dynamicOrientation, unit: "mm", format: "a4" });
       const printPages = clone.querySelectorAll('.print-page, .poshan-pdf-page');
       const elementsToRender = printPages.length > 0 ? Array.from(printPages) : [clone];
 
       for (let i = 0; i < elementsToRender.length; i++) {
         const pageEl = elementsToRender[i] as HTMLElement;
         const canvas = await html2canvas(pageEl, {
-          scale: 2,
+          scale: 2.5,
           useCORS: true,
           logging: false,
           backgroundColor: "#ffffff",
@@ -1331,7 +1309,7 @@ function TeacherMDMPage() {
           scrollX: 0,
         });
 
-        const imgData = canvas.toDataURL("image/jpeg", 0.98);
+        const imgData = canvas.toDataURL("image/png");
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
         const margin = 4;
@@ -1347,10 +1325,10 @@ function TeacherMDMPage() {
         }
 
         const xPos = (pdfWidth - imgWidth) / 2;
-        const yPos = (pdfHeight - imgHeight) / 2;
+        const yPos = 6;
 
-        if (i > 0) pdf.addPage('a4', 'l');
-        pdf.addImage(imgData, "JPEG", xPos, yPos, imgWidth, imgHeight);
+        if (i > 0) pdf.addPage('a4', dynamicOrientation === 'landscape' ? 'l' : 'p');
+        pdf.addImage(imgData, "PNG", xPos, yPos, imgWidth, imgHeight, undefined, "FAST");
       }
 
       pdf.save(filename);
@@ -3785,7 +3763,8 @@ function TeacherMDMPage() {
           setRegisterBeneficiary(classRecord.beneficiary || "");
           const savedEnr = classRecord.enrolled || classRecord.totalEnrolled || "";
           const defaultPat = registerClass === "1 To 5" ? (profile?.patPrimary || "") : (profile?.patUpper || "");
-          setTotalEnrolled((savedEnr === "45" || savedEnr === "35") && defaultPat && defaultPat !== savedEnr ? defaultPat : (savedEnr || defaultPat));
+          const dynamicPat = String(getDynamicPatSankhya(profile, registerClass === "1 To 5" ? "1 To 5" : "6 To 8"));
+          setTotalEnrolled(savedEnr || defaultPat || dynamicPat);
         } else {
           setRegisterBeneficiary("");
           setTotalEnrolled(registerClass === "1 To 5" ? (profile?.patPrimary || "") : (profile?.patUpper || ""));
@@ -6489,7 +6468,7 @@ function TeacherMDMPage() {
       if (classRec && (Number(classRec.beneficiary) > 0 || classRec.menu)) {
         return {
           beneficiary: Number(classRec.beneficiary) || 0,
-          enrolled: ((Number(classRec.totalEnrolled || classRec.enrolled || classRec.pat) || 0) === 45 || (Number(classRec.totalEnrolled || classRec.enrolled || classRec.pat) || 0) === 35) && (classSection === "1 To 5" ? (Number(profile?.patPrimary) || 0) : (Number(profile?.patUpper) || 0)) > 0 && (classSection === "1 To 5" ? (Number(profile?.patPrimary) || 0) : (Number(profile?.patUpper) || 0)) !== (Number(classRec.totalEnrolled || classRec.enrolled || classRec.pat) || 0) ? (classSection === "1 To 5" ? (Number(profile?.patPrimary) || 0) : (Number(profile?.patUpper) || 0)) : (Number(classRec.totalEnrolled || classRec.enrolled || classRec.pat) || (classSection === "1 To 5" ? (Number(profile?.patPrimary) || 0) : (Number(profile?.patUpper) || 0))),
+          enrolled: Number(classRec.totalEnrolled || classRec.enrolled || classRec.pat) || getDynamicPatSankhya(profile, classSection),
           menu: getMenuForRegisterDate(dateISO, classSection) || classRec.menu,
           selectedItems: classRec.selectedItems || getSelectedItemsForRegisterDate(dateISO, classSection),
           purakAhar: !!classRec.purakAhar,
@@ -12406,8 +12385,8 @@ function TeacherMDMPage() {
                             });
                           }
 
-                          const patPrimary = profile?.patPrimary || 0;
-                          const totalPat = profile?.totalPat || patPrimary;
+                          const patPrimary = getDynamicPatSankhya(profile, "1 To 5");
+                          const totalPat = getDynamicPatSankhya(profile, "1-8");
 
                           return (
                             <div className="space-y-1.5 font-sans text-slate-900">
@@ -12824,15 +12803,16 @@ function TeacherMDMPage() {
                           const kamacheDivs = riceData.cookedDays;
                           const shijvunDivs = riceData.cookedDays;
 
-                          const kendraRate = 1.56;
-                          const rajyaRate = 1.03;
+                          const rates = getFoodGrantRates("1 To 5", Number(primaryRate), Number(upperRate));
+                          const kendraRate = rates.centerRate;
+                          const rajyaRate = rates.stateRate;
                           const kendraHissa = parseFloat((labharthi * kendraRate).toFixed(2));
                           const rajyaHissa = parseFloat((labharthi * rajyaRate).toFixed(2));
                           const ekunKharc = kendraHissa + rajyaHissa;
 
                           const registerData = getRegisterDataForMonth(engMonthNames[monthNum], year, "1 To 5");
-                          const pat = registerData.enrolled || labharthi || 0;
-                          const pudheManagi = Math.max(0, parseFloat(((labharthi > 0 ? labharthi : pat) * 0.1 * 20 - shillakTandul).toFixed(1)));
+                          const pat = registerData.enrolled || getDynamicPatSankhya(profile, "1 To 5");
+                          const pudheManagi = Math.max(0, parseFloat(((pat || 0) * (shijvunDivs || 0) * 0.100).toFixed(1)));
 
                           return (
                             <div className="space-y-0">
@@ -12899,6 +12879,7 @@ function TeacherMDMPage() {
                                       <td className="border-r border-slate-700 px-2 py-1.5">{kendraHissa > 0 ? kendraHissa.toFixed(2) : ""}</td>
                                       <td className="border-r border-slate-700 px-2 py-1.5">{rajyaHissa > 0 ? rajyaHissa.toFixed(2) : ""}</td>
                                       <td className="border-r border-slate-700 px-2 py-1.5 font-black">{ekunKharc > 0 ? ekunKharc.toFixed(2) : ""}</td>
+                                      <td className="border-r border-slate-700 px-2 py-1.5">{kamacheDivs > 0 ? kamacheDivs : ""}</td>
                                       <td className="border-r border-slate-700 px-2 py-1.5">{shijvunDivs > 0 ? shijvunDivs : ""}</td>
                                       <td className="border-r border-slate-700 px-2 py-1.5 font-black">{pudheManagi > 0 ? pudheManagi : ""}</td>
                                     </tr>
@@ -13006,7 +12987,7 @@ function TeacherMDMPage() {
                           const riceData = getStockDataForItem("Rice", engMonthNames[monthNum], year, "1 To 5");
                           const labharthi = riceData.beneficiary;
                           const registerData = getRegisterDataForMonth(engMonthNames[monthNum], year, "1 To 5");
-                          const enrolledPat = registerData.enrolled || labharthi || 0;
+                          const enrolledPat = (registerData && registerData.enrolled) ? registerData.enrolled : getDynamicPatSankhya(profile, "1 To 5");
 
                           const items = B_FORM_ITEMS.map((def, idx) => {
                             const prev = getOpeningStock(engMonthNames[monthNum], year.toString(), "1 To 5", def.key);
@@ -13056,18 +13037,29 @@ function TeacherMDMPage() {
                               </div>
 
                               <div className="w-full overflow-x-auto">
-                                <table className="min-w-[900px] w-full border-collapse border border-slate-700 text-center text-xs font-medium">
+                                <table className="w-full border-collapse border border-black text-center text-xs font-medium table-fixed">
+                                  <colgroup>
+                                    <col style={{ width: '4%' }} />
+                                    <col style={{ width: '19%' }} />
+                                    <col style={{ width: '10%' }} />
+                                    <col style={{ width: '10%' }} />
+                                    <col style={{ width: '10%' }} />
+                                    <col style={{ width: '12%' }} />
+                                    <col style={{ width: '10%' }} />
+                                    <col style={{ width: '10%' }} />
+                                    <col style={{ width: '15%' }} />
+                                  </colgroup>
                                   <thead>
-                                    <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-700 text-xs">
-                                      <th className="border-r border-black p-1 w-[4%]">अ.न.<br/><span className="font-normal text-xs">1</span></th>
-                                      <th className="border-r border-black p-1 text-left w-[20%]">धान्यादी मालाचे नाव<br/><span className="font-normal text-xs">2</span></th>
-                                      <th className="border-r border-black p-1 w-[10%]">मागील शिल्लक वस्तू<br/><span className="text-xs font-normal">( किलोग्रॅम )</span><br/><span className="font-normal text-xs">3</span></th>
-                                      <th className="border-r border-black p-1 w-[10%]">चालू महिन्यात प्राप्त वस्तू<br/><span className="text-xs font-normal">( किलोग्रॅम )</span><br/><span className="font-normal text-xs">4</span></th>
-                                      <th className="border-r border-black p-1 w-[10%]">एकूण वस्तू<br/><span className="text-xs font-normal">( 3 + 4 ) ( किलोग्रॅम )</span><br/><span className="font-normal text-xs">5</span></th>
-                                      <th className="border-r border-black p-1 w-[13%]">अन्न शिजवण्यासाठी वापरलेल्या वस्तू<br/><span className="text-xs font-normal">( किलोग्रॅम )</span><br/><span className="font-normal text-xs">6</span></th>
-                                      <th className="border-r border-black p-1 w-[10%]">शिल्लक वस्तू<br/><span className="text-xs font-normal">( 5 - 6 ) ( किलोग्रॅम )</span><br/><span className="font-normal text-xs">7</span></th>
-                                      <th className="border-r border-black p-1 w-[10%]">पुढील महिन्यासाठी मागणी<br/><span className="text-xs font-normal">( किलोग्रॅम )</span><br/><span className="font-normal text-xs">8</span></th>
-                                      <th className="border-r border-black p-1 w-[8%]">शेरा<br/><span className="font-normal text-xs">9</span></th>
+                                    <tr className="bg-slate-100 text-slate-900 font-bold border-b border-black text-xs">
+                                      <th className="border-r border-black p-1">अ.न.<br/><span className="font-normal text-xs">1</span></th>
+                                      <th className="border-r border-black p-1 text-left">धान्यादी मालाचे नाव<br/><span className="font-normal text-xs">2</span></th>
+                                      <th className="border-r border-black p-1">मागील शिल्लक वस्तू<br/><span className="text-xs font-normal">( किलोग्रॅम )</span><br/><span className="font-normal text-xs">3</span></th>
+                                      <th className="border-r border-black p-1">चालू महिन्यात प्राप्त वस्तू<br/><span className="text-xs font-normal">( किलोग्रॅम )</span><br/><span className="font-normal text-xs">4</span></th>
+                                      <th className="border-r border-black p-1">एकूण वस्तू<br/><span className="text-xs font-normal">( 3 + 4 ) ( किलोग्रॅम )</span><br/><span className="font-normal text-xs">5</span></th>
+                                      <th className="border-r border-black p-1">अन्न शिजवण्यासाठी वापरलेल्या वस्तू<br/><span className="text-xs font-normal">( किलोग्रॅम )</span><br/><span className="font-normal text-xs">6</span></th>
+                                      <th className="border-r border-black p-1">शिल्लक वस्तू<br/><span className="text-xs font-normal">( 5 - 6 ) ( किलोग्रॅम )</span><br/><span className="font-normal text-xs">7</span></th>
+                                      <th className="border-r border-black p-1">पुढील महिन्यासाठी मागणी<br/><span className="text-xs font-normal">( किलोग्रॅम )</span><br/><span className="font-normal text-xs">8</span></th>
+                                      <th className="border-r border-black p-1">शेरा<br/><span className="font-normal text-xs">9</span></th>
                                     </tr>
                                   </thead>
                                   <tbody>
@@ -13100,28 +13092,28 @@ function TeacherMDMPage() {
                                 <div className="flex w-full divide-x divide-black text-center border-b border-black">
                                   <div className="w-[35%] p-1.5 text-left pl-3">महिन्यातील ताटांची संख्या</div>
                                   <div className="w-[15%] p-1.5 font-black">{labharthi || ""}</div>
-                                  <div className="w-[35%] p-1.5 text-left pl-3">भाजीपाला (0.98 पै.)</div>
-                                  <div className="w-[15%] p-1.5 font-black">{labharthi ? `₹${(labharthi * 0.98).toFixed(2)}` : ""}</div>
+                                  <div className="w-[35%] p-1.5 text-left pl-3">भाजीपाला अनुदान (केंद्र: ₹{(labharthi * (5.45 * 0.60 * 0.70)).toFixed(2)} | राज्य: ₹{(labharthi * (5.45 * 0.40 * 0.70)).toFixed(2)})</div>
+                                  <div className="w-[15%] p-1.5 font-black">{labharthi ? `₹${(labharthi * (5.45 * 0.70)).toFixed(2)}` : ""}</div>
                                 </div>
                                 <div className="flex w-full divide-x divide-black text-center border-b border-black">
                                   <div className="w-[35%] p-1.5 text-left pl-3">खर्च केलेले एकूण अनुदान रु.</div>
-                                  <div className="w-[15%] p-1.5 font-black">{labharthi ? `₹${(labharthi * 2.59).toFixed(2)}` : ""}</div>
-                                  <div className="w-[35%] p-1.5 text-left pl-3">इंधन (0.88 पै.)</div>
-                                  <div className="w-[15%] p-1.5 font-black">{labharthi ? `₹${(labharthi * 0.88).toFixed(2)}` : ""}</div>
+                                  <div className="w-[15%] p-1.5 font-black">{labharthi ? `₹${(labharthi * (parseFloat(primaryRate) || 5.45)).toFixed(2)}` : ""}</div>
+                                  <div className="w-[35%] p-1.5 text-left pl-3">इंधन अनुदान (केंद्र: ₹{(labharthi * (5.45 * 0.60 * 0.30)).toFixed(2)} | राज्य: ₹{(labharthi * (5.45 * 0.40 * 0.30)).toFixed(2)})</div>
+                                  <div className="w-[15%] p-1.5 font-black">{labharthi ? `₹${(labharthi * (5.45 * 0.30)).toFixed(2)}` : ""}</div>
                                 </div>
                                 <div className="flex w-full divide-x divide-black text-center">
-                                  <div className="w-[35%] p-1.5 text-left pl-3">स्वयंपाकी तथा मदतनीस मानधन रु.</div>
-                                  <div className="w-[15%] p-1 flex items-center justify-center font-black">
-                                    <span className="mr-0.5">₹</span>
-                                    <input
-                                      type="text"
-                                      value={swayampakiMandhan}
-                                      onChange={(e) => setSwayampakiMandhan(e.target.value)}
-                                      className="w-20 text-center font-black bg-emerald-50/50 hover:bg-emerald-100/50 focus:bg-white border border-emerald-300 focus:border-emerald-600 rounded px-1 py-0.5 outline-none transition-all print:border-none print:bg-transparent print:w-auto"
-                                    />
+                                  <div className="w-[35%] p-1.5 text-left pl-3">
+                                    स्वयंपाकी तथा मदतनीस मानधन (निकष: {calculateCookHelperCount(enrolledPat)} व्यक्ती)
                                   </div>
-                                  <div className="w-[35%] p-1.5 text-left pl-3">पूरक आहार (0.73 पै.)</div>
-                                  <div className="w-[15%] p-1.5 font-black">{labharthi ? `₹${(labharthi * 0.73).toFixed(2)}` : ""}</div>
+                                  <div className="w-[15%] p-1 flex items-center justify-center font-black">
+                                    ₹{(calculateCookHelperCount(enrolledPat) * 2500).toFixed(2)}
+                                  </div>
+                                  <div className="w-[35%] p-1.5 text-left pl-3">
+                                    मानधन हिस्से (केंद्र हिस्सा: ₹{(calculateCookHelperCount(enrolledPat) * 1500).toFixed(2)} | राज्य हिस्सा: ₹{(calculateCookHelperCount(enrolledPat) * 1000).toFixed(2)})
+                                  </div>
+                                  <div className="w-[15%] p-1.5 font-black">
+                                    {calculateCookHelperCount(enrolledPat)} व्यक्ती
+                                  </div>
                                 </div>
                               </div>
 
@@ -13151,9 +13143,10 @@ function TeacherMDMPage() {
                           const daysInMonth = new Date(year, monthNum, 0).getDate();
                           const marDays = ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
                           const schoolName = profile?.schoolName || "";
-                          const shasDar = 2.59;
-                          const kendraRate = 1.56;
-                          const rajyaRate = 1.03;
+                          const shasDar = Number(primaryRate) || 5.45;
+                          const rates = getFoodGrantRates("1 To 5", shasDar);
+                          const kendraRate = rates.centerRate;
+                          const rajyaRate = rates.stateRate;
 
                           // Generate daily data from actual MDM entries
                           const dailyData = Array.from({ length: daysInMonth }, (_, i) => {
@@ -13163,7 +13156,7 @@ function TeacherMDMPage() {
                             const isSunday = date.getDay() === 0;
                             const dateISO = `${year}-${String(monthNum).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                             const dailyEntry = getDailyDataForMonthDate(dateISO, "1 To 5");
-                            const pat = dailyEntry?.enrolled || 0;
+                            const pat = dailyEntry?.enrolled || getDynamicPatSankhya(profile, "1 To 5");
                             const labharthi = dailyEntry?.beneficiary || 0;
                             const kendra = labharthi > 0 ? parseFloat((labharthi * kendraRate).toFixed(2)) : 0;
                             const rajya = labharthi > 0 ? parseFloat((labharthi * rajyaRate).toFixed(2)) : 0;
@@ -13214,14 +13207,14 @@ function TeacherMDMPage() {
                                       <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100 min-w-[85px]" rowSpan={2}>दिनांक</th>
                                       <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100 min-w-[65px]" rowSpan={2}>पटसंख्या</th>
                                       <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100 min-w-[75px]" rowSpan={2}>एकूण<br/>लाभार्थी</th>
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100 min-w-[80px]" rowSpan={2}>शासन दर<br/>(2.59 रु.)</th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100 min-w-[80px]" rowSpan={2}>शासन दर<br/>({shasDar.toFixed(2)} रु.)</th>
                                       <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-green-50" colSpan={2}>अनुदान वर्गीकरण</th>
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100 min-w-[95px]" rowSpan={2}>एकूण अनुदान<br/>(2.59 रु.)</th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100 min-w-[95px]" rowSpan={2}>एकूण अनुदान<br/>({shasDar.toFixed(2)} रु.)</th>
                                       <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100 min-w-[65px]" rowSpan={2}>शेरा</th>
                                     </tr>
                                     <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-700 text-xs">
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-green-50 min-w-[85px]">केंद्र हिस्सा<br/>1.56</th>
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-green-50 min-w-[85px]">राज्य हिस्सा<br/>1.03</th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-green-50 min-w-[85px]">केंद्र हिस्सा<br/>{kendraRate.toFixed(2)}</th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-green-50 min-w-[85px]">राज्य हिस्सा<br/>{rajyaRate.toFixed(2)}</th>
                                     </tr>
                                   </thead>
                                   <tbody>
@@ -13520,6 +13513,30 @@ function TeacherMDMPage() {
                                 className="w-full h-9 px-3 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
                               />
                             </div>
+
+                            {/* 8. स्वयंपाकी संख्या */}
+                            <div>
+                              <label className="block mb-1 text-slate-700">स्वयंपाकी संख्या</label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={cookCount}
+                                onChange={(e) => setCookCount(e.target.value)}
+                                className="w-full h-9 px-3 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+
+                            {/* 9. मदतनीस संख्या */}
+                            <div>
+                              <label className="block mb-1 text-slate-700">मदतनीस संख्या</label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={helperCountVal}
+                                onChange={(e) => setHelperCountVal(e.target.value)}
+                                className="w-full h-9 px-3 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
                           </div>
                         </div>
                       )}
@@ -13652,9 +13669,10 @@ function TeacherMDMPage() {
                               const totalStateGrant = primaryStateGrant + upperStateGrant;
                               const totalGrantAll = totalCenterGrant + totalStateGrant;
 
-                              const helperCount = helpers?.length || 1;
-                              const helperCenterPay = helperCount * 600;
-                               const helperStatePay = helperCount * 1900;
+                              const totalPatForStaff = (primaryMaxEnrolled || getDynamicPatSankhya(profile, "1 To 5")) + (upperMaxEnrolled || getDynamicPatSankhya(profile, "6 To 8"));
+                              const helperCount = calculateCookHelperCount(totalPatForStaff);
+                              const helperCenterPay = helperCount * 1500;
+                              const helperStatePay = helperCount * 1000;
                               const helperTotalPay = helperCount * 2500;
 
                               const renderBFormPage = (cls: "1 To 5" | "6 To 8") => {
@@ -14373,7 +14391,10 @@ function TeacherMDMPage() {
                                         upperEnrolled={upperMaxEnrolled}
                                         primaryBeneficiarySum={primaryBeneficiarySum}
                                         upperBeneficiarySum={upperBeneficiarySum}
-                                        helperCount={helperCount}
+                                        cookCount={cookCount}
+                                        helperCount={helperCountVal}
+                                        onCookCountChange={setCookCount}
+                                        onHelperCountChange={setHelperCountVal}
                                         helperCenterPay={helperCenterPay}
                                         helperStatePay={helperStatePay}
                                         helperTotalPay={helperTotalPay}
@@ -14763,7 +14784,7 @@ function TeacherMDMPage() {
                                     )}
 
                                     {/* Table */}
-                                    <table className="w-full min-w-[1200px] border-collapse border border-black text-center text-xs font-sans">
+                                    <table className="w-full min-w-[980px] border-collapse border border-black text-center text-xs font-sans table-fixed">
                                       <colgroup>
                                         <col style={{ width: '3%' }} />
                                         <col style={{ width: '7%' }} />
@@ -14981,13 +15002,13 @@ function TeacherMDMPage() {
                                       const regData = getRegisterDataForMonth(m.month, m.year, annualSubTab === "6-8" ? "6 To 8" : "1 To 5");
                                       const stockData = getStockDataForItem("Rice", m.month, m.year, annualSubTab === "6-8" ? "6 To 8" : "1 To 5");
 
-                                      const enrolled = regData ? regData.enrolled : 0;
+                                      const enrolled = (regData && regData.enrolled) ? regData.enrolled : getDynamicPatSankhya(profile, annualSubTab);
                                       const workingDays = regData ? regData.workingDays : 0;
                                       const cookedDays = workingDays > 0 ? workingDays : 0;
                                       const leaveDays = Math.max(0, workingDays - cookedDays);
                                       const beneficiary = regData ? regData.beneficiary : 0;
 
-                                      const cookHonorarium = 0.00;
+                                      const cookHonorarium = calculateCookHelperCount(enrolled) * 2500;
                                       const vegGrant = (beneficiary * (annualSubTab === "6-8" ? 3.5 : 2.5));
 
                                       const prevStock = stockData ? stockData.prev : 10;

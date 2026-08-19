@@ -2895,7 +2895,7 @@ function StudentPortfolioPage() {
                 style={{ fontFamily: "'Noto Sans Devanagari', sans-serif" }}
               >
                 {lang === "en"
-                  ? "Vidyarthi Sanchika"
+                  ? "Student Portfolio"
                   : lang === "hi"
                   ? "छात्र संचिका"
                   : "विद्यार्थी संचिका"}

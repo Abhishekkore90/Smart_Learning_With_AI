@@ -1,18 +1,18 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, collection, query, where, onSnapshot } from "firebase/firestore";
 // @ts-ignore
 import { getTeacherId, matchStudentTeacherClassAndMedium } from "@/lib/teacherIsolationHelper";
 import { ArrowLeft, ChevronDown, ChevronUp, Plus, Trash2, Save, Sparkles, Check } from "lucide-react";
 import { toast } from "sonner";
-import { CLASS_1_OUTCOMES, OutcomeItem } from "@/data/class1_outcomes";
-import { CLASS_2_OUTCOMES } from "@/data/class2_outcomes";
-import { CLASS_3_OUTCOMES } from "@/data/class3_outcomes";
-import { CLASS_4_OUTCOMES } from "@/data/class4_outcomes";
-import { CLASS_5_OUTCOMES } from "@/data/class5_outcomes";
-import { CLASS_6_OUTCOMES } from "@/data/class6_outcomes";
-import { CLASS_7_OUTCOMES } from "@/data/class7_outcomes";
-import { CLASS_8_OUTCOMES } from "@/data/class8_outcomes";
+import { CLASS_1_OUTCOMES, CLASS_1_SEMI_OUTCOMES, OutcomeItem } from "@/data/class1_outcomes";
+import { CLASS_2_OUTCOMES, CLASS_2_SEMI_OUTCOMES } from "@/data/class2_outcomes";
+import { CLASS_3_OUTCOMES, CLASS_3_SEMI_OUTCOMES } from "@/data/class3_outcomes";
+import { CLASS_4_OUTCOMES, CLASS_4_SEMI_OUTCOMES } from "@/data/class4_outcomes";
+import { CLASS_5_OUTCOMES, CLASS_5_SEMI_OUTCOMES } from "@/data/class5_outcomes";
+import { CLASS_6_OUTCOMES, CLASS_6_SEMI_OUTCOMES } from "@/data/class6_outcomes";
+import { CLASS_7_OUTCOMES, CLASS_7_SEMI_OUTCOMES } from "@/data/class7_outcomes";
+import { CLASS_8_OUTCOMES, CLASS_8_SEMI_OUTCOMES } from "@/data/class8_outcomes";
 
 type Semester = "sem1" | "sem2";
 interface Student {
@@ -161,13 +161,16 @@ export function CCESubjectWise({
     return () => unsub();
   }, [activeClass]);
 
-  // 2. Load class-wise dynamic outcomes list
+  // 2. Load class-wise dynamic outcomes list (isolated per medium)
   useEffect(() => {
     let isMounted = true;
+    const currentMedium = localStorage.getItem("cce_selected_medium") || "marathi";
+    const cacheKey = `cce_class_outcomes_${activeClass}_${currentMedium}_${academicYear}`;
+    const docKey = `${activeClass}_${currentMedium}_${academicYear}`;
 
     // Check local cache first
     try {
-      const cached = localStorage.getItem(`cce_class_outcomes_${activeClass}_${academicYear}`);
+      const cached = localStorage.getItem(cacheKey) || localStorage.getItem(`cce_class_outcomes_${activeClass}_${academicYear}`);
       if (cached) {
         const parsed = JSON.parse(cached);
         if (parsed && typeof parsed === "object") {
@@ -178,24 +181,29 @@ export function CCESubjectWise({
 
     const loadOutcomes = async () => {
       try {
-        const ref = doc(db, "cce_outcomes_list_v2", `${activeClass}_${academicYear}`);
-        const snap = await getDoc(ref);
-        if (isMounted && snap.exists() && snap.data().outcomes) {
-          const recs = snap.data().outcomes;
+        const medRef = doc(db, "cce_outcomes_list_v2", docKey);
+        const medSnap = await getDoc(medRef);
+        if (isMounted && medSnap.exists() && medSnap.data().outcomes) {
+          const recs = medSnap.data().outcomes;
           setClassOutcomes(recs);
           try {
-            localStorage.setItem(
-              `cce_class_outcomes_${activeClass}_${academicYear}`,
-              JSON.stringify(recs)
-            );
+            localStorage.setItem(cacheKey, JSON.stringify(recs));
           } catch (e) {}
+          return;
+        }
+
+        const fallbackRef = doc(db, "cce_outcomes_list_v2", `${activeClass}_${academicYear}`);
+        const fallbackSnap = await getDoc(fallbackRef);
+        if (isMounted && fallbackSnap.exists() && fallbackSnap.data().outcomes) {
+          const recs = fallbackSnap.data().outcomes;
+          setClassOutcomes(recs);
         }
       } catch (err) {
         console.warn("Could not load outcomes list:", err);
       }
     };
 
-    const ref = doc(db, "cce_outcomes_list_v2", `${activeClass}_${academicYear}`);
+    const ref = doc(db, "cce_outcomes_list_v2", docKey);
     const unsub = onSnapshot(
       ref,
       (snap) => {
@@ -204,10 +212,7 @@ export function CCESubjectWise({
           const recs = snap.data().outcomes;
           setClassOutcomes(recs);
           try {
-            localStorage.setItem(
-              `cce_class_outcomes_${activeClass}_${academicYear}`,
-              JSON.stringify(recs)
-            );
+            localStorage.setItem(cacheKey, JSON.stringify(recs));
           } catch (e) {}
         }
       },
@@ -221,21 +226,31 @@ export function CCESubjectWise({
     };
   }, [activeClass, academicYear]);
 
-  // 3. Load student ratings for activeClass & activeSemester
+  // 3. Load student ratings for activeClass & activeSemester (isolated per medium)
   useEffect(() => {
+    const currentMedium = localStorage.getItem("cce_selected_medium") || "marathi";
+    const docKey = `${activeClass}_${currentMedium}_${academicYear}_${activeSemester}`;
+
     const loadRatings = async () => {
       setLoading(true);
       try {
-        const ref = doc(db, "cce_outcomes", `${activeClass}_${academicYear}_${activeSemester}`);
-        const snap = await getDoc(ref);
-        setRatingData(snap.exists() ? snap.data().ratings || {} : {});
+        const medRef = doc(db, "cce_outcomes", docKey);
+        const medSnap = await getDoc(medRef);
+        if (medSnap.exists()) {
+          setRatingData(medSnap.data().ratings || {});
+          setLoading(false);
+          return;
+        }
+        const fallbackRef = doc(db, "cce_outcomes", `${activeClass}_${academicYear}_${activeSemester}`);
+        const fallbackSnap = await getDoc(fallbackRef);
+        setRatingData(fallbackSnap.exists() ? fallbackSnap.data().ratings || {} : {});
       } catch (err) {
         console.warn("Error loading ratings:", err);
       }
       setLoading(false);
     };
 
-    const ref = doc(db, "cce_outcomes", `${activeClass}_${academicYear}_${activeSemester}`);
+    const ref = doc(db, "cce_outcomes", docKey);
     const unsub = onSnapshot(
       ref,
       (snap) => {
@@ -251,36 +266,59 @@ export function CCESubjectWise({
     return () => unsub();
   }, [activeClass, academicYear, activeSemester]);
 
-  // Get outcomes list for a subject (checks dynamic saved outcomes first, then CLASS_1_OUTCOMES fallback if 1st class)
+  // Get outcomes list for a subject
   const getOutcomesForSubject = (subKey: string): OutcomeItem[] => {
+    const currentMedium = localStorage.getItem("cce_selected_medium") || "marathi";
     const custom = classOutcomes[subKey];
     if (Array.isArray(custom) && custom.length > 0) return custom;
-    if (activeClass === "1st" && CLASS_1_OUTCOMES[subKey]) {
-      return CLASS_1_OUTCOMES[subKey];
-    }
-    if (activeClass === "2nd" && CLASS_2_OUTCOMES[subKey]) {
-      return CLASS_2_OUTCOMES[subKey];
-    }
-    if ((activeClass === "3rd" || activeClass === "3") && CLASS_3_OUTCOMES[subKey]) {
-      return CLASS_3_OUTCOMES[subKey];
-    }
-    if ((activeClass === "4th" || activeClass === "4") && CLASS_4_OUTCOMES[subKey]) {
-      return CLASS_4_OUTCOMES[subKey];
-    }
-    if ((activeClass === "5th" || activeClass === "5") && CLASS_5_OUTCOMES[subKey]) {
-      return CLASS_5_OUTCOMES[subKey];
-    }
-    if ((activeClass === "6th" || activeClass === "6") && CLASS_6_OUTCOMES[subKey]) {
-      return CLASS_6_OUTCOMES[subKey];
-    }
-    if ((activeClass === "7th" || activeClass === "7") && CLASS_7_OUTCOMES[subKey]) {
-      return CLASS_7_OUTCOMES[subKey];
-    }
-    if ((activeClass === "8th" || activeClass === "8") && CLASS_8_OUTCOMES[subKey]) {
-      return CLASS_8_OUTCOMES[subKey];
+
+    let outcomeBank: Record<string, OutcomeItem[]> | null = null;
+    if (activeClass === "1st" || activeClass === "1") outcomeBank = currentMedium === "semi" ? CLASS_1_SEMI_OUTCOMES : CLASS_1_OUTCOMES;
+    else if (activeClass === "2nd" || activeClass === "2") outcomeBank = currentMedium === "semi" ? CLASS_2_SEMI_OUTCOMES : CLASS_2_OUTCOMES;
+    else if (activeClass === "3rd" || activeClass === "3") outcomeBank = currentMedium === "semi" ? CLASS_3_SEMI_OUTCOMES : CLASS_3_OUTCOMES;
+    else if (activeClass === "4th" || activeClass === "4") outcomeBank = currentMedium === "semi" ? CLASS_4_SEMI_OUTCOMES : CLASS_4_OUTCOMES;
+    else if (activeClass === "5th" || activeClass === "5") outcomeBank = currentMedium === "semi" ? CLASS_5_SEMI_OUTCOMES : CLASS_5_OUTCOMES;
+    else if (activeClass === "6th" || activeClass === "6") outcomeBank = currentMedium === "semi" ? CLASS_6_SEMI_OUTCOMES : CLASS_6_OUTCOMES;
+    else if (activeClass === "7th" || activeClass === "7") outcomeBank = currentMedium === "semi" ? CLASS_7_SEMI_OUTCOMES : CLASS_7_OUTCOMES;
+    else if (activeClass === "8th" || activeClass === "8") outcomeBank = currentMedium === "semi" ? CLASS_8_SEMI_OUTCOMES : CLASS_8_OUTCOMES;
+
+    if (outcomeBank && outcomeBank[subKey]) {
+      const list = outcomeBank[subKey];
+      if (currentMedium === "semi" && (subKey === "math" || subKey === "science" || subKey === "evs1" || subKey === "evs2")) {
+        const isDevanagari = (str: string) => /[\u0900-\u097F]/.test(str);
+        return list.filter((item) => !isDevanagari(item.text));
+      }
+      return list;
     }
     return [];
   };
+
+  // Class-specific subject filter (show ONLY subjects relevant for activeClass)
+  const activeSubjectsList = useMemo(() => {
+    const norm = String(activeClass || "1st").toLowerCase().replace(/[^0-9]/g, "") || "1";
+    return SUBJECTS_LIST.filter((sub) => {
+      if (norm === "1" || norm === "2") {
+        return ["marathi", "english", "math", "kala", "karyanubhav", "sharirik"].includes(sub.key);
+      }
+      if (norm === "3" || norm === "4") {
+        return ["marathi", "english", "math", "evs1", "kala", "karyanubhav", "sharirik"].includes(sub.key);
+      }
+      if (norm === "5") {
+        return ["marathi", "english", "hindi", "math", "evs1", "kala", "karyanubhav", "sharirik"].includes(sub.key);
+      }
+      if (parseInt(norm) >= 6) {
+        return ["marathi", "english", "hindi", "math", "science", "history", "geography", "kala", "karyanubhav", "sharirik"].includes(sub.key);
+      }
+      return true;
+    });
+  }, [activeClass]);
+
+  // Reset expanded subject if it's no longer in activeSubjectsList
+  useEffect(() => {
+    if (activeSubjectsList.length > 0 && !activeSubjectsList.some((s) => s.key === expandedSubject)) {
+      setExpandedSubject(activeSubjectsList[0].key);
+    }
+  }, [activeClass, activeSubjectsList]);
 
   // Add new outcome for current active class and subject
   const addOutcome = async (subKey: string) => {
@@ -302,22 +340,24 @@ export function CCESubjectWise({
     const updatedClassOutcomes = { ...classOutcomes, [subKey]: updatedSubList };
 
     setClassOutcomes(updatedClassOutcomes);
+    const currentMedium = localStorage.getItem("cce_selected_medium") || "marathi";
+    const cacheKey = `cce_class_outcomes_${activeClass}_${currentMedium}_${academicYear}`;
+    const docKey = `${activeClass}_${currentMedium}_${academicYear}`;
+
     try {
-      localStorage.setItem(
-        `cce_class_outcomes_${activeClass}_${academicYear}`,
-        JSON.stringify(updatedClassOutcomes)
-      );
+      localStorage.setItem(cacheKey, JSON.stringify(updatedClassOutcomes));
     } catch (e) {}
 
     setNewCode("");
     setNewText("");
 
     try {
-      const ref = doc(db, "cce_outcomes_list_v2", `${activeClass}_${academicYear}`);
+      const ref = doc(db, "cce_outcomes_list_v2", docKey);
       await setDoc(
         ref,
         {
           class: activeClass,
+          medium: currentMedium,
           academicYear,
           outcomes: updatedClassOutcomes,
           updatedAt: new Date().toISOString(),
@@ -337,19 +377,21 @@ export function CCESubjectWise({
     const updatedClassOutcomes = { ...classOutcomes, [subKey]: updatedSubList };
 
     setClassOutcomes(updatedClassOutcomes);
+    const currentMedium = localStorage.getItem("cce_selected_medium") || "marathi";
+    const cacheKey = `cce_class_outcomes_${activeClass}_${currentMedium}_${academicYear}`;
+    const docKey = `${activeClass}_${currentMedium}_${academicYear}`;
+
     try {
-      localStorage.setItem(
-        `cce_class_outcomes_${activeClass}_${academicYear}`,
-        JSON.stringify(updatedClassOutcomes)
-      );
+      localStorage.setItem(cacheKey, JSON.stringify(updatedClassOutcomes));
     } catch (e) {}
 
     try {
-      const ref = doc(db, "cce_outcomes_list_v2", `${activeClass}_${academicYear}`);
+      const ref = doc(db, "cce_outcomes_list_v2", docKey);
       await setDoc(
         ref,
         {
           class: activeClass,
+          medium: currentMedium,
           academicYear,
           outcomes: updatedClassOutcomes,
           updatedAt: new Date().toISOString(),
@@ -383,11 +425,14 @@ export function CCESubjectWise({
 
   const saveRatings = async () => {
     setSaving(true);
+    const currentMedium = localStorage.getItem("cce_selected_medium") || "marathi";
+    const docKey = `${activeClass}_${currentMedium}_${academicYear}_${activeSemester}`;
     try {
       await setDoc(
-        doc(db, "cce_outcomes", `${activeClass}_${academicYear}_${activeSemester}`),
+        doc(db, "cce_outcomes", docKey),
         {
           class: activeClass,
+          medium: currentMedium,
           academicYear,
           semester: activeSemester,
           ratings: ratingData,
@@ -578,7 +623,7 @@ export function CCESubjectWise({
             <span className="text-xs font-bold text-slate-400">माहिती लोड होत आहे...</span>
           </div>
         ) : (
-          SUBJECTS_LIST.map((subject) => {
+          activeSubjectsList.map((subject) => {
             const isOpen = expandedSubject === subject.key;
             const outcomesList = getOutcomesForSubject(subject.key);
 

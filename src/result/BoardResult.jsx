@@ -696,9 +696,9 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
   const handleDownloadPdf = async () => {
     if (!printRef.current) return;
     setDownloading(true);
-    toast.info("PDF तयार होत आहे, थेट डाऊनलोड सुरू झाली आहे...");
+    toast.info("HD Vector-Grade PDF तयार होत आहे, थेट डाऊनलोड सुरू झाली आहे...");
     try {
-      const { toJpeg } = await import("html-to-image");
+      const { toPng } = await import("html-to-image");
       const { default: jsPDF } = await import("jspdf");
 
       const pdfPages = printRef.current.querySelectorAll(".pdf-page");
@@ -714,18 +714,80 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
         const pageEl = pdfPages[i];
         const isLandscape = pageEl.classList.contains("pdf-page-landscape") || pageEl.getAttribute("data-orientation") === "landscape";
 
-        const dataUrl = await toJpeg(pageEl, {
-          quality: 0.72,
-          pixelRatio: 2,
-          cacheBust: true,
-          backgroundColor: "#ffffff",
-          style: {
-            overflow: "visible",
-            scrollbarWidth: "none",
-          },
-        });
+        let dataUrl = "";
+        if (isLandscape) {
+          // Solution 1: Temporarily expand pageEl to 1920px full width with padding so 100% of all columns including अंतिम श्रेणी are captured
+          const origW = pageEl.style.width;
+          const origMaxW = pageEl.style.maxWidth;
+          const origMinW = pageEl.style.minWidth;
+          const origOverflow = pageEl.style.overflow;
+          const origPaddingR = pageEl.style.paddingRight;
 
-        // Load captured image to read exact natural aspect ratio
+          const innerContainers = pageEl.querySelectorAll(".overflow-x-auto, .overflow-hidden");
+          const innerOrigs = [];
+          innerContainers.forEach((el) => {
+            innerOrigs.push({
+              el,
+              styleW: el.style.width,
+              styleMaxW: el.style.maxWidth,
+              styleMinW: el.style.minWidth,
+              styleOverflow: el.style.overflow,
+            });
+            el.style.width = "1920px";
+            el.style.maxWidth = "none";
+            el.style.minWidth = "1920px";
+            el.style.overflow = "visible";
+          });
+
+          pageEl.style.width = "1920px";
+          pageEl.style.maxWidth = "none";
+          pageEl.style.minWidth = "1920px";
+          pageEl.style.overflow = "visible";
+          pageEl.style.paddingRight = "40px";
+
+          dataUrl = await toPng(pageEl, {
+            quality: 1.0,
+            pixelRatio: 3,
+            cacheBust: true,
+            backgroundColor: "#ffffff",
+            style: {
+              width: "1920px",
+              maxWidth: "none",
+              minWidth: "1920px",
+              overflow: "visible",
+              paddingRight: "40px",
+            },
+          });
+
+          // Immediately restore original screen styles
+          pageEl.style.width = origW;
+          pageEl.style.maxWidth = origMaxW;
+          pageEl.style.minWidth = origMinW;
+          pageEl.style.overflow = origOverflow;
+          pageEl.style.paddingRight = origPaddingR;
+          innerContainers.forEach((el, idx) => {
+            const o = innerOrigs[idx];
+            if (o) {
+              el.style.width = o.styleW;
+              el.style.maxWidth = o.styleMaxW;
+              el.style.minWidth = o.styleMinW;
+              el.style.overflow = o.styleOverflow;
+            }
+          });
+        } else {
+          dataUrl = await toPng(pageEl, {
+            quality: 1.0,
+            pixelRatio: 3,
+            cacheBust: true,
+            backgroundColor: "#ffffff",
+            style: {
+              overflow: "visible",
+              scrollbarWidth: "none",
+            },
+          });
+        }
+
+        // Load captured image
         const img = new Image();
         img.src = dataUrl;
         await new Promise((resolve) => {
@@ -733,21 +795,27 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
           else img.onload = resolve;
         });
 
-        const naturalWidth = img.naturalWidth || 1;
-        const naturalHeight = img.naturalHeight || 1;
-
         if (isLandscape) {
-          // Page 3: Rotated Landscape Page with 100% natural proportional height!
-          const targetWidth = 297; // mm
-          const targetHeight = Number(((naturalHeight / naturalWidth) * targetWidth).toFixed(2));
+          // Last Page: Standard Legal Paper Landscape (355.6mm x 215.9mm) with 5mm Safe Margin Fit
+          const naturalWidth = img.naturalWidth || 1;
+          const naturalHeight = img.naturalHeight || 1;
+          const legalWidth = 355.6; // mm
+          const legalHeight = 215.9; // mm
+          const margin = 5; // mm safe margin
+
+          const printableWidth = legalWidth - (margin * 2); // 345.6mm
+          const calcHeight = Number(((naturalHeight / naturalWidth) * printableWidth).toFixed(2));
+          const targetHeight = Math.min(legalHeight - (margin * 2), calcHeight);
+          const xOffset = margin; // 5mm left margin
+          const yOffset = Number(((legalHeight - targetHeight) / 2).toFixed(2));
 
           if (i === 0) {
-            pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: [targetWidth, targetHeight], compress: true });
+            pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "legal", compress: true });
           } else {
-            pdf.addPage([targetWidth, targetHeight], "landscape");
+            pdf.addPage("legal", "landscape");
           }
 
-          pdf.addImage(dataUrl, "JPEG", 0, 0, targetWidth, targetHeight, undefined, "FAST");
+          pdf.addImage(dataUrl, "PNG", xOffset, Math.max(0, yOffset), printableWidth, targetHeight, undefined, "FAST");
         } else {
           // Pages 1 & 2: Standard Portrait A4 (210mm x 297mm)
           const targetWidth = 210; // mm
@@ -759,14 +827,14 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
             pdf.addPage("a4", "portrait");
           }
 
-          pdf.addImage(dataUrl, "JPEG", 0, 0, targetWidth, targetHeight, undefined, "FAST");
+          pdf.addImage(dataUrl, "PNG", 0, 0, targetWidth, targetHeight, undefined, "FAST");
         }
       }
 
       if (pdf) {
         const termLabel = selectedTerm === "sem1" ? "प्रथम_सत्र" : "द्वितीय_सत्र";
         pdf.save(`CCE_मूल्यांकन_नोंदवही_${selectedClass}_${termLabel}_${academicYear}.pdf`);
-        toast.success("PDF यशस्वीरित्या थेट डाऊनलोड झाली!");
+        toast.success("HD Vector PDF यशस्वीरित्या थेट डाऊनलोड झाली!");
       }
     } catch (err) {
       console.error("PDF generation error:", err);
@@ -1126,27 +1194,30 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
             || {};
 
           const getStudentRemarksObj = (std) => {
-            if (!std) return {};
+            if (!std || !remarksData) return {};
             const sId = String(std.id || "").trim();
             const sRoll = std.rollNo !== undefined && std.rollNo !== null ? String(std.rollNo).trim() : "";
-            const sName = String(std.name || "").trim().toLowerCase();
-            const sFullName = String(std.fullName || "").trim().toLowerCase();
+            const sName = String(std.name || "").trim();
+            const sFullName = String(std.fullName || "").trim();
 
             if (sId && remarksData[sId]) return remarksData[sId];
             if (sRoll && remarksData[sRoll]) return remarksData[sRoll];
-            if (sName && remarksData[sName]) return remarksData[sName];
             if (sFullName && remarksData[sFullName]) return remarksData[sFullName];
+            if (sName && remarksData[sName]) return remarksData[sName];
+
+            const sIdLower = sId.toLowerCase();
+            const sRollLower = sRoll.toLowerCase();
+            const sNameLower = sName.toLowerCase();
+            const sFullNameLower = sFullName.toLowerCase();
 
             for (const [rKey, rVal] of Object.entries(remarksData)) {
               const lowerKey = String(rKey).trim().toLowerCase();
-              if (
-                (sId && (lowerKey === sId.toLowerCase() || lowerKey === `student_${sId.toLowerCase()}`)) ||
-                (sRoll && (lowerKey === sRoll.toLowerCase() || lowerKey === `roll_${sRoll.toLowerCase()}` || lowerKey === `student_${sRoll.toLowerCase()}`)) ||
-                (sName && (lowerKey === sName || lowerKey.includes(sName) || sName.includes(lowerKey))) ||
-                (sFullName && (lowerKey === sFullName || lowerKey.includes(sFullName) || sFullName.includes(lowerKey)))
-              ) {
-                return rVal;
-              }
+              if (!lowerKey) continue;
+
+              if (sIdLower && lowerKey === sIdLower) return rVal;
+              if (sRollLower && (lowerKey === sRollLower || lowerKey === `roll_${sRollLower}` || lowerKey === `student_${sRollLower}`)) return rVal;
+              if (sFullNameLower && lowerKey === sFullNameLower) return rVal;
+              if (sNameLower && lowerKey === sNameLower) return rVal;
             }
             return {};
           };
@@ -2200,12 +2271,13 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
               </div>
 
               {/* ========================================================================= */}
-              {/* PAGE 3: सातत्यपूर्ण सर्वंकष मूल्यांकन: निकाल पत्रक (एकत्रित लँडस्केप टेबल)    */}
+              {/* PAGE 3: सातत्यपूर्ण सर्वंकष मूल्यांकन: निकाल पत्रक (एकत्रित Legal Landscape टेबल)  */}
               {/* ========================================================================= */}
-              <div className="pdf-page pdf-page-landscape bg-white p-6 border border-slate-200 rounded-3xl min-w-[297mm] overflow-x-auto shadow-sm flex flex-col justify-between mb-4" data-orientation="landscape" style={{ pageBreakBefore: "always", breakBefore: "page" }}>
+              <div className="w-full flex justify-center items-center my-2">
+                <div className="pdf-page pdf-page-landscape cce-result-last-page cce-mulyamankan-last-page bg-white p-4 sm:p-5 border border-slate-200 rounded-3xl w-full max-w-full min-w-0 mx-auto shadow-sm flex flex-col justify-between mb-4 box-border overflow-x-auto self-center text-center" data-orientation="landscape" style={{ pageBreakBefore: "always", breakBefore: "page" }}>
                 <div>
                   <h2 className="text-xl font-black text-lime-900 text-center mb-2 tracking-tight">सातत्यपूर्ण सर्वंकष मूल्यांकन: निकाल पत्रक</h2>
-                  <div className="flex items-center justify-between text-xs font-bold text-slate-800 border-b border-lime-300 pb-2 mb-4">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-800 border-b border-lime-300 pb-2 mb-3 px-1">
                     <span>शाळा: <b>{schoolData.schoolName || "जिल्हा परिषद शाळा धोंडेवाडी(पेड)ता.तासगाव जि.सांगली"}</b></span>
                     <span>इयत्ता: <b>{selectedClass}</b></span>
                     <span>तुकडी: <b>{division}</b></span>
@@ -2213,58 +2285,56 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                     <span>सन: <b>{academicYear}</b></span>
                   </div>
 
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse border border-lime-600 text-xs text-center font-medium">
+                  <div className="w-full overflow-x-auto">
+                    <table className="w-full border-collapse border border-lime-600 text-center font-medium min-w-[1280px]">
                       <thead>
+                        {/* ROW 1: Main Headers */}
                         <tr className="bg-lime-200 text-slate-900 font-extrabold border-b border-lime-600">
-                          <th className="border border-lime-600 p-0.5 w-6 min-w-[20px] text-[10px] leading-tight" rowSpan={3}>अ.क्र.</th>
-                          <th className="border border-lime-600 p-1 text-left min-w-[160px]" rowSpan={3}>विद्यार्थ्याचे नाव</th>
+                          <th className="border border-lime-600 p-1 text-[9.5px] leading-tight min-w-[28px]" rowSpan={2}>अ.क्र.</th>
+                          <th className="border border-lime-600 p-1 text-left text-[10.5px] min-w-[140px] whitespace-nowrap" rowSpan={2}>विद्यार्थ्याचे नाव</th>
                           {subjects.map((sub) => {
                             return (
-                              <th key={sub} className="border border-lime-600 p-1" colSpan={4}>
-                                {sub}
+                              <th key={sub} className="border border-lime-600 p-1 text-[9.5px] font-extrabold whitespace-nowrap leading-tight" colSpan={4} title={sub}>
+                                {sub.replace("प्रथम भाषा : ", "").replace("द्वितीय भाषा : ", "").replace("तृतीय भाषा : ", "").replace("सामान्य ", "").replace("सामाजिक ", "सो.")}
                               </th>
                             );
                           })}
-                          <th className="border border-lime-600 p-0.5 text-[9px] w-10 min-w-[32px] leading-tight" rowSpan={3}>उपस्थिती</th>
-                          <th className="border border-lime-600 p-0.5 text-[9px] w-10 min-w-[32px] leading-tight" rowSpan={3}>एकूण गुण</th>
-                          <th className="border border-lime-600 p-0.5 text-[9px] w-12 min-w-[40px] leading-tight" rowSpan={3}>टक्केवारी</th>
-                          <th className="border border-lime-600 p-0.5 text-[9px] w-10 min-w-[32px] leading-tight" rowSpan={3}>अंतिम श्रेणी</th>
+                          <th className="border border-lime-600 p-1 text-[9px] leading-tight min-w-[42px] whitespace-nowrap" rowSpan={2}>उपस्थिती</th>
+                          <th className="border border-lime-600 p-1 text-[9px] leading-tight min-w-[42px] whitespace-nowrap" rowSpan={2}>एकूण गुण</th>
+                          <th className="border border-lime-600 p-1 text-[9px] leading-tight min-w-[44px] whitespace-nowrap" rowSpan={2}>टक्केवारी</th>
+                          <th className="border border-lime-600 p-1 text-[9px] leading-tight min-w-[42px] whitespace-nowrap" rowSpan={2}>अंतिम श्रेणी</th>
                         </tr>
+
+                        {/* ROW 2: Sub-Headers (Direct 4 sub-cols under each subject) */}
                         <tr className="bg-lime-200 text-slate-900 font-extrabold border-b border-lime-600">
                           {subjects.map((sub) => {
                             const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
                             return isPractical ? (
                               <React.Fragment key={sub}>
-                                <th className="border border-lime-600 p-0.5 text-[10px] leading-tight font-bold" colSpan={2} rowSpan={2}>अ<br/><span className="text-[8px] font-normal">आकारिक</span></th>
-                                <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9" rowSpan={2}>एकूण</th>
-                                <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9" rowSpan={2}>श्रेणी</th>
+                                <th className="border border-lime-600 p-1 text-[8.5px] leading-tight font-bold whitespace-nowrap min-w-[64px]" colSpan={2}>
+                                  अ (आकारिक)
+                                </th>
+                                <th className="border border-lime-600 p-1 text-[8.5px] font-bold whitespace-nowrap min-w-[32px]">एकूण</th>
+                                <th className="border border-lime-600 p-1 text-[8.5px] font-bold whitespace-nowrap min-w-[32px]">श्रेणी</th>
                               </React.Fragment>
                             ) : (
                               <React.Fragment key={sub}>
-                                <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9">अ</th>
-                                <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9">ब</th>
-                                <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9" rowSpan={2}>एकूण</th>
-                                <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9" rowSpan={2}>श्रेणी</th>
+                                <th className="border border-lime-600 p-1 text-[8.5px] leading-tight font-bold whitespace-nowrap min-w-[36px]">
+                                  अ (आ)
+                                </th>
+                                <th className="border border-lime-600 p-1 text-[8.5px] leading-tight font-bold whitespace-nowrap min-w-[36px]">
+                                  ब (सं)
+                                </th>
+                                <th className="border border-lime-600 p-1 text-[8.5px] font-bold whitespace-nowrap min-w-[32px]">एकूण</th>
+                                <th className="border border-lime-600 p-1 text-[8.5px] font-bold whitespace-nowrap min-w-[32px]">श्रेणी</th>
                               </React.Fragment>
                             );
                           })}
                         </tr>
-                        <tr className="bg-lime-200 text-slate-900 font-extrabold border-b border-lime-600">
-                          {subjects.map((sub) => {
-                            const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
-                            if (isPractical) return null;
-                            return (
-                              <React.Fragment key={sub}>
-                                <th className="border border-lime-600 p-0.5 text-[8px] font-normal">आकारिक</th>
-                                <th className="border border-lime-600 p-0.5 text-[8px] font-normal">संकलित</th>
-                              </React.Fragment>
-                            );
-                          })}
-                        </tr>
-                        {/* Sub-Header Row: Max Marks (पैकी) */}
-                        <tr className="bg-lime-100 text-slate-900 font-black border-b border-lime-600 text-[10px]">
-                          <td className="border border-lime-600 p-0 w-6"></td>
+
+                        {/* ROW 3: Sub-Header Row: Max Marks (पैकी) */}
+                        <tr className="bg-lime-100 text-slate-900 font-black border-b border-lime-600 text-[8.5px]">
+                          <td className="border border-lime-600 p-0.5"></td>
                           <td className="border border-lime-600 p-1 text-left font-black">पैकी</td>
                           {subjects.map((sub) => {
                             const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
@@ -2273,23 +2343,23 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
 
                             return isPractical ? (
                               <React.Fragment key={sub}>
-                                <td className="border border-lime-600 p-1" colSpan={2}>100</td>
-                                <td className="border border-lime-600 p-1">100</td>
-                                <td className="border border-lime-600 p-1"></td>
+                                <td className="border border-lime-600 p-0.5" colSpan={2}>100</td>
+                                <td className="border border-lime-600 p-0.5">100</td>
+                                <td className="border border-lime-600 p-0.5"></td>
                               </React.Fragment>
                             ) : (
                               <React.Fragment key={sub}>
-                                <td className="border border-lime-600 p-1">{formMax}</td>
-                                <td className="border border-lime-600 p-1">{semMax}</td>
-                                <td className="border border-lime-600 p-1">100</td>
-                                <td className="border border-lime-600 p-1"></td>
+                                <td className="border border-lime-600 p-0.5">{formMax}</td>
+                                <td className="border border-lime-600 p-0.5">{semMax}</td>
+                                <td className="border border-lime-600 p-0.5">100</td>
+                                <td className="border border-lime-600 p-0.5"></td>
                               </React.Fragment>
                             );
                           })}
-                          <td className="border border-lime-600 p-0 text-[10px]">{totalWorkingDays > 0 ? totalWorkingDays : "-"}</td>
-                          <td className="border border-lime-600 p-0 text-[10px]">{subjects.length * 100}</td>
-                          <td className="border border-lime-600 p-0 text-[10px]">100%</td>
-                          <td className="border border-lime-600 p-0"></td>
+                          <td className="border border-lime-600 p-0.5 text-[8px]">{totalWorkingDays > 0 ? totalWorkingDays : "-"}</td>
+                          <td className="border border-lime-600 p-0.5 text-[8px]">{subjects.length * 100}</td>
+                          <td className="border border-lime-600 p-0.5 text-[8px]">100%</td>
+                          <td className="border border-lime-600 p-0.5"></td>
                         </tr>
                       </thead>
                       <tbody>
@@ -2302,34 +2372,34 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                           const totalMaxMarks = subjects.length * 100;
                           const attDays = getStudentAttendanceDays(student);
                           const pctVal = totalMaxMarks > 0 ? (grandObtainedTotal / totalMaxMarks) * 100 : 0;
-                          const overallPct = pctVal.toFixed(2) + "%";
+                          const overallPct = pctVal.toFixed(1) + "%";
                           const overallGrade = getGrade(pctVal);
 
                           return (
-                            <tr key={student.id} className="border-b border-lime-300 hover:bg-lime-50/40">
-                              <td className="border border-lime-600 p-0 font-bold w-6 text-center text-[10px]">{idx + 1}</td>
-                              <td className="border border-lime-600 p-1 text-left font-bold text-slate-900 text-xs whitespace-nowrap" title={student.name}>{student.name}</td>
+                            <tr key={student.id} className="border-b border-lime-300 hover:bg-lime-50/40 text-[9px]">
+                              <td className="border border-lime-600 p-0.5 font-bold text-center text-[8.5px]">{idx + 1}</td>
+                              <td className="border border-lime-600 p-1 text-left font-bold text-slate-900 text-[9.5px] truncate" title={student.name}>{student.name}</td>
                               {subjects.map((sub) => {
                                 const stats = getStudentSubjectStats(student, sub);
                                 return stats.isPracticalSub ? (
                                   <React.Fragment key={sub}>
-                                    <td className="border border-lime-600 p-1 font-bold" colSpan={2}>{stats.formTotal || "-"}</td>
-                                    <td className="border border-lime-600 p-1 font-extrabold text-blue-900">{stats.grandTotal || "-"}</td>
-                                    <td className="border border-lime-600 p-1 font-bold text-emerald-800">{stats.gradeStr}</td>
+                                    <td className="border border-lime-600 p-0.5 font-bold text-[8.5px]" colSpan={2}>{stats.formTotal || "-"}</td>
+                                    <td className="border border-lime-600 p-0.5 font-extrabold text-blue-900 text-[8.5px]">{stats.grandTotal || "-"}</td>
+                                    <td className="border border-lime-600 p-0.5 font-bold text-emerald-800 text-[8.5px]">{stats.gradeStr}</td>
                                   </React.Fragment>
                                 ) : (
                                   <React.Fragment key={sub}>
-                                    <td className="border border-lime-600 p-1 font-bold">{stats.formTotal || "-"}</td>
-                                    <td className="border border-lime-600 p-1 font-bold">{stats.semTotal || "-"}</td>
-                                    <td className="border border-lime-600 p-1 font-extrabold text-blue-900">{stats.grandTotal || "-"}</td>
-                                    <td className="border border-lime-600 p-1 font-bold text-emerald-800">{stats.gradeStr}</td>
+                                    <td className="border border-lime-600 p-0.5 font-bold text-[8.5px]">{stats.formTotal || "-"}</td>
+                                    <td className="border border-lime-600 p-0.5 font-bold text-[8.5px]">{stats.semTotal || "-"}</td>
+                                    <td className="border border-lime-600 p-0.5 font-extrabold text-blue-900 text-[8.5px]">{stats.grandTotal || "-"}</td>
+                                    <td className="border border-lime-600 p-0.5 font-bold text-emerald-800 text-[8.5px]">{stats.gradeStr}</td>
                                   </React.Fragment>
                                 );
                               })}
-                              <td className="border border-lime-600 p-0 font-bold text-[10px]">{attDays > 0 ? attDays : "-"}</td>
-                              <td className="border border-lime-600 p-0 font-black text-blue-900 text-[10px]">{grandObtainedTotal}</td>
-                              <td className="border border-lime-600 p-0 font-black text-blue-900 text-[9px]">{overallPct}</td>
-                              <td className="border border-lime-600 p-0 font-black text-emerald-900 text-[10px]">{overallGrade}</td>
+                              <td className="border border-lime-600 p-0.5 font-bold text-[8.5px]">{attDays > 0 ? attDays : "-"}</td>
+                              <td className="border border-lime-600 p-0.5 font-black text-blue-900 text-[8.5px]">{grandObtainedTotal}</td>
+                              <td className="border border-lime-600 p-0.5 font-black text-blue-900 text-[8px]">{overallPct}</td>
+                              <td className="border border-lime-600 p-0.5 font-black text-emerald-900 text-[8.5px]">{overallGrade}</td>
                             </tr>
                           );
                         })}
@@ -2349,8 +2419,9 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                   </div>
                 </div>
               </div>
-            </>
-          );
+            </div>
+          </>
+        );
         })()}
 
       </div>

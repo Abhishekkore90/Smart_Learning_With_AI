@@ -1,4 +1,5 @@
 import React from "react";
+import { calculateCookHelperCount, calculateHonorariumDetails } from "@/utils/mdmPdfUtils";
 
 export interface MDMCertificateProps {
   subTab?: "1-5" | "6-8" | "1-8";
@@ -23,7 +24,10 @@ export interface MDMCertificateProps {
   upperEnrolled?: number;
   primaryBeneficiarySum?: number;
   upperBeneficiarySum?: number;
-  helperCount?: number;
+  cookCount?: number | string;
+  helperCount?: number | string;
+  onCookCountChange?: (count: string) => void;
+  onHelperCountChange?: (count: string) => void;
   helperCenterPay?: number;
   helperStatePay?: number;
   helperTotalPay?: number;
@@ -78,7 +82,10 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
   upperEnrolled = 0,
   primaryBeneficiarySum = 0,
   upperBeneficiarySum = 0,
-  helperCount = 0,
+  cookCount,
+  helperCount,
+  onCookCountChange,
+  onHelperCountChange,
   helperCenterPay = 0,
   helperStatePay = 0,
   helperTotalPay = 0,
@@ -86,10 +93,10 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
   primaryStateGrant = 0,
   upperCenterGrant = 0,
   upperStateGrant = 0,
-  primaryKendraShare = "1.55",
-  primaryRajyaShare = "1.04",
-  upperKendraShare = "1.55",
-  upperRajyaShare = "1.04",
+  primaryKendraShare = "3.27",
+  primaryRajyaShare = "2.18",
+  upperKendraShare = "4.90",
+  upperRajyaShare = "3.27",
   totalGrantAll = 0,
   vegUsageKg,
 }) => {
@@ -106,10 +113,21 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
       ? totalUpperGrant
       : totalGrantAll;
 
-  const currentHelperTotalPay =
-    subTab === "1-5" || subTab === "6-8"
-      ? helperTotalPay
-      : helperTotalPay;
+  // Calculate dynamic enrolled count and cook/helper count according to Govt slabs
+  const effectivePatPrimary = parseInt(toEnglishNumbers(certPatPrimary), 10) || primaryEnrolled || 0;
+  const effectivePatUpper = parseInt(toEnglishNumbers(certPatUpper), 10) || upperEnrolled || 0;
+  const effectivePatTotal = subTab === "1-5" ? effectivePatPrimary : subTab === "6-8" ? effectivePatUpper : (effectivePatPrimary + effectivePatUpper);
+
+  const dynamicStaffCount = calculateCookHelperCount(effectivePatTotal);
+
+  const cookNum = cookCount !== undefined && cookCount !== "" ? Math.max(0, parseInt(cookCount.toString(), 10) || 0) : dynamicStaffCount;
+  const helperNum = helperCount !== undefined && helperCount !== "" ? Math.max(0, parseInt(helperCount.toString(), 10) || 0) : dynamicStaffCount;
+
+  const totalStaffCount = Math.max(cookNum, helperNum, dynamicStaffCount);
+  const honorariumInfo = calculateHonorariumDetails(effectivePatTotal, 2500);
+  const totalHonorarium = totalStaffCount * 2500;
+  const centerHonorariumShare = totalStaffCount * 1500;
+  const stateHonorariumShare = totalStaffCount * 1000;
 
   const getHeaderTitle = () => {
     if (subTab === "1-5") return "इयत्ता १ ते ५";
@@ -126,6 +144,29 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
     if (reportYear) return toMarathiNumbers(reportYear.toString());
     return "________";
   };
+
+  const renderCountInputs = () => (
+    <div className="flex flex-col items-center justify-center gap-1.5 p-1 text-xs">
+      <div className="flex items-center justify-between gap-1 w-full">
+        <span className="text-[11px] font-extrabold text-slate-900 whitespace-nowrap">स्वयंपाकी / मदतनीस:</span>
+        <input
+          type="number"
+          min="0"
+          step="1"
+          value={cookCount !== undefined && cookCount !== null && cookCount !== "" ? cookCount : totalStaffCount}
+          onClick={(e) => e.stopPropagation()}
+          onChange={(e) => {
+            onCookCountChange?.(e.target.value);
+            onHelperCountChange?.(e.target.value);
+          }}
+          className="w-14 text-center font-black bg-amber-50/90 border border-amber-400 rounded px-1 py-0.5 text-xs text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none print:border-none print:bg-transparent print:w-auto"
+        />
+      </div>
+      <div className="text-[10px] text-slate-600 font-bold">
+        (निकष: {totalStaffCount} व्यक्ती)
+      </div>
+    </div>
+  );
 
   return (
     <div className="print-page border border-slate-300 py-4 sm:py-6 px-3 sm:px-8 bg-white text-black font-sans text-xs relative w-full max-w-full mx-auto shadow-md flex flex-col justify-between overflow-x-auto print:w-full print:h-auto print:border-none print:shadow-none print:p-0 print:overflow-x-visible">
@@ -171,16 +212,16 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
           <table className="w-full min-w-[850px] border-collapse border border-black text-center text-xs font-sans" style={{ borderCollapse: 'collapse', border: '1px solid #000000' }}>
             <thead>
               <tr className="bg-slate-100 font-bold border-b border-black text-xs">
-                <th className="border border-black p-1.5 min-w-[55px]" style={{ border: '1px solid #000000' }}>इयत्ता</th>
-                <th className="border border-black p-1.5 min-w-[45px]" style={{ border: '1px solid #000000' }}>पट</th>
-                <th className="border border-black p-1.5 min-w-[70px]" style={{ border: '1px solid #000000' }}>शिजवलेले दिवस</th>
-                <th className="border border-black p-1.5 min-w-[80px]" style={{ border: '1px solid #000000' }}>प्रोग्रेसिव्ह लाभार्थी</th>
-                <th className="border border-black p-1.5 min-w-[50px]" style={{ border: '1px solid #000000' }}>हिस्सा</th>
-                <th className="border border-black p-1.5 min-w-[45px]" style={{ border: '1px solid #000000' }}>दर</th>
-                <th className="border border-black p-1.5 min-w-[110px]" style={{ border: '1px solid #000000' }}>इंधन भाजीपाला देय अनुदान</th>
-                <th className="border border-black p-1.5 min-w-[100px]" style={{ border: '1px solid #000000' }}>स्वयंपाकी तथा मदतनीस संख्या</th>
-                <th className="border border-black p-1.5 min-w-[110px]" style={{ border: '1px solid #000000' }}>स्वयंपाकी तथा मदतनीस मानधन</th>
-                <th className="border border-black p-1.5 min-w-[65px]" style={{ border: '1px solid #000000' }}>शेरा</th>
+                <th className="border border-black p-1.5 min-w-[45px]" style={{ border: '1px solid #000000', width: '6%' }}>इयत्ता</th>
+                <th className="border border-black p-1.5 min-w-[40px]" style={{ border: '1px solid #000000', width: '5%' }}>पट</th>
+                <th className="border border-black p-1.5 min-w-[50px]" style={{ border: '1px solid #000000', width: '7%' }}>शिजवलेले दिवस</th>
+                <th className="border border-black p-1.5 min-w-[70px]" style={{ border: '1px solid #000000', width: '10%' }}>प्रोग्रेसिव्ह लाभार्थी</th>
+                <th className="border border-black p-1.5 min-w-[60px]" style={{ border: '1px solid #000000', width: '8%' }}>हिस्सा</th>
+                <th className="border border-black p-1.5 min-w-[45px]" style={{ border: '1px solid #000000', width: '6%' }}>दर</th>
+                <th className="border border-black p-1.5 min-w-[110px]" style={{ border: '1px solid #000000', width: '15%' }}>इंधन भाजीपाला देय अनुदान</th>
+                <th className="border border-black p-1.5 min-w-[130px]" style={{ border: '1px solid #000000', width: '15%' }}>स्वयंपाकी तथा मदतनीस संख्या</th>
+                <th className="border border-black p-1.5 min-w-[160px]" style={{ border: '1px solid #000000', width: '20%' }}>स्वयंपाकी तथा मदतनीस मानधन</th>
+                <th className="border border-black p-1.5 min-w-[65px]" style={{ border: '1px solid #000000', width: '8%' }}>शेरा</th>
               </tr>
             </thead>
             <tbody>
@@ -192,18 +233,24 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
                     <td className="border border-black p-1 font-bold" style={{ border: '1px solid #000000' }} rowSpan={2}>{certPatPrimary || toMarathiNumbers(primaryEnrolled.toString())}</td>
                     <td className="border border-black p-1 font-bold" style={{ border: '1px solid #000000' }} rowSpan={2}>{certPrimaryCookedDays || toMarathiNumbers(primaryCookedDays.toString())}</td>
                     <td className="border border-black p-1 font-bold" style={{ border: '1px solid #000000' }} rowSpan={2}>{certBeneficiaryPrimary || toMarathiNumbers(primaryBeneficiarySum.toString())}</td>
-                    <td className="border border-black p-1 font-medium" style={{ border: '1px solid #000000' }}>केंद्र</td>
+                    <td className="border border-black p-1 font-semibold text-slate-900" style={{ border: '1px solid #000000' }}>केंद्र हिस्सा</td>
                     <td className="border border-black p-1" style={{ border: '1px solid #000000' }}>{toMarathiNumbers(primaryKendraShare)}</td>
                     <td className="border border-black p-1 font-semibold" style={{ border: '1px solid #000000' }}>{toMarathiNumbers(primaryCenterGrant.toFixed(2))}</td>
-                    <td className="border border-black p-1 font-bold" style={{ border: '1px solid #000000' }} rowSpan={2}>{toMarathiNumbers(helperCount.toString())}</td>
-                    <td className="border border-black p-1 font-medium" style={{ border: '1px solid #000000' }}>केंद्र - {toMarathiNumbers(helperCenterPay.toFixed(2))}</td>
+                    <td className="border border-black p-1 font-bold" style={{ border: '1px solid #000000' }} rowSpan={showUpper ? 4 : 2}>
+                      {renderCountInputs()}
+                    </td>
+                    <td className="border border-black p-1 font-semibold text-slate-900" style={{ border: '1px solid #000000' }}>
+                      केंद्र हिस्सा - ₹{toMarathiNumbers(centerHonorariumShare.toString())}
+                    </td>
                     <td className="border border-black p-1 font-bold text-emerald-700" style={{ border: '1px solid #000000' }} rowSpan={2}>अचूक नोंदवलेले</td>
                   </tr>
                   <tr>
-                    <td className="border border-black p-1 font-medium" style={{ border: '1px solid #000000' }}>राज्य</td>
+                    <td className="border border-black p-1 font-semibold text-slate-900" style={{ border: '1px solid #000000' }}>राज्य हिस्सा</td>
                     <td className="border border-black p-1" style={{ border: '1px solid #000000' }}>{toMarathiNumbers(primaryRajyaShare)}</td>
                     <td className="border border-black p-1 font-semibold" style={{ border: '1px solid #000000' }}>{toMarathiNumbers(primaryStateGrant.toFixed(2))}</td>
-                    <td className="border border-black p-1 font-medium" style={{ border: '1px solid #000000' }}>राज्य - {toMarathiNumbers(helperStatePay.toFixed(2))}</td>
+                    <td className="border border-black p-1 font-semibold text-slate-900" style={{ border: '1px solid #000000' }}>
+                      राज्य हिस्सा - ₹{toMarathiNumbers(stateHonorariumShare.toString())}
+                    </td>
                   </tr>
                 </>
               )}
@@ -216,18 +263,26 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
                     <td className="border border-black p-1 font-bold" style={{ border: '1px solid #000000' }} rowSpan={2}>{certPatUpper || toMarathiNumbers(upperEnrolled.toString())}</td>
                     <td className="border border-black p-1 font-bold" style={{ border: '1px solid #000000' }} rowSpan={2}>{certUpperCookedDays || toMarathiNumbers(upperCookedDays.toString())}</td>
                     <td className="border border-black p-1 font-bold" style={{ border: '1px solid #000000' }} rowSpan={2}>{certBeneficiaryUpper || toMarathiNumbers(upperBeneficiarySum.toString())}</td>
-                    <td className="border border-black p-1 font-medium" style={{ border: '1px solid #000000' }}>केंद्र</td>
+                    <td className="border border-black p-1 font-semibold text-slate-900" style={{ border: '1px solid #000000' }}>केंद्र हिस्सा</td>
                     <td className="border border-black p-1" style={{ border: '1px solid #000000' }}>{toMarathiNumbers(upperKendraShare)}</td>
                     <td className="border border-black p-1 font-semibold" style={{ border: '1px solid #000000' }}>{toMarathiNumbers(upperCenterGrant.toFixed(2))}</td>
-                    <td className="border border-black p-1 font-bold" style={{ border: '1px solid #000000' }} rowSpan={2}>{toMarathiNumbers(helperCount.toString())}</td>
-                    <td className="border border-black p-1 font-medium" style={{ border: '1px solid #000000' }}>केंद्र - {toMarathiNumbers(helperCenterPay.toFixed(2))}</td>
+                    {!showPrimary && (
+                      <td className="border border-black p-1 font-bold" style={{ border: '1px solid #000000' }} rowSpan={2}>
+                        {renderCountInputs()}
+                      </td>
+                    )}
+                    <td className="border border-black p-1 font-semibold text-slate-900" style={{ border: '1px solid #000000' }}>
+                      केंद्र हिस्सा - ₹{toMarathiNumbers(centerHonorariumShare.toString())}
+                    </td>
                     <td className="border border-black p-1 font-bold text-emerald-700" style={{ border: '1px solid #000000' }} rowSpan={2}>अचूक नोंदवलेले</td>
                   </tr>
                   <tr>
-                    <td className="border border-black p-1 font-medium" style={{ border: '1px solid #000000' }}>राज्य</td>
+                    <td className="border border-black p-1 font-semibold text-slate-900" style={{ border: '1px solid #000000' }}>राज्य हिस्सा</td>
                     <td className="border border-black p-1" style={{ border: '1px solid #000000' }}>{toMarathiNumbers(upperRajyaShare)}</td>
                     <td className="border border-black p-1 font-semibold" style={{ border: '1px solid #000000' }}>{toMarathiNumbers(upperStateGrant.toFixed(2))}</td>
-                    <td className="border border-black p-1 font-medium" style={{ border: '1px solid #000000' }}>राज्य - {toMarathiNumbers(helperStatePay.toFixed(2))}</td>
+                    <td className="border border-black p-1 font-semibold text-slate-900" style={{ border: '1px solid #000000' }}>
+                      राज्य हिस्सा - ₹{toMarathiNumbers(stateHonorariumShare.toString())}
+                    </td>
                   </tr>
                 </>
               )}
@@ -266,9 +321,11 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
                 <td className="border border-black p-1 text-emerald-800" style={{ border: '1px solid #000000' }}>
                   {toMarathiNumbers(currentTotalGrant.toFixed(2))}
                 </td>
-                <td className="border border-black p-1" style={{ border: '1px solid #000000' }}>{toMarathiNumbers(helperCount.toString())}</td>
-                <td className="border border-black p-1 text-emerald-800" style={{ border: '1px solid #000000' }}>
-                  {toMarathiNumbers(currentHelperTotalPay.toFixed(2))}
+                <td className="border border-black p-1 text-xs font-black" style={{ border: '1px solid #000000' }}>
+                  एकूण संख्या: {toMarathiNumbers(totalStaffCount.toString())}
+                </td>
+                <td className="border border-black p-1 text-emerald-800 font-extrabold" style={{ border: '1px solid #000000' }}>
+                  ₹{toMarathiNumbers(totalHonorarium.toString())}
                 </td>
                 <td className="border border-black p-1 text-blue-700" style={{ border: '1px solid #000000' }}>प्रमाणित</td>
               </tr>
@@ -297,16 +354,16 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
       </div>
 
       {/* Footer Signatures */}
-      <div className="flex justify-between items-end mt-12 px-6 text-xs font-bold text-black select-none">
+      <div className="flex justify-between items-end mt-12 px-6 text-xs font-bold text-black select-none print:mt-8 print:break-inside-avoid">
         <div className="space-y-4 text-xs font-bold">
           <div>स्थळ --------------------</div>
           <div>दि. --------------------</div>
         </div>
         <div className="text-center pb-2 text-xs font-bold">
-          <p>मुख्याध्यापक तथा सचिव</p>
+          <p className="font-black text-slate-900">मुख्याध्यापक स्वाक्षरी व शिक्का</p>
         </div>
         <div className="text-center pb-2 text-xs font-bold">
-          <p>अध्यक्ष</p>
+          <p className="font-black text-slate-900">अध्यक्ष / सचिव</p>
         </div>
       </div>
       </div>
@@ -315,3 +372,4 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
 };
 
 export default MDMCertificate;
+
