@@ -48,6 +48,13 @@ import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas-pro";
 import { PinGate } from "@/components/teacher/PinGate";
 import MDMCertificate from "@/components/teacher/MDMCertificate";
+import {
+  calculateCookHelperCount,
+  calculateHonorariumDetails,
+  getFoodGrantRates,
+  getDynamicPatSankhya,
+  getReportOrientation,
+} from "@/utils/mdmPdfUtils";
 
 export const Route = createFileRoute("/teacher/mdm")({
   validateSearch: (search: Record<string, unknown>): { tab?: string } => ({
@@ -635,13 +642,13 @@ function TeacherMDMPage() {
             const regData = getRegisterDataForMonth(m.month, m.year, annualSubTab === "6-8" ? "6 To 8" : "1 To 5");
             const stockData = getStockDataForItem("Rice", m.month, m.year, annualSubTab === "6-8" ? "6 To 8" : "1 To 5");
 
-            const enrolled = regData ? regData.enrolled : 0;
+            const enrolled = (regData && regData.enrolled) ? regData.enrolled : getDynamicPatSankhya(profile, annualSubTab);
             const workingDays = regData ? regData.workingDays : 0;
             const cookedDays = workingDays > 0 ? workingDays : 0;
             const leaveDays = Math.max(0, workingDays - cookedDays);
             const beneficiary = regData ? regData.beneficiary : 0;
 
-            const cookHonorarium = 0.0;
+            const cookHonorarium = calculateCookHelperCount(enrolled) * 2500;
             const vegGrant = beneficiary * (annualSubTab === "6-8" ? 3.5 : 2.5);
 
             const prevStock = stockData ? stockData.prev : 10;
@@ -1316,7 +1323,8 @@ function TeacherMDMPage() {
       const { default: html2canvas } = await import("html2canvas");
       const { jsPDF } = await import("jspdf");
 
-      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      const dynamicOrientation = getReportOrientation(monthlyMdmReportType);
+      const pdf = new jsPDF({ orientation: dynamicOrientation, unit: "mm", format: "a4" });
       const printPages = clone.querySelectorAll('.print-page, .poshan-pdf-page');
       const elementsToRender = printPages.length > 0 ? Array.from(printPages) : [clone];
 
@@ -3787,7 +3795,8 @@ function TeacherMDMPage() {
           setRegisterBeneficiary(classRecord.beneficiary || "");
           const savedEnr = classRecord.enrolled || classRecord.totalEnrolled || "";
           const defaultPat = registerClass === "1 To 5" ? (profile?.patPrimary || "") : (profile?.patUpper || "");
-          setTotalEnrolled((savedEnr === "45" || savedEnr === "35") && defaultPat && defaultPat !== savedEnr ? defaultPat : (savedEnr || defaultPat));
+          const dynamicPat = String(getDynamicPatSankhya(profile, registerClass === "1 To 5" ? "1 To 5" : "6 To 8"));
+          setTotalEnrolled(savedEnr || defaultPat || dynamicPat);
         } else {
           setRegisterBeneficiary("");
           setTotalEnrolled(registerClass === "1 To 5" ? (profile?.patPrimary || "") : (profile?.patUpper || ""));
@@ -6491,7 +6500,7 @@ function TeacherMDMPage() {
       if (classRec && (Number(classRec.beneficiary) > 0 || classRec.menu)) {
         return {
           beneficiary: Number(classRec.beneficiary) || 0,
-          enrolled: ((Number(classRec.totalEnrolled || classRec.enrolled || classRec.pat) || 0) === 45 || (Number(classRec.totalEnrolled || classRec.enrolled || classRec.pat) || 0) === 35) && (classSection === "1 To 5" ? (Number(profile?.patPrimary) || 0) : (Number(profile?.patUpper) || 0)) > 0 && (classSection === "1 To 5" ? (Number(profile?.patPrimary) || 0) : (Number(profile?.patUpper) || 0)) !== (Number(classRec.totalEnrolled || classRec.enrolled || classRec.pat) || 0) ? (classSection === "1 To 5" ? (Number(profile?.patPrimary) || 0) : (Number(profile?.patUpper) || 0)) : (Number(classRec.totalEnrolled || classRec.enrolled || classRec.pat) || (classSection === "1 To 5" ? (Number(profile?.patPrimary) || 0) : (Number(profile?.patUpper) || 0))),
+          enrolled: Number(classRec.totalEnrolled || classRec.enrolled || classRec.pat) || getDynamicPatSankhya(profile, classSection),
           menu: getMenuForRegisterDate(dateISO, classSection) || classRec.menu,
           selectedItems: classRec.selectedItems || getSelectedItemsForRegisterDate(dateISO, classSection),
           purakAhar: !!classRec.purakAhar,
@@ -12408,8 +12417,8 @@ function TeacherMDMPage() {
                             });
                           }
 
-                          const patPrimary = profile?.patPrimary || 0;
-                          const totalPat = profile?.totalPat || patPrimary;
+                          const patPrimary = getDynamicPatSankhya(profile, "1 To 5");
+                          const totalPat = getDynamicPatSankhya(profile, "1-8");
 
                           return (
                             <div className="space-y-1.5 font-sans text-slate-900">
@@ -12826,14 +12835,15 @@ function TeacherMDMPage() {
                           const kamacheDivs = riceData.cookedDays;
                           const shijvunDivs = riceData.cookedDays;
 
-                          const kendraRate = 1.56;
-                          const rajyaRate = 1.03;
+                          const rates = getFoodGrantRates("1 To 5", Number(primaryRate), Number(upperRate));
+                          const kendraRate = rates.centerRate;
+                          const rajyaRate = rates.stateRate;
                           const kendraHissa = parseFloat((labharthi * kendraRate).toFixed(2));
                           const rajyaHissa = parseFloat((labharthi * rajyaRate).toFixed(2));
                           const ekunKharc = kendraHissa + rajyaHissa;
 
                           const registerData = getRegisterDataForMonth(engMonthNames[monthNum], year, "1 To 5");
-                          const pat = registerData.enrolled || labharthi || 0;
+                          const pat = registerData.enrolled || getDynamicPatSankhya(profile, "1 To 5");
                           const pudheManagi = Math.max(0, parseFloat(((pat || 0) * (shijvunDivs || 0) * 0.100).toFixed(1)));
 
                           return (
@@ -13103,28 +13113,28 @@ function TeacherMDMPage() {
                                 <div className="flex w-full divide-x divide-black text-center border-b border-black">
                                   <div className="w-[35%] p-1.5 text-left pl-3">महिन्यातील ताटांची संख्या</div>
                                   <div className="w-[15%] p-1.5 font-black">{labharthi || ""}</div>
-                                  <div className="w-[35%] p-1.5 text-left pl-3">भाजीपाला (0.98 पै.)</div>
-                                  <div className="w-[15%] p-1.5 font-black">{labharthi ? `₹${(labharthi * 0.98).toFixed(2)}` : ""}</div>
+                                  <div className="w-[35%] p-1.5 text-left pl-3">भाजीपाला अनुदान (केंद्र: ₹{(labharthi * (5.45 * 0.60 * 0.70)).toFixed(2)} | राज्य: ₹{(labharthi * (5.45 * 0.40 * 0.70)).toFixed(2)})</div>
+                                  <div className="w-[15%] p-1.5 font-black">{labharthi ? `₹${(labharthi * (5.45 * 0.70)).toFixed(2)}` : ""}</div>
                                 </div>
                                 <div className="flex w-full divide-x divide-black text-center border-b border-black">
                                   <div className="w-[35%] p-1.5 text-left pl-3">खर्च केलेले एकूण अनुदान रु.</div>
-                                  <div className="w-[15%] p-1.5 font-black">{labharthi ? `₹${(labharthi * 2.59).toFixed(2)}` : ""}</div>
-                                  <div className="w-[35%] p-1.5 text-left pl-3">इंधन (0.88 पै.)</div>
-                                  <div className="w-[15%] p-1.5 font-black">{labharthi ? `₹${(labharthi * 0.88).toFixed(2)}` : ""}</div>
+                                  <div className="w-[15%] p-1.5 font-black">{labharthi ? `₹${(labharthi * (parseFloat(primaryRate) || 5.45)).toFixed(2)}` : ""}</div>
+                                  <div className="w-[35%] p-1.5 text-left pl-3">इंधन अनुदान (केंद्र: ₹{(labharthi * (5.45 * 0.60 * 0.30)).toFixed(2)} | राज्य: ₹{(labharthi * (5.45 * 0.40 * 0.30)).toFixed(2)})</div>
+                                  <div className="w-[15%] p-1.5 font-black">{labharthi ? `₹${(labharthi * (5.45 * 0.30)).toFixed(2)}` : ""}</div>
                                 </div>
                                 <div className="flex w-full divide-x divide-black text-center">
-                                  <div className="w-[35%] p-1.5 text-left pl-3">स्वयंपाकी तथा मदतनीस मानधन रु.</div>
-                                  <div className="w-[15%] p-1 flex items-center justify-center font-black">
-                                    <span className="mr-0.5">₹</span>
-                                    <input
-                                      type="text"
-                                      value={swayampakiMandhan}
-                                      onChange={(e) => setSwayampakiMandhan(e.target.value)}
-                                      className="w-20 text-center font-black bg-emerald-50/50 hover:bg-emerald-100/50 focus:bg-white border border-emerald-300 focus:border-emerald-600 rounded px-1 py-0.5 outline-none transition-all print:border-none print:bg-transparent print:w-auto"
-                                    />
+                                  <div className="w-[35%] p-1.5 text-left pl-3">
+                                    स्वयंपाकी तथा मदतनीस मानधन (निकष: {calculateCookHelperCount(enrolledPat)} व्यक्ती)
                                   </div>
-                                  <div className="w-[35%] p-1.5 text-left pl-3">पूरक आहार (0.73 पै.)</div>
-                                  <div className="w-[15%] p-1.5 font-black">{labharthi ? `₹${(labharthi * 0.73).toFixed(2)}` : ""}</div>
+                                  <div className="w-[15%] p-1 flex items-center justify-center font-black">
+                                    ₹{(calculateCookHelperCount(enrolledPat) * 2500).toFixed(2)}
+                                  </div>
+                                  <div className="w-[35%] p-1.5 text-left pl-3">
+                                    मानधन हिस्से (केंद्र हिस्सा: ₹{(calculateCookHelperCount(enrolledPat) * 1500).toFixed(2)} | राज्य हिस्सा: ₹{(calculateCookHelperCount(enrolledPat) * 1000).toFixed(2)})
+                                  </div>
+                                  <div className="w-[15%] p-1.5 font-black">
+                                    {calculateCookHelperCount(enrolledPat)} व्यक्ती
+                                  </div>
                                 </div>
                               </div>
 
@@ -13154,9 +13164,10 @@ function TeacherMDMPage() {
                           const daysInMonth = new Date(year, monthNum, 0).getDate();
                           const marDays = ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
                           const schoolName = profile?.schoolName || "";
-                          const shasDar = 2.59;
-                          const kendraRate = 1.56;
-                          const rajyaRate = 1.03;
+                          const shasDar = Number(primaryRate) || 5.45;
+                          const rates = getFoodGrantRates("1 To 5", shasDar);
+                          const kendraRate = rates.centerRate;
+                          const rajyaRate = rates.stateRate;
 
                           // Generate daily data from actual MDM entries
                           const dailyData = Array.from({ length: daysInMonth }, (_, i) => {
@@ -13166,7 +13177,7 @@ function TeacherMDMPage() {
                             const isSunday = date.getDay() === 0;
                             const dateISO = `${year}-${String(monthNum).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                             const dailyEntry = getDailyDataForMonthDate(dateISO, "1 To 5");
-                            const pat = dailyEntry?.enrolled || 0;
+                            const pat = dailyEntry?.enrolled || getDynamicPatSankhya(profile, "1 To 5");
                             const labharthi = dailyEntry?.beneficiary || 0;
                             const kendra = labharthi > 0 ? parseFloat((labharthi * kendraRate).toFixed(2)) : 0;
                             const rajya = labharthi > 0 ? parseFloat((labharthi * rajyaRate).toFixed(2)) : 0;
@@ -13217,14 +13228,14 @@ function TeacherMDMPage() {
                                       <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100 min-w-[85px]" rowSpan={2}>दिनांक</th>
                                       <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100 min-w-[65px]" rowSpan={2}>पटसंख्या</th>
                                       <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100 min-w-[75px]" rowSpan={2}>एकूण<br/>लाभार्थी</th>
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100 min-w-[80px]" rowSpan={2}>शासन दर<br/>(2.59 रु.)</th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100 min-w-[80px]" rowSpan={2}>शासन दर<br/>({shasDar.toFixed(2)} रु.)</th>
                                       <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-green-50" colSpan={2}>अनुदान वर्गीकरण</th>
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100 min-w-[95px]" rowSpan={2}>एकूण अनुदान<br/>(2.59 रु.)</th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100 min-w-[95px]" rowSpan={2}>एकूण अनुदान<br/>({shasDar.toFixed(2)} रु.)</th>
                                       <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-slate-100 min-w-[65px]" rowSpan={2}>शेरा</th>
                                     </tr>
                                     <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-700 text-xs">
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-green-50 min-w-[85px]">केंद्र हिस्सा<br/>1.56</th>
-                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-green-50 min-w-[85px]">राज्य हिस्सा<br/>1.03</th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-green-50 min-w-[85px]">केंद्र हिस्सा<br/>{kendraRate.toFixed(2)}</th>
+                                      <th className="border-r border-slate-700 px-2 py-1.5 font-bold relative z-30 align-middle bg-green-50 min-w-[85px]">राज्य हिस्सा<br/>{rajyaRate.toFixed(2)}</th>
                                     </tr>
                                   </thead>
                                   <tbody>
@@ -13679,9 +13690,10 @@ function TeacherMDMPage() {
                               const totalStateGrant = primaryStateGrant + upperStateGrant;
                               const totalGrantAll = totalCenterGrant + totalStateGrant;
 
-                              const helperCount = helpers?.length || 1;
-                              const helperCenterPay = helperCount * 600;
-                               const helperStatePay = helperCount * 1900;
+                              const totalPatForStaff = (primaryMaxEnrolled || getDynamicPatSankhya(profile, "1 To 5")) + (upperMaxEnrolled || getDynamicPatSankhya(profile, "6 To 8"));
+                              const helperCount = calculateCookHelperCount(totalPatForStaff);
+                              const helperCenterPay = helperCount * 1500;
+                              const helperStatePay = helperCount * 1000;
                               const helperTotalPay = helperCount * 2500;
 
                               const renderBFormPage = (cls: "1 To 5" | "6 To 8") => {
@@ -14793,7 +14805,7 @@ function TeacherMDMPage() {
                                     )}
 
                                     {/* Table */}
-                                    <table className="w-full min-w-[1200px] border-collapse border border-black text-center text-xs font-sans">
+                                    <table className="w-full min-w-[980px] border-collapse border border-black text-center text-xs font-sans table-fixed">
                                       <colgroup>
                                         <col style={{ width: '3%' }} />
                                         <col style={{ width: '7%' }} />
@@ -15011,13 +15023,13 @@ function TeacherMDMPage() {
                                       const regData = getRegisterDataForMonth(m.month, m.year, annualSubTab === "6-8" ? "6 To 8" : "1 To 5");
                                       const stockData = getStockDataForItem("Rice", m.month, m.year, annualSubTab === "6-8" ? "6 To 8" : "1 To 5");
 
-                                      const enrolled = regData ? regData.enrolled : 0;
+                                      const enrolled = (regData && regData.enrolled) ? regData.enrolled : getDynamicPatSankhya(profile, annualSubTab);
                                       const workingDays = regData ? regData.workingDays : 0;
                                       const cookedDays = workingDays > 0 ? workingDays : 0;
                                       const leaveDays = Math.max(0, workingDays - cookedDays);
                                       const beneficiary = regData ? regData.beneficiary : 0;
 
-                                      const cookHonorarium = 0.00;
+                                      const cookHonorarium = calculateCookHelperCount(enrolled) * 2500;
                                       const vegGrant = (beneficiary * (annualSubTab === "6-8" ? 3.5 : 2.5));
 
                                       const prevStock = stockData ? stockData.prev : 10;
