@@ -48,23 +48,67 @@ const normalizeDateStr = (raw: string | undefined | null) => {
 export function getStoredSchoolProfile() {
   try {
     if (typeof window !== "undefined") {
+      let teacherProfile: any = null;
       const teacherProfileStr = localStorage.getItem("sqaaf_teacher_profile");
-      let activeEmail = "";
       if (teacherProfileStr) {
         try {
-          const parsed = JSON.parse(teacherProfileStr);
-          if (parsed?.email) activeEmail = parsed.email.toLowerCase().trim();
+          teacherProfile = JSON.parse(teacherProfileStr);
         } catch (e) {}
       }
+
+      const activeEmail = teacherProfile?.email ? teacherProfile.email.toLowerCase().trim() : "";
       if (activeEmail) {
         const userStored = localStorage.getItem(`teaching_diary_school_profile_${activeEmail}`);
-        if (userStored) return JSON.parse(userStored);
+        if (userStored) {
+          const parsedUserStored = JSON.parse(userStored);
+          return {
+            ...teacherProfile,
+            ...parsedUserStored,
+            schoolName: parsedUserStored.schoolName || teacherProfile?.schoolName || teacherProfile?.school || "",
+            teacherName: parsedUserStored.teacherName || teacherProfile?.teacherName || teacherProfile?.name || "",
+            className: parsedUserStored.className || teacherProfile?.className || teacherProfile?.std || "",
+            academicYear: parsedUserStored.academicYear || teacherProfile?.academicYear || teacherProfile?.year || "",
+          };
+        }
       }
+
       const stored = localStorage.getItem("teaching_diary_school_profile");
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        const parsedStored = JSON.parse(stored);
+        return {
+          ...teacherProfile,
+          ...parsedStored,
+          schoolName: parsedStored.schoolName || teacherProfile?.schoolName || teacherProfile?.school || "",
+          teacherName: parsedStored.teacherName || teacherProfile?.teacherName || teacherProfile?.name || "",
+          className: parsedStored.className || teacherProfile?.className || teacherProfile?.std || "",
+          academicYear: parsedStored.academicYear || teacherProfile?.academicYear || teacherProfile?.year || "",
+        };
+      }
+
+      if (teacherProfile) {
+        return {
+          ...teacherProfile,
+          schoolName: teacherProfile.schoolName || teacherProfile.school || "",
+          teacherName: teacherProfile.teacherName || teacherProfile.name || "",
+          className: teacherProfile.className || teacherProfile.std || "",
+          academicYear: teacherProfile.academicYear || teacherProfile.year || "2026-27",
+        };
+      }
     }
   } catch (e) {}
   return null;
+}
+
+export function getHeaderVal(...candidates: (string | undefined | null)[]): string {
+  for (const cand of candidates) {
+    if (cand !== undefined && cand !== null) {
+      const trimmed = String(cand).trim();
+      if (trimmed !== "" && trimmed !== "-" && trimmed !== "—") {
+        return trimmed;
+      }
+    }
+  }
+  return "-";
 }
 
 interface Props {
@@ -857,7 +901,14 @@ export const StructuredDayPageList = forwardRef<
         </span>
       </div>
 
-      {dayRecords.map((p, idx) => (
+      {dayRecords.map((p, idx) => {
+        const resolvedDay = getHeaderVal(p.day, getMarathiDayFromDate(p.date));
+        const resolvedTeacher = getHeaderVal(p.teacher, profile?.teacherName, profile?.name);
+        const resolvedSchool = getHeaderVal(p.school, profile?.schoolName, profile?.school);
+        const resolvedStd = getHeaderVal(p.std === "पहिली" ? undefined : p.std, profile?.className, profile?.std, p.std);
+        const resolvedYear = getHeaderVal(p.year, profile?.academicYear, profile?.year, "2025-26");
+
+        return (
         <div key={idx} className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-md space-y-6 day-card">
           <div className="flex items-center justify-between pb-3 border-b border-slate-200 text-xs">
             <span className="font-extrabold text-indigo-700 bg-indigo-50 px-3.5 py-1 rounded-full border border-indigo-100 uppercase tracking-wider">
@@ -875,11 +926,11 @@ export const StructuredDayPageList = forwardRef<
             
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 text-xs font-bold text-slate-900 bg-slate-100/80 p-4 rounded-2xl border-2 border-slate-400 shadow-sm text-left">
               <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">दिनांक</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "date", e.currentTarget.textContent || "")} className="text-orange-600 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{formatCleanDate(p.date)}</span></div>
-              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">वार</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "day", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.day || "-"}</span></div>
-              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">वर्गशिक्षक</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "teacher", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.teacher && p.teacher !== "-" ? p.teacher : (profile?.teacherName || "-")}</span></div>
-              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">शाळा</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "school", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.school && p.school !== "-" ? p.school : (profile?.schoolName || "-")}</span></div>
-              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">इयत्ता</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "std", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.std && p.std !== "-" && p.std !== "पहिली" ? p.std : (profile?.className || p.std || "-")}</span></div>
-              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">सन</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "year", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.year && p.year !== "-" ? p.year : (profile?.academicYear || "2026-27")}</span></div>
+              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">वार</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "day", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{resolvedDay}</span></div>
+              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">वर्गशिक्षक</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "teacher", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{resolvedTeacher}</span></div>
+              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">शाळा</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "school", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{resolvedSchool}</span></div>
+              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">इयत्ता</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "std", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{resolvedStd}</span></div>
+              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">सन</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "year", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{resolvedYear}</span></div>
             </div>
 
             {p.thought && (
@@ -969,7 +1020,8 @@ export const StructuredDayPageList = forwardRef<
             </div>
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 });
@@ -1562,53 +1614,61 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
 
     try {
       const defaultHeaders = ["तासिका", "विषय", "अध्ययन मुद्दा / पाठ्यघटक", "अध्ययन निष्पत्ती", "अध्ययन अनुभव", "साधन तंत्रे", "शैक्षणिक साहित्य"];
+      const profile = getStoredSchoolProfile();
+
       const dayBlocks = pagesToUse
         .filter((p: any) => !isSunday(p.day, p.date))
         .map((p: any, idx: number) => {
         const rows = (p.periods || []).map((row: any, rIdx: number) => `
           <tr style="background:${rIdx % 2 === 0 ? "#fff" : "#f8fafc"}; page-break-inside: avoid; break-inside: avoid;">
-            <td style="text-align:center;font-weight:700;color:#4338ca;width:6%">${row.period}</td>
-            <td style="font-weight:600;width:8%">${row.subject || "-"}</td>
-            <td style="width:11%">${row.topic || "-"}</td>
-            <td style="width:36%">${row.outcome || "-"}</td>
-            <td style="width:25%">${row.experience || "-"}</td>
-            <td style="width:7%">${row.tools || "-"}</td>
-            <td style="width:7%">${row.materials || "-"}</td>
+            <td style="text-align:center;font-weight:800;color:#4338ca;width:6%;font-size:12px;padding:9px 6px;">${row.period}</td>
+            <td style="font-weight:700;color:#0f172a;width:8%;font-size:12px;padding:9px 8px;">${row.subject || "-"}</td>
+            <td style="font-weight:600;color:#1e293b;width:11%;font-size:12px;padding:9px 8px;line-height:1.4;">${row.topic || "-"}</td>
+            <td style="color:#065f46;font-weight:500;width:36%;font-size:12px;padding:9px 8px;line-height:1.5;">${row.outcome || "-"}</td>
+            <td style="color:#1e293b;width:25%;font-size:12px;padding:9px 8px;line-height:1.5;">${row.experience || "-"}</td>
+            <td style="color:#334155;width:7%;font-size:12px;padding:9px 6px;">${row.tools || "-"}</td>
+            <td style="color:#334155;width:7%;font-size:12px;padding:9px 6px;">${row.materials || "-"}</td>
           </tr>`).join("");
 
         const headers = (p.columnHeaders && p.columnHeaders.length > 0 ? p.columnHeaders : defaultHeaders)
-          .map((h: string) => `<th>${h}</th>`).join("");
+          .map((h: string) => `<th style="background-color:#1e293b;color:#ffffff;font-weight:800;font-size:12.5px;padding:10px 8px;border:1.5px solid #475569;text-align:left;">${h}</th>`).join("");
+
+        const dayName = getHeaderVal(p.day, getMarathiDayFromDate(p.date));
+        const teacherVal = getHeaderVal(p.teacher, profile?.teacherName, profile?.name);
+        const schoolVal = getHeaderVal(p.school, profile?.schoolName, profile?.school);
+        const stdVal = getHeaderVal(p.std === "पहिली" ? undefined : p.std, savedRecord?.className, profile?.className, profile?.std, p.std);
+        const yearVal = getHeaderVal(p.year, profile?.academicYear, profile?.year, "2025-26");
 
         return `
-          <div class="day-block" style="margin-bottom: 15px; ${idx > 0 ? "page-break-before: always; break-before: always;" : ""} page-break-inside: avoid; break-inside: avoid;">
-            <div class="day-header" style="display: flex; justify-content: flex-end; margin-bottom: 6px;">
-              <span class="period-count" style="color: #475569; background: #f1f5f9; padding: 4px 10px; border-radius: 20px; font-weight: 600; font-size: 11px;">
+          <div class="day-block" style="margin-bottom: 20px; ${idx > 0 ? "page-break-before: always; break-before: always;" : ""} page-break-inside: avoid; break-inside: avoid;">
+            <div class="day-header" style="display: flex; justify-content: flex-end; margin-bottom: 8px;">
+              <span class="period-count" style="color: #334155; background: #e2e8f0; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 12px;">
                 ${(p.periods || []).length} तासिका (Periods)
               </span>
             </div>
-            <h2 style="font-size: 18px; font-weight: 900; text-align: center; color: #0f172a; margin: 8px 0 12px 0;">दैनंदिन पाठ टाचण</h2>
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; background: #f1f5f9; border: 2px solid #475569; border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; font-size: 11px;">
-              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">दिनांक</span><span style="font-weight:900; color:#4338ca; font-size:12px;">${formatCleanDate(p.date)}</span></div>
-              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">वार</span><span style="font-weight:900; color:#0f172a;">${p.day || "-"}</span></div>
-              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">वर्गशिक्षक</span><span style="font-weight:900; color:#0f172a;">${p.teacher || "-"}</span></div>
-              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">शाळा</span><span style="font-weight:900; color:#0f172a;">${p.school || "-"}</span></div>
-              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">इयत्ता</span><span style="font-weight:900; color:#0f172a;">${p.std || "-"}</span></div>
-              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">सन</span><span style="font-weight:900; color:#0f172a;">${p.year || "-"}</span></div>
+            <h2 style="font-size: 22px; font-weight: 900; text-align: center; color: #0f172a; margin: 10px 0 14px 0; letter-spacing: -0.5px;">दैनंदिन पाठ टाचण</h2>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; background: #f8fafc; border: 2px solid #475569; border-radius: 10px; padding: 12px 16px; margin-bottom: 14px; font-size: 13px;">
+              <div><span style="color:#0f172a; font-size:11px; text-transform:uppercase; font-weight:900; display:block; margin-bottom:2px;">दिनांक</span><span style="font-weight:900; color:#4338ca; font-size:14px;">${formatCleanDate(p.date)}</span></div>
+              <div><span style="color:#0f172a; font-size:11px; text-transform:uppercase; font-weight:900; display:block; margin-bottom:2px;">वार</span><span style="font-weight:900; color:#0f172a; font-size:13px;">${dayName}</span></div>
+              <div><span style="color:#0f172a; font-size:11px; text-transform:uppercase; font-weight:900; display:block; margin-bottom:2px;">वर्गशिक्षक</span><span style="font-weight:900; color:#0f172a; font-size:13px;">${teacherVal}</span></div>
+              <div><span style="color:#0f172a; font-size:11px; text-transform:uppercase; font-weight:900; display:block; margin-bottom:2px;">शाळा</span><span style="font-weight:900; color:#0f172a; font-size:13px;">${schoolVal}</span></div>
+              <div><span style="color:#0f172a; font-size:11px; text-transform:uppercase; font-weight:900; display:block; margin-bottom:2px;">इयत्ता</span><span style="font-weight:900; color:#0f172a; font-size:13px;">${stdVal}</span></div>
+              <div><span style="color:#0f172a; font-size:11px; text-transform:uppercase; font-weight:900; display:block; margin-bottom:2px;">सन</span><span style="font-weight:900; color:#0f172a; font-size:13px;">${yearVal}</span></div>
             </div>
-            ${p.thought ? `<div style="font-size:10.5px; font-style:italic; color:#78350f; background:#fffbeb; border-left:3px solid #f59e0b; padding:7px 12px; margin-bottom:10px; border-radius:4px;">✨ आजचा सुविचार : '${p.thought}'</div>` : ""}
-            <table style="width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 12px;">
+            ${p.thought ? `<div style="font-size:12px; font-style:italic; color:#78350f; background:#fffbeb; border-left:4px solid #f59e0b; padding:9px 14px; margin-bottom:14px; border-radius:6px;">✨ <b>आजचा सुविचार :</b> '${p.thought}'</div>` : ""}
+            <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 16px;">
               <thead>
-                <tr style="background: #f1f5f9; color: #0f172a;">
+                <tr style="background: #1e293b; color: #ffffff;">
                   ${headers}
                 </tr>
               </thead>
               <tbody>${rows}</tbody>
             </table>
-            <div style="border-top: 1px solid #e2e8f0; padding-top: 12px; margin-top: 8px; page-break-inside: avoid; break-inside: avoid;">
-              <p style="font-weight: 700; font-size: 11px; margin-bottom: 4px;">दिवसभरातील वैशिष्टपूर्ण बाबी:</p>
-              <p style="color: #cbd5e1; font-size: 11px; margin-bottom: 4px;">________________________________________________________________________________________</p>
-              <p style="color: #cbd5e1; font-size: 11px; margin-bottom: 4px;">________________________________________________________________________________________</p>
-              <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 12px; padding: 20px 30px 0;">
+            <div style="border-top: 2px solid #cbd5e1; padding-top: 16px; margin-top: 14px; page-break-inside: avoid; break-inside: avoid;">
+              <p style="font-weight: 800; font-size: 13px; color: #0f172a; margin-bottom: 8px;">दिवसभरातील वैशिष्टपूर्ण बाबी:</p>
+              <p style="color: #94a3b8; font-size: 12px; margin-bottom: 6px;">________________________________________________________________________________________</p>
+              <p style="color: #94a3b8; font-size: 12px; margin-bottom: 6px;">________________________________________________________________________________________</p>
+              <div style="display: flex; justify-content: space-between; font-weight: 900; font-size: 14px; padding: 35px 40px 10px; color: #0f172a;">
                 <span>वर्गशिक्षक</span><span>मुख्याध्यापक</span>
               </div>
             </div>
@@ -1617,12 +1677,12 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
 
       const element = document.createElement("div");
       element.innerHTML = `
-        <div style="font-family: 'Noto Sans Devanagari', Arial, sans-serif; color: #1e293b; line-height: 1.4; padding: 10px;">
+        <div style="font-family: 'Noto Sans Devanagari', Arial, sans-serif; color: #1e293b; line-height: 1.5; padding: 12px;">
           <style>
-            table { width: 100%; border-collapse: collapse; margin-top: 4px; font-size: 10.5px; border: 2px solid #475569; }
-            table th { background-color: #f1f5f9 !important; color: #0f172a !important; font-weight: 800 !important; font-size: 10.5px !important; padding: 8px !important; border: 1.5px solid #475569 !important; text-align: left; }
-            table th:first-child { text-align: center; width: 45px; background-color: #e2e8f0 !important; }
-            table td { padding: 7px 8px !important; border: 1.5px solid #94a3b8 !important; vertical-align: top; font-size: 10px !important; line-height: 1.4 !important; }
+            table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 12px; border: 2.5px solid #334155; }
+            table th { background-color: #1e293b !important; color: #ffffff !important; font-weight: 800 !important; font-size: 12.5px !important; padding: 10px 8px !important; border: 1.5px solid #475569 !important; text-align: left; }
+            table th:first-child { text-align: center; width: 45px; background-color: #0f172a !important; color: #ffffff !important; }
+            table td { padding: 9px 10px !important; border: 1.5px solid #64748b !important; vertical-align: top; font-size: 12px !important; line-height: 1.5 !important; font-weight: 500; }
             thead { display: table-header-group; }
             tr { page-break-inside: avoid; break-inside: avoid; }
           </style>
@@ -1634,7 +1694,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
       const baseName = activeFileName.replace(/\.[^/.]+$/, "") || "Teaching_Diary";
       
       const opt = {
-        margin:       6,
+        margin:       5,
         filename:     `${baseName}.pdf`,
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
@@ -1662,56 +1722,56 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
 
   return (
     <div className="w-full bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm flex flex-col h-full min-h-[500px]">
-      <div className="p-4 bg-slate-900 text-white flex items-center justify-between gap-3 shrink-0 flex-wrap">
+      <div className="p-4 bg-white text-slate-800 flex items-center justify-between gap-3 shrink-0 flex-wrap border-b border-slate-200 rounded-t-3xl">
         <div className="flex items-center gap-3 min-w-0">
-          <button
-            type="button"
-            onClick={handleBackNavigation}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all shadow-sm cursor-pointer border border-slate-700 shrink-0"
-            title="मागे जा (Back)"
-          >
-            <ArrowLeft className="size-4 text-indigo-400" />
-            <span>मागे जा (Back)</span>
-          </button>
-          <div className="size-9 rounded-xl bg-indigo-600 flex items-center justify-center shrink-0 shadow-md">
+          {onBack && (
+            <button
+              type="button"
+              onClick={handleBackNavigation}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all shadow-sm cursor-pointer border border-slate-200 shrink-0"
+              title="मागे जा (Back)"
+            >
+              <ArrowLeft className="size-4 text-indigo-600" />
+              <span>मागे जा (Back)</span>
+            </button>
+          )}
+          <div className="size-10 rounded-2xl bg-blue-600 flex items-center justify-center shrink-0 shadow-md shadow-blue-500/20 text-white">
             <FileText className="size-5 text-white" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-bold truncate text-slate-100">{activeFileName}</p>
-            <p className="text-[10px] text-slate-400">
+            <p className="text-sm font-black truncate text-slate-900 tracking-wide">{activeFileName}</p>
+            <p className="text-xs text-slate-500 font-medium">
               {selectedFile ? "Local File Selected" : savedRecord?.diaryDate ? `Saved Record (${savedRecord.diaryDate})` : "Live Preview"}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
           {savedRecord?.diaryDate && structuredPages && structuredPages.length > 1 && (
             <button
               type="button"
               onClick={() => setFilterSingleDate(!filterSingleDate)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all border cursor-pointer ${
+              className={`px-4 py-2 rounded-xl text-xs font-black transition-all border cursor-pointer ${
                 filterSingleDate
-                  ? "bg-amber-500 text-white border-amber-600 shadow-sm"
-                  : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700"
+                  ? "bg-amber-100/90 text-amber-900 border-amber-300 shadow-sm"
+                  : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
               }`}
             >
               {filterSingleDate
-                ? `📌 फक्त ${formatCleanDate(savedRecord.diaryDate)} ची टाचण`
+                ? `📌 पक्क ${formatCleanDate(savedRecord.diaryDate)} ची टाचण`
                 : `📚 सर्व तारखा (${structuredPages.length} दिवसांची टाचण)`}
             </button>
           )}
 
-
-
           {isPdf && hasStructuredView && (
-            <div className="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700 text-xs font-bold">
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
               {isPdf && (
                 <button
                   onClick={() => setViewMode("original")}
                   className={`px-3 py-1 rounded-lg transition-all flex items-center gap-1.5 ${
                     viewMode === "original"
                       ? "bg-indigo-600 text-white shadow-sm"
-                      : "text-slate-400 hover:text-slate-200"
+                      : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
                   <Eye className="size-3.5" /> PDF प्रिव्ह्यू
@@ -1722,7 +1782,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
                 className={`px-3 py-1 rounded-lg transition-all flex items-center gap-1.5 ${
                   viewMode === "structured"
                     ? "bg-indigo-600 text-white shadow-sm"
-                    : "text-slate-400 hover:text-slate-200"
+                    : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 <LayoutGrid className="size-3.5" /> स्ट्रक्चर्ड टाचण
@@ -1732,18 +1792,16 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
 
           {(downloadUrl || hasStructuredView) && (
             <div className="flex items-center gap-2">
-
-
               {hasStructuredView && (
                 <button
                   onClick={handleLocalDownloadPdf}
                   disabled={isGeneratingPdf}
-                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shrink-0 shadow-sm cursor-pointer"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-xl text-xs font-black transition-colors flex items-center gap-2 shrink-0 shadow-sm cursor-pointer border border-emerald-500/30"
                 >
                   {isGeneratingPdf ? (
-                    <><Loader2 className="size-3.5 animate-spin" /> Generating PDF...</>
+                    <><Loader2 className="size-4 animate-spin" /> Generating PDF...</>
                   ) : (
-                    <><Download className="size-3.5" /> Download to PDF</>
+                    <><Download className="size-4" /> Download to PDF</>
                   )}
                 </button>
               )}
@@ -1752,12 +1810,12 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
                 <button
                   onClick={handleSaveChanges}
                   disabled={isSaving}
-                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shrink-0 shadow-sm cursor-pointer"
+                  className="px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white rounded-xl text-xs font-black transition-colors flex items-center gap-2 shrink-0 shadow-sm cursor-pointer border border-orange-400/30"
                 >
                   {isSaving ? (
-                    <><Loader2 className="size-3.5 animate-spin" /> Saving...</>
+                    <><Loader2 className="size-4 animate-spin" /> Saving...</>
                   ) : (
-                    <><FileCheck className="size-3.5" /> Save Changes</>
+                    <><FileCheck className="size-4" /> Save Changes</>
                   )}
                 </button>
               )}
