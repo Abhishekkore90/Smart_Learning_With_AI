@@ -716,12 +716,16 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
 
         let dataUrl = "";
         if (isLandscape) {
-          // Solution 1: Temporarily expand pageEl to 1920px full width with padding so 100% of all columns including अंतिम श्रेणी are captured
+          // Dynamically measure table scrollWidth so 100% of columns including final summary columns are captured
           const origW = pageEl.style.width;
           const origMaxW = pageEl.style.maxWidth;
           const origMinW = pageEl.style.minWidth;
           const origOverflow = pageEl.style.overflow;
           const origPaddingR = pageEl.style.paddingRight;
+
+          const tableEl = pageEl.querySelector("table");
+          const calcWidth = tableEl ? Math.max(tableEl.scrollWidth + 160, 1650) : 1650;
+          const reqWidthPx = `${calcWidth}px`;
 
           const innerContainers = pageEl.querySelectorAll(".overflow-x-auto, .overflow-hidden");
           const innerOrigs = [];
@@ -733,17 +737,17 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
               styleMinW: el.style.minWidth,
               styleOverflow: el.style.overflow,
             });
-            el.style.width = "1920px";
+            el.style.width = reqWidthPx;
             el.style.maxWidth = "none";
-            el.style.minWidth = "1920px";
+            el.style.minWidth = reqWidthPx;
             el.style.overflow = "visible";
           });
 
-          pageEl.style.width = "1920px";
+          pageEl.style.width = reqWidthPx;
           pageEl.style.maxWidth = "none";
-          pageEl.style.minWidth = "1920px";
+          pageEl.style.minWidth = reqWidthPx;
           pageEl.style.overflow = "visible";
-          pageEl.style.paddingRight = "40px";
+          pageEl.style.paddingRight = "60px";
 
           dataUrl = await toPng(pageEl, {
             quality: 1.0,
@@ -751,11 +755,11 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
             cacheBust: true,
             backgroundColor: "#ffffff",
             style: {
-              width: "1920px",
+              width: reqWidthPx,
               maxWidth: "none",
-              minWidth: "1920px",
+              minWidth: reqWidthPx,
               overflow: "visible",
-              paddingRight: "40px",
+              paddingRight: "60px",
             },
           });
 
@@ -2285,55 +2289,47 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                     <span>सन: <b>{academicYear}</b></span>
                   </div>
 
-                  <div className="w-full overflow-x-auto">
-                    <table className="w-full border-collapse border border-lime-600 text-center font-medium min-w-[1280px]">
+                  <div className="w-full overflow-x-auto pb-2">
+                    <table className="w-max min-w-full border-collapse border border-lime-600 text-center font-medium">
                       <thead>
                         {/* ROW 1: Main Headers */}
-                        <tr className="bg-lime-200 text-slate-900 font-extrabold border-b border-lime-600">
-                          <th className="border border-lime-600 p-1 text-[9.5px] leading-tight min-w-[28px]" rowSpan={2}>अ.क्र.</th>
-                          <th className="border border-lime-600 p-1 text-left text-[10.5px] min-w-[140px] whitespace-nowrap" rowSpan={2}>विद्यार्थ्याचे नाव</th>
+                        <tr className="bg-lime-200 text-slate-900 font-black border-b border-lime-600">
+                          <th className="border border-lime-600 p-1 text-[10.5px] sm:text-[11px] leading-tight min-w-[28px]" rowSpan={2}>अ.क्र.</th>
+                          <th className="border border-lime-600 p-1 text-left text-[11px] sm:text-[11.5px] min-w-[140px] whitespace-nowrap" rowSpan={2}>विद्यार्थ्याचे नाव</th>
                           {subjects.map((sub) => {
                             return (
-                              <th key={sub} className="border border-lime-600 p-1 text-[9.5px] font-extrabold whitespace-nowrap leading-tight" colSpan={4} title={sub}>
+                              <th key={sub} className="border border-lime-600 p-1 text-[10.5px] sm:text-[11px] font-black whitespace-nowrap leading-tight" colSpan={4} title={sub}>
                                 {sub.replace("प्रथम भाषा : ", "").replace("द्वितीय भाषा : ", "").replace("तृतीय भाषा : ", "").replace("सामान्य ", "").replace("सामाजिक ", "सो.")}
                               </th>
                             );
                           })}
-                          <th className="border border-lime-600 p-1 text-[9px] leading-tight min-w-[42px] whitespace-nowrap" rowSpan={2}>उपस्थिती</th>
-                          <th className="border border-lime-600 p-1 text-[9px] leading-tight min-w-[42px] whitespace-nowrap" rowSpan={2}>एकूण गुण</th>
-                          <th className="border border-lime-600 p-1 text-[9px] leading-tight min-w-[44px] whitespace-nowrap" rowSpan={2}>टक्केवारी</th>
-                          <th className="border border-lime-600 p-1 text-[9px] leading-tight min-w-[42px] whitespace-nowrap" rowSpan={2}>अंतिम श्रेणी</th>
+                          <th className="border border-lime-600 p-1 text-[10px] leading-tight min-w-[50px] whitespace-nowrap" rowSpan={2}>उपस्थिती</th>
+                          <th className="border border-lime-600 p-1 text-[10px] leading-tight min-w-[54px] whitespace-nowrap" rowSpan={2}>एकूण गुण</th>
+                          <th className="border border-lime-600 p-1 text-[10px] leading-tight min-w-[54px] whitespace-nowrap" rowSpan={2}>टक्केवारी</th>
+                          <th className="border border-lime-600 p-1 text-[10px] leading-tight min-w-[72px] whitespace-nowrap" rowSpan={2}>अंतिम श्रेणी</th>
                         </tr>
 
-                        {/* ROW 2: Sub-Headers (Direct 4 sub-cols under each subject) */}
-                        <tr className="bg-lime-200 text-slate-900 font-extrabold border-b border-lime-600">
+                        {/* ROW 2: Sub-Headers (Uniform 4 sub-cols under each subject) */}
+                        <tr className="bg-lime-200 text-slate-900 font-black border-b border-lime-600">
                           {subjects.map((sub) => {
                             const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
-                            return isPractical ? (
+                            return (
                               <React.Fragment key={sub}>
-                                <th className="border border-lime-600 p-1 text-[8.5px] leading-tight font-bold whitespace-nowrap min-w-[64px]" colSpan={2}>
-                                  अ (आकारिक)
-                                </th>
-                                <th className="border border-lime-600 p-1 text-[8.5px] font-bold whitespace-nowrap min-w-[32px]">एकूण</th>
-                                <th className="border border-lime-600 p-1 text-[8.5px] font-bold whitespace-nowrap min-w-[32px]">श्रेणी</th>
-                              </React.Fragment>
-                            ) : (
-                              <React.Fragment key={sub}>
-                                <th className="border border-lime-600 p-1 text-[8.5px] leading-tight font-bold whitespace-nowrap min-w-[36px]">
+                                <th className="border border-lime-600 p-0.5 py-1 text-[9.5px] leading-none font-black whitespace-nowrap min-w-[34px] text-center">
                                   अ (आ)
                                 </th>
-                                <th className="border border-lime-600 p-1 text-[8.5px] leading-tight font-bold whitespace-nowrap min-w-[36px]">
-                                  ब (सं)
+                                <th className="border border-lime-600 p-0.5 py-1 text-[9.5px] leading-none font-black whitespace-nowrap min-w-[34px] text-center">
+                                  {isPractical ? "-" : "ब (सं)"}
                                 </th>
-                                <th className="border border-lime-600 p-1 text-[8.5px] font-bold whitespace-nowrap min-w-[32px]">एकूण</th>
-                                <th className="border border-lime-600 p-1 text-[8.5px] font-bold whitespace-nowrap min-w-[32px]">श्रेणी</th>
+                                <th className="border border-lime-600 p-0.5 py-1 text-[9.5px] leading-none font-black whitespace-nowrap min-w-[34px] text-center">एकूण</th>
+                                <th className="border border-lime-600 p-0.5 py-1 text-[9.5px] leading-none font-black whitespace-nowrap min-w-[34px] text-center">श्रेणी</th>
                               </React.Fragment>
                             );
                           })}
                         </tr>
 
                         {/* ROW 3: Sub-Header Row: Max Marks (पैकी) */}
-                        <tr className="bg-lime-100 text-slate-900 font-black border-b border-lime-600 text-[8.5px]">
+                        <tr className="bg-lime-100 text-slate-900 font-black border-b border-lime-600 text-[9.5px]">
                           <td className="border border-lime-600 p-0.5"></td>
                           <td className="border border-lime-600 p-1 text-left font-black">पैकी</td>
                           {subjects.map((sub) => {
@@ -2341,24 +2337,18 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                             const formMax = ["1st", "2nd", "1", "2"].includes(String(selectedClass)) ? "70" : ["3rd", "4th", "3", "4"].includes(String(selectedClass)) ? "60" : ["5th", "6th", "5", "6"].includes(String(selectedClass)) ? "50" : "40";
                             const semMax = ["1st", "2nd", "1", "2"].includes(String(selectedClass)) ? "30" : ["3rd", "4th", "3", "4"].includes(String(selectedClass)) ? "40" : ["5th", "6th", "5", "6"].includes(String(selectedClass)) ? "50" : "60";
 
-                            return isPractical ? (
+                            return (
                               <React.Fragment key={sub}>
-                                <td className="border border-lime-600 p-0.5" colSpan={2}>100</td>
-                                <td className="border border-lime-600 p-0.5">100</td>
-                                <td className="border border-lime-600 p-0.5"></td>
-                              </React.Fragment>
-                            ) : (
-                              <React.Fragment key={sub}>
-                                <td className="border border-lime-600 p-0.5">{formMax}</td>
-                                <td className="border border-lime-600 p-0.5">{semMax}</td>
+                                <td className="border border-lime-600 p-0.5">{isPractical ? "100" : formMax}</td>
+                                <td className="border border-lime-600 p-0.5">{isPractical ? "-" : semMax}</td>
                                 <td className="border border-lime-600 p-0.5">100</td>
                                 <td className="border border-lime-600 p-0.5"></td>
                               </React.Fragment>
                             );
                           })}
-                          <td className="border border-lime-600 p-0.5 text-[8px]">{totalWorkingDays > 0 ? totalWorkingDays : "-"}</td>
-                          <td className="border border-lime-600 p-0.5 text-[8px]">{subjects.length * 100}</td>
-                          <td className="border border-lime-600 p-0.5 text-[8px]">100%</td>
+                          <td className="border border-lime-600 p-0.5 text-[9px]">{totalWorkingDays > 0 ? totalWorkingDays : "-"}</td>
+                          <td className="border border-lime-600 p-0.5 text-[9px]">{subjects.length * 100}</td>
+                          <td className="border border-lime-600 p-0.5 text-[9px]">100%</td>
                           <td className="border border-lime-600 p-0.5"></td>
                         </tr>
                       </thead>
@@ -2376,30 +2366,24 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                           const overallGrade = getGrade(pctVal);
 
                           return (
-                            <tr key={student.id} className="border-b border-lime-300 hover:bg-lime-50/40 text-[9px]">
-                              <td className="border border-lime-600 p-0.5 font-bold text-center text-[8.5px]">{idx + 1}</td>
-                              <td className="border border-lime-600 p-1 text-left font-bold text-slate-900 text-[9.5px] truncate" title={student.name}>{student.name}</td>
+                            <tr key={student.id} className="border-b border-lime-300 hover:bg-lime-50/40 text-[9.5px]">
+                              <td className="border border-lime-600 p-0.5 font-bold text-center text-[9.5px]">{idx + 1}</td>
+                              <td className="border border-lime-600 p-1 text-left font-bold text-slate-900 text-[10.5px] truncate" title={student.name}>{student.name}</td>
                               {subjects.map((sub) => {
                                 const stats = getStudentSubjectStats(student, sub);
-                                return stats.isPracticalSub ? (
+                                return (
                                   <React.Fragment key={sub}>
-                                    <td className="border border-lime-600 p-0.5 font-bold text-[8.5px]" colSpan={2}>{stats.formTotal || "-"}</td>
-                                    <td className="border border-lime-600 p-0.5 font-extrabold text-blue-900 text-[8.5px]">{stats.grandTotal || "-"}</td>
-                                    <td className="border border-lime-600 p-0.5 font-bold text-emerald-800 text-[8.5px]">{stats.gradeStr}</td>
-                                  </React.Fragment>
-                                ) : (
-                                  <React.Fragment key={sub}>
-                                    <td className="border border-lime-600 p-0.5 font-bold text-[8.5px]">{stats.formTotal || "-"}</td>
-                                    <td className="border border-lime-600 p-0.5 font-bold text-[8.5px]">{stats.semTotal || "-"}</td>
-                                    <td className="border border-lime-600 p-0.5 font-extrabold text-blue-900 text-[8.5px]">{stats.grandTotal || "-"}</td>
-                                    <td className="border border-lime-600 p-0.5 font-bold text-emerald-800 text-[8.5px]">{stats.gradeStr}</td>
+                                    <td className="border border-lime-600 p-0.5 font-bold text-[9.5px]">{stats.formTotal || "-"}</td>
+                                    <td className="border border-lime-600 p-0.5 font-bold text-[9.5px]">{stats.isPracticalSub ? "-" : (stats.semTotal || "-")}</td>
+                                    <td className="border border-lime-600 p-0.5 font-black text-blue-950 text-[9.5px]">{stats.grandTotal || "-"}</td>
+                                    <td className="border border-lime-600 p-0.5 font-black text-emerald-800 text-[9.5px]">{stats.gradeStr}</td>
                                   </React.Fragment>
                                 );
                               })}
-                              <td className="border border-lime-600 p-0.5 font-bold text-[8.5px]">{attDays > 0 ? attDays : "-"}</td>
-                              <td className="border border-lime-600 p-0.5 font-black text-blue-900 text-[8.5px]">{grandObtainedTotal}</td>
-                              <td className="border border-lime-600 p-0.5 font-black text-blue-900 text-[8px]">{overallPct}</td>
-                              <td className="border border-lime-600 p-0.5 font-black text-emerald-900 text-[8.5px]">{overallGrade}</td>
+                              <td className="border border-lime-600 p-0.5 font-bold text-[9.5px]">{attDays > 0 ? attDays : "-"}</td>
+                              <td className="border border-lime-600 p-0.5 font-black text-blue-950 text-[9.5px]">{grandObtainedTotal}</td>
+                              <td className="border border-lime-600 p-0.5 font-black text-blue-950 text-[9px]">{overallPct}</td>
+                              <td className="border border-lime-600 p-0.5 font-black text-emerald-950 text-[10px]">{overallGrade}</td>
                             </tr>
                           );
                         })}
