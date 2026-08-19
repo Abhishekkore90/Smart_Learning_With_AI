@@ -6,14 +6,14 @@ import { getTeacherId } from "../lib/teacherIsolationHelper";
 import { Download, Printer, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import "./result.css";
-import { CLASS_1_OUTCOMES } from "@/data/class1_outcomes";
-import { CLASS_2_OUTCOMES } from "@/data/class2_outcomes";
-import { CLASS_3_OUTCOMES } from "@/data/class3_outcomes";
-import { CLASS_4_OUTCOMES } from "@/data/class4_outcomes";
-import { CLASS_5_OUTCOMES } from "@/data/class5_outcomes";
-import { CLASS_6_OUTCOMES } from "@/data/class6_outcomes";
-import { CLASS_7_OUTCOMES } from "@/data/class7_outcomes";
-import { CLASS_8_OUTCOMES } from "@/data/class8_outcomes";
+import { CLASS_1_OUTCOMES, CLASS_1_SEMI_OUTCOMES } from "@/data/class1_outcomes";
+import { CLASS_2_OUTCOMES, CLASS_2_SEMI_OUTCOMES } from "@/data/class2_outcomes";
+import { CLASS_3_OUTCOMES, CLASS_3_SEMI_OUTCOMES } from "@/data/class3_outcomes";
+import { CLASS_4_OUTCOMES, CLASS_4_SEMI_OUTCOMES } from "@/data/class4_outcomes";
+import { CLASS_5_OUTCOMES, CLASS_5_SEMI_OUTCOMES } from "@/data/class5_outcomes";
+import { CLASS_6_OUTCOMES, CLASS_6_SEMI_OUTCOMES } from "@/data/class6_outcomes";
+import { CLASS_7_OUTCOMES, CLASS_7_SEMI_OUTCOMES } from "@/data/class7_outcomes";
+import { CLASS_8_OUTCOMES, CLASS_8_SEMI_OUTCOMES } from "@/data/class8_outcomes";
 
 // Dynamic Class Outcomes Resolver
 const getClassOutcomes = (classValue, subjectKey, customOutcomesMap = {}) => {
@@ -27,21 +27,28 @@ const getClassOutcomes = (classValue, subjectKey, customOutcomesMap = {}) => {
     return customOutcomesMap[subjectKey];
   }
 
+  const currentMedium = localStorage.getItem("cce_selected_medium") || "marathi";
   const norm = String(classValue || "1st").toLowerCase().replace(/[^0-9]/g, "") || "1";
 
   let outcomeBank = null;
-  if (norm === "1") outcomeBank = CLASS_1_OUTCOMES;
-  else if (norm === "2") outcomeBank = CLASS_2_OUTCOMES;
-  else if (norm === "3") outcomeBank = CLASS_3_OUTCOMES;
-  else if (norm === "4") outcomeBank = CLASS_4_OUTCOMES;
-  else if (norm === "5") outcomeBank = CLASS_5_OUTCOMES;
-  else if (norm === "6") outcomeBank = CLASS_6_OUTCOMES;
-  else if (norm === "7") outcomeBank = CLASS_7_OUTCOMES;
-  else if (norm === "8") outcomeBank = CLASS_8_OUTCOMES;
+  if (norm === "1") outcomeBank = currentMedium === "semi" ? CLASS_1_SEMI_OUTCOMES : CLASS_1_OUTCOMES;
+  else if (norm === "2") outcomeBank = currentMedium === "semi" ? CLASS_2_SEMI_OUTCOMES : CLASS_2_OUTCOMES;
+  else if (norm === "3") outcomeBank = currentMedium === "semi" ? CLASS_3_SEMI_OUTCOMES : CLASS_3_OUTCOMES;
+  else if (norm === "4") outcomeBank = currentMedium === "semi" ? CLASS_4_SEMI_OUTCOMES : CLASS_4_OUTCOMES;
+  else if (norm === "5") outcomeBank = currentMedium === "semi" ? CLASS_5_SEMI_OUTCOMES : CLASS_5_OUTCOMES;
+  else if (norm === "6") outcomeBank = currentMedium === "semi" ? CLASS_6_SEMI_OUTCOMES : CLASS_6_OUTCOMES;
+  else if (norm === "7") outcomeBank = currentMedium === "semi" ? CLASS_7_SEMI_OUTCOMES : CLASS_7_OUTCOMES;
+  else if (norm === "8") outcomeBank = currentMedium === "semi" ? CLASS_8_SEMI_OUTCOMES : CLASS_8_OUTCOMES;
 
   if (outcomeBank) {
-    if (outcomeBank[normKey]) return outcomeBank[normKey];
-    if (outcomeBank[subjectKey]) return outcomeBank[subjectKey];
+    let list = outcomeBank[normKey] || outcomeBank[subjectKey];
+    if (list) {
+      if (currentMedium === "semi" && (normKey === "math" || normKey === "science" || normKey === "evs1" || normKey === "evs2")) {
+        const isDevanagari = (str) => /[\u0900-\u097F]/.test(str);
+        return list.filter((item) => !isDevanagari(item.text));
+      }
+      return list;
+    }
   }
 
   return [];
@@ -65,17 +72,17 @@ const OutcomeTable = ({ title, outcomes, subjectName, getUserSelectedLevel, stud
         {/* Table Header Row (Flexbox) */}
         <div className="flex bg-slate-100 text-slate-900 font-bold border-b border-slate-400 text-[11px]">
           {/* Column 1: Outcome Code */}
-          <div className="w-[70px] min-w-[70px] border-r border-slate-400 p-2 flex items-center justify-center text-center font-black leading-tight">
+          <div className="w-[76px] min-w-[76px] shrink-0 border-r border-slate-400 p-2 flex items-center justify-center text-center font-black leading-tight box-border">
             अध्ययन<br />निष्पत्ती क्र.
           </div>
 
           {/* Column 2: Outcome Text */}
-          <div className="flex-1 border-r border-slate-400 p-2 flex items-center font-black text-[11.5px]">
+          <div className="flex-1 border-r border-slate-400 p-2 flex items-center font-black text-[11.5px] box-border">
             अध्ययन निष्पत्ती
           </div>
 
           {/* Column 3: Levels Header (Flex Column with Sub-headers) */}
-          <div className="w-[128px] min-w-[128px] flex flex-col">
+          <div className="w-[128px] min-w-[128px] shrink-0 flex flex-col box-border">
             <div className="border-b border-slate-400 p-1 text-center font-black text-[11px]">
               स्तर
             </div>
@@ -98,17 +105,17 @@ const OutcomeTable = ({ title, outcomes, subjectName, getUserSelectedLevel, stud
               className={`flex ${!isLast ? "border-b border-slate-300" : ""}`}
             >
               {/* Code */}
-              <div className="w-[70px] min-w-[70px] border-r border-slate-300 p-1.5 flex items-center justify-center text-center font-bold text-slate-900 text-[10px] whitespace-nowrap">
+              <div className="w-[76px] min-w-[76px] shrink-0 border-r border-slate-300 p-1.5 px-2 flex items-center justify-center text-center font-extrabold text-slate-900 text-[10.5px] whitespace-nowrap box-border">
                 {item.code}
               </div>
 
               {/* Text */}
-              <div className="flex-1 border-r border-slate-300 p-1.5 px-2 flex items-center text-slate-900 text-[11px] font-medium leading-snug">
+              <div className="flex-1 border-r border-slate-300 p-1.5 px-2 flex items-center text-slate-900 text-[11px] font-medium leading-snug box-border">
                 {item.text}
               </div>
 
               {/* Level Ticks */}
-              <div className="w-[128px] min-w-[128px] flex text-[13px] font-black text-blue-700">
+              <div className="w-[128px] min-w-[128px] shrink-0 flex text-[13px] font-black text-blue-700 box-border">
                 <div className="w-1/4 border-r border-slate-300 flex items-center justify-center">
                   {level === 1 ? "✓" : ""}
                 </div>
@@ -268,11 +275,16 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
 
         setConfiguredSubjects(activeSubs);
 
-        // Fetch custom user-created learning outcomes if saved
+        // Fetch custom user-created learning outcomes if saved (medium isolated first)
         try {
-          const customListSnap = await getDoc(doc(db, "cce_outcomes_list_v2", `${selectedClass}_${academicYear}`));
-          if (customListSnap.exists() && customListSnap.data().outcomes) {
-            setCustomOutcomesData(customListSnap.data().outcomes);
+          const customMedSnap = await getDoc(doc(db, "cce_outcomes_list_v2", `${selectedClass}_${currentMed}_${academicYear}`));
+          if (customMedSnap.exists() && customMedSnap.data().outcomes) {
+            setCustomOutcomesData(customMedSnap.data().outcomes);
+          } else {
+            const customListSnap = await getDoc(doc(db, "cce_outcomes_list_v2", `${selectedClass}_${academicYear}`));
+            if (customListSnap.exists() && customListSnap.data().outcomes) {
+              setCustomOutcomesData(customListSnap.data().outcomes);
+            }
           }
         } catch (e) { }
       } catch (e) { }
@@ -330,8 +342,12 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
         const bunnyOutcomes = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_outcomes.json`);
         const bunnyLevels = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_levels.json`);
 
-        // Try teacher-isolated outcome docs first, then generic
+        // Try teacher and medium-isolated outcome docs first, then generic
         const outcomeDocIds = [
+          `${currentTeacherId}_${selectedClass}_${currentMedium}_${academicYear}_sem2`,
+          `${selectedClass}_${currentMedium}_${academicYear}_sem2`,
+          `${currentTeacherId}_${selectedClass}_${currentMedium}_${academicYear}_sem1`,
+          `${selectedClass}_${currentMedium}_${academicYear}_sem1`,
           `${currentTeacherId}_${selectedClass}_${academicYear}_sem2`,
           `${selectedClass}_${academicYear}_sem2`,
           `${currentTeacherId}_${selectedClass}_${academicYear}_sem1`,
@@ -408,12 +424,16 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
   const handleDownloadPdf = async () => {
     if (!printRef.current) return;
     setDownloading(true);
-    toast.info("अध्ययन निष्पती PDF तयार होत आहे, कृपया वाट पाहा...");
+    toast.info("अध्ययन निष्पत्ती PDF तयार होत आहे, कृपया वाट पाहा...");
+
+    const container = printRef.current;
+    container.classList.add("cce-pdf-generating");
+
     try {
       const html2canvas = (await import("html2canvas")).default;
       const { jsPDF } = await import("jspdf");
 
-      const pageElements = printRef.current.querySelectorAll(".pdf-page");
+      const pageElements = container.querySelectorAll(".pdf-page");
       if (!pageElements || pageElements.length === 0) {
         toast.error("कोणतेही पान सापडले नाही!");
         setDownloading(false);
@@ -435,11 +455,12 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
           useCORS: true,
           logging: false,
           backgroundColor: "#ffffff",
+          windowWidth: 794, // 210mm in pixels at 96 DPI
         });
 
         // Compressed high-efficiency JPEG encoding (keeps multi-page PDF < 10 MB)
-        const imgData = canvas.toDataURL("image/jpeg", 0.72);
-        if (i > 0) pdf.addPage();
+        const imgData = canvas.toDataURL("image/jpeg", 0.82);
+        if (i > 0) pdf.addPage("a4", "portrait");
         pdf.addImage(imgData, "JPEG", 0, 0, 210, 297, undefined, "FAST");
       }
 
@@ -448,8 +469,10 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
     } catch (err) {
       console.error("PDF generation error:", err);
       toast.error("PDF निर्मितीत अडचण आली: " + err.message);
+    } finally {
+      container.classList.remove("cce-pdf-generating");
+      setDownloading(false);
     }
-    setDownloading(false);
   };
 
   const handlePrint = () => {
@@ -634,7 +657,76 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
       )}
 
       {/* -------------------- PRINT CONTAINER (CLASS-SPECIFIC OUTCOMES & USER SELECTED LEVELS) -------------------- */}
-      <div ref={printRef} className="cce-pdf-container max-w-4xl mx-auto">
+      <div ref={printRef} className="cce-pdf-container w-full max-w-[215mm] mx-auto space-y-6 flex flex-col items-center">
+        <style>{`
+          @media screen {
+            .cce-pdf-container .pdf-page {
+              width: 100% !important;
+              max-width: 210mm !important;
+              min-width: 0 !important;
+              height: auto !important;
+              min-height: 0 !important;
+            }
+          }
+          .cce-pdf-generating {
+            margin: 0 !important;
+            padding: 0 !important;
+            max-width: none !important;
+            width: 210mm !important;
+            background-color: #ffffff !important;
+          }
+          .cce-pdf-generating .pdf-page {
+            margin: 0 !important;
+            padding: 8mm 6mm !important;
+            box-shadow: none !important;
+            border: none !important;
+            border-radius: 0 !important;
+            width: 210mm !important;
+            min-width: 210mm !important;
+            max-width: 210mm !important;
+            height: 294mm !important;
+            min-height: 294mm !important;
+            max-height: 294mm !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
+            background-color: #ffffff !important;
+          }
+          .cce-pdf-generating .pdf-page:last-child {
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+          }
+          @media print {
+            @page {
+              size: A4 portrait;
+              margin: 0;
+            }
+            body * {
+              visibility: hidden;
+            }
+            .no-print {
+              display: none !important;
+            }
+            .pdf-page, .pdf-page * {
+              visibility: visible !important;
+            }
+            .pdf-page {
+              position: relative !important;
+              left: 0 !important;
+              top: 0 !important;
+              width: 210mm !important;
+              height: 294mm !important;
+              max-width: 210mm !important;
+              max-height: 294mm !important;
+              min-width: 210mm !important;
+              min-height: 294mm !important;
+              margin: 0 !important;
+              padding: 8mm 6mm !important;
+              box-sizing: border-box !important;
+              overflow: hidden !important;
+              background-color: #ffffff !important;
+            }
+          }
+        `}</style>
         {students.map((student, sIdx) => {
           const activeSubjectSections = [
             { key: "मराठी", title: "प्रथम भाषा: मराठी", outcomes: marathiOutcomes, subjectName: "मराठी" },
@@ -656,11 +748,10 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
             return (
               <div
                 key={`${student.id}_${sec.key}`}
-                className={`pdf-page bg-white p-5 border border-slate-200 rounded-xl shadow-sm flex flex-col justify-between mb-4 ${
+                className={`pdf-page bg-white p-5 border border-slate-200 rounded-xl shadow-sm flex flex-col justify-between mb-4 w-full max-w-[210mm] min-w-0 ${
                   !isFirstPage ? "pdf-page-break" : ""
                 }`}
                 style={{
-                  minHeight: "275mm",
                   boxSizing: "border-box",
                   pageBreakBefore: isFirstPage ? "auto" : "always",
                   breakBefore: isFirstPage ? "auto" : "page",

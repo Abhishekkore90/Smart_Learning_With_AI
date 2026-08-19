@@ -162,3 +162,52 @@ export const CLASS_8_OUTCOMES: Record<string, OutcomeItem[]> = {
     { id: "c8_g28", code: "08.73G.28", text: "मिळविलेल्या माहितीच्या आधारे क्षेत्रभेटीचा अहवाल सादर करतो." }
   ]
 };
+
+export const CLASS_8_SEMI_OUTCOMES: Record<string, OutcomeItem[]> = {
+  ...CLASS_8_OUTCOMES,
+  math: [
+    { id: "c8_semi_mt1", code: "08.71.01", text: "generalises properties of addition, subtraction, multiplication and division of rational numbers through patterns." },
+    { id: "c8_semi_mt2", code: "08.71.02", text: "finds out as many rational numbers as possible between two given rational numbers." },
+    { id: "c8_semi_mt3", code: "08.71.03", text: "finds squares, cubes and square roots and cube roots of numbers using different methods." },
+    { id: "c8_semi_mt4", code: "08.71.04", text: "solves problems with integral exponents." },
+    { id: "c8_semi_mt5", code: "08.71.05", text: "solves puzzles and daily life problems using variables." },
+    { id: "c8_semi_mt6", code: "08.71.06", text: "multiplies algebraic expressions. For example, expands (2x-5)(3x2+7)." },
+    { id: "c8_semi_mt7", code: "08.71.07", text: "uses various algebraic identities in solving problems of daily life." },
+    { id: "c8_semi_mt8", code: "08.71.08", text: "applies the concept of percent in profit and loss situation in finding discount and compound interest." },
+    { id: "c8_semi_mt9", code: "08.71.09", text: "calculates discount percent when marked price and actual discount are given or finds profit per cent when cost price and profit in a transaction are given." },
+    { id: "c8_semi_mt10", code: "08.71.10", text: "solves problems based on direct and inverse proportions." },
+    { id: "c8_semi_mt11", code: "08.71.11", text: "solves problems related to angles of a quadrilateral using angle sum property." },
+    { id: "c8_semi_mt12", code: "08.71.12", text: "verifies properties of parallelograms and establishes the relationship between them through reasoning." },
+    { id: "c8_semi_mt13", code: "08.71.13", text: "constructs different quadrilaterals using compasses and straight edge." },
+    { id: "c8_semi_mt14", code: "08.71.14", text: "verifies Euler’s relation through pattern." },
+    { id: "c8_semi_mt15", code: "08.71.15", text: "estimates the area of shapes like trapezium and other polygons by using square grid/graph sheet and verifies using formulas." },
+    { id: "c8_semi_mt16", code: "08.71.16", text: "finds the area of a polygon." },
+    { id: "c8_semi_mt17", code: "08.71.17", text: "finds surface area and volume of cuboidal and cylindrical object." },
+    { id: "c8_semi_mt18", code: "08.71.18", text: "draws and interprets bar charts." },
+    { id: "c8_semi_mt19", code: "08.71.19", text: "verifies the properties of angles formed by the transversal of two parallel lines." },
+    { id: "c8_semi_mt20", code: "08.71.20", text: "Uses SSS, SAS, ASA, Hypo-side tests of congruence of triangles." },
+    { id: "c8_semi_mt21", code: "08.71.21", text: "estimates the area of closed figures using graph paper or grid paper." },
+    { id: "c8_semi_mt22", code: "08.71.22", text: "computes mean of the data used in day-to-day life." },
+    { id: "c8_semi_mt23", code: "08.71.23", text: "constructs parallel line to the given line." },
+  ],
+  science: [
+    { id: "c8_semi_sc1", code: "08.72.01", text: "differentiates materials and organisms, such as, natural and human made fibres; contact and non-contact forces; liquids as electrical conductors and insulators; plant and animal cells; viviparous and oviparous animals, on the basis of their properties, structure and functions." },
+    { id: "c8_semi_sc2", code: "08.72.02", text: "classifies materials and organisms based on properties/characteristics, for example, metals and non metals; useful and harmful microorganisms; sexual and asexual reproduction; celestial objects; exhaustible and inexhaustible natural resources, etc." },
+    { id: "c8_semi_sc3", code: "08.72.03", text: "conducts simple investigations to seek answers to queries, for example, What are the conditions required for combustion? Why do we add salt and sugar in pickles and murambas? Do liquids exert equal pressure at the same depth?" },
+    { id: "c8_semi_sc4", code: "08.72.04", text: "relates processes and phenomenon with causes, for example, smog formation with the presence of pollutants in air; deterioration of monuments with acid rain, etc." },
+    { id: "c8_semi_sc5", code: "08.72.05", text: "explains processes and phenomenon, for example, various processes in human and animals; production and propagation of sound; chemical properties of electric current etc." },
+    { id: "c8_semi_sc6", code: "08.72.06", text: "write word equation for chemical reactions, for example, reactions of metals and non-metals with air, water and acids, etc." },
+    { id: "c8_semi_sc7", code: "08.72.07", text: "measures angles of incidence and reflection." },
+    { id: "c8_semi_sc8", code: "08.72.08", text: "prepares slides of microorganisms; onion peel, human cheek cells, etc and describes their microscopic features." },
+    { id: "c8_semi_sc9", code: "08.72.09", text: "draws labelled diagram/flow charts, for example, structure of cells, structure of heart and respiratory system, experimental set ups, etc." },
+    { id: "c8_semi_sc10", code: "08.72.10", text: "constructs/prepare models using materials from surroundings and explains their working, for example, ektari, electroscope, fire extinguisher, string instruments, periscope etc." },
+    { id: "c8_semi_sc11", code: "08.72.11", text: "exhibits creativity in designing, planning making use of available resources, etc." },
+    { id: "c8_semi_sc12", code: "08.72.12", text: "applies learning of scientific concepts in day-to-day life, for example, purifying water; segregating biodegradable and non-biodegradable wastes; increasing crop production; using appropriate metals and non-metals for various purposes; increasing/reducing friction; challenging myths, legends and taboos regarding adolescence, etc." },
+    { id: "c8_semi_sc13", code: "08.72.13", text: "discusses and appreciates stories of scientific discoveries." },
+    { id: "c8_semi_sc14", code: "08.72.14", text: "makes efforts to protect environment, for example, using resources judiciously; making controlled use of fertilisers and pesticides; suggesting ways to cope with environmental hazards, etc." },
+    { id: "c8_semi_sc15", code: "08.72.15", text: "sensitises others with the over utilization of natural resources." },
+    { id: "c8_semi_sc16", code: "08.72.16", text: "exhibits values of honesty, objectivity, cooperation, freedom from fear and prejudices." },
+    { id: "c8_semi_sc17", code: "08.72.17", text: "explains the formation of universe and the progress of humans in space technology." },
+    { id: "c8_semi_sc18", code: "08.72.18", text: "uses different ICT equipments to understand the different scientific concepts." }
+  ]
+};

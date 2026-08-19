@@ -2646,3 +2646,57 @@ export const CLASS_6_OUTCOMES: Record<string, OutcomeItem[]> = {
     }
   ]
 };
+
+export const CLASS_6_SEMI_OUTCOMES: Record<string, OutcomeItem[]> = {
+  ...CLASS_6_OUTCOMES,
+  math: [
+    { id: "c6_semi_mt1", code: "06.71.01", text: "applies HCF or LCM in a particular situation." },
+    { id: "c6_semi_mt2", code: "06.71.02", text: "solves problems involving addition and subtraction of integers." },
+    { id: "c6_semi_mt3", code: "06.71.03", text: "uses fractions and decimals in different situations which involve money, length, temperature etc. For example, 7½ metres of cloth, distance between two places is 112.5 km etc." },
+    { id: "c6_semi_mt4", code: "06.71.04", text: "solves problems on daily life situations involving addition and subtraction of fractions / decimals." },
+    { id: "c6_semi_mt5", code: "06.71.05", text: "uses variable with different operations to generalise a given situation. For example, perimeter of a rectangle with sides x units and 3 units is 2(x+3) units." },
+    { id: "c6_semi_mt6", code: "06.71.06", text: "compares quantities using ratios in different situations. For example, the ratio of girls to boys in a particular class is 3:2." },
+    { id: "c6_semi_mt7", code: "06.71.07", text: "uses unitary method in solving various word problems. For example, if the cost of a dozen notebooks is given she/he finds the cost of 7 notebooks by first finding the cost of 1 notebook." },
+    { id: "c6_semi_mt8", code: "06.71.08", text: "describes geometrical ideas/terms/concepts like line, line segment, angle, triangle, quadrilateral, circle, etc., with the help of examples in surroundings." },
+    { id: "c6_semi_mt9", code: "06.71.09", text: "demonstrates an understanding of angles." },
+    { id: "c6_semi_mt10", code: "06.71.10", text: "identifies examples of angles in the surroundings, classifies angles according to their measure, estimates the measure of angles using 45°, 90° and 180° as reference angles." },
+    { id: "c6_semi_mt11", code: "06.71.11", text: "demonstrates an understanding of line-symmetry." },
+    { id: "c6_semi_mt12", code: "06.71.12", text: "identifies symmetrical 2-Dimensional (2-D) shapes which are symmetrical along one or more lines." },
+    { id: "c6_semi_mt13", code: "06.71.13", text: "creates symmetrical 2-D shapes." },
+    { id: "c6_semi_mt14", code: "06.71.14", text: "describes the basic concepts for example, ray, plane and parallel lines." },
+    { id: "c6_semi_mt15", code: "06.71.15", text: "identifies collinear points." },
+    { id: "c6_semi_mt16", code: "06.71.16", text: "identifies point of concurrancy." },
+    { id: "c6_semi_mt17", code: "06.71.17", text: "constant angle bisector." },
+    { id: "c6_semi_mt18", code: "06.71.18", text: "applies multiplication and division on fraction." },
+    { id: "c6_semi_mt19", code: "06.71.19", text: "computes percent profit and loss in daily life examples." },
+    { id: "c6_semi_mt20", code: "06.71.20", text: "classifies triangles into different groups/types on the basis of their angles and sides. For example - scalene, isosceles or equilateral on the basis of sides, etc." },
+    { id: "c6_semi_mt21", code: "06.71.21", text: "identifies various (3-D) objects like sphere, cube, cuboid, cylinder, cone in the surroundings." },
+    { id: "c6_semi_mt22", code: "06.71.22", text: "describes and provides examples of edges, vertices and faces of 3-D objects." },
+    { id: "c6_semi_mt23", code: "06.71.23", text: "shows through paper folding/paper cutting, ink blots etc, the concept of symmetry by reflector." },
+    { id: "c6_semi_mt24", code: "06.71.24", text: "arranges given/collected information such as expenditure on different items in a family in the last six months, in the form of table, pictograph and bar graph and interprets them." },
+    { id: "c6_semi_mt25", code: "06.71.25", text: "performs some basic constructions." },
+    { id: "c6_semi_mt26", code: "06.71.26", text: "identifies polygon." },
+    { id: "c6_semi_mt27", code: "06.71.27", text: "understands some bank transactions and calculates simple interest." },
+    { id: "c6_semi_mt28", code: "06.71.28", text: "identifies sides and angles of quadrilateral." },
+    { id: "c6_semi_mt29", code: "06.71.29", text: "tells some properties of triangles." },
+    { id: "c6_semi_mt30", code: "06.71.30", text: "solves simple equations in one variable." },
+    { id: "c6_semi_mt31", code: "06.71.31", text: "tells the tests of divisibility." },
+  ],
+  science: [
+    { id: "c6_semi_sc1", code: "06.72.01", text: "Identifies materials and organisms such as plant fibres, flowers on the basis of observable features, i.e. appearance, texture, function, aroma, etc." },
+    { id: "c6_semi_sc2", code: "06.72.02", text: "Differentiates materials and organisms, such as, fibre and yarn; tap and fibrous roots; electrical conductors and insulators; on the basis of their properties, structure and functions." },
+    { id: "c6_semi_sc3", code: "06.72.03", text: "Classifies materials, organisms and processes based on observable properties, for example, materials as soluble, insoluble, transparent, translucent and opaque; changes as reversible and irreversible, plants as herbs, shrubs, trees, creeper, climbers, components of habitat as biotic and abiotic; motion as rectilinear, circular, periodic etc." },
+    { id: "c6_semi_sc4", code: "06.72.04", text: "Conducts simple investigations to seek answers to queries, for example, what are the food nutrients present in animal fodder? Can all physical changes be reversible? Does a freely suspended magnet align in a particular direction?" },
+    { id: "c6_semi_sc5", code: "06.72.05", text: "Relates processes and phenomenon with causes, for example, diseases due to deficiency of diet/deficiency diseases; adaptations of animals and plants with their habitats, quality of air with pollutants etc." },
+    { id: "c6_semi_sc6", code: "06.72.06", text: "Explains processes and phenomenon for example, processing of plant fibres, movements in plants and animals, formation of shadows, reflection of light from plain mirror, variation in composition of air, preparation of vermi compost etc." },
+    { id: "c6_semi_sc7", code: "06.72.07", text: "Measures physical quantities and expresses in SI units, for example, length." },
+    { id: "c6_semi_sc8", code: "06.72.08", text: "Draw labelled diagrams/flow charts of organisms and processes, for example, parts of flowers, joints; filtration, water cycle, etc." },
+    { id: "c6_semi_sc9", code: "06.72.09", text: "Constructs models using materials from surroundings and explains their working, for example, pinhole camera, periscope, electric torch, etc." },
+    { id: "c6_semi_sc10", code: "06.72.10", text: "Applies learning to scientific concepts in day to day life, for example, selecting food items for a balanced diet, separating materials, selecting season appropriate fabrics, using compass needle for finding directions, suggesting ways to cope with heavy rain/drought etc." },
+    { id: "c6_semi_sc11", code: "06.72.11", text: "Makes efforts to protect environment, for example, minimising wastage of food, uses of water, uses of electricity, and generation of waste, spreading awareness to adopt rain water harvesting, care for plants (plantation) etc." },
+    { id: "c6_semi_sc12", code: "06.72.12", text: "Exhibits creativity in designing, making use of available resources, planning etc." },
+    { id: "c6_semi_sc13", code: "06.72.13", text: "Exhibits values of honesty, objectivity, cooperation, freedom from fear and prejudices." },
+    { id: "c6_semi_sc14", code: "06.72.14", text: "Comparative study of star, planet, satellite, Asteroid by observing them in the Universe." },
+    { id: "c6_semi_sc15", code: "06.72.15", text: "Collect information of different concepts, processes by using internet and different ICT technology." }
+  ]
+};

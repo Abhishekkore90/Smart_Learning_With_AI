@@ -174,14 +174,26 @@ export default function AnnualResultRegister({ initialClass, initialYear, onBack
 
           if (!sName) sName = "जिल्हा परिषद शाळा धोंडेवाडी(पेड)ता.तासगाव जि.सांगली";
 
-          const classSubjects = getDefaultSubjectsForClass(selectedClass, selectedMedium) || [
-            "मराठी",
-            "इंग्रजी",
-            "गणित",
-            "कला",
-            "कार्यानुभव",
-            "शारीरिक शिक्षण",
-          ];
+          let classSubjects = [];
+          try {
+            const stored = localStorage.getItem(`cce_subjects_${selectedClass}_${academicYear}_${selectedMedium}`) ||
+                           localStorage.getItem(`cce_subjects_${selectedClass}_${academicYear}`);
+            if (stored) {
+              const parsed = JSON.parse(stored);
+              if (Array.isArray(parsed) && parsed.length > 0) classSubjects = parsed;
+            }
+          } catch (e) {}
+
+          if (!classSubjects || classSubjects.length === 0) {
+            classSubjects = getDefaultSubjectsForClass(selectedClass, selectedMedium) || [
+              "मराठी",
+              "इंग्रजी",
+              "गणित",
+              "कला",
+              "कार्यानुभव",
+              "शारीरिक शिक्षण",
+            ];
+          }
 
           return { sName, classSubjects };
         })(),

@@ -632,26 +632,33 @@ export function CCERemarks({
     };
   }, [selectedClass, academicYear, activeSemester, selectedMedium]);
 
-  // Helper to retrieve student's remarks record
+  // Helper to retrieve student's remarks record (Strict exact match ONLY - new students start 100% empty)
   const getStudentRemarksRecord = (st: Student): StudentRemarks => {
-    if (!allRemarks || typeof allRemarks !== "object") return {};
+    if (!allRemarks || typeof allRemarks !== "object" || !st) return {};
 
-    if (st.id && allRemarks[st.id]) return allRemarks[st.id];
-    if (st.rollNo && allRemarks[st.rollNo]) return allRemarks[st.rollNo];
-    if (st.rollNo && allRemarks[String(st.rollNo)]) return allRemarks[String(st.rollNo)];
-    if (st.name && allRemarks[st.name]) return allRemarks[st.name];
-    if (st.fullName && allRemarks[st.fullName]) return allRemarks[st.fullName];
+    const sId = (st.id || "").trim();
+    const sRoll = (st.rollNo !== undefined && st.rollNo !== null ? String(st.rollNo) : "").trim();
+    const sName = (st.name || "").trim();
+    const sFullName = (st.fullName || "").trim();
 
-    const sId = (st.id || "").toLowerCase();
-    const sName = (st.fullName || st.name || "").toLowerCase().trim();
-    const sRoll = (st.rollNo || "").trim();
+    if (sId && allRemarks[sId]) return allRemarks[sId];
+    if (sRoll && allRemarks[sRoll]) return allRemarks[sRoll];
+    if (sFullName && allRemarks[sFullName]) return allRemarks[sFullName];
+    if (sName && allRemarks[sName]) return allRemarks[sName];
+
+    const sIdLower = sId.toLowerCase();
+    const sRollLower = sRoll.toLowerCase();
+    const sNameLower = sName.toLowerCase();
+    const sFullNameLower = sFullName.toLowerCase();
 
     for (const [k, v] of Object.entries(allRemarks)) {
-      const kLower = k.toLowerCase().trim();
-      if (sId && kLower === sId) return v;
-      if (sRoll && (kLower === sRoll || kLower === `roll_${sRoll}` || kLower === `student_${sRoll}`))
-        return v;
-      if (sName && (kLower === sName || kLower.includes(sName) || sName.includes(kLower))) return v;
+      const kLower = String(k).trim().toLowerCase();
+      if (!kLower) continue;
+
+      if (sIdLower && kLower === sIdLower) return v;
+      if (sRollLower && (kLower === sRollLower || kLower === `roll_${sRollLower}` || kLower === `student_${sRollLower}`)) return v;
+      if (sFullNameLower && kLower === sFullNameLower) return v;
+      if (sNameLower && kLower === sNameLower) return v;
     }
 
     return {};
