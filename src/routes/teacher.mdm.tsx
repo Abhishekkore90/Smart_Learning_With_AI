@@ -12994,7 +12994,7 @@ function TeacherMDMPage() {
                             const rec = getIncomingForItem(def.key, engMonthNames[monthNum], year, "1 To 5");
                             const used = getUsedForMonth(engMonthNames[monthNum], year.toString(), "1 To 5", def.key);
                             const demand = Math.max(0, (enrolledPat * 0.02 * 20) - (prev + rec - used));
-                            return { sr: idx + 1, name: def.nameMr, prev, rec, used, demand: parseFloat(demand.toFixed(2)) };
+                            return { sr: idx + 1, key: def.key, name: def.nameMr, prev, rec, used, demand: parseFloat(demand.toFixed(2)) };
                           });
 
                           const cookedDays = riceData.cookedDays;
@@ -13065,7 +13065,8 @@ function TeacherMDMPage() {
                                   <tbody>
                                     {items.map((row) => {
                                       const total = row.prev + row.rec;
-                                      const bal = total - row.used;
+                                      const isVeg = row.sr === 22 || (row as any).key === "Vegetables" || String(row.name).includes("भाजी") || row.name === "भाजीपाला";
+                                       const bal = isVeg ? 0 : (total - row.used);
                                       return (
                                         <tr key={row.sr} className={`border-b border-slate-700 h-8 ${row.sr % 2 === 0 ? "bg-slate-50/30" : "bg-white"} hover:bg-amber-50/20`}>
                                           <td className="border-r border-black py-0.5 text-xs">{row.sr}</td>
@@ -13074,7 +13075,7 @@ function TeacherMDMPage() {
                                           <td className="border-r border-black py-0.5">{row.rec !== 0 ? row.rec.toFixed(3) : ""}</td>
                                           <td className="border-r border-black py-0.5 font-bold">{total !== 0 ? total.toFixed(3) : ""}</td>
                                           <td className="border-r border-black py-0.5 font-bold text-slate-900">{row.used !== 0 ? row.used.toFixed(3) : ""}</td>
-                                          <td className={`border-r border-black py-0.5 font-extrabold ${bal < 0 ? "text-red-600" : "text-slate-900"}`}>{bal !== 0 ? bal.toFixed(3) : ""}</td>
+                                          <td className={`border-r border-black py-0.5 font-extrabold ${isVeg ? "text-slate-900" : (bal < 0 ? "text-red-600" : "text-slate-900")}`}>{isVeg ? "0.000" : (bal !== 0 ? bal.toFixed(3) : "")}</td>
                                           <td className="border-r border-black py-0.5">{row.demand !== 0 ? row.demand.toFixed(2) : ""}</td>
                                           <td className="border-r border-black py-0.5"></td>
                                         </tr>

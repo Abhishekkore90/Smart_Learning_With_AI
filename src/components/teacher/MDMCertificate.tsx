@@ -93,10 +93,10 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
   primaryStateGrant = 0,
   upperCenterGrant = 0,
   upperStateGrant = 0,
-  primaryKendraShare = "3.27",
-  primaryRajyaShare = "2.18",
-  upperKendraShare = "4.90",
-  upperRajyaShare = "3.27",
+  primaryKendraShare = "1.55",
+  primaryRajyaShare = "1.04",
+  upperKendraShare = "1.55",
+  upperRajyaShare = "1.04",
   totalGrantAll = 0,
   vegUsageKg,
 }) => {
@@ -145,28 +145,78 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
     return "________";
   };
 
-  const renderCountInputs = () => (
-    <div className="flex flex-col items-center justify-center gap-1.5 p-1 text-xs">
-      <div className="flex items-center justify-between gap-1 w-full">
-        <span className="text-[11px] font-extrabold text-slate-900 whitespace-nowrap">स्वयंपाकी / मदतनीस:</span>
-        <input
-          type="number"
-          min="0"
-          step="1"
-          value={cookCount !== undefined && cookCount !== null && cookCount !== "" ? cookCount : totalStaffCount}
-          onClick={(e) => e.stopPropagation()}
-          onChange={(e) => {
-            onCookCountChange?.(e.target.value);
-            onHelperCountChange?.(e.target.value);
-          }}
-          className="w-14 text-center font-black bg-amber-50/90 border border-amber-400 rounded px-1 py-0.5 text-xs text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none print:border-none print:bg-transparent print:w-auto"
-        />
+  const renderCountInputs = () => {
+    const currentRaw = cookCount !== undefined && cookCount !== null ? cookCount : totalStaffCount;
+    const numericVal = parseInt(currentRaw.toString(), 10) || 0;
+
+    const handleDecrement = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      const nextVal = Math.max(0, numericVal - 1);
+      onCookCountChange?.(nextVal.toString());
+      onHelperCountChange?.(nextVal.toString());
+    };
+
+    const handleIncrement = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      const nextVal = Math.min(10, numericVal + 1);
+      onCookCountChange?.(nextVal.toString());
+      onHelperCountChange?.(nextVal.toString());
+    };
+
+    return (
+      <div className="flex flex-col items-center justify-center gap-1.5 p-1 text-xs">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-1 w-full">
+          <span className="text-[11px] font-extrabold text-slate-900 whitespace-nowrap">स्वयंपाकी / मदतनीस:</span>
+          <div className="flex items-center justify-center gap-1">
+            <button
+              type="button"
+              onClick={handleDecrement}
+              disabled={numericVal <= 0}
+              className="w-6 h-6 flex items-center justify-center rounded border border-slate-400 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-900 font-black text-sm disabled:opacity-40 disabled:cursor-not-allowed print:hidden select-none"
+              title="कमी करा (-)"
+            >
+              -
+            </button>
+            <input
+              type="number"
+              min="0"
+              max="10"
+              step="1"
+              value={cookCount !== undefined && cookCount !== null ? cookCount : totalStaffCount}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === "") {
+                  onCookCountChange?.("");
+                  onHelperCountChange?.("");
+                  return;
+                }
+                const parsed = parseInt(val, 10);
+                if (!isNaN(parsed)) {
+                  const clamped = Math.min(10, Math.max(0, parsed));
+                  onCookCountChange?.(clamped.toString());
+                  onHelperCountChange?.(clamped.toString());
+                }
+              }}
+              className="w-10 text-center font-black bg-amber-50/90 border border-amber-400 rounded py-0.5 text-xs text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none print:border-none print:bg-transparent print:w-auto"
+            />
+            <button
+              type="button"
+              onClick={handleIncrement}
+              disabled={numericVal >= 10}
+              className="w-6 h-6 flex items-center justify-center rounded border border-slate-400 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-900 font-black text-sm disabled:opacity-40 disabled:cursor-not-allowed print:hidden select-none"
+              title="वाढवा (+)"
+            >
+              +
+            </button>
+          </div>
+        </div>
+        <div className="text-[10px] text-slate-600 font-bold">
+          (निकष: {totalStaffCount} व्यक्ती)
+        </div>
       </div>
-      <div className="text-[10px] text-slate-600 font-bold">
-        (निकष: {totalStaffCount} व्यक्ती)
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="print-page border border-slate-300 py-4 sm:py-6 px-3 sm:px-8 bg-white text-black font-sans text-xs relative w-full max-w-full mx-auto shadow-md flex flex-col justify-between overflow-x-auto print:w-full print:h-auto print:border-none print:shadow-none print:p-0 print:overflow-x-visible">
