@@ -1234,7 +1234,7 @@ function TeacherMDMPage() {
         ? Math.max(maxScrollWidth, 800)
         : isPortraitReport
         ? Math.max(maxScrollWidth, 850)
-        : 1400;
+        : Math.max(maxScrollWidth, 1650);
 
       clone.style.position = 'absolute';
       clone.style.top = '0px';
@@ -12668,7 +12668,7 @@ function TeacherMDMPage() {
                                 </div>
 
                                 <div className="w-full overflow-x-auto">
-                                  <table className="min-w-[1400px] w-full border-collapse border border-slate-700 text-center text-xs font-medium">
+                                  <table className="min-w-[1650px] w-full border-collapse border border-slate-700 text-center text-xs font-medium">
                                     <thead>
                                       <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-700">
                                         {colHeaders.map((h, idx) => (
