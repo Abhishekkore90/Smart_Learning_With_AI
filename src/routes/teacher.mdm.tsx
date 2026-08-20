@@ -1314,6 +1314,13 @@ function TeacherMDMPage() {
 
       for (let i = 0; i < elementsToRender.length; i++) {
         const pageEl = elementsToRender[i] as HTMLElement;
+
+        pageEl.style.width = `${totalRenderWidth}px`;
+        pageEl.style.minWidth = `${totalRenderWidth}px`;
+        pageEl.style.maxWidth = `${totalRenderWidth}px`;
+        pageEl.style.boxSizing = "border-box";
+        pageEl.style.overflow = "visible";
+
         const canvas = await html2canvas(pageEl, {
           scale: 2.5,
           useCORS: true,
@@ -1328,13 +1335,35 @@ function TeacherMDMPage() {
             styleNodes.forEach((node) => {
               clonedDoc.head.appendChild(node.cloneNode(true));
             });
-            const targetEl = element || clonedDoc.querySelector("#monthly-mdm-report-print") || clonedDoc.body.firstElementChild;
-            if (targetEl) {
-              targetEl.style.width = `${totalRenderWidth}px`;
-              targetEl.style.maxWidth = `${totalRenderWidth}px`;
-              targetEl.style.minWidth = `${totalRenderWidth}px`;
-              targetEl.style.margin = "0 auto";
-              targetEl.style.boxSizing = "border-box";
+
+            clonedDoc.body.style.width = `${totalRenderWidth}px`;
+            clonedDoc.body.style.margin = "0";
+            clonedDoc.body.style.padding = "0";
+            clonedDoc.documentElement.style.margin = "0";
+            clonedDoc.documentElement.style.padding = "0";
+
+            const rootReport = clonedDoc.querySelector("#monthly-mdm-report-print");
+            if (rootReport) {
+              rootReport.style.width = `${totalRenderWidth}px`;
+              rootReport.style.minWidth = `${totalRenderWidth}px`;
+              rootReport.style.maxWidth = `${totalRenderWidth}px`;
+              rootReport.style.boxSizing = "border-box";
+            }
+
+            const allPages = clonedDoc.querySelectorAll('.print-page, .poshan-pdf-page');
+            allPages.forEach((p: HTMLElement) => {
+              p.style.width = `${totalRenderWidth}px`;
+              p.style.minWidth = `${totalRenderWidth}px`;
+              p.style.maxWidth = `${totalRenderWidth}px`;
+              p.style.boxSizing = "border-box";
+              p.style.overflow = "visible";
+            });
+
+            if (element) {
+              element.style.width = `${totalRenderWidth}px`;
+              element.style.minWidth = `${totalRenderWidth}px`;
+              element.style.maxWidth = `${totalRenderWidth}px`;
+              element.style.boxSizing = "border-box";
             }
           }
         });
