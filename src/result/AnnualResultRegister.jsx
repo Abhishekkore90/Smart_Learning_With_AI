@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Printer, Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, Printer, Loader2, RefreshCw, Download } from "lucide-react";
+import { toast } from "sonner";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { getTeacherId } from "@/lib/teacherIsolationHelper";
@@ -93,6 +94,7 @@ const SAMPLE_STUDENTS = [
 ];
 
 export default function AnnualResultRegister({ initialClass, initialYear, onBack }) {
+  const [downloading, setDownloading] = useState(false);
   const [selectedClass, setSelectedClass] = useState(
     initialClass || (typeof localStorage !== "undefined" ? localStorage.getItem("cce_selected_class") : null) || "1st"
   );
@@ -415,6 +417,96 @@ export default function AnnualResultRegister({ initialClass, initialYear, onBack
     return 234;
   };
 
+  const handleDownloadPdf = async () => {
+    if (!printRef.current) return;
+    setDownloading(true);
+    toast.info("वार्षिक निकाल पत्रक PDF तयार होत आहे, कृपया वाट पाहा...");
+
+    try {
+      let toPng;
+      try {
+        const imgModule = await import("html-to-image");
+        toPng = imgModule.toPng;
+      } catch (e) {
+        const hModule = await import("html2canvas-pro");
+        const canvas = await (hModule.default || hModule)(printRef.current, { scale: 2 });
+        const imgData = canvas.toDataURL("image/png");
+        const { default: jsPDF } = await import("jspdf");
+        const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "legal", compress: true });
+        pdf.addImage(imgData, "PNG", 5, 5, 345, 205, undefined, "FAST");
+        pdf.save(`वार्षिक_निकाल_पत्रक_${selectedClass}_${academicYear}.pdf`);
+        toast.success("वार्षिक निकाल पत्रक PDF यशस्वीरित्या थेट डाऊनलोड झाली!");
+        setDownloading(false);
+        return;
+      }
+
+      const { default: jsPDF } = await import("jspdf");
+      const tableEl = printRef.current;
+
+      const origW = tableEl.style.width;
+      const origMaxW = tableEl.style.maxWidth;
+      const origOverflow = tableEl.style.overflow;
+
+      const calcWidth = Math.max(tableEl.scrollWidth + 100, 1600);
+      const reqWidthPx = `${calcWidth}px`;
+
+      tableEl.style.width = reqWidthPx;
+      tableEl.style.maxWidth = "none";
+      tableEl.style.overflow = "visible";
+
+      const dataUrl = await toPng(tableEl, {
+        quality: 1.0,
+        pixelRatio: 3,
+        cacheBust: true,
+        backgroundColor: "#ffffff",
+        style: {
+          width: reqWidthPx,
+          maxWidth: "none",
+          overflow: "visible",
+        },
+      });
+
+      tableEl.style.width = origW;
+      tableEl.style.maxWidth = origMaxW;
+      tableEl.style.overflow = origOverflow;
+
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise((resolve) => {
+        if (img.complete) resolve();
+        else img.onload = resolve;
+      });
+
+      const naturalWidth = img.naturalWidth || 1;
+      const naturalHeight = img.naturalHeight || 1;
+      const legalWidth = 355.6; // mm Legal Landscape
+      const legalHeight = 215.9; // mm
+      const margin = 5; // mm
+
+      const printableWidth = legalWidth - (margin * 2);
+      const calcHeight = Number(((naturalHeight / naturalWidth) * printableWidth).toFixed(2));
+      const targetHeight = Math.min(legalHeight - (margin * 2), calcHeight);
+      const yOffset = Number(((legalHeight - targetHeight) / 2).toFixed(2));
+
+      const pdf = new jsPDF({
+        orientation: "landscape",
+        unit: "mm",
+        format: "legal",
+        compress: true,
+      });
+
+      pdf.addImage(dataUrl, "PNG", margin, Math.max(0, yOffset), printableWidth, targetHeight, undefined, "FAST");
+
+      pdf.save(`वार्षिक_निकाल_पत्रक_${selectedClass}_${academicYear}.pdf`);
+      toast.success("वार्षिक निकाल पत्रक PDF यशस्वीरित्या थेट डाऊनलोड झाली!");
+    } catch (err) {
+      console.error("PDF generation error:", err);
+      toast.error("PDF डाऊनलोड करताना त्रुटी आली. कृपया 'प्रिंट करा' बटण वापरा.");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -441,15 +533,17 @@ export default function AnnualResultRegister({ initialClass, initialYear, onBack
         <div className="flex items-center gap-3 flex-wrap">
           <button
             onClick={loadRegisterData}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all cursor-pointer"
           >
             <RefreshCw className="size-4" /> रिफ्रेश
           </button>
           <button
-            onClick={handlePrint}
-            className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 rounded-xl shadow-md transition-all cursor-pointer"
+            onClick={handleDownloadPdf}
+            disabled={downloading}
+            className="flex items-center gap-1.5 px-4.5 py-2 text-xs font-extrabold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 rounded-xl shadow-md shadow-blue-200 transition-all cursor-pointer disabled:opacity-50"
           >
-            <Printer className="size-4" /> प्रिंट काढा / PDF डाऊनलोड
+            {downloading ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+            <span>{downloading ? "डाऊनलोड होत आहे..." : "PDF डाऊनलोड करा"}</span>
           </button>
         </div>
       </div>

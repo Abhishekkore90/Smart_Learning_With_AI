@@ -54,84 +54,100 @@ const getClassOutcomes = (classValue, subjectKey, customOutcomesMap = {}) => {
   return [];
 };
 
+// Helper to chunk arrays for clean multi-page pagination
+const chunkArray = (arr, size) => {
+  if (!arr || arr.length === 0) return [];
+  const result = [];
+  for (let i = 0; i < arr.length; i += size) {
+    result.push(arr.slice(i, i + size));
+  }
+  return result;
+};
+
 const OutcomeTable = ({ title, outcomes, subjectName, getUserSelectedLevel, student }) => {
   if (!outcomes || outcomes.length === 0) return null;
 
   return (
-    <div className="mb-3">
+    <div className="w-full mb-3">
       {/* Subject Title Banner */}
-      <h3
-        className="text-sm font-black text-slate-900 mb-2.5 text-center bg-amber-100 py-1.5 rounded-lg border border-amber-300 shadow-sm"
+      <div
+        className="w-full text-center bg-amber-100 py-2.5 px-4 rounded-full border border-amber-300 shadow-xs mb-3 text-slate-900 font-black text-base sm:text-lg tracking-tight"
         style={{ breakAfter: "avoid", pageBreakAfter: "avoid" }}
       >
         {title}
-      </h3>
+      </div>
 
-      {/* Flexbox Container for Outcomes Table */}
-      <div className="w-full border border-slate-400 rounded-lg overflow-hidden bg-white">
-        {/* Table Header Row (Flexbox) */}
-        <div className="flex bg-slate-100 text-slate-900 font-bold border-b border-slate-400 text-[11px]">
-          {/* Column 1: Outcome Code */}
-          <div className="w-[76px] min-w-[76px] shrink-0 border-r border-slate-400 p-2 flex items-center justify-center text-center font-black leading-tight box-border">
-            अध्ययन<br />निष्पत्ती क्र.
-          </div>
-
-          {/* Column 2: Outcome Text */}
-          <div className="flex-1 border-r border-slate-400 p-2 flex items-center font-black text-[11.5px] box-border">
-            अध्ययन निष्पत्ती
-          </div>
-
-          {/* Column 3: Levels Header (Flex Column with Sub-headers) */}
-          <div className="w-[128px] min-w-[128px] shrink-0 flex flex-col box-border">
-            <div className="border-b border-slate-400 p-1 text-center font-black text-[11px]">
-              स्तर
-            </div>
-            <div className="flex flex-1 text-[10.5px]">
-              <div className="w-1/4 border-r border-slate-400 py-1 flex items-center justify-center font-bold">1</div>
-              <div className="w-1/4 border-r border-slate-400 py-1 flex items-center justify-center font-bold">2</div>
-              <div className="w-1/4 border-r border-slate-400 py-1 flex items-center justify-center font-bold">3</div>
-              <div className="w-1/4 py-1 flex items-center justify-center font-bold">4</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Table Body Rows (Flexbox) */}
-        {outcomes.map((item, idx) => {
-          const level = getUserSelectedLevel(student, item.code, subjectName);
-          const isLast = idx === outcomes.length - 1;
-          return (
-            <div
-              key={item.code}
-              className={`flex ${!isLast ? "border-b border-slate-300" : ""}`}
-            >
-              {/* Code */}
-              <div className="w-[76px] min-w-[76px] shrink-0 border-r border-slate-300 p-1.5 px-2 flex items-center justify-center text-center font-extrabold text-slate-900 text-[10.5px] whitespace-nowrap box-border">
-                {item.code}
-              </div>
-
-              {/* Text */}
-              <div className="flex-1 border-r border-slate-300 p-1.5 px-2 flex items-center text-slate-900 text-[11px] font-medium leading-snug box-border">
-                {item.text}
-              </div>
-
-              {/* Level Ticks */}
-              <div className="w-[128px] min-w-[128px] shrink-0 flex text-[13px] font-black text-blue-700 box-border">
-                <div className="w-1/4 border-r border-slate-300 flex items-center justify-center">
-                  {level === 1 ? "✓" : ""}
-                </div>
-                <div className="w-1/4 border-r border-slate-300 flex items-center justify-center">
-                  {level === 2 ? "✓" : ""}
-                </div>
-                <div className="w-1/4 border-r border-slate-300 flex items-center justify-center">
-                  {level === 3 ? "✓" : ""}
-                </div>
-                <div className="w-1/4 flex items-center justify-center">
-                  {level === 4 ? "✓" : ""}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+      {/* HTML Table Container for Outcomes Table */}
+      <div className="w-full border border-slate-300 rounded-2xl overflow-hidden bg-white shadow-xs">
+        <table
+          className="w-full border-collapse text-slate-900 text-xs bg-white"
+          style={{ tableLayout: "fixed", width: "100%", borderCollapse: "collapse" }}
+        >
+          <colgroup>
+            <col style={{ width: "11%" }} />
+            <col style={{ width: "67%" }} />
+            <col style={{ width: "5.5%" }} />
+            <col style={{ width: "5.5%" }} />
+            <col style={{ width: "5.5%" }} />
+            <col style={{ width: "5.5%" }} />
+          </colgroup>
+          <thead>
+            <tr className="bg-slate-100 border-b border-slate-300 font-black text-xs sm:text-sm text-slate-900">
+              <th
+                rowSpan={2}
+                className="border-r border-slate-300 p-2 text-center align-middle font-black leading-tight"
+              >
+                अध्ययन<br />निष्पत्ती क्र.
+              </th>
+              <th
+                rowSpan={2}
+                className="border-r border-slate-300 p-2 px-3 text-left align-middle font-black text-xs sm:text-sm"
+              >
+                अध्ययन निष्पत्ती
+              </th>
+              <th
+                colSpan={4}
+                className="p-1.5 text-center font-black text-xs sm:text-sm"
+              >
+                स्तर
+              </th>
+            </tr>
+            <tr className="bg-slate-100 border-b border-slate-300 font-black text-xs text-slate-900">
+              <th className="border-t border-r border-slate-300 py-1 text-center font-black">1</th>
+              <th className="border-t border-r border-slate-300 py-1 text-center font-black">2</th>
+              <th className="border-t border-r border-slate-300 py-1 text-center font-black">3</th>
+              <th className="border-t py-1 text-center font-black">4</th>
+            </tr>
+          </thead>
+          <tbody>
+            {outcomes.map((item, idx) => {
+              const level = getUserSelectedLevel(student, item.code, subjectName);
+              const isLast = idx === outcomes.length - 1;
+              return (
+                <tr key={item.code} className={!isLast ? "border-b border-slate-300" : ""}>
+                  <td className="border-r border-slate-300 p-2 px-2 text-center font-black text-[11.5px] sm:text-xs text-slate-900 align-middle whitespace-nowrap">
+                    {item.code}
+                  </td>
+                  <td className="border-r border-slate-300 p-2 px-3.5 text-left font-semibold text-[12.5px] sm:text-[13px] text-slate-900 leading-snug align-middle">
+                    {item.text}
+                  </td>
+                  <td className="border-r border-slate-300 text-center align-middle font-black text-amber-800 text-[16px]">
+                    {level === 1 ? "✓" : ""}
+                  </td>
+                  <td className="border-r border-slate-300 text-center align-middle font-black text-amber-800 text-[16px]">
+                    {level === 2 ? "✓" : ""}
+                  </td>
+                  <td className="border-r border-slate-300 text-center align-middle font-black text-amber-800 text-[16px]">
+                    {level === 3 ? "✓" : ""}
+                  </td>
+                  <td className="text-center align-middle font-black text-amber-800 text-[16px]">
+                    {level === 4 ? "✓" : ""}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -428,18 +444,20 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
 
     const container = printRef.current;
     container.classList.add("cce-pdf-generating");
+    window.scrollTo(0, 0);
 
     try {
       const html2canvas = (await import("html2canvas")).default;
       const { jsPDF } = await import("jspdf");
 
-      const pageElements = container.querySelectorAll(".pdf-page");
+      const pageElements = Array.from(container.querySelectorAll(".pdf-page"));
       if (!pageElements || pageElements.length === 0) {
         toast.error("कोणतेही पान सापडले नाही!");
         setDownloading(false);
         return;
       }
 
+      const totalPages = pageElements.length;
       const pdf = new jsPDF({
         unit: "mm",
         format: "a4",
@@ -447,25 +465,85 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
         compress: true,
       });
 
-      for (let i = 0; i < pageElements.length; i++) {
+      let isFirstPdfPage = true;
+
+      for (let i = 0; i < totalPages; i++) {
+        // Live progress toast for classes with many students
+        if (totalPages > 4 && (i % 4 === 0 || i === totalPages - 1)) {
+          toast.info(`PDF तयार होत आहे: पान ${i + 1} / ${totalPages}...`, { id: "pdf-progress" });
+        }
+
         const pageEl = pageElements[i];
+
+        // Temporarily enforce desktop A4 pixel width (794px) and full height on mobile viewports
+        const origW = pageEl.style.width;
+        const origMinW = pageEl.style.minWidth;
+        const origMaxW = pageEl.style.maxWidth;
+        const origH = pageEl.style.height;
+        const origOverflow = pageEl.style.overflow;
+
+        pageEl.style.width = "794px";
+        pageEl.style.minWidth = "794px";
+        pageEl.style.maxWidth = "794px";
+        pageEl.style.height = "auto";
+        pageEl.style.overflow = "visible";
+        pageEl.style.boxSizing = "border-box";
+
+        const renderHeight = Math.max(pageEl.scrollHeight, 1050);
 
         const canvas = await html2canvas(pageEl, {
           scale: 2,
           useCORS: true,
           logging: false,
           backgroundColor: "#ffffff",
-          windowWidth: 794, // 210mm in pixels at 96 DPI
+          width: 794,
+          windowWidth: 794,
+          height: renderHeight,
+          windowHeight: renderHeight,
         });
 
-        // Compressed high-efficiency JPEG encoding (keeps multi-page PDF < 10 MB)
-        const imgData = canvas.toDataURL("image/jpeg", 0.82);
-        if (i > 0) pdf.addPage("a4", "portrait");
-        pdf.addImage(imgData, "JPEG", 0, 0, 210, 297, undefined, "FAST");
+        // Restore original inline styles
+        pageEl.style.width = origW;
+        pageEl.style.minWidth = origMinW;
+        pageEl.style.maxWidth = origMaxW;
+        pageEl.style.height = origH;
+        pageEl.style.overflow = origOverflow;
+
+        // Compressed high-efficiency JPEG encoding
+        const imgData = canvas.toDataURL("image/jpeg", 0.85);
+        const imgWidth = 210;
+        const imgHeight = (canvas.height * 210) / canvas.width;
+
+        if (imgHeight <= 297) {
+          if (!isFirstPdfPage) pdf.addPage("a4", "portrait");
+          pdf.addImage(imgData, "JPEG", 0, 0, imgWidth, imgHeight, undefined, "FAST");
+          isFirstPdfPage = false;
+        } else {
+          // Multi-page slicing if table height exceeds A4 page length
+          let position = 0;
+          let remainingHeight = imgHeight;
+          while (remainingHeight > 0) {
+            if (!isFirstPdfPage) pdf.addPage("a4", "portrait");
+            pdf.addImage(imgData, "JPEG", 0, -position, imgWidth, imgHeight, undefined, "FAST");
+            position += 297;
+            remainingHeight -= 297;
+            isFirstPdfPage = false;
+          }
+        }
+
+        // Free canvas memory immediately
+        canvas.width = 0;
+        canvas.height = 0;
+
+        // Allow UI thread to breathe between pages
+        if (i % 2 === 0) {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
       }
 
       pdf.save(`अध्ययन_निष्पत्ती_प्रगतीदर्शक_${selectedClass}_${academicYear}.pdf`);
-      toast.success("PDF यशस्वीरित्या डाऊनलोड झाली!");
+      toast.dismiss("pdf-progress");
+      toast.success(`एकूण ${students.length} विद्यार्थ्यांची PDF यशस्वीरित्या डाऊनलोड झाली!`);
     } catch (err) {
       console.error("PDF generation error:", err);
       toast.error("PDF निर्मितीत अडचण आली: " + err.message);
@@ -681,14 +759,13 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
             box-shadow: none !important;
             border: none !important;
             border-radius: 0 !important;
-            width: 210mm !important;
-            min-width: 210mm !important;
-            max-width: 210mm !important;
-            height: 294mm !important;
+            width: 794px !important;
+            min-width: 794px !important;
+            max-width: 794px !important;
+            height: auto !important;
             min-height: 294mm !important;
-            max-height: 294mm !important;
             box-sizing: border-box !important;
-            overflow: hidden !important;
+            overflow: visible !important;
             background-color: #ffffff !important;
           }
           .cce-pdf-generating .pdf-page:last-child {
@@ -744,17 +821,17 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
           ].filter((sec) => isSubjectActive(sec.key) && sec.outcomes && sec.outcomes.length > 0);
 
           return activeSubjectSections.map((sec, subIdx) => {
-            const isFirstPage = sIdx === 0 && subIdx === 0;
+            const isFirstOverallPage = sIdx === 0 && subIdx === 0;
             return (
               <div
                 key={`${student.id}_${sec.key}`}
                 className={`pdf-page bg-white p-5 border border-slate-200 rounded-xl shadow-sm flex flex-col justify-between mb-4 w-full max-w-[210mm] min-w-0 ${
-                  !isFirstPage ? "pdf-page-break" : ""
+                  !isFirstOverallPage ? "pdf-page-break" : ""
                 }`}
                 style={{
                   boxSizing: "border-box",
-                  pageBreakBefore: isFirstPage ? "auto" : "always",
-                  breakBefore: isFirstPage ? "auto" : "page",
+                  pageBreakBefore: isFirstOverallPage ? "auto" : "always",
+                  breakBefore: isFirstOverallPage ? "auto" : "page",
                   pageBreakInside: "avoid",
                   breakInside: "avoid",
                 }}
@@ -766,7 +843,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
                   </h1>
 
                   {/* Student Metadata Bar */}
-                  <div className="flex items-center justify-between text-xs font-black text-slate-800 bg-slate-100 p-2.5 px-3.5 rounded-lg border border-slate-300 mb-3">
+                  <div className="flex items-center justify-between text-xs sm:text-sm font-bold text-slate-800 bg-slate-100/90 py-2.5 px-6 rounded-full border border-slate-300 shadow-xs mb-3">
                     <span>विद्यार्थ्याचे नाव - <b className="text-slate-900 font-black">{student.name}</b></span>
                     <span>इयत्ता - <b>{selectedClass}</b></span>
                     <span>तुकडी - <b>{division}</b></span>
@@ -774,7 +851,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
                     <span>{selectedSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
                   </div>
 
-                  {/* Single Subject Table on New Dedicated Page */}
+                  {/* Dedicated Single Subject Table */}
                   <OutcomeTable
                     title={sec.title}
                     outcomes={sec.outcomes}
