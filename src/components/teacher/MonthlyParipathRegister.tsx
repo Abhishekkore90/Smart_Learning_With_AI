@@ -540,9 +540,13 @@ export function MonthlyParipathRegister() {
   const handleDownloadPdf = async () => {
     const element = printRef.current;
     if (!element) return;
-    toast.success("PDF निर्मिती सुरू आहे...");
     try {
-      const html2canvasModule = await import("html2canvas");
+      if (typeof document !== "undefined" && document.fonts && document.fonts.ready) {
+        await document.fonts.ready;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      const html2canvasModule = await import("html2canvas-pro");
       const jsPDFModule = await import("jspdf");
       const html2canvas = html2canvasModule.default || html2canvasModule;
       const jsPDF = jsPDFModule.jsPDF || (jsPDFModule as any).default;

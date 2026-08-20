@@ -120,10 +120,13 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
 
   const dynamicStaffCount = calculateCookHelperCount(effectivePatTotal);
 
-  const cookNum = cookCount !== undefined && cookCount !== "" ? Math.max(0, parseInt(cookCount.toString(), 10) || 0) : dynamicStaffCount;
-  const helperNum = helperCount !== undefined && helperCount !== "" ? Math.max(0, parseInt(helperCount.toString(), 10) || 0) : dynamicStaffCount;
+  const hasCookCount = cookCount !== undefined && cookCount !== null && cookCount !== "";
+  const hasHelperCount = helperCount !== undefined && helperCount !== null && helperCount !== "";
 
-  const totalStaffCount = Math.max(cookNum, helperNum, dynamicStaffCount);
+  const cookNum = hasCookCount ? Math.max(0, parseInt(cookCount.toString(), 10) || 0) : dynamicStaffCount;
+  const helperNum = hasHelperCount ? Math.max(0, parseInt(helperCount.toString(), 10) || 0) : dynamicStaffCount;
+
+  const totalStaffCount = (hasCookCount || hasHelperCount) ? Math.max(cookNum, helperNum) : dynamicStaffCount;
   const honorariumInfo = calculateHonorariumDetails(effectivePatTotal, 2500);
   const totalHonorarium = totalStaffCount * 2500;
   const centerHonorariumShare = totalStaffCount * 1500;
@@ -212,7 +215,7 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
           </div>
         </div>
         <div className="text-[10px] text-slate-600 font-bold">
-          (निकष: {totalStaffCount} व्यक्ती)
+          (निकष: {dynamicStaffCount} व्यक्ती)
         </div>
       </div>
     );

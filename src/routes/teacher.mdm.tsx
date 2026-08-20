@@ -296,11 +296,15 @@ function TeacherMDMPage() {
       const marathiMonths = ["जानेवारी", "फेब्रुवारी", "मार्च", "एप्रिल", "मे", "जून", "जुलै", "ऑगस्ट", "सप्टेंबर", "ऑक्टोबर", "नोव्हेंबर", "डिसेंबर"];
       const monthIndex = englishMonths.indexOf(monthlyReportMonth || "");
       const marathiMonthName = monthIndex !== -1 ? marathiMonths[monthIndex] : "";
-
       const monthName = marathiMonthName || "Report";
       const filename = `MDM_Monthly_Report_${monthName}_${reportYear || ""}.pdf`;
 
-      const { default: html2canvas } = await import("html2canvas");
+      if (typeof document !== "undefined" && document.fonts && document.fonts.ready) {
+        await document.fonts.ready;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      const { default: html2canvas } = await import("html2canvas-pro");
       const { jsPDF } = await import("jspdf");
 
       const repKey = String(monthlyMdmReportType || selectedReportCategory || "");
@@ -320,12 +324,10 @@ function TeacherMDMPage() {
 
       for (let i = 0; i < pages.length; i++) {
         const pageEl = pages[i];
-        const exactContentWidth = isPortraitReport
-          ? 800
-          : Math.ceil(Math.max(pageEl.scrollWidth || 0, pageEl.offsetWidth || 0, 800));
+        const exactContentWidth = isPortraitReport ? 850 : 1400;
 
         const canvas = await html2canvas(pageEl, {
-          scale: 2,
+          scale: 2.5,
           useCORS: true,
           logging: false,
           backgroundColor: "#ffffff",
@@ -495,19 +497,28 @@ function TeacherMDMPage() {
         await html2pdfFn().set(opt).from(element).save();
       } else {
         // Direct jsPDF 1-Page Rendering for Rice Annual Utilization Report
-        const { default: html2canvas } = await import("html2canvas");
+        if (typeof document !== "undefined" && document.fonts && document.fonts.ready) {
+          await document.fonts.ready;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 150));
+
+        const { default: html2canvas } = await import("html2canvas-pro");
         const { jsPDF } = await import("jspdf");
 
         const canvas = await html2canvas(element, {
-          scale: 3,
+          scale: 2.5,
           useCORS: true,
           logging: false,
           backgroundColor: "#ffffff",
+          windowWidth: 1400,
+          width: 1400,
           onclone: (clonedDoc: any) => {
             const reportEl = clonedDoc.getElementById("annual-report-print");
             if (reportEl) {
               reportEl.style.backgroundColor = "#ffffff";
               reportEl.style.boxShadow = "none";
+              reportEl.style.width = "1400px";
+              reportEl.style.maxWidth = "1400px";
             }
           }
         });
@@ -1223,7 +1234,7 @@ function TeacherMDMPage() {
         ? Math.max(maxScrollWidth, 800)
         : isPortraitReport
         ? Math.max(maxScrollWidth, 850)
-        : Math.max(maxScrollWidth + 10, 1100);
+        : 1400;
 
       clone.style.position = 'absolute';
       clone.style.top = '0px';
@@ -1270,6 +1281,11 @@ function TeacherMDMPage() {
 
       document.body.appendChild(clone);
 
+      if (typeof document !== "undefined" && document.fonts && document.fonts.ready) {
+        await document.fonts.ready;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
       const isPoshanReport = monthlyMdmReportType === "poshan_ahar_daily_entry";
       const isMasikTandul = monthlyMdmReportType === "masik_tandul_report";
       const isMasikSatha = monthlyMdmReportType === "masik_goshwara";
@@ -1288,7 +1304,7 @@ function TeacherMDMPage() {
         ? `दैनंदिन-तांदूळ-खर्च-नोंदवही-${monthShort}-${monthlyMdmReportMonth.includes('2026') ? '2026' : '2027'}.pdf`
         : `मासिक_अहवाल_${monthlyMdmReportMonth.replace(/\s+/g, '_')}.pdf`;
 
-      const { default: html2canvas } = await import("html2canvas");
+      const { default: html2canvas } = await import("html2canvas-pro");
       const { jsPDF } = await import("jspdf");
 
       const dynamicOrientation = getReportOrientation(monthlyMdmReportType);
@@ -1303,10 +1319,24 @@ function TeacherMDMPage() {
           useCORS: true,
           logging: false,
           backgroundColor: "#ffffff",
-          windowWidth: Math.max(pageEl.scrollWidth, totalRenderWidth),
-          width: Math.max(pageEl.scrollWidth, totalRenderWidth),
+          windowWidth: totalRenderWidth,
+          width: totalRenderWidth,
           scrollY: 0,
           scrollX: 0,
+          onclone: (clonedDoc: any, element: HTMLElement) => {
+            const styleNodes = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'));
+            styleNodes.forEach((node) => {
+              clonedDoc.head.appendChild(node.cloneNode(true));
+            });
+            const targetEl = element || clonedDoc.querySelector("#monthly-mdm-report-print") || clonedDoc.body.firstElementChild;
+            if (targetEl) {
+              targetEl.style.width = `${totalRenderWidth}px`;
+              targetEl.style.maxWidth = `${totalRenderWidth}px`;
+              targetEl.style.minWidth = `${totalRenderWidth}px`;
+              targetEl.style.margin = "0 auto";
+              targetEl.style.boxSizing = "border-box";
+            }
+          }
         });
 
         const imgData = canvas.toDataURL("image/png");
@@ -1354,8 +1384,12 @@ function TeacherMDMPage() {
     }
     let toastId: string | undefined;
     try {
-      toastId = toast.loading("PDF डाऊनलोड होत आहे...");
-      const { default: html2canvas } = await import("html2canvas");
+      if (typeof document !== "undefined" && document.fonts && document.fonts.ready) {
+        await document.fonts.ready;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      const { default: html2canvas } = await import("html2canvas-pro");
       const { jsPDF } = await import("jspdf");
 
       const canvas = await html2canvas(element, {
@@ -1448,8 +1482,12 @@ function TeacherMDMPage() {
     setIsExporting(true);
     let toastId: string | undefined;
     try {
-      toastId = toast.loading("PDF डाऊनलोड होत आहे...");
-      const { default: html2canvas } = await import("html2canvas");
+      if (typeof document !== "undefined" && document.fonts && document.fonts.ready) {
+        await document.fonts.ready;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      const { default: html2canvas } = await import("html2canvas-pro");
       const { jsPDF } = await import("jspdf");
 
       const canvas = await html2canvas(element, {
@@ -2777,7 +2815,12 @@ function TeacherMDMPage() {
       element.style.width = "900px";
       element.style.display = "block";
 
-      const { default: html2canvas } = await import("html2canvas");
+      if (typeof document !== "undefined" && document.fonts && document.fonts.ready) {
+        await document.fonts.ready;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      const { default: html2canvas } = await import("html2canvas-pro");
       const { jsPDF } = await import("jspdf");
 
       const canvas = await html2canvas(element, {
@@ -12655,7 +12698,7 @@ function TeacherMDMPage() {
 
                                         return (
                                           <tr key={day} className={`border-b border-slate-700 h-[20px] text-xs ${isSunday || daily.isHoliday ? "bg-red-50/70" : rowIdx % 2 === 0 ? "bg-white" : "bg-slate-50/40"}`}>
-                                            <td className="border-r border-slate-700 px-1 py-0.5 text-xs font-bold">{rowIdx + 1}</td>
+                                            <td className="border-r border-slate-700 px-1 py-0.5 text-xs font-bold">{day}</td>
                                             <td className="border-r border-slate-700 px-1 py-0.5 text-xs font-semibold">{String(day).padStart(2,'0')}/{String(monthNum).padStart(2,'0')}</td>
                                             <td className={`border-r border-slate-700 px-1 py-0.5 text-xs font-semibold ${isSunday || daily.isHoliday ? "text-red-600 font-bold" : ""}`}>{weekday}</td>
                                             <td className="border-r border-slate-700 px-1 py-0.5 font-semibold">{daily.isHoliday || !daily.enrolled ? "" : daily.enrolled}</td>
@@ -12821,46 +12864,69 @@ function TeacherMDMPage() {
                                 <h2 className="text-sm font-black text-slate-900 tracking-tight uppercase">प्रधानमंत्री पोषण शक्ती निर्माण योजना तांदूळ शिजवून दिल्याचा अहवाल (सन {year}/{String(year+1).slice(-2)})</h2>
                               </div>
 
-                              <div className="text-xs font-bold border border-black divide-y divide-black bg-white">
-                                <div className="grid grid-cols-2 divide-x divide-black">
+                              <div className="text-xs font-bold border border-slate-700 divide-y divide-slate-700 bg-white">
+                                <div className="grid grid-cols-2 divide-x divide-slate-700">
                                   <div className="p-1.5 px-2.5">शाळेचे नाव : <span className="font-black">{schoolName}</span></div>
                                   <div className="p-1.5 px-2.5">बीट : <span className="font-black">{profile?.beat || profile?.kendra || profile?.center || ""}</span></div>
                                 </div>
-                                <div className="grid grid-cols-2 divide-x divide-black">
+                                <div className="grid grid-cols-2 divide-x divide-slate-700">
                                   <div className="p-1.5 px-2.5">इयत्ता गट : <span className="font-black">प्राथमिक ( इयत्ता १ ते ५ )</span></div>
                                   <div className="p-1.5 px-2.5">ता. : <span className="font-black">{profile?.taluka || ""}</span></div>
                                 </div>
-                                <div className="grid grid-cols-2 divide-x divide-black">
+                                <div className="grid grid-cols-2 divide-x divide-slate-700">
                                   <div className="p-1.5 px-2.5">केंद्र : <span className="font-black">{profile?.kendra || profile?.center || ""}</span></div>
                                   <div className="p-1.5 px-2.5">जि. : <span className="font-black">{profile?.district || ""}</span></div>
                                 </div>
                               </div>
 
-                              <div className="w-full overflow-x-auto">
-                                <table className="min-w-[1250px] w-full border-collapse border border-slate-700 text-center text-xs font-medium">
+                              <div className="w-full">
+                                <table className="w-full border-collapse border border-slate-700 text-center text-xs font-medium" style={{ tableLayout: 'fixed', width: '100%' }}>
+                                  <colgroup>
+                                    <col style={{ width: "3.5%" }} />
+                                    <col style={{ width: "14%" }} />
+                                    <col style={{ width: "4.5%" }} />
+                                    <col style={{ width: "4.5%" }} />
+                                    <col style={{ width: "6.5%" }} />
+                                    <col style={{ width: "5.5%" }} />
+                                    <col style={{ width: "6%" }} />
+                                    <col style={{ width: "6%" }} />
+                                    <col style={{ width: "8.5%" }} />
+                                    <col style={{ width: "7%" }} />
+                                    <col style={{ width: "6.5%" }} />
+                                    <col style={{ width: "5.5%" }} />
+                                    <col style={{ width: "5.5%" }} />
+                                    <col style={{ width: "4.5%" }} />
+                                    <col style={{ width: "4.5%" }} />
+                                    <col style={{ width: "8%" }} />
+                                    <col style={{ width: "5.5%" }} />
+                                  </colgroup>
                                   <thead>
                                     <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-700 text-xs">
-                                      <th className="border-r border-slate-700 px-1 py-1 font-bold relative z-30 align-middle bg-slate-100 min-w-[35px]" rowSpan={2}>अ.न.<br/><span className="font-normal">1</span></th>
-                                      <th className="border-r border-slate-700 px-1.5 py-1 font-bold relative z-30 align-middle bg-slate-100 min-w-[140px]" rowSpan={2}>शाळेचे नाव<br/><span className="font-normal">2</span></th>
-                                      <th className="border-r border-slate-700 px-1 py-1 font-bold relative z-30 align-middle bg-slate-100 min-w-[45px]" rowSpan={2}>पट<br/><span className="font-normal">3</span></th>
-                                      <th className="border-r border-slate-700 px-1 py-1 font-bold relative z-30 align-middle bg-slate-100 min-w-[50px]" rowSpan={2}>लाभार्थी<br/><span className="font-normal">4</span></th>
-                                      <th className="border-r border-slate-700 px-1 py-1 font-bold relative z-30 align-middle bg-blue-50" colSpan={4}>तांदूळ स्थिती (KG)<br/><span className="font-normal">5</span></th>
-                                      <th className="border-r border-slate-700 px-1.5 py-1 font-bold relative z-30 align-middle bg-slate-100 min-w-[110px] leading-tight" rowSpan={2}>या महिन्यात शिजवून<br/>दिलेला तांदूळ (KG)<br/><span className="font-normal">9</span></th>
-                                      <th className="border-r border-slate-700 px-1.5 py-1 font-bold relative z-30 align-middle bg-slate-100 min-w-[95px] leading-tight" rowSpan={2}>उसना परत<br/>केलेला तांदूळ (KG)<br/><span className="font-normal">10</span></th>
-                                      <th className="border-r border-slate-700 px-1.5 py-1 font-bold relative z-30 align-middle bg-slate-100 min-w-[85px] leading-tight" rowSpan={2}>शिल्लक तांदूळ<br/>(KG)<br/><span className="font-normal">11</span></th>
-                                      <th className="border-r border-slate-700 px-1 py-1 font-bold relative z-30 align-middle bg-green-50" colSpan={3}>शा.पो.आ. शिजवण्यासाठी चालू महिन्याचा खर्च</th>
-                                      <th className="border-r border-slate-700 px-1 py-1 font-bold relative z-30 align-middle bg-slate-100 min-w-[60px]" rowSpan={2}>कामाचे<br/>दिवस<br/><span className="font-normal">15</span></th>
-                                      <th className="border-r border-slate-700 px-1.5 py-1 font-bold relative z-30 align-middle bg-slate-100 min-w-[110px] leading-tight" rowSpan={2}>प्रत्यक्ष शा.पो.आ.<br/>शिजवून दिल्याचे दिवस<br/><span className="font-normal">16</span></th>
-                                      <th className="border-r border-slate-700 px-1.5 py-1 font-bold relative z-30 align-middle bg-slate-100 min-w-[85px] leading-tight" rowSpan={2}>पुढील मागणी<br/>(KG)<br/><span className="font-normal">17</span></th>
+                                      <th className="border-r border-slate-700 px-1 py-1 font-bold align-middle bg-slate-100 text-center" colSpan={4}>शाळा व लाभार्थी माहिती</th>
+                                      <th className="border-r border-slate-700 px-1 py-1 font-bold align-middle bg-blue-50 text-center" colSpan={4}>तांदूळ स्थिती (KG)</th>
+                                      <th className="border-r border-slate-700 px-1 py-1 font-bold align-middle bg-slate-100 text-center" colSpan={3}>तांदूळ वापर व शिल्लक (KG)</th>
+                                      <th className="border-r border-slate-700 px-1 py-1 font-bold align-middle bg-green-50 text-center" colSpan={3}>शा.पो.आ. शिजवण्यासाठी चालू महिन्याचा खर्च</th>
+                                      <th className="border-r border-slate-700 px-1 py-1 font-bold align-middle bg-slate-100 text-center" colSpan={2}>दिवस माहिती</th>
+                                      <th className="border-r border-slate-700 px-1 py-1 font-bold align-middle bg-slate-100 text-center" colSpan={1}>मागणी</th>
                                     </tr>
                                     <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-700 text-xs">
-                                      <th className="border-r border-slate-700 px-1 py-1 font-bold relative z-30 align-middle bg-blue-50 min-w-[75px]">मागील शिल्लक<br/>तांदूळ<br/><span className="font-normal">6</span></th>
-                                      <th className="border-r border-slate-700 px-1 py-1 font-bold relative z-30 align-middle bg-blue-50 min-w-[70px]">प्राप्त तांदूळ<br/><span className="font-normal">7</span></th>
-                                      <th className="border-r border-slate-700 px-1 py-1 font-bold relative z-30 align-middle bg-blue-50 min-w-[75px]">उसना घेतलेला<br/>तांदूळ<br/><span className="font-normal">8</span></th>
-                                      <th className="border-r border-slate-700 px-1 py-1 font-bold relative z-30 align-middle bg-blue-50 min-w-[75px]">एकूण तांदूळ<br/><span className="font-normal">(6+7+8)</span></th>
-                                      <th className="border-r border-slate-700 px-1 py-1 font-bold relative z-30 align-middle bg-green-50 min-w-[70px]">केंद्र हिस्सा<br/>1.56<br/><span className="font-normal">12</span></th>
-                                      <th className="border-r border-slate-700 px-1 py-1 font-bold relative z-30 align-middle bg-green-50 min-w-[70px]">राज्य हिस्सा<br/>1.03<br/><span className="font-normal">13</span></th>
-                                      <th className="border-r border-slate-700 px-1 py-1 font-bold relative z-30 align-middle bg-green-50 min-w-[65px]">2.59<br/><span className="font-normal">14</span></th>
+                                      <th className="border-r border-slate-700 px-1 py-1 font-bold align-middle bg-slate-100 text-center leading-tight">अ.न.<br/><span className="font-normal">1</span></th>
+                                      <th className="border-r border-slate-700 px-1 py-1 font-bold align-middle bg-slate-100 text-center leading-tight">शाळेचे नाव<br/><span className="font-normal">2</span></th>
+                                      <th className="border-r border-slate-700 px-0.5 py-1 font-bold align-middle bg-slate-100 text-center leading-tight">पट<br/><span className="font-normal">3</span></th>
+                                      <th className="border-r border-slate-700 px-0.5 py-1 font-bold align-middle bg-slate-100 text-center leading-tight">लाभार्थी<br/><span className="font-normal">4</span></th>
+                                      <th className="border-r border-slate-700 px-0.5 py-1 font-bold align-middle bg-blue-50 text-center leading-tight">मागील शिल्लक तांदूळ<br/><span className="font-normal">6</span></th>
+                                      <th className="border-r border-slate-700 px-0.5 py-1 font-bold align-middle bg-blue-50 text-center leading-tight">प्राप्त तांदूळ<br/><span className="font-normal">7</span></th>
+                                      <th className="border-r border-slate-700 px-0.5 py-1 font-bold align-middle bg-blue-50 text-center leading-tight">उसना घेतलेला तांदूळ<br/><span className="font-normal">8</span></th>
+                                      <th className="border-r border-slate-700 px-0.5 py-1 font-bold align-middle bg-blue-50 text-center leading-tight">एकूण तांदूळ<br/><span className="font-normal">(6+7+8)</span></th>
+                                      <th className="border-r border-slate-700 px-1 py-1 font-bold align-middle bg-slate-100 text-center leading-tight">या महिन्यात शिजवून दिलेला तांदूळ (KG)<br/><span className="font-normal">9</span></th>
+                                      <th className="border-r border-slate-700 px-1 py-1 font-bold align-middle bg-slate-100 text-center leading-tight">उसना परत केलेला तांदूळ (KG)<br/><span className="font-normal">10</span></th>
+                                      <th className="border-r border-slate-700 px-1 py-1 font-bold align-middle bg-slate-100 text-center leading-tight">शिल्लक तांदूळ (KG)<br/><span className="font-normal">11</span></th>
+                                      <th className="border-r border-slate-700 px-0.5 py-1 font-bold align-middle bg-green-50 text-center leading-tight">केंद्र हिस्सा 1.56<br/><span className="font-normal">12</span></th>
+                                      <th className="border-r border-slate-700 px-0.5 py-1 font-bold align-middle bg-green-50 text-center leading-tight">राज्य हिस्सा 1.03<br/><span className="font-normal">13</span></th>
+                                      <th className="border-r border-slate-700 px-0.5 py-1 font-bold align-middle bg-green-50 text-center leading-tight">2.59<br/><span className="font-normal">14</span></th>
+                                      <th className="border-r border-slate-700 px-0.5 py-1 font-bold align-middle bg-slate-100 text-center leading-tight">कामाचे दिवस<br/><span className="font-normal">15</span></th>
+                                      <th className="border-r border-slate-700 px-1 py-1 font-bold align-middle bg-slate-100 text-center leading-tight">प्रत्यक्ष शा.पो.आ. शिजवून दिल्याचे दिवस<br/><span className="font-normal">16</span></th>
+                                      <th className="border-r border-slate-700 px-1 py-1 font-bold align-middle bg-slate-100 text-center leading-tight">पुढील मागणी (KG)<br/><span className="font-normal">17</span></th>
                                     </tr>
                                   </thead>
                                   <tbody>
@@ -13671,7 +13737,10 @@ function TeacherMDMPage() {
                               const totalGrantAll = totalCenterGrant + totalStateGrant;
 
                               const totalPatForStaff = (primaryMaxEnrolled || getDynamicPatSankhya(profile, "1 To 5")) + (upperMaxEnrolled || getDynamicPatSankhya(profile, "6 To 8"));
-                              const helperCount = calculateCookHelperCount(totalPatForStaff);
+                              const hasCustomStaffCount = (cookCount !== undefined && cookCount !== null && cookCount !== "") || (helperCountVal !== undefined && helperCountVal !== null && helperCountVal !== "");
+                              const helperCount = hasCustomStaffCount
+                                ? Math.max(0, parseInt((cookCount || helperCountVal || "0").toString(), 10) || 0)
+                                : calculateCookHelperCount(totalPatForStaff);
                               const helperCenterPay = helperCount * 1500;
                               const helperStatePay = helperCount * 1000;
                               const helperTotalPay = helperCount * 2500;
