@@ -698,12 +698,16 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
     setDownloading(true);
     toast.info("HD Vector-Grade PDF तयार होत आहे, थेट डाऊनलोड सुरू झाली आहे...");
     try {
-      const { toPng } = await import("html-to-image");
+      const html2canvas = (await import("html2canvas-pro")).default;
       const { default: jsPDF } = await import("jspdf");
 
-      const pdfPages = printRef.current.querySelectorAll(".pdf-page");
+      const container = printRef.current;
+      container.classList.add("cce-pdf-generating");
+
+      const pdfPages = container.querySelectorAll(".pdf-page");
       if (!pdfPages || pdfPages.length === 0) {
         toast.error("पेजेस सापडले नाहीत!");
+        container.classList.remove("cce-pdf-generating");
         setDownloading(false);
         return;
       }
@@ -712,118 +716,117 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
 
       for (let i = 0; i < pdfPages.length; i++) {
         const pageEl = pdfPages[i];
-        const isLandscape = pageEl.classList.contains("pdf-page-landscape") || pageEl.getAttribute("data-orientation") === "landscape";
+        const isLandscape =
+          pageEl.classList.contains("pdf-page-landscape") ||
+          pageEl.getAttribute("data-orientation") === "landscape";
 
-        let dataUrl = "";
-        if (isLandscape) {
-          // Dynamically measure table scrollWidth so 100% of columns including final summary columns are captured
-          const origW = pageEl.style.width;
-          const origMaxW = pageEl.style.maxWidth;
-          const origMinW = pageEl.style.minWidth;
-          const origOverflow = pageEl.style.overflow;
-          const origPaddingR = pageEl.style.paddingRight;
+        // Save original DOM styles before temporarily expanding container for wide tables
+        const origW = pageEl.style.width;
+        const origMaxW = pageEl.style.maxWidth;
+        const origMinW = pageEl.style.minWidth;
+        const origOverflow = pageEl.style.overflow;
+        const origPaddingL = pageEl.style.paddingLeft;
+        const origPaddingR = pageEl.style.paddingRight;
 
-          const tableEl = pageEl.querySelector("table");
-          const calcWidth = tableEl ? Math.max(tableEl.scrollWidth + 160, 1650) : 1650;
-          const reqWidthPx = `${calcWidth}px`;
-
-          const innerContainers = pageEl.querySelectorAll(".overflow-x-auto, .overflow-hidden");
-          const innerOrigs = [];
-          innerContainers.forEach((el) => {
-            innerOrigs.push({
-              el,
-              styleW: el.style.width,
-              styleMaxW: el.style.maxWidth,
-              styleMinW: el.style.minWidth,
-              styleOverflow: el.style.overflow,
-            });
-            el.style.width = reqWidthPx;
-            el.style.maxWidth = "none";
-            el.style.minWidth = reqWidthPx;
-            el.style.overflow = "visible";
+        const innerScrollables = pageEl.querySelectorAll(".overflow-x-auto, .overflow-hidden");
+        const innerOrigs = [];
+        innerScrollables.forEach((el) => {
+          innerOrigs.push({
+            el,
+            styleW: el.style.width,
+            styleMaxW: el.style.maxWidth,
+            styleMinW: el.style.minWidth,
+            styleOverflow: el.style.overflow,
           });
+        });
 
-          pageEl.style.width = reqWidthPx;
+        // Measure table scrollWidth so ALL columns including right-side final columns have generous breathing space
+        const tableEl = pageEl.querySelector("table");
+        if (tableEl) {
+          const tableW = tableEl.scrollWidth;
+          const containerFullW = `${tableW + 80}px`;
+          const tableFullW = `${tableW}px`;
+
+          pageEl.style.width = containerFullW;
           pageEl.style.maxWidth = "none";
-          pageEl.style.minWidth = reqWidthPx;
+          pageEl.style.minWidth = containerFullW;
           pageEl.style.overflow = "visible";
-          pageEl.style.paddingRight = "60px";
+          pageEl.style.paddingLeft = "32px";
+          pageEl.style.paddingRight = "32px";
 
-          dataUrl = await toPng(pageEl, {
-            quality: 1.0,
-            pixelRatio: 3,
-            cacheBust: true,
-            backgroundColor: "#ffffff",
-            style: {
-              width: reqWidthPx,
-              maxWidth: "none",
-              minWidth: reqWidthPx,
-              overflow: "visible",
-              paddingRight: "60px",
-            },
-          });
-
-          // Immediately restore original screen styles
-          pageEl.style.width = origW;
-          pageEl.style.maxWidth = origMaxW;
-          pageEl.style.minWidth = origMinW;
-          pageEl.style.overflow = origOverflow;
-          pageEl.style.paddingRight = origPaddingR;
-          innerContainers.forEach((el, idx) => {
-            const o = innerOrigs[idx];
-            if (o) {
-              el.style.width = o.styleW;
-              el.style.maxWidth = o.styleMaxW;
-              el.style.minWidth = o.styleMinW;
-              el.style.overflow = o.styleOverflow;
-            }
-          });
-        } else {
-          dataUrl = await toPng(pageEl, {
-            quality: 1.0,
-            pixelRatio: 3,
-            cacheBust: true,
-            backgroundColor: "#ffffff",
-            style: {
-              overflow: "visible",
-              scrollbarWidth: "none",
-            },
+          innerScrollables.forEach((el) => {
+            el.style.width = tableFullW;
+            el.style.maxWidth = "none";
+            el.style.minWidth = tableFullW;
+            el.style.overflow = "visible";
           });
         }
 
-        // Load captured image
-        const img = new Image();
-        img.src = dataUrl;
-        await new Promise((resolve) => {
-          if (img.complete) resolve();
-          else img.onload = resolve;
+        const canvas = await html2canvas(pageEl, {
+          scale: 2.5,
+          useCORS: true,
+          logging: false,
+          backgroundColor: "#ffffff",
         });
 
-        if (isLandscape) {
-          // Last Page: Standard Legal Paper Landscape (355.6mm x 215.9mm) with 5mm Safe Margin Fit
-          const naturalWidth = img.naturalWidth || 1;
-          const naturalHeight = img.naturalHeight || 1;
-          const legalWidth = 355.6; // mm
-          const legalHeight = 215.9; // mm
-          const margin = 5; // mm safe margin
+        // Immediately restore original screen styles
+        pageEl.style.width = origW;
+        pageEl.style.maxWidth = origMaxW;
+        pageEl.style.minWidth = origMinW;
+        pageEl.style.overflow = origOverflow;
+        pageEl.style.paddingLeft = origPaddingL;
+        pageEl.style.paddingRight = origPaddingR;
 
-          const printableWidth = legalWidth - (margin * 2); // 345.6mm
-          const calcHeight = Number(((naturalHeight / naturalWidth) * printableWidth).toFixed(2));
-          const targetHeight = Math.min(legalHeight - (margin * 2), calcHeight);
-          const xOffset = margin; // 5mm left margin
-          const yOffset = Number(((legalHeight - targetHeight) / 2).toFixed(2));
+        innerScrollables.forEach((el, idx) => {
+          const o = innerOrigs[idx];
+          if (o) {
+            el.style.width = o.styleW;
+            el.style.maxWidth = o.styleMaxW;
+            el.style.minWidth = o.styleMinW;
+            el.style.overflow = o.styleOverflow;
+          }
+        });
+
+        const imgData = canvas.toDataURL("image/jpeg", 0.92);
+
+        if (isLandscape) {
+          // Standard A4 Landscape format (297mm x 210mm) with 4mm safe printable margins
+          const pdfW = 297; // mm
+          const pdfH = 210; // mm
+          const margin = 4; // mm safe printable margin
+          const printableW = pdfW - margin * 2; // 289mm
+          const printableH = pdfH - margin * 2; // 202mm
+          const format = "a4";
+
+          const imgRatio = canvas.height / canvas.width;
+          const targetW = printableW;
+          const targetH = printableW * imgRatio;
 
           if (i === 0) {
-            pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "legal", compress: true });
+            pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: format, compress: true });
           } else {
-            pdf.addPage("legal", "landscape");
+            pdf.addPage(format, "landscape");
           }
 
-          pdf.addImage(dataUrl, "PNG", xOffset, Math.max(0, yOffset), printableWidth, targetHeight, undefined, "FAST");
+          if (targetH <= printableH) {
+            const xPos = margin;
+            const yPos = margin + (printableH - targetH) / 2;
+            pdf.addImage(imgData, "JPEG", xPos, yPos, targetW, targetH, undefined, "FAST");
+          } else {
+            const scale = printableH / targetH;
+            const finalW = printableW * scale;
+            const finalH = printableH;
+            const xPos = margin + (printableW - finalW) / 2;
+            const yPos = margin;
+            pdf.addImage(imgData, "JPEG", xPos, yPos, finalW, finalH, undefined, "FAST");
+          }
         } else {
-          // Pages 1 & 2: Standard Portrait A4 (210mm x 297mm)
-          const targetWidth = 210; // mm
-          const targetHeight = 297; // mm
+          // Portrait Pages (Progress Sheets / Individual Cards): Standard A4 (210mm x 297mm)
+          const pdfW = 210; // mm
+          const pdfH = 297; // mm
+          const imgRatio = canvas.height / canvas.width;
+          const targetW = pdfW;
+          const targetH = Math.min(pdfH, pdfW * imgRatio);
 
           if (i === 0) {
             pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
@@ -831,9 +834,11 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
             pdf.addPage("a4", "portrait");
           }
 
-          pdf.addImage(dataUrl, "PNG", 0, 0, targetWidth, targetHeight, undefined, "FAST");
+          pdf.addImage(imgData, "JPEG", 0, 0, targetW, targetH, undefined, "FAST");
         }
       }
+
+      container.classList.remove("cce-pdf-generating");
 
       if (pdf) {
         const termLabel = selectedTerm === "sem1" ? "प्रथम_सत्र" : "द्वितीय_सत्र";
@@ -843,8 +848,9 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
     } catch (err) {
       console.error("PDF generation error:", err);
       toast.error("PDF निर्मितीत अडचण आली: " + err.message);
+    } finally {
+      setDownloading(false);
     }
-    setDownloading(false);
   };
 
   const handlePrint = () => {
@@ -2293,45 +2299,44 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                     <table className="w-max min-w-full border-collapse border border-lime-600 text-center font-medium">
                       <thead>
                         {/* ROW 1: Main Headers */}
-                        <tr className="bg-lime-200 text-slate-900 font-black border-b border-lime-600">
-                          <th className="border border-lime-600 p-1 text-[10.5px] sm:text-[11px] leading-tight min-w-[28px]" rowSpan={2}>अ.क्र.</th>
-                          <th className="border border-lime-600 p-1 text-left text-[11px] sm:text-[11.5px] min-w-[140px] whitespace-nowrap" rowSpan={2}>विद्यार्थ्याचे नाव</th>
+                        <tr className="text-slate-900 font-black border-b border-lime-600">
+                          <th className="bg-lime-200 border border-lime-600 p-1 text-[10.5px] sm:text-[11px] leading-tight min-w-[28px]" rowSpan={3}>अ.क्र.</th>
+                          <th className="bg-lime-200 border border-lime-600 p-1 text-left text-[11px] sm:text-[11.5px] min-w-[140px] whitespace-nowrap" rowSpan={2}>विद्यार्थ्याचे नाव</th>
                           {subjects.map((sub) => {
                             return (
-                              <th key={sub} className="border border-lime-600 p-1 text-[10.5px] sm:text-[11px] font-black whitespace-nowrap leading-tight" colSpan={4} title={sub}>
+                              <th key={sub} className="bg-lime-200 border border-lime-600 p-1 text-[10.5px] sm:text-[11px] font-black whitespace-nowrap leading-tight" colSpan={4} title={sub}>
                                 {sub.replace("प्रथम भाषा : ", "").replace("द्वितीय भाषा : ", "").replace("तृतीय भाषा : ", "").replace("सामान्य ", "").replace("सामाजिक ", "सो.")}
                               </th>
                             );
                           })}
-                          <th className="border border-lime-600 p-1 text-[10px] leading-tight min-w-[50px] whitespace-nowrap" rowSpan={2}>उपस्थिती</th>
-                          <th className="border border-lime-600 p-1 text-[10px] leading-tight min-w-[54px] whitespace-nowrap" rowSpan={2}>एकूण गुण</th>
-                          <th className="border border-lime-600 p-1 text-[10px] leading-tight min-w-[54px] whitespace-nowrap" rowSpan={2}>टक्केवारी</th>
-                          <th className="border border-lime-600 p-1 text-[10px] leading-tight min-w-[72px] whitespace-nowrap" rowSpan={2}>अंतिम श्रेणी</th>
+                          <th className="bg-lime-200 border border-lime-600 p-1 text-[10px] leading-tight min-w-[50px] whitespace-nowrap" rowSpan={2}>उपस्थिती</th>
+                          <th className="bg-lime-200 border border-lime-600 p-1 text-[10px] leading-tight min-w-[54px] whitespace-nowrap" rowSpan={2}>एकूण गुण</th>
+                          <th className="bg-lime-200 border border-lime-600 p-1 text-[10px] leading-tight min-w-[54px] whitespace-nowrap" rowSpan={2}>टक्केवारी</th>
+                          <th className="bg-lime-200 border border-lime-600 p-1 text-[10px] leading-tight min-w-[72px] whitespace-nowrap" rowSpan={2}>अंतिम श्रेणी</th>
                         </tr>
 
                         {/* ROW 2: Sub-Headers (Uniform 4 sub-cols under each subject) */}
-                        <tr className="bg-lime-200 text-slate-900 font-black border-b border-lime-600">
+                        <tr className="text-slate-900 font-black border-b border-lime-600">
                           {subjects.map((sub) => {
                             const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
                             return (
                               <React.Fragment key={sub}>
-                                <th className="border border-lime-600 p-0.5 py-1 text-[9.5px] leading-none font-black whitespace-nowrap min-w-[34px] text-center">
-                                  अ (आ)
+                                <th className="bg-lime-200 border border-lime-600 p-0.5 py-1 text-[9.5px] leading-none font-black whitespace-nowrap min-w-[34px] text-center">
+                                  आकारिक
                                 </th>
-                                <th className="border border-lime-600 p-0.5 py-1 text-[9.5px] leading-none font-black whitespace-nowrap min-w-[34px] text-center">
-                                  {isPractical ? "-" : "ब (सं)"}
+                                <th className="bg-lime-200 border border-lime-600 p-0.5 py-1 text-[9.5px] leading-none font-black whitespace-nowrap min-w-[34px] text-center">
+                                  {isPractical ? "-" : "संकलित"}
                                 </th>
-                                <th className="border border-lime-600 p-0.5 py-1 text-[9.5px] leading-none font-black whitespace-nowrap min-w-[34px] text-center">एकूण</th>
-                                <th className="border border-lime-600 p-0.5 py-1 text-[9.5px] leading-none font-black whitespace-nowrap min-w-[34px] text-center">श्रेणी</th>
+                                <th className="bg-lime-200 border border-lime-600 p-0.5 py-1 text-[9.5px] leading-none font-black whitespace-nowrap min-w-[34px] text-center">एकूण</th>
+                                <th className="bg-lime-200 border border-lime-600 p-0.5 py-1 text-[9.5px] leading-none font-black whitespace-nowrap min-w-[34px] text-center">श्रेणी</th>
                               </React.Fragment>
                             );
                           })}
                         </tr>
 
                         {/* ROW 3: Sub-Header Row: Max Marks (पैकी) */}
-                        <tr className="bg-lime-100 text-slate-900 font-black border-b border-lime-600 text-[9.5px]">
-                          <td className="border border-lime-600 p-0.5"></td>
-                          <td className="border border-lime-600 p-1 text-left font-black">पैकी</td>
+                        <tr className="text-slate-900 font-black border-b border-lime-600 text-[9.5px]">
+                          <td className="bg-lime-100 border border-lime-600 p-1 text-left font-black">पैकी</td>
                           {subjects.map((sub) => {
                             const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
                             const formMax = ["1st", "2nd", "1", "2"].includes(String(selectedClass)) ? "70" : ["3rd", "4th", "3", "4"].includes(String(selectedClass)) ? "60" : ["5th", "6th", "5", "6"].includes(String(selectedClass)) ? "50" : "40";
@@ -2339,17 +2344,17 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
 
                             return (
                               <React.Fragment key={sub}>
-                                <td className="border border-lime-600 p-0.5">{isPractical ? "100" : formMax}</td>
-                                <td className="border border-lime-600 p-0.5">{isPractical ? "-" : semMax}</td>
-                                <td className="border border-lime-600 p-0.5">100</td>
-                                <td className="border border-lime-600 p-0.5"></td>
+                                <td className="bg-lime-100 border border-lime-600 p-0.5">{isPractical ? "100" : formMax}</td>
+                                <td className="bg-lime-100 border border-lime-600 p-0.5">{isPractical ? "-" : semMax}</td>
+                                <td className="bg-lime-100 border border-lime-600 p-0.5">100</td>
+                                <td className="bg-lime-100 border border-lime-600 p-0.5"></td>
                               </React.Fragment>
                             );
                           })}
-                          <td className="border border-lime-600 p-0.5 text-[9px]">{totalWorkingDays > 0 ? totalWorkingDays : "-"}</td>
-                          <td className="border border-lime-600 p-0.5 text-[9px]">{subjects.length * 100}</td>
-                          <td className="border border-lime-600 p-0.5 text-[9px]">100%</td>
-                          <td className="border border-lime-600 p-0.5"></td>
+                          <td className="bg-lime-100 border border-lime-600 p-0.5 text-[9px]">{totalWorkingDays > 0 ? totalWorkingDays : "-"}</td>
+                          <td className="bg-lime-100 border border-lime-600 p-0.5 text-[9px]">{subjects.length * 100}</td>
+                          <td className="bg-lime-100 border border-lime-600 p-0.5 text-[9px]">100%</td>
+                          <td className="bg-lime-100 border border-lime-600 p-0.5"></td>
                         </tr>
                       </thead>
                       <tbody>

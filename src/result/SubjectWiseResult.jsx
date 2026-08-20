@@ -78,14 +78,14 @@ const OutcomeTable = ({ title, outcomes, subjectName, getUserSelectedLevel, stud
       </div>
 
       {/* HTML Table Container for Outcomes Table */}
-      <div className="w-full border border-slate-300 rounded-2xl overflow-hidden bg-white shadow-xs">
+      <div className="w-full border border-slate-300 rounded-2xl bg-white shadow-xs">
         <table
           className="w-full border-collapse text-slate-900 text-xs bg-white"
           style={{ tableLayout: "fixed", width: "100%", borderCollapse: "collapse" }}
         >
           <colgroup>
-            <col style={{ width: "11%" }} />
-            <col style={{ width: "67%" }} />
+            <col style={{ width: "12%" }} />
+            <col style={{ width: "66%" }} />
             <col style={{ width: "5.5%" }} />
             <col style={{ width: "5.5%" }} />
             <col style={{ width: "5.5%" }} />
@@ -93,30 +93,21 @@ const OutcomeTable = ({ title, outcomes, subjectName, getUserSelectedLevel, stud
           </colgroup>
           <thead>
             <tr className="bg-slate-100 border-b border-slate-300 font-black text-xs sm:text-sm text-slate-900">
-              <th
-                rowSpan={2}
-                className="border-r border-slate-300 p-2 text-center align-middle font-black leading-tight"
-              >
-                अध्ययन<br />निष्पत्ती क्र.
+              <th className="border-r border-slate-300 py-2.5 px-1.5 text-center align-middle font-black leading-snug">
+                अध्ययन निष्पत्ती क्र.
               </th>
-              <th
-                rowSpan={2}
-                className="border-r border-slate-300 p-2 px-3 text-left align-middle font-black text-xs sm:text-sm"
-              >
+              <th className="border-r border-slate-300 py-2.5 px-3 text-left align-middle font-black text-xs sm:text-sm leading-snug">
                 अध्ययन निष्पत्ती
               </th>
-              <th
-                colSpan={4}
-                className="p-1.5 text-center font-black text-xs sm:text-sm"
-              >
-                स्तर
+              <th colSpan={4} className="p-0 text-center font-black text-xs sm:text-sm align-middle">
+                <div className="py-1 border-b border-slate-300 font-black">स्तर</div>
+                <div className="grid grid-cols-4 divide-x divide-slate-300 font-black text-xs py-1">
+                  <div>1</div>
+                  <div>2</div>
+                  <div>3</div>
+                  <div>4</div>
+                </div>
               </th>
-            </tr>
-            <tr className="bg-slate-100 border-b border-slate-300 font-black text-xs text-slate-900">
-              <th className="border-t border-r border-slate-300 py-1 text-center font-black">1</th>
-              <th className="border-t border-r border-slate-300 py-1 text-center font-black">2</th>
-              <th className="border-t border-r border-slate-300 py-1 text-center font-black">3</th>
-              <th className="border-t py-1 text-center font-black">4</th>
             </tr>
           </thead>
           <tbody>
@@ -514,20 +505,97 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
         const imgWidth = 210;
         const imgHeight = (canvas.height * 210) / canvas.width;
 
-        if (imgHeight <= 297) {
+        if (imgHeight <= 335) {
           if (!isFirstPdfPage) pdf.addPage("a4", "portrait");
-          pdf.addImage(imgData, "JPEG", 0, 0, imgWidth, imgHeight, undefined, "FAST");
+          const targetH = Math.min(297, imgHeight);
+          pdf.addImage(imgData, "JPEG", 0, 0, imgWidth, targetH, undefined, "FAST");
           isFirstPdfPage = false;
         } else {
-          // Multi-page slicing if table height exceeds A4 page length
-          let position = 0;
-          let remainingHeight = imgHeight;
-          while (remainingHeight > 0) {
-            if (!isFirstPdfPage) pdf.addPage("a4", "portrait");
-            pdf.addImage(imgData, "JPEG", 0, -position, imgWidth, imgHeight, undefined, "FAST");
-            position += 297;
-            remainingHeight -= 297;
-            isFirstPdfPage = false;
+          // Smart Row-Boundary Slicing for tables exceeding 1 A4 page
+          const pageElRect = pageEl.getBoundingClientRect();
+          const pageElHeightPx = pageElRect.height || pageEl.scrollHeight || 1;
+          const scalePxPerMm = canvas.height / imgHeight;
+          const trElements = Array.from(pageEl.querySelectorAll("tbody tr"));
+
+          // Measure EXACT bottom position of each table row in mm relative to pageEl top
+          const rowBottomsMm = trElements.map((tr) => {
+            const trRect = tr.getBoundingClientRect();
+            const bottomPx = trRect.bottom - pageElRect.top;
+            return (bottomPx / pageElHeightPx) * imgHeight;
+          });
+
+          let currentStartMm = 0;
+
+          while (currentStartMm < imgHeight - 2) {
+            const isFirstSlice = currentStartMm === 0;
+            const topMarginMm = isFirstSlice ? 0 : 5; // 5mm top margin on Page 2+ for clean layout
+            const availableHeight = 297 - topMarginMm - 4; // Max content height allowed on this page
+
+            let nextEndMm = currentStartMm + availableHeight;
+            let breakMm = nextEndMm;
+
+            if (nextEndMm >= imgHeight) {
+              nextEndMm = imgHeight;
+              breakMm = imgHeight;
+            } else {
+              // Find the last table row whose bottom is <= nextEndMm
+              let bestBreakMm = 0;
+              for (let r = 0; r < rowBottomsMm.length; r++) {
+                const rBottom = rowBottomsMm[r];
+                if (rBottom > currentStartMm && rBottom <= nextEndMm) {
+                  bestBreakMm = rBottom;
+                }
+              }
+
+              // If a valid row boundary was found, break exactly at that row!
+              if (bestBreakMm > currentStartMm + 50) {
+                breakMm = bestBreakMm;
+                nextEndMm = bestBreakMm;
+              }
+            }
+
+            const sliceStartPx = Math.max(0, Math.floor(currentStartMm * scalePxPerMm));
+            const sliceEndPx = Math.min(canvas.height, Math.ceil(nextEndMm * scalePxPerMm));
+            const sliceHeightPx = Math.max(1, sliceEndPx - sliceStartPx);
+
+            const sliceCanvas = document.createElement("canvas");
+            sliceCanvas.width = canvas.width;
+            sliceCanvas.height = sliceHeightPx;
+            const ctx = sliceCanvas.getContext("2d");
+            if (ctx) {
+              ctx.fillStyle = "#ffffff";
+              ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+              ctx.drawImage(
+                canvas,
+                0,
+                sliceStartPx,
+                canvas.width,
+                sliceHeightPx,
+                0,
+                0,
+                canvas.width,
+                sliceHeightPx
+              );
+
+              // Draw a clean top border line for Page 2+ table slices so table top is perfectly enclosed
+              if (!isFirstSlice) {
+                ctx.strokeStyle = "#cbd5e1"; // slate-300 border color matching OutcomeTable
+                ctx.lineWidth = Math.ceil(2 * (canvas.width / 794));
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(canvas.width, 0);
+                ctx.stroke();
+              }
+
+              const sliceImgData = sliceCanvas.toDataURL("image/jpeg", 0.90);
+              const sliceImgHeightMm = (sliceHeightPx * 210) / canvas.width;
+
+              if (!isFirstPdfPage) pdf.addPage("a4", "portrait");
+              pdf.addImage(sliceImgData, "JPEG", 0, topMarginMm, imgWidth, sliceImgHeightMm, undefined, "FAST");
+              isFirstPdfPage = false;
+            }
+
+            currentStartMm = breakMm;
           }
         }
 
@@ -755,7 +823,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
           }
           .cce-pdf-generating .pdf-page {
             margin: 0 !important;
-            padding: 8mm 6mm !important;
+            padding: 5mm 6mm !important;
             box-shadow: none !important;
             border: none !important;
             border-radius: 0 !important;
@@ -763,10 +831,18 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
             min-width: 794px !important;
             max-width: 794px !important;
             height: auto !important;
-            min-height: 294mm !important;
+            min-height: 0 !important;
             box-sizing: border-box !important;
             overflow: visible !important;
             background-color: #ffffff !important;
+          }
+          .cce-pdf-generating th {
+            vertical-align: middle !important;
+            box-sizing: border-box !important;
+          }
+          .cce-pdf-generating .rounded-2xl {
+            border-radius: 6px !important;
+            overflow: visible !important;
           }
           .cce-pdf-generating .pdf-page:last-child {
             page-break-after: avoid !important;
@@ -825,7 +901,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
             return (
               <div
                 key={`${student.id}_${sec.key}`}
-                className={`pdf-page bg-white p-5 border border-slate-200 rounded-xl shadow-sm flex flex-col justify-between mb-4 w-full max-w-[210mm] min-w-0 ${
+                className={`pdf-page bg-white p-5 border border-slate-200 rounded-xl shadow-sm flex flex-col justify-between mb-6 w-full max-w-[210mm] min-w-0 ${
                   !isFirstOverallPage ? "pdf-page-break" : ""
                 }`}
                 style={{
@@ -863,7 +939,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
 
                 {/* Signatures Footer */}
                 <div
-                  className="flex items-center justify-between pt-2.5 border-t border-slate-200 mt-2 text-[11px] font-bold text-slate-800"
+                  className="flex items-center justify-between pt-2.5 border-t border-slate-200 mt-4 text-[11px] font-bold text-slate-800"
                   style={{ breakInside: "avoid", pageBreakInside: "avoid" }}
                 >
                   <div className="text-center">

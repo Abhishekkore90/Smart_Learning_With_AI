@@ -432,8 +432,8 @@ export default function AnnualResultRegister({ initialClass, initialYear, onBack
         const canvas = await (hModule.default || hModule)(printRef.current, { scale: 2 });
         const imgData = canvas.toDataURL("image/png");
         const { default: jsPDF } = await import("jspdf");
-        const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "legal", compress: true });
-        pdf.addImage(imgData, "PNG", 5, 5, 345, 205, undefined, "FAST");
+        const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4", compress: true });
+        pdf.addImage(imgData, "PNG", 5, 5, 287, 200, undefined, "FAST");
         pdf.save(`वार्षिक_निकाल_पत्रक_${selectedClass}_${academicYear}.pdf`);
         toast.success("वार्षिक निकाल पत्रक PDF यशस्वीरित्या थेट डाऊनलोड झाली!");
         setDownloading(false);
@@ -479,23 +479,23 @@ export default function AnnualResultRegister({ initialClass, initialYear, onBack
 
       const naturalWidth = img.naturalWidth || 1;
       const naturalHeight = img.naturalHeight || 1;
-      const legalWidth = 355.6; // mm Legal Landscape
-      const legalHeight = 215.9; // mm
-      const margin = 5; // mm
+      const a4Width = 297; // mm A4 Landscape
+      const a4Height = 210; // mm
+      const margin = 5; // mm top & side margins
 
-      const printableWidth = legalWidth - (margin * 2);
+      const printableWidth = a4Width - (margin * 2);
       const calcHeight = Number(((naturalHeight / naturalWidth) * printableWidth).toFixed(2));
-      const targetHeight = Math.min(legalHeight - (margin * 2), calcHeight);
-      const yOffset = Number(((legalHeight - targetHeight) / 2).toFixed(2));
+      const targetHeight = Math.min(a4Height - (margin * 2), calcHeight);
+      const yOffset = margin; // Align top near margin (5mm) instead of centering vertically
 
       const pdf = new jsPDF({
         orientation: "landscape",
         unit: "mm",
-        format: "legal",
+        format: "a4",
         compress: true,
       });
 
-      pdf.addImage(dataUrl, "PNG", margin, Math.max(0, yOffset), printableWidth, targetHeight, undefined, "FAST");
+      pdf.addImage(dataUrl, "PNG", margin, yOffset, printableWidth, targetHeight, undefined, "FAST");
 
       pdf.save(`वार्षिक_निकाल_पत्रक_${selectedClass}_${academicYear}.pdf`);
       toast.success("वार्षिक निकाल पत्रक PDF यशस्वीरित्या थेट डाऊनलोड झाली!");
