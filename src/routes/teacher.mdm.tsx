@@ -134,6 +134,148 @@ const MARATHI_TO_ENGLISH_MONTHS: Record<string, string> = {
   "जुलै": "July",
 };
 
+export const formatClassSectionName = (sec?: string) => {
+  if (!sec) return "इयत्ता १ ली ते ५ वी";
+  if (sec === "1-5" || sec === "1 To 5") return "इयत्ता १ ली ते ५ वी";
+  if (sec === "6-8" || sec === "6 To 8") return "इयत्ता ६ वी ते ८ वी";
+  return "इयत्ता १ ली ते ८ वी (एकत्रित)";
+};
+
+export const formatMarathiMonthYear = (monthStr?: string, yearStr?: string) => {
+  if (!monthStr) return "ऑगस्ट 2026";
+  const monthMrMap: Record<string, string> = {
+    "January": "जानेवारी", "February": "फेब्रुवारी", "March": "मार्च", "April": "एप्रिल",
+    "May": "मे", "June": "जून", "July": "जुलै", "August": "ऑगस्ट", "September": "सप्टेंबर",
+    "October": "ऑक्टोबर", "November": "नोव्हेंबर", "December": "डिसेंबर",
+    "जानेवारी": "जानेवारी", "फेब्रुवारी": "फेब्रुवारी", "मार्च": "मार्च", "एप्रिल": "एप्रिल",
+    "मे": "मे", "जून": "जून", "जुलै": "जुलै", "ऑगस्ट": "ऑगस्ट", "सप्टेंबर": "सप्टेंबर",
+    "ऑक्टोबर": "ऑक्टोबर", "नोव्हेंबर": "नोव्हेंबर", "डिसेंबर": "डिसेंबर"
+  };
+  const mName = monthMrMap[monthStr] || monthStr;
+  const yearParts = (yearStr || "2026-27").split(/[-/]/);
+  const startYear = parseInt(yearParts[0], 10) || 2026;
+  const englishMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const mEng = MARATHI_TO_ENGLISH_MONTHS[monthStr] || monthStr;
+  const mIdx = englishMonths.indexOf(mEng);
+  const actualYear = (mIdx >= 0 && mIdx <= 2) ? startYear + 1 : startYear;
+  return `${mName} ${actualYear}`;
+};
+
+export interface CommonMDMReportHeaderProps {
+  title?: string;
+  subtitle?: string;
+  month: string;
+  academicYear: string;
+  schoolName?: string;
+  center?: string;
+  taluka?: string;
+  district?: string;
+  pat: number | string;
+  classSection: string;
+  workingDays: number | string;
+  cookedDays: number | string;
+}
+
+export const CommonMDMReportHeader: React.FC<CommonMDMReportHeaderProps> = ({
+  title,
+  subtitle,
+  month,
+  academicYear,
+  schoolName,
+  center,
+  taluka,
+  district,
+  pat,
+  classSection,
+  workingDays,
+  cookedDays,
+}) => {
+  return (
+    <div className="w-full bg-white text-slate-900 mb-3 space-y-2 font-sans">
+      {/* Title Header */}
+      <div className="text-center space-y-0.5">
+        <p className="text-[11px] font-bold text-[#008955] tracking-wide uppercase">
+          प्रधानमंत्री पोषण शक्ती निर्माण योजना
+        </p>
+        {title && (
+          <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight uppercase">
+            {title}
+          </h1>
+        )}
+        {schoolName && (
+          <h2 className="text-xs sm:text-sm font-extrabold text-slate-900 uppercase">
+            {schoolName}
+          </h2>
+        )}
+        {subtitle && (
+          <p className="text-xs font-bold text-slate-700">{subtitle}</p>
+        )}
+      </div>
+
+      {/* Boxed Common MDM Header Table showing all 10 mandatory metadata fields */}
+      <table className="w-full border-collapse border border-slate-400 text-xs text-center font-bold bg-white" style={{ borderCollapse: 'collapse', border: '1px solid #000000' }}>
+        <tbody>
+          {/* Row 1: Geography & School Details */}
+          <tr className="border-b border-slate-400 bg-slate-50" style={{ borderBottom: '1px solid #000000' }}>
+            <td className="border-r border-slate-400 p-1.5 w-1/4" style={{ borderRight: '1px solid #000000' }}>
+              <span className="text-[10px] text-slate-500 font-semibold block uppercase">शाळेचे नाव</span>
+              <span className="text-slate-900 font-extrabold text-xs">{schoolName || "—"}</span>
+            </td>
+            <td className="border-r border-slate-400 p-1.5 w-1/4" style={{ borderRight: '1px solid #000000' }}>
+              <span className="text-[10px] text-slate-500 font-semibold block uppercase">केंद्राचे नाव</span>
+              <span className="text-slate-900 font-extrabold text-xs">{center || "—"}</span>
+            </td>
+            <td className="border-r border-slate-400 p-1.5 w-1/4" style={{ borderRight: '1px solid #000000' }}>
+              <span className="text-[10px] text-slate-500 font-semibold block uppercase">तालुका</span>
+              <span className="text-slate-900 font-extrabold text-xs">{taluka || "—"}</span>
+            </td>
+            <td className="p-1.5 w-1/4">
+              <span className="text-[10px] text-slate-500 font-semibold block uppercase">जिल्हा</span>
+              <span className="text-slate-900 font-extrabold text-xs">{district || "—"}</span>
+            </td>
+          </tr>
+
+          {/* Row 2: MDM Key Details */}
+          <tr className="bg-white">
+            <td className="border-r border-slate-400 p-1" colSpan={2} style={{ borderRight: '1px solid #000000' }}>
+              <div className="grid grid-cols-3 divide-x divide-slate-300 text-center">
+                <div className="px-1 py-0.5">
+                  <span className="text-[9px] text-slate-500 font-semibold block uppercase">महिना</span>
+                  <span className="text-slate-900 font-extrabold text-xs">{month}</span>
+                </div>
+                <div className="px-1 py-0.5">
+                  <span className="text-[9px] text-slate-500 font-semibold block uppercase">चालू शैक्षणिक वर्ष</span>
+                  <span className="text-slate-900 font-extrabold text-xs">{academicYear}</span>
+                </div>
+                <div className="px-1 py-0.5">
+                  <span className="text-[9px] text-slate-500 font-semibold block uppercase">इयत्ता गट</span>
+                  <span className="text-slate-900 font-extrabold text-xs">{classSection}</span>
+                </div>
+              </div>
+            </td>
+            <td className="p-1" colSpan={2}>
+              <div className="grid grid-cols-3 divide-x divide-slate-300 text-center">
+                <div className="px-1 py-0.5">
+                  <span className="text-[9px] text-slate-500 font-semibold block uppercase">पट</span>
+                  <span className="text-slate-900 font-extrabold text-xs">{pat}</span>
+                </div>
+                <div className="px-1 py-0.5">
+                  <span className="text-[9px] text-slate-500 font-semibold block uppercase">एकूण कामाचे दिवस</span>
+                  <span className="text-slate-900 font-extrabold text-xs">{workingDays}</span>
+                </div>
+                <div className="px-1 py-0.5">
+                  <span className="text-[9px] text-slate-500 font-semibold block uppercase">एकूण शिजवलेले दिवस</span>
+                  <span className="text-slate-900 font-extrabold text-xs">{cookedDays}</span>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
 function TeacherMDMPage() {
   const navigate = useNavigate();
   const { user, profile, loading: authLoading } = useAuth();
@@ -222,6 +364,31 @@ function TeacherMDMPage() {
   const [reportPrincipalName, setReportPrincipalName] = useState("");
   const [monthlySubTab, setMonthlySubTab] = useState<"1-5" | "6-8" | "1-8">("1-8");
   const [annualSubTab, setAnnualSubTab] = useState<"1-5" | "6-8" | "1-8">("1-5");
+  const [globalClassSection, setGlobalClassSection] = useState<"1-5" | "6-8" | "1-8">("1-5");
+
+  const handleGlobalClassSectionChange = (val: "1-5" | "6-8" | "1-8") => {
+    setGlobalClassSection(val);
+    setMonthlySubTab(val);
+    setAnnualSubTab(val);
+    setStockDemandCategory(val === "6-8" ? "6 To 8" : "1 To 5");
+    setStockClass(val === "6-8" ? "6 To 8" : "1 To 5");
+    setRegisterClass(val === "6-8" ? "6 To 8" : "1 To 5");
+  };
+
+  const GlobalClassSelector = ({ className = "" }: { className?: string }) => (
+    <div className={`flex items-center gap-2 bg-emerald-50/90 border border-emerald-300 rounded-xl px-3 py-1.5 shadow-2xs ${className}`}>
+      <span className="text-xs font-black text-emerald-950 whitespace-nowrap">इयत्ता गट:</span>
+      <select
+        value={globalClassSection}
+        onChange={(e) => handleGlobalClassSectionChange(e.target.value as "1-5" | "6-8" | "1-8")}
+        className="px-2.5 py-1 bg-white border border-emerald-400 rounded-lg text-xs font-black text-slate-900 cursor-pointer shadow-2xs outline-none focus:ring-2 focus:ring-emerald-500"
+      >
+        <option value="1-5">इयत्ता १ ली ते ५ वी (प्राथमिक)</option>
+        <option value="6-8">इयत्ता ६ वी ते ८ वी (उच्च प्राथमिक)</option>
+        <option value="1-8">इयत्ता १ ली ते ८ वी (एकत्रित)</option>
+      </select>
+    </div>
+  );
   const [annualReportType, setAnnualReportType] = useState("तांदूळ उपयोगिता (किलोग्रॅम मध्ये)");
   const [stockDemandMonth, setStockDemandMonth] = useState<string>("सप्टेंबर");
   const [stockDemandYear, setStockDemandYear] = useState<string>("2026-27");
@@ -232,6 +399,7 @@ function TeacherMDMPage() {
   const [monthlyMdmReportSelectedMonth, setMonthlyMdmReportSelectedMonth] = useState<string>("जून");
   const [monthlyMdmReportYear, setMonthlyMdmReportYear] = useState<string>("2026/27");
   const monthlyMdmReportMonth = `${monthlyMdmReportSelectedMonth} सन ${monthlyMdmReportYear}`;
+  const [selectedCookHelperCount, setSelectedCookHelperCount] = useState<number>(1);
   const [swayampakiMandhan, setSwayampakiMandhan] = useState<string>("2500.00");
 
   const [certMonthName, setCertMonthName] = useState<string>("");
@@ -244,8 +412,8 @@ function TeacherMDMPage() {
   const [certBeneficiaryPrimary, setCertBeneficiaryPrimary] = useState<string>("");
   const [certBeneficiaryUpper, setCertBeneficiaryUpper] = useState<string>("");
   const [certHelperCount, setCertHelperCount] = useState<string>("0");
-  const [cookCount, setCookCount] = useState<string>("2");
-  const [helperCountVal, setHelperCountVal] = useState<string>("2");
+  const [cookCount, setCookCount] = useState<string>("1");
+  const [helperCountVal, setHelperCountVal] = useState<string>("1");
   const [showCertEditor, setShowCertEditor] = useState<boolean>(true);
 
   const toEnglishNumbers = (str: string) => {
@@ -6000,6 +6168,48 @@ function TeacherMDMPage() {
 
   // ---- Dynamic Report Helpers ----
 
+  // Calculate working days for a given month and academic year by excluding Sundays and Holidays
+  const calculateMonthWorkingDays = (monthStr: string, yearStr: string) => {
+    const monthEng = MARATHI_TO_ENGLISH_MONTHS[monthStr] || monthStr;
+    const yearParts = (yearStr || "2026-27").split("-");
+    const startYear = parseInt(yearParts[0], 10) || 2026;
+
+    const englishMonths = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+    const monthIndex = englishMonths.indexOf(monthEng);
+    if (monthIndex === -1) return 25;
+
+    const actualYear = (monthIndex >= 0 && monthIndex <= 2) ? startYear + 1 : startYear;
+    const monthNum = monthIndex + 1;
+
+    const totalDays = new Date(actualYear, monthNum, 0).getDate();
+    let workingDays = 0;
+
+    for (let day = 1; day <= totalDays; day++) {
+      const d = new Date(actualYear, monthIndex, day);
+      const dayOfWeek = d.getDay(); // 0 = Sunday
+      if (dayOfWeek === 0) continue; // Exclude Sundays
+
+      // Fixed government holidays
+      if (monthNum === 1 && day === 26) continue; // Republic Day
+      if (monthNum === 5 && day === 1) continue; // Maharashtra Day
+      if (monthNum === 8 && day === 15) continue; // Independence Day
+      if (monthNum === 10 && day === 2) continue; // Gandhi Jayanti
+      if (monthNum === 12 && day === 25) continue; // Christmas
+
+      const dateStr = `${actualYear}-${String(monthNum).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
+      if (monthlyCalendarRecords && monthlyCalendarRecords[dateStr]?.isHoliday) continue;
+      if (registerRecords && registerRecords[dateStr]?.isHoliday) continue;
+
+      workingDays++;
+    }
+
+    return workingDays;
+  };
+
   // Parse "2025-26" into [{month: "April", year: 2025}, ..., {month: "March", year: 2026}]
   const getAcademicYearMonths = (yearStr: string | null) => {
     if (!yearStr) return [];
@@ -6666,6 +6876,7 @@ function TeacherMDMPage() {
                     <span>⚠️ {lowStockItems.length} साहित्याचा साठा कमी आहे</span>
                   </button>
                 )}
+                <GlobalClassSelector />
                 <div className="flex items-center gap-2 text-xs font-extrabold text-slate-600 bg-slate-100/80 border border-slate-200 px-4 py-2 rounded-full shadow-inner">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
                   <span>UDISE: {getUdise()}</span>
@@ -6832,9 +7043,12 @@ function TeacherMDMPage() {
                 {activeTab === "monthly-calendar" && (
                   <div className="space-y-5 font-sans text-slate-800">
                     {/* Top Heading */}
-                    <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-                      Monthly Calendar
-                    </h2>
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
+                      <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                        Monthly Calendar
+                      </h2>
+                      <GlobalClassSelector />
+                    </div>
 
                     {/* Filter Card Container */}
                     <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
@@ -7191,9 +7405,12 @@ function TeacherMDMPage() {
                 {activeTab === "anudan" && (
                   <div className="w-full space-y-6 font-sans">
                     {/* Page Header Title */}
-                    <h2 className="text-xl font-bold text-slate-800 border-b border-slate-200 pb-3">
-                      अनुदान सेटिंग
-                    </h2>
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
+                      <h2 className="text-xl font-bold text-slate-800">
+                        अनुदान सेटिंग
+                      </h2>
+                      <GlobalClassSelector />
+                    </div>
 
                     {/* Card 1: Information Banner */}
                     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-0">
@@ -7817,6 +8034,7 @@ function TeacherMDMPage() {
                             : "Record monthly received stock. Total Available Stock = Opening Stock + Received Stock."}
                         </p>
                       </div>
+                      <GlobalClassSelector />
                     </div>
 
                     {/* Main Table Card (आरंभीची शिल्लक स्टाइल तक्ता) */}
@@ -8148,6 +8366,7 @@ function TeacherMDMPage() {
                             : "Record monthly public contribution. Total Available Stock = Previous Stock (Opening + Received) + Loksahabhag."}
                         </p>
                       </div>
+                      <GlobalClassSelector />
                     </div>
 
                     {/* Main Table Card (आरंभीची शिल्लक / साहित्य आवक स्टाइल तक्ता) */}
@@ -8484,6 +8703,7 @@ function TeacherMDMPage() {
                             : "Record monthly damaged stock. Total Remaining Stock = Stock after Loksahabhag - Damaged Stock."}
                         </p>
                       </div>
+                      <GlobalClassSelector />
                     </div>
 
                     {/* Main Table Card (इतर तक्त्यांप्रमाणेच उभा तक्ता) */}
@@ -8808,10 +9028,11 @@ function TeacherMDMPage() {
                 {activeTab === "quantity" && (
                   <div className="space-y-6">
                     {/* Main Title */}
-                    <div>
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
                       <h2 className="text-xl font-bold text-slate-900 tracking-tight">
                         Recipe Formulas
                       </h2>
+                      <GlobalClassSelector />
                     </div>
 
                     {/* Card 1: Formula source */}
@@ -9565,7 +9786,7 @@ function TeacherMDMPage() {
                       <h2 className="text-xl font-bold text-slate-800">
                         Daily Attendance Entry
                       </h2>
-
+                      <GlobalClassSelector />
                     </div>
 
                     {/* 2-Column Grid Container */}
@@ -10999,6 +11220,7 @@ function TeacherMDMPage() {
                         <h2 className="text-2xl font-bold text-[#004C99]">
                           {t_global.mdm_stock_now}
                         </h2>
+                        <GlobalClassSelector />
                         {lowStockItems.length > 0 && (
                           <button
                             onClick={() => setShowLowStockModal(true)}
@@ -11757,6 +11979,7 @@ function TeacherMDMPage() {
                           Stock Demand Report
                         </h2>
                       </div>
+                      <GlobalClassSelector />
                       <button
                         onClick={() => {
                           toast.info("Open Months मधून मागणीचा महिना निवडा आणि पटसंख्या प्रविष्ट करून Download PDF वर क्लिक करा.");
@@ -11844,57 +12067,16 @@ function TeacherMDMPage() {
                     {/* Printable Official Government Stock Demand Report Document */}
                     <div className="bg-white p-6 md:p-8 rounded-2xl border border-slate-300 shadow-md space-y-4 print:p-0 print:border-none print:shadow-none font-sans text-slate-900">
                       <div id="stock-demand-report-print" className="bg-white p-3 space-y-3 border border-slate-300 rounded-xl">
-                        {/* 1. Header Section */}
-                        <div className="relative text-center space-y-1 pb-1 pt-1">
-                          <div className="absolute left-2 top-0 hidden md:flex items-center justify-center w-14 h-14">
-                            <div className="w-12 h-12 rounded-full border border-amber-300 bg-amber-50 p-1 flex items-center justify-center shadow-2xs">
-                              <Utensils className="w-6 h-6 text-amber-600" />
-                            </div>
-                          </div>
-                          <p className="text-xs font-bold text-[#008955] tracking-wide">
-                            प्रधानमंत्री पोषण शक्ती निर्माण योजना — साहित्य मागणी अहवाल
-                          </p>
-                          <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
-                            धान्यादी मालाची मागणी
-                          </h1>
-                          <h2 className="text-sm md:text-base font-black text-slate-900 uppercase">
-                            {profile?.schoolName || "Z P SCHOOL DHONDEWADI PED"}
-                          </h2>
-                          <p className="text-xs font-bold text-slate-700">
-                            तांदूळ व धान्यादी मालाची — {stockDemandMonth} {stockDemandYear.split('-')[0]} — मागणी किलोग्रॅम मध्ये • प्राथमिक ( इयत्ता १ ते ५ )
-                          </p>
-                        </div>
-
-                        {/* 2. 5 Boxed Metadata Headers */}
-                        <div className="grid grid-cols-5 border border-slate-300 text-center text-xs font-bold divide-x divide-slate-300 bg-slate-50/80 rounded-md overflow-hidden">
-                          <div className="p-2">
-                            <span className="text-[11px] text-slate-500 font-semibold block uppercase">UDISE कोड</span>
-                            <span className="text-slate-900 font-extrabold text-xs">{getUdise() || "27350800701"}</span>
-                          </div>
-                          <div className="p-2">
-                            <span className="text-[11px] text-slate-500 font-semibold block uppercase">केंद्र</span>
-                            <span className="text-slate-900 font-extrabold text-xs">{profile?.center || "NARSINGPUR"}</span>
-                          </div>
-                          <div className="p-2">
-                            <span className="text-[11px] text-slate-500 font-semibold block uppercase">तालुका</span>
-                            <span className="text-slate-900 font-extrabold text-xs">{profile?.taluka || "वाळवा"}</span>
-                          </div>
-                          <div className="p-2">
-                            <span className="text-[11px] text-slate-500 font-semibold block uppercase">जिल्हा</span>
-                            <span className="text-slate-900 font-extrabold text-xs">{profile?.district || "सांगली"}</span>
-                          </div>
-                          <div className="p-2">
-                            <span className="text-[11px] text-slate-500 font-semibold block uppercase">पिन कोड</span>
-                            <span className="text-slate-900 font-extrabold text-xs">{profile?.pincode || "416312"}</span>
-                          </div>
-                        </div>
-
-                        {/* 3. Sub-summary Info Bar */}
                         {(() => {
                           const monthEng = MARATHI_TO_ENGLISH_MONTHS[stockDemandMonth] || "September";
-                          const yearNum = parseInt((stockDemandYear || "2026-27").split("-")[0], 10) || 2026;
+                          const yearParts = (stockDemandYear || "2026-27").split("-");
+                          const startYear = parseInt(yearParts[0], 10) || 2026;
 
-                          const regData = getRegisterDataForMonth(monthEng, yearNum, stockDemandCategory);
+                          const englishMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                          const mIdx = englishMonths.indexOf(monthEng);
+                          const actualYear = (mIdx >= 0 && mIdx <= 2) ? startYear + 1 : startYear;
+
+                          const regData = getRegisterDataForMonth(monthEng, actualYear, stockDemandCategory);
                           const regEnrolled = regData?.enrolled || 0;
 
                           let latestEnrolled = 0;
@@ -11912,24 +12094,23 @@ function TeacherMDMPage() {
                           const profPat = stockDemandCategory === "6 To 8" ? profP68 : profP15;
 
                           const pat = parseFloat(stockDemandPatSankhya) || regEnrolled || latestEnrolled || profPat || 0;
-                          const wDays = parseFloat(stockDemandWorkingDays) || 21;
-                          const todayStr = "06-08-2026";
-                          const monthStartStr = "01-09-2026";
-                          const monthAbbr: Record<string, string> = {
-                            "जानेवारी": "जाने", "फेब्रुवारी": "फेब्रु", "मार्च": "मार्च", "एप्रिल": "एप्रि",
-                            "मे": "मे", "जून": "जून", "जुलै": "जुलै", "ऑगस्ट": "ऑगस्ट", "सप्टेंबर": "सप्टें",
-                            "ऑक्टोबर": "ऑक्टो", "नोव्हेंबर": "नोव्हें", "डिसेंबर": "डिसें"
-                          };
-                          const demandPeriodStr = `${monthAbbr[stockDemandMonth] || stockDemandMonth} ${stockDemandYear.split('-')[0]}`;
+                          const wDays = calculateMonthWorkingDays(stockDemandMonth, stockDemandYear);
 
                           return (
-                            <div className="text-xs font-bold text-slate-800 py-1.5 px-3 bg-slate-50 border border-slate-300 rounded flex flex-wrap justify-between items-center gap-2">
-                              <span>पटसंख्या: <strong className="font-extrabold text-slate-900">{pat}</strong></span>
-                              <span>मागणी कालावधी: <strong className="font-extrabold text-slate-900">{demandPeriodStr}</strong></span>
-                              <span>आज: <strong className="font-extrabold text-slate-900">{todayStr}</strong></span>
-                              <span>मागणी महिना सुरू: <strong className="font-extrabold text-slate-900">{monthStartStr}</strong></span>
-                              <span>उरलेले कार्यदिवस: <strong className="font-extrabold text-slate-900">{wDays}</strong></span>
-                            </div>
+                            <CommonMDMReportHeader
+                              title="धान्यादी मालाची मागणी"
+                              subtitle="तांदूळ व धान्यादी मालाची मागणी किलोग्रॅम मध्ये"
+                              month={formatMarathiMonthYear(stockDemandMonth, stockDemandYear)}
+                              academicYear={stockDemandYear}
+                              schoolName={profile?.schoolName || "Z P SCHOOL DHONDEWADI PED"}
+                              center={profile?.center || profile?.kendra || "NARSINGPUR"}
+                              taluka={profile?.taluka || "वाळवा"}
+                              district={profile?.district || "सांगली"}
+                              pat={pat}
+                              classSection={formatClassSectionName(stockDemandCategory)}
+                              workingDays={wDays}
+                              cookedDays={wDays}
+                            />
                           );
                         })()}
 
@@ -11955,9 +12136,14 @@ function TeacherMDMPage() {
                             <tbody>
                               {(() => {
                                 const monthEng = MARATHI_TO_ENGLISH_MONTHS[stockDemandMonth] || "September";
-                                const yearNum = parseInt((stockDemandYear || "2026-27").split("-")[0], 10) || 2026;
+                                const yearParts = (stockDemandYear || "2026-27").split("-");
+                                const startYear = parseInt(yearParts[0], 10) || 2026;
 
-                                const regData = getRegisterDataForMonth(monthEng, yearNum, stockDemandCategory);
+                                const englishMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                                const mIdx = englishMonths.indexOf(monthEng);
+                                const actualYear = (mIdx >= 0 && mIdx <= 2) ? startYear + 1 : startYear;
+
+                                const regData = getRegisterDataForMonth(monthEng, actualYear, stockDemandCategory);
                                 const regEnrolled = regData?.enrolled || 0;
 
                                 let latestEnrolled = 0;
@@ -11975,7 +12161,7 @@ function TeacherMDMPage() {
                                 const profPat = stockDemandCategory === "6 To 8" ? profP68 : profP15;
 
                                 const pat = parseFloat(stockDemandPatSankhya) || regEnrolled || latestEnrolled || profPat || 0;
-                                const wDays = parseFloat(stockDemandWorkingDays) || 21;
+                                const wDays = calculateMonthWorkingDays(stockDemandMonth, stockDemandYear);
                                 const isUpper = stockDemandCategory === "6 To 8";
 
                                 const itemsDef = [
@@ -12013,7 +12199,7 @@ function TeacherMDMPage() {
                                   const expUsed = unitQty * pat * wDays;
                                   const reqMonth = unitQty * pat * wDays;
                                   const expBal = stock - expUsed;
-                                  const finalDemand = expBal < 0 ? (reqMonth + Math.abs(expBal)) : Math.max(0, reqMonth - expBal);
+                                  const finalDemand = Math.max(0, expUsed - stock);
 
                                   return (
                                     <tr key={idx} className="border-b border-slate-300 h-8 text-right font-medium hover:bg-slate-50">
@@ -12275,6 +12461,7 @@ function TeacherMDMPage() {
                     {/* Top Header matching Screenshot 2 */}
                     <div className="flex items-center justify-between">
                       <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">Monthly MDM Report</h1>
+                      <GlobalClassSelector />
                       <button className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-all border border-slate-300">
                         <Info className="w-3.5 h-3.5 text-slate-500" />
                         <span>Help</span>
@@ -12673,16 +12860,15 @@ function TeacherMDMPage() {
                                     <h3 className="text-xs md:text-sm font-extrabold text-slate-800">पोषण आहार दैनंदिन नोंदी</h3>
                                     <p className="text-xs font-bold text-slate-700">{schoolName}</p>
                                     <p className="text-xs font-semibold text-slate-600">पोषण आहार दैनंदिन नोंदी — {monthYearStr} · प्राथमिक ( इयत्ता १ ते ५ )</p>
-                                    <div className="grid grid-cols-2 sm:grid-cols-5 border border-slate-700 text-xs font-bold mt-2 text-center divide-x divide-slate-700 bg-slate-50 rounded-lg overflow-hidden">
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 border border-slate-700 text-xs font-bold mt-2 text-center divide-x divide-slate-700 bg-slate-50 rounded-lg overflow-hidden">
                                       <div className="p-2">UDISE कोड<br/><span className="font-black text-slate-900">{profile?.udise || getUdise() || ""}</span></div>
                                       <div className="p-2">केंद्र<br/><span className="font-black text-slate-900">{profile?.kendra || profile?.center || ""}</span></div>
                                       <div className="p-2">तालुका<br/><span className="font-black text-slate-900">{profile?.taluka || ""}</span></div>
                                       <div className="p-2">जिल्हा<br/><span className="font-black text-slate-900">{profile?.district || ""}</span></div>
-                                      <div className="p-2">पिन कोड<br/><span className="font-black text-slate-900">{profile?.pinCode || profile?.pincode || ""}</span></div>
                                     </div>
                                     <div className="flex w-full divide-x divide-black text-center border border-slate-700 mt-2 text-xs font-bold bg-slate-50">
                                        <div className="w-[35%] p-1.5 text-left pl-3">स्वयंपाकी तथा मदतनीस मानधन रु.</div>
-                                       <div className="w-[15%] p-1.5 font-black">₹2500.00</div>
+                                       <div className="w-[15%] p-1.5 font-black">₹{(selectedCookHelperCount * 2500).toFixed(2)}</div>
                                        <div className="w-[35%] p-1.5 text-left pl-3">पूरक आहार (0.73 पै.)</div>
                                        <div className="w-[15%] p-1.5 font-black">{monthlyTotalTat ? `₹${(monthlyTotalTat * 0.73).toFixed(2)}` : ""}</div>
                                     </div>
@@ -12802,12 +12988,32 @@ function TeacherMDMPage() {
                                       </div>
 
                                       <div className="space-y-1 pt-1">
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex flex-wrap items-center gap-2">
                                           <span className="font-bold text-slate-900">स्वयंपाकी तथा मदतनीस मानधन रु.</span>
-                                          <span className="inline-block border-b border-slate-700 w-44"></span>
+                                          <span className="bg-emerald-100/90 text-emerald-900 border border-emerald-300 font-extrabold px-3 py-0.5 rounded-md text-xs">
+                                            ₹{(selectedCookHelperCount * 2500).toFixed(2)}
+                                          </span>
+                                          <div className="flex items-center gap-1 print:hidden">
+                                            <span className="text-[10px] text-slate-600 font-bold">संख्या:</span>
+                                            <select
+                                              value={selectedCookHelperCount}
+                                              onChange={(e) => {
+                                                const val = parseInt(e.target.value, 10);
+                                                setSelectedCookHelperCount(val);
+                                                setCookCount(val.toString());
+                                                setHelperCountVal(val.toString());
+                                              }}
+                                              className="px-2 py-0.5 bg-white border border-slate-400 rounded text-xs font-black text-slate-900 cursor-pointer shadow-2xs outline-none"
+                                            >
+                                              <option value={1}>1 व्यक्ती (₹2,500)</option>
+                                              <option value={2}>2 व्यक्ती (₹5,000)</option>
+                                              <option value={3}>3 व्यक्ती (₹7,500)</option>
+                                              <option value={4}>4 व्यक्ती (₹10,000)</option>
+                                            </select>
+                                          </div>
                                         </div>
                                         <div className="text-[10px] font-medium text-slate-500 pl-0.5">
-                                          (ताटांची संख्या × दर) (शासनस्तरावरून निश्चित केल्यानुसार)
+                                          ({selectedCookHelperCount} व्यक्ती × ₹2,500) (शासनस्तरावरून निश्चित केल्यानुसार)
                                         </div>
                                       </div>
 
@@ -13378,10 +13584,11 @@ function TeacherMDMPage() {
                 {activeTab === "monthly-report" && (
                   <div className="bg-white p-2 sm:p-4 border border-slate-300 w-full min-h-[500px] flex flex-col items-stretch overflow-x-auto">
                     <div className="w-full max-w-full space-y-6">
-                      <div className="text-center py-2">
+                      <div className="text-center py-2 flex flex-col sm:flex-row items-center justify-between gap-3">
                         <h2 className="text-2xl font-black text-[#004C99]">
                           Certificate
                         </h2>
+                        <GlobalClassSelector />
                       </div>
 
                       {/* Top Control Bar matching User Screenshot */}
@@ -13610,28 +13817,24 @@ function TeacherMDMPage() {
                               />
                             </div>
 
-                            {/* 8. स्वयंपाकी संख्या */}
-                            <div>
-                              <label className="block mb-1 text-slate-700">स्वयंपाकी संख्या</label>
-                              <input
-                                type="number"
-                                min="0"
-                                value={cookCount}
-                                onChange={(e) => setCookCount(e.target.value)}
-                                className="w-full h-9 px-3 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
-                              />
-                            </div>
-
-                            {/* 9. मदतनीस संख्या */}
-                            <div>
-                              <label className="block mb-1 text-slate-700">मदतनीस संख्या</label>
-                              <input
-                                type="number"
-                                min="0"
-                                value={helperCountVal}
-                                onChange={(e) => setHelperCountVal(e.target.value)}
-                                className="w-full h-9 px-3 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
-                              />
+                            {/* 8. स्वयंपाकी तथा मदतनीस संख्या */}
+                            <div className="sm:col-span-2">
+                              <label className="block mb-1 text-slate-700 font-bold">स्वयंपाकी तथा मदतनीस संख्या (मानधन)</label>
+                              <select
+                                value={cookCount || "1"}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setCookCount(val);
+                                  setHelperCountVal(val);
+                                  setSelectedCookHelperCount(parseInt(val, 10) || 1);
+                                }}
+                                className="w-full h-9 px-3 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer"
+                              >
+                                <option value="1">1 व्यक्ती (मानधन: ₹2,500)</option>
+                                <option value="2">2 व्यक्ती (मानधन: ₹5,000)</option>
+                                <option value="3">3 व्यक्ती (मानधन: ₹7,500)</option>
+                                <option value="4">4 व्यक्ती (मानधन: ₹10,000)</option>
+                              </select>
                             </div>
                           </div>
                         </div>
@@ -14606,6 +14809,7 @@ function TeacherMDMPage() {
                             : "View and download 12-month annual MDM utilization report."}
                         </p>
                       </div>
+                      <GlobalClassSelector />
 
                       <div className="flex items-center gap-2 print:hidden">
                         <button
@@ -14753,7 +14957,7 @@ function TeacherMDMPage() {
                             </div>
 
                             {/* School Details Metadata Bar */}
-                            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 border-t border-slate-200 pt-3 mt-3 text-left text-sm">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 border-t border-slate-200 pt-3 mt-3 text-left text-sm">
                               <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
                                 <span className="text-sm text-slate-500 font-bold block">UDISE कोड</span>
                                 <span className="font-extrabold text-slate-900">{getUdise() || ""}</span>
@@ -14769,10 +14973,6 @@ function TeacherMDMPage() {
                               <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
                                 <span className="text-sm text-slate-500 font-bold block">जिल्हा</span>
                                 <span className="font-extrabold text-slate-900">{profile?.district || ""}</span>
-                              </div>
-                              <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
-                                <span className="text-sm text-slate-500 font-bold block">पिन कोड</span>
-                                <span className="font-extrabold text-slate-900">{profile?.pincode || ""}</span>
                               </div>
                             </div>
                           </div>
