@@ -60,6 +60,8 @@ export function normalizeDate(rawVal: any): { isoDate: string; displayDate: stri
   };
 }
 
+import { UniversalFileReader } from "@/services/fileReader";
+
 /**
  * Parses Yearly Excel/CSV File and uploads Date-wise records to Firestore
  */
@@ -69,17 +71,23 @@ export async function parseAndSaveYearlyDiary(
   medium: string,
   onProgress?: (processed: number, total: number) => void
 ): Promise<{ success: boolean; totalDaysParsed: number }> {
-  // Read Excel workbook
-  const workbook = XLSX.read(fileBuffer, { type: "array", cellDates: true });
-  const firstSheetName = workbook.SheetNames[0];
-  const worksheet = workbook.Sheets[firstSheetName];
+  // Read Excel workbook via UniversalFileReader service
+  const fileResult = await UniversalFileReader.readFile(fileBuffer);
+  const firstSheet = fileResult.sheets[0];
 
-  // Convert worksheet to JSON array of objects
-  const rawRows: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
-
-  if (!rawRows || rawRows.length === 0) {
+  if (!firstSheet || firstSheet.rows.length === 0) {
     throw new Error("Uploaded file is empty or missing data rows.");
   }
+
+  // Convert sheet rows into object array using headers
+  const headers = firstSheet.headers;
+  const rawRows: Record<string, any>[] = firstSheet.rows.slice(1).map((rowVals) => {
+    const obj: Record<string, any> = {};
+    headers.forEach((h, i) => {
+      obj[h] = rowVals[i] || "";
+    });
+    return obj;
+  });
 
   // Map to group period rows by ISO Date (YYYY-MM-DD)
   const diaryMap = new Map<string, DayDiaryRecord>();

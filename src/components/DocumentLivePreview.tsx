@@ -19,6 +19,7 @@ import { getBunnyStorageUrl } from "@/lib/bunny-auth-pdf";
 import { showToast as toast } from "@/lib/custom-toast";
 import { db } from "@/lib/firebase";
 import { doc, updateDoc, setDoc } from "firebase/firestore";
+import { PlanningTableRenderer } from "@/components/teacher/PlanningTableRenderer";
 
 export const formatCleanDate = (raw: string | undefined | null) => {
   if (!raw) return "-";
@@ -1860,40 +1861,10 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
               className="word-content-wrapper space-y-3"
             />
           </div>
-        ) : excelPreviewData && excelPreviewData.length > 0 ? (
-          /* EXCEL / CSV PREVIEW TABLE */
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="p-3 bg-slate-100 border-b border-slate-200 flex items-center justify-between text-xs text-slate-700 font-bold">
-              <span className="flex items-center gap-1.5 text-indigo-600">
-                <TableIcon className="size-4" />
-                Yearly Excel / CSV Data Rows ({excelPreviewData.length} previewed)
-              </span>
-              <span className="text-[10px] text-slate-400">Auto-parsed Date Columns</span>
-            </div>
-            <div className="overflow-x-auto max-h-[520px]">
-              <table className="w-full text-left text-xs text-slate-700">
-                <thead className="bg-slate-50 text-slate-900 font-black border-b border-slate-200 sticky top-0">
-                  <tr>
-                    {Object.keys(excelPreviewData[0]).slice(0, 8).map((colKey, i) => (
-                      <th key={i} className="py-2.5 px-3 border-r border-slate-200 whitespace-nowrap bg-slate-100">
-                        {colKey}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {excelPreviewData.map((row, rIdx) => (
-                    <tr key={rIdx} className="hover:bg-indigo-50/40">
-                      {Object.keys(excelPreviewData[0]).slice(0, 8).map((colKey, cIdx) => (
-                        <td key={cIdx} className="py-2 px-3 border-r border-slate-100 whitespace-nowrap text-slate-800">
-                          {String(row[colKey] || "")}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+        ) : (activeExt === "xlsx" || activeExt === "xls" || activeExt === "csv") || (excelPreviewData && excelPreviewData.length > 0) ? (
+          /* CLEAN NATIVE EXCEL MULTI-SHEET TABLE PREVIEW */
+          <div className="w-full h-full bg-white rounded-2xl overflow-auto p-4 shadow-xs">
+            <PlanningTableRenderer record={savedRecord as any} fileUrl={downloadUrl} mode="teacher" />
           </div>
         ) : isPdf && pdfUrlToDisplay ? (
           /* PDF IFRAME FALLBACK */

@@ -1,7 +1,7 @@
-import * as XLSX from "xlsx";
-import mammoth from "mammoth";
-import { extractTableRowsFromPdf } from "@/lib/pdfParser";
+import { UniversalFileReader } from "@/services/fileReader";
 import { PlanningTableRow } from "@/components/teacher/AcademicPlanningSystem";
+import { extractTableRowsFromPdf } from "@/lib/pdfParser";
+import { splitRowsIntoSubjectSections } from "@/lib/smartSubjectSplitter";
 
 export interface ParsedTableCell {
   value: string;
@@ -26,7 +26,7 @@ export interface ParsedTableResult {
 export const isColumnHeaderRow = (row: ParsedTableCell[]): boolean => {
   if (!row || row.length === 0) return false;
   const joined = row.map((c) => (c.value || "").toLowerCase().trim()).join(" ");
-  
+
   const hasMonth = joined.includes("महिना") || joined.includes("month");
   const hasHeaderKeywords =
     joined.includes("आठवडा") ||
@@ -45,7 +45,6 @@ export const isColumnHeaderRow = (row: ParsedTableCell[]): boolean => {
  */
 export const isSubjectHeaderRow = (row: ParsedTableCell[]): boolean => {
   if (!row || row.length === 0) return false;
-  // Column header rows containing "महिना" are headers, NOT subject section banners
   if (isColumnHeaderRow(row)) return false;
 
   const joined = row.map((c) => (c.value || "").toLowerCase()).join(" ");
@@ -64,216 +63,51 @@ export const isSubjectHeaderRow = (row: ParsedTableCell[]): boolean => {
 };
 
 /**
- * Parses an Excel (.xlsx / .xls) file maintaining 100% of rows (250+ rows),
- * preserving MERGED CELLS (rowspan/colspan), forward-filling merged context,
- * preserving UTF-8 Marathi text formatting, filtering out duplicate column headers,
- * and generating clean sticky-header HTML with single non-duplicate subject dividers.
+ * Parses an Excel (.xlsx / .xls / .csv) file maintaining 100% of rows (250+ rows),
+ * using the central UniversalFileReader service.
  */
 export async function parseExcelFile(file: File): Promise<ParsedTableResult> {
   try {
-    const arrayBuffer = await file.arrayBuffer();
-    const workbook = XLSX.read(arrayBuffer, { type: "array", cellStyles: true });
-    const firstSheetName = workbook.SheetNames[0];
-    if (!firstSheetName) {
-      return createEmptyResult("excel", "Excel document has no readable sheet.");
+    const res = await UniversalFileReader.readFile(file);
+    if (!res.success && res.sheets.length === 0) {
+      return createEmptyResult("excel", res.errors[0]?.message || "Excel document has no readable sheet.");
     }
 
-    const worksheet = workbook.Sheets[firstSheetName];
-    if (!worksheet || !worksheet["!ref"]) {
+    const firstSheet = res.sheets[0];
+    if (!firstSheet) {
       return createEmptyResult("excel", "Excel sheet is empty.");
     }
 
-    // Decode full sheet range
-    const range = XLSX.utils.decode_range(worksheet["!ref"]);
-    const startRow = range.s.r;
-    const endRow = range.e.r;
-    const startCol = range.s.c;
-    const endCol = range.e.c;
+    const grid: ParsedTableCell[][] = firstSheet.gridData as ParsedTableCell[][];
+    const rawHeaders = firstSheet.headers;
 
-    const rowCount = endRow - startRow + 1;
-    const colCount = endCol - startCol + 1;
-
-    if (rowCount === 0 || colCount === 0) {
-      return createEmptyResult("excel", "No rows found in sheet.");
-    }
-
-    // ── Step 1: Initialize full matrix for ALL sheet rows ──────────────────────
-    const grid: ParsedTableCell[][] = Array.from({ length: rowCount }, () =>
-      Array.from({ length: colCount }, () => ({
-        value: "",
-        rowspan: 1,
-        colspan: 1,
-        isMergedHidden: false,
-      }))
-    );
-
-    // Read raw text values into grid
-    for (let r = 0; r < rowCount; r++) {
-      for (let c = 0; c < colCount; c++) {
-        const cellAddress = XLSX.utils.encode_cell({ r: startRow + r, c: startCol + c });
-        const cell = worksheet[cellAddress];
-        let val = "";
-        if (cell && cell.v !== undefined && cell.v !== null) {
-          val = String(cell.w || cell.v).trim();
-          if (val.includes("$")) {
-            val = val.replace(/\$\s*/g, "").trim();
-          }
-        }
-        grid[r][c].value = val;
-      }
-    }
-
-    // ── Step 2: Handle Merged Cell Ranges (!merges) ─────────────────────────────
-    const merges = worksheet["!merges"] || [];
-    for (const merge of merges) {
-      const mStartRow = merge.s.r - startRow;
-      const mEndRow = merge.e.r - startRow;
-      const mStartCol = merge.s.c - startCol;
-      const mEndCol = merge.e.c - startCol;
-
-      if (
-        mStartRow >= 0 &&
-        mStartRow < rowCount &&
-        mStartCol >= 0 &&
-        mStartCol < colCount
-      ) {
-        const rowspan = Math.max(1, mEndRow - mStartRow + 1);
-        const colspan = Math.max(1, mEndCol - mStartCol + 1);
-
-        grid[mStartRow][mStartCol].rowspan = rowspan;
-        grid[mStartRow][mStartCol].colspan = colspan;
-
-        const mainVal = grid[mStartRow][mStartCol].value;
-
-        // Mark hidden covered cells & forward fill context into matrix
-        for (let r = mStartRow; r <= mEndRow && r < rowCount; r++) {
-          for (let c = mStartCol; c <= mEndCol && c < colCount; c++) {
-            if (r === mStartRow && c === mStartCol) continue;
-            grid[r][c].isMergedHidden = true;
-            if (!grid[r][c].value) {
-              grid[r][c].value = mainVal; // Forward fill merged value
-            }
-          }
-        }
-      }
-    }
-
-    // ── Step 3: Filter out all completely blank rows (all cells empty or whitespace) ──
-    const isRowEmpty = (row: ParsedTableCell[]): boolean => {
-      return row.every((cell) => !cell.value || cell.value.trim() === "");
-    };
-
-    let activeGrid = grid.filter((row) => !isRowEmpty(row));
-
-    // Trim trailing empty columns on far right
-    let maxUsedCol = 0;
-    activeGrid.forEach((row) => {
-      row.forEach((cell, cIdx) => {
-        if (cell.value || cell.isMergedHidden || cell.colspan > 1) {
-          maxUsedCol = Math.max(maxUsedCol, cIdx);
-        }
-      });
-    });
-
-    const cleanedGrid = activeGrid.map((row) => row.slice(0, maxUsedCol + 1));
-
-    if (cleanedGrid.length === 0) {
-      return createEmptyResult("excel", "No valid rows found after parsing.");
-    }
-
-    // ── Step 4: Identify Primary Header Row ────────────────────────────────────
-    let headerRowIdx = 0;
-    let maxNonEmpty = 0;
-    for (let r = 0; r < Math.min(cleanedGrid.length, 10); r++) {
-      const count = cleanedGrid[r].filter((cell) => !cell.isMergedHidden && cell.value.length > 0).length;
-      if (count > maxNonEmpty) {
-        maxNonEmpty = count;
-        headerRowIdx = r;
-      }
-    }
-
-    const rawHeaders = cleanedGrid[headerRowIdx]
-      ? cleanedGrid[headerRowIdx].map((c, i) => c.value || `स्तंभ ${i + 1}`)
-      : [];
-
-    const numCols = cleanedGrid[0]?.length || 6;
-
-    // ── Step 5: Build Clean HTML Table (Header ONLY once in <thead>) ───────────
-    let html = `<table class="w-full border-collapse border border-slate-300 text-sm font-sans my-0">`;
-    
-    // Build explicit sticky header <thead> - ONCE AT THE VERY TOP
-    html += `<thead class="sticky top-0 z-20 bg-amber-100 shadow-sm border-b-2 border-amber-300">`;
-    html += `<tr class="bg-amber-100 text-amber-950 font-bold">`;
-    cleanedGrid[headerRowIdx]?.forEach((cell) => {
-      if (cell.isMergedHidden) return;
-      const colspanAttr = cell.colspan > 1 ? ` colspan="${cell.colspan}"` : "";
-      html += `<th${colspanAttr} class="border border-slate-300 p-2.5 text-center font-bold sticky top-0 z-20 bg-amber-100 text-amber-950">${escapeHtml(cell.value || "स्तंभ")}</th>`;
-    });
-    html += `</tr>`;
-    html += `</thead>`;
-
-    html += `<tbody>`;
-
-    let prevRowWasSubjectHeader = false;
-
-    cleanedGrid.forEach((row, rIdx) => {
-      if (rIdx === headerRowIdx) return; // Skip primary header row inside tbody
-      if (isColumnHeaderRow(row)) return; // Filter out duplicate column headers inside tbody
-
-      const isSubjectHeader = isSubjectHeaderRow(row);
-
-      // Render Dynamic Subject Title Banner Row (Full-width across all columns)
-      if (isSubjectHeader) {
-        const subjectText = row.find((c) => c.value && c.value.trim() !== "")?.value || "नियोजन विभाग";
-        html += `<tr class="bg-indigo-100/95 border-t-2 border-b-2 border-indigo-400">`;
-        html += `<td colspan="${numCols}" class="py-3 px-4 text-center font-black text-indigo-950 text-base tracking-wide bg-indigo-100/95">✨ ${escapeHtml(subjectText)}</td>`;
-        html += `</tr>`;
-        return;
-      }
-      row.forEach((cell) => {
-        if (cell.isMergedHidden) return;
-
-        const rowspanAttr = cell.rowspan > 1 ? ` rowspan="${cell.rowspan}"` : "";
-        const colspanAttr = cell.colspan > 1 ? ` colspan="${cell.colspan}"` : "";
-        const cellStyle = isSubjectHeader
-          ? "border border-indigo-300 p-3 font-black text-indigo-950 align-middle whitespace-pre-wrap bg-indigo-100/90"
-          : "border border-slate-300 p-2 text-slate-800 align-top whitespace-pre-wrap";
-
-        html += `<td${rowspanAttr}${colspanAttr} class="${cellStyle}">${escapeHtml(cell.value)}</td>`;
-      });
-      html += `</tr>`;
-    });
-
-    html += `</tbody>`;
-    html += `</table>`;
-
-    // ── Step 6: Build Schema-Mapped PlanningTableRow[] Fallback (Full 250+ Rows)
+    // Build mapped PlanningTableRow items using multi-pass subject section splitter
+    const rawDataRows: string[][] = grid.map((row) => row.map((cell) => cell.value || ""));
+    const subjectMap = splitRowsIntoSubjectSections(rawDataRows, "मराठी");
     const mappedRows: PlanningTableRow[] = [];
-    const dataRows = cleanedGrid.slice(headerRowIdx + 1).filter((r) => !isColumnHeaderRow(r));
 
-    dataRows.forEach((row, i) => {
-      const visibleCells = row.filter((c) => !c.isMergedHidden || c.value);
-      if (visibleCells.length === 0) return;
-
-      mappedRows.push({
-        id: `excel_${Date.now()}_${i}`,
-        month: visibleCells[0]?.value || `महिना ${i + 1}`,
-        subject: visibleCells[1]?.value || "मराठी",
-        weeks: visibleCells[2]?.value || "4",
-        workingDays: visibleCells[3]?.value || "20",
-        periods: visibleCells[4]?.value || "50",
-        topics: visibleCells[5]?.value || visibleCells[1]?.value || "घटक माहिती",
-        outcomes: visibleCells[6]?.value || visibleCells[2]?.value || "अध्ययन निष्पत्ती",
+    Object.values(subjectMap).forEach((sec) => {
+      sec.rows.forEach((r, idx) => {
+        mappedRows.push({
+          id: `excel_${sec.subjectName}_${Date.now()}_${idx}`,
+          month: r[0] || "",
+          subject: sec.subjectName,
+          weeks: r[1] || "",
+          workingDays: r[2] || "",
+          periods: r[3] || "",
+          topics: r[4] || "",
+          outcomes: r[5] || "",
+        });
       });
     });
 
     return {
       fileType: "excel",
-      htmlContent: html,
-      gridData: cleanedGrid,
+      htmlContent: firstSheet.htmlContent,
+      gridData: grid,
       rawHeaders,
       mappedRows,
-      totalRowCount: cleanedGrid.length,
+      totalRowCount: grid.length,
     };
   } catch (err: any) {
     console.error("Excel parse error:", err);
@@ -282,19 +116,18 @@ export async function parseExcelFile(file: File): Promise<ParsedTableResult> {
 }
 
 /**
- * Parses Word (.docx) documents into clean HTML tables using mammoth.js
+ * Parses Word (.docx / .doc) documents using UniversalFileReader service.
  */
 export async function parseDocxFile(file: File): Promise<ParsedTableResult> {
   try {
-    const arrayBuffer = await file.arrayBuffer();
-    const result = await mammoth.convertToHtml({ arrayBuffer });
-    const rawHtml = result.value || "";
-
-    if (!rawHtml.trim()) {
-      return createEmptyResult("docx", "Word document contains no readable text or table.");
+    const res = await UniversalFileReader.readFile(file);
+    if (!res.success) {
+      return createEmptyResult("docx", res.errors[0]?.message || "Failed to parse Word document.");
     }
 
-    let styledHtml = rawHtml.replace(
+    const htmlContent = res.sheets[0]?.htmlContent || `<div class="p-4">${escapeHtml(res.text)}</div>`;
+
+    let styledHtml = htmlContent.replace(
       /<table/g,
       '<table class="w-full border-collapse border border-slate-300 text-sm font-sans my-2"'
     );
@@ -322,7 +155,7 @@ export async function parseDocxFile(file: File): Promise<ParsedTableResult> {
 }
 
 /**
- * Parses PDF files using pdfjs-dist extraction or returns structured fallback.
+ * Parses PDF files using UniversalFileReader service.
  */
 export async function parsePdfFile(file: File): Promise<ParsedTableResult> {
   try {

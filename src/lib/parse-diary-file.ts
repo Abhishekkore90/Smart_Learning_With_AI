@@ -22,66 +22,42 @@ export interface ParsedDiaryContent {
   periods: ParsedPeriod[];
 }
 
+import { UniversalFileReader } from "@/services/fileReader";
+
 // ─── Text Extraction ───
 
 /**
- * Extract text from a PDF file using pdf.js
+ * Extract text from a PDF file using UniversalFileReader service
  */
 async function extractTextFromPDF(base64Data: string): Promise<string> {
   try {
-    // Dynamic import for pdfjs-dist
-    const pdfjsLib = await import("pdfjs-dist");
-    
-    // Set worker source
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
-
-    // Convert base64 to ArrayBuffer
     const binaryString = atob(base64Data);
     const bytes = new Uint8Array(binaryString.length);
     for (let i = 0; i < binaryString.length; i++) {
       bytes[i] = binaryString.charCodeAt(i);
     }
-
-    const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
-    const textParts: string[] = [];
-
-    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-      const page = await pdf.getPage(pageNum);
-      const textContent = await page.getTextContent();
-      const pageText = textContent.items
-        .map((item: any) => item.str)
-        .join(" ");
-      textParts.push(pageText);
-    }
-
-    return textParts.join("\n");
+    const result = await UniversalFileReader.readFile(bytes.buffer as ArrayBuffer);
+    return result.text || "";
   } catch (err) {
-    console.error("PDF extraction error:", err);
+    console.warn("PDF diary extraction notice:", err);
     return "";
   }
 }
 
 /**
- * Extract text from a DOCX file using mammoth
+ * Extract text from a DOCX file using UniversalFileReader service
  */
 async function extractTextFromDOCX(base64Data: string): Promise<string> {
   try {
-    const mammoth = await import("mammoth");
-
-    // Convert base64 to ArrayBuffer
     const binaryString = atob(base64Data);
     const bytes = new Uint8Array(binaryString.length);
     for (let i = 0; i < binaryString.length; i++) {
       bytes[i] = binaryString.charCodeAt(i);
     }
-
-    const result = await mammoth.extractRawText({
-      arrayBuffer: bytes.buffer as ArrayBuffer,
-    });
-
-    return result.value;
+    const result = await UniversalFileReader.readFile(bytes.buffer as ArrayBuffer);
+    return result.text || "";
   } catch (err) {
-    console.error("DOCX extraction error:", err);
+    console.warn("DOCX diary extraction notice:", err);
     return "";
   }
 }

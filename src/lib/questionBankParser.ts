@@ -172,14 +172,22 @@ export async function parseQuestionBankFile(
       return;
     }
 
-    const [col1, col2, col3, col4, col5, col6, col7, col8, col9] = c;
+    const col1 = c[0] || "";
+    const col2 = c[1] || "";
+    const col3 = c[2] || "";
+    const col4 = c[3] || "";
+    const col5 = c[4] || "";
+    const col6 = c[5] || "";
+    const col7 = c[6] || "";
+    const col8 = c[7] || "";
+    const col9 = c[8] || "";
 
     if (col1) curQNum = col1;
     if (col2) curUnit = col2;
     if (col8) curFeature = col8;
 
     // Detect new Section Instruction Header (starts with * or has instruction without marks)
-    const isNewInstructionHeader = Boolean(col3.trim().startsWith("*") || (col1 && col2 && col3 && !col4));
+    const isNewInstructionHeader = Boolean((col3 || "").trim().startsWith("*") || (col1 && col2 && col3 && !col4));
 
     flatRows.push({
       row_index: idx + 1,
@@ -193,7 +201,7 @@ export async function parseQuestionBankFile(
       skill_feature: col8 || curFeature,
       learning_outcome_code: col9 || (col4 ? "05.71.01" : ""),
       is_parent_instruction: isNewInstructionHeader,
-      is_sub_instruction: Boolean(!col1 && !col2 && col3.startsWith("*")),
+      is_sub_instruction: Boolean(!col1 && !col2 && (col3 || "").startsWith("*")),
     });
 
     if (isNewInstructionHeader || !currentGroup) {
@@ -231,7 +239,7 @@ export async function parseQuestionBankFile(
       currentGroup.numbering_type = "NUMERIC";
     }
 
-    let marksNum = parseFloat(col4.replace(/[^\d\.]/g, "")) || 1;
+    let marksNum = parseFloat((col4 || "").replace(/[^\d\.]/g, "")) || 1;
 
     currentGroup.sub_questions.push({
       sub_question_index: subIdx || `${currentGroup.sub_questions.length + 1})`,
@@ -249,7 +257,7 @@ export async function parseQuestionBankFile(
     questionBankGroups.push({
       group_id: 1,
       unit_chapter: "Roman Numerals",
-      main_instruction: "*Circle the correct oppection( योग्य पर्यायास गोल करा.)",
+      main_instruction: "*Circle the correct option (योग्य पर्यायास गोल करा.)",
       numbering_type: "NUMERIC",
       skill_feature: "वैज्ञानिक दृष्टीकोन, सर्जनशील विचार, चिकित्सक विचार",
       sub_questions: [
