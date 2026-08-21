@@ -375,18 +375,21 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
   };
 
   // High Quality Crisp PDF Export Handler
-  const handleDownloadPdf = async () => {
+    const handleDownloadPdf = async () => {
     if (!printRef.current) return;
     setDownloading(true);
     toast.info("श्रेणीनिहाय निकाल संकलन प्रपत्र PDF तयार होत आहे...");
     try {
-      const { default: html2pdf } = await import("html2pdf.js");
-      const element = printRef.current;
+      window.scrollTo(0, 0);
+      if (document.fonts) await document.fonts.ready;
 
-      // Clone element to prevent input artifacts and ensure 100% width fit
+      const html2canvas = (await import("html2canvas-pro")).default;
+      const { default: jsPDF } = await import("jspdf");
+
+      const element = printRef.current;
       const clone = element.cloneNode(true);
 
-      // Replace input elements with clean text spans in clone
+      // Replace input elements with text in clone
       clone.querySelectorAll("input").forEach((inp) => {
         const val = inp.value || "0";
         const parent = inp.parentNode;
@@ -395,36 +398,16 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
           span.style.display = "inline-block";
           span.style.width = "100%";
           span.style.textAlign = "center";
-          span.style.fontWeight = "bold";
-          span.style.fontSize = "13px";
           span.style.fontWeight = "900";
+          span.style.fontSize = "13px";
           span.style.color = "#0f172a";
           span.textContent = val;
           parent.replaceChild(span, inp);
         }
       });
 
-      // Temporary offscreen container styled specifically for A4 landscape
-            // Fix table header rowSpan overlap issue in html2canvas PDF export
-      clone.querySelectorAll("thead tr").forEach((tr) => {
+      clone.querySelectorAll("tr").forEach((tr) => {
         tr.style.backgroundColor = "transparent";
-      });
-      clone.querySelectorAll("th").forEach((th) => {
-        th.style.verticalAlign = "middle";
-        th.style.textAlign = "center";
-        th.style.fontWeight = "900";
-        th.style.color = "#0f172a";
-        th.style.fontSize = "12px";
-        const bg = th.style.backgroundColor || window.getComputedStyle(th).backgroundColor;
-        if (!bg || bg === "transparent" || bg === "rgba(0, 0, 0, 0)") {
-          th.style.backgroundColor = "#fef3c7";
-        }
-      });
-
-      // Ensure all table borders in clone are thick and bold
-      clone.querySelectorAll("table").forEach((tbl) => {
-        tbl.style.border = "2.5px solid #0f172a";
-        tbl.style.borderCollapse = "collapse";
       });
       clone.querySelectorAll("th, td").forEach((cell) => {
         cell.style.border = "1.5px solid #0f172a";
@@ -434,36 +417,47 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
       tempContainer.style.position = "absolute";
       tempContainer.style.left = "-9999px";
       tempContainer.style.top = "-9999px";
-      tempContainer.style.width = "1120px";
+      tempContainer.style.width = "1200px";
       tempContainer.style.background = "#ffffff";
       tempContainer.style.padding = "10px";
       tempContainer.appendChild(clone);
       document.body.appendChild(tempContainer);
 
-      const opt = {
-        margin: [4, 4, 4, 4],
-        filename: `श्रेणीनिहाय_निकाल_संकलन_प्रपत्र_${academicYear}.pdf`,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          windowWidth: 1150,
-          scrollX: 0,
-          scrollY: 0,
-        },
-        jsPDF: { unit: "mm", format: "a4", orientation: "landscape", compress: true },
-      };
+      const canvas = await html2canvas(clone, {
+        scale: 2.5,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+        windowWidth: 1200,
+      });
 
-      await html2pdf().set(opt).from(clone).save();
       document.body.removeChild(tempContainer);
-      toast.success("PDF यशस्वीरित्या डाऊनलोड झाली!");
+
+      const imgData = canvas.toDataURL("image/jpeg", 0.95);
+      const pdfW = 297;
+      const pdfH = 210;
+      const margin = 4;
+      const printableW = pdfW - margin * 2;
+      const printableH = pdfH - margin * 2;
+
+      const imgRatio = canvas.height / canvas.width;
+      const targetW = printableW;
+      const targetH = Math.min(printableH, printableW * imgRatio);
+
+      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4", compress: true });
+      pdf.addImage(imgData, "JPEG", margin, margin, targetW, targetH, undefined, "FAST");
+
+      pdf.save(`श्रेणीनिहाय_निकाल_संकलन_प्रपत्र_${academicYear}.pdf`);
+      toast.success("श्रेणीनिहाय निकाल संकलन प्रपत्र PDF यशस्वीरित्या डाऊनलोड झाली!");
     } catch (err) {
       console.error("PDF download error:", err);
       toast.error("PDF निर्मितीत अडचण आली: " + (err.message || err));
+    } finally {
+      setDownloading(false);
     }
-    setDownloading(false);
   };
+
+
 
   // Calculate Totals Across All Classes
   const calculateTotals = () => {

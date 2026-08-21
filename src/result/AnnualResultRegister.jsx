@@ -417,95 +417,67 @@ export default function AnnualResultRegister({ initialClass, initialYear, onBack
     return 234;
   };
 
-  const handleDownloadPdf = async () => {
+    const handleDownloadPdf = async () => {
     if (!printRef.current) return;
     setDownloading(true);
     toast.info("वार्षिक निकाल पत्रक PDF तयार होत आहे, कृपया वाट पाहा...");
 
     try {
-      let toPng;
-      try {
-        const imgModule = await import("html-to-image");
-        toPng = imgModule.toPng;
-      } catch (e) {
-        const hModule = await import("html2canvas-pro");
-        const canvas = await (hModule.default || hModule)(printRef.current, { scale: 2 });
-        const imgData = canvas.toDataURL("image/png");
-        const { default: jsPDF } = await import("jspdf");
-        const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4", compress: true });
-        pdf.addImage(imgData, "PNG", 5, 5, 287, 200, undefined, "FAST");
-        pdf.save(`वार्षिक_निकाल_पत्रक_${selectedClass}_${academicYear}.pdf`);
-        toast.success("वार्षिक निकाल पत्रक PDF यशस्वीरित्या थेट डाऊनलोड झाली!");
-        setDownloading(false);
-        return;
-      }
+      window.scrollTo(0, 0);
+      if (document.fonts) await document.fonts.ready;
 
+      const html2canvas = (await import("html2canvas-pro")).default;
       const { default: jsPDF } = await import("jspdf");
-      const tableEl = printRef.current;
 
-      const origW = tableEl.style.width;
-      const origMaxW = tableEl.style.maxWidth;
-      const origOverflow = tableEl.style.overflow;
+      const container = printRef.current;
+      const origW = container.style.width;
+      const origMaxW = container.style.maxWidth;
+      const origOverflow = container.style.overflow;
 
-      const calcWidth = Math.max(tableEl.scrollWidth + 100, 1600);
+      const calcWidth = Math.max(container.scrollWidth + 60, 1400);
       const reqWidthPx = `${calcWidth}px`;
 
-      tableEl.style.width = reqWidthPx;
-      tableEl.style.maxWidth = "none";
-      tableEl.style.overflow = "visible";
+      container.style.width = reqWidthPx;
+      container.style.maxWidth = "none";
+      container.style.overflow = "visible";
 
-      const dataUrl = await toPng(tableEl, {
-        quality: 1.0,
-        pixelRatio: 3,
-        cacheBust: true,
+      const canvas = await html2canvas(container, {
+        scale: 2.5,
+        useCORS: true,
+        logging: false,
         backgroundColor: "#ffffff",
-        style: {
-          width: reqWidthPx,
-          maxWidth: "none",
-          overflow: "visible",
-        },
+        windowWidth: calcWidth,
       });
 
-      tableEl.style.width = origW;
-      tableEl.style.maxWidth = origMaxW;
-      tableEl.style.overflow = origOverflow;
+      container.style.width = origW;
+      container.style.maxWidth = origMaxW;
+      container.style.overflow = origOverflow;
 
-      const img = new Image();
-      img.src = dataUrl;
-      await new Promise((resolve) => {
-        if (img.complete) resolve();
-        else img.onload = resolve;
-      });
+      const imgData = canvas.toDataURL("image/jpeg", 0.95);
+      const pdfW = 297; // mm
+      const pdfH = 210; // mm
+      const margin = 4; // mm
+      const printableW = pdfW - margin * 2;
+      const printableH = pdfH - margin * 2;
 
-      const naturalWidth = img.naturalWidth || 1;
-      const naturalHeight = img.naturalHeight || 1;
-      const a4Width = 297; // mm A4 Landscape
-      const a4Height = 210; // mm
-      const margin = 5; // mm top & side margins
+      const imgRatio = canvas.height / canvas.width;
+      const targetW = printableW;
+      const targetH = Math.min(printableH, printableW * imgRatio);
 
-      const printableWidth = a4Width - (margin * 2);
-      const calcHeight = Number(((naturalHeight / naturalWidth) * printableWidth).toFixed(2));
-      const targetHeight = Math.min(a4Height - (margin * 2), calcHeight);
-      const yOffset = margin; // Align top near margin (5mm) instead of centering vertically
-
-      const pdf = new jsPDF({
-        orientation: "landscape",
-        unit: "mm",
-        format: "a4",
-        compress: true,
-      });
-
-      pdf.addImage(dataUrl, "PNG", margin, yOffset, printableWidth, targetHeight, undefined, "FAST");
+      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4", compress: true });
+      pdf.addImage(imgData, "JPEG", margin, margin, targetW, targetH, undefined, "FAST");
 
       pdf.save(`वार्षिक_निकाल_पत्रक_${selectedClass}_${academicYear}.pdf`);
       toast.success("वार्षिक निकाल पत्रक PDF यशस्वीरित्या थेट डाऊनलोड झाली!");
     } catch (err) {
       console.error("PDF generation error:", err);
-      toast.error("PDF डाऊनलोड करताना त्रुटी आली. कृपया 'प्रिंट करा' बटण वापरा.");
+      toast.error("PDF तयार करताना अडचण आली. कृपया प्रिंन्ट पर्याय वापरा.");
     } finally {
       setDownloading(false);
     }
   };
+
+
 
   const handlePrint = () => {
     window.print();

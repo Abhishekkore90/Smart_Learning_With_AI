@@ -663,6 +663,8 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
 
       const container = printRef.current;
       container.classList.add("cce-pdf-generating");
+      window.scrollTo(0, 0);
+      if (document.fonts) await document.fonts.ready;
 
       const pageElements = Array.from(container.querySelectorAll(".pdf-page"));
 
