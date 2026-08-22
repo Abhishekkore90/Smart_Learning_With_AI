@@ -62,7 +62,7 @@ export const QuestionBankViewer: React.FC<QuestionBankViewerProps> = ({ data, on
       let curGroup: QuestionBankGroupItem | null = null;
       let gId = 1;
 
-      data.flat_rows.forEach((r) => {
+      data.flat_rows.forEach((r: QuestionBankFlatRow) => {
         if (r.is_parent_instruction || !curGroup) {
           curGroup = {
             group_id: gId++,

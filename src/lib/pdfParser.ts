@@ -1,10 +1,5 @@
-import * as pdfjsLib from "pdfjs-dist";
+import { UniversalFileReader } from "@/services/fileReader";
 import { PlanningTableRow } from "@/components/teacher/AcademicPlanningSystem";
-
-// Initialize Worker for pdfjs-dist
-if (typeof window !== "undefined" && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version || "4.10.38"}/pdf.worker.min.mjs`;
-}
 
 const MARATHI_MONTHS = [
   "जून",
@@ -28,44 +23,21 @@ const MARATHI_MONTHS = [
 const KNOWN_SUBJECTS = ["मराठी", "गणित", "इंग्रजी", "परिसर अभ्यास", "विज्ञान", "कला / क्रीडा", "शारीरिक शिक्षण"];
 
 /**
- * Extracts structured table rows from an uploaded PDF file using pdfjs-dist.
+ * Extracts structured table rows from an uploaded PDF file using UniversalFileReader service.
  */
 export async function extractTableRowsFromPdf(file: File): Promise<PlanningTableRow[]> {
   try {
-    const arrayBuffer = await file.arrayBuffer();
-    const loadingTask = pdfjsLib.getDocument({
-      data: arrayBuffer,
-      useSystemFonts: true,
-    });
-
-    const pdfDoc = await loadingTask.promise;
-    const extractedLines: string[] = [];
-
-    for (let i = 1; i <= pdfDoc.numPages; i++) {
-      const page = await pdfDoc.getPage(i);
-      const textContent = await page.getTextContent();
-
-      let currentLine = "";
-      let lastY: number | null = null;
-
-      for (const item of textContent.items as any[]) {
-        if (!item.str || !item.str.trim()) continue;
-        const y = Math.round(item.transform ? item.transform[5] : 0);
-
-        if (lastY !== null && Math.abs(y - lastY) > 5) {
-          if (currentLine.trim()) extractedLines.push(currentLine.trim());
-          currentLine = item.str;
-        } else {
-          currentLine += (currentLine ? " " : "") + item.str;
-        }
-        lastY = y;
-      }
-      if (currentLine.trim()) extractedLines.push(currentLine.trim());
+    const result = await UniversalFileReader.readFile(file);
+    if (!result.success || !result.text) {
+      console.warn("PDF extraction notice:", result.errors[0]?.message);
+      return [];
     }
 
-    console.log("PDF Extracted Lines Count:", extractedLines.length);
+    const extractedLines = result.text
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => l && !l.startsWith("--- Page"));
 
-    // Build structured rows from extracted lines
     const parsedRows: PlanningTableRow[] = [];
     let currentMonth = "";
     let currentSubject = "मराठी";
@@ -76,7 +48,6 @@ export async function extractTableRowsFromPdf(file: File): Promise<PlanningTable
     let periods = "50";
 
     for (const line of extractedLines) {
-      // Check if line contains a month
       const foundMonth = MARATHI_MONTHS.find((m) => line.includes(m));
       const foundSubject = KNOWN_SUBJECTS.find((s) => line.includes(s));
 
@@ -85,7 +56,6 @@ export async function extractTableRowsFromPdf(file: File): Promise<PlanningTable
       }
 
       if (foundMonth) {
-        // Push previous row if exists
         if (currentMonth && (currentTopics.length > 0 || currentOutcomes.length > 0)) {
           parsedRows.push({
             id: `extracted-${Date.now()}-${parsedRows.length}`,
@@ -102,8 +72,6 @@ export async function extractTableRowsFromPdf(file: File): Promise<PlanningTable
         }
 
         currentMonth = foundMonth;
-
-        // Try extracting numbers from line
         const numbers = line.match(/\d+/g);
         if (numbers && numbers.length >= 3) {
           weeks = numbers[0];
@@ -113,7 +81,6 @@ export async function extractTableRowsFromPdf(file: File): Promise<PlanningTable
         continue;
       }
 
-      // Collect topics & outcomes text
       const trimmedLine = line.trim();
       const isHeaderLabel =
         trimmedLine === "अध्ययन निष्पत्ती" ||
@@ -129,7 +96,6 @@ export async function extractTableRowsFromPdf(file: File): Promise<PlanningTable
       }
     }
 
-    // Flush last row
     if (currentMonth && (currentTopics.length > 0 || currentOutcomes.length > 0)) {
       parsedRows.push({
         id: `extracted-${Date.now()}-${parsedRows.length}`,
@@ -143,13 +109,9 @@ export async function extractTableRowsFromPdf(file: File): Promise<PlanningTable
       });
     }
 
-    if (parsedRows.length > 0) {
-      return parsedRows;
-    }
+    return parsedRows;
   } catch (err) {
-    console.warn("PDF Auto-Extraction notice (using smart fallback):", err);
+    console.warn("PDF Extraction notice:", err);
+    return [];
   }
-
-  // Fallback if PDF text stream couldn't be parsed into rows
-  return [];
 }
