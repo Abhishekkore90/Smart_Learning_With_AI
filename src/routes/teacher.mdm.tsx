@@ -2,7 +2,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import { showToast as toast } from "@/lib/custom-toast";
@@ -426,10 +426,26 @@ function TeacherMDMPage() {
   };
 
   useEffect(() => {
-    setReportSchoolName("");
-    setReportTeacherName("");
-    setReportPrincipalName("");
-  }, []);
+    let p: any = profile;
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("sqaaf_teacher_profile");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          p = { ...parsed, ...profile };
+        } catch (e) {}
+      }
+    }
+    if (p) {
+      if (p.schoolName) setReportSchoolName(p.schoolName);
+      if (p.cookName || p.swayampakiName) setReportPrincipalName(p.cookName || p.swayampakiName);
+      else if (p.principalName) setReportPrincipalName(p.principalName);
+      
+      if (p.helperName || p.madatnisName) setReportTeacherName(p.helperName || p.madatnisName);
+      else if (p.teacherName) setReportTeacherName(p.teacherName);
+      else if (p.fullName) setReportTeacherName(p.fullName);
+    }
+  }, [profile]);
 
   const [isMonthlyReportGenerating, setIsMonthlyReportGenerating] = useState(false);
   const [isMonthlyReportGenerated, setIsMonthlyReportGenerated] = useState(false);
@@ -2554,6 +2570,13 @@ function TeacherMDMPage() {
     new Date().toLocaleString("en-US", { month: "long" }),
   );
   const [incomingClass, setIncomingClass] = useState("1 To 5");
+  const [monthlyReportClass, setMonthlyReportClass] = useState<"1 To 5" | "6 To 8">("1 To 5");
+  const [calClass, setCalClass] = useState<"1 To 5" | "6 To 8">("1 To 5");
+  const [stockDemandClass, setStockDemandClass] = useState<"1 To 5" | "6 To 8">("1 To 5");
+  const [incomingDate, setIncomingDate] = useState<string>(
+    new Date().toISOString().split("T")[0]
+  );
+  const [incomingDates, setIncomingDates] = useState<Record<string, string>>({});
   const [incomingQuantities, setIncomingQuantities] = useState<
     Record<string, string>
   >({
@@ -2799,9 +2822,24 @@ function TeacherMDMPage() {
         received?: Record<string, string>;
         borrowed?: Record<string, string>;
         spent?: Record<string, string>;
+        borrowedIn?: Record<string, string>;
+        borrowedOut?: Record<string, string>;
+        loksahabhag?: Record<string, string>;
       }
     >
   >({});
+
+  // Derived Earliest Initial Opening Stock Date (आरंभीची शिल्लक नोंदवलेली पहिली तारीख)
+  const initialStockDate = useMemo(() => {
+    const dates = Object.keys(openingStockDateMap || {}).filter(
+      (d) => d && /^\d{4}-\d{2}-\d{2}$/.test(d)
+    );
+    if (dates.length > 0) {
+      dates.sort();
+      return dates[0];
+    }
+    return openingStockDate || "";
+  }, [openingStockDateMap, openingStockDate]);
   const [openingStockValues, setOpeningStockValues] = useState<Record<string, string>>({
     Rice: "0",
     Mugdal: "0",
@@ -2831,6 +2869,33 @@ function TeacherMDMPage() {
   const [openingStockLoksahabhag, setOpeningStockLoksahabhag] = useState<Record<string, string>>({});
   const [formulaSource, setFormulaSource] = useState<"admin" | "custom">("admin");
   const [formulaRecipe, setFormulaRecipe] = useState<string>("Vegetable Pulav");
+
+  // Auto-sync opening stock inputs when openingStockDate or initialStockDate changes
+  useEffect(() => {
+    if (!openingStockDate) return;
+    if (initialStockDate && openingStockDate < initialStockDate) {
+      setOpeningStockValues({
+        Rice: "0", Mugdal: "0", Turdal: "0", Masurdal: "0", Matki: "0", Moong: "0",
+        Cowpea: "0", Gram: "0", Pease: "0", "Soyabean Wadi": "0", Cumin: "0", Mustard: "0",
+        Turmeric: "0", Chili: "0", "Onion Garlic Masala": "0", "Garam Masala": "0", Oil: "0", Salt: "0"
+      });
+      setOpeningStockBorrowedIn({});
+      setOpeningStockBorrowedOut({});
+      setOpeningStockLoksahabhag({});
+    } else if (openingStockDateMap[openingStockDate]) {
+      const record = openingStockDateMap[openingStockDate];
+      if (record.values) setOpeningStockValues(record.values);
+      if (record.borrowedIn) setOpeningStockBorrowedIn(record.borrowedIn);
+      if (record.borrowedOut) setOpeningStockBorrowedOut(record.borrowedOut);
+      if (record.loksahabhag) setOpeningStockLoksahabhag(record.loksahabhag);
+    } else if (initialStockDate && openingStockDateMap[initialStockDate]) {
+      const record = openingStockDateMap[initialStockDate];
+      if (record.values) setOpeningStockValues(record.values);
+      if (record.borrowedIn) setOpeningStockBorrowedIn(record.borrowedIn);
+      if (record.borrowedOut) setOpeningStockBorrowedOut(record.borrowedOut);
+      if (record.loksahabhag) setOpeningStockLoksahabhag(record.loksahabhag);
+    }
+  }, [openingStockDate, openingStockDateMap, initialStockDate]);
 
   const toggleOpeningStockSign = (itemKey: string) => {
     setOpeningStockSigns((prev) => ({
@@ -4230,6 +4295,11 @@ function TeacherMDMPage() {
       incomingClass !== "Select Class"
     ) {
       const recordKey = `${incomingYear}_${incomingMonth}_${incomingClass}`;
+      if (incomingDates && incomingDates[recordKey]) {
+        setIncomingDate(incomingDates[recordKey]);
+      } else {
+        setIncomingDate(new Date().toISOString().split("T")[0]);
+      }
       if (incomingRecords && incomingRecords[recordKey]) {
         setIncomingQuantities(incomingRecords[recordKey]);
       } else {
@@ -4276,7 +4346,7 @@ function TeacherMDMPage() {
         Oil: "",
       });
     }
-  }, [incomingYear, incomingMonth, incomingClass, incomingRecords]);
+  }, [incomingYear, incomingMonth, incomingClass, incomingRecords, incomingDates]);
 
   // ─── Stock Calculation Helpers ────────────────────────────────────────────
 
@@ -4333,6 +4403,7 @@ function TeacherMDMPage() {
 
     for (let day = 1; day <= daysInMonth; day++) {
       const dateISO = `${year}-${String(monthNum).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      if (initialStockDate && dateISO < initialStockDate) continue;
       const daily = getDailyDataForMonthDate(dateISO, classStr as "1 To 5" | "6 To 8");
 
       if (daily.isHoliday || !daily.beneficiary || daily.beneficiary <= 0) continue;
@@ -4432,6 +4503,27 @@ function TeacherMDMPage() {
     customRegisterRecords = registerRecords,
     customIncomingRecords = incomingRecords,
   ): number => {
+    if (initialStockDate) {
+      const parts = initialStockDate.split("-");
+      if (parts.length === 3) {
+        const initYear = parts[0];
+        const initMonthNum = parseInt(parts[1], 10);
+        const monthNamesEng = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+        const monthMap: { [k: string]: number } = {
+          "January": 1, "February": 2, "March": 3, "April": 4, "May": 5, "June": 6,
+          "July": 7, "August": 8, "September": 9, "October": 10, "November": 11, "December": 12,
+          "जानेवारी": 1, "फेब्रुवारी": 2, "मार्च": 3, "एप्रिल": 4, "मे": 5, "जून": 6,
+          "जुलै": 7, "ऑगस्ट": 8, "सप्टेंबर": 9, "ऑक्टोबर": 10, "नोव्हेंबर": 11, "डिसेंबर": 12
+        };
+        const evalMonthNum = monthMap[monthName] || monthNamesEng.findIndex(m => m && m.toLowerCase() === monthName.toLowerCase());
+
+        if (yearStr === initYear && evalMonthNum === initMonthNum) {
+          return getInitialOpeningStockValue(itemName);
+        }
+      }
+    }
+
     if (depth > 12) {
       const itemKey = getItemKeyFromName(itemName);
       return getInitialOpeningStockValue(itemName);
@@ -4999,6 +5091,9 @@ function TeacherMDMPage() {
             });
             setIncomingRecords(filteredIncomingRecords);
           }
+          if (firestoreData.incomingDates) {
+            setIncomingDates(firestoreData.incomingDates);
+          }
           if (firestoreData.stockRecordsHistory) {
             setStockRecordsHistory(firestoreData.stockRecordsHistory);
           }
@@ -5212,6 +5307,12 @@ function TeacherMDMPage() {
       };
       setIncomingRecords(updatedRecords);
 
+      const updatedDates = {
+        ...incomingDates,
+        [recordKey]: incomingDate,
+      };
+      setIncomingDates(updatedDates);
+
       // Recalculate stockRecordsHistory for the modified key using updated incoming data
       const computedStock = computeStockRecordsForKey(recordKey, registerRecords, updatedRecords);
       const updatedHistory = {
@@ -5231,9 +5332,11 @@ function TeacherMDMPage() {
             year: incomingYear,
             month: incomingMonth,
             class: incomingClass,
+            date: incomingDate,
             quantities: incomingQuantities,
           },
           incomingRecords: updatedRecords,
+          incomingDates: updatedDates,
           stockRecords,
           registerRecords,
           menuRecords,
@@ -5581,8 +5684,38 @@ function TeacherMDMPage() {
       );
       return;
     }
+    const recordKey = `${stockYear}_${stockMonth}_${stockClass}`;
+    const computed = computeStockRecordsForKey(recordKey);
+    if (computed && computed.length > 0) {
+      setStockRecords(computed);
+    }
     setShowStockTable(true);
   };
+
+  // Dynamically recalculate stockRecords for Current Stock (सध्याचा साठा) whenever dependencies change
+  useEffect(() => {
+    if (activeTab === "stock" || showStockTable) {
+      const recordKey = `${stockYear}_${stockMonth}_${stockClass}`;
+      const computed = computeStockRecordsForKey(recordKey);
+      if (computed && computed.length > 0) {
+        setStockRecords(computed);
+      }
+    }
+  }, [
+    activeTab,
+    showStockTable,
+    stockYear,
+    stockMonth,
+    stockClass,
+    stockAsOnDate,
+    openingStockDateMap,
+    openingStockValues,
+    incRecords,
+    lokRecords,
+    damagedRecords,
+    registerRecords,
+    initialStockDate,
+  ]);
 
   const handleStockReport = () => {
     setShowStockReportModal(true);
@@ -6248,6 +6381,13 @@ function TeacherMDMPage() {
     const incomingData = customIncomingRecords[key] || {};
     const isPrimary = cls === "1 To 5";
 
+    // Check if currently selected stockAsOnDate is prior to initialStockDate
+    const isPriorToInitial = !!(
+      initialStockDate &&
+      stockAsOnDate &&
+      stockAsOnDate < initialStockDate
+    );
+
     const itemsList = [
       "Rice", "Pease", "Mugdal", "Cowpea", "Gram", "Masurdal", "Matki", "Moong", "Turdal",
       "Soyabean Wadi", "Turmeric", "Salt", "Onion Garlic Masala", "Cumin", "Mustard",
@@ -6255,11 +6395,26 @@ function TeacherMDMPage() {
     ];
 
     return itemsList.map((itemName) => {
-      // 1. Received this month (Matrix + incRecords)
+      if (isPriorToInitial) {
+        return {
+          item: itemName,
+          prev: 0,
+          received: 0,
+          incomingQty: 0,
+          lokQty: 0,
+          used: 0,
+          damaged: 0,
+          cookedDays: 0,
+          beneficiary: 0,
+        };
+      }
+
+      // 1. Received this month up to stockAsOnDate (Matrix + incRecords)
       let incTabQty = 0;
       const itemKey = getItemKeyFromName(itemName);
       incRecords.forEach((r) => {
         if (!r.date || !r.item || !r.qty) return;
+        if (stockAsOnDate && r.date.trim() > stockAsOnDate.trim()) return;
         const rKey = getItemKeyFromName(r.item);
         const isMatch = (rKey && rKey === itemKey) || r.item.toLowerCase().trim() === itemName.toLowerCase().trim();
         if (isMatch) {
@@ -6293,13 +6448,14 @@ function TeacherMDMPage() {
         customIncomingRecords
       );
 
-      // 3. Used this month
+      // 3. Used this month up to stockAsOnDate
       let totalUsedKg = 0;
       let cookedDays = 0;
       let benefSum = 0;
       const seenDates = new Set<string>();
 
       Object.keys(customRegisterRecords || {}).forEach((dateStr) => {
+        if (stockAsOnDate && dateStr.trim() > stockAsOnDate.trim()) return;
         const parts = dateStr.split("-");
         if (parts.length !== 3) return;
         const recYear = parts[0];
@@ -6351,11 +6507,17 @@ function TeacherMDMPage() {
       const used = Number(totalUsedKg.toFixed(6));
       const beneficiary = benefSum;
 
+      const lokQty = getLokForMonth(itemName, month, parseInt(year, 10), stockAsOnDate);
+      const damaged = getDamagedForMonth(itemName, month, parseInt(year, 10), stockAsOnDate);
+
       return {
         item: itemName,
         prev,
         received,
+        incomingQty: received,
+        lokQty,
         used,
+        damaged,
         cookedDays,
         beneficiary,
       };
@@ -6876,7 +7038,6 @@ function TeacherMDMPage() {
                     <span>⚠️ {lowStockItems.length} साहित्याचा साठा कमी आहे</span>
                   </button>
                 )}
-                <GlobalClassSelector />
                 <div className="flex items-center gap-2 text-xs font-extrabold text-slate-600 bg-slate-100/80 border border-slate-200 px-4 py-2 rounded-full shadow-inner">
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
                   <span>UDISE: {getUdise()}</span>
@@ -7047,7 +7208,6 @@ function TeacherMDMPage() {
                       <h2 className="text-xl font-bold text-slate-900 tracking-tight">
                         Monthly Calendar
                       </h2>
-                      <GlobalClassSelector />
                     </div>
 
                     {/* Filter Card Container */}
@@ -7077,6 +7237,18 @@ function TeacherMDMPage() {
                             onChange={(e) => setCalYear(Number(e.target.value))}
                             className="h-10 px-4 border border-slate-300 rounded-lg text-sm font-bold bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-28"
                           />
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-semibold text-slate-600 block mb-1.5">इयत्ता गट</label>
+                          <select
+                            value={calClass}
+                            onChange={(e) => setCalClass(e.target.value as "1 To 5" | "6 To 8")}
+                            className="h-10 px-4 border border-indigo-400 rounded-lg text-sm font-bold bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 min-w-[170px]"
+                          >
+                            <option value="1 To 5">इयत्ता १ ली ते ५ वी (प्राथमिक)</option>
+                            <option value="6 To 8">इयत्ता ६ वी ते ८ वी (उच्च प्राथमिक)</option>
+                          </select>
                         </div>
 
                         <button
@@ -7409,7 +7581,6 @@ function TeacherMDMPage() {
                       <h2 className="text-xl font-bold text-slate-800">
                         अनुदान सेटिंग
                       </h2>
-                      <GlobalClassSelector />
                     </div>
 
                     {/* Card 1: Information Banner */}
@@ -7780,6 +7951,16 @@ function TeacherMDMPage() {
                         </div>
                       </div>
 
+                      {/* Date Status Banner for Opening Stock */}
+                      {initialStockDate && openingStockDate && openingStockDate < initialStockDate && (
+                        <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs font-bold text-amber-900 flex items-center gap-2">
+                          <Info className="w-4 h-4 text-amber-600 shrink-0" />
+                          <span>
+                            टीप: निवडलेली तारीख ({openingStockDate}) ही आरंभीची शिल्लक नोंदवलेल्या दिनांकाच्या ({initialStockDate}) आधीची असल्यामुळे साठा ० (0) दर्शवत आहे.
+                          </span>
+                        </div>
+                      )}
+
                       {/* Vertical Items List Table */}
                       <div className="w-full overflow-x-auto">
                         <table className="w-full text-left text-xs border-collapse min-w-[800px]">
@@ -7805,10 +7986,11 @@ function TeacherMDMPage() {
                           </thead>
                           <tbody className="divide-y divide-slate-200">
                             {REPORT_ITEMS.slice(0, 18).map((item, idx) => {
-                              const openVal = roundStock(parseFloat(openingStockValues[item.key] || "0"));
-                              const borInVal = roundStock(parseFloat(openingStockBorrowedIn[item.key] || "0"));
-                              const borOutVal = roundStock(parseFloat(openingStockBorrowedOut[item.key] || "0"));
-                              const lokVal = roundStock(parseFloat(openingStockLoksahabhag[item.key] || "0"));
+                              const isPriorToInitial = !!(initialStockDate && openingStockDate && openingStockDate < initialStockDate);
+                              const openVal = isPriorToInitial ? 0 : roundStock(parseFloat(openingStockValues[item.key] || "0"));
+                              const borInVal = isPriorToInitial ? 0 : roundStock(parseFloat(openingStockBorrowedIn[item.key] || "0"));
+                              const borOutVal = isPriorToInitial ? 0 : roundStock(parseFloat(openingStockBorrowedOut[item.key] || "0"));
+                              const lokVal = isPriorToInitial ? 0 : roundStock(parseFloat(openingStockLoksahabhag[item.key] || "0"));
 
                               const availStock = roundStock(openVal + borInVal + lokVal);
                               const isInvalid = borOutVal > availStock && borOutVal > 0;
@@ -7834,9 +8016,10 @@ function TeacherMDMPage() {
                                       step="0.001"
                                       min="0"
                                       placeholder="0"
-                                      value={openingStockValues[item.key] || ""}
+                                      value={isPriorToInitial ? "0" : (openingStockValues[item.key] || "")}
                                       onChange={(e) => handleOpeningStockChange(item.key, e.target.value)}
-                                      className="w-full h-9 text-center border border-emerald-300 rounded-lg font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 bg-white text-xs px-2 shadow-2xs outline-none"
+                                      disabled={isPriorToInitial}
+                                      className="w-full h-9 text-center border border-emerald-300 rounded-lg font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 bg-white text-xs px-2 shadow-2xs outline-none disabled:bg-slate-100 disabled:text-slate-400"
                                     />
                                   </td>
 
@@ -7847,9 +8030,10 @@ function TeacherMDMPage() {
                                       step="0.001"
                                       min="0"
                                       placeholder="0"
-                                      value={openingStockBorrowedIn[item.key] || ""}
+                                      value={isPriorToInitial ? "0" : (openingStockBorrowedIn[item.key] || "")}
                                       onChange={(e) => handleOpeningBorrowedInChange(item.key, e.target.value)}
-                                      className="w-full h-9 text-center border border-blue-300 rounded-lg font-bold text-blue-950 focus:ring-2 focus:ring-blue-500 bg-white text-xs px-2 shadow-2xs outline-none"
+                                      disabled={isPriorToInitial}
+                                      className="w-full h-9 text-center border border-blue-300 rounded-lg font-bold text-blue-950 focus:ring-2 focus:ring-blue-500 bg-white text-xs px-2 shadow-2xs outline-none disabled:bg-slate-100 disabled:text-slate-400"
                                     />
                                   </td>
 
@@ -7860,9 +8044,10 @@ function TeacherMDMPage() {
                                       step="0.001"
                                       min="0"
                                       placeholder="0"
-                                      value={openingStockBorrowedOut[item.key] || ""}
+                                      value={isPriorToInitial ? "0" : (openingStockBorrowedOut[item.key] || "")}
                                       onChange={(e) => handleOpeningBorrowedOutChange(item.key, e.target.value)}
-                                      className={`w-full h-9 text-center border rounded-lg font-bold text-xs px-2 shadow-2xs outline-none transition-all ${
+                                      disabled={isPriorToInitial}
+                                      className={`w-full h-9 text-center border rounded-lg font-bold text-xs px-2 shadow-2xs outline-none transition-all disabled:bg-slate-100 disabled:text-slate-400 ${
                                         isInvalid
                                           ? "border-rose-500 bg-rose-100/90 text-rose-900 focus:ring-2 focus:ring-rose-400 font-black"
                                           : "border-rose-300 text-rose-950 focus:ring-2 focus:ring-rose-500 bg-white"
@@ -7884,9 +8069,10 @@ function TeacherMDMPage() {
                                       step="0.001"
                                       min="0"
                                       placeholder="0"
-                                      value={openingStockLoksahabhag[item.key] || ""}
+                                      value={isPriorToInitial ? "0" : (openingStockLoksahabhag[item.key] || "")}
                                       onChange={(e) => handleOpeningLoksahabhagChange(item.key, e.target.value)}
-                                      className="w-full h-9 text-center border border-amber-300 rounded-lg font-bold text-amber-950 focus:ring-2 focus:ring-amber-500 bg-white text-xs px-2 shadow-2xs outline-none"
+                                      disabled={isPriorToInitial}
+                                      className="w-full h-9 text-center border border-amber-300 rounded-lg font-bold text-amber-950 focus:ring-2 focus:ring-amber-500 bg-white text-xs px-2 shadow-2xs outline-none disabled:bg-slate-100 disabled:text-slate-400"
                                     />
                                   </td>
 
@@ -8034,58 +8220,56 @@ function TeacherMDMPage() {
                             : "Record monthly received stock. Total Available Stock = Opening Stock + Received Stock."}
                         </p>
                       </div>
-                      <GlobalClassSelector />
                     </div>
 
                     {/* Main Table Card (आरंभीची शिल्लक स्टाइल तक्ता) */}
                     <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
                       {/* Top Controls: Filter & Save */}
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100">
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3 w-full md:w-auto">
-                          {/* Year */}
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full md:w-auto">
+                          {/* Class / इयत्ता गट */}
                           <div className="flex items-center gap-2">
-                            <label className="text-xs font-black text-slate-700">{lang === "mr" ? "वर्ष:" : "Year:"}</label>
-                            <select
-                              value={incomingYear}
-                              onChange={(e) => setIncomingYear(e.target.value)}
-                              className="h-9 px-3 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
-                            >
-                              <option value="2025">2025</option>
-                              <option value="2026">2026</option>
-                              <option value="2027">2027</option>
-                            </select>
-                          </div>
-
-                          {/* Month */}
-                          <div className="flex items-center gap-2">
-                            <label className="text-xs font-black text-slate-700">{lang === "mr" ? "महिना:" : "Month:"}</label>
-                            <select
-                              value={incomingMonth}
-                              onChange={(e) => setIncomingMonth(e.target.value)}
-                              className="h-9 px-3 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
-                            >
-                              {[
-                                "January", "February", "March", "April", "May", "June",
-                                "July", "August", "September", "October", "November", "December"
-                              ].map((m) => (
-                                <option key={m} value={m}>
-                                  {m === "January" ? "जानेवारी" : m === "February" ? "फेब्रुवारी" : m === "March" ? "मार्च" : m === "April" ? "एप्रिल" : m === "May" ? "मे" : m === "June" ? "जून" : m === "July" ? "जुलै" : m === "August" ? "ऑगस्ट" : m === "September" ? "सप्टेंबर" : m === "October" ? "ऑक्टोबर" : m === "November" ? "नोव्हेंबर" : "डिसेंबर"} ({m})
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          {/* Class */}
-                          <div className="flex items-center gap-2">
-                            <label className="text-xs font-black text-slate-700">{lang === "mr" ? "इयत्ता:" : "Class:"}</label>
+                            <label className="text-xs font-black text-slate-700">{lang === "mr" ? "इयत्ता गट:" : "Class Section:"}</label>
                             <select
                               value={incomingClass}
                               onChange={(e) => setIncomingClass(e.target.value)}
                               className="h-9 px-3 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
                             >
-                              <option value="1 To 5">{lang === "mr" ? "१ ते ५" : "1 To 5"}</option>
-                              <option value="6 To 8">{lang === "mr" ? "६ ते ८" : "6 To 8"}</option>
+                              <option value="1 To 5">{lang === "mr" ? "इयत्ता १ ली ते ५ वी (प्राथमिक)" : "1 To 5 (Primary)"}</option>
+                              <option value="6 To 8">{lang === "mr" ? "इयत्ता ६ वी ते ८ वी (उच्च प्राथमिक)" : "6 To 8 (Upper Primary)"}</option>
                             </select>
+                          </div>
+
+                          {/* Stock Arrival Date / साहित्य आवक तारीख */}
+                          <div className="flex items-center gap-2">
+                            <label className="text-xs font-black text-slate-700">{lang === "mr" ? "साहित्य आवक तारीख:" : "Arrival Date:"}</label>
+                            <input
+                              type="date"
+                              value={incomingDate}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setIncomingDate(val);
+                                if (val) {
+                                  const parts = val.split("-");
+                                  if (parts.length === 3) {
+                                    const yr = parts[0];
+                                    const moIndex = parseInt(parts[1], 10) - 1;
+                                    const monthNames = [
+                                      "January", "February", "March", "April", "May", "June",
+                                      "July", "August", "September", "October", "November", "December"
+                                    ];
+                                    if (moIndex >= 0 && moIndex <= 11) {
+                                      const mo = monthNames[moIndex];
+                                      setIncomingYear(yr);
+                                      setIncomingMonth(mo);
+                                      const recordKey = `${yr}_${mo}_${incomingClass}`;
+                                      setIncomingDates((prev) => ({ ...prev, [recordKey]: val }));
+                                    }
+                                  }
+                                }
+                              }}
+                              className="h-9 px-3 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs cursor-pointer"
+                            />
                           </div>
                         </div>
 
@@ -8099,6 +8283,39 @@ function TeacherMDMPage() {
                           <span>{lang === "mr" ? "साहित्य आवक जतन करा" : "Save Incoming Stock"}</span>
                         </button>
                       </div>
+
+                      {/* Dynamic Date Status Alert Banner */}
+                      {(() => {
+                        const currentRecKey = `${incomingYear}_${incomingMonth}_${incomingClass}`;
+                        const savedArrivalDate = incomingDates[currentRecKey];
+                        const isBeforeInitial = !!(initialStockDate && incomingDate && incomingDate < initialStockDate);
+                        const isBeforeArrival = savedArrivalDate && incomingDate && incomingDate < savedArrivalDate;
+                        const isSameArrival = savedArrivalDate && incomingDate && incomingDate === savedArrivalDate;
+                        const isAfterArrival = savedArrivalDate && incomingDate && incomingDate > savedArrivalDate;
+
+                        return (
+                          <div className={`p-3 rounded-xl border text-xs font-bold flex items-center gap-2 ${
+                            isBeforeInitial || isBeforeArrival
+                              ? "bg-amber-50 border-amber-200 text-amber-900"
+                              : isSameArrival || isAfterArrival
+                              ? "bg-emerald-50 border-emerald-200 text-emerald-900"
+                              : "bg-blue-50 border-blue-200 text-blue-900"
+                          }`}>
+                            <Info className="w-4 h-4 shrink-0 text-emerald-600" />
+                            <span>
+                              {isBeforeInitial
+                                ? `टीप: निवडलेली तारीख (${incomingDate}) ही आरंभीची शिल्लक नोंदवलेल्या दिनांकाच्या (${initialStockDate}) आधीची असल्यामुळे साठा ० (0) दर्शवत आहे.`
+                                : isBeforeArrival
+                                ? `टीप: निवडलेली तारीख (${incomingDate}) ही आवक दिनांकाच्या (${savedArrivalDate}) आधीची असल्यामुळे आवक साठा जोडलेला नाही. एकूण उपलब्ध साठा = मागील शिल्लक.`
+                                : isSameArrival
+                                ? `साहित्य आवक तारीख (${incomingDate}): मागील शिल्लक + प्राप्त आवक साहित्याची बेरीज करून एकूण उपलब्ध साठा दर्शवला आहे.`
+                                : isAfterArrival
+                                ? `साहित्य आवक नंतरची तारीख (${incomingDate}): मागील शिल्लक + आवक साहित्याची बेरीज करून एकूण उपलब्ध साठा दर्शवला आहे.`
+                                : `साहित्य आवक तारीख निवडा. निवडलेल्या तारखेनुसार उपलब्ध साठ्याची बेरीज आपोआप होईल.`}
+                            </span>
+                          </div>
+                        );
+                      })()}
 
                       {/* Main Incoming Stock Table */}
                       <div className="w-full overflow-x-auto">
@@ -8121,33 +8338,41 @@ function TeacherMDMPage() {
                           </thead>
                           <tbody className="divide-y divide-slate-200">
                             {REPORT_ITEMS.slice(0, 18).map((item, idx) => {
-                              const openVal = roundStock(getOpeningStock(incomingMonth, incomingYear, incomingClass, item.key));
+                              const isBeforeInitial = !!(initialStockDate && incomingDate && incomingDate < initialStockDate);
+                              const openVal = isBeforeInitial ? 0 : roundStock(getOpeningStock(incomingMonth, incomingYear, incomingClass, item.key));
+                              const currentRecKey = `${incomingYear}_${incomingMonth}_${incomingClass}`;
+                              const savedArrivalDate = incomingDates[currentRecKey];
 
                               let incTabQty = 0;
                               const itemKey = getItemKeyFromName(item.key);
-                              incRecords.forEach((r) => {
-                                if (!r.date || !r.item || !r.qty) return;
-                                const rKey = getItemKeyFromName(r.item);
-                                const isMatch = (rKey && rKey === itemKey) || r.item.toLowerCase().trim() === item.key.toLowerCase().trim();
-                                if (isMatch) {
-                                  const parts = r.date.split("-");
-                                  if (parts.length === 3) {
-                                    const recYear = parts[0];
-                                    const monthIndex = parseInt(parts[1], 10) - 1;
-                                    const monthNames = [
-                                      "January", "February", "March", "April", "May", "June",
-                                      "July", "August", "September", "October", "November", "December"
-                                    ];
-                                    if (monthIndex >= 0 && monthIndex <= 11) {
-                                      if (recYear === incomingYear && monthNames[monthIndex].toLowerCase() === incomingMonth.toLowerCase()) {
-                                        incTabQty += parseFloat(r.qty) || 0;
+                              if (!isBeforeInitial) {
+                                incRecords.forEach((r) => {
+                                  if (!r.date || !r.item || !r.qty) return;
+                                  const rKey = getItemKeyFromName(r.item);
+                                  const isMatch = (rKey && rKey === itemKey) || r.item.toLowerCase().trim() === item.key.toLowerCase().trim();
+                                  if (isMatch) {
+                                    if (!incomingDate || r.date <= incomingDate) {
+                                      const parts = r.date.split("-");
+                                      if (parts.length === 3) {
+                                        const recYear = parts[0];
+                                        const monthIndex = parseInt(parts[1], 10) - 1;
+                                        const monthNames = [
+                                          "January", "February", "March", "April", "May", "June",
+                                          "July", "August", "September", "October", "November", "December"
+                                        ];
+                                        if (monthIndex >= 0 && monthIndex <= 11) {
+                                          if (recYear === incomingYear && monthNames[monthIndex].toLowerCase() === incomingMonth.toLowerCase()) {
+                                            incTabQty += parseFloat(r.qty) || 0;
+                                          }
+                                        }
                                       }
                                     }
                                   }
-                                }
-                              });
+                                });
+                              }
 
-                              const typedIncVal = parseFloat(incomingQuantities[item.key] || "0") || 0;
+                              const isBeforeArrivalDate = isBeforeInitial || !!(savedArrivalDate && incomingDate && incomingDate < savedArrivalDate);
+                              const typedIncVal = isBeforeArrivalDate ? 0 : (parseFloat(incomingQuantities[item.key] || "0") || 0);
                               const totalIncVal = roundStock(typedIncVal + incTabQty);
                               const totalStock = roundStock(openVal + totalIncVal);
 
@@ -8205,148 +8430,8 @@ function TeacherMDMPage() {
                             })}
                           </tbody>
                         </table>
-                      </div>
                     </div>
-
-                    {/* Bottom Cards: Individual Voucher Entry & Recent Entries */}
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-4">
-                      {/* Left Column: Form Card (प्राप्त साठा नोंदवा - वैयक्तिक पावती) */}
-                      <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5">
-                        <h3 className="font-bold text-base text-slate-800 border-b pb-2">
-                          {lang === "mr" ? "प्राप्त साठा नोंदवा (पावती/चलन निहाय)" : "Record Stock Received (Voucher Entry)"}
-                        </h3>
-                        <div className="space-y-4">
-                          {/* 1. साहित्य */}
-                          <div>
-                            <label className="text-xs font-bold text-slate-600 block mb-1.5">
-                              {lang === "mr" ? "साहित्य" : "Material / Item"}
-                            </label>
-                            <select
-                              value={incItem}
-                              onChange={(e) => setIncItem(e.target.value)}
-                              className="w-full h-11 px-3.5 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 bg-white"
-                            >
-                              <option value="">{lang === "mr" ? "साहित्य निवडा" : "Select Material"}</option>
-                              <option value="तांदूळ">तांदूळ (Rice)</option>
-                              <option value="मूगडाळ">मूगडाळ (Moong Dal)</option>
-                              <option value="तूरडाळ">तूरडाळ (Tur Dal)</option>
-                              <option value="मसूरडाळ">मसूरडाळ (Masoor Dal)</option>
-                              <option value="मटकी">मटकी (Moth Beans)</option>
-                              <option value="मूग">मूग (Whole Moong)</option>
-                              <option value="चवळी">चवळी (Cowpea)</option>
-                              <option value="हरभरा">हरभरा (Chana)</option>
-                              <option value="वाटाणा">वाटाणा (Peas)</option>
-                              <option value="सोयाबीन वडी">सोयाबीन वडी (Soyabean Chunks)</option>
-                              <option value="जिरे">जिरे (Cumin)</option>
-                              <option value="मोहरी">मोहरी (Mustard)</option>
-                              <option value="हळद">हळद (Turmeric)</option>
-                              <option value="तिखट मसाला">तिखट मसाला (Chili Masala)</option>
-                              <option value="कांदा लसूण मसाला">कांदा लसूण मसाला (Onion Garlic Masala)</option>
-                              <option value="गरम मसाला">गरम मसाला (Garam Masala)</option>
-                              <option value="तेल">तेल (Cooking Oil)</option>
-                              <option value="मीठ">मीठ (Salt)</option>
-                            </select>
-                          </div>
-
-                          {/* 2. प्रमाण */}
-                          <div>
-                            <label className="text-xs font-bold text-slate-600 block mb-1.5">
-                              {lang === "mr" ? "प्रमाण" : "Quantity"}
-                            </label>
-                            <input
-                              type="number"
-                              step="0.0001"
-                              placeholder={lang === "mr" ? "प्रमाण (kg)" : "Quantity (kg)"}
-                              value={incQty}
-                              onChange={(e) => setIncQty(e.target.value)}
-                              className="w-full h-11 px-3.5 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 bg-white"
-                            />
-                          </div>
-
-                          {/* 3. दिनांक */}
-                          <div>
-                            <label className="text-xs font-bold text-slate-600 block mb-1.5">
-                              {lang === "mr" ? "दिनांक" : "Date"}
-                            </label>
-                            <input
-                              type="date"
-                              value={incDate}
-                              onChange={(e) => setIncDate(e.target.value)}
-                              className="w-full h-11 px-3.5 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 bg-white"
-                            />
-                          </div>
-
-                          {/* 4. शेरा */}
-                          <div>
-                            <label className="text-xs font-bold text-slate-600 block mb-1.5">
-                              {lang === "mr" ? "शेरा" : "Remarks"}
-                            </label>
-                            <textarea
-                              rows={3}
-                              placeholder={lang === "mr" ? "शेरा" : "Enter remarks..."}
-                              value={incRemark}
-                              onChange={(e) => setIncRemark(e.target.value)}
-                              className="w-full p-3.5 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500 bg-white resize-none"
-                            />
-                          </div>
-
-                          {/* 5. Save Button */}
-                          <button
-                            onClick={handleSaveIncomingStock}
-                            disabled={saving}
-                            className="px-6 py-2.5 bg-[#008955] hover:bg-[#007044] text-white rounded-lg font-bold text-sm shadow transition-all flex items-center gap-2"
-                          >
-                            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                            <span>Save</span>
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Right Column: Recent Entries Table (अलीकडील नोंदी) */}
-                      <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                        <h3 className="font-bold text-base text-slate-800 border-b pb-2">
-                          {lang === "mr" ? "अलीकडील आवक नोंदी" : "Recent Voucher Logs"}
-                        </h3>
-                        <div className="w-full overflow-x-auto">
-                          <table className="w-full text-left text-xs border-collapse">
-                            <thead>
-                              <tr className="border-b border-slate-200 bg-slate-50 text-slate-700 font-bold">
-                                <th className="p-3 font-bold">{lang === "mr" ? "दिनांक" : "Date"}</th>
-                                <th className="p-3 font-bold">{lang === "mr" ? "साहित्य" : "Material"}</th>
-                                <th className="p-3 font-bold">{lang === "mr" ? "प्रमाण" : "Quantity"}</th>
-                                <th className="p-3 font-bold text-right"></th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {incRecords.length === 0 ? (
-                                <tr>
-                                  <td colSpan={4} className="p-8 text-center text-slate-400 font-medium">
-                                    {lang === "mr" ? "कोणतीही प्राप्त साठा नोंद उपलब्ध नाही." : "No stock received records found."}
-                                  </td>
-                                </tr>
-                              ) : (
-                                incRecords.map((r) => (
-                                  <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50/80">
-                                    <td className="p-3 font-medium text-slate-800">{r.date}</td>
-                                    <td className="p-3 font-bold text-slate-900">{r.item}</td>
-                                    <td className="p-3 font-bold text-slate-800">{parseFloat(r.qty).toFixed(4)} kg</td>
-                                    <td className="p-3 text-right">
-                                      <button
-                                        onClick={() => handleDeleteIncomingStock(r.id)}
-                                        className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors"
-                                        title="Delete"
-                                      >
-                                        <Trash2 className="w-4 h-4" />
-                                      </button>
-                                    </td>
-                                  </tr>
-                                ))
-                              )}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
+                  </div>
                   </div>
                 )}
 
@@ -8366,7 +8451,6 @@ function TeacherMDMPage() {
                             : "Record monthly public contribution. Total Available Stock = Previous Stock (Opening + Received) + Loksahabhag."}
                         </p>
                       </div>
-                      <GlobalClassSelector />
                     </div>
 
                     {/* Main Table Card (आरंभीची शिल्लक / साहित्य आवक स्टाइल तक्ता) */}
@@ -8703,7 +8787,6 @@ function TeacherMDMPage() {
                             : "Record monthly damaged stock. Total Remaining Stock = Stock after Loksahabhag - Damaged Stock."}
                         </p>
                       </div>
-                      <GlobalClassSelector />
                     </div>
 
                     {/* Main Table Card (इतर तक्त्यांप्रमाणेच उभा तक्ता) */}
@@ -9032,7 +9115,6 @@ function TeacherMDMPage() {
                       <h2 className="text-xl font-bold text-slate-900 tracking-tight">
                         Recipe Formulas
                       </h2>
-                      <GlobalClassSelector />
                     </div>
 
                     {/* Card 1: Formula source */}
@@ -11220,7 +11302,6 @@ function TeacherMDMPage() {
                         <h2 className="text-2xl font-bold text-[#004C99]">
                           {t_global.mdm_stock_now}
                         </h2>
-                        <GlobalClassSelector />
                         {lowStockItems.length > 0 && (
                           <button
                             onClick={() => setShowLowStockModal(true)}
@@ -11979,7 +12060,6 @@ function TeacherMDMPage() {
                           Stock Demand Report
                         </h2>
                       </div>
-                      <GlobalClassSelector />
                       <button
                         onClick={() => {
                           toast.info("Open Months मधून मागणीचा महिना निवडा आणि पटसंख्या प्रविष्ट करून Download PDF वर क्लिक करा.");
@@ -12024,6 +12104,25 @@ function TeacherMDMPage() {
                             <option value="2026-27">2026-27</option>
                             <option value="2027-28">2027-28</option>
                             <option value="2028-29">2028-29</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-700 block">
+                            इयत्ता गट
+                          </label>
+                          <select
+                            value={stockDemandClass}
+                            onChange={(e) => {
+                              const newCls = e.target.value as "1 To 5" | "6 To 8";
+                              setStockDemandClass(newCls);
+                              const newPat = getDynamicPatSankhya(profile, newCls);
+                              if (newPat > 0) setStockDemandPatSankhya(newPat.toString());
+                            }}
+                            className="h-10 px-3 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none min-w-[170px]"
+                          >
+                            <option value="1 To 5">इयत्ता १ ली ते ५ वी (प्राथमिक)</option>
+                            <option value="6 To 8">इयत्ता ६ वी ते ८ वी (उच्च प्राथमिक)</option>
                           </select>
                         </div>
 
@@ -12076,13 +12175,13 @@ function TeacherMDMPage() {
                           const mIdx = englishMonths.indexOf(monthEng);
                           const actualYear = (mIdx >= 0 && mIdx <= 2) ? startYear + 1 : startYear;
 
-                          const regData = getRegisterDataForMonth(monthEng, actualYear, stockDemandCategory);
+                          const regData = getRegisterDataForMonth(monthEng, actualYear, stockDemandClass);
                           const regEnrolled = regData?.enrolled || 0;
 
                           let latestEnrolled = 0;
                           Object.values(registerRecords || {}).forEach((rec: any) => {
                             if (!rec) return;
-                            const subRec = rec[stockDemandCategory] || (stockDemandCategory === "1 To 5" ? rec : null);
+                            const subRec = rec[stockDemandClass] || (stockDemandClass === "1 To 5" ? rec : null);
                             if (subRec && subRec.enrolled) {
                               const val = parseInt(subRec.enrolled, 10);
                               if (!isNaN(val) && val > latestEnrolled) latestEnrolled = val;
@@ -12091,7 +12190,7 @@ function TeacherMDMPage() {
 
                           const profP15 = Number(profile?.patPrimary) || Number(profile?.pat1to5) || Number(profile?.totalPat) || 0;
                           const profP68 = Number(profile?.patUpper) || Number(profile?.pat6to8) || 0;
-                          const profPat = stockDemandCategory === "6 To 8" ? profP68 : profP15;
+                          const profPat = stockDemandClass === "6 To 8" ? profP68 : profP15;
 
                           const pat = parseFloat(stockDemandPatSankhya) || regEnrolled || latestEnrolled || profPat || 0;
                           const wDays = calculateMonthWorkingDays(stockDemandMonth, stockDemandYear);
@@ -12107,7 +12206,7 @@ function TeacherMDMPage() {
                               taluka={profile?.taluka || "वाळवा"}
                               district={profile?.district || "सांगली"}
                               pat={pat}
-                              classSection={formatClassSectionName(stockDemandCategory)}
+                              classSection={formatClassSectionName(stockDemandClass)}
                               workingDays={wDays}
                               cookedDays={wDays}
                             />
@@ -12143,13 +12242,13 @@ function TeacherMDMPage() {
                                 const mIdx = englishMonths.indexOf(monthEng);
                                 const actualYear = (mIdx >= 0 && mIdx <= 2) ? startYear + 1 : startYear;
 
-                                const regData = getRegisterDataForMonth(monthEng, actualYear, stockDemandCategory);
+                                 const regData = getRegisterDataForMonth(monthEng, actualYear, stockDemandClass);
                                 const regEnrolled = regData?.enrolled || 0;
 
                                 let latestEnrolled = 0;
                                 Object.values(registerRecords || {}).forEach((rec: any) => {
                                   if (!rec) return;
-                                  const subRec = rec[stockDemandCategory] || (stockDemandCategory === "1 To 5" ? rec : null);
+                                  const subRec = rec[stockDemandClass] || (stockDemandClass === "1 To 5" ? rec : null);
                                   if (subRec && subRec.enrolled) {
                                     const val = parseInt(subRec.enrolled, 10);
                                     if (!isNaN(val) && val > latestEnrolled) latestEnrolled = val;
@@ -12158,11 +12257,11 @@ function TeacherMDMPage() {
 
                                 const profP15 = Number(profile?.patPrimary) || Number(profile?.pat1to5) || Number(profile?.totalPat) || 0;
                                 const profP68 = Number(profile?.patUpper) || Number(profile?.pat6to8) || 0;
-                                const profPat = stockDemandCategory === "6 To 8" ? profP68 : profP15;
+                                const profPat = stockDemandClass === "6 To 8" ? profP68 : profP15;
 
                                 const pat = parseFloat(stockDemandPatSankhya) || regEnrolled || latestEnrolled || profPat || 0;
                                 const wDays = calculateMonthWorkingDays(stockDemandMonth, stockDemandYear);
-                                const isUpper = stockDemandCategory === "6 To 8";
+                                const isUpper = stockDemandClass === "6 To 8";
 
                                 const itemsDef = [
                                   { key: "Rice", name: "तांदूळ (kg)", qtyP: 0.100, qtyU: 0.150 },
@@ -12461,7 +12560,6 @@ function TeacherMDMPage() {
                     {/* Top Header matching Screenshot 2 */}
                     <div className="flex items-center justify-between">
                       <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">Monthly MDM Report</h1>
-                      <GlobalClassSelector />
                       <button className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-all border border-slate-300">
                         <Info className="w-3.5 h-3.5 text-slate-500" />
                         <span>Help</span>
@@ -12485,6 +12583,21 @@ function TeacherMDMPage() {
                             <option value="masik_tandul_report">मासिक तांदूळ अहवाल</option>
                             <option value="masik_goshwara">मासिक साठा नोंदवही (प्रपत्र ब)</option>
                             <option value="masik_tandul_bill">मासिक तांदूळ शिजवून दिल्याचे बिल</option>
+                          </select>
+                        </div>
+
+                        {/* Class Section Selection (1 to 5 / 6 to 8) */}
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs font-bold text-slate-700 whitespace-nowrap">
+                            इयत्ता गट
+                          </label>
+                          <select
+                            value={monthlyReportClass}
+                            onChange={(e) => setMonthlyReportClass(e.target.value as "1 To 5" | "6 To 8")}
+                            className="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-purple-500 outline-none cursor-pointer"
+                          >
+                            <option value="1 To 5">इयत्ता १ ली ते ५ वी (प्राथमिक)</option>
+                            <option value="6 To 8">इयत्ता ६ वी ते ८ वी (उच्च प्राथमिक)</option>
                           </select>
                         </div>
 
@@ -12572,7 +12685,7 @@ function TeacherMDMPage() {
                           const district = profile?.district || "";
 
                           // Opening stock for Rice in KG
-                          const prevRiceStock = getOpeningStock(engMonthNames[monthNum], year.toString(), "1 To 5", "Rice");
+                          const prevRiceStock = getOpeningStock(engMonthNames[monthNum], year.toString(), monthlyReportClass, "Rice");
                           let currentRiceBalance = prevRiceStock;
 
                           let totalWorkingDays = 0;
@@ -12592,14 +12705,14 @@ function TeacherMDMPage() {
                             const dateISO = `${year}-${String(monthNum).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                             const dateFormatted = `${String(day).padStart(2, '0')}/${String(monthNum).padStart(2, '0')}/${year}`;
 
-                            const daily = getDailyDataForMonthDate(dateISO, "1 To 5");
+                            const daily = getDailyDataForMonthDate(dateISO, monthlyReportClass);
                             const isHoliday = daily?.isHoliday || isSunday;
 
                             if (daily && (daily.enrolled > 0 || daily.beneficiary > 0)) {
                               recordedDaysCount++;
                             }
 
-                            const dayIncomingRice = getIncomingForItem("Rice", engMonthNames[monthNum], year, "1 To 5", day);
+                            const dayIncomingRice = getIncomingForItem("Rice", engMonthNames[monthNum], year, monthlyReportClass, day);
                             if (dayIncomingRice > 0 && !riceReceivedDateStr) {
                               riceReceivedDateStr = dateFormatted;
                             }
@@ -12617,8 +12730,9 @@ function TeacherMDMPage() {
                               if (bene > 0) {
                                 totalRiceDistributedDays++;
                                 const riceRule = quantityRules.find((r) => r.item.toLowerCase() === "rice");
-                                const riceQtyStr = riceRule ? riceRule.qty15 : "0.100";
-                                const ricePerStudent = parseFloat(riceQtyStr) || 0.100;
+                                const defaultQty = monthlyReportClass === "6 To 8" ? "0.150" : "0.100";
+                                const riceQtyStr = riceRule ? (monthlyReportClass === "6 To 8" ? (riceRule.qty68 || defaultQty) : (riceRule.qty15 || defaultQty)) : defaultQty;
+                                const ricePerStudent = parseFloat(riceQtyStr) || (monthlyReportClass === "6 To 8" ? 0.150 : 0.100);
                                 const riceRateKg = ricePerStudent;
                                 kharch = bene * riceRateKg;
                                 totalBeneficiaries += bene;
@@ -12644,7 +12758,7 @@ function TeacherMDMPage() {
                             });
                           }
 
-                          const patPrimary = getDynamicPatSankhya(profile, "1 To 5");
+                          const patSelectedClass = getDynamicPatSankhya(profile, monthlyReportClass);
                           const totalPat = getDynamicPatSankhya(profile, "1-8");
 
                           return (
@@ -12666,7 +12780,7 @@ function TeacherMDMPage() {
                                     शाळेचे नाव : <span className="font-bold text-slate-900">{schoolName}</span>
                                   </div>
                                   <div className="p-1.5 md:col-span-3">
-                                    इयत्ता गट : <span className="font-bold text-slate-900">प्राथमिक ( इयत्ता १ ते ५ )</span>
+                                    इयत्ता गट : <span className="font-bold text-slate-900">{monthlyReportClass === "6 To 8" ? "उच्च प्राथमिक ( इयत्ता ६ ते ८ )" : "प्राथमिक ( इयत्ता १ ते ५ )"}</span>
                                   </div>
                                   <div className="p-1.5 md:col-span-2">
                                     केंद्र : <span className="font-bold text-slate-900">{kendra}</span>
@@ -12685,7 +12799,7 @@ function TeacherMDMPage() {
                                     महिना : <span className="font-bold text-slate-900">{monthlyMdmReportMonth}</span>
                                   </div>
                                   <div className="p-1.5">
-                                    पटसंख्या (१ ते ५) : <span className="font-bold text-slate-900">{patPrimary}</span>
+                                    पटसंख्या ({monthlyReportClass === "6 To 8" ? "६ ते ८" : "१ ते ५"}) : <span className="font-bold text-slate-900">{patSelectedClass}</span>
                                   </div>
                                   <div className="p-1.5">
                                     एकूण पटसंख्या : <span className="font-bold text-slate-900">{totalPat}</span>
@@ -12834,7 +12948,7 @@ function TeacherMDMPage() {
                             "Sugar-Jaggery", "Milk-Milk Powder", "Ragi Satva", "Vegetables"
                           ];
 
-                          const prevRiceStock = getOpeningStock(engMonthNames[monthNum], year.toString(), "1 To 5", "Rice");
+                          const prevRiceStock = getOpeningStock(engMonthNames[monthNum], year.toString(), monthlyReportClass, "Rice");
                           let monthlyTotalRiceUsed = 0;
                           let monthlyTotalTat = 0;
                           let monthlyTotalGrant = 0;
@@ -12848,7 +12962,7 @@ function TeacherMDMPage() {
                               const weekday = marDays[date.getDay()];
                               const isSunday = date.getDay() === 0;
                               const dateISO = `${year}-${String(monthNum).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-                              const daily = getDailyDataForMonthDate(dateISO, "1 To 5");
+                              const daily = getDailyDataForMonthDate(dateISO, monthlyReportClass);
                               return { day, weekday, isSunday, dateISO, daily };
                             });
 
@@ -12859,7 +12973,7 @@ function TeacherMDMPage() {
                                     <h2 className="text-sm md:text-base font-black text-slate-900 tracking-tight uppercase">प्रधानमंत्री पोषण शक्ती निर्माण योजना — पोषण आहार दैनंदिन नोंदी</h2>
                                     <h3 className="text-xs md:text-sm font-extrabold text-slate-800">पोषण आहार दैनंदिन नोंदी</h3>
                                     <p className="text-xs font-bold text-slate-700">{schoolName}</p>
-                                    <p className="text-xs font-semibold text-slate-600">पोषण आहार दैनंदिन नोंदी — {monthYearStr} · प्राथमिक ( इयत्ता १ ते ५ )</p>
+                                    <p className="text-xs font-semibold text-slate-600">पोषण आहार दैनंदिन नोंदी — {monthYearStr} · {monthlyReportClass === "6 To 8" ? "उच्च प्राथमिक ( इयत्ता ६ ते ८ )" : "प्राथमिक ( इयत्ता १ ते ५ )"}</p>
                                     <div className="grid grid-cols-2 sm:grid-cols-4 border border-slate-700 text-xs font-bold mt-2 text-center divide-x divide-slate-700 bg-slate-50 rounded-lg overflow-hidden">
                                       <div className="p-2">UDISE कोड<br/><span className="font-black text-slate-900">{profile?.udise || getUdise() || ""}</span></div>
                                       <div className="p-2">केंद्र<br/><span className="font-black text-slate-900">{profile?.kendra || profile?.center || ""}</span></div>
@@ -12898,7 +13012,8 @@ function TeacherMDMPage() {
                                         const bene = daily.beneficiary;
                                         if (bene > 0) {
                                           monthlyTotalTat += bene;
-                                          monthlyTotalGrant += bene * (parseFloat(primaryRate) || 5.45);
+                                          const perStudentRate = monthlyReportClass === "6 To 8" ? (parseFloat(upperRate) || 8.17) : (parseFloat(primaryRate) || 5.45);
+                                          monthlyTotalGrant += bene * perStudentRate;
                                         }
 
                                         const recipeSelection = getRecipeItemsById(daily.menu);
@@ -12924,7 +13039,8 @@ function TeacherMDMPage() {
                                               const wasSelected = !!activeSelected[itemKey];
                                               if (!wasSelected) return <td key={itemKey} className="border-r border-slate-700 px-1 py-0.5"></td>;
                                               const rule = quantityRules.find(r => r.item.toLowerCase() === itemKey.toLowerCase());
-                                              const qStr = rule ? rule.qty15 : (itemKey === "Rice" ? "0.100" : "0.02");
+                                              const defaultQtyStr = itemKey === "Rice" ? (monthlyReportClass === "6 To 8" ? "0.150" : "0.100") : "0.02";
+                                              const qStr = rule ? (monthlyReportClass === "6 To 8" ? (rule.qty68 || defaultQtyStr) : (rule.qty15 || defaultQtyStr)) : defaultQtyStr;
                                               const qVal = parseFloat(qStr) || 0;
                                               const qKg = qVal >= 1 ? qVal / 1000 : qVal;
                                               const usedKg = qKg * bene;
@@ -13068,7 +13184,7 @@ function TeacherMDMPage() {
                           const year = monthNum >= 6 ? 2026 : 2027;
                           const schoolName = profile?.schoolName || "";
 
-                          const riceData = getStockDataForItem("Rice", engMonthNames[monthNum], year, "1 To 5");
+                          const riceData = getStockDataForItem("Rice", engMonthNames[monthNum], year, monthlyReportClass);
                           const prevTandul = riceData.prev;
                           const recTandul = riceData.received;
                           const usnaTandul = 0;
@@ -13081,16 +13197,18 @@ function TeacherMDMPage() {
                           const kamacheDivs = riceData.cookedDays;
                           const shijvunDivs = riceData.cookedDays;
 
-                          const rates = getFoodGrantRates("1 To 5", Number(primaryRate), Number(upperRate));
+                          const rates = getFoodGrantRates(monthlyReportClass, Number(primaryRate), Number(upperRate));
                           const kendraRate = rates.centerRate;
                           const rajyaRate = rates.stateRate;
                           const kendraHissa = parseFloat((labharthi * kendraRate).toFixed(2));
                           const rajyaHissa = parseFloat((labharthi * rajyaRate).toFixed(2));
                           const ekunKharc = kendraHissa + rajyaHissa;
 
-                          const registerData = getRegisterDataForMonth(engMonthNames[monthNum], year, "1 To 5");
-                          const pat = registerData.enrolled || getDynamicPatSankhya(profile, "1 To 5");
-                          const pudheManagi = Math.max(0, parseFloat(((pat || 0) * (shijvunDivs || 0) * 0.100).toFixed(1)));
+                          const registerData = getRegisterDataForMonth(engMonthNames[monthNum], year, monthlyReportClass);
+                          const pat = registerData.enrolled || getDynamicPatSankhya(profile, monthlyReportClass);
+                          const perStudentRiceRate = monthlyReportClass === "6 To 8" ? 0.150 : 0.100;
+                          const nextMonthDays = 26; // पुढील महिन्यातील २६ दिवस गृहीत धरून
+                          const pudheManagi = Math.max(0, parseFloat(((pat || 0) * nextMonthDays * perStudentRiceRate).toFixed(1)));
 
                           return (
                             <div className="space-y-0">
@@ -13105,7 +13223,7 @@ function TeacherMDMPage() {
                                   <div className="p-1.5 px-2.5">बीट : <span className="font-black">{profile?.beat || profile?.kendra || profile?.center || ""}</span></div>
                                 </div>
                                 <div className="grid grid-cols-2 divide-x divide-slate-700">
-                                  <div className="p-1.5 px-2.5">इयत्ता गट : <span className="font-black">प्राथमिक ( इयत्ता १ ते ५ )</span></div>
+                                  <div className="p-1.5 px-2.5">इयत्ता गट : <span className="font-black">{monthlyReportClass === "6 To 8" ? "उच्च प्राथमिक ( इयत्ता ६ ते ८ )" : "प्राथमिक ( इयत्ता १ ते ५ )"}</span></div>
                                   <div className="p-1.5 px-2.5">ता. : <span className="font-black">{profile?.taluka || ""}</span></div>
                                 </div>
                                 <div className="grid grid-cols-2 divide-x divide-slate-700">
@@ -13285,22 +13403,23 @@ function TeacherMDMPage() {
                           const primaryMaxEnrolled = getMaxDailyEnrolled("1 To 5");
                           const upperMaxEnrolled = getMaxDailyEnrolled("6 To 8");
 
-                          const riceData = getStockDataForItem("Rice", engMonthNames[monthNum], year, "1 To 5");
+                          const riceData = getStockDataForItem("Rice", engMonthNames[monthNum], year, monthlyReportClass);
                           const labharthi = riceData.beneficiary;
-                          const registerData = getRegisterDataForMonth(engMonthNames[monthNum], year, "1 To 5");
-                          const enrolledPat = (registerData && registerData.enrolled) ? registerData.enrolled : getDynamicPatSankhya(profile, "1 To 5");
+                          const registerData = getRegisterDataForMonth(engMonthNames[monthNum], year, monthlyReportClass);
+                          const enrolledPat = (registerData && registerData.enrolled) ? registerData.enrolled : getDynamicPatSankhya(profile, monthlyReportClass);
 
                           const items = B_FORM_ITEMS.map((def, idx) => {
-                            const prev = getOpeningStock(engMonthNames[monthNum], year.toString(), "1 To 5", def.key);
-                            const rec = getIncomingForItem(def.key, engMonthNames[monthNum], year, "1 To 5");
-                            const used = getUsedForMonth(engMonthNames[monthNum], year.toString(), "1 To 5", def.key);
-                            const demand = Math.max(0, (enrolledPat * 0.02 * 20) - (prev + rec - used));
+                            const prev = getOpeningStock(engMonthNames[monthNum], year.toString(), monthlyReportClass, def.key);
+                            const rec = getIncomingForItem(def.key, engMonthNames[monthNum], year, monthlyReportClass);
+                            const used = getUsedForMonth(engMonthNames[monthNum], year.toString(), monthlyReportClass, def.key);
+                            const perStudentRiceDemand = monthlyReportClass === "6 To 8" ? 0.03 : 0.02;
+                            const demand = Math.max(0, (enrolledPat * perStudentRiceDemand * 20) - (prev + rec - used));
                             return { sr: idx + 1, key: def.key, name: def.nameMr, prev, rec, used, demand: parseFloat(demand.toFixed(2)) };
                           });
 
                           const cookedDays = riceData.cookedDays;
 
-                          const rateVal = parseFloat(primaryRate) || 5.45;
+                          const rateVal = monthlyReportClass === "6 To 8" ? (parseFloat(upperRate) || 8.17) : (parseFloat(primaryRate) || 5.45);
                           const vegCost = parseFloat((labharthi * (rateVal * (parseFloat(vegPercent) || 70) / 100)).toFixed(2));
                           const fuelCost = parseFloat((labharthi * (rateVal * (parseFloat(fuelPercent) || 30) / 100)).toFixed(2));
                           const ekunGrant = vegCost + fuelCost;
@@ -13317,7 +13436,7 @@ function TeacherMDMPage() {
                               <div className="border border-black text-xs font-bold">
                                 <div className="grid grid-cols-3 divide-x divide-black border-b border-black">
                                   <div className="p-2.5">शाळेचे नाव : <span className="font-black">{schoolName}</span></div>
-                                  <div className="p-2.5">इयत्ता गट : <span className="font-black">प्राथमिक ( इयत्ता १ ते ५ )</span></div>
+                                  <div className="p-2.5">इयत्ता गट : <span className="font-black">{monthlyReportClass === "6 To 8" ? "उच्च प्राथमिक ( इयत्ता ६ ते ८ )" : "प्राथमिक ( इयत्ता १ ते ५ )"}</span></div>
                                   <div className="p-2.5">केंद्र : <span className="font-black">{profile?.kendra || profile?.center || ""}</span></div>
                                 </div>
                                 <div className="grid grid-cols-3 divide-x divide-black border-b border-black">
@@ -13327,7 +13446,7 @@ function TeacherMDMPage() {
                                 </div>
                                 <div className="grid grid-cols-3 divide-x divide-black border-b border-black">
                                   <div className="p-2.5">माहे : <span className="font-black">{monthlyMdmReportMonth}</span></div>
-                                  <div className="p-2.5">पटसंख्या (१ ते ५) : <span className="font-black">{enrolledPat || '—'}</span></div>
+                                  <div className="p-2.5">पटसंख्या ({monthlyReportClass === "6 To 8" ? "६ ते ८" : "१ ते ५"}) : <span className="font-black">{enrolledPat || '—'}</span></div>
                                   <div className="p-2.5">एकूण लाभार्थी संख्या : <span className="font-black">{labharthi || '—'}</span></div>
                                 </div>
                                 <div className="grid grid-cols-3 divide-x divide-black">
@@ -13445,8 +13564,8 @@ function TeacherMDMPage() {
                           const daysInMonth = new Date(year, monthNum, 0).getDate();
                           const marDays = ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
                           const schoolName = profile?.schoolName || "";
-                          const shasDar = Number(primaryRate) || 5.45;
-                          const rates = getFoodGrantRates("1 To 5", shasDar);
+                          const shasDar = monthlyReportClass === "6 To 8" ? (Number(upperRate) || 8.17) : (Number(primaryRate) || 5.45);
+                          const rates = getFoodGrantRates(monthlyReportClass, shasDar);
                           const kendraRate = rates.centerRate;
                           const rajyaRate = rates.stateRate;
 
@@ -13457,8 +13576,8 @@ function TeacherMDMPage() {
                             const weekday = marDays[date.getDay()];
                             const isSunday = date.getDay() === 0;
                             const dateISO = `${year}-${String(monthNum).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                            const dailyEntry = getDailyDataForMonthDate(dateISO, "1 To 5");
-                            const pat = dailyEntry?.enrolled || getDynamicPatSankhya(profile, "1 To 5");
+                            const dailyEntry = getDailyDataForMonthDate(dateISO, monthlyReportClass);
+                            const pat = dailyEntry?.enrolled || getDynamicPatSankhya(profile, monthlyReportClass);
                             const labharthi = dailyEntry?.beneficiary || 0;
                             const kendra = labharthi > 0 ? parseFloat((labharthi * kendraRate).toFixed(2)) : 0;
                             const rajya = labharthi > 0 ? parseFloat((labharthi * rajyaRate).toFixed(2)) : 0;
@@ -13490,7 +13609,7 @@ function TeacherMDMPage() {
                                   <div className="p-1.5 px-2.5">बीट : <span className="font-black">{profile?.beat || profile?.kendra || profile?.center || ""}</span></div>
                                 </div>
                                 <div className="grid grid-cols-2 divide-x divide-black">
-                                  <div className="p-1.5 px-2.5">इयत्ता गट : <span className="font-black">प्राथमिक ( इयत्ता १ ते ५ )</span></div>
+                                  <div className="p-1.5 px-2.5">इयत्ता गट : <span className="font-black">{monthlyReportClass === "6 To 8" ? "उच्च प्राथमिक ( इयत्ता ६ ते ८ )" : "प्राथमिक ( इयत्ता १ ते ५ )"}</span></div>
                                   <div className="p-1.5 px-2.5">ता. : <span className="font-black">{profile?.taluka || ""}</span></div>
                                 </div>
                                 <div className="grid grid-cols-2 divide-x divide-black">
@@ -13588,7 +13707,6 @@ function TeacherMDMPage() {
                         <h2 className="text-2xl font-black text-[#004C99]">
                           Certificate
                         </h2>
-                        <GlobalClassSelector />
                       </div>
 
                       {/* Top Control Bar matching User Screenshot */}

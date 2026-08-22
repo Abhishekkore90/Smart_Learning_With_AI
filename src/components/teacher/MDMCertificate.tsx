@@ -328,9 +328,9 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
         {/* Certificate Text Paragraph */}
         <div className="text-justify text-xs leading-[1.8rem] space-y-2 px-2 font-normal text-black mb-4">
           <p>
-            अध्यक्ष/ सचिव शाळा व्यवस्थापन समिती <span className="font-bold border-b border-dotted border-black px-3">{principalName || "________"}</span> कडून प्रमाणित करणेत येते की,
+            अध्यक्ष/ सचिव शाळा व्यवस्थापन समिती कडून प्रमाणित करणेत येते की,
             जि.प. शाळा <span className="font-bold border-b border-dotted border-black px-3">{reportSchoolName || "________"}</span> या शाळेतील{" "}
-            <span className="font-bold border-b border-dotted border-black px-3">{teacherName || "________"}</span> यांनी शालेय पोषण आहार अंतर्गत माहे{" "}
+            <span className="font-bold border-b border-dotted border-black px-3">{principalName || teacherName || "________"}</span> यांनी शालेय पोषण आहार अंतर्गत माहे{" "}
             <span className="font-bold border-b border-dotted border-black px-2">{getFormattedMonthYear()}</span> मध्ये{" "}
             {showPrimary && (
               <>

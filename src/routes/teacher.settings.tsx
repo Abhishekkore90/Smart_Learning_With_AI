@@ -37,6 +37,12 @@ function TeacherSettings() {
     schoolName: "",
     udise: "",
     address: "",
+    center: "",
+    beat: "",
+    taluka: "",
+    district: "",
+    cookName: "",
+    helperName: "",
   });
 
   useEffect(() => {
@@ -80,6 +86,12 @@ function TeacherSettings() {
           schoolName: data.schoolName || "",
           udise: data.udise || "",
           address: data.address || "",
+          center: data.center || data.kendra || "",
+          beat: data.beat || data.bit || "",
+          taluka: data.taluka || "",
+          district: data.district || "",
+          cookName: data.cookName || data.swayampakiName || "",
+          helperName: data.helperName || data.madatnisName || "",
         });
       } else {
         // Fallback to local storage if Firestore has no record
@@ -96,6 +108,12 @@ function TeacherSettings() {
               schoolName: parsed.schoolName || "",
               udise: parsed.udise || "",
               address: parsed.address || "",
+              center: parsed.center || parsed.kendra || "",
+              beat: parsed.beat || parsed.bit || "",
+              taluka: parsed.taluka || "",
+              district: parsed.district || "",
+              cookName: parsed.cookName || parsed.swayampakiName || "",
+              helperName: parsed.helperName || parsed.madatnisName || "",
             });
             return;
           } catch (e) {
@@ -120,6 +138,12 @@ function TeacherSettings() {
             schoolName: parsed.schoolName || "",
             udise: parsed.udise || "",
             address: parsed.address || "",
+            center: parsed.center || parsed.kendra || "",
+            beat: parsed.beat || parsed.bit || "",
+            taluka: parsed.taluka || "",
+            district: parsed.district || "",
+            cookName: parsed.cookName || parsed.swayampakiName || "",
+            helperName: parsed.helperName || parsed.madatnisName || "",
           });
         } catch (e) {
           setFormData((prev) => ({ ...prev, fullName: user.displayName || "" }));
@@ -151,6 +175,10 @@ function TeacherSettings() {
         docRef,
         {
           ...formData,
+          kendra: formData.center,
+          bit: formData.beat,
+          swayampakiName: formData.cookName,
+          madatnisName: formData.helperName,
           updatedAt: new Date().toISOString(),
         },
         { merge: true },
@@ -166,6 +194,14 @@ function TeacherSettings() {
           address: formData.address,
           udise: formData.udise,
           schoolName: formData.schoolName,
+          center: formData.center,
+          kendra: formData.center,
+          beat: formData.beat,
+          bit: formData.beat,
+          taluka: formData.taluka,
+          district: formData.district,
+          cookName: formData.cookName,
+          helperName: formData.helperName,
           updatedAt: new Date().toISOString(),
         },
         { merge: true }
@@ -173,11 +209,25 @@ function TeacherSettings() {
 
       // Sync local storage profile
       const savedProfile = localStorage.getItem("sqaaf_teacher_profile");
-      let updated = { ...formData, role: "teacher" };
+      let updated = { 
+        ...formData, 
+        role: "teacher", 
+        kendra: formData.center, 
+        bit: formData.beat,
+        swayampakiName: formData.cookName,
+        madatnisName: formData.helperName,
+      };
       if (savedProfile) {
         try {
           const parsed = JSON.parse(savedProfile);
-          updated = { ...parsed, ...formData };
+          updated = { 
+            ...parsed, 
+            ...formData, 
+            kendra: formData.center, 
+            bit: formData.beat,
+            swayampakiName: formData.cookName,
+            madatnisName: formData.helperName,
+          };
         } catch (e) {
           console.error("Failed to parse savedProfile during save sync", e);
         }
@@ -186,6 +236,13 @@ function TeacherSettings() {
       if (formData.udise) {
         localStorage.setItem("teacher_udise", formData.udise);
       }
+      if (formData.schoolName) {
+        localStorage.setItem("teacher_school_name", formData.schoolName);
+        localStorage.setItem("sqaf_cert_school_name", formData.schoolName);
+      }
+      if (formData.center) localStorage.setItem("teacher_center", formData.center);
+      if (formData.taluka) localStorage.setItem("teacher_taluka", formData.taluka);
+      if (formData.district) localStorage.setItem("teacher_district", formData.district);
       toast.success("Profile updated successfully!");
       setTimeout(() => {
         window.location.reload();
@@ -329,7 +386,7 @@ function TeacherSettings() {
                   {/* School Name */}
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                      <School className="size-4 text-indigo-500" /> School Name
+                      <School className="size-4 text-indigo-500" /> शाळेचे नाव (School Name)
                     </label>
                     <input
                       type="text"
@@ -337,14 +394,14 @@ function TeacherSettings() {
                       value={formData.schoolName}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-semibold"
                     />
                   </div>
 
                   {/* School UDISE Code */}
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                      <School className="size-4 text-indigo-500" /> School UDISE Code
+                      <School className="size-4 text-indigo-500" /> यूडायस कोड (UDISE Code)
                     </label>
                     <input
                       type="text"
@@ -352,7 +409,97 @@ function TeacherSettings() {
                       value={formData.udise}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono font-semibold"
+                    />
+                  </div>
+
+                  {/* Center Name */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                      <MapPin className="size-4 text-emerald-600" /> केंद्राचे नाव (Center Name)
+                    </label>
+                    <input
+                      type="text"
+                      name="center"
+                      value={formData.center}
+                      onChange={handleChange}
+                      placeholder="उदा. NARSINGPUR / नरसिंगपूर"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-semibold"
+                    />
+                  </div>
+
+                  {/* Beat Name */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                      <MapPin className="size-4 text-emerald-600" /> बीट नाव (Beat Name)
+                    </label>
+                    <input
+                      type="text"
+                      name="beat"
+                      value={formData.beat}
+                      onChange={handleChange}
+                      placeholder="उदा. बीट नाव"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-semibold"
+                    />
+                  </div>
+
+                  {/* Taluka */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                      <MapPin className="size-4 text-emerald-600" /> तालुका (Taluka)
+                    </label>
+                    <input
+                      type="text"
+                      name="taluka"
+                      value={formData.taluka}
+                      onChange={handleChange}
+                      placeholder="उदा. वाळवा"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-semibold"
+                    />
+                  </div>
+
+                  {/* District */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                      <MapPin className="size-4 text-emerald-600" /> जिल्हा (District)
+                    </label>
+                    <input
+                      type="text"
+                      name="district"
+                      value={formData.district}
+                      onChange={handleChange}
+                      placeholder="उदा. सांगली"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-semibold"
+                    />
+                  </div>
+
+                  {/* Cook Name */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                      <User className="size-4 text-amber-600" /> स्वयंपाकी नाव (Cook Name)
+                    </label>
+                    <input
+                      type="text"
+                      name="cookName"
+                      value={formData.cookName}
+                      onChange={handleChange}
+                      placeholder="उदा. स्वयंपाकी नाव"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all font-semibold"
+                    />
+                  </div>
+
+                  {/* Helper Name */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                      <User className="size-4 text-amber-600" /> मदतनीस नाव (Helper Name)
+                    </label>
+                    <input
+                      type="text"
+                      name="helperName"
+                      value={formData.helperName}
+                      onChange={handleChange}
+                      placeholder="उदा. मदतनीस नाव"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all font-semibold"
                     />
                   </div>
 
