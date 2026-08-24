@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
-import { db, storage } from "@/lib/firebase";
+import { auth, db, storage } from "@/lib/firebase";
 import { doc, getDoc, setDoc, onSnapshot, collection } from "firebase/firestore";
-import { ref, uploadBytes, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { PDFDocument } from "pdf-lib";
 import {
   BookOpen,
@@ -42,6 +42,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
 import { saveFileToIndexedDB, getFileFromIndexedDB } from "@/lib/indexedDbStorage";
+import { uploadBlobToBunny } from "@/lib/bunnyStorage";
 import { extractTableRowsFromPdf } from "@/lib/pdfParser";
 import { parseExcelFile, ParsedTableCell } from "@/lib/tableParser";
 import { parsePlanningExcelFile, PlanningCategory, PlanningDocumentRecord } from "@/lib/smartPlanningParser";
@@ -498,6 +499,7 @@ export interface PlanningFileRecord {
   rawDataRows?: string[][];
   gridData?: ParsedTableCell[][];
   htmlContent?: string;
+  isCustomUserEdit?: boolean;
 }
 
 export interface PlanningTableRow {
@@ -958,15 +960,29 @@ export function AcademicPlanningSystem({
         fileType: "application/pdf",
         uploadedBy: mode,
         uploadedAt: new Date().toISOString(),
-        tableRows: rawEditorHeaders.length > 0 ? tableRows : tableRows,
+        tableRows: tableRows,
         ...(rawEditorHeaders.length > 0 && { rawHeaders: rawEditorHeaders }),
         ...(rawEditorRows.length > 0 && { rawDataRows: rawEditorRows }),
+        isCustomUserEdit: true,
       };
 
-
+      // 1. Save to Local Storage strictly for this User
+      const effectiveUserId = auth?.currentUser?.uid || "guest_teacher";
       try {
-        await setDoc(doc(db, "academic_plannings", recordKey), updatedRecord, { merge: true });
-      } catch (e) { }
+        localStorage.setItem(`user_edit_${effectiveUserId}_${recordKey}`, JSON.stringify(updatedRecord));
+      } catch (e) {}
+
+      // 2. Save to Firestore user edits collection (User Specific)
+      try {
+        await setDoc(doc(db, "academic_plannings_user_edits", `${effectiveUserId}_${recordKey}`), updatedRecord, { merge: true });
+      } catch (e) {}
+
+      // 3. Save to main Firestore collection if Admin mode
+      if (mode === "admin") {
+        try {
+          await setDoc(doc(db, "academic_plannings", recordKey), updatedRecord, { merge: true });
+        } catch (e) {}
+      }
 
       setPlanningFiles((prev) => ({ ...prev, [recordKey]: updatedRecord }));
       setIsTableEditorOpen(false);
@@ -1085,7 +1101,7 @@ export function AcademicPlanningSystem({
 
         try {
           localStorage.setItem("cce_academic_plannings_cache", JSON.stringify(filesMap));
-        } catch (e) {}
+        } catch (e) { }
       },
       (err) => {
         console.warn("Planning files realtime listener notice:", err);
@@ -1215,6 +1231,18 @@ export function AcademicPlanningSystem({
     const fileKey = getFileRecordKey(pType, subjName, clsId, medId, yearStr);
     let fileRecord = planningFiles[fileKey];
 
+    // Check if current user has saved a customized edit for this record
+    try {
+      const effectiveUserId = auth?.currentUser?.uid || "guest_teacher";
+      const savedUserEdit = localStorage.getItem(`user_edit_${effectiveUserId}_${fileKey}`);
+      if (savedUserEdit) {
+        const parsedEdit = JSON.parse(savedUserEdit);
+        if (parsedEdit && parsedEdit.id) {
+          fileRecord = parsedEdit;
+        }
+      }
+    } catch (e) {}
+
     // Fallback check for legacy record keys (e.g. classId_mediumId_subjectId_planningType)
     if (!fileRecord) {
       const cls = (clsId || selectedClass || "1st").trim().toLowerCase();
@@ -1309,52 +1337,63 @@ export function AcademicPlanningSystem({
 
       const compressedSizeMb = (finalFileBlob.size / (1024 * 1024)).toFixed(2);
 
-      // 1. Save binary Blob persistently to IndexedDB for 100% cross-refresh availability
-      await saveFileToIndexedDB(recordKey, finalFileBlob);
+      setUploadProgress(55);
+      let fileUrl = "";
 
-      // Create instant local Blob URL (0ms)
-      const blobUrl = URL.createObjectURL(finalFileBlob);
-      let fileUrl = blobUrl;
-
-      // 2. Direct upload to Firebase Storage with 2.5s fallback timeout
-      if (storage) {
-        try {
-          const storageRef = ref(storage, cleanStoragePath);
-          setUploadProgress(75);
-
-          const storageUploadPromise = (async () => {
-            const uploadSnapshot = await uploadBytes(storageRef, finalFileBlob);
-            return await getDownloadURL(uploadSnapshot.ref);
-          })();
-
-          const timeoutPromise = new Promise<string>((_, reject) =>
-            setTimeout(() => reject(new Error("Firebase storage response timeout")), 2500)
-          );
-
-          fileUrl = await Promise.race([storageUploadPromise, timeoutPromise]);
-          setUploadProgress(95);
-        } catch (fbErr) {
-          console.warn("Firebase Storage timeout/notice, using persistent IndexedDB blob:", fbErr);
-          fileUrl = blobUrl;
+      // 1. Primary High-Speed Upload via Bunny Storage CDN
+      try {
+        fileUrl = await uploadBlobToBunny(cleanStoragePath, finalFileBlob);
+        setUploadProgress(90);
+      } catch (bunnyErr) {
+        console.warn("Bunny CDN upload notice, trying Firebase storage fallback:", bunnyErr);
+        if (storage) {
+          try {
+            const storageRef = ref(storage, cleanStoragePath);
+            const uploadTask = uploadBytesResumable(storageRef, finalFileBlob);
+            fileUrl = await new Promise<string>((resolve, reject) => {
+              uploadTask.on(
+                "state_changed",
+                (snapshot) => {
+                  const progress = 55 + Math.round((snapshot.bytesTransferred / Math.max(snapshot.totalBytes, 1)) * 35);
+                  setUploadProgress(Math.min(progress, 90));
+                },
+                (error) => reject(error),
+                async () => {
+                  try {
+                    resolve(await getDownloadURL(uploadTask.snapshot.ref));
+                  } catch (error) {
+                    reject(error);
+                  }
+                }
+              );
+            });
+          } catch (fbErr) {
+            console.warn("Firebase Storage fallback notice:", fbErr);
+          }
         }
       }
 
-      setUploadProgress(95);
+      // Also persist binary Blob to IndexedDB for persistent offline fallback
+      try {
+        await saveFileToIndexedDB(recordKey, finalFileBlob);
+      } catch (e) {}
+
+      if (!fileUrl) {
+        fileUrl = URL.createObjectURL(finalFileBlob);
+      }
+
+      setUploadProgress(92);
 
       // 2. Extract structured table rows from uploaded file (PDF or Excel)
       toast.info("🔍 फाईलमधून तक्ता व माहिती ऑटो-एक्सट्रॅक्ट होत आहे...");
       let extractedRows: PlanningTableRow[] = [];
       let excelRawHeaders: string[] = [];
       let excelRawDataRows: string[][] = [];
-      let excelGridData: ParsedTableCell[][] = [];
-      let excelHtmlContent = "";
       try {
         if (ext === "xls" || ext === "xlsx" || ext === "csv") {
           const excelResult = await parseExcelFile(selectedFile);
           if (excelResult.gridData && excelResult.gridData.length > 0) {
-            excelGridData = excelResult.gridData;
             excelRawHeaders = excelResult.rawHeaders;
-            excelHtmlContent = excelResult.htmlContent || "";
             excelRawDataRows = excelResult.gridData.map((row) =>
               row.map((cell) => cell.value || "")
             );
@@ -1391,7 +1430,7 @@ export function AcademicPlanningSystem({
         subjectId: selectedSubject || "all",
         planningType: uploadingType,
         fileName: selectedFile.name,
-        fileUrl: fileUrl,
+        fileUrl,
         fileSize: fileSizeDisplay,
         fileType:
           selectedFile.type ||
@@ -1400,19 +1439,16 @@ export function AcademicPlanningSystem({
             : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
         uploadedBy: mode,
         uploadedAt: new Date().toISOString(),
-        tableRows: rowsToSave,
-        ...(excelHtmlContent && { htmlContent: excelHtmlContent }),
-        ...(excelGridData.length > 0 && { gridData: excelGridData }),
+        ...(extractedRows.length <= 200 && { tableRows: rowsToSave }),
+        // Keep Firestore documents small. The original XLS/XLSX is the source of
+        // truth in Firebase Storage and is parsed again by the Teacher view.
         ...(excelRawHeaders.length > 0 && { rawHeaders: excelRawHeaders }),
-        ...(excelRawDataRows.length > 0 && { rawDataRows: excelRawDataRows }),
+        ...(excelRawDataRows.length > 0 && excelRawDataRows.length <= 200 && { rawDataRows: excelRawDataRows }),
       };
 
-      // 3. Save metadata to Firestore (~250 bytes document -> ~50ms save!)
-      try {
-        await setDoc(doc(db, "academic_plannings", recordKey), newRecord, { merge: true });
-      } catch (fsErr) {
-        console.warn("Firestore setDoc notice:", fsErr);
-      }
+      // 3. Save only durable metadata to Firestore. Do not swallow the error:
+      // otherwise the Admin UI looked successful while teachers received nothing.
+      await setDoc(doc(db, "academic_plannings", recordKey), newRecord, { merge: true });
 
       // 4. Update Local State and Cache
       setPlanningFiles((prev) => {
@@ -1468,7 +1504,7 @@ export function AcademicPlanningSystem({
             tx.objectStore("files").delete(latestRec.id);
           }
         };
-      } catch (e) {}
+      } catch (e) { }
     }
     localStorage.setItem(`cce_meta_${latestRec.id}`, latestRec.uploadedAt || "");
 
@@ -1496,8 +1532,8 @@ export function AcademicPlanningSystem({
       (rec.rawHeaders && rec.rawHeaders.length > 0)
     );
 
-    let enrichedRec = { 
-      ...rec, 
+    let enrichedRec = {
+      ...rec,
       fileUrl: targetUrl,
       ...(isExcel && { fileType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
     };
@@ -1720,10 +1756,10 @@ export function AcademicPlanningSystem({
                   disabled={thisIdx > currIdx}
                   onClick={() => setStep(s.id as any)}
                   className={`size-10 rounded-2xl flex items-center justify-center text-xs font-black transition-all cursor-pointer ${isActive
-                      ? "bg-indigo-600 text-white shadow-lg ring-4 ring-indigo-100 scale-110"
-                      : isCompleted
-                        ? "bg-slate-900 text-white hover:bg-slate-800"
-                        : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                    ? "bg-indigo-600 text-white shadow-lg ring-4 ring-indigo-100 scale-110"
+                    : isCompleted
+                      ? "bg-slate-900 text-white hover:bg-slate-800"
+                      : "bg-slate-100 text-slate-400 cursor-not-allowed"
                     }`}
                 >
                   {isCompleted ? <CheckCircle2 className="size-4 text-emerald-400" /> : idx + 1}
@@ -1764,15 +1800,15 @@ export function AcademicPlanningSystem({
                         setStep("class");
                       }}
                       className={`p-8 rounded-3xl border text-left transition-all duration-300 cursor-pointer flex flex-col justify-between gap-6 relative overflow-hidden group ${isSelected
-                          ? "bg-gradient-to-br from-indigo-700 to-purple-800 text-white border-indigo-700 shadow-2xl scale-102"
-                          : "bg-white text-slate-800 border-slate-200 hover:border-indigo-400 hover:shadow-xl hover:scale-101"
+                        ? "bg-gradient-to-br from-indigo-700 to-purple-800 text-white border-indigo-700 shadow-2xl scale-102"
+                        : "bg-white text-slate-800 border-slate-200 hover:border-indigo-400 hover:shadow-xl hover:scale-101"
                         }`}
                     >
                       <div className="flex items-center justify-between w-full">
                         <div
                           className={`size-14 rounded-2xl flex items-center justify-center font-black text-lg ${isSelected
-                              ? "bg-white/20 text-white"
-                              : "bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors"
+                            ? "bg-white/20 text-white"
+                            : "bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors"
                             }`}
                         >
                           <Languages className="size-7" />
@@ -1827,14 +1863,14 @@ export function AcademicPlanningSystem({
                         setStep("type");
                       }}
                       className={`p-6 rounded-3xl border text-center transition-all duration-300 cursor-pointer flex flex-col items-center gap-3 relative overflow-hidden group ${isSelected
-                          ? "bg-indigo-600 text-white border-indigo-600 shadow-xl shadow-indigo-200 scale-105"
-                          : "bg-white text-slate-800 border-slate-200 hover:border-indigo-400 hover:shadow-lg hover:scale-102"
+                        ? "bg-indigo-600 text-white border-indigo-600 shadow-xl shadow-indigo-200 scale-105"
+                        : "bg-white text-slate-800 border-slate-200 hover:border-indigo-400 hover:shadow-lg hover:scale-102"
                         }`}
                     >
                       <div
                         className={`size-12 rounded-2xl flex items-center justify-center font-black text-base ${isSelected
-                            ? "bg-white/20 text-white"
-                            : "bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors"
+                          ? "bg-white/20 text-white"
+                          : "bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors"
                           }`}
                       >
                         <GraduationCap className="size-6" />
@@ -2347,8 +2383,8 @@ export function AcademicPlanningSystem({
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             className={`bg-white rounded-2xl sm:rounded-3xl w-full flex flex-col shadow-2xl overflow-hidden border border-slate-700/50 transition-all duration-300 ${isPdfFullscreen
-                ? "h-full max-w-none max-h-none rounded-xl sm:rounded-2xl"
-                : "max-w-5xl h-[82vh] max-h-[85vh] mt-10"
+              ? "h-full max-w-none max-h-none rounded-xl sm:rounded-2xl"
+              : "max-w-5xl h-[82vh] max-h-[85vh] mt-10"
               }`}
           >
             {/* Modal Header */}
@@ -2365,24 +2401,6 @@ export function AcademicPlanningSystem({
               </div>
 
               <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap justify-end">
-                {/* EDIT TABLE DATA BUTTON */}
-                <button
-                  onClick={(e) => handleOpenTableEditor(e, viewModalFile)}
-                  title="माहिती एडिट करा (Edit Data)"
-                  className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
-                >
-                  <Edit3 className="size-4" />
-                  <span>✏️ एडिट करा (Edit)</span>
-                </button>
-
-                {/* DOWNLOAD */}
-                <button
-                  onClick={() => handleDownloadFile(viewModalFile)}
-                  className="px-3 sm:px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
-                >
-                  <Download className="size-4" /> <span className="hidden sm:inline">DOWNLOAD</span>
-                </button>
-
                 {/* CLOSE */}
                 <button
                   onClick={() => {
@@ -2399,7 +2417,11 @@ export function AcademicPlanningSystem({
             {/* Modal Preview Body */}
             <div className="flex-1 p-2 sm:p-4 overflow-hidden bg-slate-950/80 flex flex-col items-center justify-center relative">
               <div className="w-full h-full min-h-0 flex-1 relative rounded-2xl overflow-y-auto bg-white shadow-2xl flex flex-col p-4">
-                <PlanningTableRenderer record={viewModalFile as any} fileUrl={viewModalFile.fileUrl} mode={mode} />
+                <PlanningTableRenderer
+                  record={viewModalFile as any}
+                  fileUrl={viewModalFile.fileUrl}
+                  mode={mode}
+                />
               </div>
             </div>
           </motion.div>

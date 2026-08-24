@@ -140,7 +140,7 @@ export async function parseExcelData(
       // Build HTML content preview
       let htmlContent = `<div class="table-responsive"><table class="table table-bordered align-middle"><thead><tr>`;
       headers.forEach((h) => {
-        htmlContent += `<th class="bg-dark text-warning border-secondary p-2 text-center font-bold">${escapeHtml(h)}</th>`;
+        htmlContent += `<th class="bg-dark text-warning border-secondary p-2.5 text-center font-bold" style="background-color: #0f172a !important; color: #fde047 !important; font-weight: 900; border: 1px solid #334155;">${escapeHtml(h)}</th>`;
       });
       htmlContent += `</tr></thead><tbody>`;
 

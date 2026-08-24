@@ -14,19 +14,25 @@ export interface PlanningHeaderMetadata {
 
 export interface PlanningDocumentRecord {
   id: string;
-  category: PlanningCategory;
-  classId: string; // "1" to "8"
-  subjectId: string; // "मराठी", "इंग्रजी", "गणित", etc.
+  category?: PlanningCategory;
+  classId?: string; // "1" to "8"
+  subjectId?: string; // "मराठी", "इंग्रजी", "गणित", etc.
   month?: string; // e.g. "जून २०२६"
-  metadata: PlanningHeaderMetadata;
-  headers: string[];
-  rows: string[][];
+  metadata?: PlanningHeaderMetadata;
+  headers?: string[];
+  rows?: string[][];
   fileName?: string;
   fileUrl?: string;
-  uploadedAt: string;
+  uploadedAt?: string;
   uploadedBy?: string;
+  planningType?: "annual" | "monthly" | "question_bank";
   gridData?: any[][];
   htmlContent?: string;
+  rawDataRows?: string[][];
+  tableRows?: any[];
+  isCustomUserEdit?: boolean;
+  editedByUserId?: string;
+  editedAt?: string;
 }
 
 export const DEFAULT_HEADERS: Record<PlanningCategory, string[]> = {

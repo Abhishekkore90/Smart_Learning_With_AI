@@ -65,24 +65,52 @@ export function normalizeSubjectName(rawName: string): string {
 
   if (clean.includes("गणित") || clean.toLowerCase().includes("math")) return "गणित";
   if (clean.includes("मराठी")) return "मराठी";
+  if (clean.includes("हिंदी") || clean.toLowerCase().includes("hindi")) return "हिंदी";
   if (clean.includes("इंग्रजी") || clean.toLowerCase().includes("english")) return "इंग्रजी";
-  if (clean.includes("कला") || clean.includes("शिकू")) return "कलाशिक्षण";
-  if (clean.includes("कार्य") || clean.includes("करू")) return "कार्यशिक्षण";
+
+  if (
+    clean.includes("कला") ||
+    clean.includes("शिकू") ||
+    clean.includes("आ जाण")
+  )
+    return "कलाशिक्षण";
+
+  if (
+    clean.includes("कार्य") ||
+    clean.includes("करू") ||
+    clean.includes("ब जाण")
+  )
+    return "कार्यशिक्षण";
+
   if (
     clean.includes("शारीरिक") ||
     clean.includes("निरामयता") ||
     clean.includes("क्रीडा") ||
+    clean.includes("क जाण") ||
+    clean.includes("आरोग्य") ||
     clean.toLowerCase().includes("pe") ||
     clean.includes("health")
   )
     return "शारीरिक शिक्षण";
+
   if (
-    clean.includes("परिसर") ||
-    clean.includes("विज्ञान") ||
-    clean.toLowerCase().includes("science") ||
-    clean.includes("सामाजिक")
+    clean.includes("परिसर")
   )
     return "परिसर अभ्यास";
+
+  if (
+    clean.includes("विज्ञान") ||
+    clean.toLowerCase().includes("science")
+  )
+    return "विज्ञान";
+
+  if (
+    clean.includes("सामाजिक") ||
+    clean.includes("इतिहास") ||
+    clean.includes("भूगोल") ||
+    clean.includes("नागरिकशास्त्र")
+  )
+    return "सामाजिक शास्त्रे";
 
   return clean.replace(/^(?:विषय|subject)\s*[:\-–]?\s*/i, "").trim();
 }
@@ -279,8 +307,8 @@ export async function extractSubjectSectionsFromExcel(
       }
 
       const monthCell = String(row[0] || "").trim();
-      const topicCell = String(row[4] || row[3] || "").trim();
-      const outcomeCell = String(row[5] || row[4] || row[2] || "").trim();
+      const topicCell = String(row[4] !== undefined && row[4] !== null ? row[4] : "").trim();
+      const outcomeCell = String(row[5] !== undefined && row[5] !== null ? row[5] : "").trim();
 
       if (monthCell && isMarathiMonth(monthCell)) {
         lastMonth = monthCell;
@@ -309,12 +337,15 @@ export async function extractSubjectSectionsFromExcel(
 
   const standardOrder = [
     "मराठी",
-    "गणित",
+    "हिंदी",
     "इंग्रजी",
+    "गणित",
+    "विज्ञान",
+    "परिसर अभ्यास",
+    "सामाजिक शास्त्रे",
     "कलाशिक्षण",
     "कार्यशिक्षण",
     "शारीरिक शिक्षण",
-    "परिसर अभ्यास",
   ];
   allSubjectNames.sort((a, b) => {
     const idxA = standardOrder.indexOf(a);
@@ -344,17 +375,20 @@ export function splitRowsIntoSubjectSections(
 ): Record<string, SubjectSection> {
   const KNOWN_SUBJECTS = [
     "मराठी",
-    "गणित",
+    "हिंदी",
     "इंग्रजी",
+    "गणित",
+    "विज्ञान",
+    "परिसर अभ्यास",
+    "सामाजिक शास्त्रे",
     "कलाशिक्षण",
     "कार्यशिक्षण",
     "शारीरिक शिक्षण",
-    "परिसर अभ्यास",
-    "विज्ञान",
-    "सामाजिक शास्त्रे",
     "English",
     "Maths",
     "Science",
+    "Hindi",
+    "Social Science",
   ];
 
   const subjectsMap: Record<string, SubjectSection> = {};
@@ -467,8 +501,8 @@ export function splitRowsIntoSubjectSections(
     }
 
     const monthCell = String(row[0] || "").trim();
-    const topicCell = String(row[4] || row[3] || "").trim();
-    const outcomeCell = String(row[5] || row[4] || row[2] || "").trim();
+    const topicCell = String(row[4] !== undefined && row[4] !== null ? row[4] : "").trim();
+    const outcomeCell = String(row[5] !== undefined && row[5] !== null ? row[5] : "").trim();
 
     if (monthCell && isMarathiMonth(monthCell)) {
       lastMonth = monthCell;
