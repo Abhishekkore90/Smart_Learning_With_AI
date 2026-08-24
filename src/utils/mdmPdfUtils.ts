@@ -26,13 +26,13 @@ export interface HonorariumDetails {
 export const calculateHonorariumDetails = (
   patSankhya: number,
   perPersonRate: number = 2500,
-  centerRatio: number = 0.60
+  centerRatio: number = 0.24
 ): HonorariumDetails => {
   const cookHelperCount = calculateCookHelperCount(patSankhya);
   const rate = Math.max(0, Number(perPersonRate) || 2500);
   const totalHonorarium = cookHelperCount * rate;
-  const centerShare = Math.round(totalHonorarium * centerRatio * 100) / 100;
-  const stateShare = Math.round((totalHonorarium - centerShare) * 100) / 100;
+  const centerShare = Math.round(cookHelperCount * 600 * 100) / 100;
+  const stateShare = Math.round(cookHelperCount * 1900 * 100) / 100;
 
   return {
     cookHelperCount,

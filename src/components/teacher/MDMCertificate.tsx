@@ -238,8 +238,8 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
   const totalStaffCount = (hasCookCount || hasHelperCount) ? Math.max(cookNum, helperNum) : dynamicStaffCount;
   const honorariumInfo = calculateHonorariumDetails(effectivePatTotal, 2500);
   const totalHonorarium = totalStaffCount * 2500;
-  const centerHonorariumShare = totalStaffCount * 1500;
-  const stateHonorariumShare = totalStaffCount * 1000;
+  const centerHonorariumShare = totalStaffCount * 600;
+  const stateHonorariumShare = totalStaffCount * 1900;
 
   const getHeaderTitle = () => {
     if (subTab === "1-5") return "इयत्ता १ ते ५";

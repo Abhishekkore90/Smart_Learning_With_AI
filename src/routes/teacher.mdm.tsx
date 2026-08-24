@@ -398,6 +398,8 @@ function TeacherMDMPage() {
   const [monthlyMdmReportType, setMonthlyMdmReportType] = useState<string>("daily_tandul_register");
   const [monthlyMdmReportSelectedMonth, setMonthlyMdmReportSelectedMonth] = useState<string>("जून");
   const [monthlyMdmReportYear, setMonthlyMdmReportYear] = useState<string>("2026/27");
+  const [monthlyReportPatSankhya, setMonthlyReportPatSankhya] = useState<string>("");
+  const [monthlyReportWorkingDays, setMonthlyReportWorkingDays] = useState<string>("");
   const monthlyMdmReportMonth = `${monthlyMdmReportSelectedMonth} सन ${monthlyMdmReportYear}`;
   const [selectedCookHelperCount, setSelectedCookHelperCount] = useState<number>(1);
   const [swayampakiMandhan, setSwayampakiMandhan] = useState<string>("2500.00");
@@ -446,6 +448,13 @@ function TeacherMDMPage() {
       else if (p.fullName) setReportTeacherName(p.fullName);
     }
   }, [profile]);
+
+  useEffect(() => {
+    if (stockDemandMonth && stockDemandYear) {
+      const computedDays = calculateMonthWorkingDays(stockDemandMonth, stockDemandYear);
+      setStockDemandWorkingDays(computedDays.toString());
+    }
+  }, [stockDemandMonth, stockDemandYear]);
 
   const [isMonthlyReportGenerating, setIsMonthlyReportGenerating] = useState(false);
   const [isMonthlyReportGenerated, setIsMonthlyReportGenerated] = useState(false);
@@ -12138,6 +12147,19 @@ function TeacherMDMPage() {
                           />
                         </div>
 
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-700 block">
+                            कार्य दिन
+                          </label>
+                          <input
+                            type="number"
+                            value={stockDemandWorkingDays}
+                            onChange={(e) => setStockDemandWorkingDays(e.target.value)}
+                            className="h-10 w-24 px-3 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none text-center"
+                            placeholder="दिवस"
+                          />
+                        </div>
+
                         <div className="flex items-center gap-2 pt-5">
                           <button
                             onClick={() => {
@@ -12193,7 +12215,9 @@ function TeacherMDMPage() {
                           const profPat = stockDemandClass === "6 To 8" ? profP68 : profP15;
 
                           const pat = parseFloat(stockDemandPatSankhya) || regEnrolled || latestEnrolled || profPat || 0;
-                          const wDays = calculateMonthWorkingDays(stockDemandMonth, stockDemandYear);
+                          const calculatedWDays = calculateMonthWorkingDays(stockDemandMonth, stockDemandYear);
+                          const parsedWDays = parseFloat(stockDemandWorkingDays);
+                          const wDays = !isNaN(parsedWDays) && stockDemandWorkingDays !== "" ? parsedWDays : calculatedWDays;
 
                           return (
                             <CommonMDMReportHeader
@@ -12260,7 +12284,9 @@ function TeacherMDMPage() {
                                 const profPat = stockDemandClass === "6 To 8" ? profP68 : profP15;
 
                                 const pat = parseFloat(stockDemandPatSankhya) || regEnrolled || latestEnrolled || profPat || 0;
-                                const wDays = calculateMonthWorkingDays(stockDemandMonth, stockDemandYear);
+                                const calculatedWDays = calculateMonthWorkingDays(stockDemandMonth, stockDemandYear);
+                                const parsedWDays = parseFloat(stockDemandWorkingDays);
+                                const wDays = !isNaN(parsedWDays) && stockDemandWorkingDays !== "" ? parsedWDays : calculatedWDays;
                                 const isUpper = stockDemandClass === "6 To 8";
 
                                 const itemsDef = [
@@ -12643,6 +12669,32 @@ function TeacherMDMPage() {
                           </select>
                         </div>
 
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs font-bold text-slate-700 whitespace-nowrap">
+                            पटसंख्या
+                          </label>
+                          <input
+                            type="number"
+                            value={monthlyReportPatSankhya}
+                            onChange={(e) => setMonthlyReportPatSankhya(e.target.value)}
+                            className="h-9 w-20 px-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-purple-500 outline-none text-center"
+                            placeholder="पट"
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs font-bold text-slate-700 whitespace-nowrap">
+                            कार्य दिन
+                          </label>
+                          <input
+                            type="number"
+                            value={monthlyReportWorkingDays}
+                            onChange={(e) => setMonthlyReportWorkingDays(e.target.value)}
+                            className="h-9 w-20 px-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-purple-500 outline-none text-center"
+                            placeholder="दिवस"
+                          />
+                        </div>
+
                         <button
                           onClick={() => {
                             toast.success("अहवाल अद्ययावत केला!");
@@ -12758,8 +12810,33 @@ function TeacherMDMPage() {
                             });
                           }
 
-                          const patSelectedClass = getDynamicPatSankhya(profile, monthlyReportClass);
-                          const totalPat = getDynamicPatSankhya(profile, "1-8");
+                          let maxEnrolledInMonth = 0;
+                          Object.values(registerRecords || {}).forEach((rec: any) => {
+                            if (!rec) return;
+                            const subRec = rec[monthlyReportClass] || (monthlyReportClass === "1 To 5" ? rec : null);
+                            if (subRec && subRec.enrolled) {
+                              const val = parseInt(subRec.enrolled, 10);
+                              if (!isNaN(val) && val > maxEnrolledInMonth) maxEnrolledInMonth = val;
+                            }
+                          });
+
+                          const profP15 = Number(profile?.patPrimary) || Number(profile?.pat1to5) || Number(profile?.totalPat) || 0;
+                          const profP68 = Number(profile?.patUpper) || Number(profile?.pat6to8) || 0;
+                          const profPat = monthlyReportClass === "6 To 8" ? profP68 : profP15;
+
+                          const autoPat = maxEnrolledInMonth || getDynamicPatSankhya(profile, monthlyReportClass) || profPat || 0;
+                          const patSelectedClass = monthlyReportPatSankhya !== "" && !isNaN(Number(monthlyReportPatSankhya))
+                            ? Number(monthlyReportPatSankhya)
+                            : autoPat;
+
+                          const totalPat = monthlyReportClass === "1 To 5"
+                            ? (patSelectedClass + (profP68 || 0))
+                            : (patSelectedClass + (profP15 || 0));
+
+                          const defaultDays = totalRiceDistributedDays > 0 ? totalRiceDistributedDays : totalWorkingDays;
+                          const effectiveWorkingDays = monthlyReportWorkingDays !== "" && !isNaN(Number(monthlyReportWorkingDays))
+                            ? Number(monthlyReportWorkingDays)
+                            : defaultDays;
 
                           return (
                             <div className="space-y-1.5 font-sans text-slate-900">
@@ -12808,7 +12885,7 @@ function TeacherMDMPage() {
 
                                 <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-700">
                                   <div className="p-1.5">
-                                    एकूण कामाचे दिवस : <span className="font-bold text-slate-900">{totalWorkingDays}</span>
+                                    एकूण कामाचे दिवस : <span className="font-bold text-slate-900">{effectiveWorkingDays}</span>
                                   </div>
                                   <div className="p-1.5">
                                     तांदूळ दिलेले दिवस : <span className="font-bold text-slate-900">{totalRiceDistributedDays}</span>
@@ -13185,6 +13262,7 @@ function TeacherMDMPage() {
                           const schoolName = profile?.schoolName || "";
 
                           const riceData = getStockDataForItem("Rice", engMonthNames[monthNum], year, monthlyReportClass);
+                          const registerData = getRegisterDataForMonth(engMonthNames[monthNum], year, monthlyReportClass);
                           const prevTandul = riceData.prev;
                           const recTandul = riceData.received;
                           const usnaTandul = 0;
@@ -13194,8 +13272,10 @@ function TeacherMDMPage() {
                           const shillakTandul = Math.max(0, totalTandul - shijvunTandul - usnaParatTandul);
 
                           const labharthi = riceData.beneficiary;
-                          const kamacheDivs = riceData.cookedDays;
                           const shijvunDivs = riceData.cookedDays;
+                          const kamacheDivs = monthlyReportWorkingDays !== "" && !isNaN(Number(monthlyReportWorkingDays))
+                            ? Number(monthlyReportWorkingDays)
+                            : (riceData.cookedDays > 0 ? riceData.cookedDays : 26);
 
                           const rates = getFoodGrantRates(monthlyReportClass, Number(primaryRate), Number(upperRate));
                           const kendraRate = rates.centerRate;
@@ -13204,8 +13284,11 @@ function TeacherMDMPage() {
                           const rajyaHissa = parseFloat((labharthi * rajyaRate).toFixed(2));
                           const ekunKharc = kendraHissa + rajyaHissa;
 
-                          const registerData = getRegisterDataForMonth(engMonthNames[monthNum], year, monthlyReportClass);
-                          const pat = registerData.enrolled || getDynamicPatSankhya(profile, monthlyReportClass);
+                          const autoPat = getDynamicPatSankhya(profile, monthlyReportClass) || (monthlyReportClass === "6 To 8" ? Number(profile?.patUpper) : Number(profile?.patPrimary)) || 0;
+                          const pat = monthlyReportPatSankhya !== "" && !isNaN(Number(monthlyReportPatSankhya))
+                            ? Number(monthlyReportPatSankhya)
+                            : (registerData.enrolled || autoPat);
+
                           const perStudentRiceRate = monthlyReportClass === "6 To 8" ? 0.150 : 0.100;
                           const nextMonthDays = 26; // पुढील महिन्यातील २६ दिवस गृहीत धरून
                           const pudheManagi = Math.max(0, parseFloat(((pat || 0) * nextMonthDays * perStudentRiceRate).toFixed(1)));
@@ -13406,7 +13489,14 @@ function TeacherMDMPage() {
                           const riceData = getStockDataForItem("Rice", engMonthNames[monthNum], year, monthlyReportClass);
                           const labharthi = riceData.beneficiary;
                           const registerData = getRegisterDataForMonth(engMonthNames[monthNum], year, monthlyReportClass);
-                          const enrolledPat = (registerData && registerData.enrolled) ? registerData.enrolled : getDynamicPatSankhya(profile, monthlyReportClass);
+                          const autoGoshwaraPat = getDynamicPatSankhya(profile, monthlyReportClass) || (monthlyReportClass === "6 To 8" ? Number(profile?.patUpper) : Number(profile?.patPrimary)) || 0;
+                          const enrolledPat = monthlyReportPatSankhya !== "" && !isNaN(Number(monthlyReportPatSankhya))
+                            ? Number(monthlyReportPatSankhya)
+                            : ((registerData && registerData.enrolled) ? registerData.enrolled : autoGoshwaraPat);
+
+                          const cookedDays = monthlyReportWorkingDays !== "" && !isNaN(Number(monthlyReportWorkingDays))
+                            ? Number(monthlyReportWorkingDays)
+                            : riceData.cookedDays;
 
                           const items = B_FORM_ITEMS.map((def, idx) => {
                             const prev = getOpeningStock(engMonthNames[monthNum], year.toString(), monthlyReportClass, def.key);
@@ -13416,8 +13506,6 @@ function TeacherMDMPage() {
                             const demand = Math.max(0, (enrolledPat * perStudentRiceDemand * 20) - (prev + rec - used));
                             return { sr: idx + 1, key: def.key, name: def.nameMr, prev, rec, used, demand: parseFloat(demand.toFixed(2)) };
                           });
-
-                          const cookedDays = riceData.cookedDays;
 
                           const rateVal = monthlyReportClass === "6 To 8" ? (parseFloat(upperRate) || 8.17) : (parseFloat(primaryRate) || 5.45);
                           const vegCost = parseFloat((labharthi * (rateVal * (parseFloat(vegPercent) || 70) / 100)).toFixed(2));
@@ -13530,7 +13618,7 @@ function TeacherMDMPage() {
                                     ₹{(calculateCookHelperCount(enrolledPat) * 2500).toFixed(2)}
                                   </div>
                                   <div className="w-[35%] p-1.5 text-left pl-3">
-                                    मानधन हिस्से (केंद्र हिस्सा: ₹{(calculateCookHelperCount(enrolledPat) * 1500).toFixed(2)} | राज्य हिस्सा: ₹{(calculateCookHelperCount(enrolledPat) * 1000).toFixed(2)})
+                                    मानधन हिस्से (केंद्र हिस्सा: ₹{(calculateCookHelperCount(enrolledPat) * 600).toFixed(2)} | राज्य हिस्सा: ₹{(calculateCookHelperCount(enrolledPat) * 1900).toFixed(2)})
                                   </div>
                                   <div className="w-[15%] p-1.5 font-black">
                                     {calculateCookHelperCount(enrolledPat)} व्यक्ती
@@ -14091,8 +14179,8 @@ function TeacherMDMPage() {
                               const helperCount = hasCustomStaffCount
                                 ? Math.max(0, parseInt((cookCount || helperCountVal || "0").toString(), 10) || 0)
                                 : calculateCookHelperCount(totalPatForStaff);
-                              const helperCenterPay = helperCount * 1500;
-                              const helperStatePay = helperCount * 1000;
+                              const helperCenterPay = helperCount * 600;
+                              const helperStatePay = helperCount * 1900;
                               const helperTotalPay = helperCount * 2500;
 
                               const renderBFormPage = (cls: "1 To 5" | "6 To 8") => {
