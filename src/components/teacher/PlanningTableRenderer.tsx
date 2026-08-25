@@ -6,6 +6,7 @@ import {
 import {
   extractSubjectSectionsFromExcel,
   splitRowsIntoSubjectSections,
+  splitRowsIntoMonthlySections,
   normalizeSubjectName,
   AnnualPlanningWorkbook,
   SubjectSection,
@@ -30,7 +31,6 @@ import {
   Save,
   Plus,
   X,
-  Check,
   UserCheck,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -89,7 +89,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
   const [loadingWorkbook, setLoadingWorkbook] = useState<boolean>(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState<boolean>(false);
   const [questionBankSheets, setQuestionBankSheets] = useState<ParsedSheet[]>([]);
-  
+
   // Inline Table Editing State & User-Specific Storage
   const [isInlineEditing, setIsInlineEditing] = useState<boolean>(false);
   const [isSavingEdits, setIsSavingEdits] = useState<boolean>(false);
@@ -98,7 +98,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
   const printContainerRef = useRef<HTMLDivElement>(null);
   const activeUrl = fileUrl || record?.fileUrl || null;
-  const activeRecordId = record?.id || (record as any)?.recordKey || null;
+  const activeRecordId = record?.id || (record as any)?.recordKey || `plan_${record?.classId || "1"}_${record?.subjectId || "all"}`;
 
   // Load User-Specific Edit (Persisted in LocalStorage / Firestore for logged in user)
   useEffect(() => {
@@ -109,19 +109,20 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
       const effectiveUserId = user?.uid || auth?.currentUser?.uid || "guest_teacher";
 
       // 1. LocalStorage check (strictly user specific)
-      const localDataStr = localStorage.getItem(`user_edit_${effectiveUserId}_${activeRecordId}`);
+      const localDataStr =
+        localStorage.getItem(`user_edit_${effectiveUserId}_${activeRecordId}`) ||
+        localStorage.getItem(`user_edit_${activeRecordId}`);
 
       if (localDataStr) {
         try {
           const parsed = JSON.parse(localDataStr);
-          if (parsed && (parsed.rawDataRows || parsed.rows || parsed.tableRows) && (parsed.editedByUserId === effectiveUserId || !parsed.editedByUserId)) {
-            // Check if Admin published a newer version after this user edit
+          if (parsed && (parsed.sections || parsed.rawDataRows || parsed.rows || parsed.tableRows)) {
             const adminTime = record?.uploadedAt ? new Date(record.uploadedAt).getTime() : 0;
             const userEditTime = parsed.editedAt ? new Date(parsed.editedAt).getTime() : 0;
 
             if (mode !== "admin" && adminTime > userEditTime) {
-              // Admin edited after user edit -> invalidate stale local cache so teacher gets Admin's new update
               localStorage.removeItem(`user_edit_${effectiveUserId}_${activeRecordId}`);
+              localStorage.removeItem(`user_edit_${activeRecordId}`);
               setSavedUserEditRecord(null);
               return;
             }
@@ -139,21 +140,18 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           const snap = await getDoc(docRef);
           if (snap.exists() && isMounted) {
             const data = snap.data() as PlanningDocumentRecord;
-            if (data.editedByUserId === effectiveUserId || !data.editedByUserId) {
-              const adminTime = record?.uploadedAt ? new Date(record.uploadedAt).getTime() : 0;
-              const userEditTime = data.editedAt ? new Date(data.editedAt).getTime() : 0;
+            const adminTime = record?.uploadedAt ? new Date(record.uploadedAt).getTime() : 0;
+            const userEditTime = data.editedAt ? new Date(data.editedAt).getTime() : 0;
 
-              if (mode !== "admin" && adminTime > userEditTime) {
-                // Admin updated main file after user edit -> fallback to Admin's new version
-                setSavedUserEditRecord(null);
-                return;
-              }
-
-              setSavedUserEditRecord(data);
-              try {
-                localStorage.setItem(`user_edit_${effectiveUserId}_${activeRecordId}`, JSON.stringify(data));
-              } catch (e) {}
+            if (mode !== "admin" && adminTime > userEditTime) {
+              setSavedUserEditRecord(null);
+              return;
             }
+
+            setSavedUserEditRecord(data);
+            try {
+              localStorage.setItem(`user_edit_${effectiveUserId}_${activeRecordId}`, JSON.stringify(data));
+            } catch (e) {}
           }
         } catch (e) {
           console.warn("Firestore fetch user edit notice:", e);
@@ -165,7 +163,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [activeRecordId, user?.uid]);
+  }, [activeRecordId, user?.uid, record?.uploadedAt]);
 
   // Extract Subject Sections from Excel when fileUrl is present
   useEffect(() => {
@@ -191,7 +189,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
         const buffer = await response.arrayBuffer();
 
-        if (record?.planningType === "question_bank" || (record as any)?.category === "prashnapedhi") {
+        if (record?.planningType === "question_bank") {
           const parsed = await parseExcelData(buffer, { preserveFormatting: true });
           if (!parsed.sheets.length) throw new Error("Question Bank workbook has no readable sheets.");
           if (isMounted) {
@@ -217,42 +215,10 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [activeUrl, record?.planningType]);
-
-  // List of Available Subjects
-  const availableSubjectNames = useMemo(() => {
-    if (parsedWorkbook && parsedWorkbook.allSubjectNames.length > 0) {
-      return parsedWorkbook.allSubjectNames;
-    }
-    const currentRec = savedUserEditRecord || record;
-    if (currentRec) {
-      const recAny = currentRec as any;
-      let rowsToUse: string[][] = recAny.rawDataRows || currentRec.rows || [];
-      if (!rowsToUse || rowsToUse.length === 0) {
-        if (recAny.tableRows && Array.isArray(recAny.tableRows)) {
-          rowsToUse = recAny.tableRows.map((tr: any) => [
-            tr.month || "",
-            tr.weeks || "",
-            tr.workingDays || "",
-            tr.periods || "",
-            tr.topics || "",
-            tr.outcomes || "",
-          ]);
-        }
-      }
-      if (rowsToUse && rowsToUse.length > 0) {
-        const splitMap = splitRowsIntoSubjectSections(rowsToUse, currentRec.subjectId || "मराठी");
-        const keys = Object.keys(splitMap);
-        if (keys.length > 0) return keys;
-      }
-    }
-    return ["मराठी", "गणित", "इंग्रजी", "कलाशिक्षण", "कार्यशिक्षण", "शारीरिक शिक्षण"];
-  }, [parsedWorkbook, record, savedUserEditRecord]);
+  }, [activeUrl]);
 
   // All subject sections extracted from Excel or stored record
   const allSectionsAvailable = useMemo<SubjectSection[]>(() => {
-    const currentRec = savedUserEditRecord || record;
-
     // Helper to split tableRows by tr.subject
     const splitTableRowsBySubject = (tRows: any[], fallbackSubj: string): SubjectSection[] => {
       const splitMap: Record<string, SubjectSection> = {};
@@ -281,35 +247,63 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
       return Object.values(splitMap);
     };
 
-    // 1. If user has saved customized edit data
+    // 1. If user or admin has saved customized edit data, ALWAYS PREFER IT FIRST!
     if (savedUserEditRecord) {
       const recAny = savedUserEditRecord as any;
-      if (recAny.tableRows && Array.isArray(recAny.tableRows) && recAny.tableRows.length > 0) {
-        const sections = splitTableRowsBySubject(recAny.tableRows, savedUserEditRecord.subjectId || "मराठी");
-        if (sections.length > 0) return sections;
+      if (recAny.sections && Array.isArray(recAny.sections) && recAny.sections.length > 0) {
+        return recAny.sections;
+      }
+    }
+
+    if (record) {
+      const recAny = record as any;
+      if (recAny.sections && Array.isArray(recAny.sections) && recAny.sections.length > 0) {
+        return recAny.sections;
+      }
+    }
+
+    // 2. Check if Monthly Planning is requested
+    const isMonthlyPlan = record?.planningType === "monthly" || record?.category === "masik_niyojan";
+    if (isMonthlyPlan) {
+      if (parsedWorkbook && parsedWorkbook.monthlySections && Object.keys(parsedWorkbook.monthlySections).length > 0) {
+        return Object.values(parsedWorkbook.monthlySections).map((mSec: any) => ({
+          subjectName: mSec.monthName,
+          displaySubjectName: mSec.displayMonthName,
+          headers: mSec.headers || DEFAULT_HEADERS.masik_niyojan,
+          rows: mSec.rows,
+          startRow: 0,
+          endRow: mSec.rows.length,
+        }));
       }
 
-      let rowsToUse: string[][] = [];
-      if (recAny.rawDataRows && Array.isArray(recAny.rawDataRows) && recAny.rawDataRows.length > 0) {
-        rowsToUse = recAny.rawDataRows;
-      } else if (savedUserEditRecord.rows && Array.isArray(savedUserEditRecord.rows) && savedUserEditRecord.rows.length > 0) {
-        rowsToUse = savedUserEditRecord.rows;
+      const currentRec = savedUserEditRecord || record;
+      const recAny = currentRec as any;
+      let rowsToUse: string[][] = recAny?.rawDataRows || currentRec?.rows || [];
+      if (rowsToUse.length === 0 && parsedWorkbook?.rawGrid) {
+        rowsToUse = parsedWorkbook.rawGrid;
       }
 
       if (rowsToUse.length > 0) {
-        const splitMap = splitRowsIntoSubjectSections(rowsToUse, savedUserEditRecord.subjectId || "मराठी");
-        if (Object.keys(splitMap).length > 0) {
-          return Object.values(splitMap);
+        const mSplitMap = splitRowsIntoMonthlySections(rowsToUse);
+        if (Object.keys(mSplitMap).length > 0) {
+          return Object.values(mSplitMap).map((mSec) => ({
+            subjectName: mSec.monthName,
+            displaySubjectName: mSec.displayMonthName,
+            headers: mSec.headers || DEFAULT_HEADERS.masik_niyojan,
+            rows: mSec.rows,
+            startRow: 0,
+            endRow: mSec.rows.length,
+          }));
         }
       }
     }
 
-    // 2. Check if parsedWorkbook has extracted subject sections from Excel
+    // 3. Fallback to Annual Planning Subject Sections
     if (parsedWorkbook && Object.keys(parsedWorkbook.subjects).length > 0) {
       return Object.values(parsedWorkbook.subjects);
     }
 
-    // 3. Fallback to data stored directly in record (tableRows / rawDataRows / rows / gridData)
+    // 4. Otherwise fallback to record tableRows / rawDataRows
     if (record) {
       const recAny = record as any;
 
@@ -340,6 +334,17 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     return [];
   }, [parsedWorkbook, record, savedUserEditRecord]);
 
+  // List of Available Subjects
+  const availableSubjectNames = useMemo(() => {
+    if (allSectionsAvailable.length > 0) {
+      return allSectionsAvailable.map((s) => s.subjectName);
+    }
+    if (parsedWorkbook && parsedWorkbook.allSubjectNames.length > 0) {
+      return parsedWorkbook.allSubjectNames;
+    }
+    return ["मराठी", "गणित", "इंग्रजी", "कलाशिक्षण", "कार्यशिक्षण", "शारीरिक शिक्षण"];
+  }, [allSectionsAvailable, parsedWorkbook]);
+
   // Helper to filter sections strictly by selected subject
   const filterSectionsBySubject = (sections: SubjectSection[], filter: string): SubjectSection[] => {
     if (!sections || sections.length === 0) return [];
@@ -360,7 +365,6 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
     if (matched.length > 0) return matched;
 
-    // Do NOT fallback to returning all subjects! Return a single section for selected subject
     return [
       {
         subjectName: filter,
@@ -372,11 +376,6 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
       },
     ];
   };
-
-  // Selected Subject Section(s) to Display
-  const activeSectionsToDisplay = useMemo<SubjectSection[]>(() => {
-    return filterSectionsBySubject(allSectionsAvailable, selectedSubjectFilter);
-  }, [allSectionsAvailable, selectedSubjectFilter]);
 
   // Dynamic sections to render depending on view / edit mode and current subject filter
   const sectionsToRender = useMemo<SubjectSection[]>(() => {
@@ -402,11 +401,6 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     }
     setEditableSections(sectionsToEdit);
     setIsInlineEditing(true);
-    if (onEdit) {
-      try {
-        onEdit();
-      } catch (e) {}
-    }
     toast.info("✏️ तक्ता संपादन मोड सुरू झाला! तुम्ही माहिती थेट बदलू शकता.", { duration: 3000 });
   };
 
@@ -502,29 +496,20 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     toast.info("🗑️ ओळ डिलीट केली.");
   };
 
-  // Save Edits for Specific User
+  // Save Edits for Specific User vs Admin Master
+  // Save Edits for Specific User vs Admin Master
   const handleSaveUserEdits = async () => {
     try {
       setIsSavingEdits(true);
       const effectiveUserId = user?.uid || auth?.currentUser?.uid || "guest_teacher";
-      const recordId = activeRecordId || `plan_${record?.classId || "1"}_${selectedSubjectFilter}`;
+      const recordId = activeRecordId;
 
-      // Merge allSectionsAvailable with editableSections to preserve every subject section intact
-      const mergedSectionsMap: Record<string, SubjectSection> = {};
-
-      allSectionsAvailable.forEach((sec) => {
-        mergedSectionsMap[sec.subjectName] = JSON.parse(JSON.stringify(sec));
-      });
-
-      editableSections.forEach((sec) => {
-        mergedSectionsMap[sec.subjectName] = JSON.parse(JSON.stringify(sec));
-      });
-
-      const sectionsToSave = Object.values(mergedSectionsMap);
+      // Use editableSections directly as source of truth for saving
+      const sectionsToSave = JSON.parse(JSON.stringify(editableSections.length > 0 ? editableSections : allSectionsAvailable));
       const combinedRows: string[][] = [];
       const updatedTableRows: any[] = [];
 
-      sectionsToSave.forEach((sec) => {
+      sectionsToSave.forEach((sec: SubjectSection) => {
         if (sec.rows && sec.rows.length > 0) {
           combinedRows.push([`विषय : ${sec.subjectName}`, "", "", "", "", ""]);
           combinedRows.push(["महिना", "आठवडा", "कामाचे दिवस", "प्राप्त तासिका", `विषय : ${sec.subjectName}`, "अध्ययन निष्पत्ती"]);
@@ -546,7 +531,8 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
       const updatedRec: PlanningDocumentRecord = {
         ...(record || {}),
         id: recordId,
-        category: record?.category || "varshik_niyojan",
+        category: record?.category || (isMonthly ? "masik_niyojan" : "varshik_niyojan"),
+        planningType: record?.planningType || (isMonthly ? "monthly" : "annual"),
         classId: record?.classId || "1",
         subjectId: record?.subjectId || "मराठी",
         metadata: record?.metadata || {
@@ -557,8 +543,9 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           class_display: "",
           subject_display: "",
         },
-        headers: record?.headers || [],
+        headers: categoryHeaders,
         uploadedAt: mode === "admin" ? new Date().toISOString() : (record?.uploadedAt || new Date().toISOString()),
+        sections: sectionsToSave, // STORE DIRECTLY FOR 100% RELIABLE RENDERING
         rawDataRows: combinedRows,
         rows: combinedRows,
         tableRows: updatedTableRows,
@@ -567,32 +554,40 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         editedAt: new Date().toISOString(),
       };
 
-      // 1. Store in LocalStorage strictly for this specific user
+      // Always save to LocalStorage for instant rendering
       try {
         localStorage.setItem(`user_edit_${effectiveUserId}_${recordId}`, JSON.stringify(updatedRec));
+        localStorage.setItem(`user_edit_${recordId}`, JSON.stringify(updatedRec));
       } catch (e) {
         console.warn("LocalStorage save notice:", e);
       }
 
-      // 2. Persist in Firestore user_edits collection strictly for this user
-      if (db) {
-        try {
-          const userDocRef = doc(db, "academic_plannings_user_edits", `${effectiveUserId}_${recordId}`);
-          await setDoc(userDocRef, updatedRec, { merge: true });
-
-          // Only update main collection if explicitly in Admin mode
-          if (mode === "admin") {
+      if (mode === "admin") {
+        // Admin edits update master Firestore record for ALL teachers
+        if (db && recordId) {
+          try {
             const adminDocRef = doc(db, "academic_plannings", recordId);
             await setDoc(adminDocRef, updatedRec, { merge: true });
+          } catch (e) {
+            console.warn("Firestore admin save notice:", e);
           }
-        } catch (e) {
-          console.warn("Firestore user edit save notice:", e);
         }
+        toast.success("🎉 ॲडमिन मास्टर फाईल यशस्वीरित्या सेव्ह झाली! सर्व युझर्सना हा बदल दिसेल.");
+      } else {
+        // Teacher/User edit is strictly saved for this specific user
+        if (db && recordId) {
+          try {
+            const userDocRef = doc(db, "academic_plannings_user_edits", `${effectiveUserId}_${recordId}`);
+            await setDoc(userDocRef, updatedRec, { merge: true });
+          } catch (e) {
+            console.warn("Firestore user edit save notice:", e);
+          }
+        }
+        toast.success("🎉 तुमची संपादित केलेली माहिती फक्त तुमच्या खात्यासाठी (Specific User) यशस्वीरित्या सेव्ह झाली!");
       }
 
       setSavedUserEditRecord(updatedRec);
       setIsInlineEditing(false);
-      toast.success("🎉 तुमची संपादित केलेली माहिती युझर अकाउंटसाठी यशस्वीरित्या सेव्ह झाली!");
     } catch (err) {
       console.error("Save edit error:", err);
       toast.error("माहिती सेव्ह करताना अडचण आली.");
@@ -623,10 +618,6 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     toast.info("🔄 मूळ एडमिन फाईल यशस्वीरित्या रिस्टोअर झाली.");
   };
 
-  const handlePrintOrPdf = () => {
-    window.print();
-  };
-
   // Generate Multi-Subject Combined PDF
   const handleDownloadCombinedPdf = async () => {
     try {
@@ -649,7 +640,11 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         image: { type: "jpeg", quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, logging: false },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        pagebreak: { mode: ["css", "legacy"], avoid: ["tr", "td", "th"] },
+        pagebreak: {
+          mode: ["css", "legacy"],
+          after: ".html2pdf__page-break",
+          avoid: ["tr", "td", "th"],
+        },
       };
 
       await (html2pdf() as any).from(printElement).set(opt).save();
@@ -676,6 +671,9 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     );
   }
 
+  const isMonthly = record?.planningType === "monthly" || record?.category === "masik_niyojan";
+  const categoryHeaders = isMonthly ? DEFAULT_HEADERS.masik_niyojan : DEFAULT_HEADERS.varshik_niyojan;
+
   return (
     <div className="w-full space-y-5 print:p-0">
       {/* Top Controls & Subject Filter Selector */}
@@ -683,30 +681,28 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
         {/* Subject Filter Bar */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
           <span className="text-xs font-black text-slate-500 uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 pr-2 border-r border-slate-200">
-            <BookOpen className="size-4 text-indigo-600" /> विषय निवडा (Select Subject):
+            <BookOpen className="size-4 text-indigo-600" /> {isMonthly ? "महिना निवडा (SELECT MONTH):" : "विषय निवडा (SELECT SUBJECT):"}
           </span>
 
           <button
             onClick={() => setSelectedSubjectFilter("all")}
-            className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
-              selectedSubjectFilter === "all"
+            className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${selectedSubjectFilter === "all"
                 ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20 scale-105"
                 : "bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200"
-            }`}
+              }`}
           >
             <Globe className="size-3.5" />
-            <span>🌐 सर्व विषय एकत्र (All Combined)</span>
+            <span>{isMonthly ? "🌐 सर्व महिने एकत्र (All Months)" : "🌐 सर्व विषय एकत्र (All Combined)"}</span>
           </button>
 
           {availableSubjectNames.map((sName) => (
             <button
               key={sName}
               onClick={() => setSelectedSubjectFilter(sName)}
-              className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
-                selectedSubjectFilter === sName
+              className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${selectedSubjectFilter === sName
                   ? "bg-slate-900 text-amber-300 shadow-md scale-105"
                   : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-300"
-              }`}
+                }`}
             >
               <CheckCircle2 className="size-3.5 text-emerald-500" />
               <span>{sName}</span>
@@ -719,14 +715,14 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           <div className="flex items-center justify-between bg-amber-50 border border-amber-300/80 px-4 py-2.5 rounded-2xl text-xs font-bold text-amber-900">
             <div className="flex items-center gap-2">
               <UserCheck className="size-4 text-amber-600 shrink-0" />
-              <span>✏️ तुम्ही संपादन केलेले नियोजन (तुमच्या युझर अकाउंटसाठी जतन केले आहे)</span>
+              <span>✏️ तुम्ही संपादन केलेले नियोजन (तुमच्या युझर खात्यासाठी जतन केले आहे)</span>
             </div>
             <button
               onClick={handleResetToOriginal}
               className="px-3 py-1 bg-white hover:bg-amber-100 text-amber-800 rounded-xl text-[11px] font-black border border-amber-300 transition-all cursor-pointer flex items-center gap-1"
             >
               <RotateCcw className="size-3.5 text-amber-600" />
-              <span>🔄 मूळ फाईलवर जा</span>
+              <span>🔄 मूळ एडमिन फाईलवर जा</span>
             </button>
           </div>
         )}
@@ -745,13 +741,22 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           </div>
 
           <div className="flex items-center gap-2 flex-wrap justify-end">
-            {/* Inline Editing Controls */}
+            <button
+              onClick={handleDownloadCombinedPdf}
+              disabled={isGeneratingPdf}
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-md active:scale-95 disabled:opacity-50"
+            >
+              {isGeneratingPdf ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
+              <span>📥 COMBINED PDF DOWNLOAD</span>
+            </button>
+
+            {/* SINGLE ONLY SAVE / EDIT CONTROL BAR */}
             {isInlineEditing ? (
               <>
                 <button
                   onClick={handleSaveUserEdits}
                   disabled={isSavingEdits}
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-emerald-600/30 active:scale-95 disabled:opacity-50"
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-emerald-600/30 active:scale-95 disabled:opacity-50 border border-emerald-400"
                 >
                   {isSavingEdits ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
                   <span>💾 SAVE (सेव्ह करा)</span>
@@ -759,7 +764,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
                 <button
                   onClick={() => handleAddRow(selectedSubjectFilter === "all" ? "मराठी" : selectedSubjectFilter)}
-                  className="px-3.5 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer border border-indigo-200 active:scale-95"
+                  className="px-3.5 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer border border-amber-300 active:scale-95"
                 >
                   <Plus className="size-4" />
                   <span>➕ ओळ जोडा</span>
@@ -774,33 +779,13 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                 </button>
               </>
             ) : (
-              <>
-                <button
-                  onClick={handleDownloadCombinedPdf}
-                  disabled={isGeneratingPdf}
-                  className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-md active:scale-95 disabled:opacity-50"
-                >
-                  {isGeneratingPdf ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
-                  <span>📥 COMBINED PDF DOWNLOAD</span>
-                </button>
-
-                <button
-                  onClick={handleStartInlineEditing}
-                  className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-300 text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95 border border-slate-700"
-                  title="थेट तक्ता एडिट करा"
-                >
-                  <Edit3 className="size-4 text-amber-300" />
-                  <span>✏️ EDIT (संपादन करा)</span>
-                </button>
-
-                <button
-                  onClick={handlePrintOrPdf}
-                  className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border border-slate-300"
-                >
-                  <Printer className="size-4 text-slate-600" />
-                  <span>PRINT / PDF</span>
-                </button>
-              </>
+              <button
+                onClick={handleStartInlineEditing}
+                className="px-4 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-md active:scale-95"
+              >
+                <Edit3 className="size-4 text-slate-950" />
+                <span>✏️ EDIT (संपादन करा)</span>
+              </button>
             )}
 
             {mode === "admin" && onDelete && (
@@ -829,18 +814,18 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           </div>
         ) : (
           <>
-            {record?.planningType === "question_bank" || (record as any)?.category === "prashnapedhi" ? (
+            {record?.planningType === "question_bank" ? (
               <>
                 <div className="border-b-2 border-slate-900 pb-5 space-y-2 text-center">
                   <h2 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight">
-                    {record?.fileName || "प्रश्नपेढी"}
+                    {record.fileName || "प्रश्नपेढी"}
                   </h2>
                   <div className="flex items-center justify-center gap-3 text-xs font-bold text-slate-700 flex-wrap">
                     <span className="bg-slate-100 px-3 py-1 rounded-xl border border-slate-200">
-                      इयत्ता: <strong>{record?.classId || "—"}</strong>
+                      इयत्ता: <strong>{record.classId}</strong>
                     </span>
                     <span className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-xl border border-indigo-200">
-                      विषय: <strong>{record?.subjectId || "—"}</strong>
+                      विषय: <strong>{record.subjectId}</strong>
                     </span>
                     <span className="bg-amber-50 text-amber-800 px-3 py-1 rounded-xl border border-amber-200">
                       Sheets: <strong>{questionBankSheets.length}</strong>
@@ -883,12 +868,12 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                         <div className="overflow-x-auto rounded-2xl border border-slate-900">
                           <table className="w-full border-collapse text-xs font-sans bg-white">
                             <thead>
-                              <tr className="bg-slate-900 text-amber-300 font-black" style={{ backgroundColor: "#0f172a" }}>
+                              <tr className="bg-slate-900 text-amber-300" style={{ backgroundColor: "#0f172a", color: "#fef08a" }}>
                                 {Array.from({ length: columnCount }).map((_, colIndex) => (
                                   <th
                                     key={colIndex}
-                                    className="border border-slate-700 p-3 text-center font-black align-middle text-xs tracking-wider uppercase bg-slate-900 text-amber-300 whitespace-pre-wrap min-w-[110px]"
-                                    style={{ backgroundColor: "#0f172a", color: "#fde047", border: "1px solid #334155" }}
+                                    className="border border-slate-700 p-2.5 text-center font-black align-top whitespace-pre-wrap min-w-[110px]"
+                                    style={{ backgroundColor: "#0f172a", color: "#fef08a" }}
                                   >
                                     {tableHeader[colIndex] || `स्तंभ ${colIndex + 1}`}
                                   </th>
@@ -919,37 +904,38 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
               </>
             ) : (
               <>
+                <style>{`
+                  @media print, all {
+                    table {
+                      page-break-inside: auto;
+                    }
+                    tr {
+                      page-break-inside: avoid !important;
+                      break-inside: avoid !important;
+                      page-break-after: auto !important;
+                    }
+                    td, th {
+                      page-break-inside: avoid !important;
+                      break-inside: avoid !important;
+                    }
+                  }
+                `}</style>
                 {/* Header Title Card */}
                 <div className="border-b-2 border-slate-900 pb-5 space-y-2 text-center">
                   <h2 className="text-xl sm:text-2xl font-black text-slate-950 uppercase tracking-tight">
                     {parsedWorkbook?.classTitle || `इयत्ता : ${record?.classId || "१ ली"} संपूर्ण वार्षिक नियोजन सन २०२६-२७`}
                   </h2>
-                  <div className="flex items-center justify-center gap-3 text-xs font-bold text-slate-700 flex-wrap">
-                    <span className="bg-slate-100 px-3 py-1 rounded-xl border border-slate-200">
-                      माध्यम: <strong>मराठी</strong>
-                    </span>
-                    <span className="bg-indigo-50 text-indigo-700 px-3 py-1 rounded-xl border border-indigo-200">
-                      विषय पर्याय: <strong>{selectedSubjectFilter === "all" ? "सर्व विषय एकत्र" : selectedSubjectFilter}</strong>
-                    </span>
-                  </div>
+                  <p className="text-xs font-bold text-slate-700">
+                    माध्यम: सेमी-इंग्रजी / मराठी | सन २०२६-२७
+                  </p>
                 </div>
 
-                {/* EDIT MODE NOTICE BANNER */}
+                {/* EDIT MODE NOTICE BANNER (Informative only - no duplicate save button) */}
                 {isInlineEditing && (
                   <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white p-4 rounded-2xl shadow-md flex items-center justify-between flex-wrap gap-3">
                     <div className="flex items-center gap-2.5 font-black text-xs sm:text-sm">
                       <Edit3 className="size-5 text-amber-200 animate-bounce" />
-                      <span>✏️ तक्ता संपादन पद्धत चालू आहे - सर्व माहिती थेट एडिट करा व सेव्ह करा</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={handleSaveUserEdits}
-                        disabled={isSavingEdits}
-                        className="px-4 py-2 bg-slate-900 hover:bg-slate-950 text-amber-300 rounded-xl text-xs font-black transition-all cursor-pointer shadow-md flex items-center gap-1.5 border border-amber-400/40"
-                      >
-                        {isSavingEdits ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-                        <span>💾 सेव्ह करा</span>
-                      </button>
+                      <span>✏️ तक्ता संपादन पद्धत सुरू आहे - सर्व माहिती थेट बदला व वरील '💾 SAVE (सेव्ह करा)' बटणावर क्लिक करा.</span>
                     </div>
                   </div>
                 )}
@@ -958,19 +944,25 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                 {sectionsToRender.length > 0 ? (
                   sectionsToRender.map((sec, secIdx) => {
                     const filteredRows = sec.rows.filter((row) => {
+                      const hasMeaningfulContent = row.some((c) => {
+                        const s = String(c || "").trim();
+                        return s !== "" && s !== "-" && s !== "null" && s !== "undefined";
+                      });
+                      if (!hasMeaningfulContent && !isInlineEditing) return false;
+
                       if (!searchQuery.trim() || isInlineEditing) return true;
                       const q = searchQuery.toLowerCase().trim();
                       return row.some((c) => (c || "").toLowerCase().includes(q));
                     });
 
-                    const categoryHeaders =
-                      DEFAULT_HEADERS[record?.category || "varshik_niyojan"] ||
-                      DEFAULT_HEADERS.varshik_niyojan;
-
                     return (
-                      <div key={secIdx} className="space-y-4 page-break-after">
+                      <React.Fragment key={`${sec.subjectName}-${secIdx}`}>
+                        {secIdx > 0 && (
+                          <div className="html2pdf__page-break" style={{ pageBreakAfter: "always", breakAfter: "page", height: 0, margin: 0, padding: 0 }} />
+                        )}
+                        <div className={`space-y-4 ${secIdx > 0 ? "pt-6 border-t-2 border-slate-200" : ""}`}>
                         {/* Subject Banner Header */}
-                        <div className="bg-slate-900 text-amber-300 px-5 py-3 rounded-2xl flex items-center justify-between shadow-xs print:bg-slate-900 print:text-amber-300">
+                        <div className="bg-slate-900 text-amber-300 px-5 py-3 rounded-2xl flex items-center justify-between shadow-xs">
                           <h3 className="text-sm font-black uppercase tracking-wider flex items-center gap-2">
                             <BookOpen className="size-4 text-emerald-400" />
                             <span>{sec.displaySubjectName || `विषय : ${sec.subjectName}`}</span>
@@ -991,33 +983,52 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                           </div>
                         </div>
 
-                        {/* Table View */}
+                         {/* Table View */}
                         <div className="overflow-x-auto">
                           <table className="w-full table-fixed border-collapse border border-slate-900 text-xs font-sans bg-white">
                             <colgroup>
-                              <col style={{ width: "9%" }} />
-                              <col style={{ width: "7%" }} />
-                              <col style={{ width: "9%" }} />
-                              <col style={{ width: "9%" }} />
-                              <col style={{ width: "40%" }} />
-                              <col style={{ width: "21%" }} />
-                              {isInlineEditing && <col style={{ width: "5%" }} />}
+                              {isMonthly ? (
+                                <>
+                                  <col style={{ width: "6%" }} />
+                                  <col style={{ width: "22%" }} />
+                                  <col style={{ width: "20%" }} />
+                                  <col style={{ width: "18%" }} />
+                                  <col style={{ width: "16%" }} />
+                                  <col style={{ width: "10%" }} />
+                                  <col style={{ width: "8%" }} />
+                                  {isInlineEditing && <col style={{ width: "5%" }} />}
+                                </>
+                              ) : (
+                                <>
+                                  <col style={{ width: "8%" }} />
+                                  <col style={{ width: "6%" }} />
+                                  <col style={{ width: "8%" }} />
+                                  <col style={{ width: "8%" }} />
+                                  <col style={{ width: "45%" }} />
+                                  <col style={{ width: "25%" }} />
+                                  {isInlineEditing && <col style={{ width: "5%" }} />}
+                                </>
+                              )}
                             </colgroup>
                             <thead>
-                              <tr className="bg-slate-900 text-amber-300 font-black text-center text-xs border-b-2 border-slate-900" style={{ backgroundColor: "#0f172a" }}>
-                                {categoryHeaders.map((hText: string, i: number) => {
-                                  return (
-                                    <th
-                                      key={i}
-                                      className="border border-slate-700 p-2.5 text-center font-black tracking-wider uppercase bg-slate-900 text-amber-300 text-xs shadow-xs"
-                                      style={{ backgroundColor: "#0f172a", color: "#fde047", border: "1px solid #334155" }}
-                                    >
-                                      {i === 4 ? `विषय : ${sec.subjectName}` : hText}
-                                    </th>
-                                  );
-                                })}
+                              <tr
+                                className="bg-slate-900 text-amber-300 font-black text-center text-xs border-b-2 border-slate-950"
+                                style={{ backgroundColor: "#0f172a", color: "#fef08a" }}
+                              >
+                                {categoryHeaders.map((hText: string, i: number) => (
+                                  <th
+                                    key={i}
+                                    className="border border-slate-700 p-2.5 text-center font-black tracking-wide text-xs"
+                                    style={{ backgroundColor: "#0f172a", color: "#fef08a" }}
+                                  >
+                                    {!isMonthly && i === 4 ? `विषय : ${sec.subjectName}` : hText}
+                                  </th>
+                                ))}
                                 {isInlineEditing && (
-                                  <th className="border border-slate-700 p-2.5 text-center bg-slate-900 text-amber-300 text-xs">
+                                  <th
+                                    className="border border-slate-700 p-2.5 text-center font-black tracking-wide text-xs"
+                                    style={{ backgroundColor: "#0f172a", color: "#fef08a" }}
+                                  >
                                     क्रिया
                                   </th>
                                 )}
@@ -1028,92 +1039,163 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                 filteredRows.map((r, rIdx) => (
                                   <tr
                                     key={rIdx}
-                                    className={`hover:bg-indigo-50/40 transition-colors ${
-                                      rIdx % 2 === 0 ? "bg-white" : "bg-slate-50/60"
-                                    }`}
+                                    className={`hover:bg-indigo-50/40 transition-colors ${rIdx % 2 === 0 ? "bg-white" : "bg-slate-50/60"
+                                      }`}
+                                    style={{ pageBreakInside: "avoid", breakInside: "avoid" }}
                                   >
                                     {isInlineEditing ? (
-                                      <>
-                                        {/* Editable Month */}
-                                        <td className="border border-slate-300 p-1.5 align-top">
-                                          <input
-                                            type="text"
-                                            value={r[0] || ""}
-                                            onChange={(e) => handleCellChange(sec.subjectName, rIdx, 0, e.target.value)}
-                                            placeholder="महिना"
-                                            className="w-full p-2 text-xs font-bold text-center border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
-                                          />
-                                        </td>
-                                        {/* Editable Weeks */}
-                                        <td className="border border-slate-300 p-1.5 align-top">
-                                          <input
-                                            type="text"
-                                            value={r[1] || ""}
-                                            onChange={(e) => handleCellChange(sec.subjectName, rIdx, 1, e.target.value)}
-                                            placeholder="आठवडा"
-                                            className="w-full p-2 text-xs font-bold text-center border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
-                                          />
-                                        </td>
-                                        {/* Editable Days */}
-                                        <td className="border border-slate-300 p-1.5 align-top">
-                                          <input
-                                            type="text"
-                                            value={r[2] || ""}
-                                            onChange={(e) => handleCellChange(sec.subjectName, rIdx, 2, e.target.value)}
-                                            placeholder="दिवस"
-                                            className="w-full p-2 text-xs font-bold text-center border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
-                                          />
-                                        </td>
-                                        {/* Editable Periods */}
-                                        <td className="border border-slate-300 p-1.5 align-top">
-                                          <input
-                                            type="text"
-                                            value={r[3] || ""}
-                                            onChange={(e) => handleCellChange(sec.subjectName, rIdx, 3, e.target.value)}
-                                            placeholder="तासिका"
-                                            className="w-full p-2 text-xs font-bold text-center border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
-                                          />
-                                        </td>
-                                        {/* Editable Topics */}
-                                        <td className="border border-slate-300 p-1.5 align-top">
-                                          <AutoHeightTextarea
-                                            value={r[4] || ""}
-                                            onChange={(val) => handleCellChange(sec.subjectName, rIdx, 4, val)}
-                                            placeholder="घटकांचे नाव व सविस्तर स्पष्टीकरण..."
-                                          />
-                                        </td>
-                                        {/* Editable Outcomes */}
-                                        <td className="border border-slate-300 p-1.5 align-top">
-                                          <AutoHeightTextarea
-                                            value={r[5] || ""}
-                                            onChange={(val) => handleCellChange(sec.subjectName, rIdx, 5, val)}
-                                            placeholder="अध्ययन निष्पत्ती..."
-                                          />
-                                        </td>
-                                        {/* Delete Row Action */}
-                                        <td className="border border-slate-300 p-1.5 align-middle text-center">
-                                          <button
-                                            onClick={() => handleDeleteRow(sec.subjectName, rIdx)}
-                                            className="p-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors border border-rose-200 cursor-pointer"
-                                            title="ही ओळ डिलीट करा"
-                                          >
-                                            <Trash2 className="size-4" />
-                                          </button>
-                                        </td>
-                                      </>
-                                    ) : (
-                                      categoryHeaders.map((_: string, cIdx: number) => {
-                                        return (
-                                          <td
-                                            key={cIdx}
-                                            className={`border border-slate-300 p-2.5 align-top text-slate-900 leading-relaxed ${
-                                              cIdx <= 3 ? "text-center font-bold" : "text-left whitespace-pre-line"
-                                            }`}
-                                          >
-                                            {r[cIdx] || "-"}
+                                      isMonthly ? (
+                                        <>
+                                          {/* Monthly Col 0: Date */}
+                                          <td className="border border-slate-300 p-1.5 align-top" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                                            <input
+                                              type="text"
+                                              value={r[0] || ""}
+                                              onChange={(e) => handleCellChange(sec.subjectName, rIdx, 0, e.target.value)}
+                                              placeholder="दिनांक"
+                                              className="w-full p-2 text-xs font-bold text-center border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
+                                            />
                                           </td>
-                                        );
-                                      })
+                                          {/* Monthly Col 1: Topic */}
+                                          <td className="border border-slate-300 p-1.5 align-top" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                                            <AutoHeightTextarea
+                                              value={r[1] || ""}
+                                              onChange={(val) => handleCellChange(sec.subjectName, rIdx, 1, val)}
+                                              placeholder="पाठ/घटक/उपघटक..."
+                                            />
+                                          </td>
+                                          {/* Monthly Col 2: Learning Outcome */}
+                                          <td className="border border-slate-300 p-1.5 align-top" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                                            <AutoHeightTextarea
+                                              value={r[2] || ""}
+                                              onChange={(val) => handleCellChange(sec.subjectName, rIdx, 2, val)}
+                                              placeholder="अध्ययन निष्पत्ती..."
+                                            />
+                                          </td>
+                                          {/* Monthly Col 3: Objectives */}
+                                          <td className="border border-slate-300 p-1.5 align-top" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                                            <AutoHeightTextarea
+                                              value={r[3] || ""}
+                                              onChange={(val) => handleCellChange(sec.subjectName, rIdx, 3, val)}
+                                              placeholder="अध्ययन मुद्दे/पाठ्यांश उद्देश..."
+                                            />
+                                          </td>
+                                          {/* Monthly Col 4: Experience */}
+                                          <td className="border border-slate-300 p-1.5 align-top" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                                            <AutoHeightTextarea
+                                              value={r[4] || ""}
+                                              onChange={(val) => handleCellChange(sec.subjectName, rIdx, 4, val)}
+                                              placeholder="अध्ययन अनुभवाचे स्वरूप..."
+                                            />
+                                          </td>
+                                          {/* Monthly Col 5: Tools */}
+                                          <td className="border border-slate-300 p-1.5 align-top" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                                            <AutoHeightTextarea
+                                              value={r[5] || ""}
+                                              onChange={(val) => handleCellChange(sec.subjectName, rIdx, 5, val)}
+                                              placeholder="उपयोगात आणावयाची साधन तंत्रे..."
+                                            />
+                                          </td>
+                                          {/* Monthly Col 6: Material */}
+                                          <td className="border border-slate-300 p-1.5 align-top" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                                            <AutoHeightTextarea
+                                              value={r[6] || ""}
+                                              onChange={(val) => handleCellChange(sec.subjectName, rIdx, 6, val)}
+                                              placeholder="आवश्यक साहित्य..."
+                                            />
+                                          </td>
+                                          {/* Delete Row Action */}
+                                          <td className="border border-slate-300 p-1.5 align-middle text-center" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                                            <button
+                                              onClick={() => handleDeleteRow(sec.subjectName, rIdx)}
+                                              className="p-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors border border-rose-200 cursor-pointer"
+                                              title="ही ओळ डिलीट करा"
+                                            >
+                                              <Trash2 className="size-4" />
+                                            </button>
+                                          </td>
+                                        </>
+                                      ) : (
+                                        <>
+                                          {/* Editable Month */}
+                                          <td className="border border-slate-300 p-1.5 align-top" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                                            <input
+                                              type="text"
+                                              value={r[0] || ""}
+                                              onChange={(e) => handleCellChange(sec.subjectName, rIdx, 0, e.target.value)}
+                                              placeholder="महिना"
+                                              className="w-full p-2 text-xs font-bold text-center border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
+                                            />
+                                          </td>
+                                          {/* Editable Weeks */}
+                                          <td className="border border-slate-300 p-1.5 align-top" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                                            <input
+                                              type="text"
+                                              value={r[1] || ""}
+                                              onChange={(e) => handleCellChange(sec.subjectName, rIdx, 1, e.target.value)}
+                                              placeholder="आठवडा"
+                                              className="w-full p-2 text-xs font-bold text-center border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
+                                            />
+                                          </td>
+                                          {/* Editable Days */}
+                                          <td className="border border-slate-300 p-1.5 align-top" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                                            <input
+                                              type="text"
+                                              value={r[2] || ""}
+                                              onChange={(e) => handleCellChange(sec.subjectName, rIdx, 2, e.target.value)}
+                                              placeholder="दिवस"
+                                              className="w-full p-2 text-xs font-bold text-center border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
+                                            />
+                                          </td>
+                                          {/* Editable Periods */}
+                                          <td className="border border-slate-300 p-1.5 align-top" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                                            <input
+                                              type="text"
+                                              value={r[3] || ""}
+                                              onChange={(e) => handleCellChange(sec.subjectName, rIdx, 3, e.target.value)}
+                                              placeholder="तासिका"
+                                              className="w-full p-2 text-xs font-bold text-center border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
+                                            />
+                                          </td>
+                                          {/* Editable Topics */}
+                                          <td className="border border-slate-300 p-1.5 align-top" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                                            <AutoHeightTextarea
+                                              value={r[4] || ""}
+                                              onChange={(val) => handleCellChange(sec.subjectName, rIdx, 4, val)}
+                                              placeholder="घटकांचे नाव व सविस्तर स्पष्टीकरण..."
+                                            />
+                                          </td>
+                                          {/* Editable Outcomes */}
+                                          <td className="border border-slate-300 p-1.5 align-top" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                                            <AutoHeightTextarea
+                                              value={r[5] || ""}
+                                              onChange={(val) => handleCellChange(sec.subjectName, rIdx, 5, val)}
+                                              placeholder="अध्ययन निष्पत्ती..."
+                                            />
+                                          </td>
+                                          {/* Delete Row Action */}
+                                          <td className="border border-slate-300 p-1.5 align-middle text-center" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                                            <button
+                                              onClick={() => handleDeleteRow(sec.subjectName, rIdx)}
+                                              className="p-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 transition-colors border border-rose-200 cursor-pointer"
+                                              title="ही ओळ डिलीट करा"
+                                            >
+                                              <Trash2 className="size-4" />
+                                            </button>
+                                          </td>
+                                        </>
+                                      )
+                                    ) : (
+                                      categoryHeaders.map((_: string, cIdx: number) => (
+                                        <td
+                                          key={cIdx}
+                                          className={`border border-slate-300 p-2.5 align-top text-slate-900 leading-relaxed ${cIdx === 0 ? "text-center font-bold" : "text-left whitespace-pre-line"
+                                            }`}
+                                          style={{ pageBreakInside: "avoid", breakInside: "avoid" }}
+                                        >
+                                          {r[cIdx] || "-"}
+                                        </td>
+                                      ))
                                     )}
                                   </tr>
                                 ))
@@ -1128,6 +1210,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                           </table>
                         </div>
                       </div>
+                    </React.Fragment>
                     );
                   })
                 ) : (
