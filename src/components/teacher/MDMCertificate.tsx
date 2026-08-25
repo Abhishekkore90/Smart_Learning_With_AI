@@ -40,7 +40,7 @@ export interface MDMCertificateProps {
 }
 
 // Marathi number converter helper
-const toMarathiNumbers = (str: string | number): string => {
+export const toMarathiNumbers = (str: string | number): string => {
   if (str === undefined || str === null) return "";
   const numStr = str.toString();
   const marathiDigits = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
@@ -48,7 +48,7 @@ const toMarathiNumbers = (str: string | number): string => {
 };
 
 // English number converter helper
-const toEnglishNumbers = (str: string | number): string => {
+export const toEnglishNumbers = (str: string | number): string => {
   if (str === undefined || str === null) return "";
   const numStr = str.toString();
   const marathiDigits = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
@@ -86,10 +86,10 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
   primaryStateGrant = 0,
   upperCenterGrant = 0,
   upperStateGrant = 0,
-  primaryKendraShare = "1.55",
-  primaryRajyaShare = "1.04",
-  upperKendraShare = "1.55",
-  upperRajyaShare = "1.04",
+  primaryKendraShare = "1.56",
+  primaryRajyaShare = "1.03",
+  upperKendraShare = "2.32",
+  upperRajyaShare = "1.56",
   totalGrantAll = 0,
   vegUsageKg,
 }) => {
@@ -172,8 +172,8 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
               <tr className="bg-slate-100 font-bold border-b border-black text-xs">
                 <th className="border border-black p-1" style={{ border: '1px solid #000000' }}>इयत्ता</th>
                 <th className="border border-black p-1" style={{ border: '1px solid #000000' }}>पट</th>
-                <th className="border border-black p-1" style={{ border: '1px solid #000000' }}>शिजवलेले दिवस</th>
                 <th className="border border-black p-1" style={{ border: '1px solid #000000' }}>प्रोग्रेसिव्ह लाभार्थी</th>
+                <th className="border border-black p-1" style={{ border: '1px solid #000000' }}>शिजवलेले दिवस</th>
                 <th className="border border-black p-1" style={{ border: '1px solid #000000' }}>हिस्सा</th>
                 <th className="border border-black p-1" style={{ border: '1px solid #000000' }}>दर</th>
                 <th className="border border-black p-1" style={{ border: '1px solid #000000' }}>इंधन भाजीपाला देय अनुदान</th>
@@ -189,8 +189,8 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
                   <tr>
                     <td className="border border-black p-1 font-bold" style={{ border: '1px solid #000000' }} rowSpan={2}>१ ते ५</td>
                     <td className="border border-black p-1 font-bold" style={{ border: '1px solid #000000' }} rowSpan={2}>{certPatPrimary || toMarathiNumbers(primaryEnrolled.toString())}</td>
-                    <td className="border border-black p-1 font-bold" style={{ border: '1px solid #000000' }} rowSpan={2}>{certPrimaryCookedDays || toMarathiNumbers(primaryCookedDays.toString())}</td>
                     <td className="border border-black p-1 font-bold" style={{ border: '1px solid #000000' }} rowSpan={2}>{certBeneficiaryPrimary || toMarathiNumbers(primaryBeneficiarySum.toString())}</td>
+                    <td className="border border-black p-1 font-bold" style={{ border: '1px solid #000000' }} rowSpan={2}>{certPrimaryCookedDays || toMarathiNumbers(primaryCookedDays.toString())}</td>
                     <td className="border border-black p-1 font-medium" style={{ border: '1px solid #000000' }}>केंद्र</td>
                     <td className="border border-black p-1" style={{ border: '1px solid #000000' }}>{toMarathiNumbers(primaryKendraShare)}</td>
                     <td className="border border-black p-1 font-semibold" style={{ border: '1px solid #000000' }}>{toMarathiNumbers(primaryCenterGrant.toFixed(2))}</td>
@@ -213,8 +213,8 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
                   <tr>
                     <td className="border border-black p-1 font-bold" style={{ border: '1px solid #000000' }} rowSpan={2}>६ ते ८</td>
                     <td className="border border-black p-1 font-bold" style={{ border: '1px solid #000000' }} rowSpan={2}>{certPatUpper || toMarathiNumbers(upperEnrolled.toString())}</td>
-                    <td className="border border-black p-1 font-bold" style={{ border: '1px solid #000000' }} rowSpan={2}>{certUpperCookedDays || toMarathiNumbers(upperCookedDays.toString())}</td>
                     <td className="border border-black p-1 font-bold" style={{ border: '1px solid #000000' }} rowSpan={2}>{certBeneficiaryUpper || toMarathiNumbers(upperBeneficiarySum.toString())}</td>
+                    <td className="border border-black p-1 font-bold" style={{ border: '1px solid #000000' }} rowSpan={2}>{certUpperCookedDays || toMarathiNumbers(upperCookedDays.toString())}</td>
                     <td className="border border-black p-1 font-medium" style={{ border: '1px solid #000000' }}>केंद्र</td>
                     <td className="border border-black p-1" style={{ border: '1px solid #000000' }}>{toMarathiNumbers(upperKendraShare)}</td>
                     <td className="border border-black p-1 font-semibold" style={{ border: '1px solid #000000' }}>{toMarathiNumbers(upperCenterGrant.toFixed(2))}</td>
@@ -243,22 +243,17 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
                 </td>
                 <td className="border border-black p-1" style={{ border: '1px solid #000000' }}>
                   {subTab === "1-5"
+                    ? (certBeneficiaryPrimary || toMarathiNumbers(primaryBeneficiarySum.toString()))
+                    : subTab === "6-8"
+                    ? (certBeneficiaryUpper || toMarathiNumbers(upperBeneficiarySum.toString()))
+                    : toMarathiNumbers((primaryBeneficiarySum + upperBeneficiarySum).toString())}
+                </td>
+                <td className="border border-black p-1" style={{ border: '1px solid #000000' }}>
+                  {subTab === "1-5"
                     ? (certPrimaryCookedDays || toMarathiNumbers(primaryCookedDays.toString()))
                     : subTab === "6-8"
                     ? (certUpperCookedDays || toMarathiNumbers(upperCookedDays.toString()))
                     : toMarathiNumbers((primaryCookedDays + upperCookedDays).toString())}
-                </td>
-                <td className="border border-black p-1" style={{ border: '1px solid #000000' }}>
-                  {subTab === "1-5"
-                    ? (certBeneficiaryPrimary || toMarathiNumbers(primaryBeneficiarySum.toString()))
-                    : subTab === "6-8"
-                    ? (certBeneficiaryUpper || toMarathiNumbers(upperBeneficiarySum.toString()))
-                    : toMarathiNumbers(
-                        (
-                          (certBeneficiaryPrimary ? parseInt(toEnglishNumbers(certBeneficiaryPrimary), 10) || primaryBeneficiarySum : primaryBeneficiarySum) +
-                          (certBeneficiaryUpper ? parseInt(toEnglishNumbers(certBeneficiaryUpper), 10) || upperBeneficiarySum : upperBeneficiarySum)
-                        ).toString()
-                      )}
                 </td>
                 <td className="border border-black p-1" style={{ border: '1px solid #000000' }}>---</td>
                 <td className="border border-black p-1" style={{ border: '1px solid #000000' }}>---</td>

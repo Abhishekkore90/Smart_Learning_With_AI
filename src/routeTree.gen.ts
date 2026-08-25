@@ -41,6 +41,7 @@ import { Route as TeacherSettingsRouteImport } from './routes/teacher.settings'
 import { Route as TeacherResultRouteImport } from './routes/teacher.result'
 import { Route as TeacherRecordBookRouteImport } from './routes/teacher.record-book'
 import { Route as TeacherQuestionBankRouteImport } from './routes/teacher.question-bank'
+import { Route as TeacherPlanningViewRouteImport } from './routes/teacher.planning-view'
 import { Route as TeacherPlanningRouteImport } from './routes/teacher.planning'
 import { Route as TeacherNoticesRouteImport } from './routes/teacher.notices'
 import { Route as TeacherMeetingRouteImport } from './routes/teacher.meeting'
@@ -67,6 +68,7 @@ import { Route as AdminStudentManagementRouteImport } from './routes/admin.stude
 import { Route as AdminSqafConfigRouteImport } from './routes/admin.sqaf-config'
 import { Route as AdminSqaafConfigRouteImport } from './routes/admin.sqaaf-config'
 import { Route as AdminReviewsRouteImport } from './routes/admin.reviews'
+import { Route as AdminPlanningManagementRouteImport } from './routes/admin.planning-management'
 import { Route as AdminPlanningRouteImport } from './routes/admin.planning'
 import { Route as AdminModulePaymentsRouteImport } from './routes/admin.module-payments'
 import { Route as AdminMeetingTemplatesRouteImport } from './routes/admin.meeting-templates'
@@ -259,6 +261,11 @@ const TeacherQuestionBankRoute = TeacherQuestionBankRouteImport.update({
   path: '/teacher/question-bank',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TeacherPlanningViewRoute = TeacherPlanningViewRouteImport.update({
+  id: '/teacher/planning-view',
+  path: '/teacher/planning-view',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TeacherPlanningRoute = TeacherPlanningRouteImport.update({
   id: '/teacher/planning',
   path: '/teacher/planning',
@@ -387,6 +394,11 @@ const AdminSqaafConfigRoute = AdminSqaafConfigRouteImport.update({
 const AdminReviewsRoute = AdminReviewsRouteImport.update({
   id: '/admin/reviews',
   path: '/admin/reviews',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminPlanningManagementRoute = AdminPlanningManagementRouteImport.update({
+  id: '/admin/planning-management',
+  path: '/admin/planning-management',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminPlanningRoute = AdminPlanningRouteImport.update({
@@ -581,6 +593,7 @@ export interface FileRoutesByFullPath {
   '/admin/meeting-templates': typeof AdminMeetingTemplatesRoute
   '/admin/module-payments': typeof AdminModulePaymentsRoute
   '/admin/planning': typeof AdminPlanningRoute
+  '/admin/planning-management': typeof AdminPlanningManagementRoute
   '/admin/reviews': typeof AdminReviewsRoute
   '/admin/sqaaf-config': typeof AdminSqaafConfigRoute
   '/admin/sqaf-config': typeof AdminSqafConfigRoute
@@ -607,6 +620,7 @@ export interface FileRoutesByFullPath {
   '/teacher/meeting': typeof TeacherMeetingRoute
   '/teacher/notices': typeof TeacherNoticesRoute
   '/teacher/planning': typeof TeacherPlanningRoute
+  '/teacher/planning-view': typeof TeacherPlanningViewRoute
   '/teacher/question-bank': typeof TeacherQuestionBankRoute
   '/teacher/record-book': typeof TeacherRecordBookRoute
   '/teacher/result': typeof TeacherResultRoute
@@ -671,6 +685,7 @@ export interface FileRoutesByTo {
   '/admin/meeting-templates': typeof AdminMeetingTemplatesRoute
   '/admin/module-payments': typeof AdminModulePaymentsRoute
   '/admin/planning': typeof AdminPlanningRoute
+  '/admin/planning-management': typeof AdminPlanningManagementRoute
   '/admin/reviews': typeof AdminReviewsRoute
   '/admin/sqaaf-config': typeof AdminSqaafConfigRoute
   '/admin/sqaf-config': typeof AdminSqafConfigRoute
@@ -697,6 +712,7 @@ export interface FileRoutesByTo {
   '/teacher/meeting': typeof TeacherMeetingRoute
   '/teacher/notices': typeof TeacherNoticesRoute
   '/teacher/planning': typeof TeacherPlanningRoute
+  '/teacher/planning-view': typeof TeacherPlanningViewRoute
   '/teacher/question-bank': typeof TeacherQuestionBankRoute
   '/teacher/record-book': typeof TeacherRecordBookRoute
   '/teacher/result': typeof TeacherResultRoute
@@ -763,6 +779,7 @@ export interface FileRoutesById {
   '/admin/meeting-templates': typeof AdminMeetingTemplatesRoute
   '/admin/module-payments': typeof AdminModulePaymentsRoute
   '/admin/planning': typeof AdminPlanningRoute
+  '/admin/planning-management': typeof AdminPlanningManagementRoute
   '/admin/reviews': typeof AdminReviewsRoute
   '/admin/sqaaf-config': typeof AdminSqaafConfigRoute
   '/admin/sqaf-config': typeof AdminSqafConfigRoute
@@ -789,6 +806,7 @@ export interface FileRoutesById {
   '/teacher/meeting': typeof TeacherMeetingRoute
   '/teacher/notices': typeof TeacherNoticesRoute
   '/teacher/planning': typeof TeacherPlanningRoute
+  '/teacher/planning-view': typeof TeacherPlanningViewRoute
   '/teacher/question-bank': typeof TeacherQuestionBankRoute
   '/teacher/record-book': typeof TeacherRecordBookRoute
   '/teacher/result': typeof TeacherResultRoute
@@ -856,6 +874,7 @@ export interface FileRouteTypes {
     | '/admin/meeting-templates'
     | '/admin/module-payments'
     | '/admin/planning'
+    | '/admin/planning-management'
     | '/admin/reviews'
     | '/admin/sqaaf-config'
     | '/admin/sqaf-config'
@@ -882,6 +901,7 @@ export interface FileRouteTypes {
     | '/teacher/meeting'
     | '/teacher/notices'
     | '/teacher/planning'
+    | '/teacher/planning-view'
     | '/teacher/question-bank'
     | '/teacher/record-book'
     | '/teacher/result'
@@ -946,6 +966,7 @@ export interface FileRouteTypes {
     | '/admin/meeting-templates'
     | '/admin/module-payments'
     | '/admin/planning'
+    | '/admin/planning-management'
     | '/admin/reviews'
     | '/admin/sqaaf-config'
     | '/admin/sqaf-config'
@@ -972,6 +993,7 @@ export interface FileRouteTypes {
     | '/teacher/meeting'
     | '/teacher/notices'
     | '/teacher/planning'
+    | '/teacher/planning-view'
     | '/teacher/question-bank'
     | '/teacher/record-book'
     | '/teacher/result'
@@ -1037,6 +1059,7 @@ export interface FileRouteTypes {
     | '/admin/meeting-templates'
     | '/admin/module-payments'
     | '/admin/planning'
+    | '/admin/planning-management'
     | '/admin/reviews'
     | '/admin/sqaaf-config'
     | '/admin/sqaf-config'
@@ -1063,6 +1086,7 @@ export interface FileRouteTypes {
     | '/teacher/meeting'
     | '/teacher/notices'
     | '/teacher/planning'
+    | '/teacher/planning-view'
     | '/teacher/question-bank'
     | '/teacher/record-book'
     | '/teacher/result'
@@ -1129,6 +1153,7 @@ export interface RootRouteChildren {
   AdminMeetingTemplatesRoute: typeof AdminMeetingTemplatesRoute
   AdminModulePaymentsRoute: typeof AdminModulePaymentsRoute
   AdminPlanningRoute: typeof AdminPlanningRoute
+  AdminPlanningManagementRoute: typeof AdminPlanningManagementRoute
   AdminReviewsRoute: typeof AdminReviewsRoute
   AdminSqaafConfigRoute: typeof AdminSqaafConfigRoute
   AdminSqafConfigRoute: typeof AdminSqafConfigRoute
@@ -1153,6 +1178,7 @@ export interface RootRouteChildren {
   TeacherMeetingRoute: typeof TeacherMeetingRoute
   TeacherNoticesRoute: typeof TeacherNoticesRoute
   TeacherPlanningRoute: typeof TeacherPlanningRoute
+  TeacherPlanningViewRoute: typeof TeacherPlanningViewRoute
   TeacherQuestionBankRoute: typeof TeacherQuestionBankRoute
   TeacherRecordBookRoute: typeof TeacherRecordBookRoute
   TeacherResultRoute: typeof TeacherResultRoute
@@ -1407,6 +1433,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TeacherQuestionBankRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/teacher/planning-view': {
+      id: '/teacher/planning-view'
+      path: '/teacher/planning-view'
+      fullPath: '/teacher/planning-view'
+      preLoaderRoute: typeof TeacherPlanningViewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/teacher/planning': {
       id: '/teacher/planning'
       path: '/teacher/planning'
@@ -1587,6 +1620,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/reviews'
       fullPath: '/admin/reviews'
       preLoaderRoute: typeof AdminReviewsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/planning-management': {
+      id: '/admin/planning-management'
+      path: '/admin/planning-management'
+      fullPath: '/admin/planning-management'
+      preLoaderRoute: typeof AdminPlanningManagementRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/planning': {
@@ -1895,6 +1935,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminMeetingTemplatesRoute: AdminMeetingTemplatesRoute,
   AdminModulePaymentsRoute: AdminModulePaymentsRoute,
   AdminPlanningRoute: AdminPlanningRoute,
+  AdminPlanningManagementRoute: AdminPlanningManagementRoute,
   AdminReviewsRoute: AdminReviewsRoute,
   AdminSqaafConfigRoute: AdminSqaafConfigRoute,
   AdminSqafConfigRoute: AdminSqafConfigRoute,
@@ -1919,6 +1960,7 @@ const rootRouteChildren: RootRouteChildren = {
   TeacherMeetingRoute: TeacherMeetingRoute,
   TeacherNoticesRoute: TeacherNoticesRoute,
   TeacherPlanningRoute: TeacherPlanningRoute,
+  TeacherPlanningViewRoute: TeacherPlanningViewRoute,
   TeacherQuestionBankRoute: TeacherQuestionBankRoute,
   TeacherRecordBookRoute: TeacherRecordBookRoute,
   TeacherResultRoute: TeacherResultRoute,
