@@ -127,7 +127,7 @@ export const ASSEMBLY_TRANSLATIONS = {
     importantEvents: "महत्त्वाच्या घटना",
     birthdays: "जन्मदिवस / जयंती",
     deaths: "मृत्यू / पुण्यतिथी / स्मृतिदिन",
-    patrioticSongTitle: "देशभक्ती गीत",
+    patrioticSongTitle: "समूहगीत/देशभक्ती गीत",
     songTitle: "गीताचे शीर्षक",
     storyTitle: "बोधकथा",
     storyName: "कथेचे नाव",

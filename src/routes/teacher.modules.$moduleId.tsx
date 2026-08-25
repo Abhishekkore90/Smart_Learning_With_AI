@@ -62,6 +62,7 @@ import {
   ZoomOut,
   Maximize2,
   SunMedium,
+  Globe,
 } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
 import { AcademicPlanningSystem } from "@/components/teacher/AcademicPlanningSystem";
@@ -1969,6 +1970,14 @@ function DailyAssemblyContent() {
       const sanvidhan = data.preamble || data.sanvidhan || data.preamble_mr || assemblyItems[3]?.content || "";
       const prarthana = data.prayer || data.prarthana || data.prayer_mr || assemblyItems[4]?.content || "";
       const shlok = data.shlok || data.shlok_mr || "";
+      const panchang = data.panchang
+        ? (typeof data.panchang === "string" ? data.panchang : Object.values(data.panchang).filter(Boolean).join(" "))
+        : [
+            data.tithi ? `तिथी: ${data.tithi}` : "",
+            data.paksha ? `पक्ष: ${data.paksha}` : "",
+            data.nakshatra ? `नक्षत्र: ${data.nakshatra}` : "",
+            data.month ? `मास: ${data.month}` : "",
+          ].filter(Boolean).join(" ");
       const suvichar = data.thought || data.suvichar || "";
       const batmya = data.valueNews || data.batmya || data.news || "";
       const dinvishesh = data.events || data.dinvishesh || "";
@@ -1977,11 +1986,21 @@ function DailyAssemblyContent() {
       const bodhkatha = data.story || data.bodhkatha || "";
       const storyTitle = data.storyTitle || "";
       const moral = data.moral || "";
-      const samuhgeet = data.samuhgeet || data.songTitle || data.patrioticSong || "";
-      const deshbhaktigeet = data.deshbhaktigeet || data.patrioticSong || "";
+      const gkList = [1, 2, 3, 4]
+        .map(n => ({
+          q: data[`gkQ${n}`],
+          a: data[`gkA${n}`]
+        }))
+        .filter(item => item.q);
+
+      const gkText = gkList.length > 0
+        ? gkList.map((item, i) => `प्र. ${i + 1}: ${item.q}\nउत्तर: ${item.a || '-'}`).join('\n\n')
+        : (data.gk || data.samanyaGyan || data.generalKnowledge || "");
+
+      const songContent = data.samuhgeet || data.deshbhaktigeet || data.songTitle || data.patrioticSong || "";
       const maun = data.silentPasayadan || data.maun || assemblyItems[5]?.content || "";
 
-      // Build ALL 14 content sections in exact sequence
+      // Build ALL 15 content sections in exact sequence
       const allContent = `
         <style>
           #temp-pdf-render, #temp-pdf-render * {
@@ -2019,51 +2038,56 @@ function DailyAssemblyContent() {
             <div style="${contentText}">${nl2br(shlok || 'माहिती उपलब्ध नाही')}</div>
           </div>
 
+          <div style="${sectionBox('#ffedd5')}">
+            ${greenBar('६. पंचांग')}
+            <div style="${contentText}">${nl2br(panchang || 'माहिती उपलब्ध नाही')}</div>
+          </div>
+
           <div style="${sectionBox('#ede9fe')}">
-            ${greenBar('६. सुविचार')}
+            ${greenBar('७. सुविचार')}
             <div style="${contentText} font-style: italic;">${suvichar ? `"${suvichar}"` : 'माहिती उपलब्ध नाही'}</div>
           </div>
 
           <div style="${sectionBox('#a7f3d0')}">
-            ${greenBar('७. सुसंस्कारक्षम बातम्या')}
+            ${greenBar('८. सुसंस्कारक्षम बातम्या')}
             <div style="${contentText} text-align: left;">${nl2br(batmya || 'माहिती उपलब्ध नाही')}</div>
           </div>
 
           <div style="${sectionBox('#bfdbfe')}">
-            ${greenBar('८. दिनविशेष')}
+            ${greenBar('९. दिनविशेष')}
             ${data.yearDay ? `<div style="font-size: 11px; font-weight: 700; color: #1e40af; text-align: center; margin-bottom: 4px;">हा वर्षातील ${data.yearDay} वा दिवस आहे.</div>` : ''}
             <div style="${contentText} text-align: left;">${nl2br(dinvishesh || 'माहिती उपलब्ध नाही')}</div>
           </div>
 
           <div style="${sectionBox('#ccfbf1')}">
-            ${greenBar('९. म्हण')}
+            ${greenBar('१०. म्हण')}
             <div style="${contentText} font-weight: 800;">${mhan ? `"${mhan}"` : 'माहिती उपलब्ध नाही'}</div>
             ${mhanMeaning ? `<div style="font-size: 12px; color: #4b5563; text-align: center; margin-top: 6px;"><b>अर्थ:</b> ${mhanMeaning}</div>` : ''}
           </div>
 
           <div style="${sectionBox('#fecdd3')}">
-            ${greenBar(`१०. बोधकथा${storyTitle ? ': ' + storyTitle : ''}`)}
+            ${greenBar(`११. बोधकथा${storyTitle ? ': ' + storyTitle : ''}`)}
             <div style="${contentText} text-align: left;">${nl2br(bodhkatha || 'माहिती उपलब्ध नाही')}</div>
             ${moral ? `<div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 6px 12px; border-radius: 4px; margin-top: 6px; font-size: 12px; font-weight: 700; color: #92400e;"><b>तात्पर्य:</b> ${moral}</div>` : ''}
           </div>
 
-          <div style="${sectionBox('#e0e7ff')}">
-            ${greenBar('११. समूहगीत')}
-            <div style="${contentText}">${nl2br(samuhgeet || 'माहिती उपलब्ध नाही')}</div>
+          <div style="${sectionBox('#fef3c7')}">
+            ${greenBar('१२. सामान्य ज्ञान')}
+            <div style="${contentText} text-align: left;">${nl2br(gkText || 'माहिती उपलब्ध नाही')}</div>
           </div>
 
-          <div style="${sectionBox('#c7d2fe')}">
-            ${greenBar('१२. देशभक्ती गीत')}
-            <div style="${contentText}">${nl2br(deshbhaktigeet || 'माहिती उपलब्ध नाही')}</div>
+          <div style="${sectionBox('#e0e7ff')}">
+            ${greenBar('१३. समूहगीत/देशभक्ती गीत')}
+            <div style="${contentText}">${nl2br(songContent || 'माहिती उपलब्ध नाही')}</div>
           </div>
 
           <div style="${sectionBox('#fde68a')}">
-            ${greenBar('१३. मौन पसायदान')}
+            ${greenBar('१४. मौन पसायदान')}
             <div style="${contentText}">${nl2br(maun || 'पसायदान')}</div>
           </div>
 
           <div style="${sectionBox('#e2e8f0')}">
-            ${greenBar('१४. वर्गशिक्षकांची स्वाक्षरी')}
+            ${greenBar('१५. वर्गशिक्षकांची स्वाक्षरी')}
             <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 800; color: #1e293b; padding: 25px 20px 5px 20px;">
               <span>वर्गशिक्षक स्वाक्षरी</span>
               <span>मुख्याध्यापक स्वाक्षरी</span>
@@ -2311,23 +2335,73 @@ function DailyAssemblyContent() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3 relative z-10 pdf-hide">
+            <div className="flex flex-wrap items-center gap-3 relative z-10 pdf-hide">
+              {/* Language Selector */}
+              <div className="flex items-center gap-1 bg-white/10 hover:bg-white/15 p-1 rounded-2xl border border-white/20 shadow-inner">
+                <div className="flex items-center gap-1 pl-2 pr-1 text-cyan-300 text-xs font-extrabold">
+                  <Globe className="size-4 text-cyan-400" />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setLang("mr")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
+                    lang === "mr"
+                      ? "bg-amber-400 text-slate-950 shadow-md scale-105"
+                      : "text-indigo-100 hover:text-white hover:bg-white/10"
+                  }`}
+                  title="मराठी परिपाठ"
+                >
+                  मराठी
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLang("en")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
+                    lang === "en"
+                      ? "bg-amber-400 text-slate-950 shadow-md scale-105"
+                      : "text-indigo-100 hover:text-white hover:bg-white/10"
+                  }`}
+                  title="English Paripath"
+                >
+                  EN
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLang("hi")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
+                    lang === "hi"
+                      ? "bg-amber-400 text-slate-950 shadow-md scale-105"
+                      : "text-indigo-100 hover:text-white hover:bg-white/10"
+                  }`}
+                  title="हिंदी परिपाठ"
+                >
+                  हिंदी
+                </button>
+              </div>
+
               <div 
-                className="flex items-center gap-2.5 bg-white/15 hover:bg-white/25 px-4 py-2.5 rounded-2xl border border-white/30 text-white shadow-md transition-all cursor-pointer group"
+                className="relative flex items-center gap-2.5 bg-white/15 hover:bg-white/25 px-4 py-2.5 rounded-2xl border border-white/30 text-white shadow-md transition-all cursor-pointer group"
                 onClick={(e) => {
                   const input = e.currentTarget.querySelector('input[type="date"]') as HTMLInputElement;
                   if (input && typeof input.showPicker === 'function') {
                     try { input.showPicker(); } catch (err) {}
                   }
                 }}
+                title="तारीख निवडा (Select Date)"
               >
-                <Calendar className="size-4.5 text-amber-400 group-hover:scale-110 transition-transform" />
+                <Calendar className="size-4.5 text-amber-400 group-hover:scale-110 transition-transform shrink-0" />
+                <span className="text-xs font-black text-amber-100 tracking-wide font-mono">
+                  {(() => {
+                    if (!selectedDate) return "";
+                    const parts = selectedDate.split("-");
+                    return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : selectedDate;
+                  })()}
+                </span>
                 <input
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="bg-transparent border-none text-xs font-black outline-none cursor-pointer text-amber-100 [color-scheme:dark]"
-                  style={{ colorScheme: 'dark' }}
+                  className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
                 />
               </div>
               <button
@@ -2411,24 +2485,24 @@ function DailyAssemblyContent() {
           {[
             {
               id: 'rashtrageet',
-              title: 'राष्ट्रगीत',
+              title: lang === 'en' ? 'National Anthem' : lang === 'hi' ? 'राष्ट्रगान' : 'राष्ट्रगीत',
               emoji: '🇮🇳',
               gradient: 'from-emerald-100/80 via-teal-50/60 to-green-100/80',
-              content: formData.nationalAnthem || formData.rashtrageet || formData.nationalAnthem_mr || assemblyItems[0]?.content || "",
+              content: formData[`nationalAnthem_${lang}`] || (lang === 'mr' ? (formData.nationalAnthem || formData.rashtrageet) : undefined) || assemblyItems[0]?.content || "",
             },
             {
               id: 'pratigya',
-              title: 'प्रतिज्ञा',
+              title: lang === 'en' ? 'Pledge' : lang === 'hi' ? 'प्रतिज्ञा' : 'प्रतिज्ञा',
               emoji: '✋',
               gradient: 'from-blue-100/80 via-indigo-50/60 to-cyan-100/80',
-              content: formData.pledge || formData.pratigya || formData.pledge_mr || assemblyItems[2]?.content || "",
+              content: formData[`pledge_${lang}`] || (lang === 'mr' ? (formData.pledge || formData.pratigya) : undefined) || assemblyItems[2]?.content || "",
             },
             {
               id: 'sanvidhan',
-              title: 'भारताचे संविधान',
+              title: lang === 'en' ? 'Preamble (Constitution)' : lang === 'hi' ? 'संविधान उद्देशिका' : 'भारताचे संविधान',
               emoji: '📜',
               gradient: 'from-amber-100/80 via-orange-50/60 to-yellow-100/80',
-              content: formData.preamble || formData.sanvidhan || formData.preamble_mr || assemblyItems[3]?.content || "",
+              content: formData[`preamble_${lang}`] || (lang === 'mr' ? (formData.preamble || formData.sanvidhan) : undefined) || assemblyItems[3]?.content || "",
             },
             {
               id: 'prarthana',
@@ -2443,6 +2517,13 @@ function DailyAssemblyContent() {
               emoji: '🕉️',
               gradient: 'from-amber-100/80 via-rose-50/60 to-orange-100/80',
               content: formData.shlok || formData.shlok_mr || "",
+            },
+            {
+              id: 'panchang',
+              title: 'पंचांग',
+              emoji: '🗓️',
+              gradient: 'from-orange-100/80 via-amber-50/60 to-yellow-100/80',
+              content: formData.panchang || (formData.month || formData.tithi ? [formData.month, formData.paksha, formData.tithi, formData.nakshatra].filter(Boolean).join(' | ') : ""),
             },
             {
               id: 'suvichar',
@@ -2484,20 +2565,20 @@ function DailyAssemblyContent() {
               moral: formData.moral,
             },
             {
-              id: 'samuhgeet',
-              title: 'समूहगीत',
+              id: 'samanya_gyan',
+              title: 'सामान्य ज्ञान',
+              emoji: '🧠',
+              gradient: 'from-amber-100/80 via-orange-50/60 to-yellow-100/80',
+              content: [1, 2, 3, 4].map(n => formData[`gkQ${n}`] ? `प्र. ${n}: ${formData[`gkQ${n}`]}\nउत्तर: ${formData[`gkA${n}`] || '-'}` : '').filter(Boolean).join('\n\n') || formData.gk || formData.samanyaGyan || "",
+              gkItems: [1, 2, 3, 4].map(n => ({ q: formData[`gkQ${n}`], a: formData[`gkA${n}`] })).filter(item => item.q),
+            },
+            {
+              id: 'samuhgeet_deshbhaktigeet',
+              title: 'समूहगीत/देशभक्ती गीत',
               emoji: '🎵',
               gradient: 'from-sky-100/80 via-indigo-50/60 to-purple-100/80',
               songTitle: formData.songTitle,
-              content: formData.samuhgeet || formData.patrioticSong || "",
-            },
-            {
-              id: 'deshbhaktigeet',
-              title: 'देशभक्ती गीत',
-              emoji: '🇮🇳',
-              gradient: 'from-orange-100/80 via-red-50/60 to-amber-100/80',
-              songTitle: formData.songTitle,
-              content: formData.deshbhaktigeet || formData.patrioticSong || "",
+              content: formData.samuhgeet || formData.deshbhaktigeet || formData.patrioticSong || "",
             },
             {
               id: 'maun',
@@ -2534,6 +2615,20 @@ function DailyAssemblyContent() {
                     <p>मुख्याध्यापक स्वाक्षरी</p>
                   </div>
                 </div>
+              ) : sec.id === 'samanya_gyan' && sec.gkItems && sec.gkItems.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {sec.gkItems.map((item: any, idx: number) => (
+                    <div key={idx} className="p-5 bg-white/80 backdrop-blur-xl border border-amber-200/80 rounded-[2rem] shadow-sm text-left space-y-2">
+                      <div className="text-xs font-black text-amber-800 bg-amber-100/80 px-3 py-1 rounded-full inline-block">
+                        प्रश्न {idx + 1}
+                      </div>
+                      <p className="text-sm md:text-base font-extrabold text-slate-900">{item.q}</p>
+                      <div className="text-xs md:text-sm font-extrabold text-emerald-800 bg-emerald-50/90 px-3.5 py-2 rounded-xl border border-emerald-200">
+                        <span className="font-black text-emerald-950">उत्तर: </span>{item.a || '-'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               ) : sec.content ? (
                 <div className="space-y-4">
                   {sec.storyTitle && (
@@ -2543,7 +2638,7 @@ function DailyAssemblyContent() {
                       </span>
                     </div>
                   )}
-                  {sec.songTitle && (sec.id === 'samuhgeet' || sec.id === 'deshbhaktigeet') && (
+                  {sec.songTitle && (sec.id === 'samuhgeet' || sec.id === 'deshbhaktigeet' || sec.id === 'samuhgeet_deshbhaktigeet') && (
                     <div className="flex justify-center mb-2">
                       <span className="text-sm font-black text-orange-700 bg-orange-50 border border-orange-200 px-6 py-2 rounded-full uppercase tracking-widest">
                         {sec.songTitle}

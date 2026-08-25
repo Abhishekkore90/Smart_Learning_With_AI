@@ -16,6 +16,7 @@ import {
   MessageSquare,
   Newspaper,
   Sparkles,
+  Globe,
 } from "lucide-react";
 import { collection, addDoc, getDocs, deleteDoc, doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -55,6 +56,9 @@ function AssemblyBookAdmin() {
 
   const [selectedDate, setSelectedDate] = useState<string>(() => getLocalDateString());
   const [adminLang, setAdminLang] = useState<"mr" | "en" | "hi">("mr");
+  const [anthemLang, setAnthemLang] = useState<"mr" | "en" | "hi">("mr");
+  const [pledgeLang, setPledgeLang] = useState<"mr" | "en" | "hi">("mr");
+  const [preambleLang, setPreambleLang] = useState<"mr" | "en" | "hi">("mr");
   const [paripathData, setParipathData] = useState<any>(DEFAULT_FORM_DATA.mr);
   const [savingParipath, setSavingParipath] = useState(false);
   const [isSavedForDate, setIsSavedForDate] = useState(false);
@@ -109,6 +113,7 @@ function AssemblyBookAdmin() {
       deaths: "",
       thought: "",
       shlok: "",
+      panchang: "",
       proverb: "",
       proverbMeaning: "",
       storyTitle: "",
@@ -233,9 +238,18 @@ function AssemblyBookAdmin() {
     `;
 
     // --- PAGE 3: पंचांग, सुविचार, श्लोक, म्हण ---
-    const panchang = (data.month || data.tithi || data.nakshatra) ? `
+    const panchangTextStr = data.panchang
+      ? typeof data.panchang === "string"
+        ? data.panchang
+        : Object.values(data.panchang).filter(Boolean).join(" ")
+      : "";
+    const hasGridPanchang = !!(data.month || data.tithi || data.nakshatra || data.paksha);
+
+    const panchang = (panchangTextStr || hasGridPanchang) ? `
       <div style="${sectionBox('#FFF7ED', '#FFEDD5')}">
         <h2 style="${sectionTitle('#C2410C')}">🗓️ आजचे पंचांग</h2>
+        ${panchangTextStr ? `<div style="${bodyText} text-align: center; font-size: 13px; font-weight: 700; margin-bottom: 6px;">${nl2br(panchangTextStr)}</div>` : ''}
+        ${hasGridPanchang ? `
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px;">
           ${data.day ? `<div style="background: #FEF3C7; border-radius: 8px; padding: 8px; text-align: center;"><div style="font-size: 9px; font-weight: 700; color: #92400E; text-transform: uppercase;">वार</div><div style="font-size: 12px; font-weight: 800; color: #1F2937;">${data.day}</div></div>` : ''}
           ${data.month ? `<div style="background: #FEF3C7; border-radius: 8px; padding: 8px; text-align: center;"><div style="font-size: 9px; font-weight: 700; color: #92400E; text-transform: uppercase;">मास</div><div style="font-size: 12px; font-weight: 800; color: #1F2937;">${data.month}</div></div>` : ''}
@@ -246,6 +260,7 @@ function AssemblyBookAdmin() {
           ${data.sunrise ? `<div style="background: #FEF3C7; border-radius: 8px; padding: 8px; text-align: center;"><div style="font-size: 9px; font-weight: 700; color: #92400E; text-transform: uppercase;">सूर्योदय</div><div style="font-size: 12px; font-weight: 800; color: #1F2937;">${data.sunrise}</div></div>` : ''}
           ${data.sunset ? `<div style="background: #FEF3C7; border-radius: 8px; padding: 8px; text-align: center;"><div style="font-size: 9px; font-weight: 700; color: #92400E; text-transform: uppercase;">सूर्यास्त</div><div style="font-size: 12px; font-weight: 800; color: #1F2937;">${data.sunset}</div></div>` : ''}
         </div>
+        ` : ''}
       </div>
     ` : '';
 
@@ -803,15 +818,31 @@ function AssemblyBookAdmin() {
                   </h3>
                   <p className="text-slate-500 mt-2">Edit the structured text below. It will automatically update in the teacher's Daily Assembly module.</p>
                 </div>
-                <div className="flex flex-wrap items-center gap-3 bg-slate-100 px-5 py-3 rounded-2xl border border-slate-200/80 shadow-inner">
-                  <Calendar className="size-5 text-[#6C63FF]" />
+                <div 
+                  className="relative flex items-center gap-3 bg-indigo-50/90 hover:bg-indigo-100/90 px-4 py-2.5 rounded-2xl border border-indigo-200 shadow-sm transition-all cursor-pointer group"
+                  onClick={(e) => {
+                    const input = e.currentTarget.querySelector('input[type="date"]') as HTMLInputElement;
+                    if (input && typeof input.showPicker === 'function') {
+                      try { input.showPicker(); } catch (err) {}
+                    }
+                  }}
+                  title="तारीख बदला (Change Date)"
+                >
+                  <Calendar className="size-5 text-[#6C63FF] group-hover:scale-110 transition-transform shrink-0" />
+                  <span className="text-sm font-black text-slate-900 tracking-wide font-mono">
+                    {(() => {
+                      if (!selectedDate) return "";
+                      const parts = selectedDate.split("-");
+                      return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : selectedDate;
+                    })()}
+                  </span>
                   <input
                     type="date"
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
-                    className="bg-transparent border-none text-sm font-black text-slate-800 outline-none cursor-pointer"
+                    className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
                   />
-                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider relative z-20 pointer-events-none ${
                     isSavedForDate
                       ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
                       : "bg-amber-100 text-amber-800 border border-amber-300"
@@ -844,20 +875,53 @@ function AssemblyBookAdmin() {
                 
                 <div className="flex flex-col space-y-8 max-w-3xl mx-auto relative">
                   {/* National Anthem - Single field */}
-                  {[
-                    { key: 'nationalAnthem', label: '🇮🇳 राष्ट्रगीत (National Anthem)', rows: 11, idx: 0 },
-                    { key: 'stateAnthem', label: '🚩 राज्यगीत (State Anthem)', rows: 14, idx: 1 },
-                  ].map((field) => (
-                    <div key={field.key} className="bg-white/90 backdrop-blur-sm p-6 md:p-8 rounded-[2.5rem] border border-green-100 shadow-xl shadow-green-900/5 hover:shadow-2xl hover:shadow-green-900/10 transition-all duration-300 text-center">
-                      <label className="inline-block px-4 py-1.5 bg-green-50 text-green-700 rounded-full text-xs font-black uppercase tracking-widest mb-4 border border-green-100">{field.label}</label>
-                      <textarea
-                        rows={field.rows}
-                        value={paripathData[field.key] || DEFAULT_ASSEMBLY_ITEMS.mr[field.idx].content}
-                        onChange={(e) => setParipathData({ ...paripathData, [field.key]: e.target.value })}
-                        className="w-full px-6 py-5 bg-green-50/30 border border-green-100 hover:border-green-300 focus:bg-white rounded-2xl focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all resize-none text-center font-bold text-slate-800 leading-relaxed"
-                      />
+                  {/* ─── National Anthem (राष्ट्रगीत) with 3-language tabs ─── */}
+                  <div className="bg-white/90 backdrop-blur-sm p-6 md:p-8 rounded-[2.5rem] border border-green-100 shadow-xl shadow-green-900/5 hover:shadow-2xl hover:shadow-green-900/10 transition-all duration-300 text-center">
+                    <label className="inline-block px-4 py-1.5 bg-green-50 text-green-700 rounded-full text-xs font-black uppercase tracking-widest mb-4 border border-green-100">
+                      🇮🇳 राष्ट्रगीत (National Anthem)
+                    </label>
+                    <div className="flex justify-center mb-4">
+                      <div className="flex bg-green-50 p-1 rounded-xl border border-green-100 shadow-sm">
+                        {(["mr", "en", "hi"] as const).map((lk) => (
+                          <button
+                            key={lk}
+                            type="button"
+                            onClick={() => setAnthemLang(lk)}
+                            className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${
+                              anthemLang === lk
+                                ? "bg-green-600 text-white shadow-sm"
+                                : "text-slate-500 hover:text-slate-800"
+                            }`}
+                          >
+                            {lk === "mr" ? "मराठी" : lk === "en" ? "English" : "हिंदी"}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  ))}
+                    <textarea
+                      rows={12}
+                      value={
+                        paripathData[`nationalAnthem_${anthemLang}`] !== undefined
+                          ? paripathData[`nationalAnthem_${anthemLang}`]
+                          : (anthemLang === 'mr' ? paripathData.nationalAnthem : undefined) || DEFAULT_ASSEMBLY_ITEMS[anthemLang]?.[0]?.content || ""
+                      }
+                      onChange={(e) => setParipathData({ ...paripathData, [`nationalAnthem_${anthemLang}`]: e.target.value, nationalAnthem: anthemLang === 'mr' ? e.target.value : paripathData.nationalAnthem })}
+                      className="w-full px-6 py-5 bg-green-50/30 border border-green-100 hover:border-green-300 focus:bg-white rounded-2xl focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all resize-none text-center font-bold text-slate-800 leading-relaxed"
+                    />
+                  </div>
+
+                  {/* ─── State Anthem (राज्यगीत) ─── */}
+                  <div className="bg-white/90 backdrop-blur-sm p-6 md:p-8 rounded-[2.5rem] border border-green-100 shadow-xl shadow-green-900/5 hover:shadow-2xl hover:shadow-green-900/10 transition-all duration-300 text-center">
+                    <label className="inline-block px-4 py-1.5 bg-green-50 text-green-700 rounded-full text-xs font-black uppercase tracking-widest mb-4 border border-green-100">
+                      🚩 राज्यगीत (State Anthem)
+                    </label>
+                    <textarea
+                      rows={14}
+                      value={paripathData.stateAnthem || DEFAULT_ASSEMBLY_ITEMS.mr[1].content}
+                      onChange={(e) => setParipathData({ ...paripathData, stateAnthem: e.target.value })}
+                      className="w-full px-6 py-5 bg-green-50/30 border border-green-100 hover:border-green-300 focus:bg-white rounded-2xl focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all resize-none text-center font-bold text-slate-800 leading-relaxed"
+                    />
+                  </div>
 
                   {/* ─── Pledge (प्रतिज्ञा) with 3-language tabs ─── */}
                   <div className="bg-white/90 backdrop-blur-sm p-6 md:p-8 rounded-[2.5rem] border border-green-100 shadow-xl shadow-green-900/5 hover:shadow-2xl hover:shadow-green-900/10 transition-all duration-300 text-center">
@@ -871,9 +935,9 @@ function AssemblyBookAdmin() {
                           <button
                             key={lk}
                             type="button"
-                            onClick={() => setAdminLang(lk)}
+                            onClick={() => setPledgeLang(lk)}
                             className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${
-                              adminLang === lk
+                              pledgeLang === lk
                                 ? "bg-green-600 text-white shadow-sm"
                                 : "text-slate-500 hover:text-slate-800"
                             }`}
@@ -886,11 +950,11 @@ function AssemblyBookAdmin() {
                     <textarea
                       rows={17}
                       value={
-                        paripathData[`pledge_${adminLang}`] !== undefined
-                          ? paripathData[`pledge_${adminLang}`]
-                          : (paripathData.pledge || DEFAULT_ASSEMBLY_ITEMS[adminLang]?.[2]?.content || "")
+                        paripathData[`pledge_${pledgeLang}`] !== undefined
+                          ? paripathData[`pledge_${pledgeLang}`]
+                          : (pledgeLang === 'mr' ? paripathData.pledge : undefined) || DEFAULT_ASSEMBLY_ITEMS[pledgeLang]?.[2]?.content || ""
                       }
-                      onChange={(e) => setParipathData({ ...paripathData, [`pledge_${adminLang}`]: e.target.value })}
+                      onChange={(e) => setParipathData({ ...paripathData, [`pledge_${pledgeLang}`]: e.target.value, pledge: pledgeLang === 'mr' ? e.target.value : paripathData.pledge })}
                       className="w-full px-6 py-5 bg-green-50/30 border border-green-100 hover:border-green-300 focus:bg-white rounded-2xl focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all resize-none text-center font-bold text-slate-800 leading-relaxed"
                     />
                   </div>
@@ -907,9 +971,9 @@ function AssemblyBookAdmin() {
                           <button
                             key={lk}
                             type="button"
-                            onClick={() => setAdminLang(lk)}
+                            onClick={() => setPreambleLang(lk)}
                             className={`px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${
-                              adminLang === lk
+                              preambleLang === lk
                                 ? "bg-green-600 text-white shadow-sm"
                                 : "text-slate-500 hover:text-slate-800"
                             }`}
@@ -922,11 +986,11 @@ function AssemblyBookAdmin() {
                     <textarea
                       rows={6}
                       value={
-                        paripathData[`preamble_${adminLang}`] !== undefined
-                          ? paripathData[`preamble_${adminLang}`]
-                          : (paripathData.preamble || DEFAULT_ASSEMBLY_ITEMS[adminLang]?.[3]?.content || "")
+                        paripathData[`preamble_${preambleLang}`] !== undefined
+                          ? paripathData[`preamble_${preambleLang}`]
+                          : (preambleLang === 'mr' ? paripathData.preamble : undefined) || DEFAULT_ASSEMBLY_ITEMS[preambleLang]?.[3]?.content || ""
                       }
-                      onChange={(e) => setParipathData({ ...paripathData, [`preamble_${adminLang}`]: e.target.value })}
+                      onChange={(e) => setParipathData({ ...paripathData, [`preamble_${preambleLang}`]: e.target.value, preamble: preambleLang === 'mr' ? e.target.value : paripathData.preamble })}
                       className="w-full px-6 py-5 bg-green-50/30 border border-green-100 hover:border-green-300 focus:bg-white rounded-2xl focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all resize-none text-center font-bold text-slate-800 leading-relaxed"
                     />
                   </div>
@@ -963,6 +1027,22 @@ function AssemblyBookAdmin() {
                     onChange={(e) => setParipathData({ ...paripathData, shlok: e.target.value })}
                     className="w-full px-6 py-5 bg-amber-50/30 border border-amber-100 hover:border-amber-300 focus:bg-white rounded-2xl focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all resize-none text-center font-bold text-slate-800 text-lg md:text-xl leading-relaxed"
                     placeholder="उदा. वक्रतुण्ड महाकाय सूर्यकोटि समप्रभ..."
+                  />
+                </div>
+
+                {/* Panchang */}
+                <div className="bg-white/90 backdrop-blur-sm p-8 md:p-10 rounded-[2.5rem] border border-orange-100 shadow-xl shadow-orange-900/5 hover:shadow-2xl hover:shadow-orange-900/10 transition-all duration-300 text-center relative">
+                  <div className="flex justify-center mb-6">
+                    <span className="inline-flex items-center justify-center gap-2 px-6 py-2 bg-orange-50 text-orange-700 rounded-full text-xs font-black uppercase tracking-widest border border-orange-100">
+                      🗓️ पंचांग (Panchang)
+                    </span>
+                  </div>
+                  <textarea
+                    rows={3}
+                    value={paripathData.panchang || ''}
+                    onChange={(e) => setParipathData({ ...paripathData, panchang: e.target.value })}
+                    className="w-full px-6 py-5 bg-orange-50/30 border border-orange-100 hover:border-orange-300 focus:bg-white rounded-2xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 transition-all resize-none text-center font-bold text-slate-800 text-lg md:text-xl leading-relaxed"
+                    placeholder="उदा. शके १९४६, विक्रम संवत २०८१, तिथी, नक्षत्र..."
                   />
                 </div>
 
@@ -1120,7 +1200,7 @@ function AssemblyBookAdmin() {
                   <div>
                     <div className="flex justify-center mb-6">
                       <span className="inline-flex items-center justify-center gap-2 px-6 py-2 bg-indigo-50 text-indigo-700 rounded-full text-xs font-black uppercase tracking-widest border border-indigo-100">
-                        🎵 देशभक्ती गीत (Patriotic Song)
+                        🎵 समूहगीत/देशभक्ती गीत (Group / Patriotic Song)
                       </span>
                     </div>
                     <input
