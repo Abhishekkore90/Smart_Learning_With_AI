@@ -549,6 +549,20 @@ function TeachingRecordPage() {
                   <GraduationCap className="size-4 text-amber-500" />
                   <span>🏫 यू-डायस व शाळा माहिती (UDISE & School Info)</span>
                 </button>
+
+                {diaryRecords.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedRecordForPreview(diaryRecords[0]);
+                      setIsPreviewOpen(true);
+                    }}
+                    className="px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white hover:from-orange-600 hover:to-amber-600 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                  >
+                    <FileText className="size-4" />
+                    <span>All Days PDF</span>
+                  </button>
+                )}
               </div>
 
               {/* Dynamic Breadcrumbs & Saved profile status badge */}
@@ -978,6 +992,7 @@ function TeachingRecordPage() {
                       savedRecord={selectedRecordForPreview}
                       authenticatedPdfUrl={authenticatedPreviewUrl}
                       loadingPdf={loadingPreview}
+                      schoolProfile={schoolProfile}
                       onBack={() => {
                         setIsPreviewOpen(false);
                         setSelectedRecordForPreview(null);
