@@ -46,7 +46,7 @@ import { uploadBlobToBunny } from "@/lib/bunnyStorage";
 import { extractTableRowsFromPdf } from "@/lib/pdfParser";
 import { parseExcelFile, ParsedTableCell } from "@/lib/tableParser";
 import { parsePlanningExcelFile, PlanningCategory, PlanningDocumentRecord } from "@/lib/smartPlanningParser";
-import { extractSubjectSectionsFromExcel } from "@/lib/smartSubjectSplitter";
+import { extractSubjectSectionsFromExcel, splitRowsIntoSubjectSections } from "@/lib/smartSubjectSplitter";
 import { PlanningTableRenderer } from "@/components/teacher/PlanningTableRenderer";
 import * as XLSX from "xlsx";
 
@@ -1411,12 +1411,44 @@ export function AcademicPlanningSystem({
         console.warn("File extraction notice:", exErr);
       }
 
-      const rowsToSave =
+      let rowsToSave =
         extractedRows.length > 0
           ? extractedRows
           : uploadingType === "annual"
             ? DEFAULT_ALL_SUBJECTS_ANNUAL_ROWS
             : DEFAULT_ANNUAL_ROWS;
+
+      // Tag each tableRow with correct subject using smart subject detection from rawDataRows
+      if (excelRawDataRows.length > 0 && rowsToSave.length > 0) {
+        try {
+          const subjectSectionMap = splitRowsIntoSubjectSections(excelRawDataRows, selectedSubject || "मराठी");
+          const subjectKeys = Object.keys(subjectSectionMap);
+          if (subjectKeys.length > 0) {
+            // Build a flat list of rows with subject tagged
+            const taggedRows: PlanningTableRow[] = [];
+            subjectKeys.forEach((subjKey) => {
+              const sec = subjectSectionMap[subjKey];
+              sec.rows.forEach((r, ri) => {
+                taggedRows.push({
+                  id: `upload_${Date.now()}_${subjKey}_${ri}`,
+                  month: r[0] || "",
+                  weeks: r[1] || "",
+                  workingDays: r[2] || "",
+                  periods: r[3] || "",
+                  topics: r[4] || "",
+                  outcomes: r[5] || "",
+                  subject: sec.subjectName,
+                });
+              });
+            });
+            if (taggedRows.length > 0) {
+              rowsToSave = taggedRows;
+            }
+          }
+        } catch (tagErr) {
+          console.warn("Subject tagging notice:", tagErr);
+        }
+      }
 
       setUploadProgress(100);
 
