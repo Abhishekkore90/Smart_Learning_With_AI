@@ -15,6 +15,7 @@ export interface AnnualPlanningWorkbook {
   subjects: Record<string, SubjectSection>;
   allSubjectNames: string[];
   rawGrid: string[][];
+  monthlySections?: Record<string, MonthlySection>;
 }
 
 const DEFAULT_SUBJECT_HEADERS = [
@@ -356,12 +357,15 @@ export async function extractSubjectSectionsFromExcel(
     return a.localeCompare(b);
   });
 
+  const monthlySections = splitRowsIntoMonthlySections(combinedRawGrid);
+
   return {
     classTitle,
     academicYear,
     subjects: subjectsMap,
     allSubjectNames,
     rawGrid: combinedRawGrid,
+    monthlySections,
   };
 }
 
@@ -425,33 +429,47 @@ export function splitRowsIntoSubjectSections(
     const rowLine = (row || []).map((c) => String(c || "")).join(" ").trim();
     if (!rowLine) return;
 
-    const subjMatch = rowLine.match(
-      /(?:विषय|subject)\s*[:\-–]?\s*([^\s\|()\d]+(?:\s+[^\s\|()\d]+)*)/i
-    );
-
     let detectedSubjText: string | null = null;
-    if (subjMatch && subjMatch[1]) {
-      const matchClean = subjMatch[1].trim();
-      if (
-        !matchClean.includes("विवरण") &&
-        !matchClean.includes("निष्पत्ती") &&
-        !matchClean.includes("निष्पती")
-      ) {
-        detectedSubjText = matchClean;
+    for (const c of (row || [])) {
+      if (!c) continue;
+      const cStr = String(c).trim();
+      const m = cStr.match(/(?:विषय|subject)\s*[:\-–]?\s*([^\s\|()\d]+(?:\s+[^\s\|()\d]+)*)/i);
+      if (m && m[1]) {
+        const cleanVal = m[1].trim();
+        if (
+          !cleanVal.includes("विवरण") &&
+          !cleanVal.includes("निष्पत्ती") &&
+          !cleanVal.includes("निष्पती") &&
+          !cleanVal.includes("नावा") &&
+          cleanVal.length < 30
+        ) {
+          detectedSubjText = cleanVal;
+          break;
+        }
+      }
+      const known = KNOWN_SUBJECTS.find(
+        (s) => cStr === s || cStr === `विषय : ${s}` || cStr === `विषय:${s}`
+      );
+      if (known) {
+        detectedSubjText = known;
+        break;
       }
     }
 
     if (!detectedSubjText) {
-      const found = KNOWN_SUBJECTS.find(
-        (sName) =>
-          rowLine.startsWith(`विषय : ${sName}`) ||
-          rowLine.startsWith(`विषय:${sName}`) ||
-          rowLine.startsWith(`विषय-${sName}`) ||
-          rowLine === sName ||
-          (rowLine.includes(sName) && (rowLine.includes("विषय") || rowLine.length < 35))
+      const subjMatch = rowLine.match(
+        /(?:विषय|subject)\s*[:\-–]?\s*([^\s\|()\d]+(?:\s+[^\s\|()\d]+)*)/i
       );
-      if (found) {
-        detectedSubjText = found;
+      if (subjMatch && subjMatch[1]) {
+        const matchClean = subjMatch[1].trim();
+        if (
+          !matchClean.includes("विवरण") &&
+          !matchClean.includes("निष्पत्ती") &&
+          !matchClean.includes("निष्पती") &&
+          matchClean.length < 30
+        ) {
+          detectedSubjText = matchClean;
+        }
       }
     }
 
@@ -459,17 +477,19 @@ export function splitRowsIntoSubjectSections(
 
     if (detectedSubjText) {
       const normalizedKey = normalizeSubjectName(detectedSubjText);
-      flushCurrentSubject(rIdx - 1);
-
-      currentSubjKey = normalizedKey;
-      currentSubjDisplay = `विषय : ${normalizedKey}`;
-      currentSubjectRows = [];
-      currentStartRow = rIdx;
-      lastMonth = "";
-      lastWeeks = "";
-      lastWorkingDays = "";
-      lastPeriods = "";
-      return;
+      if (normalizedKey && normalizedKey !== "सामान्य" && isNaN(Number(normalizedKey))) {
+        if (currentSubjKey !== normalizedKey) {
+          flushCurrentSubject(rIdx - 1);
+          currentSubjKey = normalizedKey;
+          currentSubjDisplay = `विषय : ${normalizedKey}`;
+          currentSubjectRows = [];
+          currentStartRow = rIdx;
+          lastMonth = "";
+          lastWeeks = "";
+          lastWorkingDays = "";
+          lastPeriods = "";
+        }
+      }
     }
 
     if (isColumnHeader) {
@@ -542,3 +562,112 @@ export function splitRowsIntoSubjectSections(
 
   return subjectsMap;
 }
+
+export interface MonthlySection {
+  monthName: string; // e.g. "जुलै २०२६"
+  displayMonthName: string; // e.g. "अभ्यासक्रमाचे मासिक व घटक नियोजन माहे - जुलै २०२६"
+  classTitle?: string;
+  subjectTitle?: string;
+  plannedPeriods?: string;
+  workingDays?: string;
+  headers: string[];
+  rows: string[][];
+}
+
+export const DEFAULT_MONTHLY_HEADERS = [
+  "दिनांक",
+  "पाठ / घटक / उपघटक",
+  "अध्ययन निष्पत्ती",
+  "अध्ययन मुद्दे / पाठ्यांश उद्देश",
+  "अध्ययन अनुभवाचे स्वरूप",
+  "उपयोगात आणावयाची साधन तंत्रे",
+  "आवश्यक साहित्य",
+];
+
+export function splitRowsIntoMonthlySections(rawRows: string[][]): Record<string, MonthlySection> {
+  const monthlyMap: Record<string, MonthlySection> = {};
+
+  let currentMonthName = "";
+  let currentClassTitle = "";
+  let currentSubjectTitle = "";
+  let currentPlannedPeriods = "";
+  let currentWorkingDays = "";
+  let currentRows: string[][] = [];
+
+  const flushCurrentMonth = () => {
+    if (currentMonthName && currentRows.length > 0) {
+      monthlyMap[currentMonthName] = {
+        monthName: currentMonthName,
+        displayMonthName: `अभ्यासक्रमाचे मासिक व घटक नियोजन माहे - ${currentMonthName}`,
+        classTitle: currentClassTitle,
+        subjectTitle: currentSubjectTitle,
+        plannedPeriods: currentPlannedPeriods,
+        workingDays: currentWorkingDays,
+        headers: DEFAULT_MONTHLY_HEADERS,
+        rows: currentRows,
+      };
+    }
+  };
+
+  rawRows.forEach((row) => {
+    const line = (row || []).map((c) => String(c || "")).join(" ").trim();
+    if (!line) return;
+
+    // Check for Month Header Banner: "अभ्यासक्रमाचे मासिक व घटक नियोजन माहे - जुलै २०२६"
+    const monthMatch = line.match(/(?:मासिक\s+व\s+घटक\s+नियोजन\s+माहे|माहे)\s*[:\-–]?\s*([^\n\r]+)/i);
+    if (monthMatch && monthMatch[1]) {
+      flushCurrentMonth();
+      currentMonthName = monthMatch[1].replace(/^[-\s–:]+/, "").trim();
+      currentRows = [];
+      return;
+    }
+
+    // Check for Metadata Header: "इयत्ता : दुसरी ... नियोजित तासिका : 25"
+    if (line.includes("इयत्ता :") || line.includes("विषय :") || line.includes("कामाचे दिवस")) {
+      for (const cell of row) {
+        const cStr = String(cell || "").trim();
+        if (cStr.includes("इयत्ता")) currentClassTitle = cStr;
+        if (cStr.includes("विषय")) currentSubjectTitle = cStr;
+        if (cStr.includes("तासिका")) currentPlannedPeriods = cStr;
+        if (cStr.includes("कामाचे दिवस")) currentWorkingDays = cStr;
+      }
+      return;
+    }
+
+    // Skip table column headers row
+    if (line.includes("दिनांक") && (line.includes("पाठ") || line.includes("घटक") || line.includes("साहित्य"))) {
+      return;
+    }
+
+    // Skip signatures
+    if (line.includes("शिक्षक स्वाक्षरी") || line.includes("मुख्याध्यापक स्वाक्षरी")) {
+      return;
+    }
+
+    // Regular Data Row: ensure 7 columns
+    if (!currentMonthName) currentMonthName = "जून २०२६";
+
+    const r7 = [
+      String(row[0] || "").trim(), // दिनांक
+      String(row[1] || "").trim(), // पाठ/घटक/उपघटक
+      String(row[2] || "").trim(), // अध्ययन निष्पत्ती
+      String(row[3] || "").trim(), // अध्ययन मुद्दे/पाठ्यांश उद्देश
+      String(row[4] || "").trim(), // अध्ययन अनुभवाचे स्वरूप
+      String(row[5] || "").trim(), // उपयोगात आणावयाची साधन तंत्रे
+      String(row[6] || "").trim(), // आवश्यक साहित्य
+    ];
+
+    const hasMeaningfulContent = r7.some((c) => {
+      const s = c.trim();
+      return s !== "" && s !== "-" && s !== "null" && s !== "undefined";
+    });
+
+    if (hasMeaningfulContent) {
+      currentRows.push(r7);
+    }
+  });
+
+  flushCurrentMonth();
+  return monthlyMap;
+}
+
