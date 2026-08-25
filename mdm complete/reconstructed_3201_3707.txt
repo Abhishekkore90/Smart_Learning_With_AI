@@ -1,0 +1,66 @@
+Created At: 2026-06-03T06:04:16Z
+Completed At: 2026-06-03T06:04:16Z
+File Path: `file:///d:/Abhi/Project%27s/pure-pixel-showcase-main%202/pure-pixel-showcase-main%202/pure-pixel-showcase-main/src/routes/teacher.mdm.tsx`
+Total Lines: 3707
+Total Bytes: 222724
+Showing lines 3201 to 3707
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+3201:                                           value={item.cookedDays}
+3202:                                           readOnly
+3203:                                           className="w-[90%] mx-auto text-center border border-slate-200 rounded p-1 outline-none bg-slate-50 text-slate-500 font-bold"
+3204:                                         />
+3205:                                       </td>
+3206:                                       
+3207:                                       {/* Beneficiary - in current month */}
+3208:                                       <td className="border border-black p-1 text-center">
+3209:                                         <input 
+3210:                                           type="number"
+3211:                                           value={item.beneficiary}
+3212:                                           readOnly
+3213:                                           className="w-[90%] 
+3663:                                 }
+3664:                               }
+3665:                             `}</style>
+3666: 
+3667:                             {/* Actions */}
+3668:                             <div className="flex justify-end gap-3 mt-4 print:hidden">
+3669:                               <button 
+3670:                                 onClick={() => window.print()}
+3671:                                 className="px-6 py-2 bg-[#007bff] hover:bg-blue-700 text-white rounded text-sm font-semibold shadow-md transition-all active:scale-95"
+3672:                               >
+3673:                                 Print
+3674:                               </button>
+3675:                               <button 
+3676:                                 onClick={() => setShowDemandReportModal(false)}
+3677:                                 className="px-6 py-2 bg-[#f44336] hover:bg-red-700 text-white rounded text-sm font-semibold shadow-md transition-all active:scale-95 ml-3"
+3678:                               >
+3679:                                 Close
+3680:                               </button>
+3681:                             </div>
+3682:                           </div>
+3683:                         </div>
+3684:                       )}
+3685:                       </div>
+3686:                 )}
+3687: 
+3688: 
+3689: 
+3690: 
+3691: 
+3692: 
+3693:               </motion.div>
+3694:             </AnimatePresence>
+3695:           )}
+3696: 
+3697: 
+3698: 
+3699:         </div>
+3700: 
+3701: 
+3702: 
+3703:       </main>
+3704:     </div>
+3705:   );
+3706: }
+3707: 
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

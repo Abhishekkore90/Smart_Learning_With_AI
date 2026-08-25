@@ -43,6 +43,10 @@ import { toast } from "sonner";
 import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
 import { saveFileToIndexedDB, getFileFromIndexedDB } from "@/lib/indexedDbStorage";
 import { extractTableRowsFromPdf } from "@/lib/pdfParser";
+import { parseExcelFile, ParsedTableCell } from "@/lib/tableParser";
+import { parsePlanningExcelFile, PlanningCategory, PlanningDocumentRecord } from "@/lib/smartPlanningParser";
+import { extractSubjectSectionsFromExcel, splitRowsIntoSubjectSections } from "@/lib/smartSubjectSplitter";
+import { PlanningTableRenderer } from "@/components/teacher/PlanningTableRenderer";
 import * as XLSX from "xlsx";
 
 // Helper to identify subject change / section header rows in raw Excel data
@@ -398,7 +402,7 @@ const extractExcelData = async (
     const rawDataRows: string[][] = dataRows.map((row) => {
       const nonEmpties = row.filter((c) => c !== "");
       const isTitleRow = nonEmpties.length === 1 && (nonEmpties[0].toLowerCase().includes("नियोजन") || nonEmpties[0].toLowerCase().includes("माहे"));
-      
+
       if (isTitleRow) {
         lastVal.fill("");
         return row;
@@ -1280,12 +1284,44 @@ export function AcademicPlanningSystem({
         console.warn("File extraction notice:", exErr);
       }
 
-      const rowsToSave =
+      let rowsToSave =
         extractedRows.length > 0
           ? extractedRows
           : uploadingType === "annual"
             ? DEFAULT_ALL_SUBJECTS_ANNUAL_ROWS
             : DEFAULT_ANNUAL_ROWS;
+
+      // Tag each tableRow with correct subject using smart subject detection from rawDataRows
+      if (excelRawDataRows.length > 0 && rowsToSave.length > 0) {
+        try {
+          const subjectSectionMap = splitRowsIntoSubjectSections(excelRawDataRows, selectedSubject || "मराठी");
+          const subjectKeys = Object.keys(subjectSectionMap);
+          if (subjectKeys.length > 0) {
+            // Build a flat list of rows with subject tagged
+            const taggedRows: PlanningTableRow[] = [];
+            subjectKeys.forEach((subjKey) => {
+              const sec = subjectSectionMap[subjKey];
+              sec.rows.forEach((r, ri) => {
+                taggedRows.push({
+                  id: `upload_${Date.now()}_${subjKey}_${ri}`,
+                  month: r[0] || "",
+                  weeks: r[1] || "",
+                  workingDays: r[2] || "",
+                  periods: r[3] || "",
+                  topics: r[4] || "",
+                  outcomes: r[5] || "",
+                  subject: sec.subjectName,
+                });
+              });
+            });
+            if (taggedRows.length > 0) {
+              rowsToSave = taggedRows;
+            }
+          }
+        } catch (tagErr) {
+          console.warn("Subject tagging notice:", tagErr);
+        }
+      }
 
       setUploadProgress(100);
 
@@ -1598,10 +1634,10 @@ export function AcademicPlanningSystem({
                   disabled={thisIdx > currIdx}
                   onClick={() => setStep(s.id as any)}
                   className={`size-10 rounded-2xl flex items-center justify-center text-xs font-black transition-all cursor-pointer ${isActive
-                      ? "bg-indigo-600 text-white shadow-lg ring-4 ring-indigo-100 scale-110"
-                      : isCompleted
-                        ? "bg-slate-900 text-white hover:bg-slate-800"
-                        : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                    ? "bg-indigo-600 text-white shadow-lg ring-4 ring-indigo-100 scale-110"
+                    : isCompleted
+                      ? "bg-slate-900 text-white hover:bg-slate-800"
+                      : "bg-slate-100 text-slate-400 cursor-not-allowed"
                     }`}
                 >
                   {isCompleted ? <CheckCircle2 className="size-4 text-emerald-400" /> : idx + 1}
@@ -1642,15 +1678,15 @@ export function AcademicPlanningSystem({
                         setStep("class");
                       }}
                       className={`p-8 rounded-3xl border text-left transition-all duration-300 cursor-pointer flex flex-col justify-between gap-6 relative overflow-hidden group ${isSelected
-                          ? "bg-gradient-to-br from-indigo-700 to-purple-800 text-white border-indigo-700 shadow-2xl scale-102"
-                          : "bg-white text-slate-800 border-slate-200 hover:border-indigo-400 hover:shadow-xl hover:scale-101"
+                        ? "bg-gradient-to-br from-indigo-700 to-purple-800 text-white border-indigo-700 shadow-2xl scale-102"
+                        : "bg-white text-slate-800 border-slate-200 hover:border-indigo-400 hover:shadow-xl hover:scale-101"
                         }`}
                     >
                       <div className="flex items-center justify-between w-full">
                         <div
                           className={`size-14 rounded-2xl flex items-center justify-center font-black text-lg ${isSelected
-                              ? "bg-white/20 text-white"
-                              : "bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors"
+                            ? "bg-white/20 text-white"
+                            : "bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors"
                             }`}
                         >
                           <Languages className="size-7" />
@@ -1705,14 +1741,14 @@ export function AcademicPlanningSystem({
                         setStep("type");
                       }}
                       className={`p-6 rounded-3xl border text-center transition-all duration-300 cursor-pointer flex flex-col items-center gap-3 relative overflow-hidden group ${isSelected
-                          ? "bg-indigo-600 text-white border-indigo-600 shadow-xl shadow-indigo-200 scale-105"
-                          : "bg-white text-slate-800 border-slate-200 hover:border-indigo-400 hover:shadow-lg hover:scale-102"
+                        ? "bg-indigo-600 text-white border-indigo-600 shadow-xl shadow-indigo-200 scale-105"
+                        : "bg-white text-slate-800 border-slate-200 hover:border-indigo-400 hover:shadow-lg hover:scale-102"
                         }`}
                     >
                       <div
                         className={`size-12 rounded-2xl flex items-center justify-center font-black text-base ${isSelected
-                            ? "bg-white/20 text-white"
-                            : "bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors"
+                          ? "bg-white/20 text-white"
+                          : "bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors"
                           }`}
                       >
                         <GraduationCap className="size-6" />
@@ -2229,8 +2265,8 @@ export function AcademicPlanningSystem({
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             className={`bg-white rounded-2xl sm:rounded-3xl w-full flex flex-col shadow-2xl overflow-hidden border border-slate-700/50 transition-all duration-300 ${isPdfFullscreen
-                ? "h-full max-w-none max-h-none rounded-xl sm:rounded-2xl"
-                : "max-w-5xl h-[82vh] max-h-[85vh] mt-10"
+              ? "h-full max-w-none max-h-none rounded-xl sm:rounded-2xl"
+              : "max-w-5xl h-[82vh] max-h-[85vh] mt-10"
               }`}
           >
             {/* Modal Header */}
