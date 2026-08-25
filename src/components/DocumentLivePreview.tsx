@@ -45,6 +45,29 @@ const normalizeDateStr = (raw: string | undefined | null) => {
   return formatCleanDate(raw);
 };
 
+export const getMarathiDayName = (dateStr: string) => {
+  if (!dateStr || dateStr === "-") return "";
+  try {
+    let m = dateStr.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+    let d: Date | null = null;
+    if (m) {
+      d = new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]));
+    } else {
+      m = dateStr.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+      if (m) {
+        let y = parseInt(m[3]);
+        if (y < 100) y += 2000;
+        d = new Date(y, parseInt(m[2]) - 1, parseInt(m[1]));
+      }
+    }
+    if (d && !isNaN(d.getTime())) {
+      const days = ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
+      return days[d.getDay()];
+    }
+  } catch (e) {}
+  return "";
+};
+
 export function getStoredSchoolProfile() {
   try {
     if (typeof window !== "undefined") {
@@ -751,9 +774,9 @@ export interface StructuredDayPageListRef {
   getEditedData: () => any[];
 }
 
-export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { pages: StructuredDayPage[] }>(({ pages }, ref) => {
+export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { pages: StructuredDayPage[], schoolProfile?: any }>(({ pages, schoolProfile }, ref) => {
   const [dayRecords, setDayRecords] = useState<any[]>([]);
-  const profile = useMemo(() => getStoredSchoolProfile(), []);
+  const profile = useMemo(() => schoolProfile || getStoredSchoolProfile(), [schoolProfile]);
 
   useEffect(() => {
     setDayRecords(groupStructuredPagesByDay(pages));
@@ -872,7 +895,7 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
             
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 text-xs font-bold text-slate-900 bg-slate-100/80 p-4 rounded-2xl border-2 border-slate-400 shadow-sm text-left">
               <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">दिनांक</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "date", e.currentTarget.textContent || "")} className="text-orange-600 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{formatCleanDate(p.date)}</span></div>
-              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">वार</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "day", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.day || "-"}</span></div>
+              <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">वार</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "day", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.day && p.day !== "-" ? p.day : (getMarathiDayName(p.date) || "-")}</span></div>
               <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">वर्गशिक्षक</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "teacher", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.teacher && p.teacher !== "-" ? p.teacher : (profile?.teacherName || "-")}</span></div>
               <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">शाळा</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "school", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.school && p.school !== "-" ? p.school : (profile?.schoolName || "-")}</span></div>
               <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">इयत्ता</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "std", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.std && p.std !== "-" && p.std !== "पहिली" ? p.std : (profile?.className || p.std || "-")}</span></div>
@@ -1018,6 +1041,7 @@ export interface DocumentLivePreviewProps {
   authenticatedPdfUrl?: string | null;
   loadingPdf?: boolean;
   onBack?: () => void;
+  schoolProfile?: any;
 }
 
 export interface DocumentLivePreviewRef {
@@ -1029,7 +1053,8 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
   savedRecord,
   authenticatedPdfUrl,
   loadingPdf = false,
-  onBack
+  onBack,
+  schoolProfile
 }, ref) => {
   const [htmlContent, setHtmlContent] = useState<string | null>(null);
   const [structuredPages, setStructuredPages] = useState<StructuredDayPage[]>([]);
@@ -1163,6 +1188,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
     setExcelPreviewData(null);
     setErrorMsg(null);
     setViewMode(isPdf ? "original" : "structured");
+    setFilterSingleDate(false);
 
     if (savedRecord && (savedRecord as any).structuredData && (savedRecord as any).structuredData.length > 0) {
       setStructuredPages((savedRecord as any).structuredData);
@@ -1308,7 +1334,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
     }
   }, [selectedFile, savedRecord, isPdf]);
 
-  const [filterSingleDate, setFilterSingleDate] = useState<boolean>(true);
+  const [filterSingleDate, setFilterSingleDate] = useState<boolean>(false);
 
   const pdfUrlToDisplay = selectedFile && isPdf
     ? localPdfBlobUrl
@@ -1319,52 +1345,8 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
   }, [savedRecord?.diaryDate]);
 
   const pagesToDisplay = useMemo(() => {
-    if (!structuredPages || structuredPages.length === 0) return [];
-    if (filterSingleDate && savedRecord?.diaryDate) {
-      const targetIso = savedRecord.diaryDate.trim();
-      const parts = targetIso.split("-");
-
-      const matched = structuredPages.filter((p) => {
-        if (!p.date) return false;
-        const pClean = p.date.trim();
-        if (pClean === targetIso) return true;
-
-        if (parts.length === 3) {
-          const dTarget = parseInt(parts[2], 10);
-          const mTarget = parseInt(parts[1], 10);
-
-          const m = pClean.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
-          if (m && parseInt(m[1], 10) === dTarget && parseInt(m[2], 10) === mTarget) return true;
-
-          const mIso = pClean.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
-          if (mIso && parseInt(mIso[3], 10) === dTarget && parseInt(mIso[2], 10) === mTarget) return true;
-        }
-        return false;
-      });
-
-      if (matched.length > 0) return matched;
-
-      // Fallback by working day index (excluding Sundays)
-      if (parts.length === 3) {
-        const yTarget = parseInt(parts[0], 10);
-        const mTarget = parseInt(parts[1], 10);
-        const dTarget = parseInt(parts[2], 10);
-
-        if (!isNaN(yTarget) && !isNaN(mTarget) && !isNaN(dTarget)) {
-          let workingCount = 0;
-          for (let d = 1; d <= dTarget; d++) {
-            const testD = new Date(yTarget, mTarget - 1, d);
-            if (testD.getDay() !== 0) workingCount++;
-          }
-          const dayIdx = Math.max(0, workingCount - 1);
-          if (dayIdx >= 0 && dayIdx < structuredPages.length) {
-            return [structuredPages[dayIdx]];
-          }
-        }
-      }
-    }
-    return structuredPages;
-  }, [structuredPages, filterSingleDate, savedRecord?.diaryDate]);
+    return structuredPages || [];
+  }, [structuredPages]);
 
   const hasStructuredView = pagesToDisplay && pagesToDisplay.length > 0;
   const downloadUrl = savedRecord?.pageUrl || (selectedFile ? localPdfBlobUrl : null);
@@ -1380,7 +1362,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
       : (structuredPages && structuredPages.length > 0)
         ? structuredPages
         : (savedRecord as any)?.structuredData || pagesToDisplay;
-    const profile = getStoredSchoolProfile();
+    const profile = schoolProfile || getStoredSchoolProfile();
     const cleanText = (txt: any) => {
       if (!txt || txt === "-") return "-";
       return String(txt)
@@ -1408,6 +1390,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
           const headers = (p.columnHeaders && p.columnHeaders.length > 0 ? p.columnHeaders : defaultHeaders)
             .map((h: string) => `<th style="background-color:#1e293b;color:#ffffff;padding:10px;text-align:left;font-weight:bold;border:1.5pt solid #475569;">${cleanText(h)}</th>`).join("");
 
+          const dayVal = cleanText(p.day && p.day !== "-" ? p.day : (getMarathiDayName(p.date) || "-"));
           const teacherVal = cleanText(p.teacher && p.teacher !== "-" ? p.teacher : (profile?.teacherName || "-"));
           const schoolVal = cleanText(p.school && p.school !== "-" ? p.school : (profile?.schoolName || "-"));
           const stdVal = cleanText(p.std && p.std !== "-" && p.std !== "पहिली" ? p.std : (profile?.className || p.std || "-"));
@@ -1419,7 +1402,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
               <table style="width:100%; border-collapse:collapse; margin-bottom:15px; background:#f1f5f9; border:2pt solid #475569; font-size:11px;">
                 <tr>
                   <td style="padding:6px 10px; border:1.5pt solid #64748b;"><b>दिनांक:</b> <span style="color:#4338ca;">${cleanText(formatCleanDate(p.date))}</span></td>
-                  <td style="padding:6px 10px; border:1.5pt solid #64748b;"><b>वार:</b> ${cleanText(p.day)}</td>
+                  <td style="padding:6px 10px; border:1.5pt solid #64748b;"><b>वार:</b> ${dayVal}</td>
                   <td style="padding:6px 10px; border:1.5pt solid #64748b;"><b>वर्गशिक्षक:</b> ${teacherVal}</td>
                 </tr>
                 <tr>
@@ -1564,6 +1547,8 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
       return handleDownloadWord();
     }
 
+    const profile = schoolProfile || getStoredSchoolProfile();
+
     setIsGeneratingPdf(true);
     toast.success("PDF डाउनलोड तयार होत आहे... (Generating PDF...)");
 
@@ -1586,6 +1571,12 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
         const headers = (p.columnHeaders && p.columnHeaders.length > 0 ? p.columnHeaders : defaultHeaders)
           .map((h: string) => `<th>${h}</th>`).join("");
 
+        const dayVal = p.day && p.day !== "-" ? p.day : (getMarathiDayName(p.date) || "-");
+        const teacherVal = p.teacher && p.teacher !== "-" ? p.teacher : (profile?.teacherName || "-");
+        const schoolVal = p.school && p.school !== "-" ? p.school : (profile?.schoolName || "-");
+        const stdVal = p.std && p.std !== "-" && p.std !== "पहिली" ? p.std : (profile?.className || p.std || "-");
+        const yearVal = p.year && p.year !== "-" ? p.year : (profile?.academicYear || "2026-27");
+
         return `
           <div class="day-block" style="margin-bottom: 15px; ${idx > 0 ? "page-break-before: always; break-before: always;" : ""} page-break-inside: avoid; break-inside: avoid;">
             <div class="day-header" style="display: flex; justify-content: flex-end; margin-bottom: 6px;">
@@ -1596,11 +1587,11 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
             <h2 style="font-size: 18px; font-weight: 900; text-align: center; color: #0f172a; margin: 8px 0 12px 0;">दैनंदिन पाठ टाचण</h2>
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; background: #f1f5f9; border: 2px solid #475569; border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; font-size: 11px;">
               <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">दिनांक</span><span style="font-weight:900; color:#4338ca; font-size:12px;">${formatCleanDate(p.date)}</span></div>
-              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">वार</span><span style="font-weight:900; color:#0f172a;">${p.day || "-"}</span></div>
-              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">वर्गशिक्षक</span><span style="font-weight:900; color:#0f172a;">${p.teacher || "-"}</span></div>
-              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">शाळा</span><span style="font-weight:900; color:#0f172a;">${p.school || "-"}</span></div>
-              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">इयत्ता</span><span style="font-weight:900; color:#0f172a;">${p.std || "-"}</span></div>
-              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">सन</span><span style="font-weight:900; color:#0f172a;">${p.year || "-"}</span></div>
+              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">वार</span><span style="font-weight:900; color:#0f172a;">${dayVal}</span></div>
+              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">वर्गशिक्षक</span><span style="font-weight:900; color:#0f172a;">${teacherVal}</span></div>
+              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">शाळा</span><span style="font-weight:900; color:#0f172a;">${schoolVal}</span></div>
+              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">इयत्ता</span><span style="font-weight:900; color:#0f172a;">${stdVal}</span></div>
+              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">सन</span><span style="font-weight:900; color:#0f172a;">${yearVal}</span></div>
             </div>
             ${p.thought ? `<div style="font-size:10.5px; font-style:italic; color:#78350f; background:#fffbeb; border-left:3px solid #f59e0b; padding:7px 12px; margin-bottom:10px; border-radius:4px;">✨ आजचा सुविचार : '${p.thought}'</div>` : ""}
             <table style="width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 12px;">
@@ -1692,21 +1683,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          {savedRecord?.diaryDate && structuredPages && structuredPages.length > 1 && (
-            <button
-              type="button"
-              onClick={() => setFilterSingleDate(!filterSingleDate)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all border cursor-pointer ${
-                filterSingleDate
-                  ? "bg-amber-500 text-white border-amber-600 shadow-sm"
-                  : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700"
-              }`}
-            >
-              {filterSingleDate
-                ? `📌 फक्त ${formatCleanDate(savedRecord.diaryDate)} ची टाचण`
-                : "📚 सर्व तारखा (1-12 Dates)"}
-            </button>
-          )}
+
 
           {isPdf && hasStructuredView && (
             <div className="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700 text-xs font-bold">
@@ -1737,17 +1714,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
 
           {(downloadUrl || hasStructuredView) && (
             <div className="flex items-center gap-2">
-              <button
-                onClick={handleDownloadWord}
-                disabled={isInnerDownloading}
-                className="px-3.5 py-1.5 bg-orange-600 hover:bg-orange-500 disabled:opacity-60 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shrink-0 shadow-sm cursor-pointer"
-              >
-                {isInnerDownloading ? (
-                  <><Loader2 className="size-3.5 animate-spin" /> Word तयार होत आहे...</>
-                ) : (
-                  <><Download className="size-3.5" /> Download to Word</>
-                )}
-              </button>
+
 
               {hasStructuredView && (
                 <button
@@ -1799,7 +1766,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
           </div>
         ) : viewMode === "structured" && pagesToDisplay.length > 0 ? (
           <div className="w-full">
-            <StructuredDayPageList ref={structuredListRef} pages={pagesToDisplay} />
+            <StructuredDayPageList ref={structuredListRef} pages={pagesToDisplay} schoolProfile={schoolProfile} />
           </div>
         ) : htmlContent ? (
           <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm max-w-3xl mx-auto prose prose-slate text-sm font-sans leading-relaxed text-slate-800">

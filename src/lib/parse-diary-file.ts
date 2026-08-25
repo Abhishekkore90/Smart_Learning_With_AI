@@ -826,9 +826,31 @@ export function parseDocxHtmlToDiaries(html: string, className: string): ParsedD
         }
       });
 
+      // Expand entries with >9 periods into 9-period day chunks
+      const expandedEntries: ParsedDiaryContent[] = [];
+      finalEntries.forEach((entry) => {
+        if (entry.periods && entry.periods.length > 9) {
+          const chunkSize = 9;
+          const totalChunks = Math.ceil(entry.periods.length / chunkSize);
+          for (let c = 0; c < totalChunks; c++) {
+            const chunkPeriods = entry.periods.slice(c * chunkSize, (c + 1) * chunkSize).map((p, idx) => ({
+              ...p,
+              period: String(idx + 1),
+            }));
+            expandedEntries.push({
+              ...entry,
+              date: c === 0 ? entry.date : "",
+              periods: chunkPeriods,
+            });
+          }
+        } else {
+          expandedEntries.push(entry);
+        }
+      });
+
       // Clear duplicate hardcoded dates so auto-mapper assigns sequential working dates (1 Aug, 2 Aug, 3 Aug...)
       const seenDates = new Set<string>();
-      finalEntries.forEach((entry) => {
+      expandedEntries.forEach((entry) => {
         if (entry.date) {
           if (seenDates.has(entry.date)) {
             entry.date = "";
@@ -838,7 +860,7 @@ export function parseDocxHtmlToDiaries(html: string, className: string): ParsedD
         }
       });
 
-      return finalEntries;
+      return expandedEntries;
     }
   }
 
