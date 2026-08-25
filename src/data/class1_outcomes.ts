@@ -179,22 +179,3 @@ export const CLASS_1_OUTCOMES: Record<string, OutcomeItem[]> = {
     { id: "sh27", code: "C-13.4.1", text: "वर्गातील नियमांबाबतच्या चर्चेत सहभागी होतो व वागतो." },
   ],
 };
-
-export const CLASS_1_SEMI_OUTCOMES: Record<string, OutcomeItem[]> = {
-  ...CLASS_1_OUTCOMES,
-  math: [
-    { id: "c1_semi_mt1", code: "01.71.01", text: "Works with numbers from 1 to 20." },
-    { id: "c1_semi_mt2", code: "01.71.02", text: "Classifies objects into groups based on the shape of the objects and size of the objects." },
-    { id: "c1_semi_mt3", code: "01.71.03", text: "Recites number name and counts objects up to 20, concretely, pictorially and symbolically." },
-    { id: "c1_semi_mt4", code: "01.71.04", text: "Counts objects using numbers 1 to 9." },
-    { id: "c1_semi_mt5", code: "01.71.05", text: "Compares numbers up to 20, for example, tell whether number of girls or number of boys is more in the class." },
-    { id: "c1_semi_mt6", code: "01.71.06", text: "Applies addition and subtraction of numbers 1 to 20 in day-to-day life." },
-    { id: "c1_semi_mt7", code: "01.71.07", text: "Constructs addition facts up to 9 by using concrete objects, for example, to find 3+3 counts 3 steps forward from 3 onwards and concludes that 3+3=6." },
-    { id: "c1_semi_mt8", code: "01.71.08", text: "Subtracts numbers using 1 to 9, for example, the child takes out 3 objects from a collection of 9 objects and counts the remaining to conclude 9-3=6." },
-    { id: "c1_semi_mt9", code: "01.71.09", text: "Solves day-to-day problems related to addition and subtraction of numbers up to 9." },
-    { id: "c1_semi_mt10", code: "01.71.10", text: "Recognizes numbers up to 99 and write numerals." },
-    { id: "c1_semi_mt11", code: "01.71.11", text: "Observes, extends and creates pattern of shapes and numbers, for example, arrangement of shapes/object/numbers like - □ △ □ △, - 1, 2, 3, 4, 5, .... - 1, 3, 5, .... - 2, 4, 6, .... - 1, 2, 3, 1, 2, .... - 1, .... 3, ..." },
-    { id: "c1_semi_mt12", code: "01.71.12", text: "Collects, records (using pictures/numerals) and interprets simple information by looking at visuals. (For example, in a picture of a garden the child looks at different flowers and draws inference that flowers of a certain colour are more.)" },
-    { id: "c1_semi_mt13", code: "01.71.13", text: "Understands the concept of zero." },
-  ],
-};

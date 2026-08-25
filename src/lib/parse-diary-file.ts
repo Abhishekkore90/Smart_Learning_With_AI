@@ -22,42 +22,66 @@ export interface ParsedDiaryContent {
   periods: ParsedPeriod[];
 }
 
-import { UniversalFileReader } from "@/services/fileReader";
-
 // ─── Text Extraction ───
 
 /**
- * Extract text from a PDF file using UniversalFileReader service
+ * Extract text from a PDF file using pdf.js
  */
 async function extractTextFromPDF(base64Data: string): Promise<string> {
   try {
+    // Dynamic import for pdfjs-dist
+    const pdfjsLib = await import("pdfjs-dist");
+    
+    // Set worker source
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+
+    // Convert base64 to ArrayBuffer
     const binaryString = atob(base64Data);
     const bytes = new Uint8Array(binaryString.length);
     for (let i = 0; i < binaryString.length; i++) {
       bytes[i] = binaryString.charCodeAt(i);
     }
-    const result = await UniversalFileReader.readFile(bytes.buffer as ArrayBuffer);
-    return result.text || "";
+
+    const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+    const textParts: string[] = [];
+
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items
+        .map((item: any) => item.str)
+        .join(" ");
+      textParts.push(pageText);
+    }
+
+    return textParts.join("\n");
   } catch (err) {
-    console.warn("PDF diary extraction notice:", err);
+    console.error("PDF extraction error:", err);
     return "";
   }
 }
 
 /**
- * Extract text from a DOCX file using UniversalFileReader service
+ * Extract text from a DOCX file using mammoth
  */
 async function extractTextFromDOCX(base64Data: string): Promise<string> {
   try {
+    const mammoth = await import("mammoth");
+
+    // Convert base64 to ArrayBuffer
     const binaryString = atob(base64Data);
     const bytes = new Uint8Array(binaryString.length);
     for (let i = 0; i < binaryString.length; i++) {
       bytes[i] = binaryString.charCodeAt(i);
     }
-    const result = await UniversalFileReader.readFile(bytes.buffer as ArrayBuffer);
-    return result.text || "";
+
+    const result = await mammoth.extractRawText({
+      arrayBuffer: bytes.buffer as ArrayBuffer,
+    });
+
+    return result.value;
   } catch (err) {
-    console.warn("DOCX diary extraction notice:", err);
+    console.error("DOCX extraction error:", err);
     return "";
   }
 }
@@ -139,15 +163,25 @@ function parseTextToDiary(rawText: string, className: string): ParsedDiaryConten
   // ─── Extract thought (suvichar) ───
   let thought = "";
   const thoughtPatterns = [
-    /(?:सुविचार|आजचा सुविचार)\s*[:：]?\s*(.+?)(?:\n|$)/i,
-    /(?:Thought|Today.?s Thought)\s*[:：]?\s*(.+?)(?:\n|$)/i,
+    /(?:आजचा\s*सुव\u200Dिचार|आजचा\s*(?:सु)?विचार|सुविचार|Thought|Today.?s Thought|Suvichar|िचार|विचार)\s*[:：\-]?\s*([^\n\r]+)/i,
+    /(?:आजचा\s*सुविचार\s*[:：\-]?\s*)([^\n\r]+)/i,
   ];
   for (const pattern of thoughtPatterns) {
     const match = fullText.match(pattern);
     if (match) {
-      thought = match[1].trim();
-      break;
+      const candidate = match[1]
+        .replace(/^[:\s\u0903-]+/, "")
+        .replace(/\s*(?:इयत्त्?ता|Class|Std|सन|Year|वार|Day|वर्गशिक्षक|शिक्षक|शाळा|दिनांक|तारीख).*$/i, "")
+        .trim();
+      if (candidate && candidate.length > 2) {
+        thought = candidate;
+        break;
+      }
     }
+  }
+
+  if (!thought) {
+    thought = "जेव्हा आपण नम्रतेने महान होतो , तेव्हा आपण महानतेच्या निकट जातो";
   }
 
   // ─── Extract dinvishesh ───
@@ -327,7 +361,7 @@ function parseTextToDiary(rawText: string, className: string): ParsedDiaryConten
       const chunkSize = Math.max(1, Math.ceil(contentLines.length / 4));
       let periodNum = 1;
       
-      for (let i = 0; i < contentLines.length && periodNum <= 8; i += chunkSize) {
+      for (let i = 0; i < contentLines.length && periodNum <= 12; i += chunkSize) {
         const chunk = contentLines.slice(i, i + chunkSize);
         periods.push({
           period: periodNum.toString(),
@@ -569,8 +603,10 @@ function createFallbackStructure(className: string): ParsedDiaryContent {
 
 export function parseAndStandardizeDate(dateStr: string | undefined | null): string | null {
   if (!dateStr) return null;
+  // Convert Marathi digits (०-९) to ASCII digits (0-9)
+  let clean = dateStr.trim().replace(/[०-९]/g, d => "०१२३४५६७८९".indexOf(d).toString());
   // Normalize internal spaces around date separators (e.g. "12/ 8 /2026" -> "12/8/2026")
-  let clean = dateStr.trim().replace(/(\d{1,2})\s*[\/\-\.]\s*(\d{1,2})\s*[\/\-\.]\s*(\d{2,4})/, "$1/$2/$3");
+  clean = clean.replace(/(\d{1,2})\s*[\/\-\.]\s*(\d{1,2})\s*[\/\-\.]\s*(\d{2,4})/, "$1/$2/$3");
   
   // Match DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY
   let m = clean.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
@@ -727,80 +763,89 @@ export function parseExcelToDiaries(arrayBuffer: ArrayBuffer, className: string)
 export function parseDocxHtmlToDiaries(html: string, className: string): ParsedDiaryContent[] {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, "text/html");
-  
-  // Un-wrap container elements (e.g., <div class="WordSection1">) so we iterate directly over top-level paragraphs and tables
-  let elements: Element[] = [];
-  const topChildren = Array.from(doc.body.children);
-  topChildren.forEach((child) => {
-    if ((child.tagName === "DIV" || child.tagName === "SECTION") && child.children.length > 0) {
-      elements.push(...Array.from(child.children));
-    } else {
-      elements.push(child);
-    }
-  });
-  if (elements.length === 0) {
-    elements = topChildren;
-  }
 
-  const dateRegex = /(?:तारीख|दिनांक|Date)?\s*[:：]?\s*(\d{1,2}\s*[\/\-\.]\s*\d{1,2}\s*[\/\-\.]\s*\d{2,4})/gi;
-  const allText = doc.body.textContent || "";
-  const dateMatches: { dateStr: string; index: number }[] = [];
-  let match;
-  while ((match = dateRegex.exec(allText)) !== null) {
-    const std = parseAndStandardizeDate(match[1]);
-    if (std) {
-      dateMatches.push({ dateStr: match[1], index: match.index });
-    }
-  }
+  // Query ALL table elements anywhere in the HTML document
+  const tables = Array.from(doc.querySelectorAll("table"));
 
-  // If 0 or 1 date match found in the whole document, treat the ENTIRE document as a single section!
-  if (dateMatches.length <= 1) {
-    const singleDateStr = dateMatches.length === 1 ? dateMatches[0].dateStr : "";
-    return [parseHtmlSection({ dateStr: singleDateStr, elements }, className)];
-  }
+  if (tables.length > 0) {
+    const rawParsedList: ParsedDiaryContent[] = [];
 
-  // If multiple distinct dates found, split elements by date section
-  const sections: { dateStr: string; elements: Element[] }[] = [];
-  let currentSection: { dateStr: string; elements: Element[] } | null = null;
+    tables.forEach((tableEl) => {
+      // Find preceding text elements before this table
+      let prevText = "";
+      let curr: Element | null = tableEl.previousElementSibling;
+      const textParts: string[] = [];
+      while (curr && curr.tagName !== "TABLE") {
+        textParts.unshift(curr.textContent || "");
+        curr = curr.previousElementSibling;
+      }
+      prevText = textParts.join("\n");
 
-  elements.forEach((el) => {
-    const text = el.textContent || "";
-    const dMatch = text.match(/(?:तारीख|दिनांक|Date)?\s*[:：]?\s*(\d{1,2}\s*[\/\-\.]\s*\d{1,2}\s*[\/\-\.]\s*\d{2,4})/i);
-    if (dMatch) {
-      const std = parseAndStandardizeDate(dMatch[1]);
-      if (std) {
-        if (!currentSection || currentSection.elements.length > 0) {
-          currentSection = { dateStr: dMatch[1], elements: [] };
-          sections.push(currentSection);
+      const secData = parseHtmlSection({ textElements: [], table: tableEl }, className);
+      if (prevText) {
+        const dMatch = prevText.match(/(?:तारीख|दिनांक|Date)\s*[:：]?\s*(\d{1,2}\s*[\/\-\.]\s*\d{1,2}\s*[\/\-\.]\s*\d{2,4})/i);
+        if (dMatch) {
+          const parsedD = parseAndStandardizeDate(dMatch[1]);
+          if (parsedD) secData.date = parsedD;
+        }
+        const tMatch = prevText.match(/(?:आजचा\s*सुविचार|सुविचार|Thought)\s*[:：\-]?\s*([^\n\r]+)/i);
+        if (tMatch && !secData.thought) {
+          secData.thought = tMatch[1].trim();
         }
       }
-    }
-    if (!currentSection) {
-      currentSection = { dateStr: dateMatches[0].dateStr, elements: [] };
-      sections.push(currentSection);
-    }
-    currentSection.elements.push(el);
-  });
 
-  const rawParsedList = sections.map(sec => parseHtmlSection(sec, className)).filter(Boolean) as ParsedDiaryContent[];
-
-  // Merge sections with the same date
-  const mergedMap: Record<string, ParsedDiaryContent> = {};
-  rawParsedList.forEach((item) => {
-    const key = item.date || "default";
-    if (!mergedMap[key]) {
-      mergedMap[key] = { ...item, periods: [...(item.periods || [])] };
-    } else {
-      if (!mergedMap[key].day && item.day) mergedMap[key].day = item.day;
-      if (!mergedMap[key].thought && item.thought) mergedMap[key].thought = item.thought;
-      if (!mergedMap[key].dinvishesh && item.dinvishesh) mergedMap[key].dinvishesh = item.dinvishesh;
-      if (item.periods && item.periods.length > 0) {
-        mergedMap[key].periods.push(...item.periods);
+      if (secData.periods.length > 0 || secData.thought || secData.date) {
+        rawParsedList.push(secData);
       }
-    }
-  });
+    });
 
-  return Object.values(mergedMap);
+    if (rawParsedList.length > 0) {
+      // Process sections into separate day entries
+      const finalEntries: ParsedDiaryContent[] = [];
+      rawParsedList.forEach((item) => {
+        if (finalEntries.length === 0) {
+          finalEntries.push({ ...item, periods: [...(item.periods || [])] });
+        } else {
+          const last = finalEntries[finalEntries.length - 1];
+          const isNewDayTable =
+            (item.date && last.date && item.date !== last.date) ||
+            (item.periods && item.periods.some((p) => p.period === "1" || p.period === "१")) ||
+            (item.periods && item.periods.length > 0 && last.periods && last.periods.length >= 4);
+
+          if (isNewDayTable) {
+            finalEntries.push({ ...item, periods: [...(item.periods || [])] });
+          } else {
+            // Continuation section of the previous table
+            if (!last.day && item.day) last.day = item.day;
+            if (!last.thought && item.thought) last.thought = item.thought;
+            if (!last.dinvishesh && item.dinvishesh) last.dinvishesh = item.dinvishesh;
+            if (item.periods && item.periods.length > 0) {
+              last.periods.push(...item.periods);
+            }
+          }
+        }
+      });
+
+      // Clear duplicate hardcoded dates so auto-mapper assigns sequential working dates (1 Aug, 2 Aug, 3 Aug...)
+      const seenDates = new Set<string>();
+      finalEntries.forEach((entry) => {
+        if (entry.date) {
+          if (seenDates.has(entry.date)) {
+            entry.date = "";
+          } else {
+            seenDates.add(entry.date);
+          }
+        }
+      });
+
+      return finalEntries;
+    }
+  }
+
+  // Fallback: If no separate tables found or text-based splitting needed
+  const rawText = doc.body.textContent || "";
+  const textDiaries = splitTextByDates(rawText, className);
+  return textDiaries.length > 0 ? textDiaries : [parseHtmlSection({ textElements: Array.from(doc.body.children) }, className)];
 }
 
 function getCellTextWithNewlines(cell: Element): string {
@@ -851,122 +896,144 @@ function parseHtmlTableToGrid(tableEl: Element): string[][] {
   return grid;
 }
 
-function parseHtmlSection(sec: { dateStr: string; elements: Element[] }, className: string): ParsedDiaryContent {
-  let date = parseAndStandardizeDate(sec.dateStr) || "";
+function parseHtmlSection(
+  sec: { textElements: Element[]; table?: Element },
+  className: string
+): ParsedDiaryContent {
+  const textElsText = sec.textElements.map((el) => el.textContent || "").join("\n");
+  const tableText = sec.table
+    ? Array.from(sec.table.querySelectorAll("tr"))
+        .map((r) => Array.from(r.querySelectorAll("td, th")).map((c) => c.textContent || "").join(" "))
+        .join("\n")
+    : "";
+  const fullSectionText = textElsText + "\n" + tableText;
+
+  let date = "";
+  const dateMatch = fullSectionText.match(/(?:तारीख|दिनांक|Date)\s*[:：]?\s*(\d{1,2}\s*[\/\-\.]\s*\d{1,2}\s*[\/\-\.]\s*\d{2,4})/i);
+  if (dateMatch) {
+    date = parseAndStandardizeDate(dateMatch[1]) || "";
+  }
+  if (!date) {
+    const standaloneMatch = fullSectionText.match(/\b(\d{1,2}\s*[\/\-\.]\s*\d{1,2}\s*[\/\-\.]\s*\d{2,4})\b/);
+    if (standaloneMatch) {
+      date = parseAndStandardizeDate(standaloneMatch[1]) || "";
+    }
+  }
+
   let day = "";
+  const dayRegex = /(?:दिवस|वार|Day)\s*[:：]?\s*(सोमवार|मंगळवार|बुधवार|गुरुवार|शुक्रवार|शनिवार|रविवार|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/i;
+  const dayMatch = fullSectionText.match(dayRegex);
+  if (dayMatch) {
+    day = dayMatch[1].trim();
+  }
+
   let thought = "";
+  const thoughtRegex = /(?:आजचा\s*सुव\u200Dिचार|आजचा\s*(?:सु)?विचार|सुविचार|Thought|Today.?s Thought)\s*[:：\-]?\s*([^\n\r]+)/i;
+  const thoughtMatch = fullSectionText.match(thoughtRegex);
+  if (thoughtMatch) {
+    thought = thoughtMatch[1]
+      .replace(/^[:\s\u0903-]+/, "")
+      .replace(/\s*(?:इयत्त्?ता|Class|Std|सन|Year|वार|Day|वर्गशिक्षक|शिक्षक|शाळा|दिनांक|तारीख).*$/i, "")
+      .trim();
+  }
+
   let dinvishesh = "";
+  const dinvisheshRegex = /(?:दिनविशेष|आजचा दिनविशेष|Day Special|Special Day)\s*[:：]?\s*([^\n\r]+)/i;
+  const dinMatch = fullSectionText.match(dinvisheshRegex);
+  if (dinMatch) {
+    dinvishesh = dinMatch[1].trim();
+  }
+
   let highlights = "";
+  const highlightsRegex = /(?:दिवसातील प्रमुख उपक्रम|प्रमुख उपक्रम|Highlights|Activities)\s*[:：]?\s*([^\n\r]+)/i;
+  const highMatch = fullSectionText.match(highlightsRegex);
+  if (highMatch) {
+    highlights = highMatch[1].trim();
+  }
+
   const periods: ParsedPeriod[] = [];
 
-  const thoughtRegex = /(?:सुविचार|आजचा सुविचार|Thought|Today.?s Thought)\s*[:：]?\s*(.+)/i;
-  const dinvisheshRegex = /(?:दिनविशेष|आजचा दिनविशेष|Day Special|Special Day)\s*[:：]?\s*(.+)/i;
-  const highlightsRegex = /(?:दिवसातील प्रमुख उपक्रम|प्रमुख उपक्रम|Highlights|Activities)\s*[:：]?\s*(.+)/i;
-  const dayRegex = /(?:दिवस|Day)\s*[:：]?\s*(सोमवार|मंगळवार|बुधवार|गुरुवार|शुक्रवार|शनिवार|रविवार|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/i;
-
-  sec.elements.forEach((el) => {
-    const text = el.textContent || "";
-    
-    const dayMatch = text.match(dayRegex);
-    if (dayMatch && !day) {
-      day = dayMatch[1].trim();
-    }
-
-    const thoughtMatch = text.match(thoughtRegex);
-    if (thoughtMatch && !thought) {
-      thought = thoughtMatch[1].trim();
-    }
-
-    const dinMatch = text.match(dinvisheshRegex);
-    if (dinMatch && !dinvishesh) {
-      dinvishesh = dinMatch[1].trim();
-    }
-
-    const highMatch = text.match(highlightsRegex);
-    if (highMatch && !highlights) {
-      highlights = highMatch[1].trim();
-    }
-  });
-
-  // Extract all tables in sec.elements (including nested tables inside wrapper divs or sections)
   const tables: Element[] = [];
-  sec.elements.forEach((el) => {
-    if (el.tagName === "TABLE") {
-      tables.push(el);
-    } else {
-      const nestedTables = Array.from(el.querySelectorAll("table"));
-      tables.push(...nestedTables);
-    }
-  });
+  if (sec.table) {
+    tables.push(sec.table);
+  } else {
+    sec.textElements.forEach((el) => {
+      if (el.tagName === "TABLE") {
+        tables.push(el);
+      } else {
+        tables.push(...Array.from(el.querySelectorAll("table")));
+      }
+    });
+  }
 
   const uniqueTables = Array.from(new Set(tables));
 
   uniqueTables.forEach((tableEl) => {
     const grid = parseHtmlTableToGrid(tableEl);
     if (grid.length > 0) {
-        let headerRowIndex = -1;
-        for (let r = 0; r < Math.min(10, grid.length); r++) {
-          const rowCells = grid[r] || [];
-          if (rowCells.some(c => /तास|तासिका|विषय|घटक|Period|Subject|Topic/i.test(c))) {
-            headerRowIndex = r;
-            break;
-          }
-        }
-
-        let colMap = { period: 0, subject: 1, topic: 2, outcome: 3, experience: 4, tools: 5, materials: 6 };
-
-        if (headerRowIndex !== -1) {
-          const headerCells = (grid[headerRowIndex] || []).map(c => c.toLowerCase());
-          colMap = {
-            period: headerCells.findIndex(h => /तास|तासिका|period|time/i.test(h)),
-            subject: headerCells.findIndex(h => /विषय|subject/i.test(h)),
-            topic: headerCells.findIndex(h => /मुद्दा|पाठ्यांश|पाठ्यघटक|घटक|पाठ|topic|chapter/i.test(h)),
-            outcome: headerCells.findIndex(h => /निष्पत्ती|निष्पती|दर्शक|दर्शके|outcome|result/i.test(h)),
-            experience: headerCells.findIndex(h => /अनुभव|अनुभवाचे|स्वरूप|कृती|experience/i.test(h)),
-            tools: headerCells.findIndex(h => /साधन|तंत्र|tools|method/i.test(h)),
-            materials: headerCells.findIndex(h => /साहित्य|materials/i.test(h)),
-          };
-
-          if (colMap.period === -1) colMap.period = 0;
-          if (colMap.subject === -1) colMap.subject = 1;
-          if (colMap.topic === -1) colMap.topic = 2;
-          if (colMap.outcome === -1) colMap.outcome = 3;
-          if (colMap.experience === -1) colMap.experience = 4;
-          if (colMap.tools === -1) colMap.tools = 5;
-          if (colMap.materials === -1) colMap.materials = 6;
-        }
-
-        const startRow = headerRowIndex !== -1 ? headerRowIndex + 1 : 0;
-        for (let r = startRow; r < grid.length; r++) {
-          const cells = grid[r] || [];
-          if (cells.length < 2) continue;
-
-          const rawPeriodStr = colMap.period !== -1 && cells[colMap.period] ? cells[colMap.period] : "";
-          if (rawPeriodStr === "तासिका" || rawPeriodStr === "Period" || rawPeriodStr === "तास") continue;
-
-          const periodNum = rawPeriodStr || (periods.length + 1).toString();
-          const subject = colMap.subject !== -1 && cells[colMap.subject] ? cells[colMap.subject] : "";
-          const topic = colMap.topic !== -1 && cells[colMap.topic] ? cells[colMap.topic] : "";
-          const outcome = colMap.outcome !== -1 && cells[colMap.outcome] ? cells[colMap.outcome] : "";
-          const experience = colMap.experience !== -1 && cells[colMap.experience] ? cells[colMap.experience] : "";
-          const tools = colMap.tools !== -1 && cells[colMap.tools] ? cells[colMap.tools] : "";
-          const materials = colMap.materials !== -1 && cells[colMap.materials] ? cells[colMap.materials] : "";
-
-          if (subject || topic || outcome || experience) {
-            periods.push({
-              period: periodNum,
-              class: className,
-              subject,
-              topic,
-              experience,
-              tools,
-              materials,
-              outcome,
-            });
-          }
+      let headerRowIndex = -1;
+      for (let r = 0; r < Math.min(10, grid.length); r++) {
+        const rowCells = grid[r] || [];
+        if (rowCells.some(c => /तास|तासिका|विषय|घटक|Period|Subject|Topic/i.test(c))) {
+          headerRowIndex = r;
+          break;
         }
       }
-    });
+
+      let colMap = { period: 0, subject: 1, topic: 2, outcome: 3, experience: 4, tools: 5, materials: 6 };
+
+      if (headerRowIndex !== -1) {
+        const headerCells = (grid[headerRowIndex] || []).map(c => c.toLowerCase());
+        colMap = {
+          period: headerCells.findIndex(h => /तास|तासिका|period|time/i.test(h)),
+          subject: headerCells.findIndex(h => /विषय|subject/i.test(h)),
+          topic: headerCells.findIndex(h => /मुद्दा|पाठ्यांश|पाठ्यघटक|घटक|पाठ|topic|chapter/i.test(h)),
+          outcome: headerCells.findIndex(h => /निष्पत्ती|निष्पती|दर्शक|दर्शके|outcome|result/i.test(h)),
+          experience: headerCells.findIndex(h => /अनुभव|अनुभवाचे|स्वरूप|कृती|experience/i.test(h)),
+          tools: headerCells.findIndex(h => /साधन|तंत्र|tools|method/i.test(h)),
+          materials: headerCells.findIndex(h => /साहित्य|materials/i.test(h)),
+        };
+
+        if (colMap.period === -1) colMap.period = 0;
+        if (colMap.subject === -1) colMap.subject = 1;
+        if (colMap.topic === -1) colMap.topic = 2;
+        if (colMap.outcome === -1) colMap.outcome = 3;
+        if (colMap.experience === -1) colMap.experience = 4;
+        if (colMap.tools === -1) colMap.tools = 5;
+        if (colMap.materials === -1) colMap.materials = 6;
+      }
+
+      const startRow = headerRowIndex !== -1 ? headerRowIndex + 1 : 0;
+      for (let r = startRow; r < grid.length; r++) {
+        const cells = grid[r] || [];
+        if (cells.length < 2) continue;
+
+        const rawPeriodStr = colMap.period !== -1 && cells[colMap.period] ? cells[colMap.period] : "";
+        if (rawPeriodStr === "तासिका" || rawPeriodStr === "Period" || rawPeriodStr === "तास") continue;
+
+        const periodNum = rawPeriodStr || (periods.length + 1).toString();
+        const subject = colMap.subject !== -1 && cells[colMap.subject] ? cells[colMap.subject] : "";
+        const topic = colMap.topic !== -1 && cells[colMap.topic] ? cells[colMap.topic] : "";
+        const outcome = colMap.outcome !== -1 && cells[colMap.outcome] ? cells[colMap.outcome] : "";
+        const experience = colMap.experience !== -1 && cells[colMap.experience] ? cells[colMap.experience] : "";
+        const tools = colMap.tools !== -1 && cells[colMap.tools] ? cells[colMap.tools] : "";
+        const materials = colMap.materials !== -1 && cells[colMap.materials] ? cells[colMap.materials] : "";
+
+        if (subject || topic || outcome || experience) {
+          periods.push({
+            period: periodNum,
+            class: className,
+            subject,
+            topic,
+            experience,
+            tools,
+            materials,
+            outcome,
+          });
+        }
+      }
+    }
+  });
 
   return {
     date,
@@ -1193,7 +1260,7 @@ export async function saveParsedEntriesToFirestore({
   selectedMonth: string;
   selectedWeek: string;
 }): Promise<string[]> {
-  const { doc, setDoc } = await import("firebase/firestore");
+  const { doc, writeBatch } = await import("firebase/firestore");
   const { db } = await import("@/lib/firebase");
 
   const monthStr = selectedMonth || "01";
@@ -1209,15 +1276,12 @@ export async function saveParsedEntriesToFirestore({
   const dateCursor = new Date(parseInt(selectedYear, 10), parseInt(monthStr, 10) - 1, baseDay);
   const savedDates: string[] = [];
 
+  const batch = writeBatch(db);
+
   // Save primary file record in teacher_diaries so it represents the uploaded file
   const masterDocId = `file_${Date.now()}`;
   const masterDocRef = doc(db, "teacher_diaries", selectedClass, selectedMedium, masterDocId);
-  const firstValidDate = validEntries.length > 0 && validEntries[0].date ? (parseAndStandardizeDate(validEntries[0].date) || null) : null;
-  let primaryDateStr = firstValidDate || `${selectedYear}-${monthStr}-${String(baseDay).padStart(2, "0")}`;
-  if (primaryDateStr && selectedYear) {
-    const p = primaryDateStr.split("-");
-    if (p.length === 3) primaryDateStr = `${selectedYear}-${p[1]}-${p[2]}`;
-  }
+  const primaryDateStr = `${selectedYear}-${monthStr}-${String(baseDay).padStart(2, "0")}`;
 
   const masterData = {
     id: masterDocId,
@@ -1236,13 +1300,9 @@ export async function saveParsedEntriesToFirestore({
     periods: validEntries[0]?.periods || [],
   };
 
-  try {
-    await setDoc(masterDocRef, masterData, { merge: true });
-  } catch (e) {
-    console.error("Failed to save master record:", e);
-  }
+  batch.set(masterDocRef, masterData, { merge: true });
 
-  const count = validEntries.length > 0 ? validEntries.length : 10;
+  const count = validEntries.length > 1 ? validEntries.length : 31;
 
   for (let idx = 0; idx < count; idx++) {
     const entry = validEntries[idx] || null;
@@ -1258,13 +1318,6 @@ export async function saveParsedEntriesToFirestore({
       }
       targetDateStr = format(dateCursor, "yyyy-MM-dd");
       dateCursor.setDate(dateCursor.getDate() + 1);
-    }
-
-    if (targetDateStr && selectedYear) {
-      const parts = targetDateStr.split("-");
-      if (parts.length === 3) {
-        targetDateStr = `${selectedYear}-${parts[1]}-${parts[2]}`;
-      }
     }
 
     const parts = targetDateStr.split("-");
@@ -1295,27 +1348,29 @@ export async function saveParsedEntriesToFirestore({
       pageNumber: idx + 1,
       week: selectedWeek,
       month: selectedMonth,
-      thought: entry?.thought || validEntries[0]?.thought || "",
-      dinvishesh: entry?.dinvishesh || validEntries[0]?.dinvishesh || "",
+      thought: entry?.thought || "",
+      dinvishesh: entry?.dinvishesh || "",
       periods: periods,
       parsedContent: entry || { date: targetDateStr, day: dayName, periods },
       structuredData: validEntries.length > 0 ? validEntries : undefined,
     };
 
-    try {
-      // 1. Save to teacher_diaries doc for specific date
-      const teacherDocRef = doc(db, "teacher_diaries", selectedClass, selectedMedium, targetDateStr);
-      await setDoc(teacherDocRef, recordData, { merge: true });
+    // 1. Save to teacher_diaries doc for specific date
+    const teacherDocRef = doc(db, "teacher_diaries", selectedClass, selectedMedium, targetDateStr);
+    batch.set(teacherDocRef, recordData, { merge: true });
 
-      // 2. Save to teaching_diaries doc for specific date
-      const tdDocId = `${selectedClass}_${selectedMedium}_${targetDateStr}`;
-      const tdDocRef = doc(db, "teaching_diaries", tdDocId);
-      await setDoc(tdDocRef, recordData, { merge: true });
+    // 2. Save to teaching_diaries doc for specific date
+    const tdDocId = `${selectedClass}_${selectedMedium}_${targetDateStr}`;
+    const tdDocRef = doc(db, "teaching_diaries", tdDocId);
+    batch.set(tdDocRef, recordData, { merge: true });
 
-      savedDates.push(targetDateStr);
-    } catch (e) {
-      console.error(`Failed to save record for date ${targetDateStr}:`, e);
-    }
+    savedDates.push(targetDateStr);
+  }
+
+  try {
+    await batch.commit();
+  } catch (e) {
+    console.error("Failed to commit batch records:", e);
   }
 
   return savedDates;

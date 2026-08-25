@@ -513,16 +513,25 @@ function TeachingRecordPage() {
       <main className="lg:pl-64 pt-16 min-h-screen print:pl-0 print:pt-0 pb-24">
         <PinGate sectionKey="teaching_record">
           <div className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto space-y-6 print:p-0 print:max-w-full">
-            {/* Clean top navigation tabs matching Image 1 */}
-            <div className="flex items-center justify-between gap-4 print:hidden">
-              <div className="flex items-center gap-2">
+            {/* Top Navigation Bar with Back Button, Tabs & Breadcrumbs */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-3.5 sm:p-4 rounded-3xl border border-slate-200/80 shadow-sm print:hidden">
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-2xl text-xs font-black shadow-md transition-all active:scale-95 cursor-pointer"
+                >
+                  <ArrowLeft className="size-4 shrink-0" />
+                  <span>मागे जा (Back)</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => setActiveMainTab("diary")}
                   className={`px-4 py-2 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
                     activeMainTab === "diary"
                       ? "bg-slate-900 text-white shadow-md"
-                      : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
                   }`}
                 >
                   <BookOpen className="size-4" />
@@ -534,14 +543,66 @@ function TeachingRecordPage() {
                   className={`px-4 py-2 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
                     activeMainTab === "school_profile"
                       ? "bg-orange-600 text-white shadow-md shadow-orange-500/20"
-                      : "bg-orange-50 text-orange-900 hover:bg-orange-100 border border-orange-200"
+                      : "bg-orange-100 text-orange-900 hover:bg-orange-200 border border-orange-300"
                   }`}
                 >
                   <GraduationCap className="size-4 text-amber-500" />
-                  <span>🏫 यु-डायस व शाळा माहिती</span>
+                  <span>🏫 यू-डायस व शाळा माहिती (UDISE & School Info)</span>
                 </button>
               </div>
+
+              {/* Dynamic Breadcrumbs & Saved profile status badge */}
+              <div className="flex flex-wrap items-center gap-3">
+                {(schoolProfile.schoolName || schoolProfile.udiseCode) && (
+                  <div className="hidden md:flex items-center gap-2 text-xs font-bold text-slate-600 bg-slate-50 px-3.5 py-1.5 rounded-xl border border-slate-200">
+                    {schoolProfile.udiseCode && (
+                      <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-[10px] font-black">
+                        UDISE: {schoolProfile.udiseCode}
+                      </span>
+                    )}
+                    {schoolProfile.schoolName && <span className="text-orange-600 font-extrabold">{schoolProfile.schoolName}</span>}
+                    <span>•</span>
+                    <span>इयत्ता: <strong className="text-slate-900">{schoolProfile.className}</strong></span>
+                    <span>•</span>
+                    <span>सन: <strong className="text-emerald-600 font-black">{schoolProfile.academicYear || "2026-27"}</strong></span>
+                  </div>
+                )}
+                {selectedMedium && (
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold text-slate-600">
+                    <span className="text-orange-600 font-extrabold">{selectedMedium === "Marathi" ? "मराठी माध्यम" : "सेमी इंग्रजी"}</span>
+                    {selectedClass && (
+                      <>
+                        <ChevronRight className="size-3 text-slate-400" />
+                        <span className="text-orange-600 font-extrabold">{selectedClass}</span>
+                      </>
+                    )}
+                    {selectedMonth && (
+                      <>
+                        <ChevronRight className="size-3 text-slate-400" />
+                        <span className="text-pink-600 font-extrabold">{months.find(m => m.id === selectedMonth)?.mr}</span>
+                      </>
+                    )}
+                    {selectedWeek && (
+                      <>
+                        <ChevronRight className="size-3 text-slate-400" />
+                        <span className="text-indigo-600 font-extrabold">{weeks.find(w => w.id === selectedWeek)?.mr}</span>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
+
+            {/* Saved profile status badge */}
+            {schoolProfile.schoolName && (
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-600 bg-slate-50 px-3.5 py-1.5 rounded-xl border border-slate-200">
+                <span className="text-orange-600 font-extrabold">{schoolProfile.schoolName}</span>
+                <span>•</span>
+                <span>इयत्ता: <strong className="text-slate-900">{schoolProfile.className}</strong></span>
+                <span>•</span>
+                <span>सन: <strong className="text-emerald-600 font-black">{schoolProfile.academicYear || "2026-27"}</strong></span>
+              </div>
+            )}
 
             <AnimatePresence mode="wait">
               {activeMainTab === "school_profile" ? (

@@ -490,22 +490,22 @@ export const PlanningTableViewer: React.FC<PlanningTableViewerProps> = ({
       html += `<table class="pdf-table w-full table-fixed border-collapse border border-slate-400 text-xs font-sans my-0" style="width: 100%; table-layout: fixed; border-collapse: collapse;">`;
       html += `<colgroup>`;
       html += `<col style="width: 10%;" />`;
-      html += `<col style="width: 7%;" />`;
-      html += `<col style="width: 9%;" />`;
-      html += `<col style="width: 9%;" />`;
-      html += `<col style="width: 42%;" />`;
-      html += `<col style="width: 23%;" />`;
+      html += `<col style="width: 8%;" />`;
+      html += `<col style="width: 10%;" />`;
+      html += `<col style="width: 10%;" />`;
+      html += `<col style="width: 35%;" />`;
+      html += `<col style="width: 27%;" />`;
       html += `</colgroup>`;
 
       // Header Row
       html += `<thead>`;
       html += `<tr class="bg-amber-100 text-slate-900 font-bold border-b-2 border-amber-300 shadow-sm" style="background-color: #fef3c7 !important;">`;
       html += `<th class="p-2 border border-amber-300 text-center font-bold" style="width: 10%;">महिना</th>`;
-      html += `<th class="p-2 border border-amber-300 text-center font-bold" style="width: 7%;">आठवडा</th>`;
-      html += `<th class="p-2 border border-amber-300 text-center font-bold" style="width: 9%;">कामाचे दिवस</th>`;
-      html += `<th class="p-2 border border-amber-300 text-center font-bold" style="width: 9%;">प्राप्त तासिका</th>`;
-      html += `<th class="p-2 border border-amber-300 text-left bg-amber-200/80 font-extrabold text-amber-950" style="width: 42%;">📌 ${escapeHtml(group.subjectName)}</th>`;
-      html += `<th class="p-2 border border-amber-300 text-left font-bold" style="width: 23%;">अध्ययन निष्पत्ती क्रमांक</th>`;
+      html += `<th class="p-2 border border-amber-300 text-center font-bold" style="width: 8%;">आठवडा</th>`;
+      html += `<th class="p-2 border border-amber-300 text-center font-bold" style="width: 10%;">कामाचे दिवस</th>`;
+      html += `<th class="p-2 border border-amber-300 text-center font-bold" style="width: 10%;">प्राप्त तासिका</th>`;
+      html += `<th class="p-2 border border-amber-300 text-left bg-amber-200/80 font-extrabold text-amber-950" style="width: 35%;">📌 ${escapeHtml(group.subjectName)}</th>`;
+      html += `<th class="p-2 border border-amber-300 text-left font-bold" style="width: 27%;">अध्ययन निष्पत्ती क्रमांक</th>`;
       html += `</tr>`;
       html += `</thead>`;
 

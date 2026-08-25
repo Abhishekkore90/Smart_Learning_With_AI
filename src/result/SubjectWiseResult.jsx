@@ -6,14 +6,14 @@ import { getTeacherId } from "../lib/teacherIsolationHelper";
 import { Download, Printer, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import "./result.css";
-import { CLASS_1_OUTCOMES, CLASS_1_SEMI_OUTCOMES } from "@/data/class1_outcomes";
-import { CLASS_2_OUTCOMES, CLASS_2_SEMI_OUTCOMES } from "@/data/class2_outcomes";
-import { CLASS_3_OUTCOMES, CLASS_3_SEMI_OUTCOMES } from "@/data/class3_outcomes";
-import { CLASS_4_OUTCOMES, CLASS_4_SEMI_OUTCOMES } from "@/data/class4_outcomes";
-import { CLASS_5_OUTCOMES, CLASS_5_SEMI_OUTCOMES } from "@/data/class5_outcomes";
-import { CLASS_6_OUTCOMES, CLASS_6_SEMI_OUTCOMES } from "@/data/class6_outcomes";
-import { CLASS_7_OUTCOMES, CLASS_7_SEMI_OUTCOMES } from "@/data/class7_outcomes";
-import { CLASS_8_OUTCOMES, CLASS_8_SEMI_OUTCOMES } from "@/data/class8_outcomes";
+import { CLASS_1_OUTCOMES } from "@/data/class1_outcomes";
+import { CLASS_2_OUTCOMES } from "@/data/class2_outcomes";
+import { CLASS_3_OUTCOMES } from "@/data/class3_outcomes";
+import { CLASS_4_OUTCOMES } from "@/data/class4_outcomes";
+import { CLASS_5_OUTCOMES } from "@/data/class5_outcomes";
+import { CLASS_6_OUTCOMES } from "@/data/class6_outcomes";
+import { CLASS_7_OUTCOMES } from "@/data/class7_outcomes";
+import { CLASS_8_OUTCOMES } from "@/data/class8_outcomes";
 
 // Dynamic Class Outcomes Resolver
 const getClassOutcomes = (classValue, subjectKey, customOutcomesMap = {}) => {
@@ -27,118 +27,104 @@ const getClassOutcomes = (classValue, subjectKey, customOutcomesMap = {}) => {
     return customOutcomesMap[subjectKey];
   }
 
-  const currentMedium = localStorage.getItem("cce_selected_medium") || "marathi";
   const norm = String(classValue || "1st").toLowerCase().replace(/[^0-9]/g, "") || "1";
 
   let outcomeBank = null;
-  if (norm === "1") outcomeBank = currentMedium === "semi" ? CLASS_1_SEMI_OUTCOMES : CLASS_1_OUTCOMES;
-  else if (norm === "2") outcomeBank = currentMedium === "semi" ? CLASS_2_SEMI_OUTCOMES : CLASS_2_OUTCOMES;
-  else if (norm === "3") outcomeBank = currentMedium === "semi" ? CLASS_3_SEMI_OUTCOMES : CLASS_3_OUTCOMES;
-  else if (norm === "4") outcomeBank = currentMedium === "semi" ? CLASS_4_SEMI_OUTCOMES : CLASS_4_OUTCOMES;
-  else if (norm === "5") outcomeBank = currentMedium === "semi" ? CLASS_5_SEMI_OUTCOMES : CLASS_5_OUTCOMES;
-  else if (norm === "6") outcomeBank = currentMedium === "semi" ? CLASS_6_SEMI_OUTCOMES : CLASS_6_OUTCOMES;
-  else if (norm === "7") outcomeBank = currentMedium === "semi" ? CLASS_7_SEMI_OUTCOMES : CLASS_7_OUTCOMES;
-  else if (norm === "8") outcomeBank = currentMedium === "semi" ? CLASS_8_SEMI_OUTCOMES : CLASS_8_OUTCOMES;
+  if (norm === "1") outcomeBank = CLASS_1_OUTCOMES;
+  else if (norm === "2") outcomeBank = CLASS_2_OUTCOMES;
+  else if (norm === "3") outcomeBank = CLASS_3_OUTCOMES;
+  else if (norm === "4") outcomeBank = CLASS_4_OUTCOMES;
+  else if (norm === "5") outcomeBank = CLASS_5_OUTCOMES;
+  else if (norm === "6") outcomeBank = CLASS_6_OUTCOMES;
+  else if (norm === "7") outcomeBank = CLASS_7_OUTCOMES;
+  else if (norm === "8") outcomeBank = CLASS_8_OUTCOMES;
 
   if (outcomeBank) {
-    let list = outcomeBank[normKey] || outcomeBank[subjectKey];
-    if (list) {
-      if (currentMedium === "semi" && (normKey === "math" || normKey === "science" || normKey === "evs1" || normKey === "evs2")) {
-        const isDevanagari = (str) => /[\u0900-\u097F]/.test(str);
-        return list.filter((item) => !isDevanagari(item.text));
-      }
-      return list;
-    }
+    if (outcomeBank[normKey]) return outcomeBank[normKey];
+    if (outcomeBank[subjectKey]) return outcomeBank[subjectKey];
   }
 
   return [];
-};
-
-// Helper to chunk arrays for clean multi-page pagination
-const chunkArray = (arr, size) => {
-  if (!arr || arr.length === 0) return [];
-  const result = [];
-  for (let i = 0; i < arr.length; i += size) {
-    result.push(arr.slice(i, i + size));
-  }
-  return result;
 };
 
 const OutcomeTable = ({ title, outcomes, subjectName, getUserSelectedLevel, student }) => {
   if (!outcomes || outcomes.length === 0) return null;
 
   return (
-    <div className="w-full mb-3">
+    <div className="mb-3">
       {/* Subject Title Banner */}
-      <div
-        className="w-full text-center bg-amber-100 py-2.5 px-4 rounded-full border border-amber-300 shadow-xs mb-3 text-slate-900 font-black text-base sm:text-lg tracking-tight"
+      <h3
+        className="text-sm font-black text-slate-900 mb-2.5 text-center bg-amber-100 py-1.5 rounded-lg border border-amber-300 shadow-sm"
         style={{ breakAfter: "avoid", pageBreakAfter: "avoid" }}
       >
         {title}
-      </div>
+      </h3>
 
-      {/* HTML Table Container for Outcomes Table */}
-      <div className="w-full border border-slate-300 rounded-2xl bg-white shadow-xs">
-        <table
-          className="w-full border-collapse text-slate-900 text-xs bg-white"
-          style={{ tableLayout: "fixed", width: "100%", borderCollapse: "collapse" }}
-        >
-          <colgroup>
-            <col style={{ width: "12%" }} />
-            <col style={{ width: "66%" }} />
-            <col style={{ width: "5.5%" }} />
-            <col style={{ width: "5.5%" }} />
-            <col style={{ width: "5.5%" }} />
-            <col style={{ width: "5.5%" }} />
-          </colgroup>
-          <thead>
-            <tr className="bg-slate-100 border-b border-slate-300 font-black text-xs sm:text-sm text-slate-900">
-              <th className="border-r border-slate-300 py-2.5 px-1.5 text-center align-middle font-black leading-snug">
-                अध्ययन निष्पत्ती क्र.
-              </th>
-              <th className="border-r border-slate-300 py-2.5 px-3 text-left align-middle font-black text-xs sm:text-sm leading-snug">
-                अध्ययन निष्पत्ती
-              </th>
-              <th colSpan={4} className="p-0 text-center font-black text-xs sm:text-sm align-middle">
-                <div className="py-1 border-b border-slate-300 font-black">स्तर</div>
-                <div className="grid grid-cols-4 divide-x divide-slate-300 font-black text-xs py-1">
-                  <div>1</div>
-                  <div>2</div>
-                  <div>3</div>
-                  <div>4</div>
+      {/* Flexbox Container for Outcomes Table */}
+      <div className="w-full border border-slate-400 rounded-lg overflow-hidden bg-white">
+        {/* Table Header Row (Flexbox) */}
+        <div className="flex bg-slate-100 text-slate-900 font-bold border-b border-slate-400 text-[11px]">
+          {/* Column 1: Outcome Code */}
+          <div className="w-[70px] min-w-[70px] border-r border-slate-400 p-2 flex items-center justify-center text-center font-black leading-tight">
+            अध्ययन<br />निष्पत्ती क्र.
+          </div>
+
+          {/* Column 2: Outcome Text */}
+          <div className="flex-1 border-r border-slate-400 p-2 flex items-center font-black text-[11.5px]">
+            अध्ययन निष्पत्ती
+          </div>
+
+          {/* Column 3: Levels Header (Flex Column with Sub-headers) */}
+          <div className="w-[128px] min-w-[128px] flex flex-col">
+            <div className="border-b border-slate-400 p-1 text-center font-black text-[11px]">
+              स्तर
+            </div>
+            <div className="flex flex-1 text-[10.5px]">
+              <div className="w-1/4 border-r border-slate-400 py-1 flex items-center justify-center font-bold">1</div>
+              <div className="w-1/4 border-r border-slate-400 py-1 flex items-center justify-center font-bold">2</div>
+              <div className="w-1/4 border-r border-slate-400 py-1 flex items-center justify-center font-bold">3</div>
+              <div className="w-1/4 py-1 flex items-center justify-center font-bold">4</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Table Body Rows (Flexbox) */}
+        {outcomes.map((item, idx) => {
+          const level = getUserSelectedLevel(student, item.code, subjectName);
+          const isLast = idx === outcomes.length - 1;
+          return (
+            <div
+              key={item.code}
+              className={`flex ${!isLast ? "border-b border-slate-300" : ""}`}
+            >
+              {/* Code */}
+              <div className="w-[70px] min-w-[70px] border-r border-slate-300 p-1.5 flex items-center justify-center text-center font-bold text-slate-900 text-[10px] whitespace-nowrap">
+                {item.code}
+              </div>
+
+              {/* Text */}
+              <div className="flex-1 border-r border-slate-300 p-1.5 px-2 flex items-center text-slate-900 text-[11px] font-medium leading-snug">
+                {item.text}
+              </div>
+
+              {/* Level Ticks */}
+              <div className="w-[128px] min-w-[128px] flex text-[13px] font-black text-blue-700">
+                <div className="w-1/4 border-r border-slate-300 flex items-center justify-center">
+                  {level === 1 ? "✓" : ""}
                 </div>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {outcomes.map((item, idx) => {
-              const level = getUserSelectedLevel(student, item.code, subjectName);
-              const isLast = idx === outcomes.length - 1;
-              return (
-                <tr key={item.code} className={!isLast ? "border-b border-slate-300" : ""}>
-                  <td className="border-r border-slate-300 p-2 px-2 text-center font-black text-[11.5px] sm:text-xs text-slate-900 align-middle whitespace-nowrap">
-                    {item.code}
-                  </td>
-                  <td className="border-r border-slate-300 p-2 px-3.5 text-left font-semibold text-[12.5px] sm:text-[13px] text-slate-900 leading-snug align-middle">
-                    {item.text}
-                  </td>
-                  <td className="border-r border-slate-300 text-center align-middle font-black text-amber-800 text-[16px]">
-                    {level === 1 ? "✓" : ""}
-                  </td>
-                  <td className="border-r border-slate-300 text-center align-middle font-black text-amber-800 text-[16px]">
-                    {level === 2 ? "✓" : ""}
-                  </td>
-                  <td className="border-r border-slate-300 text-center align-middle font-black text-amber-800 text-[16px]">
-                    {level === 3 ? "✓" : ""}
-                  </td>
-                  <td className="text-center align-middle font-black text-amber-800 text-[16px]">
-                    {level === 4 ? "✓" : ""}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                <div className="w-1/4 border-r border-slate-300 flex items-center justify-center">
+                  {level === 2 ? "✓" : ""}
+                </div>
+                <div className="w-1/4 border-r border-slate-300 flex items-center justify-center">
+                  {level === 3 ? "✓" : ""}
+                </div>
+                <div className="w-1/4 flex items-center justify-center">
+                  {level === 4 ? "✓" : ""}
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -282,16 +268,11 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
 
         setConfiguredSubjects(activeSubs);
 
-        // Fetch custom user-created learning outcomes if saved (medium isolated first)
+        // Fetch custom user-created learning outcomes if saved
         try {
-          const customMedSnap = await getDoc(doc(db, "cce_outcomes_list_v2", `${selectedClass}_${currentMed}_${academicYear}`));
-          if (customMedSnap.exists() && customMedSnap.data().outcomes) {
-            setCustomOutcomesData(customMedSnap.data().outcomes);
-          } else {
-            const customListSnap = await getDoc(doc(db, "cce_outcomes_list_v2", `${selectedClass}_${academicYear}`));
-            if (customListSnap.exists() && customListSnap.data().outcomes) {
-              setCustomOutcomesData(customListSnap.data().outcomes);
-            }
+          const customListSnap = await getDoc(doc(db, "cce_outcomes_list_v2", `${selectedClass}_${academicYear}`));
+          if (customListSnap.exists() && customListSnap.data().outcomes) {
+            setCustomOutcomesData(customListSnap.data().outcomes);
           }
         } catch (e) { }
       } catch (e) { }
@@ -349,12 +330,8 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
         const bunnyOutcomes = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_outcomes.json`);
         const bunnyLevels = await fetchJsonFromBunny(`cce_results/${selectedClass}_${academicYear}_levels.json`);
 
-        // Try teacher and medium-isolated outcome docs first, then generic
+        // Try teacher-isolated outcome docs first, then generic
         const outcomeDocIds = [
-          `${currentTeacherId}_${selectedClass}_${currentMedium}_${academicYear}_sem2`,
-          `${selectedClass}_${currentMedium}_${academicYear}_sem2`,
-          `${currentTeacherId}_${selectedClass}_${currentMedium}_${academicYear}_sem1`,
-          `${selectedClass}_${currentMedium}_${academicYear}_sem1`,
           `${currentTeacherId}_${selectedClass}_${academicYear}_sem2`,
           `${selectedClass}_${academicYear}_sem2`,
           `${currentTeacherId}_${selectedClass}_${academicYear}_sem1`,
@@ -431,24 +408,18 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
   const handleDownloadPdf = async () => {
     if (!printRef.current) return;
     setDownloading(true);
-    toast.info("अध्ययन निष्पत्ती PDF तयार होत आहे, कृपया वाट पाहा...");
-
-    const container = printRef.current;
-    container.classList.add("cce-pdf-generating");
-    window.scrollTo(0, 0);
-
+    toast.info("अध्ययन निष्पती PDF तयार होत आहे, कृपया वाट पाहा...");
     try {
       const html2canvas = (await import("html2canvas")).default;
       const { jsPDF } = await import("jspdf");
 
-      const pageElements = Array.from(container.querySelectorAll(".pdf-page"));
+      const pageElements = printRef.current.querySelectorAll(".pdf-page");
       if (!pageElements || pageElements.length === 0) {
         toast.error("कोणतेही पान सापडले नाही!");
         setDownloading(false);
         return;
       }
 
-      const totalPages = pageElements.length;
       const pdf = new jsPDF({
         unit: "mm",
         format: "a4",
@@ -456,169 +427,29 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
         compress: true,
       });
 
-      let isFirstPdfPage = true;
-
-      for (let i = 0; i < totalPages; i++) {
-        // Live progress toast for classes with many students
-        if (totalPages > 4 && (i % 4 === 0 || i === totalPages - 1)) {
-          toast.info(`PDF तयार होत आहे: पान ${i + 1} / ${totalPages}...`, { id: "pdf-progress" });
-        }
-
+      for (let i = 0; i < pageElements.length; i++) {
         const pageEl = pageElements[i];
-
-        // Temporarily enforce desktop A4 pixel width (794px) and full height on mobile viewports
-        const origW = pageEl.style.width;
-        const origMinW = pageEl.style.minWidth;
-        const origMaxW = pageEl.style.maxWidth;
-        const origH = pageEl.style.height;
-        const origOverflow = pageEl.style.overflow;
-
-        pageEl.style.width = "794px";
-        pageEl.style.minWidth = "794px";
-        pageEl.style.maxWidth = "794px";
-        pageEl.style.height = "auto";
-        pageEl.style.overflow = "visible";
-        pageEl.style.boxSizing = "border-box";
-
-        const renderHeight = Math.max(pageEl.scrollHeight, 1050);
 
         const canvas = await html2canvas(pageEl, {
           scale: 2,
           useCORS: true,
           logging: false,
           backgroundColor: "#ffffff",
-          width: 794,
-          windowWidth: 794,
-          height: renderHeight,
-          windowHeight: renderHeight,
         });
 
-        // Restore original inline styles
-        pageEl.style.width = origW;
-        pageEl.style.minWidth = origMinW;
-        pageEl.style.maxWidth = origMaxW;
-        pageEl.style.height = origH;
-        pageEl.style.overflow = origOverflow;
-
-        // Compressed high-efficiency JPEG encoding
-        const imgData = canvas.toDataURL("image/jpeg", 0.85);
-        const imgWidth = 210;
-        const imgHeight = (canvas.height * 210) / canvas.width;
-
-        if (imgHeight <= 335) {
-          if (!isFirstPdfPage) pdf.addPage("a4", "portrait");
-          const targetH = Math.min(297, imgHeight);
-          pdf.addImage(imgData, "JPEG", 0, 0, imgWidth, targetH, undefined, "FAST");
-          isFirstPdfPage = false;
-        } else {
-          // Smart Row-Boundary Slicing for tables exceeding 1 A4 page
-          const pageElRect = pageEl.getBoundingClientRect();
-          const pageElHeightPx = pageElRect.height || pageEl.scrollHeight || 1;
-          const scalePxPerMm = canvas.height / imgHeight;
-          const trElements = Array.from(pageEl.querySelectorAll("tbody tr"));
-
-          // Measure EXACT bottom position of each table row in mm relative to pageEl top
-          const rowBottomsMm = trElements.map((tr) => {
-            const trRect = tr.getBoundingClientRect();
-            const bottomPx = trRect.bottom - pageElRect.top;
-            return (bottomPx / pageElHeightPx) * imgHeight;
-          });
-
-          let currentStartMm = 0;
-
-          while (currentStartMm < imgHeight - 2) {
-            const isFirstSlice = currentStartMm === 0;
-            const topMarginMm = isFirstSlice ? 0 : 5; // 5mm top margin on Page 2+ for clean layout
-            const availableHeight = 297 - topMarginMm - 4; // Max content height allowed on this page
-
-            let nextEndMm = currentStartMm + availableHeight;
-            let breakMm = nextEndMm;
-
-            if (nextEndMm >= imgHeight) {
-              nextEndMm = imgHeight;
-              breakMm = imgHeight;
-            } else {
-              // Find the last table row whose bottom is <= nextEndMm
-              let bestBreakMm = 0;
-              for (let r = 0; r < rowBottomsMm.length; r++) {
-                const rBottom = rowBottomsMm[r];
-                if (rBottom > currentStartMm && rBottom <= nextEndMm) {
-                  bestBreakMm = rBottom;
-                }
-              }
-
-              // If a valid row boundary was found, break exactly at that row!
-              if (bestBreakMm > currentStartMm + 50) {
-                breakMm = bestBreakMm;
-                nextEndMm = bestBreakMm;
-              }
-            }
-
-            const sliceStartPx = Math.max(0, Math.floor(currentStartMm * scalePxPerMm));
-            const sliceEndPx = Math.min(canvas.height, Math.ceil(nextEndMm * scalePxPerMm));
-            const sliceHeightPx = Math.max(1, sliceEndPx - sliceStartPx);
-
-            const sliceCanvas = document.createElement("canvas");
-            sliceCanvas.width = canvas.width;
-            sliceCanvas.height = sliceHeightPx;
-            const ctx = sliceCanvas.getContext("2d");
-            if (ctx) {
-              ctx.fillStyle = "#ffffff";
-              ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
-              ctx.drawImage(
-                canvas,
-                0,
-                sliceStartPx,
-                canvas.width,
-                sliceHeightPx,
-                0,
-                0,
-                canvas.width,
-                sliceHeightPx
-              );
-
-              // Draw a clean top border line for Page 2+ table slices so table top is perfectly enclosed
-              if (!isFirstSlice) {
-                ctx.strokeStyle = "#cbd5e1"; // slate-300 border color matching OutcomeTable
-                ctx.lineWidth = Math.ceil(2 * (canvas.width / 794));
-                ctx.beginPath();
-                ctx.moveTo(0, 0);
-                ctx.lineTo(canvas.width, 0);
-                ctx.stroke();
-              }
-
-              const sliceImgData = sliceCanvas.toDataURL("image/jpeg", 0.90);
-              const sliceImgHeightMm = (sliceHeightPx * 210) / canvas.width;
-
-              if (!isFirstPdfPage) pdf.addPage("a4", "portrait");
-              pdf.addImage(sliceImgData, "JPEG", 0, topMarginMm, imgWidth, sliceImgHeightMm, undefined, "FAST");
-              isFirstPdfPage = false;
-            }
-
-            currentStartMm = breakMm;
-          }
-        }
-
-        // Free canvas memory immediately
-        canvas.width = 0;
-        canvas.height = 0;
-
-        // Allow UI thread to breathe between pages
-        if (i % 2 === 0) {
-          await new Promise((resolve) => setTimeout(resolve, 10));
-        }
+        // Compressed high-efficiency JPEG encoding (keeps multi-page PDF < 10 MB)
+        const imgData = canvas.toDataURL("image/jpeg", 0.72);
+        if (i > 0) pdf.addPage();
+        pdf.addImage(imgData, "JPEG", 0, 0, 210, 297, undefined, "FAST");
       }
 
       pdf.save(`अध्ययन_निष्पत्ती_प्रगतीदर्शक_${selectedClass}_${academicYear}.pdf`);
-      toast.dismiss("pdf-progress");
-      toast.success(`एकूण ${students.length} विद्यार्थ्यांची PDF यशस्वीरित्या डाऊनलोड झाली!`);
+      toast.success("PDF यशस्वीरित्या डाऊनलोड झाली!");
     } catch (err) {
       console.error("PDF generation error:", err);
       toast.error("PDF निर्मितीत अडचण आली: " + err.message);
-    } finally {
-      container.classList.remove("cce-pdf-generating");
-      setDownloading(false);
     }
+    setDownloading(false);
   };
 
   const handlePrint = () => {
@@ -803,83 +634,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
       )}
 
       {/* -------------------- PRINT CONTAINER (CLASS-SPECIFIC OUTCOMES & USER SELECTED LEVELS) -------------------- */}
-      <div ref={printRef} className="cce-pdf-container w-full max-w-[215mm] mx-auto space-y-6 flex flex-col items-center">
-        <style>{`
-          @media screen {
-            .cce-pdf-container .pdf-page {
-              width: 100% !important;
-              max-width: 210mm !important;
-              min-width: 0 !important;
-              height: auto !important;
-              min-height: 0 !important;
-            }
-          }
-          .cce-pdf-generating {
-            margin: 0 !important;
-            padding: 0 !important;
-            max-width: none !important;
-            width: 210mm !important;
-            background-color: #ffffff !important;
-          }
-          .cce-pdf-generating .pdf-page {
-            margin: 0 !important;
-            padding: 5mm 6mm !important;
-            box-shadow: none !important;
-            border: none !important;
-            border-radius: 0 !important;
-            width: 794px !important;
-            min-width: 794px !important;
-            max-width: 794px !important;
-            height: auto !important;
-            min-height: 0 !important;
-            box-sizing: border-box !important;
-            overflow: visible !important;
-            background-color: #ffffff !important;
-          }
-          .cce-pdf-generating th {
-            vertical-align: middle !important;
-            box-sizing: border-box !important;
-          }
-          .cce-pdf-generating .rounded-2xl {
-            border-radius: 6px !important;
-            overflow: visible !important;
-          }
-          .cce-pdf-generating .pdf-page:last-child {
-            page-break-after: avoid !important;
-            break-after: avoid !important;
-          }
-          @media print {
-            @page {
-              size: A4 portrait;
-              margin: 0;
-            }
-            body * {
-              visibility: hidden;
-            }
-            .no-print {
-              display: none !important;
-            }
-            .pdf-page, .pdf-page * {
-              visibility: visible !important;
-            }
-            .pdf-page {
-              position: relative !important;
-              left: 0 !important;
-              top: 0 !important;
-              width: 210mm !important;
-              height: 294mm !important;
-              max-width: 210mm !important;
-              max-height: 294mm !important;
-              min-width: 210mm !important;
-              min-height: 294mm !important;
-              margin: 0 !important;
-              padding: 8mm 6mm !important;
-              box-sizing: border-box !important;
-              overflow: hidden !important;
-              background-color: #ffffff !important;
-            }
-          }
-        `}</style>
+      <div ref={printRef} className="cce-pdf-container max-w-4xl mx-auto">
         {students.map((student, sIdx) => {
           const activeSubjectSections = [
             { key: "मराठी", title: "प्रथम भाषा: मराठी", outcomes: marathiOutcomes, subjectName: "मराठी" },
@@ -897,17 +652,18 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
           ].filter((sec) => isSubjectActive(sec.key) && sec.outcomes && sec.outcomes.length > 0);
 
           return activeSubjectSections.map((sec, subIdx) => {
-            const isFirstOverallPage = sIdx === 0 && subIdx === 0;
+            const isFirstPage = sIdx === 0 && subIdx === 0;
             return (
               <div
                 key={`${student.id}_${sec.key}`}
-                className={`pdf-page bg-white p-5 border border-slate-200 rounded-xl shadow-sm flex flex-col justify-between mb-6 w-full max-w-[210mm] min-w-0 ${
-                  !isFirstOverallPage ? "pdf-page-break" : ""
+                className={`pdf-page bg-white p-5 border border-slate-200 rounded-xl shadow-sm flex flex-col justify-between mb-4 ${
+                  !isFirstPage ? "pdf-page-break" : ""
                 }`}
                 style={{
+                  minHeight: "275mm",
                   boxSizing: "border-box",
-                  pageBreakBefore: isFirstOverallPage ? "auto" : "always",
-                  breakBefore: isFirstOverallPage ? "auto" : "page",
+                  pageBreakBefore: isFirstPage ? "auto" : "always",
+                  breakBefore: isFirstPage ? "auto" : "page",
                   pageBreakInside: "avoid",
                   breakInside: "avoid",
                 }}
@@ -919,7 +675,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
                   </h1>
 
                   {/* Student Metadata Bar */}
-                  <div className="flex items-center justify-between text-xs sm:text-sm font-bold text-slate-800 bg-slate-100/90 py-2.5 px-6 rounded-full border border-slate-300 shadow-xs mb-3">
+                  <div className="flex items-center justify-between text-xs font-black text-slate-800 bg-slate-100 p-2.5 px-3.5 rounded-lg border border-slate-300 mb-3">
                     <span>विद्यार्थ्याचे नाव - <b className="text-slate-900 font-black">{student.name}</b></span>
                     <span>इयत्ता - <b>{selectedClass}</b></span>
                     <span>तुकडी - <b>{division}</b></span>
@@ -927,7 +683,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
                     <span>{selectedSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
                   </div>
 
-                  {/* Dedicated Single Subject Table */}
+                  {/* Single Subject Table on New Dedicated Page */}
                   <OutcomeTable
                     title={sec.title}
                     outcomes={sec.outcomes}
@@ -939,7 +695,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
 
                 {/* Signatures Footer */}
                 <div
-                  className="flex items-center justify-between pt-2.5 border-t border-slate-200 mt-4 text-[11px] font-bold text-slate-800"
+                  className="flex items-center justify-between pt-2.5 border-t border-slate-200 mt-2 text-[11px] font-bold text-slate-800"
                   style={{ breakInside: "avoid", pageBreakInside: "avoid" }}
                 >
                   <div className="text-center">

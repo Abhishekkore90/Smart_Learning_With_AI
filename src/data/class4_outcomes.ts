@@ -1437,29 +1437,3 @@ export const CLASS_4_OUTCOMES: Record<string, OutcomeItem[]> = {
     }
   ]
 };
-
-export const CLASS_4_SEMI_OUTCOMES: Record<string, OutcomeItem[]> = {
-  ...CLASS_4_OUTCOMES,
-  math: [
-    { id: "c4_semi_mt1", code: "04.71.01", text: "applies operations on numbers in daily life." },
-    { id: "c4_semi_mt2", code: "04.71.02", text: "classifies the numbers as even or odd." },
-    { id: "c4_semi_mt3", code: "04.71.03", text: "multiplies 2 and 3-digit numbers." },
-    { id: "c4_semi_mt4", code: "04.71.04", text: "divides a number by another number using different methods like - pictorially (by drawing dots), equal grouping or repeated subtraction and by using inter-relationship between division and multiplication." },
-    { id: "c4_semi_mt5", code: "04.71.05", text: "creates and solves simple real life situations/problems including coins, notes, length, mass and capacity by using the four operations." },
-    { id: "c4_semi_mt6", code: "04.71.06", text: "works with fractions: identifies half, one-fourth, three-fourths of a whole in a given picture by paper folding and also in a collection of objects; represents the fractions as half (1/2), one-fourth (1/4) and three-fourths (3/4) by using numbers/numerals; shows the equivalence of a fraction (1/2) and (2/4) with other fractions." },
-    { id: "c4_semi_mt7", code: "04.71.07", text: "acquires understanding about shapes around her/him." },
-    { id: "c4_semi_mt8", code: "04.71.08", text: "identifies the centre, radius and diameter of the circle." },
-    { id: "c4_semi_mt9", code: "04.71.09", text: "finds out shapes that can be used for tiling." },
-    { id: "c4_semi_mt10", code: "04.71.10", text: "makes cube/cuboids using the given nets." },
-    { id: "c4_semi_mt11", code: "04.71.11", text: "draws top view, front view and side view of simple objects." },
-    { id: "c4_semi_mt12", code: "04.71.12", text: "explores the area and perimeter of simple geometrical shapes (triangle, rectangle, square) in terms of given shape as a unit. For example, the number of books that can completely fill the top of a table." },
-    { id: "c4_semi_mt13", code: "04.71.13", text: "converts metre into centimetre and centimetre into metre." },
-    { id: "c4_semi_mt14", code: "04.71.14", text: "estimates the length of an object/distance between two locations, weight of various objects, volume of liquid, etc., and verifies them by actual measurement." },
-    { id: "c4_semi_mt15", code: "04.71.15", text: "solves problem involving daily life situations related to length, distance, weight, volume and time involving four basic arithmetic operations." },
-    { id: "c4_semi_mt16", code: "04.71.16", text: "reads clock time in hour and minutes and expresses the time in a.m. and p.m." },
-    { id: "c4_semi_mt17", code: "04.71.17", text: "relates to 24 hr clock with respect to 12 hr clock." },
-    { id: "c4_semi_mt18", code: "04.71.18", text: "calculates time intervals / duration of familiar daily life events by using forward or backward counting / addition and subtraction." },
-    { id: "c4_semi_mt19", code: "04.71.19", text: "identifies the pattern in multiplication and division. (up to multiple of 9)" },
-    { id: "c4_semi_mt20", code: "04.71.20", text: "represents the collected information in tables and bar graphs and draws inferences from these." },
-  ],
-};

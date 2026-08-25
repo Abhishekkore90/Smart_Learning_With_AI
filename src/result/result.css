@@ -557,34 +557,3 @@ input {
   font-size: 1.5rem;
   cursor: pointer;
 }
-
-
-/* Strict PDF Print Top Gap Fix */
-@media print {
-  @page {
-    margin: 4mm 5mm 4mm 5mm !important;
-  }
-  body, html, #root {
-    margin: 0 !important;
-    padding: 0 !important;
-    background: #fff !important;
-  }
-  .pdf-page, .pdf-page-landscape, .cce-result-last-page, .cce-mulyamankan-last-page, .page {
-    margin-top: 0 !important;
-    padding-top: 2px !important;
-    margin-bottom: 0 !important;
-    align-items: flex-start !important;
-    justify-content: flex-start !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-  }
-}
-
-
-/* PDF Generation Table Background Fix */
-.cce-pdf-generating tr {
-  background-color: transparent !important;
-}
-.cce-pdf-generating th, .cce-pdf-generating td {
-  box-shadow: none !important;
-}

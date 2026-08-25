@@ -1657,22 +1657,3 @@ export const CLASS_3_OUTCOMES: Record<string, OutcomeItem[]> = {
     }
   ]
 };
-
-export const CLASS_3_SEMI_OUTCOMES: Record<string, OutcomeItem[]> = {
-  ...CLASS_3_OUTCOMES,
-  math: [
-    { id: "c3_semi_mt1", code: "03.71.01", text: "works with three-digit numbers: reads and writes numbers up to 999 using place value; compares numbers up to 999 for their value based on their place value; solves simple daily life problems using addition and subtraction of three-digit numbers with and without regrouping, sums not exceeding 999; analyses and applies an appropriate number operation in the situation/context; explains the meaning of division facts by equal grouping/sharing and finds it by repeated subtraction; adds and subtracts small amounts of money with or without regrouping; makes rate charts and simple bills." },
-    { id: "c3_semi_mt2", code: "03.71.02", text: "acquires understanding about 2D shapes: identifies and makes 2D shapes by paper folding, paper cutting on the dot grid, using straight lines etc.; describes 2D shapes by the number of sides, corners and diagonals; fills a given region leaving no gaps using a tile of a given shape." },
-    { id: "c3_semi_mt3", code: "03.71.03", text: "estimates and measures length and distance using standard units like centimetres or metres and identifies relationships." },
-    { id: "c3_semi_mt4", code: "03.71.04", text: "weighs objects using standard units- grams and kilograms using simple balance." },
-    { id: "c3_semi_mt5", code: "03.71.05", text: "estimates and measures lengths/distance using uniform non-standard units like a rod/pencil. Similarly measures and estimates the capacities of container like a vessel, tank etc. using uniform non-standard units like cup/spoon/bucket etc." },
-    { id: "c3_semi_mt6", code: "03.71.06", text: "compares the capacity of different containers in terms of non-standard units." },
-    { id: "c3_semi_mt7", code: "03.71.07", text: "adds and subtracts measures involving grams and kilograms in life situations." },
-    { id: "c3_semi_mt8", code: "03.71.08", text: "identifies a particular day and date on a calendar." },
-    { id: "c3_semi_mt9", code: "03.71.09", text: "sequences the events occurring according to their duration in terms of hours/days. For example, does a child remain in school for longer period than at home?" },
-    { id: "c3_semi_mt10", code: "03.71.10", text: "reads the time correctly to the hour using a clock/watch." },
-    { id: "c3_semi_mt11", code: "03.71.11", text: "extends patterns in simple shapes and numbers. Understands the management of data." },
-    { id: "c3_semi_mt12", code: "03.71.12", text: "observes, identifies and extends geometrical pattern based on symmetry." },
-    { id: "c3_semi_mt13", code: "03.71.13", text: "records data using tally marks, represents pictorially and draws conclusions." },
-  ],
-};

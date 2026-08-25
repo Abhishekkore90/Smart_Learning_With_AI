@@ -180,19 +180,3 @@ export const CLASS_2_OUTCOMES: Record<string, OutcomeItem[]> = {
     { id: "c2_sh30", code: "C-13.3.1", text: "वर्गाचे नियम तयार करण्याच्या चर्चेत सहभागी होतो व पाळतो." },
   ],
 };
-
-export const CLASS_2_SEMI_OUTCOMES: Record<string, OutcomeItem[]> = {
-  ...CLASS_2_OUTCOMES,
-  math: [
-    { id: "c2_semi_mt1", code: "02.71.01", text: "Can carry out operations on two-digit numbers." },
-    { id: "c2_semi_mt2", code: "02.71.02", text: "Can describe the visual characteristics of two-dimensional and three-dimensional objects." },
-    { id: "c2_semi_mt3", code: "02.71.03", text: "Can distinguish between straight and curved lines." },
-    { id: "c2_semi_mt4", code: "02.71.04", text: "Can draw straight lines in different ways – vertical, horizontal, inclined." },
-    { id: "c2_semi_mt5", code: "02.71.05", text: "According to their physical characteristics, can describe solid objects in their own words. e.g. a ball rolls, a box slides, etc." },
-    { id: "c2_semi_mt6", code: "02.71.06", text: "Can estimate and measure the length of objects using non-standard units such as fingers, hand span, arm, foot, etc." },
-    { id: "c2_semi_mt7", code: "02.71.07", text: "Can compare two objects using a common balance and can express the comparison in words such as ‘....is heavier than....’, ‘....is lighter than....’" },
-    { id: "c2_semi_mt8", code: "02.71.08", text: "Can tell the names of the days of a week and the months of a year." },
-    { id: "c2_semi_mt9", code: "02.71.09", text: "Can analyse the information collected and draw inferences from it. e.g. the number of vehicles used in Sameer’s house is more than those used in Anjalee’s house." },
-    { id: "c2_semi_mt10", code: "02.71.10", text: "Can tell the values of notes and coins up to hundred rupees and can carry out the operations of addition and subtraction on them." },
-  ],
-};

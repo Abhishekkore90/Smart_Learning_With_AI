@@ -2312,13 +2312,22 @@ function DailyAssemblyContent() {
               </div>
             </div>
             <div className="flex items-center gap-3 relative z-10 pdf-hide">
-              <div className="flex items-center gap-2.5 bg-white/10 px-4 py-2.5 rounded-2xl border border-white/15 text-white shadow-inner">
-                <Calendar className="size-4 text-indigo-300" />
+              <div 
+                className="flex items-center gap-2.5 bg-white/15 hover:bg-white/25 px-4 py-2.5 rounded-2xl border border-white/30 text-white shadow-md transition-all cursor-pointer group"
+                onClick={(e) => {
+                  const input = e.currentTarget.querySelector('input[type="date"]') as HTMLInputElement;
+                  if (input && typeof input.showPicker === 'function') {
+                    try { input.showPicker(); } catch (err) {}
+                  }
+                }}
+              >
+                <Calendar className="size-4.5 text-amber-400 group-hover:scale-110 transition-transform" />
                 <input
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="bg-transparent border-none text-xs font-black outline-none cursor-pointer text-indigo-100"
+                  className="bg-transparent border-none text-xs font-black outline-none cursor-pointer text-amber-100 [color-scheme:dark]"
+                  style={{ colorScheme: 'dark' }}
                 />
               </div>
               <button

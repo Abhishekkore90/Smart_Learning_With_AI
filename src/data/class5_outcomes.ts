@@ -439,21 +439,3 @@ export const CLASS_5_OUTCOMES: Record<string, OutcomeItem[]> = {
     }
   ]
 };
-
-export const CLASS_5_SEMI_OUTCOMES: Record<string, OutcomeItem[]> = {
-  ...CLASS_5_OUTCOMES,
-  math: [
-    { id: "c5_semi_mt1", code: "05.71.01", text: "works with large numbers: reads and writes numbers bigger than 1000 being used in her/his surroundings; performs four basic arithmetic operations on numbers beyond 1000 by understanding of place value of numbers; divides a given number by another number using standard algorithms; estimates sum, difference, product and quotient of numbers and verifies the same using different strategies." },
-    { id: "c5_semi_mt2", code: "05.71.02", text: "Identifies the classification of prime numbers and coprime numbers." },
-    { id: "c5_semi_mt3", code: "05.71.03", text: "acquires understanding about fractions: finds the number corresponding to part of a collection; identifies and forms equivalent fractions of a given fraction; expresses a given fraction 1/2, 1/4, 1/5 in decimal notation and vice versa; converts fractions into decimals and vice versa." },
-    { id: "c5_semi_mt4", code: "05.71.04", text: "explores idea of angles and shapes. Classifies angles into right angle, acute angle, obtuse angle and represents the same by drawing and tracing." },
-    { id: "c5_semi_mt5", code: "05.71.05", text: "relates different commonly used larger and smaller units of length, weight and volume and converts larger units to smaller units and vice versa." },
-    { id: "c5_semi_mt6", code: "05.71.06", text: "estimates the volume of a container in known units like volume of a bucket is about 20 times that of a mug." },
-    { id: "c5_semi_mt7", code: "05.71.07", text: "makes cube and parallelepiped using nets designed for this purpose." },
-    { id: "c5_semi_mt8", code: "05.71.08", text: "applies the four fundamental arithmetic operations in solving problems involving coins, notes, length, mass, capacity and time intervals." },
-    { id: "c5_semi_mt9", code: "05.71.09", text: "identifies the pattern in triangular number and square number." },
-    { id: "c5_semi_mt10", code: "05.71.10", text: "collects data related to various daily life situations, represents it in tabular form and as bar graphs and interprets it." },
-    { id: "c5_semi_mt11", code: "05.71.11", text: "estimates the perimeter and area of the rectangular shapes in the surroundings. For example, the floor of the classroom, plane surface of chalk-stick box, etc." },
-    { id: "c5_semi_mt12", code: "05.71.12", text: "uses four basic operations (addition, subtraction, multiplication and division) on large numbers." },
-  ],
-};

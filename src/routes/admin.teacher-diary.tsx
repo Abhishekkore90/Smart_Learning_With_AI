@@ -372,7 +372,7 @@ function TeacherDiaryAdmin() {
         console.warn("Client multi-day parse note:", pErr);
       }
 
-      setUploadStatus("Saving date records (1-12) to database...");
+      setUploadStatus("Saving date records (1-31) to database...");
       setUploadProgress(95);
 
       const { saveParsedEntriesToFirestore } = await import("@/lib/parse-diary-file");

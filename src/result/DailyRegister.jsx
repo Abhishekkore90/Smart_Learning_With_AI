@@ -1368,7 +1368,7 @@ function DailyRegister({ initialClass, initialYear, onBack }) {
           </div>
         </div>
 
-        <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-start; margin-top: 4px; overflow: hidden;">
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; overflow: hidden;">
           <table class="result-table" style="margin-bottom: 0;">
             <thead>
               <tr>
