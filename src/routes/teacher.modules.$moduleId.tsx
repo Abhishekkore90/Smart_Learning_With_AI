@@ -2201,23 +2201,23 @@ function DailyAssemblyContent() {
       `}</style>
 
       {/* Mode Switcher: Daily Assembly vs Monthly Assembly Register */}
-      <div className="flex items-center justify-between p-3 bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-800 pdf-hide gap-3">
+      <div className="flex items-center justify-between p-3.5 bg-gradient-to-r from-[#0F172A] via-[#1E1B4B] to-[#0F172A] rounded-[2.5rem] shadow-[0_20px_50px_-15px_rgba(30,27,75,0.5)] border border-indigo-500/40 pdf-hide gap-3">
         <button
           onClick={() => navigate({ to: "/teacher" })}
-          className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs md:text-sm uppercase tracking-wider border border-white/20 transition-all shadow-md active:scale-95 group shrink-0"
+          className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-indigo-950/80 hover:bg-indigo-900 text-white font-bold text-xs md:text-sm uppercase tracking-wider border border-indigo-400/40 transition-all shadow-md active:scale-95 group shrink-0"
           title="मागे जा (Back to Dashboard)"
         >
           <ArrowLeft className="size-5 group-hover:-translate-x-1 transition-transform text-amber-400" />
           <span>मागे जा</span>
         </button>
 
-        <div className="flex p-1.5 bg-slate-800/80 rounded-2xl border border-slate-700/60 w-full max-w-2xl">
+        <div className="flex gap-2 p-2 bg-[#0B0F19] rounded-2xl border border-indigo-400/40 w-full max-w-2xl shadow-inner">
           <button
             onClick={() => setAssemblyMode("daily")}
             className={`flex-1 py-3 px-6 rounded-xl font-black text-xs md:text-sm tracking-wider uppercase transition-all duration-300 flex items-center justify-center gap-2.5 ${
               assemblyMode === "daily"
-                ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/25 scale-[1.02]"
-                : "text-slate-400 hover:text-white hover:bg-slate-700/50"
+                ? "bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 text-slate-950 shadow-lg shadow-amber-500/40 ring-2 ring-amber-300/50 scale-[1.02]"
+                : "bg-white/10 hover:bg-white/20 text-white font-extrabold border border-white/20 shadow-inner"
             }`}
           >
             <BookMarked className="size-4" />
@@ -2228,8 +2228,8 @@ function DailyAssemblyContent() {
             onClick={() => setAssemblyMode("monthly")}
             className={`flex-1 py-3 px-6 rounded-xl font-black text-xs md:text-sm tracking-wider uppercase transition-all duration-300 flex items-center justify-center gap-2.5 ${
               assemblyMode === "monthly"
-                ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-500/25 scale-[1.02]"
-                : "text-slate-400 hover:text-white hover:bg-slate-700/50"
+                ? "bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-500 text-slate-950 shadow-lg shadow-emerald-500/40 ring-2 ring-emerald-300/50 scale-[1.02]"
+                : "bg-white/10 hover:bg-white/20 text-white font-extrabold border border-white/20 shadow-inner"
             }`}
           >
             <Table className="size-4" />
