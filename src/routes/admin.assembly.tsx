@@ -123,6 +123,7 @@ function AssemblyBookAdmin() {
       patrioticSong: "",
       personalityTitle: "",
       personality: "",
+      silentPasayadanTitle: "",
       silentPasayadan: "",
       valueNews: "",
     };
@@ -986,9 +987,15 @@ function AssemblyBookAdmin() {
                     <textarea
                       rows={6}
                       value={
-                        paripathData[`preamble_${preambleLang}`] !== undefined
-                          ? paripathData[`preamble_${preambleLang}`]
-                          : (preambleLang === 'mr' ? paripathData.preamble : undefined) || DEFAULT_ASSEMBLY_ITEMS[preambleLang]?.[3]?.content || ""
+                        (() => {
+                          const val = paripathData[`preamble_${preambleLang}`] !== undefined
+                            ? paripathData[`preamble_${preambleLang}`]
+                            : (preambleLang === 'mr' ? paripathData.preamble : undefined);
+                          if (preambleLang === 'mr' && (!val || val.includes("हम, भारत के लोग"))) {
+                            return DEFAULT_ASSEMBLY_ITEMS.mr[3].content;
+                          }
+                          return val || DEFAULT_ASSEMBLY_ITEMS[preambleLang]?.[3]?.content || "";
+                        })()
                       }
                       onChange={(e) => setParipathData({ ...paripathData, [`preamble_${preambleLang}`]: e.target.value, preamble: preambleLang === 'mr' ? e.target.value : paripathData.preamble })}
                       className="w-full px-6 py-5 bg-green-50/30 border border-green-100 hover:border-green-300 focus:bg-white rounded-2xl focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all resize-none text-center font-bold text-slate-800 leading-relaxed"
@@ -1225,23 +1232,40 @@ function AssemblyBookAdmin() {
 
               {/* Pasaydan - Editable Card */}
               <div className="space-y-8 p-8 md:p-12 bg-gradient-to-br from-amber-50/80 to-yellow-100/50 border border-amber-200/60 rounded-[3rem] shadow-[0_8px_30px_rgb(245,158,11,0.12)] relative overflow-hidden">
-                <div className="bg-white/90 backdrop-blur-sm p-8 rounded-[2.5rem] border border-amber-100 shadow-xl shadow-amber-900/5 hover:shadow-2xl hover:shadow-amber-900/10 transition-all duration-300 text-center relative">
-                  <div className="flex justify-center mb-6">
+                <div className="bg-white/90 backdrop-blur-sm p-8 rounded-[2.5rem] border border-amber-100 shadow-xl shadow-amber-900/5 hover:shadow-2xl hover:shadow-amber-900/10 transition-all duration-300 text-center relative space-y-4">
+                  <div className="flex justify-center mb-2">
                     <span className="inline-flex items-center justify-center gap-2 px-6 py-2 bg-amber-50 text-amber-700 rounded-full text-xs font-black uppercase tracking-widest border border-amber-100">
                       ✨ मौन पसायदान (Silent Pasayadan)
                     </span>
                   </div>
-                  <textarea
-                    rows={12}
-                    value={
-                      paripathData.silentPasayadan !== undefined
-                        ? paripathData.silentPasayadan
-                        : (paripathData.silentPasayadan || DEFAULT_ASSEMBLY_ITEMS[adminLang]?.[5]?.content || "")
-                    }
-                    onChange={(e) => setParipathData({ ...paripathData, silentPasayadan: e.target.value })}
-                    className="w-full px-6 py-5 bg-amber-50/30 border border-amber-100 hover:border-amber-300 focus:bg-white rounded-2xl focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all resize-none text-center font-bold text-slate-800 leading-relaxed max-w-2xl mx-auto block"
-                    placeholder="उदा. आता विश्वात्मकें देवें..."
-                  />
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-amber-600 mb-2">
+                      पसायदान शीर्षक (Title / Heading)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="उदा. पसायदान / आता विश्वात्मकें देवें"
+                      value={paripathData.silentPasayadanTitle || paripathData.pasaydanTitle || ''}
+                      onChange={(e) => setParipathData({ ...paripathData, silentPasayadanTitle: e.target.value, pasaydanTitle: e.target.value })}
+                      className="w-full max-w-2xl mx-auto px-6 py-3.5 bg-amber-50/30 border border-amber-100 hover:border-amber-300 focus:bg-white rounded-2xl focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all text-center font-bold text-slate-800 text-base"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-amber-600 mb-2">
+                      पसायदान संपूर्ण मजकूर (Full Content)
+                    </label>
+                    <textarea
+                      rows={10}
+                      value={
+                        paripathData.silentPasayadan !== undefined
+                          ? paripathData.silentPasayadan
+                          : (paripathData.silentPasayadan || DEFAULT_ASSEMBLY_ITEMS[adminLang]?.[5]?.content || "")
+                      }
+                      onChange={(e) => setParipathData({ ...paripathData, silentPasayadan: e.target.value })}
+                      className="w-full px-6 py-5 bg-amber-50/30 border border-amber-100 hover:border-amber-300 focus:bg-white rounded-2xl focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all resize-none text-center font-bold text-slate-800 leading-relaxed max-w-2xl mx-auto block"
+                      placeholder="उदा. आता विश्वात्मकें देवें..."
+                    />
+                  </div>
                 </div>
               </div>
 
