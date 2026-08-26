@@ -92,6 +92,51 @@ function shortText(text: string | undefined, maxLen = 40): string {
   return sub.replace(/[:\-–,\s]+$/, "").trim();
 }
 
+// Helper: Extract ONLY the first single news item or single dinvishesh event
+function getSingleItem(dataRaw: any, maxLen = 65): string {
+  if (!dataRaw) return "";
+
+  let firstItem = "";
+  if (Array.isArray(dataRaw)) {
+    firstItem = dataRaw.find((item) => item && String(item).trim().length > 0) || "";
+  } else if (typeof dataRaw === "object") {
+    firstItem = Object.values(dataRaw).find((val) => val && String(val).trim().length > 0) as string || "";
+  } else {
+    firstItem = String(dataRaw);
+  }
+
+  if (!firstItem) return "";
+
+  // 1. Split by newlines first if there are multiple lines
+  const lines = firstItem.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+  let single = lines[0] || firstItem;
+
+  // 2. If it contains multiple events (e.g., "1873 : ... 1875 : ..." or "१९०१ : ... १९०५ : ...")
+  const eventMatch = single.split(/(?=\s(?:18|19|20|१८|१९|२०)\d{2}\s*[:\-–])/);
+  if (eventMatch.length > 1) {
+    single = eventMatch[0].trim();
+  }
+
+  // 3. If it contains multiple news items separated by period + capital/Devanagari or bullet point
+  const newsMatch = single.split(/(?<=[.!?।])\s+(?=[A-Z0-9\u0900-\u097F])/);
+  if (newsMatch.length > 1 && newsMatch[0].length >= 15) {
+    single = newsMatch[0].trim();
+  }
+
+  // 4. Remove leading bullet points or numbers (e.g. "1.", "•", "- ")
+  single = single.replace(/^[\d\s•\-\.\*]+/, "").trim();
+
+  // 5. If still longer than maxLen, trim at word boundary
+  if (single.length <= maxLen) return single;
+
+  let sub = single.substring(0, maxLen);
+  const lastSpace = sub.lastIndexOf(" ");
+  if (lastSpace > 15) {
+    sub = sub.substring(0, lastSpace);
+  }
+  return sub.replace(/[:\-–,\s]+$/, "").trim();
+}
+
 // Helper: get prayer heading title from content
 function getPrayerShortName(prayerContent: string | undefined): string {
   if (!prayerContent) return "प्रार्थना";
@@ -391,9 +436,9 @@ export function MonthlyParipathRegister() {
               sanvidhan: "आम्ही भारताचे नागरिक",
               // प्रार्थना - short heading title of prayer
               prarthana: data.prayerTitle || data.prayerName || getPrayerShortName(prayerContent),
-              // श्लोक - max 2 lines (~36 chars)
-              shlok: shortText(data.shlok, 36),
-              // पंचांग - max 2 lines (~34 chars), extracted from string or tithi/paksha/month/nakshatra
+              // श्लोक - 2 full lines (~88 chars)
+              shlok: shortText(data.shlok, 88),
+              // पंचांग - 2 full lines (~85 chars), extracted from string or tithi/paksha/month/nakshatra
               panchang: shortText(
                 data.panchang
                   ? typeof data.panchang === "string"
@@ -407,24 +452,24 @@ export function MonthlyParipathRegister() {
                     ]
                       .filter(Boolean)
                       .join(" ") || data.panchangStr || "",
-                34
+                85
               ),
-              // सुविचार - max 2 lines (~38 chars)
-              suvichar: shortText(data.thought || data.suvichar, 38),
-              // बातम्या - max 2 lines (~42 chars)
-              batmya: shortText(data.valueNews || data.batmya, 42),
-              // दिनविशेष - max 2 lines (~42 chars)
-              dinvishesh: shortText(data.events || data.dinvishesh, 42),
-              // म्हण - max 2 lines (~42 chars)
-              mhan: shortText(data.proverb || data.mhan, 42),
-              // बोधकथा - title / max 2 lines (~36 chars)
-              bodhkatha: data.storyTitle || shortText(data.story || data.bodhkatha, 36),
-              // समूहगीत - title / max 2 lines (~34 chars)
-              samuhgeet: data.songTitle || shortText(data.patrioticSong || data.samuhgeet, 34),
-              // देशभक्ती गीत - title / max 2 lines (~34 chars)
-              deshbhaktigeet: data.songTitle || shortText(data.patrioticSong || data.deshbhaktigeet, 34),
-              // सामान्य ज्ञान - max 2 lines (~34 chars)
-              samanyaGyan: shortText(data.gkQ1 ? `प्र.१: ${data.gkQ1}` : (data.samanyaGyan || data.gk || ""), 34),
+              // सुविचार - 2 full lines (~88 chars)
+              suvichar: shortText(data.thought || data.suvichar, 88),
+              // बातम्या - 1 single news item (~65 chars max)
+              batmya: getSingleItem(data.valueNews || data.batmya || data.news, 65),
+              // दिनविशेष - 1 single dinvishesh event (~65 chars max)
+              dinvishesh: getSingleItem(data.events || data.dinvishesh || data.event, 65),
+              // म्हण - 1 single proverb (~65 chars max)
+              mhan: getSingleItem(data.proverb || data.mhan, 65),
+              // बोधकथा - title / 2 lines (~45 chars)
+              bodhkatha: data.storyTitle || shortText(data.story || data.bodhkatha, 45),
+              // समूहगीत - title / 2 lines (~45 chars)
+              samuhgeet: data.songTitle || shortText(data.patrioticSong || data.samuhgeet, 45),
+              // देशभक्ती गीत - title / 2 lines (~45 chars)
+              deshbhaktigeet: data.songTitle || shortText(data.patrioticSong || data.deshbhaktigeet, 45),
+              // सामान्य ज्ञान - 1 single question (~65 chars max)
+              samanyaGyan: getSingleItem(data.gkQ1 ? `प्र.१: ${data.gkQ1}` : (data.samanyaGyan || data.gk || ""), 65),
               // मौन पसायदान - just "पसायदान"
               maun: "पसायदान",
               // वर्गशिक्षकांची स्वाक्षरी - blank
@@ -839,17 +884,20 @@ export function MonthlyParipathRegister() {
       `}</style>
 
       {/* Control Panel (Hidden in Print) */}
-      <div className="non-printable bg-gradient-to-br from-indigo-950 via-slate-900 to-indigo-900 text-white p-6 md:p-8 rounded-[2.5rem] shadow-2xl space-y-6 border border-indigo-500/20 backdrop-blur-xl">
+      <div className="non-printable bg-gradient-to-br from-[#0F172A] via-[#1E1B4B] to-[#311042] text-white p-6 md:p-8 rounded-[2.5rem] shadow-[0_25px_60px_-15px_rgba(30,27,75,0.6)] space-y-6 border border-indigo-500/30 backdrop-blur-2xl relative overflow-hidden">
+        {/* Top Decorative Glow Line */}
+        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-indigo-500 via-amber-400 to-purple-500" />
+
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
-            <div className="size-14 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300 shadow-inner">
+            <div className="size-14 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 border border-indigo-400/50 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
               <FileSpreadsheet className="size-8" />
             </div>
             <div>
-              <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white">
+              <h2 className="text-2xl md:text-3xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-indigo-100 to-amber-200">
                 मासिक परिपाठ नोंदवही
               </h2>
-              <p className="text-xs font-semibold text-indigo-300/80 uppercase tracking-widest mt-1">
+              <p className="text-xs font-extrabold text-amber-300/90 uppercase tracking-widest mt-1">
                 दैनिक परिपाठातून स्वयंचलित डेटा • Day-to-Day Auto Fetch
               </p>
             </div>
@@ -860,12 +908,12 @@ export function MonthlyParipathRegister() {
             <button
               onClick={fetchMonthlyData}
               disabled={isFetching}
-              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-indigo-900/60 hover:bg-indigo-800/80 text-indigo-200 border border-indigo-400/30 font-bold text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 disabled:opacity-50"
+              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-indigo-950/80 hover:bg-indigo-900 text-indigo-100 border border-indigo-400/40 font-bold text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 disabled:opacity-50"
             >
               {isFetching ? (
-                <Loader2 className="size-4 animate-spin" />
+                <Loader2 className="size-4 animate-spin text-amber-400" />
               ) : (
-                <RefreshCw className="size-4" />
+                <RefreshCw className="size-4 text-amber-400" />
               )}
               {isFetching ? "डेटा लोड होत आहे..." : "🔄 रिफ्रेश डेटा"}
             </button>
@@ -873,7 +921,7 @@ export function MonthlyParipathRegister() {
             <button
               onClick={handleSaveData}
               disabled={isSaving}
-              className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-emerald-950/40 active:scale-95"
+              className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-emerald-500/30 active:scale-95"
             >
               <Save className="size-4" />
               {isSaving ? "सेव्ह होत आहे..." : "सेव्ह करा"}
@@ -881,7 +929,7 @@ export function MonthlyParipathRegister() {
 
             <button
               onClick={() => setShowHolidayModal(true)}
-              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-amber-950/40 active:scale-95"
+              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-amber-500/30 active:scale-95"
             >
               <CalendarDays className="size-4" />
               📅 सुट्टी घोषित करा
@@ -889,7 +937,7 @@ export function MonthlyParipathRegister() {
 
             <button
               onClick={handleDownloadPdf}
-              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-indigo-950/40 active:scale-95"
+              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-purple-500/30 active:scale-95"
             >
               <Download className="size-4" />
               PDF डाउनलोड
@@ -898,44 +946,44 @@ export function MonthlyParipathRegister() {
         </div>
 
         {/* Inputs row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-indigo-500/20 text-xs font-medium">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-indigo-500/30 text-xs font-medium">
           <div className="space-y-1.5">
-            <label className="text-indigo-200/90 font-bold uppercase tracking-wider flex items-center gap-1.5">
-              <Building2 className="size-3.5 text-indigo-300" /> शाळेचे नाव
+            <label className="text-amber-300 font-extrabold uppercase tracking-wider flex items-center gap-1.5">
+              <Building2 className="size-3.5 text-amber-400" /> शाळेचे नाव
             </label>
             <input
               type="text"
               value={schoolName}
               onChange={(e) => setSchoolName(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/30 text-white outline-none font-bold transition-all"
+              className="w-full px-4 py-2.5 rounded-xl bg-[#0B0F19]/90 hover:bg-[#131927] border border-indigo-500/40 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30 text-white outline-none font-bold transition-all shadow-inner"
               placeholder="शाळेचे नाव टाका"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-indigo-200/90 font-bold uppercase tracking-wider flex items-center gap-1.5">
-              <Clock className="size-3.5 text-indigo-300" /> सन (शैक्षणिक वर्ष)
+            <label className="text-amber-300 font-extrabold uppercase tracking-wider flex items-center gap-1.5">
+              <Clock className="size-3.5 text-amber-400" /> सन (शैक्षणिक वर्ष)
             </label>
             <input
               type="text"
               value={academicYear}
               onChange={(e) => setAcademicYear(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/30 text-white outline-none font-bold transition-all"
+              className="w-full px-4 py-2.5 rounded-xl bg-[#0B0F19]/90 hover:bg-[#131927] border border-indigo-500/40 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30 text-white outline-none font-bold transition-all shadow-inner"
               placeholder="२०२५-२०२६"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-indigo-200/90 font-bold uppercase tracking-wider flex items-center gap-1.5">
-              <Calendar className="size-3.5 text-indigo-300" /> महिना निवडा
+            <label className="text-amber-300 font-extrabold uppercase tracking-wider flex items-center gap-1.5">
+              <Calendar className="size-3.5 text-amber-400" /> महिना निवडा
             </label>
             <select
               value={selectedMonthIndex}
               onChange={(e) => setSelectedMonthIndex(Number(e.target.value))}
-              className="w-full px-4 py-2.5 rounded-xl bg-indigo-950 border border-indigo-400/30 text-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/30 font-bold cursor-pointer transition-all"
+              className="w-full px-4 py-2.5 rounded-xl bg-[#0B0F19] border border-indigo-500/40 text-amber-200 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30 font-bold cursor-pointer transition-all shadow-inner"
             >
               {MARATHI_MONTHS.map((m, idx) => (
-                <option key={idx} value={idx}>
+                <option key={idx} value={idx} className="bg-slate-900 text-white">
                   {m}
                 </option>
               ))}
@@ -943,16 +991,16 @@ export function MonthlyParipathRegister() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-indigo-200/90 font-bold uppercase tracking-wider flex items-center gap-1.5">
+            <label className="text-amber-300 font-extrabold uppercase tracking-wider flex items-center gap-1.5">
               वर्ष निवडा
             </label>
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="w-full px-4 py-2.5 rounded-xl bg-indigo-950 border border-indigo-400/30 text-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/30 font-bold cursor-pointer transition-all"
+              className="w-full px-4 py-2.5 rounded-xl bg-[#0B0F19] border border-indigo-500/40 text-amber-200 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30 font-bold cursor-pointer transition-all shadow-inner"
             >
               {[2024, 2025, 2026, 2027, 2028].map((y) => (
-                <option key={y} value={y}>
+                <option key={y} value={y} className="bg-slate-900 text-white">
                   {y}
                 </option>
               ))}
@@ -961,64 +1009,64 @@ export function MonthlyParipathRegister() {
         </div>
 
         {/* Additional School Info & Signatures Controls */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 pt-3 border-t border-indigo-500/20 text-xs font-medium">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 pt-3 border-t border-indigo-500/30 text-xs font-medium">
           <div className="space-y-1">
-            <label className="text-indigo-200/80 font-bold">तालुका</label>
+            <label className="text-amber-300/90 font-bold">तालुका</label>
             <input
               type="text"
               value={schoolInfo.taluka || ""}
               onChange={(e) => setSchoolInfo(prev => ({ ...prev, taluka: e.target.value }))}
-              className="w-full px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 border border-white/20 focus:border-indigo-400 text-white font-bold outline-none transition-all"
+              className="w-full px-3 py-1.5 rounded-lg bg-[#0B0F19]/90 hover:bg-[#131927] border border-indigo-500/40 focus:border-amber-400 text-white font-bold outline-none transition-all shadow-inner"
               placeholder="तालुका"
             />
           </div>
           <div className="space-y-1">
-            <label className="text-indigo-200/80 font-bold">जिल्हा</label>
+            <label className="text-amber-300/90 font-bold">जिल्हा</label>
             <input
               type="text"
               value={schoolInfo.jilha || ""}
               onChange={(e) => setSchoolInfo(prev => ({ ...prev, jilha: e.target.value }))}
-              className="w-full px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 border border-white/20 focus:border-indigo-400 text-white font-bold outline-none transition-all"
+              className="w-full px-3 py-1.5 rounded-lg bg-[#0B0F19]/90 hover:bg-[#131927] border border-indigo-500/40 focus:border-amber-400 text-white font-bold outline-none transition-all shadow-inner"
               placeholder="जिल्हा"
             />
           </div>
           <div className="space-y-1">
-            <label className="text-indigo-200/80 font-bold">केंद्र</label>
+            <label className="text-amber-300/90 font-bold">केंद्र</label>
             <input
               type="text"
               value={schoolInfo.kendra || ""}
               onChange={(e) => setSchoolInfo(prev => ({ ...prev, kendra: e.target.value }))}
-              className="w-full px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 border border-white/20 focus:border-indigo-400 text-white font-bold outline-none transition-all"
+              className="w-full px-3 py-1.5 rounded-lg bg-[#0B0F19]/90 hover:bg-[#131927] border border-indigo-500/40 focus:border-amber-400 text-white font-bold outline-none transition-all shadow-inner"
               placeholder="केंद्र"
             />
           </div>
           <div className="space-y-1">
-            <label className="text-indigo-200/80 font-bold">UDISE नंबर</label>
+            <label className="text-amber-300/90 font-bold">UDISE नंबर</label>
             <input
               type="text"
               value={schoolInfo.udise || ""}
               onChange={(e) => setSchoolInfo(prev => ({ ...prev, udise: e.target.value }))}
-              className="w-full px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 border border-white/20 focus:border-indigo-400 text-white font-bold outline-none transition-all"
+              className="w-full px-3 py-1.5 rounded-lg bg-[#0B0F19]/90 hover:bg-[#131927] border border-indigo-500/40 focus:border-amber-400 text-white font-bold outline-none transition-all shadow-inner"
               placeholder="युडायस नंबर"
             />
           </div>
           <div className="space-y-1">
-            <label className="text-indigo-200/80 font-bold">शिक्षकाचे नाव</label>
+            <label className="text-amber-300/90 font-bold">शिक्षकाचे नाव</label>
             <input
               type="text"
               value={teacherName}
               onChange={(e) => setTeacherName(e.target.value)}
-              className="w-full px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 border border-white/20 focus:border-indigo-400 text-white font-bold outline-none transition-all"
+              className="w-full px-3 py-1.5 rounded-lg bg-[#0B0F19]/90 hover:bg-[#131927] border border-indigo-500/40 focus:border-amber-400 text-white font-bold outline-none transition-all shadow-inner"
               placeholder="शिक्षकाचे नाव"
             />
           </div>
           <div className="space-y-1">
-            <label className="text-indigo-200/80 font-bold">मुख्याध्यापकाचे नाव</label>
+            <label className="text-amber-300/90 font-bold">मुख्याध्यापकाचे नाव</label>
             <input
               type="text"
               value={headmasterName}
               onChange={(e) => setHeadmasterName(e.target.value)}
-              className="w-full px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 border border-white/20 focus:border-indigo-400 text-white font-bold outline-none transition-all"
+              className="w-full px-3 py-1.5 rounded-lg bg-[#0B0F19]/90 hover:bg-[#131927] border border-indigo-500/40 focus:border-amber-400 text-white font-bold outline-none transition-all shadow-inner"
               placeholder="मुख्याध्यापकाचे नाव"
             />
           </div>
@@ -1103,20 +1151,20 @@ export function MonthlyParipathRegister() {
                 <div className="overflow-x-auto border-2 border-slate-900 bg-white shadow-sm mb-6 w-full">
                   <table className="w-full text-left text-[11px] text-slate-900 border-collapse align-middle table-fixed min-w-[950px]">
                     <colgroup>
-                      <col style={{ width: "4%" }} />
-                      <col style={{ width: "7%" }} />
-                      <col style={{ width: "14%" }} />
-                      <col style={{ width: "14%" }} />
-                      <col style={{ width: "15%" }} />
-                      <col style={{ width: "14%" }} />
+                      <col style={{ width: "32px" }} />
+                      <col style={{ width: "55px" }} />
                       <col style={{ width: "11%" }} />
-                      <col style={{ width: "10%" }} />
                       <col style={{ width: "11%" }} />
+                      <col style={{ width: "12%" }} />
+                      <col style={{ width: "11%" }} />
+                      <col style={{ width: "18%" }} />
+                      <col style={{ width: "17%" }} />
+                      <col style={{ width: "20%" }} />
                     </colgroup>
                     <thead>
                       <tr className="bg-slate-100 border-b-2 border-slate-900 text-center font-black text-slate-900 uppercase text-[11px]">
-                        <th className="p-2 border-r border-slate-900 text-center align-middle">दिनांक</th>
-                        <th className="p-2 border-r border-slate-900 text-center align-middle">वार</th>
+                        <th className="w-[32px] max-w-[32px] px-0.5 py-1.5 border-r border-slate-900 text-center align-middle text-[10px] whitespace-nowrap overflow-hidden">दिनांक</th>
+                        <th className="w-[55px] max-w-[55px] px-0.5 py-1.5 border-r border-slate-900 text-center align-middle text-[10px] whitespace-nowrap overflow-hidden">वार</th>
                         <th className="p-2 border-r border-slate-900 text-center align-middle">राष्ट्रगीत</th>
                         <th className="p-2 border-r border-slate-900 text-center align-middle">प्रतिज्ञा</th>
                         <th className="p-2 border-r border-slate-900 text-center align-middle">भारताचे संविधान</th>
@@ -1146,10 +1194,10 @@ export function MonthlyParipathRegister() {
                             </td>
                           ) : (
                             <>
-                              <td className="p-2 border-r border-slate-900 text-center font-black align-middle text-slate-900">
+                              <td className="w-[32px] max-w-[32px] px-0.5 py-1.5 border-r border-slate-900 text-center font-black align-middle text-[10px] text-slate-900 whitespace-nowrap overflow-hidden">
                                 {row.date}
                               </td>
-                              <td className="p-2 border-r border-slate-900 text-center font-bold text-[11px] align-middle text-slate-900">
+                              <td className="w-[55px] max-w-[55px] px-0.5 py-1.5 border-r border-slate-900 text-center font-bold text-[10px] align-middle text-slate-900 whitespace-nowrap overflow-hidden">
                                 {row.day}
                               </td>
                               <td className="p-1 border-r border-slate-900 align-middle">
@@ -1251,20 +1299,17 @@ export function MonthlyParipathRegister() {
                 <div className="overflow-x-auto border-2 border-slate-900 bg-white shadow-sm w-full">
                   <table className="w-full text-left text-[11px] text-slate-900 border-collapse align-middle table-fixed min-w-[950px]">
                     <colgroup>
-                      <col style={{ width: "4%" }} />
-                      <col style={{ width: "7%" }} />
-                      <col style={{ width: "14%" }} />
-                      <col style={{ width: "14%" }} />
-                      <col style={{ width: "15%" }} />
-                      <col style={{ width: "14%" }} />
+                      <col style={{ width: "17%" }} />
+                      <col style={{ width: "17%" }} />
+                      <col style={{ width: "16%" }} />
                       <col style={{ width: "11%" }} />
-                      <col style={{ width: "10%" }} />
                       <col style={{ width: "11%" }} />
+                      <col style={{ width: "16%" }} />
+                      <col style={{ width: "6%" }} />
+                      <col style={{ width: "6%" }} />
                     </colgroup>
                     <thead>
                       <tr className="bg-slate-100 border-b-2 border-slate-900 text-center font-black text-slate-900 uppercase text-[11px]">
-                        <th className="p-2 border-r border-slate-900 text-center align-middle">दिनांक</th>
-                        <th className="p-2 border-r border-slate-900 text-center align-middle">वार</th>
                         <th className="p-2 border-r border-slate-900 text-center align-middle">
                           सुसंस्कारक्षम बातम्या
                         </th>
@@ -1277,8 +1322,11 @@ export function MonthlyParipathRegister() {
                         <th className="p-2 border-r border-slate-900 text-center align-middle">
                           सामान्य ज्ञान
                         </th>
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">
+                          मौन / पसायदान
+                        </th>
                         <th className="p-2 text-center align-middle">
-                          मौन पसायदान / स्वाक्षरी
+                          स्वाक्षरी
                         </th>
                       </tr>
                     </thead>
@@ -1293,21 +1341,15 @@ export function MonthlyParipathRegister() {
                           }`}
                         >
                           {row.isSunday ? (
-                            <td colSpan={9} className="p-2.5 text-center font-black text-rose-700 text-[13px] tracking-widest align-middle border-b border-slate-900">
+                            <td colSpan={8} className="p-2.5 text-center font-black text-rose-700 text-[13px] tracking-widest align-middle border-b border-slate-900">
                               रविवार
                             </td>
                           ) : row.isHoliday ? (
-                            <td colSpan={9} className="p-2.5 text-center font-black text-rose-700 text-[13px] tracking-wider align-middle border-b border-slate-900">
+                            <td colSpan={8} className="p-2.5 text-center font-black text-rose-700 text-[13px] tracking-wider align-middle border-b border-slate-900">
                               सुट्टी ({row.holidayReason || "शाळेस सुट्टी"})
                             </td>
                           ) : (
                             <>
-                              <td className="p-2 border-r border-slate-900 text-center font-black align-middle text-slate-900">
-                                {row.date}
-                              </td>
-                              <td className="p-2 border-r border-slate-900 text-center font-bold text-[11px] align-middle text-slate-900">
-                                {row.day}
-                              </td>
                               <td className="p-1 border-r border-slate-900 align-middle">
                                 <textarea
                                   value={row.batmya}
@@ -1387,9 +1429,9 @@ export function MonthlyParipathRegister() {
                                   placeholder="सामान्य ज्ञान..."
                                 />
                               </td>
-                              <td className="p-1 align-middle">
+                              <td className="p-1 border-r border-slate-900 align-middle">
                                 <textarea
-                                  value={row.maun}
+                                  value={row.maun || "पसायदान"}
                                   onChange={(e) => {
                                     handleCellChange(row.date, "maun", e.target.value);
                                     e.target.style.height = "auto";
@@ -1397,6 +1439,19 @@ export function MonthlyParipathRegister() {
                                   }}
                                   className="w-full bg-transparent text-center outline-none font-bold text-[11px] leading-snug overflow-hidden resize-none py-1 px-1 border-0 focus:ring-1 focus:ring-indigo-500 rounded"
                                   rows={1}
+                                />
+                              </td>
+                              <td className="p-1 align-middle">
+                                <textarea
+                                  value={row.swakshari}
+                                  onChange={(e) => {
+                                    handleCellChange(row.date, "swakshari", e.target.value);
+                                    e.target.style.height = "auto";
+                                    e.target.style.height = `${e.target.scrollHeight}px`;
+                                  }}
+                                  className="w-full bg-transparent text-center outline-none font-bold text-[11px] leading-snug overflow-hidden resize-none py-1 px-1 border-0 focus:ring-1 focus:ring-indigo-500 rounded"
+                                  rows={1}
+                                  placeholder="स्वाक्षरी..."
                                 />
                               </td>
                             </>
