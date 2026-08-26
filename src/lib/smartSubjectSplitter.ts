@@ -116,6 +116,23 @@ export function normalizeSubjectName(rawName: string): string {
   return clean.replace(/^(?:विषय|subject)\s*[:\-–]?\s*/i, "").trim();
 }
 
+// Helper to check if a row is a signature/footer row from Excel
+export const isSignatureRow = (row: any[]): boolean => {
+  if (!row || !Array.isArray(row) || row.length === 0) return false;
+  const line = row.map((c) => String(c || "")).join(" ").trim().toLowerCase();
+  if (!line) return false;
+
+  const lineNoSpace = line.replace(/\s+/g, "");
+
+  if (line.includes("स्वाक्षरी") || line.includes("शिक्का")) return true;
+  if (line.includes("वर्ग शिक्षक") && line.includes("मुख्याध्यापक")) return true;
+  if (line.includes("विषय /") && line.includes("शिक्षक")) return true;
+  if (line.includes("शिक्षक") && line.includes("मुख्याध्यापक")) return true;
+  if (lineNoSpace.includes("वर्गशिक्षक") || lineNoSpace.includes("मुख्याध्यापक")) return true;
+
+  return false;
+};
+
 /**
  * Smart Subject Section Extractor: Parses multi-subject & multi-sheet Excel files (Classes 1st to 8th)
  * into isolated, clean subject sections with complete months (June to April/May).
@@ -294,8 +311,7 @@ export async function extractSubjectSectionsFromExcel(
       }
 
       if (
-        rowLine.includes("शिक्षक स्वाक्षरी") ||
-        rowLine.includes("मुख्याध्यापक स्वाक्षरी") ||
+        isSignatureRow(row) ||
         rowLine.includes("वार्षिक नियोजन") ||
         rowLine.includes("इयत्ता :")
       ) {
@@ -617,7 +633,13 @@ export function splitRowsIntoMonthlySections(rawRows: string[][]): Record<string
     const monthMatch = line.match(/(?:मासिक\s+व\s+घटक\s+नियोजन\s+माहे|माहे)\s*[:\-–]?\s*([^\n\r]+)/i);
     if (monthMatch && monthMatch[1]) {
       flushCurrentMonth();
-      currentMonthName = monthMatch[1].replace(/^[-\s–:]+/, "").trim();
+      let rawMonth = monthMatch[1].replace(/^[-\s–:]+/, "").trim();
+      const cleanMonthMatch = rawMonth.match(/(जुन|जून|जुलै|ऑगस्ट|सप्टेंबर|सप्टें|ऑक्टोबर|ऑक्टो|नोव्हेंबर|नोव्हें|डिसेंबर|डिसे|जानेवारी|जाने|फेब्रुवारी|फेब्रु|मार्च|एप्रिल|मे)(?:\s*\d{4}[-–]?\d{0,4})?/i);
+      if (cleanMonthMatch) {
+        currentMonthName = cleanMonthMatch[0].trim();
+      } else {
+        currentMonthName = rawMonth.split(/\s+अभ्यासक्रमाचे|\s+मासिक|\s+विषय/i)[0].trim() || rawMonth;
+      }
       currentRows = [];
       return;
     }
@@ -640,7 +662,7 @@ export function splitRowsIntoMonthlySections(rawRows: string[][]): Record<string
     }
 
     // Skip signatures
-    if (line.includes("शिक्षक स्वाक्षरी") || line.includes("मुख्याध्यापक स्वाक्षरी")) {
+    if (isSignatureRow(row)) {
       return;
     }
 

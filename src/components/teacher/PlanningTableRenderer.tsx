@@ -8,6 +8,7 @@ import {
   splitRowsIntoSubjectSections,
   splitRowsIntoMonthlySections,
   normalizeSubjectName,
+  isSignatureRow,
   AnnualPlanningWorkbook,
   SubjectSection,
 } from "@/lib/smartSubjectSplitter";
@@ -32,6 +33,8 @@ import {
   Plus,
   X,
   UserCheck,
+  School,
+  Building,
 } from "lucide-react";
 import { toast } from "sonner";
 import { parseExcelData } from "@/services/fileReader/ExcelParser";
@@ -46,6 +49,15 @@ interface PlanningTableRendererProps {
   mode?: "teacher" | "admin";
   onEdit?: () => void;
   onDelete?: () => void;
+}
+
+export interface UserSchoolProfile {
+  schoolName: string;
+  kendraName: string;
+  talukaName: string;
+  udiseNumber: string;
+  teacherName: string;
+  headMasterName: string;
 }
 
 // Auto-expanding textarea without inner sidebars/scrollbars
@@ -345,6 +357,429 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     return ["मराठी", "गणित", "इंग्रजी", "कलाशिक्षण", "कार्यशिक्षण", "शारीरिक शिक्षण"];
   }, [allSectionsAvailable, parsedWorkbook]);
 
+  // Dynamic Selected Medium Display
+  const displayMedium = useMemo(() => {
+    const recAny = record as any;
+    const rawMed = (recAny?.mediumId || recAny?.medium || "").trim().toLowerCase();
+    if (rawMed === "semi" || rawMed === "semi_english" || rawMed === "semi-english" || rawMed.includes("सेमी")) {
+      return "सेमी-इंग्रजी";
+    }
+    if (rawMed === "marathi" || rawMed === "mr" || rawMed.includes("मराठी")) {
+      return "मराठी";
+    }
+    if (recAny?.mediumId) return recAny.mediumId;
+    return "मराठी";
+  }, [record]);
+
+  // Clean main document class title
+  const cleanClassTitle = useMemo(() => {
+    let title = parsedWorkbook?.classTitle || "";
+    const isMonthlyPlan = record?.planningType === "monthly" || (record as any)?.category === "masik_niyojan";
+    if (!title || title.length > 50) {
+      return `इयत्ता : ${record?.classId || "१ ली"} ${isMonthlyPlan ? "मासिक नियोजन" : "संपूर्ण वार्षिक नियोजन"} सन २०२६-२७`;
+    }
+    return title;
+  }, [parsedWorkbook, record]);
+
+  // Helper to format clean section/month banner title
+  const formatCleanSectionTitle = (sec: SubjectSection) => {
+    const rawTitle = (sec.displaySubjectName || sec.subjectName || "").trim();
+
+    // 1. Check if it's a monthly section or contains month names
+    const monthRegex = /(जुन|जून|जुलै|ऑगस्ट|सप्टेंबर|सप्टें|ऑक्टोबर|ऑक्टो|नोव्हेंबर|नोव्हें|डिसेंबर|डिसे|जानेवारी|जाने|फेब्रुवारी|फेब्रु|मार्च|एप्रिल|मे)/i;
+    const match = rawTitle.match(monthRegex);
+
+    if (match) {
+      const monthName = match[1];
+      const yearMatch = rawTitle.match(/२०\d{2}|20\d{2}/);
+      const yearStr = yearMatch ? ` ${yearMatch[0]}` : "";
+      return `मासिक नियोजन माहे : ${monthName}${yearStr}`;
+    }
+
+    // 2. If rawTitle contains duplicate repeated phrases (e.g. length > 40)
+    if (rawTitle.length > 40) {
+      const normSubj = normalizeSubjectName(sec.subjectName);
+      if (normSubj && normSubj !== "सामान्य") {
+        return `विषय : ${normSubj}`;
+      }
+      const parts = rawTitle.split(/\s+अभ्यासक्रमाचे|\s+मासिक|\s+विषय/i).map((p) => p.trim()).filter(Boolean);
+      if (parts.length > 0 && parts[0].length <= 40) {
+        return parts[0];
+      }
+      return `विषय : ${sec.subjectName}`;
+    }
+
+    // 3. Standard clean title
+    if (!rawTitle.startsWith("विषय") && !rawTitle.startsWith("मासिक")) {
+      return `विषय : ${rawTitle}`;
+    }
+
+    return rawTitle;
+  };
+
+  // Helper to normalize cell string for accurate comparison (handling non-breaking spaces & whitespace differences)
+  const normalizeForCompare = (val: any) => {
+    if (val === null || val === undefined) return "";
+    return String(val)
+      .replace(/[\u00a0\r\n\t]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+  };
+
+  const isEmptyValue = (val: any) => {
+    const norm = normalizeForCompare(val);
+    return norm === "" || norm === "-" || norm === "null" || norm === "undefined";
+  };
+
+        // Helper to detect if content/subject/medium in Excel is English
+  const isEnglishContent = (
+    headers: string[],
+    rows: string[][],
+    subjectName?: string,
+    mediumId?: string
+  ): boolean => {
+    const sub = (subjectName || "").toLowerCase();
+    const med = (mediumId || "").toLowerCase();
+
+    if (med === "english" || med === "en") return true;
+    if (sub === "english" || sub.includes("english")) return true;
+
+    const headerStr = (headers || []).join(" ").toLowerCase();
+    if (
+      headerStr.includes("date") ||
+      headerStr.includes("month") ||
+      headerStr.includes("unit") ||
+      headerStr.includes("topic") ||
+      headerStr.includes("outcome") ||
+      headerStr.includes("objective") ||
+      headerStr.includes("period") ||
+      headerStr.includes("week") ||
+      headerStr.includes("tlm") ||
+      headerStr.includes("material")
+    ) {
+      return true;
+    }
+
+    let englishCount = 0;
+    let devanagariCount = 0;
+
+    const sampleRows = (rows || []).slice(0, 12);
+    for (const r of sampleRows) {
+      for (const cell of r) {
+        const s = String(cell || "").trim();
+        if (!s || s === "-") continue;
+        const engMatches = s.match(/[a-zA-Z]/g);
+        const devMatches = s.match(/[\u0900-\u097F]/g);
+        if (engMatches) englishCount += engMatches.length;
+        if (devMatches) devanagariCount += devMatches.length;
+      }
+    }
+
+    return englishCount > devanagariCount && englishCount > 15;
+  };
+
+  // Helper to get dynamic category headers matching the Excel language (English / Marathi)
+  const getCategoryHeaders = (sec: SubjectSection, isMonthlyPlan: boolean, recordAny: any): string[] => {
+    if (sec.headers && Array.isArray(sec.headers) && sec.headers.length >= 4) {
+      const hasMeaningfulHeaders = sec.headers.some(
+        (h) => h && !h.toLowerCase().includes("स्तंभ") && !h.toLowerCase().includes("column")
+      );
+      if (hasMeaningfulHeaders) {
+        return sec.headers;
+      }
+    }
+
+    const isEng = isEnglishContent(sec.headers || [], sec.rows, sec.subjectName, recordAny?.mediumId);
+
+    if (isMonthlyPlan) {
+      return isEng
+        ? [
+            "Date",
+            "Topic / Unit / Subtopic",
+            "Learning Outcomes",
+            "Teaching Points / Objectives",
+            "Learning Experiences",
+            "Tools & Techniques",
+            "Teaching Learning Material (TLM)",
+          ]
+        : DEFAULT_HEADERS.masik_niyojan;
+    } else {
+      return isEng
+        ? [
+            "Month",
+            "Weeks",
+            "Working Days",
+            "Periods",
+            `Subject : ${sec.subjectName}`,
+            "Learning Outcomes",
+          ]
+        : DEFAULT_HEADERS.varshik_niyojan;
+    }
+  };
+
+  // Helper to check if text is an Exam / Assessment / Test title
+  const isExamOrAssessmentText = (val: any): boolean => {
+    if (!val) return false;
+    const s = String(val).trim().toLowerCase();
+    if (!s) return false;
+
+    return (
+      s.includes("चाचणी") ||
+      s.includes("मूल्यमापन") ||
+      s.includes("परीक्षा") ||
+      s.includes("संकलित") ||
+      s.includes("घटक चाचणी") ||
+      s.includes("सत्र परीक्षा") ||
+      s.includes("प्रथम घटक") ||
+      s.includes("द्वितीय घटक")
+    );
+  };
+
+  // Helper to check if an entire row is an Exam / Assessment row
+  const isExamOrAssessmentRow = (row: string[]): boolean => {
+    if (!row || !Array.isArray(row)) return false;
+    return row.some((cell) => isExamOrAssessmentText(cell));
+  };
+
+    // Helper to compute rowSpan matrix for ALL columns (merging matching values & empty sub-cells under parent titles, formatting Exam blocks cleanly)
+  const getTargetRowSpanMatrix = (rows: string[][], isMonthlyPlan: boolean, headers: string[]) => {
+    const numRows = rows.length;
+    if (numRows === 0) return [];
+    const numCols = Math.max(...rows.map((r) => r.length), headers.length, 1);
+
+    const matrix: { rowSpan: number; skip: boolean; displayValue: string; isExam?: boolean }[][] = Array.from(
+      { length: numRows },
+      () => Array.from({ length: numCols }, () => ({ rowSpan: 1, skip: false, displayValue: "-" }))
+    );
+
+    let r = 0;
+    while (r < numRows) {
+      const isExamRow = isExamOrAssessmentRow(rows[r]);
+
+      if (isExamRow) {
+        // 1. Find full span of continuous Exam rows
+        let examSpan = 1;
+        while (r + examSpan < numRows && isExamOrAssessmentRow(rows[r + examSpan])) {
+          examSpan++;
+        }
+
+        // 2. Find primary exam title and primary column
+        let examTitle = "";
+        let primaryCol = isMonthlyPlan ? 1 : 4;
+
+        for (let spanR = r; spanR < r + examSpan; spanR++) {
+          for (let c = 0; c < numCols; c++) {
+            const val = rows[spanR]?.[c];
+            if (isExamOrAssessmentText(val)) {
+              examTitle = String(val).trim();
+              primaryCol = c;
+              break;
+            }
+          }
+          if (examTitle) break;
+        }
+
+        if (!examTitle) examTitle = "चाचणी / मूल्यमापन";
+
+        // 3. Process Date Column (Col 0) for Exam Block (keep dates AS IS or merge if identical)
+        let dateR = r;
+        while (dateR < r + examSpan) {
+          const dVal = rows[dateR]?.[0];
+          const dEmpty = isEmptyValue(dVal);
+          if (dEmpty) {
+            let dSpan = 1;
+            while (
+              dateR + dSpan < r + examSpan &&
+              isEmptyValue(rows[dateR + dSpan]?.[0])
+            ) {
+              dSpan++;
+            }
+            matrix[dateR][0] = { rowSpan: dSpan, skip: false, displayValue: "-" };
+            for (let k = 1; k < dSpan; k++) {
+              matrix[dateR + k][0] = { rowSpan: 1, skip: true, displayValue: "" };
+            }
+            dateR += dSpan;
+          } else {
+            const dNorm = normalizeForCompare(dVal);
+            const dDisplay = String(dVal || "").trim();
+            let dSpan = 1;
+            while (
+              dateR + dSpan < r + examSpan &&
+              (isEmptyValue(rows[dateR + dSpan]?.[0]) || normalizeForCompare(rows[dateR + dSpan]?.[0]) === dNorm)
+            ) {
+              dSpan++;
+            }
+            matrix[dateR][0] = { rowSpan: dSpan, skip: false, displayValue: dDisplay };
+            for (let k = 1; k < dSpan; k++) {
+              matrix[dateR + k][0] = { rowSpan: 1, skip: true, displayValue: "" };
+            }
+            dateR += dSpan;
+          }
+        }
+
+        // 4. Process Content Columns (Cols 1..numCols-1) for Exam Block
+        for (let cIdx = 1; cIdx < numCols; cIdx++) {
+          if (cIdx === primaryCol) {
+            matrix[r][cIdx] = { rowSpan: examSpan, skip: false, displayValue: examTitle, isExam: true };
+            for (let k = 1; k < examSpan; k++) {
+              matrix[r + k][cIdx] = { rowSpan: 1, skip: true, displayValue: "" };
+            }
+          } else {
+            let altExamTitle = "";
+            for (let spanR = r; spanR < r + examSpan; spanR++) {
+              const val = rows[spanR]?.[cIdx];
+              if (isExamOrAssessmentText(val) && normalizeForCompare(val) !== normalizeForCompare(examTitle)) {
+                altExamTitle = String(val).trim();
+                break;
+              }
+            }
+
+            const colDisplay = altExamTitle || "-";
+            matrix[r][cIdx] = { rowSpan: examSpan, skip: false, displayValue: colDisplay, isExam: !!altExamTitle };
+            for (let k = 1; k < examSpan; k++) {
+              matrix[r + k][cIdx] = { rowSpan: 1, skip: true, displayValue: "" };
+            }
+          }
+        }
+
+        r += examSpan;
+      } else {
+        // Regular curriculum rows (process per column normally)
+        for (let cIdx = 0; cIdx < numCols; cIdx++) {
+          if (matrix[r][cIdx].skip || matrix[r][cIdx].rowSpan > 1) continue;
+
+          const cellVal = rows[r]?.[cIdx];
+          const isCurrentEmpty = isEmptyValue(cellVal);
+
+          if (isCurrentEmpty) {
+            let span = 1;
+            while (
+              r + span < numRows &&
+              !isExamOrAssessmentRow(rows[r + span]) &&
+              isEmptyValue(rows[r + span]?.[cIdx])
+            ) {
+              span++;
+            }
+            matrix[r][cIdx] = { rowSpan: span, skip: false, displayValue: "-" };
+            for (let k = 1; k < span; k++) {
+              matrix[r + k][cIdx] = { rowSpan: 1, skip: true, displayValue: "" };
+            }
+          } else {
+            const currentNorm = normalizeForCompare(cellVal);
+            const currentDisplay = String(cellVal || "").trim();
+            let span = 1;
+
+            while (r + span < numRows) {
+              if (isExamOrAssessmentRow(rows[r + span])) {
+                break;
+              }
+
+              const nextVal = rows[r + span]?.[cIdx];
+              const isNextEmpty = isEmptyValue(nextVal);
+              const nextNorm = normalizeForCompare(nextVal);
+
+              if (isNextEmpty || nextNorm === currentNorm) {
+                span++;
+              } else {
+                break;
+              }
+            }
+
+            matrix[r][cIdx] = { rowSpan: span, skip: false, displayValue: currentDisplay };
+            for (let k = 1; k < span; k++) {
+              matrix[r + k][cIdx] = { rowSpan: 1, skip: true, displayValue: "" };
+            }
+          }
+        }
+        r++;
+      }
+    }
+
+    return matrix;
+  };
+
+  // One-time School & Teacher Profile State
+  const [schoolProfile, setSchoolProfile] = useState<UserSchoolProfile>({
+    schoolName: "",
+    kendraName: "",
+    talukaName: "",
+    udiseNumber: "",
+    teacherName: "",
+    headMasterName: "",
+  });
+  const [isSchoolModalOpen, setIsSchoolModalOpen] = useState<boolean>(false);
+  const [isSavingSchoolProfile, setIsSavingSchoolProfile] = useState<boolean>(false);
+  const [schoolFormData, setSchoolFormData] = useState<UserSchoolProfile>({
+    schoolName: "",
+    kendraName: "",
+    talukaName: "",
+    udiseNumber: "",
+    teacherName: "",
+    headMasterName: "",
+  });
+
+  useEffect(() => {
+    const effectiveUserId = user?.uid || auth?.currentUser?.uid || "guest_teacher";
+    const storageKey = `user_planning_school_profile_${effectiveUserId}`;
+
+    const cached = localStorage.getItem(storageKey);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        setSchoolProfile(parsed);
+        setSchoolFormData(parsed);
+      } catch (e) {}
+    }
+
+    const fetchSchoolProfile = async () => {
+      if (db && effectiveUserId && effectiveUserId !== "guest_teacher") {
+        try {
+          const docRef = doc(db, "user_planning_school_profiles", effectiveUserId);
+          const snap = await getDoc(docRef);
+          if (snap.exists()) {
+            const data = snap.data() as UserSchoolProfile;
+            setSchoolProfile(data);
+            setSchoolFormData(data);
+            localStorage.setItem(storageKey, JSON.stringify(data));
+          }
+        } catch (err) {
+          console.warn("Planning school profile fetch notice:", err);
+        }
+      }
+    };
+
+    fetchSchoolProfile();
+  }, [user?.uid]);
+
+  const handleSaveSchoolProfile = async () => {
+    try {
+      setIsSavingSchoolProfile(true);
+      const effectiveUserId = user?.uid || auth?.currentUser?.uid || "guest_teacher";
+      const storageKey = `user_planning_school_profile_${effectiveUserId}`;
+
+      localStorage.setItem(storageKey, JSON.stringify(schoolFormData));
+
+      if (db && effectiveUserId && effectiveUserId !== "guest_teacher") {
+        try {
+          const docRef = doc(db, "user_planning_school_profiles", effectiveUserId);
+          await setDoc(docRef, { ...schoolFormData, updatedAt: new Date().toISOString() }, { merge: true });
+        } catch (e) {
+          console.warn("Firestore save planning school profile notice:", e);
+        }
+      }
+
+      setSchoolProfile(schoolFormData);
+      setIsSchoolModalOpen(false);
+      toast.success("🎉 शाळा व शिक्षक माहिती यशस्वीरित्या जतन झाली!");
+    } catch (err) {
+      console.error("Save school profile error:", err);
+      toast.error("माहिती जतन करताना त्रुटी आली.");
+    } finally {
+      setIsSavingSchoolProfile(false);
+    }
+  };
+
   // Helper to filter sections strictly by selected subject
   const filterSectionsBySubject = (sections: SubjectSection[], filter: string): SubjectSection[] => {
     if (!sections || sections.length === 0) return [];
@@ -618,11 +1053,16 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     toast.info("🔄 मूळ एडमिन फाईल यशस्वीरित्या रिस्टोअर झाली.");
   };
 
-  // Generate Multi-Subject Combined PDF
+  // Generate Multi-Subject / Single-Subject PDF
   const handleDownloadCombinedPdf = async () => {
     try {
       setIsGeneratingPdf(true);
-      toast.info("⚡ सर्व विषयांचे एकत्र (Combined) PDF तयार होत आहे...");
+      const isSingleSubject = selectedSubjectFilter !== "all";
+      toast.info(
+        isSingleSubject
+          ? `⚡ विषय : ${selectedSubjectFilter} चे PDF तयार होत आहे...`
+          : "⚡ सर्व विषयांचे एकत्र (Combined) PDF तयार होत आहे..."
+      );
 
       const printElement = printContainerRef.current;
       if (!printElement) {
@@ -635,8 +1075,10 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
       const html2pdf = html2pdfModule.default || html2pdfModule;
 
       const opt = {
-        margin: [8, 8, 8, 8],
-        filename: `इयत्ता_${record?.classId || "1"}_संपूर्ण_वार्षिक_नियोजन_२०२६-२७.pdf`,
+        margin: [6, 6, 6, 6],
+        filename: isSingleSubject
+          ? `इयत्ता_${record?.classId || "1"}_वार्षिक_नियोजन_${selectedSubjectFilter}_२०२६-२७.pdf`
+          : `इयत्ता_${record?.classId || "1"}_संपूर्ण_वार्षिक_नियोजन_२०२६-२७.pdf`,
         image: { type: "jpeg", quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, logging: false },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
@@ -649,9 +1091,13 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
       await (html2pdf() as any).from(printElement).set(opt).save();
       setIsGeneratingPdf(false);
-      toast.success("🎉 सर्व विषयांचे एकत्र (Combined) PDF यशस्वीरित्या डाऊनलोड झाले!");
+      toast.success(
+        isSingleSubject
+          ? `🎉 विषय : ${selectedSubjectFilter} चे PDF यशस्वीरित्या डाऊनलोड झाले!`
+          : "🎉 सर्व विषयांचे एकत्र (Combined) PDF यशस्वीरित्या डाऊनलोड झाले!"
+      );
     } catch (err) {
-      console.error("Combined PDF error:", err);
+      console.error("PDF download error:", err);
       setIsGeneratingPdf(false);
       toast.error("PDF डाऊनलोड करताना अडचण आली.");
     }
@@ -747,7 +1193,11 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
               className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-md active:scale-95 disabled:opacity-50"
             >
               {isGeneratingPdf ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
-              <span>📥 COMBINED PDF DOWNLOAD</span>
+              <span>
+                {selectedSubjectFilter === "all"
+                  ? "📥 COMBINED PDF DOWNLOAD"
+                  : `📥 PDF DOWNLOAD (${selectedSubjectFilter})`}
+              </span>
             </button>
 
             {/* SINGLE ONLY SAVE / EDIT CONTROL BAR */}
@@ -906,6 +1356,13 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
               <>
                 <style>{`
                   @media print, all {
+                    .html2pdf__page-break {
+                      page-break-before: always !important;
+                      break-before: page !important;
+                      height: 0 !important;
+                      margin: 0 !important;
+                      padding: 0 !important;
+                    }
                     table {
                       page-break-inside: auto;
                     }
@@ -920,14 +1377,25 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                     }
                   }
                 `}</style>
-                {/* Header Title Card */}
-                <div className="border-b-2 border-slate-900 pb-5 space-y-2 text-center">
-                  <h2 className="text-xl sm:text-2xl font-black text-slate-950 uppercase tracking-tight">
-                    {parsedWorkbook?.classTitle || `इयत्ता : ${record?.classId || "१ ली"} संपूर्ण वार्षिक नियोजन सन २०२६-२७`}
-                  </h2>
-                  <p className="text-xs font-bold text-slate-700">
-                    माध्यम: सेमी-इंग्रजी / मराठी | सन २०२६-२७
-                  </p>
+                {/* Header Title & School Info Card at START of Document (First Page Only) */}
+                <div className="border-2 border-slate-900 rounded-2xl p-4 sm:p-5 bg-slate-50 space-y-3 text-xs font-bold text-slate-900 print:bg-white print:border-2 print:border-slate-900">
+                  <div className="text-center space-y-1.5 border-b-2 border-slate-900 pb-3">
+                    <h2 className="text-lg sm:text-xl font-black text-indigo-950 uppercase tracking-tight print:text-slate-950">
+                      {schoolProfile.schoolName || "जिल्हा परिषद प्राथमिक शाळा"}
+                    </h2>
+                    <h3 className="text-sm sm:text-base font-black text-slate-900 uppercase">
+                      {cleanClassTitle}
+                    </h3>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs font-bold text-slate-900 pt-1">
+                    <div><span className="text-slate-600">केंद्र:</span> {schoolProfile.kendraName || "—"}</div>
+                    <div><span className="text-slate-600">तालुका:</span> {schoolProfile.talukaName || "—"}</div>
+                    <div><span className="text-slate-600">UDISE क्र.:</span> <span className="font-mono">{schoolProfile.udiseNumber || "—"}</span></div>
+                    <div><span className="text-slate-600">वर्ग शिक्षक:</span> {schoolProfile.teacherName || "—"}</div>
+                    <div><span className="text-slate-600">मुख्याध्यापक:</span> {schoolProfile.headMasterName || "—"}</div>
+                    <div><span className="text-slate-600">माध्यम:</span> {displayMedium}</div>
+                  </div>
                 </div>
 
                 {/* EDIT MODE NOTICE BANNER (Informative only - no duplicate save button) */}
@@ -942,30 +1410,45 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
                 {/* Render Selected Subject Sections */}
                 {sectionsToRender.length > 0 ? (
-                  sectionsToRender.map((sec, secIdx) => {
-                    const filteredRows = sec.rows.filter((row) => {
-                      const hasMeaningfulContent = row.some((c) => {
-                        const s = String(c || "").trim();
-                        return s !== "" && s !== "-" && s !== "null" && s !== "undefined";
+                  sectionsToRender
+                    .filter((sec) => {
+                      if (isInlineEditing) return true;
+                      const hasData = sec.rows.some((row) =>
+                        row.some((c) => {
+                          const s = String(c || "").trim();
+                          return s !== "" && s !== "-" && s !== "null" && s !== "undefined";
+                        })
+                      );
+                      return hasData;
+                    })
+                    .map((sec, secIdx) => {
+                      const filteredRows = sec.rows.filter((row) => {
+                        if (isSignatureRow(row)) return false;
+                        const hasMeaningfulContent = row.some((c) => {
+                          const s = String(c || "").trim();
+                          return s !== "" && s !== "-" && s !== "null" && s !== "undefined";
+                        });
+                        if (!hasMeaningfulContent && !isInlineEditing) return false;
+
+                        if (!searchQuery.trim() || isInlineEditing) return true;
+                        const q = searchQuery.toLowerCase().trim();
+                        return row.some((c) => (c || "").toLowerCase().includes(q));
                       });
-                      if (!hasMeaningfulContent && !isInlineEditing) return false;
 
-                      if (!searchQuery.trim() || isInlineEditing) return true;
-                      const q = searchQuery.toLowerCase().trim();
-                      return row.some((c) => (c || "").toLowerCase().includes(q));
-                    });
+                      const categoryHeaders = getCategoryHeaders(sec, isMonthly, record);
+                      const sectionRowMatrix = !isInlineEditing ? getTargetRowSpanMatrix(filteredRows, isMonthly, categoryHeaders) : [];
 
-                    return (
-                      <React.Fragment key={`${sec.subjectName}-${secIdx}`}>
-                        {secIdx > 0 && (
-                          <div className="html2pdf__page-break" style={{ pageBreakAfter: "always", breakAfter: "page", height: 0, margin: 0, padding: 0 }} />
-                        )}
-                        <div className={`space-y-4 ${secIdx > 0 ? "pt-6 border-t-2 border-slate-200" : ""}`}>
+                      return (
+                        <React.Fragment key={`${sec.subjectName}-${secIdx}`}>
+                          {secIdx > 0 && (
+                            <div className="html2pdf__page-break" style={{ pageBreakBefore: "always", breakBefore: "page", height: 0, margin: 0, padding: 0 }} />
+                          )}
+                          <div className={`space-y-4 ${secIdx > 0 ? "pt-4 border-t-2 border-slate-200" : ""}`}>
                         {/* Subject Banner Header */}
                         <div className="bg-slate-900 text-amber-300 px-5 py-3 rounded-2xl flex items-center justify-between shadow-xs">
                           <h3 className="text-sm font-black uppercase tracking-wider flex items-center gap-2">
                             <BookOpen className="size-4 text-emerald-400" />
-                            <span>{sec.displaySubjectName || `विषय : ${sec.subjectName}`}</span>
+                            <span>{formatCleanSectionTitle(sec)}</span>
                           </h3>
                           <div className="flex items-center gap-3">
                             <span className="text-[11px] font-bold text-slate-300">
@@ -1186,16 +1669,23 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                         </>
                                       )
                                     ) : (
-                                      categoryHeaders.map((_: string, cIdx: number) => (
-                                        <td
-                                          key={cIdx}
-                                          className={`border border-slate-300 p-2.5 align-top text-slate-900 leading-relaxed ${cIdx === 0 ? "text-center font-bold" : "text-left whitespace-pre-line"
-                                            }`}
-                                          style={{ pageBreakInside: "avoid", breakInside: "avoid" }}
-                                        >
-                                          {r[cIdx] || "-"}
-                                        </td>
-                                      ))
+                                      categoryHeaders.map((_: string, cIdx: number) => {
+                                         const cellInfo = sectionRowMatrix[rIdx]?.[cIdx];
+                                         if (!isInlineEditing && cellInfo?.skip) {
+                                           return null;
+                                         }
+
+                                         return (
+                                           <td
+                                             key={cIdx}
+                                             rowSpan={!isInlineEditing && cellInfo?.rowSpan ? cellInfo.rowSpan : 1}
+                                             className={`border border-slate-300 p-2.5 align-middle text-slate-900 leading-relaxed ${(cellInfo?.isExam || isExamOrAssessmentText(cellInfo?.displayValue)) ? "text-center font-bold text-slate-900 bg-amber-50/40" : cIdx === 0 ? "text-center font-bold" : "text-left whitespace-pre-line"}`}
+                                             style={{ pageBreakInside: "avoid", breakInside: "avoid" }}
+                                           >
+                                             {cellInfo ? cellInfo.displayValue : r[cIdx] || "-"}
+                                           </td>
+                                         );
+                                       })
                                     )}
                                   </tr>
                                 ))
@@ -1209,6 +1699,17 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                             </tbody>
                           </table>
                         </div>
+                        {/* Signature Bar on EVERY Subject Page */}
+                        <div className="pt-4 border-t border-slate-300 grid grid-cols-2 text-center text-xs font-black text-slate-900">
+                          <div>
+                            <div>वर्ग शिक्षक स्वाक्षरी</div>
+                            <div className="text-[11px] text-slate-600 font-bold mt-1">({schoolProfile.teacherName || "शिक्षकाचे नाव"})</div>
+                          </div>
+                          <div>
+                            <div>मुख्याध्यापक स्वाक्षरी व शिक्का</div>
+                            <div className="text-[11px] text-slate-600 font-bold mt-1">({schoolProfile.headMasterName || "मुख्याध्यापक नाव"})</div>
+                          </div>
+                        </div>
                       </div>
                     </React.Fragment>
                     );
@@ -1218,12 +1719,6 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                     कोणताही विषय डेटा उपलब्ध नाही.
                   </div>
                 )}
-
-                {/* Footer Signature Bar */}
-                <div className="pt-8 border-t border-slate-200 grid grid-cols-2 text-center text-xs font-black text-slate-900">
-                  <div>वर्ग शिक्षक / विषय शिक्षक स्वाक्षरी</div>
-                  <div>मुख्याध्यापक स्वाक्षरी व शिक्का</div>
-                </div>
               </>
             )}
           </>

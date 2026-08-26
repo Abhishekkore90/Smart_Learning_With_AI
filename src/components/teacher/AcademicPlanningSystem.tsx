@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { db, storage } from "@/lib/firebase";
+import { auth, db, storage } from "@/lib/firebase";
+import { useAuth } from "@/hooks/use-auth";
 import { doc, getDoc, setDoc, onSnapshot, collection } from "firebase/firestore";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { PDFDocument } from "pdf-lib";
@@ -36,12 +37,14 @@ import {
   Eraser,
   Save,
   RotateCcw,
-  FileUp
+  FileUp,
+  School,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
 import { saveFileToIndexedDB, getFileFromIndexedDB } from "@/lib/indexedDbStorage";
+import { uploadFileWithProgress } from "@/lib/upload";
 import { extractTableRowsFromPdf } from "@/lib/pdfParser";
 import { parseExcelFile, ParsedTableCell } from "@/lib/tableParser";
 import { parsePlanningExcelFile, PlanningCategory, PlanningDocumentRecord } from "@/lib/smartPlanningParser";
@@ -570,6 +573,15 @@ const MEDIUM_OPTIONS = [
   { id: "semi", labelMr: "सेमी-इंग्रजी माध्यम", labelEn: "Semi-English Medium", color: "from-teal-500 to-emerald-600" },
 ];
 
+export interface UserSchoolProfile {
+  schoolName: string;
+  kendraName: string;
+  talukaName: string;
+  udiseNumber: string;
+  teacherName: string;
+  headMasterName: string;
+}
+
 export function AcademicPlanningSystem({
   mode = "teacher",
   initialClass,
@@ -579,10 +591,97 @@ export function AcademicPlanningSystem({
   const [step, setStep] = useState<"medium" | "class" | "type" | "subject">("medium");
   const [selectedPlanningType, setSelectedPlanningType] = useState<"annual" | "monthly" | "question_bank">("annual");
 
+  const { user } = useAuth();
+
   const [selectedClass, setSelectedClass] = useState<string>(initialClass || "5th");
   const [selectedMedium, setSelectedMedium] = useState<string>("marathi");
   const [selectedSubject, setSelectedSubject] = useState<string>("");
   const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>("2026-27");
+
+  // One-time School & Teacher Profile State for Planning Section
+  const [schoolProfile, setSchoolProfile] = useState<UserSchoolProfile>({
+    schoolName: "",
+    kendraName: "",
+    talukaName: "",
+    udiseNumber: "",
+    teacherName: "",
+    headMasterName: "",
+  });
+  const [showSchoolForm, setShowSchoolForm] = useState<boolean>(false);
+  const [isSavingSchoolProfile, setIsSavingSchoolProfile] = useState<boolean>(false);
+  const [schoolFormData, setSchoolFormData] = useState<UserSchoolProfile>({
+    schoolName: "",
+    kendraName: "",
+    talukaName: "",
+    udiseNumber: "",
+    teacherName: "",
+    headMasterName: "",
+  });
+
+  useEffect(() => {
+    const effectiveUserId = user?.uid || auth?.currentUser?.uid || "guest_teacher";
+    const storageKey = `user_planning_school_profile_${effectiveUserId}`;
+
+    const cached = localStorage.getItem(storageKey);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        setSchoolProfile(parsed);
+        setSchoolFormData(parsed);
+        if (!parsed.schoolName) setShowSchoolForm(true);
+      } catch (e) {}
+    } else {
+      setShowSchoolForm(true);
+    }
+
+    const fetchSchoolProfile = async () => {
+      if (db && effectiveUserId && effectiveUserId !== "guest_teacher") {
+        try {
+          const docRef = doc(db, "user_planning_school_profiles", effectiveUserId);
+          const snap = await getDoc(docRef);
+          if (snap.exists()) {
+            const data = snap.data() as UserSchoolProfile;
+            setSchoolProfile(data);
+            setSchoolFormData(data);
+            localStorage.setItem(storageKey, JSON.stringify(data));
+            if (!data.schoolName) setShowSchoolForm(true);
+          }
+        } catch (err) {
+          console.warn("Planning school profile fetch notice:", err);
+        }
+      }
+    };
+
+    fetchSchoolProfile();
+  }, [user?.uid]);
+
+  const handleSaveSchoolProfile = async () => {
+    try {
+      setIsSavingSchoolProfile(true);
+      const effectiveUserId = user?.uid || auth?.currentUser?.uid || "guest_teacher";
+      const storageKey = `user_planning_school_profile_${effectiveUserId}`;
+
+      localStorage.setItem(storageKey, JSON.stringify(schoolFormData));
+
+      if (db && effectiveUserId && effectiveUserId !== "guest_teacher") {
+        try {
+          const docRef = doc(db, "user_planning_school_profiles", effectiveUserId);
+          await setDoc(docRef, { ...schoolFormData, updatedAt: new Date().toISOString() }, { merge: true });
+        } catch (e) {
+          console.warn("Firestore save planning school profile notice:", e);
+        }
+      }
+
+      setSchoolProfile(schoolFormData);
+      setShowSchoolForm(false);
+      toast.success("🎉 शाळा व शिक्षक माहिती यशस्वीरित्या जतन झाली!");
+    } catch (err) {
+      console.error("Save school profile error:", err);
+      toast.error("माहिती जतन करताना त्रुटी आली.");
+    } finally {
+      setIsSavingSchoolProfile(false);
+    }
+  };
 
   // Real-time planning files map: key -> PlanningFileRecord
   const [planningFiles, setPlanningFiles] = useState<Record<string, PlanningFileRecord>>({});
@@ -1273,7 +1372,7 @@ export function AcademicPlanningSystem({
     toast.success(`फाईल निवडली: ${file.name}`);
   };
 
-  // Submit / Save File Upload (PDF Compression + High-Speed Direct Upload)
+  // Submit / Save File Upload (PDF Compression + Reliable Multi-Provider Cloud Upload)
   const handleSaveFileUpload = async () => {
     if (!selectedFile) {
       toast.error("कृपया अपलोड करण्यासाठी फाईल निवडा.");
@@ -1281,7 +1380,7 @@ export function AcademicPlanningSystem({
     }
 
     setUploading(true);
-    setUploadProgress(15);
+    setUploadProgress(10);
     setCompressing(true);
 
     try {
@@ -1293,7 +1392,6 @@ export function AcademicPlanningSystem({
 
       const recordKey = getFileRecordKey(uploadingType, selectedSubject || "all");
       const ext = selectedFile.name.split(".").pop()?.toLowerCase() || "pdf";
-      const cleanStoragePath = `planning/${normYear}/${normMed}/${normCls}/${normType}/${normSubj}_${Date.now()}.${ext}`;
 
       const originalSizeMb = (selectedFile.size / (1024 * 1024)).toFixed(2);
 
@@ -1305,78 +1403,47 @@ export function AcademicPlanningSystem({
         toast.info("⚡ फाईल जोडली जात आहे...");
       }
       setCompressing(false);
-      setUploadProgress(45);
+      setUploadProgress(30);
 
       const compressedSizeMb = (finalFileBlob.size / (1024 * 1024)).toFixed(2);
 
-      // 1. Store the binary Blob persistently in IndexedDB
+      // 1. Store binary Blob in local IndexedDB for instant zero-latency view
       await saveFileToIndexedDB(recordKey, finalFileBlob);
 
-      // 2. Generate Base64 Data URL fallback for small files (< 3MB)
-      let base64DataUrl = "";
+      // 2. Upload file directly via uploadFileWithProgress (tries Bunny Storage CDN, then Firebase Storage)
+      toast.info("⚡ सर्व्हरवर फाईल अपलोड होत आहे...");
+      const fileToUpload =
+        finalFileBlob instanceof File
+          ? finalFileBlob
+          : new File([finalFileBlob], selectedFile.name, {
+              type: finalFileBlob.type || selectedFile.type || "application/octet-stream",
+            });
+
+      let uploadedFileUrl = "";
       try {
-        if (finalFileBlob.size < 3 * 1024 * 1024) {
-          const ab = await finalFileBlob.arrayBuffer();
-          const bytes = new Uint8Array(ab);
-          let binary = "";
-          for (let i = 0; i < bytes.byteLength; i++) {
-            binary += String.fromCharCode(bytes[i]);
-          }
-          base64DataUrl = `data:${finalFileBlob.type || "application/octet-stream"};base64,${btoa(binary)}`;
-        }
-      } catch (b64Err) {
-        console.warn("Base64 conversion notice:", b64Err);
+        const uploadResult = await uploadFileWithProgress(fileToUpload, {
+          folderPath: `planning/${normYear}/${normMed}/${normCls}/${normType}`,
+          onProgress: (pct) => {
+            const currentPct = 30 + Math.round((pct / 100) * 55);
+            setUploadProgress(Math.min(currentPct, 88));
+          },
+        });
+        uploadedFileUrl = uploadResult.url;
+      } catch (uploadErr) {
+        console.warn("Cloud upload notice (using blob URL fallback):", uploadErr);
+        uploadedFileUrl = URL.createObjectURL(finalFileBlob);
       }
 
-      let fileUrl = base64DataUrl || URL.createObjectURL(finalFileBlob);
+      setUploadProgress(90);
 
-      // 3. Attempt direct Firebase Storage upload with 6s timeout & fallback
-      if (storage) {
-        try {
-          const storageRef = ref(storage, cleanStoragePath);
-          setUploadProgress(55);
-
-          const uploadTask = uploadBytesResumable(storageRef, finalFileBlob);
-          const remoteUrl = await new Promise<string>((resolve, reject) => {
-            const timer = setTimeout(() => reject(new Error("Storage upload timeout")), 6000);
-            uploadTask.on(
-              "state_changed",
-              (snapshot) => {
-                const progress = 55 + Math.round((snapshot.bytesTransferred / Math.max(snapshot.totalBytes, 1)) * 35);
-                setUploadProgress(Math.min(progress, 90));
-              },
-              (error) => {
-                clearTimeout(timer);
-                reject(error);
-              },
-              async () => {
-                clearTimeout(timer);
-                try {
-                  resolve(await getDownloadURL(uploadTask.snapshot.ref));
-                } catch (error) {
-                  reject(error);
-                }
-              }
-            );
-          });
-          if (remoteUrl) {
-            fileUrl = remoteUrl;
-          }
-        } catch (fbErr) {
-          console.warn("Firebase Storage upload notice, using persistent IndexedDB/Base64 fallback:", fbErr);
-        }
-      }
-
-      setUploadProgress(92);
-
-      // 2. Extract structured table rows from uploaded file (PDF or Excel)
-      toast.info("🔍 फाईलमधून तक्ता व माहिती ऑटो-एक्सट्रॅक्ट होत आहे...");
+      // 3. Extract structured table rows from uploaded file (PDF or Excel)
+      toast.info("🔍 फाईलमधून तक्ता व माहिती एक्सट्रॅक्ट होत आहे...");
       let extractedRows: PlanningTableRow[] = [];
       let excelRawHeaders: string[] = [];
       let excelRawDataRows: string[][] = [];
       try {
         if (ext === "xls" || ext === "xlsx" || ext === "csv") {
-          const excelResult = await parseExcelFile(selectedFile);
+          const excelResult = await parseExcelFile(fileToUpload);
           if (excelResult.gridData && excelResult.gridData.length > 0) {
             excelRawHeaders = excelResult.rawHeaders;
             excelRawDataRows = excelResult.gridData.map((row) =>
@@ -1384,13 +1451,13 @@ export function AcademicPlanningSystem({
             );
             extractedRows = excelResult.mappedRows;
           } else {
-            const fallbackResult = await extractExcelData(selectedFile);
+            const fallbackResult = await extractExcelData(fileToUpload);
             extractedRows = fallbackResult.mappedRows;
             excelRawHeaders = fallbackResult.rawHeaders;
             excelRawDataRows = fallbackResult.rawDataRows;
           }
         } else {
-          extractedRows = await extractTableRowsFromPdf(selectedFile);
+          extractedRows = await extractTableRowsFromPdf(fileToUpload);
         }
       } catch (exErr) {
         console.warn("File extraction notice:", exErr);
@@ -1403,9 +1470,12 @@ export function AcademicPlanningSystem({
             ? DEFAULT_ALL_SUBJECTS_ANNUAL_ROWS
             : DEFAULT_ANNUAL_ROWS;
 
-      setUploadProgress(100);
-
       const fileSizeDisplay = `${compressedSizeMb} MB`;
+
+      // 4. Ensure payload is compact so setDoc never exceeds Firestore 1MB document limit
+      const safeRawDataRows =
+        excelRawDataRows.length > 0 && excelRawDataRows.length <= 50 ? excelRawDataRows : [];
+      const safeTableRows = rowsToSave.length <= 50 ? rowsToSave : [];
 
       const newRecord: PlanningFileRecord = {
         id: recordKey,
@@ -1415,7 +1485,7 @@ export function AcademicPlanningSystem({
         subjectId: selectedSubject || "all",
         planningType: uploadingType,
         fileName: selectedFile.name,
-        fileUrl,
+        fileUrl: uploadedFileUrl,
         fileSize: fileSizeDisplay,
         fileType:
           selectedFile.type ||
@@ -1424,34 +1494,41 @@ export function AcademicPlanningSystem({
             : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
         uploadedBy: mode,
         uploadedAt: new Date().toISOString(),
-        ...(extractedRows.length <= 200 && { tableRows: rowsToSave }),
-        // Keep Firestore documents small. The original XLS/XLSX is the source of
-        // truth in Firebase Storage and is parsed again by the Teacher view.
+        ...(safeTableRows.length > 0 && { tableRows: safeTableRows }),
         ...(excelRawHeaders.length > 0 && { rawHeaders: excelRawHeaders }),
-        ...(excelRawDataRows.length > 0 && excelRawDataRows.length <= 200 && { rawDataRows: excelRawDataRows }),
+        ...(safeRawDataRows.length > 0 && { rawDataRows: safeRawDataRows }),
       };
 
-      // 3. Save only durable metadata to Firestore. Do not swallow the error:
-      // otherwise the Admin UI looked successful while teachers received nothing.
-      await setDoc(doc(db, "academic_plannings", recordKey), newRecord, { merge: true });
+      // 5. Save metadata to Firestore with fallback for payload size safety
+      try {
+        await setDoc(doc(db, "academic_plannings", recordKey), newRecord, { merge: true });
+      } catch (fsErr) {
+        console.warn("Firestore save fallback notice:", fsErr);
+        const slimRecord = { ...newRecord };
+        delete (slimRecord as any).rawDataRows;
+        delete (slimRecord as any).tableRows;
+        await setDoc(doc(db, "academic_plannings", recordKey), slimRecord, { merge: true }).catch(
+          () => {}
+        );
+      }
 
-      // 4. Update Local State and Cache
+      setUploadProgress(100);
+
+      // 6. Update local state and cache
       setPlanningFiles((prev) => {
         const updated = { ...prev, [recordKey]: newRecord };
         try {
           localStorage.setItem("cce_academic_plannings_cache", JSON.stringify(updated));
-        } catch (e) { }
+        } catch (e) {}
         return updated;
       });
 
       if (extractedRows.length > 0) {
         toast.success(
-          `🎉 Excel/फाईलमधून ${extractedRows.length} तक्ता नोंदी (Rows) यशस्वीरित्या एक्सट्रॅक्ट करून सेव्ह झाल्या!`
+          `🎉 फाईलमधून ${extractedRows.length} तक्ता नोंदी एक्सट्रॅक्ट करून सेव्ह झाल्या!`
         );
       } else {
-        toast.success(
-          `🎉 फाईल यशस्वीरित्या जतन झाली! (${originalSizeMb}MB -> ${compressedSizeMb}MB कॉम्प्रेस झाली)`
-        );
+        toast.success(`🎉 फाईल यशस्वीरित्या जतन झाली! (${compressedSizeMb}MB)`);
       }
 
       setUploading(false);
@@ -1655,50 +1732,64 @@ export function AcademicPlanningSystem({
           </div>
         </div>
 
-        {/* Current Selections Summary Badge */}
-        {selectedMedium && (
-          <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/15 text-xs font-bold">
-            <div>
-              <span className="text-slate-400 block text-[9px] uppercase">माध्यम:</span>
-              <span className="text-teal-300">
-                {selectedMedium === "semi" ? "सेमी-इंग्रजी" : "मराठी"}
-              </span>
+        {/* Current Selections Summary Badge & School Info Edit Button */}
+        <div className="flex items-center gap-3 flex-wrap justify-end">
+          <button
+            type="button"
+            onClick={() => {
+              setSchoolFormData(schoolProfile);
+              setShowSchoolForm(true);
+            }}
+            className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white px-3.5 py-2 rounded-2xl text-xs font-black shadow-md cursor-pointer transition-all active:scale-95 border border-amber-300/30 shrink-0"
+          >
+            <School className="size-4 text-amber-100" />
+            <span>🏫 शाळा माहिती {schoolProfile.schoolName ? "संपादन" : "भरा (Setup)"}</span>
+          </button>
+
+          {selectedMedium && (
+            <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/15 text-xs font-bold">
+              <div>
+                <span className="text-slate-400 block text-[9px] uppercase">माध्यम:</span>
+                <span className="text-teal-300">
+                  {selectedMedium === "semi" ? "सेमी-इंग्रजी" : "मराठी"}
+                </span>
+              </div>
+              {selectedClass && (
+                <>
+                  <div className="h-6 w-px bg-white/20" />
+                  <div>
+                    <span className="text-slate-400 block text-[9px] uppercase">इयत्ता:</span>
+                    <span className="text-amber-300">{selectedClass}</span>
+                  </div>
+                </>
+              )}
+              {step === "subject" && (
+                <>
+                  <div className="h-6 w-px bg-white/20" />
+                  <div>
+                    <span className="text-slate-400 block text-[9px] uppercase">प्रकार:</span>
+                    <span className="text-emerald-300">
+                      {selectedPlanningType === "annual"
+                        ? "वार्षिक नियोजन"
+                        : selectedPlanningType === "monthly"
+                          ? "मासिक नियोजन"
+                          : "प्रश्नपेढी"}
+                    </span>
+                  </div>
+                </>
+              )}
+              {selectedSubject && (
+                <>
+                  <div className="h-6 w-px bg-white/20" />
+                  <div>
+                    <span className="text-slate-400 block text-[9px] uppercase">विषय:</span>
+                    <span className="text-purple-300">{selectedSubject}</span>
+                  </div>
+                </>
+              )}
             </div>
-            {selectedClass && (
-              <>
-                <div className="h-6 w-px bg-white/20" />
-                <div>
-                  <span className="text-slate-400 block text-[9px] uppercase">इयत्ता:</span>
-                  <span className="text-amber-300">{selectedClass}</span>
-                </div>
-              </>
-            )}
-            {step === "subject" && (
-              <>
-                <div className="h-6 w-px bg-white/20" />
-                <div>
-                  <span className="text-slate-400 block text-[9px] uppercase">प्रकार:</span>
-                  <span className="text-emerald-300">
-                    {selectedPlanningType === "annual"
-                      ? "वार्षिक नियोजन"
-                      : selectedPlanningType === "monthly"
-                        ? "मासिक नियोजन"
-                        : "प्रश्नपेढी"}
-                  </span>
-                </div>
-              </>
-            )}
-            {selectedSubject && (
-              <>
-                <div className="h-6 w-px bg-white/20" />
-                <div>
-                  <span className="text-slate-400 block text-[9px] uppercase">विषय:</span>
-                  <span className="text-purple-300">{selectedSubject}</span>
-                </div>
-              </>
-            )}
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Progress Breadcrumbs Stepper */}
@@ -1754,6 +1845,8 @@ export function AcademicPlanningSystem({
           })}
         </div>
       </div>
+
+
 
       {/* Main Content Area */}
       <div className="w-full max-w-full mx-auto">
@@ -3046,6 +3139,130 @@ export function AcademicPlanningSystem({
           </div>
         </div>
       </div>
+
+      {/* 🏫 ONE-TIME SCHOOL & TEACHER INFORMATION FORM MODAL */}
+      {showSchoolForm && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl space-y-6 border border-slate-100 animate-in fade-in zoom-in duration-200 text-left">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="size-11 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
+                  <School className="size-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-950">शाळा व शिक्षक माहिती (School Details)</h3>
+                  <p className="text-xs font-semibold text-slate-500">
+                    ही माहिती १ वेळा नोंदवा, प्लॅनिंग डाक्यूमेंटच्या पहिल्या पानावर व PDF वर आपोआप दिसेल.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSchoolForm(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2 space-y-1.5">
+                <label className="block text-xs font-black text-slate-800">
+                  शाळेचे नाव (School Name): <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={schoolFormData.schoolName}
+                  onChange={(e) => setSchoolFormData({ ...schoolFormData, schoolName: e.target.value })}
+                  placeholder="उदा. जि. प. प्राथ. शाळा, नवी मुंबई"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-black text-slate-800">केंद्र (Kendra / Center):</label>
+                <input
+                  type="text"
+                  value={schoolFormData.kendraName}
+                  onChange={(e) => setSchoolFormData({ ...schoolFormData, kendraName: e.target.value })}
+                  placeholder="उदा. वाशी"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-black text-slate-800">तालुका (Taluka):</label>
+                <input
+                  type="text"
+                  value={schoolFormData.talukaName}
+                  onChange={(e) => setSchoolFormData({ ...schoolFormData, talukaName: e.target.value })}
+                  placeholder="उदा. ठाणे"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-black text-slate-800">UDISE नंबर (UDISE Number):</label>
+                <input
+                  type="text"
+                  value={schoolFormData.udiseNumber}
+                  onChange={(e) => setSchoolFormData({ ...schoolFormData, udiseNumber: e.target.value })}
+                  placeholder="उदा. 27240100101"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-black text-slate-800">वर्ग शिक्षकाचे नाव (Class Teacher):</label>
+                <input
+                  type="text"
+                  value={schoolFormData.teacherName}
+                  onChange={(e) => setSchoolFormData({ ...schoolFormData, teacherName: e.target.value })}
+                  placeholder="उदा. श्री. अमितेश शिंदे"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                />
+              </div>
+
+              <div className="sm:col-span-2 space-y-1.5">
+                <label className="block text-xs font-black text-slate-800">मुख्याध्यापकाचे नाव (Headmaster Name):</label>
+                <input
+                  type="text"
+                  value={schoolFormData.headMasterName}
+                  onChange={(e) => setSchoolFormData({ ...schoolFormData, headMasterName: e.target.value })}
+                  placeholder="उदा. श्रीमती कविता पाटील"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowSchoolForm(false)}
+                className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer"
+              >
+                रद्द करा (Cancel)
+              </button>
+              <button
+                type="button"
+                disabled={isSavingSchoolProfile}
+                onClick={handleSaveSchoolProfile}
+                className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black transition-all cursor-pointer shadow-md disabled:opacity-50 flex items-center gap-2"
+              >
+                {isSavingSchoolProfile ? (
+                  <>
+                    <RefreshCw className="size-4 animate-spin" /> जतन होत आहे...
+                  </>
+                ) : (
+                  <>
+                    <Save className="size-4" /> SUBMIT & SAVE (जतन करा)
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
