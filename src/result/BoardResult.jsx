@@ -701,7 +701,32 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
       const { toJpeg } = await import("html-to-image");
       const { default: jsPDF } = await import("jspdf");
 
-      const pdfPages = printRef.current.querySelectorAll(".pdf-page");
+      const container = printRef.current;
+
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch (e) {}
+      }
+
+      const images = Array.from(container.querySelectorAll("img"));
+      await Promise.all(
+        images.map(
+          (img) =>
+            new Promise((resolve) => {
+              if (img.complete) resolve();
+              else {
+                img.onload = resolve;
+                img.onerror = resolve;
+              }
+            })
+        )
+      );
+
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      const pdfPages = container.querySelectorAll(".pdf-page");
       if (!pdfPages || pdfPages.length === 0) {
         toast.error("पेजेस सापडले नाहीत!");
         setDownloading(false);

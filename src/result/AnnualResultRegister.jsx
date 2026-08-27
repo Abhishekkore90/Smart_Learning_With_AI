@@ -425,6 +425,32 @@ export default function AnnualResultRegister({ initialClass, initialYear, onBack
 
       const { jsPDF } = await import("jspdf");
       const element = printRef.current;
+
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch (e) {}
+      }
+
+      if (element) {
+        const images = Array.from(element.querySelectorAll("img"));
+        await Promise.all(
+          images.map(
+            (img) =>
+              new Promise((resolve) => {
+                if (img.complete) resolve();
+                else {
+                  img.onload = resolve;
+                  img.onerror = resolve;
+                }
+              })
+          )
+        );
+      }
+
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
       const tableElem = element ? element.querySelector("table") : null;
 
       const requiredTableWidth = 360 + (subjects || []).length * 144;

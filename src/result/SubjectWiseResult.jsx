@@ -412,9 +412,36 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
       const html2canvas = (await import("html2canvas")).default;
       const { jsPDF } = await import("jspdf");
 
-      const pageElements = printRef.current.querySelectorAll(".pdf-page");
+      const container = printRef.current;
+      container.classList.add("cce-pdf-generating");
+
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch (e) {}
+      }
+
+      const images = Array.from(container.querySelectorAll("img"));
+      await Promise.all(
+        images.map(
+          (img) =>
+            new Promise((resolve) => {
+              if (img.complete) resolve();
+              else {
+                img.onload = resolve;
+                img.onerror = resolve;
+              }
+            })
+        )
+      );
+
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      const pageElements = container.querySelectorAll(".pdf-page");
       if (!pageElements || pageElements.length === 0) {
         toast.error("कोणतेही पान सापडले नाही!");
+        container.classList.remove("cce-pdf-generating");
         setDownloading(false);
         return;
       }
@@ -447,8 +474,12 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
     } catch (err) {
       console.error("PDF generation error:", err);
       toast.error("PDF निर्मितीत अडचण आली: " + err.message);
+    } finally {
+      if (printRef.current) {
+        printRef.current.classList.remove("cce-pdf-generating");
+      }
+      setDownloading(false);
     }
-    setDownloading(false);
   };
 
   const handlePrint = () => {

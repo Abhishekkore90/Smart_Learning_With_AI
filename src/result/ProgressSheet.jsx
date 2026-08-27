@@ -531,6 +531,29 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
       const container = printRef.current;
       container.classList.add("cce-pdf-generating");
 
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch (e) {}
+      }
+
+      const images = Array.from(container.querySelectorAll("img"));
+      await Promise.all(
+        images.map(
+          (img) =>
+            new Promise((resolve) => {
+              if (img.complete) resolve();
+              else {
+                img.onload = resolve;
+                img.onerror = resolve;
+              }
+            })
+        )
+      );
+
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
       const pageElements = Array.from(container.querySelectorAll(".pdf-page"));
 
       if (pageElements.length === 0) {
