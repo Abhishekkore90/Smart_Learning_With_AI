@@ -3,7 +3,7 @@ import { db } from "../lib/firebase";
 import { doc, getDoc, collection, getDocs, query, where } from "firebase/firestore";
 import { matchStudentClassAndMedium } from "./firestoreMarksHelper";
 import { getTeacherId } from "../lib/teacherIsolationHelper";
-import { Download, Printer, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
+import { Download, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import "./result.css";
 import { CLASS_1_OUTCOMES } from "@/data/class1_outcomes";
@@ -54,77 +54,76 @@ const OutcomeTable = ({ title, outcomes, subjectName, getUserSelectedLevel, stud
     <div className="mb-3">
       {/* Subject Title Banner */}
       <h3
-        className="text-sm font-black text-slate-900 mb-2.5 text-center bg-amber-100 py-1.5 rounded-lg border border-amber-300 shadow-sm"
+        className="text-xs font-black text-slate-900 mb-2 text-center bg-amber-100 py-1.5 px-3 rounded-lg border-2 border-amber-300 shadow-sm"
         style={{ breakAfter: "avoid", pageBreakAfter: "avoid" }}
       >
         {title}
       </h3>
 
-      {/* Flexbox Container for Outcomes Table */}
-      <div className="w-full border border-slate-400 rounded-lg overflow-hidden bg-white">
-        {/* Table Header Row (Flexbox) */}
-        <div className="flex bg-slate-100 text-slate-900 font-bold border-b border-slate-400 text-[11px]">
-          {/* Column 1: Outcome Code */}
-          <div className="w-[70px] min-w-[70px] border-r border-slate-400 p-2 flex items-center justify-center text-center font-black leading-tight">
-            अध्ययन<br />निष्पत्ती क्र.
-          </div>
-
-          {/* Column 2: Outcome Text */}
-          <div className="flex-1 border-r border-slate-400 p-2 flex items-center font-black text-[11.5px]">
-            अध्ययन निष्पत्ती
-          </div>
-
-          {/* Column 3: Levels Header (Flex Column with Sub-headers) */}
-          <div className="w-[128px] min-w-[128px] flex flex-col">
-            <div className="border-b border-slate-400 p-1 text-center font-black text-[11px]">
-              स्तर
-            </div>
-            <div className="flex flex-1 text-[10.5px]">
-              <div className="w-1/4 border-r border-slate-400 py-1 flex items-center justify-center font-bold">1</div>
-              <div className="w-1/4 border-r border-slate-400 py-1 flex items-center justify-center font-bold">2</div>
-              <div className="w-1/4 border-r border-slate-400 py-1 flex items-center justify-center font-bold">3</div>
-              <div className="w-1/4 py-1 flex items-center justify-center font-bold">4</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Table Body Rows (Flexbox) */}
-        {outcomes.map((item, idx) => {
-          const level = getUserSelectedLevel(student, item.code, subjectName);
-          const isLast = idx === outcomes.length - 1;
-          return (
-            <div
-              key={item.code}
-              className={`flex ${!isLast ? "border-b border-slate-300" : ""}`}
-            >
-              {/* Code */}
-              <div className="w-[70px] min-w-[70px] border-r border-slate-300 p-1.5 flex items-center justify-center text-center font-bold text-slate-900 text-[10px] whitespace-nowrap">
-                {item.code}
-              </div>
-
-              {/* Text */}
-              <div className="flex-1 border-r border-slate-300 p-1.5 px-2 flex items-center text-slate-900 text-[11px] font-medium leading-snug">
-                {item.text}
-              </div>
-
-              {/* Level Ticks */}
-              <div className="w-[128px] min-w-[128px] flex text-[13px] font-black text-blue-700">
-                <div className="w-1/4 border-r border-slate-300 flex items-center justify-center">
-                  {level === 1 ? "✓" : ""}
+      {/* Semantic HTML Table for 100% html2canvas border rendering */}
+      <div className="w-full border-2 border-slate-400 rounded-lg overflow-hidden bg-white">
+        <table className="w-full border-collapse text-left text-slate-900" style={{ borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+          <colgroup>
+            <col style={{ width: '10%' }} />
+            <col style={{ width: '74%' }} />
+            <col style={{ width: '4%' }} />
+            <col style={{ width: '4%' }} />
+            <col style={{ width: '4%' }} />
+            <col style={{ width: '4%' }} />
+          </colgroup>
+          <thead>
+            <tr className="bg-slate-100 font-black text-[11px] border-b-2 border-slate-400">
+              <th className="border-r border-b border-slate-400 p-1 text-center leading-tight">
+                अध्ययन<br />निष्पत्ती<br />क्र.
+              </th>
+              <th className="border-r border-b border-slate-400 p-1.5 text-left">
+                अध्ययन निष्पत्ती
+              </th>
+              <th colSpan={4} className="border-b border-slate-400 p-0 text-center">
+                <div className="border-b border-slate-400 py-1 font-black text-center text-[11px]">
+                  स्तर
                 </div>
-                <div className="w-1/4 border-r border-slate-300 flex items-center justify-center">
-                  {level === 2 ? "✓" : ""}
+                <div className="grid grid-cols-4 text-[10.5px]">
+                  <div className="border-r border-slate-400 py-0.5 text-center font-bold">1</div>
+                  <div className="border-r border-slate-400 py-0.5 text-center font-bold">2</div>
+                  <div className="border-r border-slate-400 py-0.5 text-center font-bold">3</div>
+                  <div className="py-0.5 text-center font-bold">4</div>
                 </div>
-                <div className="w-1/4 border-r border-slate-300 flex items-center justify-center">
-                  {level === 3 ? "✓" : ""}
-                </div>
-                <div className="w-1/4 flex items-center justify-center">
-                  {level === 4 ? "✓" : ""}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {outcomes.map((item, idx) => {
+              const level = getUserSelectedLevel(student, item.code, subjectName);
+              const isLast = idx === outcomes.length - 1;
+              return (
+                <tr
+                  key={item.code}
+                  className={`text-[10.5px] ${!isLast ? "border-b border-slate-300" : ""}`}
+                >
+                  <td className="border-r border-slate-300 p-1 text-center font-bold text-[9.5px] whitespace-nowrap bg-slate-50/50">
+                    {item.code}
+                  </td>
+                  <td className="border-r border-slate-300 p-1.5 px-2 font-medium text-[11px] leading-snug">
+                    {item.text}
+                  </td>
+                  <td className="border-r border-slate-300 p-1 text-center font-black text-blue-900 text-[13px]">
+                    {level === 1 ? "✓" : ""}
+                  </td>
+                  <td className="border-r border-slate-300 p-1 text-center font-black text-blue-900 text-[13px]">
+                    {level === 2 ? "✓" : ""}
+                  </td>
+                  <td className="border-r border-slate-300 p-1 text-center font-black text-blue-900 text-[13px]">
+                    {level === 3 ? "✓" : ""}
+                  </td>
+                  <td className="p-1 text-center font-black text-blue-900 text-[13px]">
+                    {level === 4 ? "✓" : ""}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -440,7 +439,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
         // Compressed high-efficiency JPEG encoding (keeps multi-page PDF < 10 MB)
         const imgData = canvas.toDataURL("image/jpeg", 0.72);
         if (i > 0) pdf.addPage();
-        pdf.addImage(imgData, "JPEG", 0, 0, 210, 297, undefined, "FAST");
+        pdf.addImage(imgData, "JPEG", 2.5, 2.5, 205, 292, undefined, "FAST");
       }
 
       pdf.save(`अध्ययन_निष्पत्ती_प्रगतीदर्शक_${selectedClass}_${academicYear}.pdf`);
@@ -613,14 +612,6 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
           >
             {downloading ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
             <span>{downloading ? "डाउनलोड होत आहे..." : "PDF डाऊनलोड करा"}</span>
-          </button>
-          <button
-            onClick={handlePrint}
-            disabled={students.length === 0}
-            className="px-4 py-2.5 bg-slate-800 hover:bg-slate-900 active:scale-95 text-white text-xs font-extrabold rounded-xl transition-all cursor-pointer shadow-md shadow-slate-300 flex items-center gap-2 disabled:opacity-50"
-          >
-            <Printer className="size-4" />
-            <span>प्रिंट करा</span>
           </button>
         </div>
       </div>

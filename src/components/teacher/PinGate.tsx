@@ -2,6 +2,9 @@ import React, { useState, useEffect } from "react";
 import { Lock, Eye, EyeOff, Loader2, KeyRound, School, User, UserCheck, MapPin, Milestone, GraduationCap, Save } from "lucide-react";
 import { showToast as toast } from "@/lib/custom-toast";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@/hooks/use-auth";
+import { db } from "@/lib/firebase";
+import { doc, setDoc } from "firebase/firestore";
 
 interface PinGateProps {
   sectionKey: string;
@@ -9,12 +12,28 @@ interface PinGateProps {
   enabled?: boolean;
 }
 
+export function clearUnlockedPinSections() {
+  if (typeof window !== "undefined") {
+    try {
+      Object.keys(sessionStorage).forEach((key) => {
+        if (key.startsWith("unlocked_section_")) {
+          sessionStorage.removeItem(key);
+        }
+      });
+    } catch (e) {
+      console.error("Error clearing unlocked pin sections", e);
+    }
+  }
+}
+
 export function PinGate({ sectionKey, children, enabled = true }: PinGateProps) {
+  const { user, profile } = useAuth();
   const [isUnlocked, setIsUnlocked] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<"pin" | "setup">("pin");
   const [pin, setPin] = useState<string>("");
   const [showPin, setShowPin] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
+  const [savingSetup, setSavingSetup] = useState<boolean>(false);
   const [isShaking, setIsShaking] = useState<boolean>(false);
 
   // Profile setup states
@@ -25,6 +44,7 @@ export function PinGate({ sectionKey, children, enabled = true }: PinGateProps) 
   const [taluka, setTaluka] = useState<string>("");
   const [district, setDistrict] = useState<string>("");
   const [center, setCenter] = useState<string>("");
+  const [academicYear, setAcademicYear] = useState<string>("2026-27");
 
   const storageKey = `unlocked_section_${sectionKey}`;
 
@@ -35,23 +55,35 @@ export function PinGate({ sectionKey, children, enabled = true }: PinGateProps) 
         setIsUnlocked(true);
       }
 
-      // Load saved setup values from localStorage
-      setTeacherName(localStorage.getItem("teacher_name") || "");
-      setPrincipalName(localStorage.getItem("teacher_principal_name") || "");
-      setSchoolName(localStorage.getItem("teacher_school_name") || "");
-      setUdiseNumber(localStorage.getItem("teacher_udise") || "");
-      setTaluka(localStorage.getItem("teacher_taluka") || "");
-      setDistrict(localStorage.getItem("teacher_district") || "");
-      setCenter(localStorage.getItem("teacher_center") || "");
+      // Load saved setup values from logged-in user's profile first
+      if (profile) {
+        if (profile.fullName || profile.teacherName) setTeacherName(profile.fullName || profile.teacherName || "");
+        if (profile.principalName || profile.cookName || profile.swayampakiName) setPrincipalName(profile.principalName || profile.cookName || profile.swayampakiName || "");
+        if (profile.schoolName) setSchoolName(profile.schoolName || "");
+        if (profile.udise) setUdiseNumber(profile.udise || "");
+        if (profile.taluka) setTaluka(profile.taluka || "");
+        if (profile.district) setDistrict(profile.district || "");
+        if (profile.center) setCenter(profile.center || "");
+        if (profile.academicYear) setAcademicYear(profile.academicYear || "2026-27");
+      } else {
+        setTeacherName(localStorage.getItem("teacher_name") || "");
+        setPrincipalName(localStorage.getItem("teacher_principal_name") || "");
+        setSchoolName(localStorage.getItem("teacher_school_name") || "");
+        setUdiseNumber(localStorage.getItem("teacher_udise") || "");
+        setTaluka(localStorage.getItem("teacher_taluka") || "");
+        setDistrict(localStorage.getItem("teacher_district") || "");
+        setCenter(localStorage.getItem("teacher_center") || "");
+        setAcademicYear(localStorage.getItem("cce_academic_year") || "2026-27");
+      }
     }
-  }, [storageKey]);
+  }, [storageKey, profile]);
 
   const handleSubmitPin = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     setTimeout(() => {
-      const storedUdise = localStorage.getItem("teacher_udise") || "";
+      const storedUdise = profile?.udise || localStorage.getItem("teacher_udise") || "";
       const cleanedUdise = storedUdise.trim();
       const cleanedPin = pin.trim();
 
@@ -72,19 +104,57 @@ export function PinGate({ sectionKey, children, enabled = true }: PinGateProps) 
     }, 600);
   };
 
-  const handleSaveSetup = (e: React.FormEvent) => {
+  const handleSaveSetup = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    localStorage.setItem("teacher_name", teacherName);
-    localStorage.setItem("teacher_principal_name", principalName);
-    localStorage.setItem("teacher_school_name", schoolName);
-    localStorage.setItem("teacher_udise", udiseNumber);
-    localStorage.setItem("teacher_taluka", taluka);
-    localStorage.setItem("teacher_district", district);
-    localStorage.setItem("teacher_center", center);
+    setSavingSetup(true);
 
-    toast.success("माहिती जतन केली / Setup Info Saved!");
-    setActiveTab("pin"); // Switch back to login PIN
+    const updatedData = {
+      fullName: teacherName,
+      teacherName: teacherName,
+      principalName: principalName,
+      cookName: principalName,
+      swayampakiName: principalName,
+      schoolName: schoolName,
+      udise: udiseNumber,
+      taluka: taluka,
+      district: district,
+      center: center,
+      academicYear: academicYear,
+      updatedAt: new Date().toISOString(),
+    };
+
+    try {
+      if (user) {
+        await setDoc(doc(db, "teachers", user.uid), updatedData, { merge: true });
+        await setDoc(doc(db, "users", user.uid), updatedData, { merge: true });
+      }
+
+      const savedProfile = localStorage.getItem("sqaaf_teacher_profile");
+      let merged = { ...updatedData, role: "teacher" };
+      if (savedProfile) {
+        try {
+          const parsed = JSON.parse(savedProfile);
+          merged = { ...parsed, ...updatedData };
+        } catch (e) {}
+      }
+      localStorage.setItem("sqaaf_teacher_profile", JSON.stringify(merged));
+      localStorage.setItem("teacher_name", teacherName);
+      localStorage.setItem("teacher_principal_name", principalName);
+      localStorage.setItem("teacher_school_name", schoolName);
+      localStorage.setItem("teacher_udise", udiseNumber);
+      localStorage.setItem("teacher_taluka", taluka);
+      localStorage.setItem("teacher_district", district);
+      localStorage.setItem("teacher_center", center);
+      localStorage.setItem("cce_academic_year", academicYear);
+
+      toast.success("माहिती जतन केली / Setup Info Saved!");
+      setActiveTab("pin");
+    } catch (err) {
+      console.error("Error saving setup info:", err);
+      toast.error("माहिती जतन करताना त्रुटी आली.");
+    } finally {
+      setSavingSetup(false);
+    }
   };
 
   if (!enabled || isUnlocked) {
@@ -323,25 +393,34 @@ export function PinGate({ sectionKey, children, enabled = true }: PinGateProps) 
                   </div>
                 </div>
 
-                {/* 8. Default Academic Year (Locked to 2026-27 by default) */}
+                {/* 8. Academic Year */}
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">शैक्षणिक वर्ष (Academic Year)</label>
                   <div className="relative">
                     <GraduationCap className="absolute left-3 top-3.5 size-4 text-slate-400" />
-                    <input
-                      type="text"
-                      value="2026-27"
-                      disabled
-                      className="w-full pl-10 pr-4 py-3 bg-slate-100 border border-slate-200 rounded-xl font-bold text-xs outline-none text-slate-500 cursor-not-allowed"
-                    />
+                    <select
+                      value={academicYear}
+                      onChange={(e) => setAcademicYear(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs outline-none focus:border-indigo-500 focus:bg-white transition-all text-slate-800"
+                    >
+                      <option value="2026-27">2026-27</option>
+                      <option value="2025-26">2025-26</option>
+                      <option value="2024-25">2024-25</option>
+                      <option value="2023-24">2023-24</option>
+                    </select>
                   </div>
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full py-3.5 mt-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer"
+                  disabled={savingSetup}
+                  className="w-full py-3.5 mt-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
-                  <Save className="size-4" />
+                  {savingSetup ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Save className="size-4" />
+                  )}
                   <span>माहिती जतन करा / Save Info</span>
                 </button>
               </form>

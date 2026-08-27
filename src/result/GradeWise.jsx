@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Download, Printer, Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, Download, Loader2, RefreshCw } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { matchStudentClassAndMedium, fetchStudentsForClass, fetchFirestoreMarks } from "./firestoreMarksHelper";
@@ -386,30 +386,45 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
         await document.fonts.ready;
       }
 
-      const { default: html2pdf } = await import("html2pdf.js");
+      let html2canvas;
+      try {
+        const hModule = await import("html2canvas-pro");
+        html2canvas = hModule.default || hModule;
+      } catch (e) {
+        const hModule = await import("html2canvas");
+        html2canvas = hModule.default || hModule;
+      }
+
+      const { jsPDF } = await import("jspdf");
       const element = printRef.current;
       const tableElem = element ? element.querySelector("table") : null;
 
       // Calculate full un-clipped width of table so no columns get cut off
-      const fullWidth = Math.max(
+      const tableWidth = Math.max(
         element ? element.scrollWidth : 0,
         tableElem ? tableElem.scrollWidth : 0,
         tableElem ? tableElem.offsetWidth : 0,
-        1400
+        1200
       );
+
+      const paddingX = 20;
+      const cloneWidth = tableWidth + paddingX * 2;
 
       // Clone element to prevent input artifacts and ensure 100% width fit
       const clone = element.cloneNode(true);
 
       // Strip outer card padding & shadows so top title stays at the very top of PDF
-      clone.style.padding = "10px 15px";
+      clone.style.boxSizing = "border-box";
+      clone.style.padding = `10px ${paddingX}px 15px ${paddingX}px`;
       clone.style.margin = "0";
       clone.style.boxShadow = "none";
       clone.style.border = "none";
       clone.style.borderRadius = "0";
-      clone.style.width = `${fullWidth}px`;
+      clone.style.width = `${cloneWidth}px`;
+      clone.style.minWidth = `${cloneWidth}px`;
       clone.style.maxWidth = "none";
       clone.style.overflow = "visible";
+      clone.style.background = "#ffffff";
 
       // Replace input elements with clean text spans in clone
       clone.querySelectorAll("input").forEach((inp) => {
@@ -422,7 +437,7 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
           const span = document.createElement("span");
           span.style.display = "inline-block";
           span.style.fontWeight = "900";
-          span.style.fontSize = isNumber ? "13px" : "13px";
+          span.style.fontSize = "13px";
           span.style.color = "#000000";
           if (isNumber) {
             span.style.width = "100%";
@@ -438,80 +453,64 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
         }
       });
 
+      // Ensure crisp high contrast table borders and header colors
+      clone.querySelectorAll("table").forEach((tb) => {
+        tb.style.boxSizing = "border-box";
+        tb.style.border = "2px solid #000000";
+        tb.style.borderCollapse = "collapse";
+        tb.style.width = `${tableWidth}px`;
+        tb.style.minWidth = `${tableWidth}px`;
+      });
+      clone.querySelectorAll("th").forEach((th) => {
+        th.style.backgroundColor = "#0d47a1";
+        th.style.color = "#ffffff";
+        th.style.border = "1px solid #000000";
+        th.style.verticalAlign = "middle";
+      });
+      clone.querySelectorAll("td").forEach((td) => {
+        td.style.border = "1px solid #000000";
+      });
+      clone.querySelectorAll("th span").forEach((sp) => {
+        sp.style.color = "#ffffff";
+      });
+
       // Temporary offscreen container
       const tempContainer = document.createElement("div");
       tempContainer.style.position = "absolute";
       tempContainer.style.left = "-9999px";
       tempContainer.style.top = "0";
-      tempContainer.style.width = `${fullWidth + 40}px`;
+      tempContainer.style.width = `${cloneWidth + 40}px`;
       tempContainer.style.background = "#ffffff";
       tempContainer.style.zIndex = "-9999";
       tempContainer.appendChild(clone);
       document.body.appendChild(tempContainer);
 
-      const opt = {
-        margin: [5, 5, 5, 5],
-        filename: `श्रेणीनिहाय_निकाल_संकलन_प्रपत्र_${academicYear}.pdf`,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          windowWidth: fullWidth + 60,
-          scrollX: 0,
-          scrollY: 0,
-          onclone: (clonedDoc) => {
-            const container = clonedDoc.querySelector(".print-area");
-            if (container) {
-              container.style.setProperty("width", `${fullWidth}px`, "important");
-              container.style.setProperty("max-width", "none", "important");
-              container.style.setProperty("overflow", "visible", "important");
-            }
-            const tbl = clonedDoc.querySelector("table");
-            if (tbl) {
-              tbl.style.setProperty("width", `${fullWidth}px`, "important");
-              tbl.style.setProperty("max-width", "none", "important");
-            }
-            const h1 = clonedDoc.querySelector("h1");
-            if (h1) {
-              h1.style.setProperty("display", "block", "important");
-              h1.style.setProperty("visibility", "visible", "important");
-              h1.style.setProperty("color", "#0a2540", "important");
-              h1.style.setProperty("font-size", "20px", "important");
-              h1.style.setProperty("font-weight", "900", "important");
-              h1.style.setProperty("text-align", "center", "important");
-              h1.style.setProperty("margin-bottom", "12px", "important");
-            }
-            clonedDoc.querySelectorAll("table").forEach((tb) => {
-              tb.style.setProperty("border", "2px solid #000000", "important");
-              tb.style.setProperty("border-collapse", "collapse", "important");
-            });
-            clonedDoc.querySelectorAll("tr").forEach((tr) => {
-              tr.style.setProperty("border-color", "#000000", "important");
-            });
-            clonedDoc.querySelectorAll("th").forEach((th) => {
-              th.style.setProperty("background-color", "#0d47a1", "important");
-              th.style.setProperty("color", "#ffffff", "important");
-              th.style.setProperty("border", "1px solid #000000", "important");
-              th.style.setProperty("border-color", "#000000", "important");
-              th.style.setProperty("vertical-align", "middle", "important");
-            });
-            clonedDoc.querySelectorAll("td").forEach((td) => {
-              td.style.setProperty("border", "1px solid #000000", "important");
-              td.style.setProperty("border-color", "#000000", "important");
-            });
-            clonedDoc.querySelectorAll("th span").forEach((sp) => {
-              sp.style.setProperty("color", "#ffffff", "important");
-              sp.style.setProperty("position", "relative", "important");
-              sp.style.setProperty("z-index", "99", "important");
-            });
-          },
-        },
-        jsPDF: { unit: "mm", format: "a4", orientation: "landscape", compress: true },
-      };
+      const canvas = await html2canvas(clone, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+        windowWidth: cloneWidth + 60,
+        scrollX: 0,
+        scrollY: 0,
+      });
 
-      await html2pdf().set(opt).from(clone).save();
       document.body.removeChild(tempContainer);
+
+      const imgData = canvas.toDataURL("image/jpeg", 0.98);
+      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      const pdfWidth = pdf.internal.pageSize.getWidth(); // 297 mm
+      const pdfHeight = pdf.internal.pageSize.getHeight(); // 210 mm
+      const marginX = 4; // 4mm side margin
+      const marginTop = 3; // 3mm top margin to start immediately at top
+      const availWidth = pdfWidth - marginX * 2; // 289 mm
+      const availHeight = pdfHeight - marginTop * 2; // 204 mm
+
+      const imgWidth = availWidth;
+      const imgHeight = (canvas.height * availWidth) / canvas.width;
+
+      pdf.addImage(imgData, "JPEG", marginX, marginTop, imgWidth, Math.min(imgHeight, availHeight), undefined, "FAST");
+      pdf.save(`श्रेणीनिहाय_निकाल_संकलन_प्रपत्र_${academicYear}.pdf`);
       toast.success("PDF यशस्वीरित्या डाऊनलोड झाली!");
     } catch (err) {
       console.error("PDF download error:", err);
@@ -613,14 +612,14 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
             रीफ्रेश
           </button>
 
-          {/* PDF Download Button */}
+          {/* Download Button */}
           <button
             onClick={handleDownloadPdf}
             disabled={downloading}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 cursor-pointer transition-colors shadow-md disabled:opacity-50"
+            className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 cursor-pointer transition-colors shadow-md disabled:opacity-50"
           >
             {downloading ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
-            PDF डाऊनलोड करा
+            {downloading ? "डाऊनलोड होत आहे..." : "डाऊनलोड"}
           </button>
         </div>
       </div>

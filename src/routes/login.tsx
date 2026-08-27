@@ -14,7 +14,7 @@ import {
   CloudUpload,
   Sparkles,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import {
   collection,
@@ -28,6 +28,7 @@ import { auth, db } from "@/lib/firebase";
 import { showToast as toast } from "@/lib/custom-toast";
 import { useLanguage } from "@/hooks/use-language";
 import { DICTIONARY } from "@/lib/translations";
+import { clearUnlockedPinSections } from "@/components/teacher/PinGate";
 
 import loginBg from "@/assets/teacher login.avif";
 
@@ -124,6 +125,10 @@ function UnifiedLoginPortal() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    clearUnlockedPinSections();
+  }, []);
+
   const handleRoleSwitch = (newRole: AuthRole) => {
     setActiveRole(newRole);
     setIdentifier("");
@@ -133,6 +138,7 @@ function UnifiedLoginPortal() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    clearUnlockedPinSections();
     try {
       if (activeRole === "admin") {
         if (identifier === "superadmin123@gmail.com" && password === "123456") {
