@@ -166,6 +166,24 @@ function getPrayerShortName(prayerContent: string | undefined): string {
   return firstPhrase.length > 22 ? firstPhrase.substring(0, 22) + "..." : firstPhrase;
 }
 
+// Helper: get pasayadan heading title from content
+function getPasayadanShortName(pasayadanContent: string | undefined): string {
+  if (!pasayadanContent) return "आता विश्वात्मकें देवें";
+  const content = pasayadanContent.trim();
+  if (!content) return "आता विश्वात्मकें देवें";
+
+  if (content.length <= 25 && !content.includes("\n")) {
+    return content;
+  }
+
+  if (content.includes("आता विश्वात्मकें") || content.includes("आता विश्वात्मके") || content.includes("पसायदान")) {
+    return "आता विश्वात्मकें देवें";
+  }
+
+  const firstPhrase = content.split("\n")[0].split(",")[0].split("-")[0].trim();
+  return firstPhrase.length > 25 ? firstPhrase.substring(0, 25) + "..." : (firstPhrase || "आता विश्वात्मकें देवें");
+}
+
 // Helper: detect language of content
 function detectLanguage(content: string | undefined): string {
   if (!content) return "मराठी";
@@ -470,8 +488,8 @@ export function MonthlyParipathRegister() {
               deshbhaktigeet: data.songTitle || shortText(data.patrioticSong || data.deshbhaktigeet, 45),
               // सामान्य ज्ञान - 1 single question (~65 chars max)
               samanyaGyan: getSingleItem(data.gkQ1 ? `प्र.१: ${data.gkQ1}` : (data.samanyaGyan || data.gk || ""), 65),
-              // मौन पसायदान - just "पसायदान"
-              maun: "पसायदान",
+              // मौन पसायदान - fetch heading title dynamically
+              maun: data.pasaydanTitle || data.silentPasayadanTitle || data.maunTitle || data.pasayadanHeading || getPasayadanShortName(data.silentPasayadan || data.pasaydan || data.maun),
               // वर्गशिक्षकांची स्वाक्षरी - blank
               swakshari: "",
             };
@@ -524,7 +542,7 @@ export function MonthlyParipathRegister() {
                 samuhgeet: "",
                 deshbhaktigeet: "",
                 samanyaGyan: "",
-                maun: "पसायदान",
+                maun: "आता विश्वात्मकें देवें",
                 swakshari: "",
               };
             }
@@ -1431,7 +1449,7 @@ export function MonthlyParipathRegister() {
                               </td>
                               <td className="p-1 border-r border-slate-900 align-middle">
                                 <textarea
-                                  value={row.maun || "पसायदान"}
+                                  value={row.maun || "आता विश्वात्मकें देवें"}
                                   onChange={(e) => {
                                     handleCellChange(row.date, "maun", e.target.value);
                                     e.target.style.height = "auto";

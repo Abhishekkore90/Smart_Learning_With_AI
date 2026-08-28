@@ -78,6 +78,15 @@ export function Header() {
   const handleSignOut = async () => {
     try {
       sessionStorage.removeItem("is_super_admin");
+      if (typeof window !== "undefined") {
+        try {
+          Object.keys(sessionStorage).forEach((key) => {
+            if (key.startsWith("unlocked_section_")) {
+              sessionStorage.removeItem(key);
+            }
+          });
+        } catch (e) {}
+      }
       await auth.signOut();
       toast.success("Signed out successfully");
       window.location.href = "/login";

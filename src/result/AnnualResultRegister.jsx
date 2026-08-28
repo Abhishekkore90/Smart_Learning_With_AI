@@ -414,103 +414,150 @@ export default function AnnualResultRegister({ initialClass, initialYear, onBack
         await document.fonts.ready;
       }
 
-      const { default: html2pdf } = await import("html2pdf.js");
+      let html2canvas;
+      try {
+        const hModule = await import("html2canvas-pro");
+        html2canvas = hModule.default || hModule;
+      } catch (e) {
+        const hModule = await import("html2canvas");
+        html2canvas = hModule.default || hModule;
+      }
+
+      const { jsPDF } = await import("jspdf");
       const element = printRef.current;
+
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch (e) {}
+      }
+
+      if (element) {
+        const images = Array.from(element.querySelectorAll("img"));
+        await Promise.all(
+          images.map(
+            (img) =>
+              new Promise((resolve) => {
+                if (img.complete) resolve();
+                else {
+                  img.onload = resolve;
+                  img.onerror = resolve;
+                }
+              })
+          )
+        );
+      }
+
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
       const tableElem = element ? element.querySelector("table") : null;
 
-      // Calculate full un-clipped width of table so no columns get cut off
-      const fullWidth = Math.max(
+      const requiredTableWidth = 360 + (subjects || []).length * 144;
+      const tableWidth = Math.max(
         element ? element.scrollWidth : 0,
         tableElem ? tableElem.scrollWidth : 0,
         tableElem ? tableElem.offsetWidth : 0,
-        1400
+        requiredTableWidth,
+        1350
       );
+
+      const paddingX = 20;
+      const cloneWidth = tableWidth + paddingX * 2;
 
       const clone = element.cloneNode(true);
 
-      clone.style.padding = "10px 15px";
+      clone.style.boxSizing = "border-box";
+      clone.style.padding = `10px ${paddingX}px 15px ${paddingX}px`;
       clone.style.margin = "0";
       clone.style.boxShadow = "none";
       clone.style.border = "none";
       clone.style.borderRadius = "0";
-      clone.style.width = `${fullWidth}px`;
+      clone.style.width = `${cloneWidth}px`;
+      clone.style.minWidth = `${cloneWidth}px`;
       clone.style.maxWidth = "none";
       clone.style.overflow = "visible";
+      clone.style.background = "#ffffff";
 
-      // Temporary offscreen container
+      clone.querySelectorAll("input").forEach((inp) => {
+        const isNumber = inp.type === "number";
+        const val = inp.value !== undefined && inp.value !== null && inp.value !== ""
+          ? inp.value
+          : (isNumber ? "0" : "");
+        const parent = inp.parentNode;
+        if (parent) {
+          const span = document.createElement("span");
+          span.style.display = "inline-block";
+          span.style.fontWeight = "900";
+          span.style.fontSize = "13px";
+          span.style.color = "#000000";
+          if (isNumber) {
+            span.style.width = "100%";
+            span.style.textAlign = "center";
+          } else {
+            span.style.minWidth = "200px";
+            span.style.textAlign = "left";
+            span.style.borderBottom = "1px dotted #94a3b8";
+            span.style.paddingLeft = "4px";
+          }
+          span.textContent = val;
+          parent.replaceChild(span, inp);
+        }
+      });
+
+      clone.querySelectorAll("table").forEach((tb) => {
+        tb.style.boxSizing = "border-box";
+        tb.style.border = "2px solid #000000";
+        tb.style.borderCollapse = "collapse";
+        tb.style.width = `${tableWidth}px`;
+        tb.style.minWidth = `${tableWidth}px`;
+      });
+      clone.querySelectorAll("th").forEach((th) => {
+        th.style.backgroundColor = "#0d47a1";
+        th.style.color = "#ffffff";
+        th.style.border = "1px solid #000000";
+        th.style.verticalAlign = "middle";
+      });
+      clone.querySelectorAll("td").forEach((td) => {
+        td.style.border = "1px solid #000000";
+      });
+
       const tempContainer = document.createElement("div");
       tempContainer.style.position = "absolute";
       tempContainer.style.left = "-9999px";
       tempContainer.style.top = "0";
-      tempContainer.style.width = `${fullWidth + 40}px`;
+      tempContainer.style.width = `${cloneWidth + 40}px`;
       tempContainer.style.background = "#ffffff";
       tempContainer.style.zIndex = "-9999";
       tempContainer.appendChild(clone);
       document.body.appendChild(tempContainer);
 
-      const opt = {
-        margin: [5, 5, 5, 5],
-        filename: `वार्षिक_निकाल_पत्रक_${selectedClass}_${academicYear}.pdf`,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          windowWidth: fullWidth + 60,
-          scrollX: 0,
-          scrollY: 0,
-          onclone: (clonedDoc) => {
-            const container = clonedDoc.querySelector(".print-area");
-            if (container) {
-              container.style.setProperty("width", `${fullWidth}px`, "important");
-              container.style.setProperty("max-width", "none", "important");
-              container.style.setProperty("overflow", "visible", "important");
-            }
-            const tbl = clonedDoc.querySelector("table");
-            if (tbl) {
-              tbl.style.setProperty("width", `${fullWidth}px`, "important");
-              tbl.style.setProperty("max-width", "none", "important");
-            }
-            const h1 = clonedDoc.querySelector("h1");
-            if (h1) {
-              h1.style.setProperty("display", "block", "important");
-              h1.style.setProperty("visibility", "visible", "important");
-              h1.style.setProperty("color", "#000000", "important");
-              h1.style.setProperty("font-size", "20px", "important");
-              h1.style.setProperty("font-weight", "900", "important");
-              h1.style.setProperty("text-align", "center", "important");
-              h1.style.setProperty("margin-bottom", "12px", "important");
-            }
-            clonedDoc.querySelectorAll("table").forEach((tb) => {
-              tb.style.setProperty("border", "2px solid #000000", "important");
-              tb.style.setProperty("border-collapse", "collapse", "important");
-            });
-            clonedDoc.querySelectorAll("tr").forEach((tr) => {
-              tr.style.setProperty("border-color", "#000000", "important");
-            });
-            clonedDoc.querySelectorAll("th").forEach((th) => {
-              th.style.setProperty("background-color", "#0d47a1", "important");
-              th.style.setProperty("color", "#ffffff", "important");
-              th.style.setProperty("border", "1px solid #000000", "important");
-              th.style.setProperty("border-color", "#000000", "important");
-              th.style.setProperty("vertical-align", "middle", "important");
-            });
-            clonedDoc.querySelectorAll("td").forEach((td) => {
-              td.style.setProperty("border", "1px solid #000000", "important");
-              td.style.setProperty("border-color", "#000000", "important");
-            });
-            clonedDoc.querySelectorAll("th span").forEach((sp) => {
-              sp.style.setProperty("color", "#ffffff", "important");
-              sp.style.setProperty("position", "relative", "important");
-              sp.style.setProperty("z-index", "99", "important");
-            });
-          },
-        },
-        jsPDF: { unit: "mm", format: "a4", orientation: "landscape", compress: true },
-      };
+      const canvas = await html2canvas(clone, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+        windowWidth: cloneWidth + 60,
+        scrollX: 0,
+        scrollY: 0,
+      });
 
-      await html2pdf().set(opt).from(clone).save();
       document.body.removeChild(tempContainer);
+
+      const imgData = canvas.toDataURL("image/jpeg", 0.98);
+      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const marginX = 4;
+      const marginTop = 3;
+      const availWidth = pdfWidth - marginX * 2;
+      const availHeight = pdfHeight - marginTop * 2;
+
+      const imgWidth = availWidth;
+      const imgHeight = (canvas.height * availWidth) / canvas.width;
+
+      pdf.addImage(imgData, "JPEG", marginX, marginTop, imgWidth, Math.min(imgHeight, availHeight), undefined, "FAST");
+      pdf.save(`वार्षिक_निकाल_पत्रक_${selectedClass}_${academicYear}.pdf`);
       toast.success("PDF यशस्वीरित्या डाऊनलोड झाली!");
     } catch (err) {
       console.error("PDF generation failed:", err);
@@ -625,7 +672,7 @@ export default function AnnualResultRegister({ initialClass, initialYear, onBack
           <style dangerouslySetInnerHTML={{ __html: ".annual-register-table, .annual-register-table tr, .annual-register-table th, .annual-register-table td { border: 1px solid #000000 !important; border-color: #000000 !important; } .annual-register-table { border: 2px solid #000000 !important; }" }} />
           <table
             className="w-full text-center text-[13px] border-collapse annual-register-table"
-            style={{ tableLayout: "fixed", width: "100%", borderColor: "#000000", borderWidth: "2px", borderStyle: "solid" }}
+            style={{ tableLayout: "fixed", minWidth: `${360 + subjects.length * 144}px`, width: "100%", borderColor: "#000000", borderWidth: "2px", borderStyle: "solid" }}
           >
             <colgroup>
               <col style={{ width: "35px" }} />

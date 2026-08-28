@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { db } from "../lib/firebase";
 import { doc, getDoc, collection, getDocs, query, where } from "firebase/firestore";
-import { Download, Printer, ArrowLeft, Loader2, AlertCircle, FileText, Copy } from "lucide-react";
+import { Download, ArrowLeft, Loader2, AlertCircle, FileText, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
 import { getTeacherId, matchStudentTeacherClassAndMedium } from "../lib/teacherIsolationHelper";
@@ -701,7 +701,32 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
       const { toJpeg } = await import("html-to-image");
       const { default: jsPDF } = await import("jspdf");
 
-      const pdfPages = printRef.current.querySelectorAll(".pdf-page");
+      const container = printRef.current;
+
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch (e) {}
+      }
+
+      const images = Array.from(container.querySelectorAll("img"));
+      await Promise.all(
+        images.map(
+          (img) =>
+            new Promise((resolve) => {
+              if (img.complete) resolve();
+              else {
+                img.onload = resolve;
+                img.onerror = resolve;
+              }
+            })
+        )
+      );
+
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      const pdfPages = container.querySelectorAll(".pdf-page");
       if (!pdfPages || pdfPages.length === 0) {
         toast.error("पेजेस सापडले नाहीत!");
         setDownloading(false);
@@ -747,7 +772,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
             pdf.addPage([targetWidth, targetHeight], "landscape");
           }
 
-          pdf.addImage(dataUrl, "JPEG", 0, 0, targetWidth, targetHeight, undefined, "FAST");
+          pdf.addImage(dataUrl, "JPEG", 2.5, 2.5, targetWidth - 5, targetHeight - 5, undefined, "FAST");
         } else {
           // Pages 1 & 2: Standard Portrait A4 (210mm x 297mm)
           const targetWidth = 210; // mm
@@ -759,7 +784,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
             pdf.addPage("a4", "portrait");
           }
 
-          pdf.addImage(dataUrl, "JPEG", 0, 0, targetWidth, targetHeight, undefined, "FAST");
+          pdf.addImage(dataUrl, "JPEG", 2.5, 2.5, targetWidth - 5, targetHeight - 5, undefined, "FAST");
         }
       }
 
@@ -978,14 +1003,6 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
           >
             {downloading ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
             <span>{downloading ? "डाउनलोड होत आहे..." : "PDF डाऊनलोड करा"}</span>
-          </button>
-          <button
-            onClick={handlePrint}
-            disabled={students.length === 0}
-            className="px-4 py-2.5 bg-slate-800 hover:bg-slate-900 active:scale-95 text-white text-xs font-extrabold rounded-xl transition-all cursor-pointer shadow-md shadow-slate-300 flex items-center gap-2 disabled:opacity-50"
-          >
-            <Printer className="size-4" />
-            <span>प्रिंट करा</span>
           </button>
         </div>
       </div>

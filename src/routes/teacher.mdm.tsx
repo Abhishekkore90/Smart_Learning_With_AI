@@ -449,6 +449,54 @@ function TeacherMDMPage() {
     }
   }, [profile]);
 
+  const [savingSchoolProfile, setSavingSchoolProfile] = useState(false);
+
+  const handleSaveSchoolProfileToDatabase = async (overrideData?: any) => {
+    if (!user) {
+      toast.error("कृपया लॉगिन करा.");
+      return;
+    }
+    setSavingSchoolProfile(true);
+    try {
+      const dataToSave = {
+        schoolName: overrideData?.schoolName || reportSchoolName || "",
+        cookName: overrideData?.cookName || reportPrincipalName || "",
+        swayampakiName: overrideData?.cookName || reportPrincipalName || "",
+        helperName: overrideData?.helperName || reportTeacherName || "",
+        madatnisName: overrideData?.helperName || reportTeacherName || "",
+        center: overrideData?.center !== undefined ? overrideData.center : (profile?.center || ""),
+        taluka: overrideData?.taluka !== undefined ? overrideData.taluka : (profile?.taluka || ""),
+        district: overrideData?.district !== undefined ? overrideData.district : (profile?.district || ""),
+        udise: overrideData?.udise !== undefined ? overrideData.udise : (profile?.udise || ""),
+        updatedAt: new Date().toISOString(),
+      };
+
+      const teacherRef = doc(db, "teachers", user.uid);
+      await setDoc(teacherRef, dataToSave, { merge: true });
+
+      const userRef = doc(db, "users", user.uid);
+      await setDoc(userRef, dataToSave, { merge: true });
+
+      const saved = localStorage.getItem("sqaaf_teacher_profile");
+      let parsed: any = {};
+      if (saved) {
+        try { parsed = JSON.parse(saved); } catch (e) {}
+      }
+      const updatedProfile = { ...parsed, ...dataToSave };
+      localStorage.setItem("sqaaf_teacher_profile", JSON.stringify(updatedProfile));
+      if (dataToSave.udise) {
+        localStorage.setItem("teacher_udise", dataToSave.udise);
+      }
+
+      toast.success("शाळेची व प्रोफाइल माहिती अपडेट झाली!");
+    } catch (error) {
+      console.error("Error saving school profile:", error);
+      toast.error("माहिती अपडेट करताना अडचण आली.");
+    } finally {
+      setSavingSchoolProfile(false);
+    }
+  };
+
   useEffect(() => {
     if (stockDemandMonth && stockDemandYear) {
       const computedDays = calculateMonthWorkingDays(stockDemandMonth, stockDemandYear);
@@ -2586,6 +2634,11 @@ function TeacherMDMPage() {
     new Date().toISOString().split("T")[0]
   );
   const [incomingDates, setIncomingDates] = useState<Record<string, string>>({});
+  const [loksahabhagDate, setLoksahabhagDate] = useState<string>(
+    new Date().toISOString().split("T")[0]
+  );
+  const [loksahabhagDates, setLoksahabhagDates] = useState<Record<string, string>>({});
+  const [damagedDates, setDamagedDates] = useState<Record<string, string>>({});
   const [incomingQuantities, setIncomingQuantities] = useState<
     Record<string, string>
   >({
@@ -2749,10 +2802,14 @@ function TeacherMDMPage() {
     setSaving(true);
     try {
       const udise = getUdise();
+      const currentRecKey = `${damagedYear}_${damagedMonth}_${damagedClass}`;
+      const updatedDates = { ...damagedDates, [currentRecKey]: damagedDate };
+      setDamagedDates(updatedDates);
       await setDoc(
         doc(db, "school_data", `${udise}_mdm`),
         {
           openingStockSpent,
+          damagedDates: updatedDates,
           updatedAt: new Date().toISOString(),
         },
         { merge: true },
@@ -3308,10 +3365,14 @@ function TeacherMDMPage() {
     setSaving(true);
     try {
       const udise = getUdise();
+      const currentRecKey = `${loksahabhagYear}_${loksahabhagMonth}_${loksahabhagClass}`;
+      const updatedDates = { ...loksahabhagDates, [currentRecKey]: loksahabhagDate };
+      setLoksahabhagDates(updatedDates);
       await setDoc(
         doc(db, "school_data", `${udise}_mdm`),
         {
           openingStockLoksahabhag,
+          loksahabhagDates: updatedDates,
           updatedAt: new Date().toISOString(),
         },
         { merge: true },
@@ -8512,6 +8573,38 @@ function TeacherMDMPage() {
                               <option value="6 To 8">{lang === "mr" ? "६ ते ८" : "6 To 8"}</option>
                             </select>
                           </div>
+
+                          {/* Loksahabhag Date / लोकसहभाग तारीख */}
+                          <div className="flex items-center gap-2">
+                            <label className="text-xs font-black text-slate-700">{lang === "mr" ? "लोकसहभाग तारीख:" : "Contribution Date:"}</label>
+                            <input
+                              type="date"
+                              value={loksahabhagDate}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setLoksahabhagDate(val);
+                                if (val) {
+                                  const parts = val.split("-");
+                                  if (parts.length === 3) {
+                                    const yr = parts[0];
+                                    const moIndex = parseInt(parts[1], 10) - 1;
+                                    const monthNames = [
+                                      "January", "February", "March", "April", "May", "June",
+                                      "July", "August", "September", "October", "November", "December"
+                                    ];
+                                    if (moIndex >= 0 && moIndex <= 11) {
+                                      const mo = monthNames[moIndex];
+                                      setLoksahabhagYear(yr);
+                                      setLoksahabhagMonth(mo);
+                                      const recordKey = `${yr}_${mo}_${loksahabhagClass}`;
+                                      setLoksahabhagDates((prev) => ({ ...prev, [recordKey]: val }));
+                                    }
+                                  }
+                                }
+                              }}
+                              className="h-9 px-3 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs cursor-pointer"
+                            />
+                          </div>
                         </div>
 
                         {/* Save Button */}
@@ -8525,8 +8618,41 @@ function TeacherMDMPage() {
                         </button>
                       </div>
 
+                      {/* Dynamic Date Status Alert Banner for Loksahabhag */}
+                      {(() => {
+                        const currentRecKey = `${loksahabhagYear}_${loksahabhagMonth}_${loksahabhagClass}`;
+                        const savedLoksahabhagDate = loksahabhagDates[currentRecKey];
+                        const isBeforeInitial = !!(initialStockDate && loksahabhagDate && loksahabhagDate < initialStockDate);
+                        const isBeforeLok = savedLoksahabhagDate && loksahabhagDate && loksahabhagDate < savedLoksahabhagDate;
+                        const isSameLok = savedLoksahabhagDate && loksahabhagDate && loksahabhagDate === savedLoksahabhagDate;
+                        const isAfterLok = savedLoksahabhagDate && loksahabhagDate && loksahabhagDate > savedLoksahabhagDate;
+
+                        return (
+                          <div className={`p-3 rounded-xl border text-xs font-bold flex items-center gap-2 ${
+                            isBeforeInitial || isBeforeLok
+                              ? "bg-amber-50 border-amber-200 text-amber-900"
+                              : isSameLok || isAfterLok
+                              ? "bg-emerald-50 border-emerald-200 text-emerald-900"
+                              : "bg-blue-50 border-blue-200 text-blue-900"
+                          }`}>
+                            <Info className="w-4 h-4 shrink-0 text-emerald-600" />
+                            <span>
+                              {isBeforeInitial
+                                ? `टीप: निवडलेली तारीख (${loksahabhagDate}) ही आरंभीची शिल्लक नोंदवलेल्या दिनांकाच्या (${initialStockDate}) आधीची असल्यामुळे साठा ० (0) दर्शवत आहे.`
+                                : isBeforeLok
+                                ? `टीप: निवडलेली तारीख (${loksahabhagDate}) ही लोकसहभाग दिनांकाच्या (${savedLoksahabhagDate}) आधीची असल्यामुळे लोकसहभाग जोडलेला नाही. एकूण उपलब्ध साठा = मागील शिल्लक.`
+                                : isSameLok
+                                ? `लोकसहभाग तारीख (${loksahabhagDate}): मागील शिल्लक + प्राप्त लोकसहभाग साहित्याची बेरीज करून एकूण उपलब्ध साठा दर्शवला आहे.`
+                                : isAfterLok
+                                ? `लोकसहभाग नंतरची तारीख (${loksahabhagDate}): मागील शिल्लक + लोकसहभाग साहित्याची बेरीज करून एकूण उपलब्ध साठा दर्शवला आहे.`
+                                : `लोकसहभाग तारीख निवडा. निवडलेल्या तारखेनुसार उपलब्ध साठ्याची बेरीज आपोआप होईल.`}
+                            </span>
+                          </div>
+                        );
+                      })()}
+
                       {/* Main Loksahabhag Stock Table */}
-                      <div className="w-full overflow-x-auto">
+                      <div className="w-full overflow-x-auto border-0">
                         <table className="w-full text-left text-xs border-collapse min-w-[750px]">
                           <thead>
                             <tr className="bg-emerald-100/90 border-b border-emerald-300 text-emerald-950 font-bold">
@@ -8546,45 +8672,77 @@ function TeacherMDMPage() {
                           </thead>
                           <tbody className="divide-y divide-slate-200">
                             {REPORT_ITEMS.slice(0, 18).map((item, idx) => {
-                              // 1. Opening stock for the month
-                              const openVal = roundStock(getOpeningStock(loksahabhagMonth, loksahabhagYear, loksahabhagClass, item.key));
+                              const isBeforeInitial = !!(initialStockDate && loksahabhagDate && loksahabhagDate < initialStockDate);
+                              const openVal = isBeforeInitial ? 0 : roundStock(getOpeningStock(loksahabhagMonth, loksahabhagYear, loksahabhagClass, item.key));
+                              const currentRecKey = `${loksahabhagYear}_${loksahabhagMonth}_${loksahabhagClass}`;
+                              const savedLoksahabhagDate = loksahabhagDates[currentRecKey];
 
-                              // 2. Incoming received stock (table + vouchers) for the month
+                              // 2. Incoming received stock for the month up to loksahabhagDate
                               let incTabQty = 0;
                               const itemKey = getItemKeyFromName(item.key);
-                              incRecords.forEach((r) => {
-                                if (!r.date || !r.item || !r.qty) return;
-                                const rKey = getItemKeyFromName(r.item);
-                                const isMatch = (rKey && rKey === itemKey) || r.item.toLowerCase().trim() === item.key.toLowerCase().trim();
-                                if (isMatch) {
-                                  const parts = r.date.split("-");
-                                  if (parts.length === 3) {
-                                    const recYear = parts[0];
-                                    const monthIndex = parseInt(parts[1], 10) - 1;
-                                    const monthNames = [
-                                      "January", "February", "March", "April", "May", "June",
-                                      "July", "August", "September", "October", "November", "December"
-                                    ];
-                                    if (monthIndex >= 0 && monthIndex <= 11) {
-                                      if (recYear === loksahabhagYear && monthNames[monthIndex].toLowerCase() === loksahabhagMonth.toLowerCase()) {
-                                        incTabQty += parseFloat(r.qty) || 0;
+                              if (!isBeforeInitial) {
+                                incRecords.forEach((r) => {
+                                  if (!r.date || !r.item || !r.qty) return;
+                                  const rKey = getItemKeyFromName(r.item);
+                                  const isMatch = (rKey && rKey === itemKey) || r.item.toLowerCase().trim() === item.key.toLowerCase().trim();
+                                  if (isMatch) {
+                                    if (!loksahabhagDate || r.date <= loksahabhagDate) {
+                                      const parts = r.date.split("-");
+                                      if (parts.length === 3) {
+                                        const recYear = parts[0];
+                                        const monthIndex = parseInt(parts[1], 10) - 1;
+                                        const monthNames = [
+                                          "January", "February", "March", "April", "May", "June",
+                                          "July", "August", "September", "October", "November", "December"
+                                        ];
+                                        if (monthIndex >= 0 && monthIndex <= 11) {
+                                          if (recYear === loksahabhagYear && monthNames[monthIndex].toLowerCase() === loksahabhagMonth.toLowerCase()) {
+                                            incTabQty += parseFloat(r.qty) || 0;
+                                          }
+                                        }
                                       }
                                     }
                                   }
-                                }
-                              });
+                                });
+                              }
                               const recordKeyInc = `${loksahabhagYear}_${loksahabhagMonth}_${loksahabhagClass}`;
                               const typedIncVal = parseFloat((incomingRecords[recordKeyInc] || {})[item.key] || "0") || 0;
                               const totalIncVal = roundStock(typedIncVal + incTabQty);
 
-                              // 3. Stock available from previous page (Opening + Incoming)
+                              // 3. Stock available from previous stage (Opening + Incoming)
                               const prevAvailStock = roundStock(openVal + totalIncVal);
 
-                              // 4. Loksahabhag entries from individual logs
-                              const lokTabQty = roundStock(getLokForMonth(item.key, loksahabhagMonth, Number(loksahabhagYear) || 2026));
+                              // 4. Loksahabhag entries from individual logs up to loksahabhagDate
+                              let lokTabQty = 0;
+                              if (!isBeforeInitial) {
+                                lokRecords.forEach((r) => {
+                                  if (!r.date || !r.item || !r.qty) return;
+                                  const rKey = getItemKeyFromName(r.item);
+                                  const isMatch = (rKey && rKey === itemKey) || r.item.toLowerCase().trim() === item.key.toLowerCase().trim();
+                                  if (isMatch) {
+                                    if (!loksahabhagDate || r.date <= loksahabhagDate) {
+                                      const parts = r.date.split("-");
+                                      if (parts.length === 3) {
+                                        const recYear = parts[0];
+                                        const monthIndex = parseInt(parts[1], 10) - 1;
+                                        const monthNames = [
+                                          "January", "February", "March", "April", "May", "June",
+                                          "July", "August", "September", "October", "November", "December"
+                                        ];
+                                        if (monthIndex >= 0 && monthIndex <= 11) {
+                                          if (recYear === loksahabhagYear && monthNames[monthIndex].toLowerCase() === loksahabhagMonth.toLowerCase()) {
+                                            lokTabQty += parseFloat(r.qty) || 0;
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                });
+                              }
 
                               // 5. Typed loksahabhag value
-                              const typedLokVal = parseFloat(openingStockLoksahabhag[item.key] || "0") || 0;
+                              const isBeforeLokDate = isBeforeInitial || !!(savedLoksahabhagDate && loksahabhagDate && loksahabhagDate < savedLoksahabhagDate);
+                              const typedLokVal = isBeforeLokDate ? 0 : (parseFloat(openingStockLoksahabhag[item.key] || "0") || 0);
                               const totalLokVal = roundStock(typedLokVal + lokTabQty);
 
                               // 6. Total Stock = (Opening + Incoming) + Loksahabhag
@@ -8848,6 +9006,38 @@ function TeacherMDMPage() {
                               <option value="6 To 8">{lang === "mr" ? "६ ते ८" : "6 To 8"}</option>
                             </select>
                           </div>
+
+                          {/* Damaged Date / खराब साठा तारीख */}
+                          <div className="flex items-center gap-2">
+                            <label className="text-xs font-black text-slate-700">{lang === "mr" ? "खराब साठा तारीख:" : "Damaged Date:"}</label>
+                            <input
+                              type="date"
+                              value={damagedDate}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setDamagedDate(val);
+                                if (val) {
+                                  const parts = val.split("-");
+                                  if (parts.length === 3) {
+                                    const yr = parts[0];
+                                    const moIndex = parseInt(parts[1], 10) - 1;
+                                    const monthNames = [
+                                      "January", "February", "March", "April", "May", "June",
+                                      "July", "August", "September", "October", "November", "December"
+                                    ];
+                                    if (moIndex >= 0 && moIndex <= 11) {
+                                      const mo = monthNames[moIndex];
+                                      setDamagedYear(yr);
+                                      setDamagedMonth(mo);
+                                      const recordKey = `${yr}_${mo}_${damagedClass}`;
+                                      setDamagedDates((prev) => ({ ...prev, [recordKey]: val }));
+                                    }
+                                  }
+                                }
+                              }}
+                              className="h-9 px-3 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs cursor-pointer"
+                            />
+                          </div>
                         </div>
 
                         {/* Save Button */}
@@ -8861,8 +9051,41 @@ function TeacherMDMPage() {
                         </button>
                       </div>
 
+                      {/* Dynamic Date Status Alert Banner for Damaged Stock */}
+                      {(() => {
+                        const currentRecKey = `${damagedYear}_${damagedMonth}_${damagedClass}`;
+                        const savedDamagedDate = damagedDates[currentRecKey];
+                        const isBeforeInitial = !!(initialStockDate && damagedDate && damagedDate < initialStockDate);
+                        const isBeforeDmg = savedDamagedDate && damagedDate && damagedDate < savedDamagedDate;
+                        const isSameDmg = savedDamagedDate && damagedDate && damagedDate === savedDamagedDate;
+                        const isAfterDmg = savedDamagedDate && damagedDate && damagedDate > savedDamagedDate;
+
+                        return (
+                          <div className={`p-3 rounded-xl border text-xs font-bold flex items-center gap-2 ${
+                            isBeforeInitial || isBeforeDmg
+                              ? "bg-amber-50 border-amber-200 text-amber-900"
+                              : isSameDmg || isAfterDmg
+                              ? "bg-emerald-50 border-emerald-200 text-emerald-900"
+                              : "bg-blue-50 border-blue-200 text-blue-900"
+                          }`}>
+                            <Info className="w-4 h-4 shrink-0 text-emerald-600" />
+                            <span>
+                              {isBeforeInitial
+                                ? `टीप: निवडलेली तारीख (${damagedDate}) ही आरंभीची शिल्लक नोंदवलेल्या दिनांकाच्या (${initialStockDate}) आधीची असल्यामुळे साठा ० (0) दर्शवत आहे.`
+                                : isBeforeDmg
+                                ? `टीप: निवडलेली तारीख (${damagedDate}) ही खराब साठा दिनांकाच्या (${savedDamagedDate}) आधीची असल्यामुळे खराब साठा कपात केलेला नाही. एकूण शिल्लक साठा = मागील उपलब्ध साठा.`
+                                : isSameDmg
+                                ? `खराब साठा तारीख (${damagedDate}): मागील शिल्लक मधून खराब साठा कपात करून एकूण शिल्लक साठा दर्शवला आहे.`
+                                : isAfterDmg
+                                ? `खराब साठा नंतरची तारीख (${damagedDate}): मागील शिल्लक मधून खराब साठा कपात करून एकूण शिल्लक साठा दर्शवला आहे.`
+                                : `खराब साठा तारीख निवडा. निवडलेल्या तारखेनुसार शिल्लक साठ्याची कपात आपोआप होईल.`}
+                            </span>
+                          </div>
+                        );
+                      })()}
+
                       {/* Main Damaged Stock Table */}
-                      <div className="w-full overflow-x-auto">
+                      <div className="w-full overflow-x-auto border-0">
                         <table className="w-full text-left text-xs border-collapse min-w-[750px]">
                           <thead>
                             <tr className="bg-emerald-100/90 border-b border-emerald-300 text-emerald-950 font-bold">
@@ -8882,48 +9105,106 @@ function TeacherMDMPage() {
                           </thead>
                           <tbody className="divide-y divide-slate-200">
                             {REPORT_ITEMS.slice(0, 18).map((item, idx) => {
-                              // 1. Opening stock for the month
-                              const openVal = roundStock(getOpeningStock(damagedMonth, damagedYear, damagedClass, item.key));
+                              const isBeforeInitial = !!(initialStockDate && damagedDate && damagedDate < initialStockDate);
+                              const openVal = isBeforeInitial ? 0 : roundStock(getOpeningStock(damagedMonth, damagedYear, damagedClass, item.key));
+                              const currentRecKey = `${damagedYear}_${damagedMonth}_${damagedClass}`;
+                              const savedDamagedDate = damagedDates[currentRecKey];
 
-                              // 2. Incoming received stock for the month
+                              // 2. Incoming received stock up to damagedDate
                               let incTabQty = 0;
                               const itemKey = getItemKeyFromName(item.key);
-                              incRecords.forEach((r) => {
-                                if (!r.date || !r.item || !r.qty) return;
-                                const rKey = getItemKeyFromName(r.item);
-                                const isMatch = (rKey && rKey === itemKey) || r.item.toLowerCase().trim() === item.key.toLowerCase().trim();
-                                if (isMatch) {
-                                  const parts = r.date.split("-");
-                                  if (parts.length === 3) {
-                                    const recYear = parts[0];
-                                    const monthIndex = parseInt(parts[1], 10) - 1;
-                                    const monthNames = [
-                                      "January", "February", "March", "April", "May", "June",
-                                      "July", "August", "September", "October", "November", "December"
-                                    ];
-                                    if (monthIndex >= 0 && monthIndex <= 11) {
-                                      if (recYear === damagedYear && monthNames[monthIndex].toLowerCase() === damagedMonth.toLowerCase()) {
-                                        incTabQty += parseFloat(r.qty) || 0;
+                              if (!isBeforeInitial) {
+                                incRecords.forEach((r) => {
+                                  if (!r.date || !r.item || !r.qty) return;
+                                  const rKey = getItemKeyFromName(r.item);
+                                  const isMatch = (rKey && rKey === itemKey) || r.item.toLowerCase().trim() === item.key.toLowerCase().trim();
+                                  if (isMatch) {
+                                    if (!damagedDate || r.date <= damagedDate) {
+                                      const parts = r.date.split("-");
+                                      if (parts.length === 3) {
+                                        const recYear = parts[0];
+                                        const monthIndex = parseInt(parts[1], 10) - 1;
+                                        const monthNames = [
+                                          "January", "February", "March", "April", "May", "June",
+                                          "July", "August", "September", "October", "November", "December"
+                                        ];
+                                        if (monthIndex >= 0 && monthIndex <= 11) {
+                                          if (recYear === damagedYear && monthNames[monthIndex].toLowerCase() === damagedMonth.toLowerCase()) {
+                                            incTabQty += parseFloat(r.qty) || 0;
+                                          }
+                                        }
                                       }
                                     }
                                   }
-                                }
-                              });
+                                });
+                              }
                               const recordKeyInc = `${damagedYear}_${damagedMonth}_${damagedClass}`;
                               const typedIncVal = parseFloat((incomingRecords[recordKeyInc] || {})[item.key] || "0") || 0;
                               const totalIncVal = roundStock(typedIncVal + incTabQty);
 
-                              // 3. Loksahabhag stock for the month
+                              // 3. Loksahabhag stock for the month up to damagedDate
+                              let lokTabQty = 0;
+                              if (!isBeforeInitial) {
+                                lokRecords.forEach((r) => {
+                                  if (!r.date || !r.item || !r.qty) return;
+                                  const rKey = getItemKeyFromName(r.item);
+                                  const isMatch = (rKey && rKey === itemKey) || r.item.toLowerCase().trim() === item.key.toLowerCase().trim();
+                                  if (isMatch) {
+                                    if (!damagedDate || r.date <= damagedDate) {
+                                      const parts = r.date.split("-");
+                                      if (parts.length === 3) {
+                                        const recYear = parts[0];
+                                        const monthIndex = parseInt(parts[1], 10) - 1;
+                                        const monthNames = [
+                                          "January", "February", "March", "April", "May", "June",
+                                          "July", "August", "September", "October", "November", "December"
+                                        ];
+                                        if (monthIndex >= 0 && monthIndex <= 11) {
+                                          if (recYear === damagedYear && monthNames[monthIndex].toLowerCase() === damagedMonth.toLowerCase()) {
+                                            lokTabQty += parseFloat(r.qty) || 0;
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                });
+                              }
                               const typedLokVal = parseFloat(openingStockLoksahabhag[item.key] || "0") || 0;
-                              const lokTabQty = roundStock(getLokForMonth(item.key, damagedMonth, Number(damagedYear) || 2026));
                               const totalLokVal = roundStock(typedLokVal + lokTabQty);
 
                               // 4. Available stock from previous stage (Loksahabhag total)
                               const prevAvailStock = roundStock(openVal + totalIncVal + totalLokVal);
 
-                              // 5. Damaged stock for the month (table + individual logs)
-                              const typedDmgVal = parseFloat(openingStockSpent[item.key] || "0") || 0;
-                              const dmgTabQty = roundStock(getDamagedForMonth(item.key, damagedMonth, Number(damagedYear) || 2026));
+                              // 5. Damaged stock up to damagedDate
+                              let dmgTabQty = 0;
+                              if (!isBeforeInitial) {
+                                damagedRecords.forEach((r) => {
+                                  if (!r.date || !r.item || !r.qty) return;
+                                  const rKey = getItemKeyFromName(r.item);
+                                  const isMatch = (rKey && rKey === itemKey) || r.item.toLowerCase().trim() === item.key.toLowerCase().trim();
+                                  if (isMatch) {
+                                    if (!damagedDate || r.date <= damagedDate) {
+                                      const parts = r.date.split("-");
+                                      if (parts.length === 3) {
+                                        const recYear = parts[0];
+                                        const monthIndex = parseInt(parts[1], 10) - 1;
+                                        const monthNames = [
+                                          "January", "February", "March", "April", "May", "June",
+                                          "July", "August", "September", "October", "November", "December"
+                                        ];
+                                        if (monthIndex >= 0 && monthIndex <= 11) {
+                                          if (recYear === damagedYear && monthNames[monthIndex].toLowerCase() === damagedMonth.toLowerCase()) {
+                                            dmgTabQty += parseFloat(r.qty) || 0;
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                });
+                              }
+
+                              const isBeforeDmgDate = isBeforeInitial || !!(savedDamagedDate && damagedDate && damagedDate < savedDamagedDate);
+                              const typedDmgVal = isBeforeDmgDate ? 0 : (parseFloat(openingStockSpent[item.key] || "0") || 0);
                               const totalDmgVal = roundStock(typedDmgVal + dmgTabQty);
 
                               // 6. Remaining Stock = Previous Available Stock - Damaged Stock
@@ -13929,9 +14210,24 @@ function TeacherMDMPage() {
                                 प्रमाणपत्र मजकूर माहिती संपादन (Edit Certificate Text & Details)
                               </h3>
                             </div>
-                            <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                              ⚡ खालील माहिती बदलताच प्रमाणपत्रामध्ये लाईव्ह (Live) अपडेट होईल
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                ⚡ खालील माहिती बदलताच प्रमाणपत्रामध्ये लाईव्ह (Live) अपडेट होईल
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleSaveSchoolProfileToDatabase()}
+                                disabled={savingSchoolProfile}
+                                className="flex items-center gap-1.5 px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                              >
+                                {savingSchoolProfile ? (
+                                  <Loader2 className="size-3.5 animate-spin" />
+                                ) : (
+                                  <Save className="size-3.5" />
+                                )}
+                                प्रोफाइल मध्ये माहिती सेव्ह करा
+                              </button>
+                            </div>
                           </div>
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 text-xs font-bold text-slate-700">
