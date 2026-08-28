@@ -2477,7 +2477,23 @@ export function AcademicPlanningSystem({
                 </div>
                 <div className="min-w-0">
                   <h3 className="text-sm sm:text-base font-black tracking-tight">
-                    {selectedPlanningType === "annual" ? "वार्षिक नियोजन" : selectedPlanningType === "monthly" ? "मासिक नियोजन" : "प्रश्नपेढी"}
+                    {(() => {
+                      const recAny = viewModalFile as any;
+                      const pType = (recAny?.planningType || recAny?.category || selectedPlanningType || "").toLowerCase();
+                      const titleStr = (recAny?.title || recAny?.name || recAny?.fileName || "").toLowerCase();
+
+                      if (pType === "annual" || pType === "varshik" || titleStr.includes("वार्षिक") || titleStr.includes("annual")) {
+                        return "वार्षिक नियोजन";
+                      }
+                      if (pType === "monthly" || pType === "masik" || titleStr.includes("मासिक") || titleStr.includes("monthly")) {
+                        return "मासिक नियोजन";
+                      }
+                      if (pType === "question_bank" || pType === "prashnapedhi" || titleStr.includes("प्रश्नपेढी") || titleStr.includes("question")) {
+                        return "प्रश्नपेढी";
+                      }
+
+                      return selectedPlanningType === "annual" ? "वार्षिक नियोजन" : selectedPlanningType === "monthly" ? "मासिक नियोजन" : "प्रश्नपेढी";
+                    })()}
                   </h3>
                 </div>
               </div>

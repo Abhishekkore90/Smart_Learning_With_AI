@@ -542,7 +542,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     return row.some((cell) => isExamOrAssessmentText(cell));
   };
 
-    // Helper to compute rowSpan matrix for ALL columns (merging matching values & empty sub-cells under parent titles, formatting Exam blocks cleanly)
+          // Helper to compute rowSpan matrix for ALL columns
   const getTargetRowSpanMatrix = (rows: string[][], isMonthlyPlan: boolean, headers: string[]) => {
     const numRows = rows.length;
     if (numRows === 0) return [];
@@ -553,20 +553,93 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
       () => Array.from({ length: numCols }, () => ({ rowSpan: 1, skip: false, displayValue: "-" }))
     );
 
+    // --- ANNUAL PLANNING (वार्षिक नियोजन) MATRIX BUILDER ---
+    if (!isMonthlyPlan) {
+      let r = 0;
+      while (r < numRows) {
+        let monthVal = String(rows[r]?.[0] || "").trim();
+        if (monthVal === "-" || monthVal === "null" || monthVal === "undefined") monthVal = "";
+
+        // If row r has no month name, try finding previous valid month
+        if (!monthVal && r > 0) {
+          for (let prev = r - 1; prev >= 0; prev--) {
+            const pVal = String(rows[prev]?.[0] || "").trim();
+            if (pVal && pVal !== "-" && pVal !== "null" && pVal !== "undefined") {
+              monthVal = pVal;
+              break;
+            }
+          }
+        }
+
+        if (monthVal) {
+          let blockSpan = 1;
+          while (
+            r + blockSpan < numRows &&
+            (normalizeForCompare(rows[r + blockSpan]?.[0]) === normalizeForCompare(monthVal) ||
+              isEmptyValue(rows[r + blockSpan]?.[0]))
+          ) {
+            blockSpan++;
+          }
+
+          // Col 0 (Month Name): 1 merged box for all rows of THIS month
+          matrix[r][0] = { rowSpan: blockSpan, skip: false, displayValue: monthVal };
+          for (let k = 1; k < blockSpan; k++) {
+            matrix[r + k][0] = { rowSpan: 1, skip: true, displayValue: "" };
+          }
+
+          // Cols 1, 2, 3 (Weeks, Working Days, Periods): 1 merged box for all rows of THIS month
+          for (let cIdx = 1; cIdx <= 3; cIdx++) {
+            let colVal = "";
+            for (let k = 0; k < blockSpan; k++) {
+              const v = String(rows[r + k]?.[cIdx] || "").trim();
+              if (v && v !== "-") {
+                colVal = v;
+                break;
+              }
+            }
+            if (!colVal) colVal = "-";
+
+            matrix[r][cIdx] = { rowSpan: blockSpan, skip: false, displayValue: colVal };
+            for (let k = 1; k < blockSpan; k++) {
+              matrix[r + k][cIdx] = { rowSpan: 1, skip: true, displayValue: "" };
+            }
+          }
+
+          // Cols 4 & 5 (Topics & Learning Outcomes): 1 rowSpan per line
+          for (let k = 0; k < blockSpan; k++) {
+            for (let cIdx = 4; cIdx < numCols; cIdx++) {
+              const cellVal = String(rows[r + k]?.[cIdx] || "").trim();
+              const isExam = isExamOrAssessmentText(cellVal);
+              matrix[r + k][cIdx] = { rowSpan: 1, skip: false, displayValue: cellVal || "-", isExam };
+            }
+          }
+
+          r += blockSpan;
+        } else {
+          for (let cIdx = 0; cIdx < numCols; cIdx++) {
+            const cellVal = String(rows[r]?.[cIdx] || "").trim();
+            const isExam = isExamOrAssessmentText(cellVal);
+            matrix[r][cIdx] = { rowSpan: 1, skip: false, displayValue: cellVal || "-", isExam };
+          }
+          r++;
+        }
+      }
+      return matrix;
+    }
+
+    // --- MONTHLY PLANNING (मासिक नियोजन) MATRIX BUILDER ---
     let r = 0;
     while (r < numRows) {
       const isExamRow = isExamOrAssessmentRow(rows[r]);
 
       if (isExamRow) {
-        // 1. Find full span of continuous Exam rows
         let examSpan = 1;
         while (r + examSpan < numRows && isExamOrAssessmentRow(rows[r + examSpan])) {
           examSpan++;
         }
 
-        // 2. Find primary exam title and primary column
         let examTitle = "";
-        let primaryCol = isMonthlyPlan ? 1 : 4;
+        let primaryCol = 1;
 
         for (let spanR = r; spanR < r + examSpan; spanR++) {
           for (let c = 0; c < numCols; c++) {
@@ -582,7 +655,6 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
         if (!examTitle) examTitle = "चाचणी / मूल्यमापन";
 
-        // 3. Process Date Column (Col 0) for Exam Block (keep dates AS IS or merge if identical)
         let dateR = r;
         while (dateR < r + examSpan) {
           const dVal = rows[dateR]?.[0];
@@ -618,7 +690,6 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           }
         }
 
-        // 4. Process Content Columns (Cols 1..numCols-1) for Exam Block
         for (let cIdx = 1; cIdx < numCols; cIdx++) {
           if (cIdx === primaryCol) {
             matrix[r][cIdx] = { rowSpan: examSpan, skip: false, displayValue: examTitle, isExam: true };
@@ -645,7 +716,6 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
         r += examSpan;
       } else {
-        // Regular curriculum rows (process per column normally)
         for (let cIdx = 0; cIdx < numCols; cIdx++) {
           if (matrix[r][cIdx].skip || matrix[r][cIdx].rowSpan > 1) continue;
 
@@ -1297,7 +1367,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
 
                     return (
                       <div key={`${sheet.sheetName}-${sheetIndex}`} className="space-y-4 page-break-after">
-                        <div className="bg-slate-900 text-amber-300 px-5 py-3 rounded-2xl flex items-center justify-between shadow-xs">
+                        <div className="pdf-subject-banner bg-slate-900 text-amber-300 px-5 py-3 rounded-2xl flex items-center justify-between shadow-xs">
                           <h3 className="text-sm font-black uppercase tracking-wider flex items-center gap-2">
                             <FileSpreadsheet className="size-4 text-emerald-400" />
                             <span>{sheet.sheetName}</span>
@@ -1355,7 +1425,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
             ) : (
               <>
                 <style>{`
-                  @media print, all {
+                  @media print {
                     .html2pdf__page-break {
                       page-break-before: always !important;
                       break-before: page !important;
@@ -1376,9 +1446,90 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                       break-inside: avoid !important;
                     }
                   }
+
+                  /* Dedicated Clean PDF Export Mode (Activated ONLY during handleDownloadCombinedPdf) */
+                  .pdf-export-active .pdf-school-header {
+                    background: transparent !important;
+                    border: none !important;
+                    border-bottom: 2px solid #000 !important;
+                    border-radius: 0 !important;
+                    padding: 4px 0 8px 0 !important;
+                    margin-bottom: 10px !important;
+                    box-shadow: none !important;
+                  }
+                  .pdf-export-active .pdf-school-header h2 {
+                    font-size: 15px !important;
+                    color: #000 !important;
+                    margin-bottom: 2px !important;
+                  }
+                  .pdf-export-active .pdf-school-header h3 {
+                    font-size: 12px !important;
+                    color: #000 !important;
+                  }
+                  .pdf-export-active .pdf-subject-section {
+                    box-sizing: border-box !important;
+                    border-top: none !important;
+                    padding-top: 0 !important;
+                  }
+                  .pdf-export-active .pdf-subject-section.html2pdf__page-break {
+                    page-break-before: always !important;
+                    break-before: page !important;
+                    margin-top: 0 !important;
+                    padding-top: 0 !important;
+                  }
+                  .pdf-export-active .pdf-subject-banner {
+                    background: transparent !important;
+                    color: #000 !important;
+                    border-bottom: 1.5px solid #000 !important;
+                    border-radius: 0 !important;
+                    padding: 2px 0 4px 0 !important;
+                    margin-bottom: 6px !important;
+                    box-shadow: none !important;
+                  }
+                  .pdf-export-active .pdf-subject-banner h3 {
+                    font-size: 13px !important;
+                    color: #000 !important;
+                    font-weight: 800 !important;
+                  }
+                  .pdf-export-active .pdf-subject-banner span {
+                    color: #000 !important;
+                  }
+                  .pdf-export-active .pdf-subject-banner svg,
+                  .pdf-export-active .pdf-subject-banner button,
+                  .pdf-export-active .pdf-subject-banner div span {
+                    display: none !important;
+                  }
+                  .pdf-export-active table {
+                    border-collapse: collapse !important;
+                    border: 1px solid #333 !important;
+                    font-size: 9px !important;
+                    line-height: 1.15 !important;
+                    width: 100% !important;
+                  }
+                  .pdf-export-active th {
+                    background-color: #f1f5f9 !important;
+                    color: #000 !important;
+                    border: 1px solid #333 !important;
+                    padding: 3px 4px !important;
+                    font-size: 9.5px !important;
+                    font-weight: 800 !important;
+                  }
+                  .pdf-export-active td {
+                    border: 1px solid #333 !important;
+                    padding: 2px 4px !important;
+                    font-size: 9px !important;
+                    color: #000 !important;
+                  }
+                  .pdf-export-active .pdf-signature-bar {
+                    border-top: 1px solid #000 !important;
+                    padding-top: 6px !important;
+                    margin-top: 8px !important;
+                    font-size: 10px !important;
+                    color: #000 !important;
+                  }
                 `}</style>
                 {/* Header Title & School Info Card at START of Document (First Page Only) */}
-                <div className="border-2 border-slate-900 rounded-2xl p-4 sm:p-5 bg-slate-50 space-y-3 text-xs font-bold text-slate-900 print:bg-white print:border-2 print:border-slate-900">
+                <div className="pdf-school-header border-2 border-slate-900 rounded-2xl p-4 sm:p-5 bg-slate-50 space-y-3 text-xs font-bold text-slate-900 print:bg-white print:border-2 print:border-slate-900">
                   <div className="text-center space-y-1.5 border-b-2 border-slate-900 pb-3">
                     <h2 className="text-lg sm:text-xl font-black text-indigo-950 uppercase tracking-tight print:text-slate-950">
                       {schoolProfile.schoolName || "जिल्हा परिषद प्राथमिक शाळा"}
@@ -1439,13 +1590,12 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                       const sectionRowMatrix = !isInlineEditing ? getTargetRowSpanMatrix(filteredRows, isMonthly, categoryHeaders) : [];
 
                       return (
-                        <React.Fragment key={`${sec.subjectName}-${secIdx}`}>
-                          {secIdx > 0 && (
-                            <div className="html2pdf__page-break" style={{ pageBreakBefore: "always", breakBefore: "page", height: 0, margin: 0, padding: 0 }} />
-                          )}
-                          <div className={`space-y-4 ${secIdx > 0 ? "pt-4 border-t-2 border-slate-200" : ""}`}>
+                        <div
+                          key={`${sec.subjectName}-${secIdx}`}
+                          className={`pdf-subject-section space-y-4 my-6 ${secIdx > 0 ? "html2pdf__page-break pt-6 border-t-2 border-slate-200 print:pt-0 print:border-none" : ""}`}
+                        >
                         {/* Subject Banner Header */}
-                        <div className="bg-slate-900 text-amber-300 px-5 py-3 rounded-2xl flex items-center justify-between shadow-xs">
+                        <div className="pdf-subject-banner bg-slate-900 text-amber-300 px-5 py-3 rounded-2xl flex items-center justify-between shadow-xs">
                           <h3 className="text-sm font-black uppercase tracking-wider flex items-center gap-2">
                             <BookOpen className="size-4 text-emerald-400" />
                             <span>{formatCleanSectionTitle(sec)}</span>
@@ -1700,7 +1850,7 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                           </table>
                         </div>
                         {/* Signature Bar on EVERY Subject Page */}
-                        <div className="pt-4 border-t border-slate-300 grid grid-cols-2 text-center text-xs font-black text-slate-900">
+                        <div className="pdf-signature-bar pt-4 border-t border-slate-300 grid grid-cols-2 text-center text-xs font-black text-slate-900">
                           <div>
                             <div>वर्ग शिक्षक स्वाक्षरी</div>
                             <div className="text-[11px] text-slate-600 font-bold mt-1">({schoolProfile.teacherName || "शिक्षकाचे नाव"})</div>
@@ -1711,7 +1861,6 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                           </div>
                         </div>
                       </div>
-                    </React.Fragment>
                     );
                   })
                 ) : (
