@@ -510,9 +510,9 @@ function TeachingRecordPage() {
         <TeacherSidebar />
       </div>
 
-      <main className="lg:pl-64 pt-16 min-h-screen print:pl-0 print:pt-0 pb-24">
+      <main className="w-full pt-16 min-h-screen print:pl-0 print:pt-0 pb-24">
         <PinGate sectionKey="teaching_record">
-          <div className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto space-y-6 print:p-0 print:max-w-full">
+          <div className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto w-full space-y-6 print:p-0 print:max-w-full">
             {/* Top Navigation Bar with Back Button, Tabs & Breadcrumbs */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-3.5 sm:p-4 rounded-3xl border border-slate-200/80 shadow-sm print:hidden">
               <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
@@ -983,7 +983,7 @@ function TeachingRecordPage() {
 
             {/* Document Live Preview Modal Backdrop & Frame */}
             {isPreviewOpen && selectedRecordForPreview && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-955/80 backdrop-blur-sm">
+              <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-sm">
                 <div className="bg-white rounded-3xl overflow-hidden shadow-2xl w-full max-w-[96vw] border border-slate-100 flex flex-col h-[93vh]">
                   {/* Modal Body with single unified navbar */}
                   <div className="flex-1 overflow-hidden bg-slate-100 p-2 sm:p-4">

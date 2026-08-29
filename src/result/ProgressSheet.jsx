@@ -562,7 +562,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
         return;
       }
 
-      const isPortrait = pageMode === "1page" && layoutMode === "portrait";
+      const isPortrait = layoutMode === "portrait";
       const orientation = isPortrait ? "portrait" : "landscape";
       const pdfWidth = isPortrait ? 210 : 297;
       const pdfHeight = isPortrait ? 297 : 210;
@@ -882,7 +882,6 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
               <button
                 onClick={() => {
                   setPageMode("2pages");
-                  setLayoutMode("portrait");
                   setShowLayoutModal(false);
                 }}
                 className={`p-4 rounded-2xl border-2 transition-all text-left flex items-center gap-3.5 cursor-pointer group active:scale-[0.98] ${
@@ -935,33 +934,31 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
           <span>स्वरूप: {pageMode === "1page" ? "१ पान (Single Page)" : "२ पाने (Two Pages)"}</span>
         </button>
 
-        {/* Layout Switcher (Portrait vs Landscape Booklet) - only for 1page mode */}
-        {pageMode === "1page" && (
-          <div className="flex items-center bg-orange-50/80 p-1 rounded-xl border border-orange-200 gap-1 shadow-xs">
-            <button
-              onClick={() => setLayoutMode("portrait")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
-                layoutMode === "portrait"
-                  ? "bg-orange-600 text-white shadow-sm"
-                  : "text-slate-700 hover:text-orange-950 hover:bg-orange-100/60"
-              }`}
-            >
-              <span>📄</span>
-              <span>उभा लेआउट (Portrait)</span>
-            </button>
-            <button
-              onClick={() => setLayoutMode("landscape")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
-                layoutMode === "landscape"
-                  ? "bg-orange-600 text-white shadow-sm"
-                  : "text-slate-700 hover:text-orange-950 hover:bg-orange-100/60"
-              }`}
-            >
-              <span>📖</span>
-              <span>फोल्डिंग लेआउट (Landscape)</span>
-            </button>
-          </div>
-        )}
+        {/* Layout Switcher (Portrait vs Landscape Booklet) - for both 1page and 2pages modes */}
+        <div className="flex items-center bg-orange-50/80 p-1 rounded-xl border border-orange-200 gap-1 shadow-xs">
+          <button
+            onClick={() => setLayoutMode("portrait")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+              layoutMode === "portrait"
+                ? "bg-orange-600 text-white shadow-sm"
+                : "text-slate-700 hover:text-orange-950 hover:bg-orange-100/60"
+            }`}
+          >
+            <span>📄</span>
+            <span>उभा लेआउट (Portrait)</span>
+          </button>
+          <button
+            onClick={() => setLayoutMode("landscape")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+              layoutMode === "landscape"
+                ? "bg-orange-600 text-white shadow-sm"
+                : "text-slate-700 hover:text-orange-950 hover:bg-orange-100/60"
+            }`}
+          >
+            <span>📖</span>
+            <span>फोल्डिंग लेआउट (Landscape)</span>
+          </button>
+        </div>
 
         {/* Student Selector Dropdown */}
         <div className="flex items-center gap-2">
@@ -993,22 +990,22 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
       </div>
 
       {/* -------------------- PRINTABLE PROGRESS SHEET CONTAINER -------------------- */}
-      <div ref={printRef} className={`w-full ${pageMode === "1page" && layoutMode === "portrait" ? "max-w-[215mm]" : "max-w-[305mm]"} mx-auto overflow-x-auto space-y-8 p-2`}>
+      <div ref={printRef} className={`w-full ${layoutMode === "portrait" ? "max-w-[215mm]" : "max-w-[305mm]"} mx-auto overflow-x-auto space-y-8 p-2`}>
         <style>{`
           .cce-pdf-generating {
             margin: 0 !important;
             padding: 0 !important;
             max-width: none !important;
-            width: ${pageMode === "1page" && layoutMode === "portrait" ? "210mm" : "297mm"} !important;
+            width: ${layoutMode === "portrait" ? "210mm" : "297mm"} !important;
             background-color: #ffffff !important;
           }
           .cce-pdf-generating .pdf-page {
             margin: 0 !important;
             padding: 14px !important;
             box-shadow: none !important;
-            height: ${pageMode === "1page" && layoutMode === "portrait" ? "294mm" : "207mm"} !important;
-            max-height: ${pageMode === "1page" && layoutMode === "portrait" ? "294mm" : "207mm"} !important;
-            min-height: ${pageMode === "1page" && layoutMode === "portrait" ? "294mm" : "207mm"} !important;
+            height: ${layoutMode === "portrait" ? "294mm" : "207mm"} !important;
+            max-height: ${layoutMode === "portrait" ? "294mm" : "207mm"} !important;
+            min-height: ${layoutMode === "portrait" ? "294mm" : "207mm"} !important;
             page-break-after: always !important;
             break-after: page !important;
             page-break-inside: avoid !important;
@@ -1022,12 +1019,12 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
           }
           @media print {
             @page {
-              size: ${pageMode === "1page" && layoutMode === "portrait" ? "A4 portrait" : "A4 landscape"};
+              size: ${layoutMode === "portrait" ? "A4 portrait" : "A4 landscape"};
               margin: 0;
             }
             html, body {
-              width: ${pageMode === "1page" && layoutMode === "portrait" ? "210mm" : "297mm"};
-              height: ${pageMode === "1page" && layoutMode === "portrait" ? "297mm" : "210mm"};
+              width: ${layoutMode === "portrait" ? "210mm" : "297mm"};
+              height: ${layoutMode === "portrait" ? "297mm" : "210mm"};
               margin: 0 !important;
               padding: 0 !important;
               background: #fff;
@@ -1046,12 +1043,12 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
               position: relative !important;
               left: 0 !important;
               top: 0 !important;
-              width: ${pageMode === "1page" && layoutMode === "portrait" ? "210mm" : "297mm"} !important;
-              height: ${pageMode === "1page" && layoutMode === "portrait" ? "294mm" : "207mm"} !important;
-              max-width: ${pageMode === "1page" && layoutMode === "portrait" ? "210mm" : "297mm"} !important;
-              max-height: ${pageMode === "1page" && layoutMode === "portrait" ? "294mm" : "207mm"} !important;
-              min-width: ${pageMode === "1page" && layoutMode === "portrait" ? "210mm" : "297mm"} !important;
-              min-height: ${pageMode === "1page" && layoutMode === "portrait" ? "294mm" : "207mm"} !important;
+              width: ${layoutMode === "portrait" ? "210mm" : "297mm"} !important;
+              height: ${layoutMode === "portrait" ? "294mm" : "207mm"} !important;
+              max-width: ${layoutMode === "portrait" ? "210mm" : "297mm"} !important;
+              max-height: ${layoutMode === "portrait" ? "294mm" : "207mm"} !important;
+              min-width: ${layoutMode === "portrait" ? "210mm" : "297mm"} !important;
+              min-height: ${layoutMode === "portrait" ? "294mm" : "207mm"} !important;
               margin: 0 !important;
               padding: 4px !important;
               page-break-before: auto !important;
@@ -1090,6 +1087,8 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
           </div>
         ) : (
           displayedStudents.map((student, idx) => {
+            const isLastStudent = idx === displayedStudents.length - 1;
+
             const renderSinglePageProgressSheet = () => (
               <div className="grid grid-cols-12 gap-2 h-full w-full">
                 {/* LEFT SIDE: Attendance, Shreni Takta, Student Profile & Photo */}
@@ -1434,239 +1433,163 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
               </div>
             );
 
-            const renderTwoPageProgressSheet = () => (
-              <>
-                {/* ==================== PAGE 1 (A4 LANDSCAPE 297mm x 210mm: ATTENDANCE/GRADES LEFT, STUDENT DETAILS RIGHT) ==================== */}
-                <div
-                  className="pdf-page bg-white relative w-[297mm] max-w-[297mm] min-w-[297mm] h-[207mm] max-h-[207mm] min-h-[207mm] mx-auto overflow-hidden mb-8 print:mb-0 shadow-md print:shadow-none p-4 box-border border-2 border-orange-500 rounded-xl"
-                  style={{
-                    pageBreakAfter: "always",
-                    breakAfter: "page",
-                    pageBreakInside: "avoid",
-                    breakInside: "avoid",
-                    fontFamily: "'Noto Sans Devanagari', 'Inter', sans-serif",
-                  }}
-                >
-                  <div className="grid grid-cols-12 gap-3 h-full w-full">
-                    {/* PAGE 1 LEFT SIDE: Attendance, Grade Scale, Dates, Signatures */}
-                    <div className="col-span-6 border-r-2 border-orange-400 border-dashed pr-3 flex flex-col justify-between h-full">
-                      <div className="space-y-1.5 flex-1 flex flex-col justify-between">
-                        {/* Attendance Table (उपस्थिती) */}
-                        <div className="border-2 border-orange-400 rounded-xl overflow-hidden bg-white">
-                          <h4 className="text-[11px] font-black text-orange-950 text-center bg-orange-100/90 py-0.5 border-b border-orange-400">
-                            उपस्थिती
-                          </h4>
-                          <table className="w-full text-center text-[10px] border-collapse border border-orange-300">
-                            <thead>
-                              <tr className="bg-amber-100/90 font-black text-amber-950 border-b border-orange-300 text-[10px] h-[17px]">
-                                <th className="border border-orange-300 px-1 py-0.5 w-[34%]">महिना</th>
-                                <th className="border border-orange-300 px-1 py-0.5 w-[33%]">कामाचे दिवस</th>
-                                <th className="border border-orange-300 px-1 py-0.5 w-[33%]">हजर दिवस</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {monthsList.map((m) => {
-                                const workingDays = getWorkingDaysForMonth(student, m);
-                                const pres = getStudentPresentDays(student, m);
-                                return (
-                                  <tr key={m.key} className="border-b border-orange-200 h-[13px]">
-                                    <td className="border border-orange-300 px-1 py-0 font-bold text-slate-900 bg-orange-50/40 text-[9.5px]">{m.label}</td>
-                                    <td className="border border-orange-300 px-1 py-0 font-bold text-slate-900 text-[9.5px]">{workingDays}</td>
-                                    <td className="border border-orange-300 px-1 py-0 font-bold text-blue-950 text-[10px]">{pres}</td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-
-                        {/* Grade Scale Table (श्रेणी तक्ता) */}
-                        <div className="border-2 border-orange-400 rounded-xl overflow-hidden bg-white">
-                          <h4 className="text-[11px] font-black text-orange-950 text-center bg-orange-100/90 py-0.5 border-b border-orange-400">
-                            श्रेणी तक्ता
-                          </h4>
-                          <table className="w-full text-center text-[9.5px] border-collapse border border-orange-300">
-                            <thead>
-                              <tr className="bg-amber-100/90 font-black text-amber-950 border-b border-orange-300 text-[9.5px] h-[16px]">
-                                <th className="border border-orange-300 px-1 py-0.5 w-[65%]">गुणांचे वर्गीकरण</th>
-                                <th className="border border-orange-300 px-1 py-0.5 w-[35%]">श्रेणी</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr className="border-b border-orange-200 h-[13px]"><td className="border border-orange-300 px-1 py-0 font-bold text-slate-900">91% ते 100%</td><td className="border border-orange-300 px-1 py-0 font-bold text-blue-900 text-[9.5px]">अ-1</td></tr>
-                              <tr className="border-b border-orange-200 h-[13px]"><td className="border border-orange-300 px-1 py-0 font-bold text-slate-900">81% ते 90%</td><td className="border border-orange-300 px-1 py-0 font-bold text-blue-900 text-[9.5px]">अ-2</td></tr>
-                              <tr className="border-b border-orange-200 h-[13px]"><td className="border border-orange-300 px-1 py-0 font-bold text-slate-900">71% ते 80%</td><td className="border border-orange-300 px-1 py-0 font-bold text-blue-900 text-[9.5px]">ब-1</td></tr>
-                              <tr className="border-b border-orange-200 h-[13px]"><td className="border border-orange-300 px-1 py-0 font-bold text-slate-900">61% ते 70%</td><td className="border border-orange-300 px-1 py-0 font-bold text-blue-900 text-[9.5px]">ब-2</td></tr>
-                              <tr className="border-b border-orange-200 h-[13px]"><td className="border border-orange-300 px-1 py-0 font-bold text-slate-900">51% ते 60%</td><td className="border border-orange-300 px-1 py-0 font-bold text-blue-900 text-[9.5px]">क-1</td></tr>
-                              <tr className="border-b border-orange-200 h-[13px]"><td className="border border-orange-300 px-1 py-0 font-bold text-slate-900">41% ते 50%</td><td className="border border-orange-300 px-1 py-0 font-bold text-blue-900 text-[9.5px]">क-2</td></tr>
-                              <tr className="border-b border-orange-200 h-[13px]"><td className="border border-orange-300 px-1 py-0 font-bold text-slate-900">33% ते 40%</td><td className="border border-orange-300 px-1 py-0 font-bold text-blue-900 text-[9.5px]">ड</td></tr>
-                              <tr className="border-b border-orange-200 h-[13px]"><td className="border border-orange-300 px-1 py-0 font-bold text-slate-900">21% ते 32%</td><td className="border border-orange-300 px-1 py-0 font-bold text-blue-900 text-[9.5px]">इ-1</td></tr>
-                              <tr className="h-[13px]"><td className="border border-orange-300 px-1 py-0 font-bold text-slate-900">20% व त्यापेक्षा कमी</td><td className="border border-orange-300 px-1 py-0 font-bold text-blue-900 text-[9.5px]">इ-2</td></tr>
-                            </tbody>
-                          </table>
-                        </div>
-
-                        {/* School Dates & Next Class Bar */}
-                        <div className="border border-orange-400 bg-amber-50/70 rounded-lg p-1 text-[9.5px] flex items-center justify-between font-black text-slate-900">
-                          <span>शाळा भरण्याचा दिनांक: <b className="text-blue-950 font-black">15 Jun 2026</b></span>
-                          <span>पुढील वर्षाची इयत्ता: <b className="text-emerald-700 font-black">{getNextClassName(selectedClass)}</b></span>
-                        </div>
-
-                        {/* Page 1 Left Signatures Footer */}
-                        <div className="flex items-end justify-between border border-orange-400 pt-2 pb-1 text-[9px] font-bold text-slate-900 shrink-0 bg-orange-50/30 px-3 rounded-lg">
-                          <div className="text-center min-w-[90px]">
-                            <div className="h-[34px] flex items-end justify-center font-black text-slate-950 text-[10.5px] pb-1">
-                              {schoolData.teacherName || ""}
-                            </div>
-                            <p className="text-[8.5px] text-slate-900 font-black border-t border-slate-500 pt-0.5">वर्गशिक्षक स्वाक्षरी</p>
+            const renderTwoPageProgressSheet = () => {
+              const page1Inner = (
+                <div className="grid grid-cols-12 gap-3 h-full w-full">
+                  <div className="col-span-6 border-r-2 border-orange-400 border-dashed pr-3 flex flex-col justify-between h-full">
+                    <div className="space-y-1.5 flex-1 flex flex-col justify-between">
+                      <div className="border-2 border-orange-400 rounded-xl overflow-hidden bg-white">
+                        <h4 className="text-[11px] font-black text-orange-950 text-center bg-orange-100/90 py-0.5 border-b border-orange-400">
+                          उपस्थिती
+                        </h4>
+                        <table className="w-full text-center text-[10px] border-collapse border border-orange-300">
+                          <thead>
+                            <tr className="bg-amber-100/90 font-black text-amber-950 border-b border-orange-300 text-[10px] h-[17px]">
+                              <th className="border border-orange-300 px-1 py-0.5 w-[34%]">महिना</th>
+                              <th className="border border-orange-300 px-1 py-0.5 w-[33%]">कामाचे दिवस</th>
+                              <th className="border border-orange-300 px-1 py-0.5 w-[33%]">हजर दिवस</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {monthsList.map((m) => {
+                              const workingDays = getWorkingDaysForMonth(student, m);
+                              const pres = getStudentPresentDays(student, m);
+                              return (
+                                <tr key={m.key} className="border-b border-orange-200 h-[13px]">
+                                  <td className="border border-orange-300 px-1 py-0 font-bold text-slate-900 bg-orange-50/40 text-[9.5px]">{m.label}</td>
+                                  <td className="border border-orange-300 px-1 py-0 font-bold text-slate-900 text-[9.5px]">{workingDays}</td>
+                                  <td className="border border-orange-300 px-1 py-0 font-bold text-blue-950 text-[10px]">{pres}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                      <div className="border-2 border-orange-400 rounded-xl overflow-hidden bg-white">
+                        <h4 className="text-[11px] font-black text-orange-950 text-center bg-orange-100/90 py-0.5 border-b border-orange-400">
+                          श्रेणी तक्ता
+                        </h4>
+                        <table className="w-full text-center text-[9.5px] border-collapse border border-orange-300">
+                          <thead>
+                            <tr className="bg-amber-100/90 font-black text-amber-950 border-b border-orange-300 text-[9.5px] h-[16px]">
+                              <th className="border border-orange-300 px-1 py-0.5 w-[65%]">गुणांचे वर्गीकरण</th>
+                              <th className="border border-orange-300 px-1 py-0.5 w-[35%]">श्रेणी</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr className="border-b border-orange-200 h-[13px]"><td className="border border-orange-300 px-1 py-0 font-bold text-slate-900">91% ते 100%</td><td className="border border-orange-300 px-1 py-0 font-bold text-blue-900 text-[9.5px]">अ-1</td></tr>
+                            <tr className="border-b border-orange-200 h-[13px]"><td className="border border-orange-300 px-1 py-0 font-bold text-slate-900">81% ते 90%</td><td className="border border-orange-300 px-1 py-0 font-bold text-blue-900 text-[9.5px]">अ-2</td></tr>
+                            <tr className="border-b border-orange-200 h-[13px]"><td className="border border-orange-300 px-1 py-0 font-bold text-slate-900">71% ते 80%</td><td className="border border-orange-300 px-1 py-0 font-bold text-blue-900 text-[9.5px]">ब-1</td></tr>
+                            <tr className="border-b border-orange-200 h-[13px]"><td className="border border-orange-300 px-1 py-0 font-bold text-slate-900">61% ते 70%</td><td className="border border-orange-300 px-1 py-0 font-bold text-blue-900 text-[9.5px]">ब-2</td></tr>
+                            <tr className="border-b border-orange-200 h-[13px]"><td className="border border-orange-300 px-1 py-0 font-bold text-slate-900">51% ते 60%</td><td className="border border-orange-300 px-1 py-0 font-bold text-blue-900 text-[9.5px]">क-1</td></tr>
+                            <tr className="border-b border-orange-200 h-[13px]"><td className="border border-orange-300 px-1 py-0 font-bold text-slate-900">41% ते 50%</td><td className="border border-orange-300 px-1 py-0 font-bold text-blue-900 text-[9.5px]">क-2</td></tr>
+                            <tr className="border-b border-orange-200 h-[13px]"><td className="border border-orange-300 px-1 py-0 font-bold text-slate-900">33% ते 40%</td><td className="border border-orange-300 px-1 py-0 font-bold text-blue-900 text-[9.5px]">ड</td></tr>
+                            <tr className="border-b border-orange-200 h-[13px]"><td className="border border-orange-300 px-1 py-0 font-bold text-slate-900">21% ते 32%</td><td className="border border-orange-300 px-1 py-0 font-bold text-blue-900 text-[9.5px]">इ-1</td></tr>
+                            <tr className="h-[13px]"><td className="border border-orange-300 px-1 py-0 font-bold text-slate-900">20% व त्यापेक्षा कमी</td><td className="border border-orange-300 px-1 py-0 font-bold text-blue-900 text-[9.5px]">इ-2</td></tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div className="border border-orange-400 bg-amber-50/70 rounded-lg p-1 text-[9.5px] flex items-center justify-between font-black text-slate-900">
+                        <span>शाळा भरण्याचा दिनांक: <b className="text-blue-950 font-black">15 Jun 2026</b></span>
+                        <span>पुढील वर्षाची इयत्ता: <b className="text-emerald-700 font-black">{getNextClassName(selectedClass)}</b></span>
+                      </div>
+                      <div className="flex items-end justify-between border border-orange-400 pt-2 pb-1 text-[9px] font-bold text-slate-900 shrink-0 bg-orange-50/30 px-3 rounded-lg">
+                        <div className="text-center min-w-[90px]">
+                          <div className="h-[34px] flex items-end justify-center font-black text-slate-950 text-[10.5px] pb-1">
+                            {schoolData.teacherName || ""}
                           </div>
-                          <div className="text-center min-w-[90px]">
-                            <div className="h-[34px] flex items-end justify-center font-black text-slate-950 text-[10.5px] pb-1">
-                              {schoolData.headmasterName || ""}
-                            </div>
-                            <p className="text-[8.5px] text-slate-900 font-black border-t border-slate-500 pt-0.5">मुख्याध्यापक स्वाक्षरी</p>
+                          <p className="text-[8.5px] text-slate-900 font-black border-t border-slate-500 pt-0.5">वर्गशिक्षक स्वाक्षरी</p>
+                        </div>
+                        <div className="text-center min-w-[90px]">
+                          <div className="h-[34px] flex items-end justify-center font-black text-slate-950 text-[10.5px] pb-1">
+                            {schoolData.headmasterName || ""}
                           </div>
-                          <div className="text-center min-w-[90px]">
-                            <div className="h-[34px]"></div>
-                            <p className="text-[8.5px] text-slate-900 font-black border-t border-slate-500 pt-0.5">पालक स्वाक्षरी</p>
-                          </div>
+                          <p className="text-[8.5px] text-slate-900 font-black border-t border-slate-500 pt-0.5">मुख्याध्यापक स्वाक्षरी</p>
+                        </div>
+                        <div className="text-center min-w-[90px]">
+                          <div className="h-[34px]"></div>
+                          <p className="text-[8.5px] text-slate-900 font-black border-t border-slate-500 pt-0.5">पालक स्वाक्षरी</p>
                         </div>
                       </div>
                     </div>
-
-                    {/* PAGE 1 RIGHT SIDE: Header, Photo, Student Info Table, Health Bar */}
-                    <div className="col-span-6 pl-1 flex flex-col justify-between h-full space-y-1.5">
-                      <div className="space-y-1.5">
-                        {/* Header, Title & Round Student Photo */}
-                        <div className="flex items-center justify-between border-b-2 border-orange-400 pb-1">
-                          <div className="flex items-center gap-1.5">
-                            <div className="w-6 h-6 bg-orange-600 text-white rounded-lg flex items-center justify-center font-black text-[9px] shadow-sm shrink-0">
-                              SS
-                            </div>
-                            <div>
-                              <h3 className="text-[10px] font-black text-orange-700 tracking-wider uppercase">समग्र शिक्षा</h3>
-                              <p className="text-[7px] text-slate-500 font-bold">Samagra Shiksha</p>
-                            </div>
+                  </div>
+                  <div className="col-span-6 pl-1 flex flex-col justify-between h-full space-y-1.5">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between border-b-2 border-orange-400 pb-1">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-6 h-6 bg-orange-600 text-white rounded-lg flex items-center justify-center font-black text-[9px] shadow-sm shrink-0">
+                            SS
                           </div>
-                          <div className="text-center bg-amber-50 px-2.5 py-0.5 rounded-xl border border-orange-300">
-                            <h2 className="text-[11px] font-black text-amber-950 tracking-tight">
-                              विद्यार्थी प्रगतीपत्रक सन {academicYear}
-                            </h2>
-                          </div>
-                          {/* Round Student Photo */}
-                          <div className="w-[52px] h-[52px] rounded-full overflow-hidden border-2 border-orange-500 bg-white flex items-center justify-center shrink-0 shadow-sm p-0.5">
-                            {student.photoUrl ? (
-                              <img
-                                src={student.photoUrl}
-                                alt={student.fullName || student.name}
-                                className="w-full h-full object-cover rounded-full"
-                                onError={(e) => {
-                                  e.currentTarget.style.display = 'none';
-                                  const fallbackElem = e.currentTarget.parentElement?.querySelector('.photo-fallback');
-                                  if (fallbackElem) fallbackElem.style.display = 'flex';
-                                }}
-                              />
-                            ) : null}
-                            <div
-                              className="photo-fallback flex flex-col items-center justify-center text-center p-0.5"
-                              style={{ display: student.photoUrl ? 'none' : 'flex' }}
-                            >
-                              <User className="size-4 text-orange-400 mb-0.5" />
-                              <span className="text-[7.5px] font-extrabold text-orange-950 leading-tight">फोटो</span>
-                            </div>
+                          <div>
+                            <h3 className="text-[10px] font-black text-orange-700 tracking-wider uppercase">समग्र शिक्षा</h3>
+                            <p className="text-[7px] text-slate-500 font-bold">Samagra Shiksha</p>
                           </div>
                         </div>
-
-                        {/* Student Information Table */}
-                        <div className="border-2 border-orange-400 rounded-xl overflow-hidden bg-white text-[10.5px]">
-                          <table className="w-full border-collapse">
-                            <tbody>
-                              <tr className="border-b border-orange-200">
-                                <td className="w-[50%] py-0.5 px-1.5 font-black text-slate-800 border-r border-orange-200 text-[10px]">
-                                  हजेरी क्र. : <b className="text-black font-black text-[11px]">{student.rollNo || idx + 1}</b>
-                                </td>
-                                <td className="w-[50%] py-0.5 px-1.5 font-black text-slate-800 text-[10px]">
-                                  यु-डायस: <b className="text-black font-black text-[10.5px]">{schoolData.udise || student.udise || "-"}</b>
-                                </td>
-                              </tr>
-                              <tr className="border-b border-orange-200 bg-orange-50/30">
-                                <td colSpan={2} className="py-0.5 px-1.5 font-black text-slate-800 text-[10px]">
-                                  शाळेचे नाव: <b className="text-amber-950 font-black text-[10.5px]">{schoolData.schoolName || student.schoolName || "-"}</b>
-                                </td>
-                              </tr>
-                              <tr className="border-b border-orange-200 bg-amber-100/70">
-                                <td colSpan={2} className="py-0.5 px-1.5 font-black text-slate-900 text-[10.5px]">
-                                  विद्यार्थ्याचे नाव: <b className="text-blue-950 font-black text-[12px]">{student.fullName || student.name || "-"}</b>
-                                </td>
-                              </tr>
-                              <tr className="border-b border-orange-200">
-                                <td className="w-[50%] py-0.5 px-1.5 font-black text-slate-800 border-r border-orange-200 text-[10px]">
-                                  जन्म दिनांक: <b className="text-black font-black text-[10px]">{formatDob(student.dob)}</b>
-                                </td>
-                                <td className="w-[50%] py-0.5 px-1.5 font-black text-slate-800 text-[10px]">
-                                  आधार क्रमांक: <b className="text-black font-black text-[10px]">{student.aadhar || "-"}</b>
-                                </td>
-                              </tr>
-                              <tr className="border-b border-orange-200 bg-orange-50/30">
-                                <td colSpan={2} className="py-0.5 px-1.5 font-black text-slate-800 text-[10px]">
-                                  इयत्ता: <b className="text-black font-black text-[10.5px]">{getMarathiClassName(selectedClass)}</b> &nbsp;&nbsp;&nbsp;&nbsp;
-                                  तुकडी: <b className="text-black font-black text-[10.5px]">{division}</b> &nbsp;&nbsp;&nbsp;&nbsp;
-                                  जन. रजि. नं. : <b className="text-black font-black text-[10.5px]">{student.generalRegNo || "-"}</b>
-                                </td>
-                              </tr>
-                              <tr className="border-b border-orange-200">
-                                <td colSpan={2} className="py-0.5 px-1.5 font-black text-slate-800 text-[10px]">
-                                  पेन नं. : <b className="text-black font-black text-[10.5px]">{student.penNo || student.studentId || "-"}</b>
-                                </td>
-                              </tr>
-                              <tr className="border-b border-orange-200 bg-orange-50/30">
-                                <td className="w-[50%] py-0.5 px-1.5 font-black text-slate-800 border-r border-orange-200 text-[10px]">
-                                  वडिलांचे नाव: <b className="text-black font-black text-[10px]">{student.fatherName || "-"}</b>
-                                </td>
-                                <td className="w-[50%] py-0.5 px-1.5 font-black text-slate-800 text-[10px]">
-                                  व्यवसाय: <b className="text-black font-black text-[10px]">{student.fatherOccupation || "-"}</b>
-                                </td>
-                              </tr>
-                              <tr className="border-b border-orange-200">
-                                <td className="w-[50%] py-0.5 px-1.5 font-black text-slate-800 border-r border-orange-200 text-[10px]">
-                                  आईचे नाव: <b className="text-black font-black text-[10px]">{student.motherName || "-"}</b>
-                                </td>
-                                <td className="w-[50%] py-0.5 px-1.5 font-black text-slate-800 text-[10px]">
-                                  व्यवसाय: <b className="text-black font-black text-[10px]">{student.motherOccupation || "-"}</b>
-                                </td>
-                              </tr>
-                              <tr className="border-b border-orange-200 bg-orange-50/30">
-                                <td className="w-[50%] py-0.5 px-1.5 font-black text-slate-800 border-r border-orange-200 text-[10px]">
-                                  मातृभाषा: <b className="text-black font-black text-[10px]">{student.motherTongue || "मराठी"}</b>
-                                </td>
-                                <td className="w-[50%] py-0.5 px-1.5 font-black text-slate-800 text-[10px]">
-                                  माध्यम: <b className="text-black font-black text-[10px]">{student.medium || "मराठी"}</b>
-                                </td>
-                              </tr>
-                              <tr className="border-b border-orange-200">
-                                <td className="w-[50%] py-0.5 px-1.5 font-black text-slate-800 border-r border-orange-200 text-[10px]">
-                                  धर्म: <b className="text-black font-black text-[10px]">{student.religion || "हिंदू"}</b>
-                                </td>
-                                <td className="w-[50%] py-0.5 px-1.5 font-black text-slate-800 text-[10px]">
-                                  संवर्ग: <b className="text-black font-black text-[10px]">{student.caste || "ओपन"}</b>
-                                </td>
-                              </tr>
-                              <tr className="border-b border-orange-200 bg-orange-50/30">
-                                <td colSpan={2} className="py-0.5 px-1.5 font-black text-slate-800 text-[10px]">
-                                  पत्ता: <b className="text-black font-black text-[10px]">{student.address || schoolData.address || "-"}</b>
-                                </td>
-                              </tr>
-                              <tr>
-                                <td colSpan={2} className="py-0.5 px-1.5 font-black text-slate-800 text-[10px]">
-                                  संपर्क: <b className="text-black font-black text-[10px]">{student.mobile || "-"}</b>
-                                </td>
-                              </tr>
-                            </tbody>
-                          </table>
+                        <div className="text-center bg-amber-50 px-2.5 py-0.5 rounded-xl border border-orange-300">
+                          <h2 className="text-[11px] font-black text-amber-950 tracking-tight">
+                            विद्यार्थी प्रगतीपत्रक सन {academicYear}
+                          </h2>
+                        </div>
+                        <div className="w-9 h-9 rounded-full border-2 border-orange-500 overflow-hidden bg-orange-50 shrink-0 shadow-xs flex items-center justify-center">
+                          {student.photoUrl ? (
+                            <img src={student.photoUrl} alt={student.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <User className="size-5 text-orange-400" />
+                          )}
                         </div>
                       </div>
-
-                      {/* Health Bar (आरोग्य विषयक माहिती) */}
+                      <div className="border-2 border-orange-400 rounded-xl p-1.5 bg-white space-y-0.5 text-[9.5px]">
+                        <div className="flex items-center justify-between font-black text-slate-950 border-b border-orange-200 pb-0.5">
+                          <span>हजेरी क्र. : <b className="text-blue-950 font-black">{student.rollNo || idx + 1}</b></span>
+                        </div>
+                        <div className="space-y-0.5 pt-0.5">
+                          <div className="flex border-b border-slate-100 pb-0.5">
+                            <span className="w-24 text-slate-500 font-bold shrink-0">शाळेचे नाव :</span>
+                            <span className="font-black text-slate-900 truncate">{schoolData.schoolName || "-"}</span>
+                          </div>
+                          <div className="flex border-b border-slate-100 pb-0.5">
+                            <span className="w-24 text-slate-500 font-bold shrink-0">विद्यार्थ्याचे नाव:</span>
+                            <span className="font-black text-slate-950 truncate">{student.fullName || student.name || "-"}</span>
+                          </div>
+                          <div className="flex border-b border-slate-100 pb-0.5">
+                            <span className="w-24 text-slate-500 font-bold shrink-0">जन्म दिनांक :</span>
+                            <span className="font-black text-slate-900">{formatDob(student.dob)}</span>
+                          </div>
+                          <div className="flex border-b border-slate-100 pb-0.5">
+                            <span className="w-24 text-slate-500 font-bold shrink-0">इयत्ता:</span>
+                            <span className="font-black text-slate-950">{getMarathiClassName(selectedClass)} | तुकडी: {division} | रजि. क्र. : {student.grNo || student.rollNo || "-"}</span>
+                          </div>
+                          <div className="flex border-b border-slate-100 pb-0.5">
+                            <span className="w-24 text-slate-500 font-bold shrink-0">पेन नं. :</span>
+                            <span className="font-black text-blue-950">{student.penNo || student.id || "-"}</span>
+                          </div>
+                          <div className="flex border-b border-slate-100 pb-0.5">
+                            <span className="w-24 text-slate-500 font-bold shrink-0">वडिलांचे नाव :</span>
+                            <span className="font-bold text-slate-800 truncate">{student.fatherName || "-"}</span>
+                          </div>
+                          <div className="flex border-b border-slate-100 pb-0.5">
+                            <span className="w-24 text-slate-500 font-bold shrink-0">आईचे नाव :</span>
+                            <span className="font-bold text-slate-800 truncate">{student.motherName || "-"}</span>
+                          </div>
+                          <div className="flex border-b border-slate-100 pb-0.5">
+                            <span className="w-24 text-slate-500 font-bold shrink-0">मातृभाषा:</span>
+                            <span className="font-black text-slate-900">{student.motherTongue || "मराठी"}</span>
+                            <span className="ml-4 text-slate-500 font-bold">माध्यम:</span>
+                            <span className="font-black text-slate-900 ml-1">{selectedMedium}</span>
+                          </div>
+                          <div className="flex border-b border-slate-100 pb-0.5">
+                            <span className="w-24 text-slate-500 font-bold shrink-0">धर्म/ जात:</span>
+                            <span className="font-black text-slate-900">{student.religion || "हिंदू"}</span>
+                          </div>
+                          <div className="flex">
+                            <span className="w-24 text-slate-500 font-bold shrink-0">पत्ता:</span>
+                            <span className="font-bold text-slate-800 truncate">{student.address || schoolData.address || "-"}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="border border-orange-300 bg-orange-50/30 rounded-lg p-1 text-[9.5px] font-bold text-slate-800 flex items-center justify-between">
+                        <span>संपर्क: <b className="text-slate-950 font-black">{student.mobile || student.phone || "-"}</b></span>
+                      </div>
                       <div className="border border-orange-400 bg-orange-50/40 rounded-lg p-1 text-[9.5px] flex items-center justify-between font-black text-slate-900">
                         <span>वजन: <b className="text-blue-950 font-black">- किलो</b></span>
                         <span className="text-orange-950 font-black">आरोग्य विषयक माहिती</span>
@@ -1675,19 +1598,10 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                     </div>
                   </div>
                 </div>
+              );
 
-                {/* ==================== PAGE 2 (A4 LANDSCAPE 297mm x 210mm: TERM 1 LEFT, TERM 2 RIGHT - FULL HEIGHT STRETCH) ==================== */}
-                <div
-                  className="pdf-page bg-white relative w-[297mm] max-w-[297mm] min-w-[297mm] h-[207mm] max-h-[207mm] min-h-[207mm] mx-auto overflow-hidden mb-8 print:mb-0 shadow-md print:shadow-none p-4 box-border border-2 border-orange-500 rounded-xl flex flex-col justify-between"
-                  style={{
-                    pageBreakAfter: isLastStudent ? "avoid" : "always",
-                    breakAfter: isLastStudent ? "avoid" : "page",
-                    pageBreakInside: "avoid",
-                    breakInside: "avoid",
-                    fontFamily: "'Noto Sans Devanagari', 'Inter', sans-serif",
-                  }}
-                >
-                  {/* Student Top Header Bar Page 2 */}
+              const page2Inner = (
+                <>
                   <div className="flex items-center justify-between border-b-2 border-orange-400 pb-1 mb-2 text-[10.5px] font-black text-slate-900 bg-amber-50/80 py-1 px-3 rounded-xl border border-orange-300 shrink-0">
                     <div>
                       विद्यार्थ्याचे नाव: <span className="font-black text-blue-950 text-[13px]">{student.fullName || student.name || "-"}</span>
@@ -1698,9 +1612,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                       <span>हजेरी क्र.: <b className="font-black">{student.rollNo || idx + 1}</b></span>
                     </div>
                   </div>
-
                   <div className="grid grid-cols-12 gap-3 flex-1 h-full w-full overflow-hidden">
-                    {/* PAGE 2 LEFT SIDE: First Semester (प्रथम सत्र) - FULL HEIGHT */}
                     <div className="col-span-6 border-r-2 border-orange-400 border-dashed pr-3 flex flex-col justify-between h-full space-y-1.5 overflow-hidden">
                       <div className="flex flex-col border-2 border-orange-400 rounded-xl overflow-hidden bg-white flex-1 h-full">
                         <h3 className="text-[12px] font-black text-orange-950 text-center py-1 border-b-2 border-orange-400 bg-orange-100/90 shrink-0">
@@ -1755,8 +1667,6 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                           </tbody>
                         </table>
                       </div>
-
-                      {/* First Term Signatures Footer */}
                       <div className="flex items-end justify-between border border-orange-400 pt-2 pb-1 text-[9.5px] font-bold text-slate-900 shrink-0 bg-orange-50/30 px-3 rounded-lg">
                         <div className="text-center min-w-[90px]">
                           <div className="h-[34px] flex items-end justify-center font-black text-slate-950 text-[10.5px] pb-1">
@@ -1776,8 +1686,6 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                         </div>
                       </div>
                     </div>
-
-                    {/* PAGE 2 RIGHT SIDE: Second Semester (द्वितीय सत्र) - FULL HEIGHT */}
                     <div className="col-span-6 pl-1 flex flex-col justify-between h-full space-y-1.5 overflow-hidden">
                       <div className="flex flex-col border-2 border-orange-400 rounded-xl overflow-hidden bg-white flex-1 h-full">
                         <h3 className="text-[12px] font-black text-orange-950 text-center py-1 border-b-2 border-orange-400 bg-orange-100/90 shrink-0">
@@ -1854,11 +1762,87 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                       </div>
                     </div>
                   </div>
-                </div>
-              </>
-            );
+                </>
+              );
 
-            const isLastStudent = idx === displayedStudents.length - 1;
+              return (
+                <>
+                  {/* PAGE 1 */}
+                  {layoutMode === "portrait" ? (
+                    <div
+                      className="pdf-page bg-white relative w-[210mm] max-w-[210mm] min-w-[210mm] h-[297mm] max-h-[297mm] min-h-[297mm] mx-auto overflow-hidden mb-8 print:mb-0 shadow-md print:shadow-none box-border border-2 border-orange-500 rounded-xl flex items-center justify-center p-0"
+                      style={{
+                        pageBreakAfter: "always",
+                        breakAfter: "page",
+                        pageBreakInside: "avoid",
+                        breakInside: "avoid",
+                        fontFamily: "'Noto Sans Devanagari', 'Inter', sans-serif",
+                      }}
+                    >
+                      <div
+                        className="w-[297mm] h-[207mm] max-w-[297mm] max-h-[207mm] bg-white p-2 box-border flex flex-col justify-between shrink-0"
+                        style={{
+                          transform: "rotate(-90deg)",
+                          transformOrigin: "center center",
+                        }}
+                      >
+                        {page1Inner}
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      className="pdf-page bg-white relative w-[297mm] max-w-[297mm] min-w-[297mm] h-[207mm] max-h-[207mm] min-h-[207mm] mx-auto overflow-hidden mb-8 print:mb-0 shadow-md print:shadow-none p-4 box-border border-2 border-orange-500 rounded-xl"
+                      style={{
+                        pageBreakAfter: "always",
+                        breakAfter: "page",
+                        pageBreakInside: "avoid",
+                        breakInside: "avoid",
+                        fontFamily: "'Noto Sans Devanagari', 'Inter', sans-serif",
+                      }}
+                    >
+                      {page1Inner}
+                    </div>
+                  )}
+
+                  {/* PAGE 2 */}
+                  {layoutMode === "portrait" ? (
+                    <div
+                      className="pdf-page bg-white relative w-[210mm] max-w-[210mm] min-w-[210mm] h-[297mm] max-h-[297mm] min-h-[297mm] mx-auto overflow-hidden mb-8 print:mb-0 shadow-md print:shadow-none box-border border-2 border-orange-500 rounded-xl flex items-center justify-center p-0"
+                      style={{
+                        pageBreakAfter: isLastStudent ? "avoid" : "always",
+                        breakAfter: isLastStudent ? "avoid" : "page",
+                        pageBreakInside: "avoid",
+                        breakInside: "avoid",
+                        fontFamily: "'Noto Sans Devanagari', 'Inter', sans-serif",
+                      }}
+                    >
+                      <div
+                        className="w-[297mm] h-[207mm] max-w-[297mm] max-h-[207mm] bg-white p-2 box-border flex flex-col justify-between shrink-0"
+                        style={{
+                          transform: "rotate(-90deg)",
+                          transformOrigin: "center center",
+                        }}
+                      >
+                        {page2Inner}
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      className="pdf-page bg-white relative w-[297mm] max-w-[297mm] min-w-[297mm] h-[207mm] max-h-[207mm] min-h-[207mm] mx-auto overflow-hidden mb-8 print:mb-0 shadow-md print:shadow-none p-4 box-border border-2 border-orange-500 rounded-xl flex flex-col justify-between"
+                      style={{
+                        pageBreakAfter: isLastStudent ? "avoid" : "always",
+                        breakAfter: isLastStudent ? "avoid" : "page",
+                        pageBreakInside: "avoid",
+                        breakInside: "avoid",
+                        fontFamily: "'Noto Sans Devanagari', 'Inter', sans-serif",
+                      }}
+                    >
+                      {page2Inner}
+                    </div>
+                  )}
+                </>
+              );
+            };
 
             return (
               <React.Fragment key={student.id || idx}>
