@@ -97,10 +97,10 @@ function AssemblyBookAdmin() {
     const formattedDayNum = String(d).padStart(2, "0");
     const dateMonthStr = `${toDevanagariDigits(formattedDayNum)} ${monthName}`;
 
-    const startOfYear = new Date(y, 0, 0);
+    const startOfYear = new Date(y, 0, 1);
     const diff = dateObj.getTime() - startOfYear.getTime();
     const oneDay = 1000 * 60 * 60 * 24;
-    const dayOfYear = Math.floor(diff / oneDay);
+    const dayOfYear = Math.floor(diff / oneDay) + 1;
     const yearDayStr = toDevanagariDigits(dayOfYear);
 
     return {

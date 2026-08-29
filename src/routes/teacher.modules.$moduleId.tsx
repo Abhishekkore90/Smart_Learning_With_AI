@@ -1876,17 +1876,17 @@ function DailyAssemblyContent() {
     const formattedDayNum = String(d).padStart(2, "0");
     const dateMonthStr = `${toDevanagariDigits(formattedDayNum)} ${monthName}`;
 
-    const startOfYear = new Date(y, 0, 0);
+    const startOfYear = new Date(y, 0, 1);
     const diff = dateObj.getTime() - startOfYear.getTime();
     const oneDay = 1000 * 60 * 60 * 24;
-    const dayOfYear = Math.floor(diff / oneDay);
+    const dayOfYear = Math.floor(diff / oneDay) + 1;
     const yearDayStr = toDevanagariDigits(dayOfYear);
 
     return {
       ...baseData,
-      day: dbFormData?.day || dayName,
-      dateMonth: dbFormData?.dateMonth || dateMonthStr,
-      yearDay: dbFormData?.yearDay || yearDayStr,
+      day: dayName,
+      dateMonth: dateMonthStr,
+      yearDay: yearDayStr,
     };
   };
 
@@ -1966,6 +1966,7 @@ function DailyAssemblyContent() {
 
       // --- All 14 Monthly Paripath Register Content Sections ---
       const rashtrageet = data.nationalAnthem || data.rashtrageet || data.nationalAnthem_mr || assemblyItems[0]?.content || "";
+      const rajyageet = data.stateAnthem || data.rajyageet || data.stateAnthem_mr || assemblyItems[1]?.content || "";
       const pratigya = data.pledge || data.pratigya || data.pledge_mr || assemblyItems[2]?.content || "";
       const sanvidhan = data.preamble || data.sanvidhan || data.preamble_mr || assemblyItems[3]?.content || "";
       const prarthana = data.prayer || data.prarthana || data.prayer_mr || assemblyItems[4]?.content || "";
@@ -2000,7 +2001,7 @@ function DailyAssemblyContent() {
       const songContent = data.samuhgeet || data.deshbhaktigeet || data.songTitle || data.patrioticSong || "";
       const maun = data.silentPasayadan || data.maun || assemblyItems[5]?.content || "";
 
-      // Build ALL 15 content sections in exact sequence
+      // Build ALL 16 content sections in exact sequence
       const allContent = `
         <style>
           #temp-pdf-render, #temp-pdf-render * {
@@ -2018,76 +2019,81 @@ function DailyAssemblyContent() {
             <div style="${contentText} font-weight: 700;">${nl2br(rashtrageet || 'जन गण मन...')}</div>
           </div>
 
+          <div style="${sectionBox('#fef08a')}">
+            ${greenBar('२. राज्यगीत')}
+            <div style="${contentText} font-weight: 700;">${nl2br(rajyageet || 'जय जय महाराष्ट्र माझा...')}</div>
+          </div>
+
           <div style="${sectionBox('#bbf7d0')}">
-            ${greenBar('२. प्रतिज्ञा')}
+            ${greenBar('३. प्रतिज्ञा')}
             <div style="${contentText}">${nl2br(pratigya || 'भारत माझा देश आहे...')}</div>
           </div>
 
           <div style="${sectionBox('#fed7aa')}">
-            ${greenBar('३. भारताचे संविधान')}
+            ${greenBar('४. भारताचे संविधान')}
             <div style="${contentText}">${nl2br(sanvidhan || 'आम्ही भारताचे लोक...')}</div>
           </div>
 
           <div style="${sectionBox('#bbf7d0')}">
-            ${greenBar('४. प्रार्थना')}
+            ${greenBar('५. प्रार्थना')}
             <div style="${contentText}">${nl2br(prarthana)}</div>
           </div>
 
           <div style="${sectionBox('#fecaca')}">
-            ${greenBar('५. श्लोक')}
+            ${greenBar('६. श्लोक')}
             <div style="${contentText}">${nl2br(shlok || 'माहिती उपलब्ध नाही')}</div>
           </div>
 
           <div style="${sectionBox('#ffedd5')}">
-            ${greenBar('६. पंचांग')}
+            ${greenBar('७. पंचांग')}
             <div style="${contentText}">${nl2br(panchang || 'माहिती उपलब्ध नाही')}</div>
           </div>
 
           <div style="${sectionBox('#ede9fe')}">
-            ${greenBar('७. सुविचार')}
+            ${greenBar('८. सुविचार')}
             <div style="${contentText} font-style: italic;">${suvichar ? `"${suvichar}"` : 'माहिती उपलब्ध नाही'}</div>
           </div>
 
           <div style="${sectionBox('#a7f3d0')}">
-            ${greenBar('८. सुसंस्कारक्षम बातम्या')}
+            ${greenBar('९. सुसंस्कारक्षम बातम्या')}
             <div style="${contentText} text-align: left;">${nl2br(batmya || 'माहिती उपलब्ध नाही')}</div>
           </div>
 
           <div style="${sectionBox('#bfdbfe')}">
-            ${greenBar('९. दिनविशेष')}
-            ${data.yearDay ? `<div style="font-size: 11px; font-weight: 700; color: #1e40af; text-align: center; margin-bottom: 4px;">हा वर्षातील ${data.yearDay} वा दिवस आहे.</div>` : ''}
+            ${greenBar('१०. दिनविशेष')}
+            ${(formData.yearDay || data.yearDay) ? `<div style="font-size: 11px; font-weight: 700; color: #1e40af; text-align: center; margin-bottom: 4px;">हा वर्षातील ${formData.yearDay || data.yearDay} वा दिवस आहे.</div>` : ''}
             <div style="${contentText} text-align: left;">${nl2br(dinvishesh || 'माहिती उपलब्ध नाही')}</div>
           </div>
 
           <div style="${sectionBox('#ccfbf1')}">
-            ${greenBar('१०. म्हण')}
+            ${greenBar('११. म्हण')}
             <div style="${contentText} font-weight: 800;">${mhan ? `"${mhan}"` : 'माहिती उपलब्ध नाही'}</div>
             ${mhanMeaning ? `<div style="font-size: 12px; color: #4b5563; text-align: center; margin-top: 6px;"><b>अर्थ:</b> ${mhanMeaning}</div>` : ''}
           </div>
 
           <div style="${sectionBox('#fecdd3')}">
-            ${greenBar(`११. बोधकथा${storyTitle ? ': ' + storyTitle : ''}`)}
+            ${greenBar(`१२. बोधकथा${storyTitle ? ': ' + storyTitle : ''}`)}
             <div style="${contentText} text-align: left;">${nl2br(bodhkatha || 'माहिती उपलब्ध नाही')}</div>
             ${moral ? `<div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 6px 12px; border-radius: 4px; margin-top: 6px; font-size: 12px; font-weight: 700; color: #92400e;"><b>तात्पर्य:</b> ${moral}</div>` : ''}
           </div>
 
           <div style="${sectionBox('#fef3c7')}">
-            ${greenBar('१२. सामान्य ज्ञान')}
+            ${greenBar('१३. सामान्य ज्ञान')}
             <div style="${contentText} text-align: left;">${nl2br(gkText || 'माहिती उपलब्ध नाही')}</div>
           </div>
 
           <div style="${sectionBox('#e0e7ff')}">
-            ${greenBar('१३. समूहगीत/देशभक्ती गीत')}
+            ${greenBar('१४. समूहगीत/देशभक्ती गीत')}
             <div style="${contentText}">${nl2br(songContent || 'माहिती उपलब्ध नाही')}</div>
           </div>
 
           <div style="${sectionBox('#fde68a')}">
-            ${greenBar('१४. मौन पसायदान')}
+            ${greenBar('१५. मौन पसायदान')}
             <div style="${contentText}">${nl2br(maun || 'पसायदान')}</div>
           </div>
 
           <div style="${sectionBox('#e2e8f0')}">
-            ${greenBar('१५. वर्गशिक्षकांची स्वाक्षरी')}
+            ${greenBar('१६. वर्गशिक्षकांची स्वाक्षरी')}
             <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 800; color: #1e293b; padding: 25px 20px 5px 20px;">
               <span>वर्गशिक्षक स्वाक्षरी</span>
               <span>मुख्याध्यापक स्वाक्षरी</span>
@@ -2489,6 +2495,13 @@ function DailyAssemblyContent() {
               emoji: '🇮🇳',
               gradient: 'from-emerald-100/80 via-teal-50/60 to-green-100/80',
               content: formData[`nationalAnthem_${lang}`] || (lang === 'mr' ? (formData.nationalAnthem || formData.rashtrageet) : undefined) || assemblyItems[0]?.content || "",
+            },
+            {
+              id: 'rajyageet',
+              title: lang === 'en' ? 'State Anthem' : lang === 'hi' ? 'राज्य गीत' : 'राज्यगीत',
+              emoji: '🚩',
+              gradient: 'from-amber-100/80 via-yellow-50/60 to-orange-100/80',
+              content: formData.stateAnthem || formData.rajyageet || assemblyItems[1]?.content || "",
             },
             {
               id: 'pratigya',
