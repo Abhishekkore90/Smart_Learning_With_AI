@@ -438,6 +438,17 @@ export function MonthlyParipathRegister() {
     }
     setHolidaysMap(holidays);
 
+    // Fetch admin current paripath data as fallback/update
+    let currentAdminData: any = null;
+    try {
+      const currentSnap = await getDoc(doc(db, "admin_daily_paripath", "current"));
+      if (currentSnap.exists()) {
+        currentAdminData = currentSnap.data();
+      }
+    } catch (e) {
+      console.error("Failed to fetch admin current paripath", e);
+    }
+
     try {
       for (let d = 1; d <= daysInMonth; d++) {
         const dateObj = new Date(selectedYear, selectedMonthIndex, d);
@@ -501,13 +512,32 @@ export function MonthlyParipathRegister() {
           continue;
         }
 
-        // Try to fetch from Firebase archive
+        // Try to fetch from Firebase archive or admin current
         try {
           const docRef = doc(db, "daily_paripath_archive", dateKey);
           const docSnap = await getDoc(docRef);
 
+          let data: any = null;
           if (docSnap.exists()) {
-            const data = docSnap.data();
+            data = docSnap.data();
+          }
+
+          const today = new Date();
+          const todayKey = getDateKey(today.getFullYear(), today.getMonth(), today.getDate());
+
+          if (!data && currentAdminData) {
+            if (currentAdminData.archivedDate === dateKey || currentAdminData.date === dateKey || dateKey === todayKey) {
+              data = currentAdminData;
+            }
+          }
+
+          if (dateKey === todayKey && currentAdminData && currentAdminData.lastUpdated) {
+            if (!data || !data.lastUpdated || new Date(currentAdminData.lastUpdated) > new Date(data.lastUpdated)) {
+              data = currentAdminData;
+            }
+          }
+
+          if (data) {
             
             // Extract actual content from the saved daily paripath data
             const nationalAnthemContent = data.nationalAnthem || "";

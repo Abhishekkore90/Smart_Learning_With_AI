@@ -459,8 +459,17 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
         const canvas = await html2canvas(pageEl, {
           scale: 2,
           useCORS: true,
+          allowTaint: true,
           logging: false,
           backgroundColor: "#ffffff",
+          scrollX: 0,
+          scrollY: 0,
+          onclone: (clonedDoc, clonedElement) => {
+            clonedElement.style.margin = "0";
+            clonedElement.style.padding = "14px";
+            clonedElement.style.display = "block";
+            clonedElement.style.visibility = "visible";
+          },
         });
 
         // Compressed high-efficiency JPEG encoding (keeps multi-page PDF < 10 MB)

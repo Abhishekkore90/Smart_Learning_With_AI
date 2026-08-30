@@ -1830,29 +1830,55 @@ function DailyAssemblyContent() {
       });
 
     const archiveRef = doc(db, "daily_paripath_archive", selectedDate);
+    const currentRef = doc(db, "admin_daily_paripath", "current");
+
+    let archiveData: any = null;
+    let currentData: any = null;
+
+    const updateCombinedData = () => {
+      let finalData: any = archiveData;
+
+      if (!finalData && currentData) {
+        if (selectedDate === todayLocalStr || currentData.archivedDate === selectedDate || currentData.date === selectedDate) {
+          finalData = currentData;
+        }
+      }
+
+      if (selectedDate === todayLocalStr && archiveData && currentData && currentData.lastUpdated) {
+        if (!archiveData.lastUpdated || new Date(currentData.lastUpdated) > new Date(archiveData.lastUpdated)) {
+          finalData = currentData;
+        }
+      }
+
+      setDbFormData(finalData || null);
+    };
+
     const unsubscribeArchive = onSnapshot(
       archiveRef,
-      async (docSnap) => {
-        if (docSnap.exists()) {
-          setDbFormData(docSnap.data());
-        } else if (selectedDate === todayLocalStr) {
-          const currentRef = doc(db, "admin_daily_paripath", "current");
-          const currentSnap = await getDoc(currentRef);
-          if (currentSnap.exists()) {
-            setDbFormData(currentSnap.data());
-          } else {
-            setDbFormData(null);
-          }
-        } else {
-          setDbFormData(null);
-        }
+      (docSnap) => {
+        archiveData = docSnap.exists() ? docSnap.data() : null;
+        updateCombinedData();
       },
       (err) => {
-        console.error("Error fetching date paripath data:", err);
+        console.error("Error fetching archive paripath data:", err);
       }
     );
 
-    return () => unsubscribeArchive();
+    const unsubscribeCurrent = onSnapshot(
+      currentRef,
+      (docSnap) => {
+        currentData = docSnap.exists() ? docSnap.data() : null;
+        updateCombinedData();
+      },
+      (err) => {
+        console.error("Error fetching current paripath data:", err);
+      }
+    );
+
+    return () => {
+      unsubscribeArchive();
+      unsubscribeCurrent();
+    };
   }, [selectedDate]);
 
   const MARATHI_DAYS_LIST = ["रविवार", "सोमवार", "मंगळवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
@@ -1946,10 +1972,21 @@ function DailyAssemblyContent() {
 
       const contentText = `font-size: 13px; font-weight: 600; line-height: 1.65; color: #1F2937; margin: 0; text-align: center; font-family: 'Noto Sans Devanagari', sans-serif; white-space: pre-line; word-break: break-word; overflow-wrap: break-word; box-sizing: border-box; padding: 0 10px;`;
 
+      const formatDateToDDMMYYYY = (dStr: string) => {
+        if (!dStr) return "";
+        const parts = dStr.split(/[-/]/);
+        if (parts.length === 3 && parts[0].length === 4) {
+          return `${parts[2].padStart(2, "0")}-${parts[1].padStart(2, "0")}-${parts[0]}`;
+        }
+        return dStr;
+      };
+
+      const formattedDate = formatDateToDDMMYYYY(dateStr);
+
       const pageHeader = `
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2.5px solid #2e7d32; padding-bottom: 6px; margin-bottom: 12px;">
           <div style="font-size: 14px; font-weight: 800; color: #2e7d32; font-family: 'Noto Sans Devanagari', sans-serif;">📖 दैनिक परिपाठ</div>
-          <div style="font-size: 13px; font-weight: 700; color: #2e7d32; font-family: 'Noto Sans Devanagari', sans-serif;">दिनांक: ${dateStr}</div>
+          <div style="font-size: 13px; font-weight: 700; color: #2e7d32; font-family: 'Noto Sans Devanagari', sans-serif;">दिनांक: ${formattedDate}</div>
         </div>
       `;
 

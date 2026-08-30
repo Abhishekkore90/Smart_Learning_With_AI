@@ -182,11 +182,22 @@ function AssemblyBookAdmin() {
     const bodyText = `font-size: 12.5px; font-weight: 600; line-height: 1.65; color: #1F2937; margin: 0; white-space: pre-line; word-break: break-word; overflow-wrap: break-word; box-sizing: border-box; padding: 0 10px;`;
     const divider = `<div style="width: 100%; height: 1.5px; background: linear-gradient(90deg, transparent, #CBD5E1, transparent); margin: 10px 0;"></div>`;
 
+    const formatDateToDDMMYYYY = (dStr: string) => {
+      if (!dStr) return "";
+      const parts = dStr.split(/[-/]/);
+      if (parts.length === 3 && parts[0].length === 4) {
+        return `${parts[2].padStart(2, "0")}-${parts[1].padStart(2, "0")}-${parts[0]}`;
+      }
+      return dStr;
+    };
+
+    const formattedDate = formatDateToDDMMYYYY(dateStr);
+
     // Page header helper
     const pageHeader = `
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2.5px solid #166534; padding-bottom: 6px; margin-bottom: 14px;">
         <div style="font-size: 12px; font-weight: 800; color: #166534;">📖 दैनिक परिपाठ</div>
-        <div style="font-size: 12px; font-weight: 800; color: #166534;">दिनांक: ${dateStr}</div>
+        <div style="font-size: 12px; font-weight: 800; color: #166534;">दिनांक: ${formattedDate}</div>
       </div>
     `;
 
