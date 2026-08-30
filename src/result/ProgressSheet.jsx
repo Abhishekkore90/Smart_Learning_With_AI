@@ -1419,22 +1419,22 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                     </div>
 
                     {/* Signatures Footer */}
-                    <div className="flex items-center justify-between border border-orange-400 py-0.5 text-[9px] font-bold text-slate-900 shrink-0 bg-orange-50/40 px-2 rounded-lg mt-auto">
-                      <div className="text-center min-w-[90px]">
-                        <div className="h-[16px] flex items-center justify-center font-black text-slate-950 text-[10px]">
+                    <div className="flex items-center justify-between border border-orange-400 py-1 text-[9px] font-bold text-slate-900 shrink-0 bg-orange-50/40 px-3 rounded-lg mt-auto">
+                      <div className="text-center min-w-[95px]">
+                        <div className="h-[28px] flex items-end justify-center pb-0.5 font-black text-slate-950 text-[10px]">
                           {schoolData.teacherName || ""}
                         </div>
-                        <p className="text-[8.5px] text-slate-900 font-black border-t border-slate-400 pt-0.2">वर्गशिक्षक स्वाक्षरी</p>
+                        <p className="text-[8.5px] text-slate-900 font-black border-t border-slate-400 pt-0.5">वर्गशिक्षक स्वाक्षरी</p>
                       </div>
-                      <div className="text-center min-w-[90px]">
-                        <div className="h-[16px] flex items-center justify-center font-black text-slate-950 text-[10px]">
+                      <div className="text-center min-w-[95px]">
+                        <div className="h-[28px] flex items-end justify-center pb-0.5 font-black text-slate-950 text-[10px]">
                           {schoolData.headmasterName || ""}
                         </div>
-                        <p className="text-[8.5px] text-slate-900 font-black border-t border-slate-400 pt-0.2">मुख्याध्यापक स्वाक्षरी</p>
+                        <p className="text-[8.5px] text-slate-900 font-black border-t border-slate-400 pt-0.5">मुख्याध्यापक स्वाक्षरी</p>
                       </div>
-                      <div className="text-center min-w-[90px]">
-                        <div className="h-[16px]"></div>
-                        <p className="text-[8.5px] text-slate-900 font-black border-t border-slate-400 pt-0.2">पालक स्वाक्षरी</p>
+                      <div className="text-center min-w-[95px]">
+                        <div className="h-[28px]"></div>
+                        <p className="text-[8.5px] text-slate-900 font-black border-t border-slate-400 pt-0.5">पालक स्वाक्षरी</p>
                       </div>
                     </div>
                   </div>
