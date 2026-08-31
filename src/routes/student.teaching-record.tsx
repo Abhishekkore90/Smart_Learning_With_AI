@@ -182,8 +182,8 @@ function StudentTeachingRecordPage() {
       <StudentHeader />
       <StudentSidebar />
 
-      <main className="lg:pl-64 pt-16 min-h-screen">
-        <div className="p-6 md:p-10 space-y-6 max-w-7xl mx-auto">
+      <main className="w-full pt-16 min-h-screen">
+        <div className="p-6 md:p-10 space-y-6 max-w-6xl mx-auto w-full">
           {/* Top Navigation Bar with Back Button */}
           <div className="flex items-center justify-between gap-3 bg-white p-3.5 px-5 rounded-2xl border border-slate-200 shadow-sm">
             <button

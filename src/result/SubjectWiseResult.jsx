@@ -6,6 +6,8 @@ import { getTeacherId } from "../lib/teacherIsolationHelper";
 import { Download, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import "./result.css";
+import { printReportContent } from '../utils/printHelper';
+
 import { CLASS_1_OUTCOMES } from "@/data/class1_outcomes";
 import { CLASS_2_OUTCOMES } from "@/data/class2_outcomes";
 import { CLASS_3_OUTCOMES } from "@/data/class3_outcomes";
@@ -459,8 +461,56 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
         const canvas = await html2canvas(pageEl, {
           scale: 2,
           useCORS: true,
+          allowTaint: true,
           logging: false,
           backgroundColor: "#ffffff",
+          scrollX: 0,
+          scrollY: 0,
+          onclone: (clonedDoc, clonedElement) => {
+            try {
+              const styleTags = Array.from(document.querySelectorAll("style"));
+              styleTags.forEach((st) => {
+                clonedDoc.head.appendChild(st.cloneNode(true));
+              });
+
+              let cssText = "";
+              Array.from(document.styleSheets).forEach((sheet) => {
+                try {
+                  const rules = Array.from(sheet.cssRules || sheet.rules || []);
+                  rules.forEach((rule) => {
+                    cssText += rule.cssText + "\n";
+                  });
+                } catch (e) {}
+              });
+
+              if (cssText) {
+                const inlineStyle = clonedDoc.createElement("style");
+                inlineStyle.textContent = cssText;
+                clonedDoc.head.appendChild(inlineStyle);
+              }
+
+              const imgs = Array.from(clonedElement.querySelectorAll("img"));
+              imgs.forEach((img) => {
+                try {
+                  if (img.src && !img.src.startsWith("data:")) {
+                    const c = document.createElement("canvas");
+                    c.width = img.naturalWidth || img.width || 100;
+                    c.height = img.naturalHeight || img.height || 100;
+                    const ctx = c.getContext("2d");
+                    if (ctx) {
+                      ctx.drawImage(img, 0, 0, c.width, c.height);
+                      img.src = c.toDataURL("image/png");
+                    }
+                  }
+                } catch (e) {}
+              });
+            } catch (e) {}
+
+            clonedElement.style.margin = "0";
+            clonedElement.style.padding = "14px";
+            clonedElement.style.display = "block";
+            clonedElement.style.visibility = "visible";
+          },
         });
 
         // Compressed high-efficiency JPEG encoding (keeps multi-page PDF < 10 MB)
@@ -483,7 +533,14 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
   };
 
   const handlePrint = () => {
-    window.print();
+    if (printRef.current) {
+      printReportContent(printRef.current, {
+        title: "Subject Wise CCE Result Report",
+        landscape: true,
+      });
+    } else {
+      window.print();
+    }
   };
 
   const isSubjectActive = (subName) => {

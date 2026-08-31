@@ -33,6 +33,7 @@ interface DayRowData {
   isHoliday?: boolean;
   holidayReason?: string;
   rashtrageet: string;
+  rajyageet: string;
   pratigya: string;
   sanvidhan: string;
   prarthana: string;
@@ -195,6 +196,81 @@ function detectLanguage(content: string | undefined): string {
   if (content.includes("भारत माझा देश") || content.includes("माझ्या")) return "मराठी";
   // Default
   return "मराठी";
+}
+
+const DEFAULT_SINGLE_LINE_SHLOKS = [
+  "वक्रतुण्ड महाकाय सूर्यकोटिसमप्रभ ।",
+  "गुरुर ब्रह्मा गुरुर विष्णुः ।",
+  "न चोरहार्यं न च राजहार्यं ।",
+  "कराग्रे वसते लक्ष्मीः ।",
+  "शुभं करोति कल्याणम् ।",
+  "सर्वमंगल मांगल्ये शिवे ।",
+  "ॐ असतो मा सद्गमय ।",
+];
+
+function formatShlokOneLine(shlokRaw: string | undefined, dayNum: number): string {
+  if (!shlokRaw || !shlokRaw.trim()) {
+    return DEFAULT_SINGLE_LINE_SHLOKS[(dayNum - 1) % DEFAULT_SINGLE_LINE_SHLOKS.length];
+  }
+  let text = shlokRaw.trim();
+  const lines = text.split(/\r?\n/).map((l: string) => l.trim()).filter(Boolean);
+  if (lines.length > 0) {
+    text = lines[0];
+  }
+  if (text.includes("।")) {
+    const part = text.split("।")[0].trim();
+    if (part.length >= 8) {
+      return `${part} ।`;
+    }
+  }
+  if (text.length > 38) {
+    let sub = text.substring(0, 38);
+    const lastSpace = sub.lastIndexOf(" ");
+    if (lastSpace > 10) {
+      sub = sub.substring(0, lastSpace);
+    }
+    return sub.replace(/[:\-–,\s]+$/, "").trim();
+  }
+  return text;
+}
+
+const MARATHI_TITHIS = [
+  "प्रथमा", "द्वितीया", "तृतीया", "चतुर्थी", "पंचमी",
+  "षष्ठी", "सप्तमी", "अष्टमी", "नवमी", "दशमी",
+  "एकादशी", "द्वादशी", "त्रयोदशी", "चतुर्दशी", "पौर्णिमा",
+  "प्रथमा", "द्वितीया", "तृतीया", "चतुर्थी", "पंचमी",
+  "षष्ठी", "सप्तमी", "अष्टमी", "नवमी", "दशमी",
+  "एकादशी", "द्वादशी", "त्रयोदशी", "चतुर्दशी", "अमावास्या"
+];
+
+const MARATHI_HINDU_MONTHS = [
+  "पौष", "माघ", "फाल्गुन", "चैत्र", "वैशाख", "ज्येष्ठ",
+  "आषाढ", "श्रावण", "भाद्रपद", "कार्तिक", "मार्गशीर्ष", "पौष"
+];
+
+function formatPanchangTwoLines(data: any, dateObj: Date): string {
+  const dayName = data.day || MARATHI_DAYS[dateObj.getDay()];
+  const monthName = data.month || MARATHI_HINDU_MONTHS[dateObj.getMonth() % 12];
+  const pakshaName = data.paksha || (dateObj.getDate() <= 15 ? "कृष्ण पक्ष" : "शुक्ल पक्ष");
+  const tithiName = data.tithi || MARATHI_TITHIS[(dateObj.getDate() - 1) % 30];
+
+  if (data.panchang && typeof data.panchang === "string" && data.panchang.trim()) {
+    const str = data.panchang.trim();
+    if (str.includes("\n")) {
+      const lines = str.split(/\r?\n/).map((l: string) => l.trim()).filter(Boolean);
+      if (lines.length >= 2) return lines.slice(0, 2).join("\n");
+    }
+    if (str.includes(",")) {
+      const parts = str.split(",").map((p: string) => p.trim()).filter(Boolean);
+      if (parts.length >= 4) {
+        return `${parts[0]}, ${parts[1]},\n${parts[2]}, ${parts[3]}`;
+      } else if (parts.length >= 2) {
+        return `${parts[0]},\n${parts.slice(1).join(", ")}`;
+      }
+    }
+  }
+
+  return `वार : ${dayName}, मास : ${monthName},\nपक्ष : ${pakshaName}, तिथी : ${tithiName}`;
 }
 
 function getCurrentAcademicYearStr(): string {
@@ -362,6 +438,17 @@ export function MonthlyParipathRegister() {
     }
     setHolidaysMap(holidays);
 
+    // Fetch admin current paripath data as fallback/update
+    let currentAdminData: any = null;
+    try {
+      const currentSnap = await getDoc(doc(db, "admin_daily_paripath", "current"));
+      if (currentSnap.exists()) {
+        currentAdminData = currentSnap.data();
+      }
+    } catch (e) {
+      console.error("Failed to fetch admin current paripath", e);
+    }
+
     try {
       for (let d = 1; d <= daysInMonth; d++) {
         const dateObj = new Date(selectedYear, selectedMonthIndex, d);
@@ -376,6 +463,7 @@ export function MonthlyParipathRegister() {
             day: dayName,
             isSunday: true,
             rashtrageet: "रविवार",
+            rajyageet: "रविवार",
             pratigya: "रविवार",
             sanvidhan: "रविवार",
             prarthana: "रविवार",
@@ -404,6 +492,7 @@ export function MonthlyParipathRegister() {
             isHoliday: true,
             holidayReason: holidayInfo.reason || "शाळेस सुट्टी",
             rashtrageet: `सुट्टी (${holidayInfo.reason || "शाळेस सुट्टी"})`,
+            rajyageet: "सुट्टी",
             pratigya: "सुट्टी",
             sanvidhan: "सुट्टी",
             prarthana: "सुट्टी",
@@ -423,55 +512,58 @@ export function MonthlyParipathRegister() {
           continue;
         }
 
-        // Try to fetch from Firebase archive
+        // Try to fetch from Firebase archive or admin current
         try {
           const docRef = doc(db, "daily_paripath_archive", dateKey);
           const docSnap = await getDoc(docRef);
 
+          let data: any = null;
           if (docSnap.exists()) {
-            const data = docSnap.data();
+            data = docSnap.data();
+          }
+
+          const today = new Date();
+          const todayKey = getDateKey(today.getFullYear(), today.getMonth(), today.getDate());
+
+          if (!data && currentAdminData) {
+            if (currentAdminData.archivedDate === dateKey || currentAdminData.date === dateKey || dateKey === todayKey) {
+              data = currentAdminData;
+            }
+          }
+
+          if (dateKey === todayKey && currentAdminData && currentAdminData.lastUpdated) {
+            if (!data || !data.lastUpdated || new Date(currentAdminData.lastUpdated) > new Date(data.lastUpdated)) {
+              data = currentAdminData;
+            }
+          }
+
+          if (data) {
             
             // Extract actual content from the saved daily paripath data
             const nationalAnthemContent = data.nationalAnthem || "";
+            const stateAnthemContent = data.stateAnthem || data.rajyageet || "";
             const pledgeContent = data.pledge || data.pratigya || "";
             const preambleContent = data.preamble || data.sanvidhan || "";
             const prayerContent = data.prayer || data.prarthana || "";
             
-            // Detect languages
-            const anthemLang = detectLanguage(nationalAnthemContent);
-            const pledgeLang = detectLanguage(pledgeContent);
-            const preambleLang = detectLanguage(preambleContent);
-
             newRows[d] = {
               date: d,
               day: dayName,
               isSunday: false,
               // राष्ट्रगीत - जन गण मन
               rashtrageet: "जन गण मन",
+              // राज्यगीत - जय जय महाराष्ट्र माझा
+              rajyageet: shortText(stateAnthemContent, 45) || "जय जय महाराष्ट्र माझा",
               // प्रतिज्ञा - भारत माझा देश आहे
               pratigya: "भारत माझा देश आहे",
               // संविधान - आम्ही भारताचे नागरिक
               sanvidhan: "आम्ही भारताचे नागरिक",
               // प्रार्थना - short heading title of prayer
               prarthana: data.prayerTitle || data.prayerName || getPrayerShortName(prayerContent),
-              // श्लोक - 2 full lines (~88 chars)
-              shlok: shortText(data.shlok, 88),
-              // पंचांग - 2 full lines (~85 chars), extracted from string or tithi/paksha/month/nakshatra
-              panchang: shortText(
-                data.panchang
-                  ? typeof data.panchang === "string"
-                    ? data.panchang
-                    : Object.values(data.panchang).filter(Boolean).join(" ")
-                  : [
-                      data.tithi ? `तिथी: ${data.tithi}` : "",
-                      data.paksha ? `पक्ष: ${data.paksha}` : "",
-                      data.nakshatra ? `नक्षत्र: ${data.nakshatra}` : "",
-                      data.month ? `मास: ${data.month}` : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ") || data.panchangStr || "",
-                85
-              ),
+              // श्लोक - formatted in 1 single line
+              shlok: formatShlokOneLine(data.shlok, d),
+              // पंचांग - formatted in 2 lines
+              panchang: formatPanchangTwoLines(data, dateObj),
               // सुविचार - 2 full lines (~88 chars)
               suvichar: shortText(data.thought || data.suvichar, 88),
               // बातम्या - 1 single news item (~65 chars max)
@@ -506,6 +598,7 @@ export function MonthlyParipathRegister() {
                 day: dayName,
                 isSunday: false,
                 rashtrageet: "",
+                rajyageet: "",
                 pratigya: "",
                 sanvidhan: "",
                 prarthana: "",
@@ -523,17 +616,18 @@ export function MonthlyParipathRegister() {
                 swakshari: "",
               };
             } else {
-              // Past date but no data - show placeholder
+              // Past date but no data - format proper 1-line shlok & 2-line panchang
               newRows[d] = {
                 date: d,
                 day: dayName,
                 isSunday: false,
                 rashtrageet: "जन गण मन",
+                rajyageet: "जय जय महाराष्ट्र माझा",
                 pratigya: "भारत माझा देश आहे",
                 sanvidhan: "आम्ही भारताचे नागरिक",
                 prarthana: "प्रार्थना",
-                shlok: "",
-                panchang: "",
+                shlok: formatShlokOneLine("", d),
+                panchang: formatPanchangTwoLines({}, thisDate),
                 suvichar: "",
                 batmya: "",
                 dinvishesh: "",
@@ -554,6 +648,7 @@ export function MonthlyParipathRegister() {
             day: dayName,
             isSunday: false,
             rashtrageet: "",
+            rajyageet: "",
             pratigya: "",
             sanvidhan: "",
             prarthana: "",
@@ -628,6 +723,7 @@ export function MonthlyParipathRegister() {
         day: dayName,
         isSunday,
         rashtrageet: isSunday ? "रविवार" : "",
+        rajyageet: isSunday ? "रविवार" : "",
         pratigya: isSunday ? "रविवार" : "",
         sanvidhan: isSunday ? "रविवार" : "",
         prarthana: isSunday ? "रविवार" : "",
@@ -1171,19 +1267,21 @@ export function MonthlyParipathRegister() {
                     <colgroup>
                       <col style={{ width: "32px" }} />
                       <col style={{ width: "55px" }} />
-                      <col style={{ width: "11%" }} />
-                      <col style={{ width: "11%" }} />
-                      <col style={{ width: "12%" }} />
-                      <col style={{ width: "11%" }} />
-                      <col style={{ width: "18%" }} />
+                      <col style={{ width: "10%" }} />
+                      <col style={{ width: "10%" }} />
+                      <col style={{ width: "10%" }} />
+                      <col style={{ width: "10%" }} />
+                      <col style={{ width: "10%" }} />
+                      <col style={{ width: "15%" }} />
+                      <col style={{ width: "15%" }} />
                       <col style={{ width: "17%" }} />
-                      <col style={{ width: "20%" }} />
                     </colgroup>
                     <thead>
                       <tr className="bg-slate-100 border-b-2 border-slate-900 text-center font-black text-slate-900 uppercase text-[11px]">
                         <th className="w-[32px] max-w-[32px] px-0.5 py-1.5 border-r border-slate-900 text-center align-middle text-[10px] whitespace-nowrap overflow-hidden">दिनांक</th>
                         <th className="w-[55px] max-w-[55px] px-0.5 py-1.5 border-r border-slate-900 text-center align-middle text-[10px] whitespace-nowrap overflow-hidden">वार</th>
                         <th className="p-2 border-r border-slate-900 text-center align-middle">राष्ट्रगीत</th>
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">राज्यगीत</th>
                         <th className="p-2 border-r border-slate-900 text-center align-middle">प्रतिज्ञा</th>
                         <th className="p-2 border-r border-slate-900 text-center align-middle">भारताचे संविधान</th>
                         <th className="p-2 border-r border-slate-900 text-center align-middle">प्रार्थना</th>
@@ -1203,11 +1301,11 @@ export function MonthlyParipathRegister() {
                           }`}
                         >
                           {row.isSunday ? (
-                            <td colSpan={9} className="p-2.5 text-center font-black text-rose-700 text-[13px] tracking-widest align-middle border-b border-slate-900">
+                            <td colSpan={10} className="p-2.5 text-center font-black text-rose-700 text-[13px] tracking-widest align-middle border-b border-slate-900">
                               रविवार
                             </td>
                           ) : row.isHoliday ? (
-                            <td colSpan={9} className="p-2.5 text-center font-black text-rose-700 text-[13px] tracking-wider align-middle border-b border-slate-900">
+                            <td colSpan={10} className="p-2.5 text-center font-black text-rose-700 text-[13px] tracking-wider align-middle border-b border-slate-900">
                               सुट्टी ({row.holidayReason || "शाळेस सुट्टी"})
                             </td>
                           ) : (
@@ -1223,6 +1321,18 @@ export function MonthlyParipathRegister() {
                                   value={row.rashtrageet}
                                   onChange={(e) => {
                                     handleCellChange(row.date, "rashtrageet", e.target.value);
+                                    e.target.style.height = "auto";
+                                    e.target.style.height = `${e.target.scrollHeight}px`;
+                                  }}
+                                  className="w-full bg-transparent text-center outline-none font-bold text-[11px] leading-snug overflow-hidden resize-none py-1 px-1 border-0 focus:ring-1 focus:ring-indigo-500 rounded"
+                                  rows={1}
+                                />
+                              </td>
+                              <td className="p-1 border-r border-slate-900 align-middle">
+                                <textarea
+                                  value={row.rajyageet}
+                                  onChange={(e) => {
+                                    handleCellChange(row.date, "rajyageet", e.target.value);
                                     e.target.style.height = "auto";
                                     e.target.style.height = `${e.target.scrollHeight}px`;
                                   }}

@@ -6,6 +6,8 @@ import React, { useState, useEffect, useMemo } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import { showToast as toast } from "@/lib/custom-toast";
+import { saveUnifiedSchoolProfile, getUnifiedSchoolProfile } from "@/utils/schoolProfileHelper";
+
 import { uploadBlobToBunny } from "@/lib/bunnyStorage";
 import {
   Utensils,
@@ -487,6 +489,7 @@ function TeacherMDMPage() {
       if (dataToSave.udise) {
         localStorage.setItem("teacher_udise", dataToSave.udise);
       }
+      saveUnifiedSchoolProfile(dataToSave);
 
       toast.success("शाळेची व प्रोफाइल माहिती अपडेट झाली!");
     } catch (error) {
@@ -12500,16 +12503,17 @@ function TeacherMDMPage() {
                           const parsedWDays = parseFloat(stockDemandWorkingDays);
                           const wDays = !isNaN(parsedWDays) && stockDemandWorkingDays !== "" ? parsedWDays : calculatedWDays;
 
+                          const uni = getUnifiedSchoolProfile();
                           return (
                             <CommonMDMReportHeader
                               title="धान्यादी मालाची मागणी"
                               subtitle="तांदूळ व धान्यादी मालाची मागणी किलोग्रॅम मध्ये"
                               month={formatMarathiMonthYear(stockDemandMonth, stockDemandYear)}
                               academicYear={stockDemandYear}
-                              schoolName={profile?.schoolName || "Z P SCHOOL DHONDEWADI PED"}
-                              center={profile?.center || profile?.kendra || "NARSINGPUR"}
-                              taluka={profile?.taluka || "वाळवा"}
-                              district={profile?.district || "सांगली"}
+                              schoolName={profile?.schoolName || uni.schoolName}
+                              center={profile?.center || profile?.kendra || uni.kendra}
+                              taluka={profile?.taluka || uni.taluka}
+                              district={profile?.district || profile?.jilha || uni.jilha}
                               pat={pat}
                               classSection={formatClassSectionName(stockDemandClass)}
                               workingDays={wDays}
@@ -15179,6 +15183,9 @@ function TeacherMDMPage() {
                                         reportSchoolName={reportSchoolName}
                                         principalName={reportPrincipalName || ""}
                                         teacherName={reportTeacherName || ""}
+                                        center={profile?.center || profile?.kendra}
+                                        taluka={profile?.taluka}
+                                        district={profile?.district || profile?.jilha}
                                         primaryCookedDays={primaryCookedDays}
                                         upperCookedDays={upperCookedDays}
                                         wednesdaysCount={wednesdaysCount}

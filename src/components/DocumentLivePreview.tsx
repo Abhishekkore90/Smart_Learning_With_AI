@@ -1553,23 +1553,56 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
     toast.success("PDF डाउनलोड तयार होत आहे... (Generating PDF...)");
 
     try {
-      const defaultHeaders = ["तासिका", "विषय", "अध्ययन मुद्दा / पाठ्यघटक", "अध्ययन निष्पत्ती", "अध्ययन अनुभव", "साधन तंत्रे", "शैक्षणिक साहित्य"];
-      const dayBlocks = pagesToUse
-        .filter((p: any) => !isSunday(p.day, p.date))
-        .map((p: any, idx: number) => {
+      const html2pdfModule = await import("html2pdf.js");
+      let html2pdfFn: any = html2pdfModule.default || html2pdfModule;
+      if (html2pdfFn && html2pdfFn.default) html2pdfFn = html2pdfFn.default;
+      if (typeof html2pdfFn !== "function" && typeof window !== "undefined" && typeof (window as any).html2pdf === "function") {
+        html2pdfFn = (window as any).html2pdf;
+      }
+
+      const isSundayDate = (dayName: string, dateStr: string) => {
+        if (dayName) {
+          const d = String(dayName).toLowerCase().trim();
+          if (d.includes("रविवार") || d.includes("sunday")) return true;
+        }
+        if (dateStr) {
+          try {
+            const dt = new Date(dateStr);
+            if (!isNaN(dt.getTime()) && dt.getDay() === 0) return true;
+          } catch {}
+        }
+        return false;
+      };
+
+      const defaultHeaders = ["तासिका", "विषय", "अध्यापन मुद्दा / पाठ्यघटक", "अध्ययन निष्पत्ती", "अध्ययन अनुभव", "साधन तंत्रे", "शैक्षणिक साहित्य"];
+
+      const validPages = pagesToUse.filter((p: any) => {
+        if (!p) return false;
+        if (p.isSunday || p.isHoliday) return false;
+        if (isSundayDate(p.day, p.date)) return false;
+        const validPeriods = (p.periods || []).filter((r: any) => 
+          r && (r.subject || r.topic || r.outcome || r.experience || r.period)
+        );
+        return validPeriods.length > 0;
+      });
+
+      const dayBlocks = validPages.map((p: any, idx: number) => {
         const rows = (p.periods || []).map((row: any, rIdx: number) => `
-          <tr style="background:${rIdx % 2 === 0 ? "#fff" : "#f8fafc"}; page-break-inside: avoid; break-inside: avoid;">
-            <td style="text-align:center;font-weight:700;color:#4338ca;width:6%">${row.period}</td>
-            <td style="font-weight:600;width:8%">${row.subject || "-"}</td>
-            <td style="width:11%">${row.topic || "-"}</td>
-            <td style="width:36%">${row.outcome || "-"}</td>
-            <td style="width:25%">${row.experience || "-"}</td>
-            <td style="width:7%">${row.tools || "-"}</td>
-            <td style="width:7%">${row.materials || "-"}</td>
+          <tr style="background:${rIdx % 2 === 0 ? "#ffffff" : "#f8fafc"};">
+            <td style="text-align:center;font-weight:900;color:#4338ca;width:6%;padding:6px 3px;border:1.5px solid #334155;vertical-align:middle;">${row.period}</td>
+            <td style="text-align:center;font-weight:900;color:#0f172a;width:9%;padding:6px 3px;border:1.5px solid #334155;vertical-align:middle;">${row.subject || "-"}</td>
+            <td style="text-align:left;font-weight:800;color:#1e293b;width:17%;padding:6px 4px;border:1.5px solid #334155;vertical-align:middle;line-height:1.3;">${row.topic || "-"}</td>
+            <td style="text-align:left;color:#047857;font-weight:800;width:25.5%;padding:6px 6px;border:1.5px solid #334155;vertical-align:middle;line-height:1.3;">${row.outcome || "-"}</td>
+            <td style="text-align:left;color:#334155;font-weight:700;width:25.5%;padding:6px 6px;border:1.5px solid #334155;vertical-align:middle;line-height:1.3;">${row.experience || "-"}</td>
+            <td style="text-align:center;color:#334155;font-weight:700;width:8.5%;padding:6px 3px;border:1.5px solid #334155;vertical-align:middle;">${row.tools || "-"}</td>
+            <td style="text-align:center;color:#334155;font-weight:700;width:8.5%;padding:6px 3px;border:1.5px solid #334155;vertical-align:middle;">${row.materials || "-"}</td>
           </tr>`).join("");
 
         const headers = (p.columnHeaders && p.columnHeaders.length > 0 ? p.columnHeaders : defaultHeaders)
-          .map((h: string) => `<th>${h}</th>`).join("");
+          .map((h: string, hIdx: number) => {
+            const widths = ["6%", "9%", "17%", "25.5%", "25.5%", "8.5%", "8.5%"];
+            return `<th style="width:${widths[hIdx] || "auto"}; background-color:#0f172a !important; color:#ffffff !important; padding:8px 3px; text-align:center; font-size:11px; font-weight:900; border:1.5px solid #1e293b;">${h}</th>`;
+          }).join("");
 
         const dayVal = p.day && p.day !== "-" ? p.day : (getMarathiDayName(p.date) || "-");
         const teacherVal = p.teacher && p.teacher !== "-" ? p.teacher : (profile?.teacherName || "-");
@@ -1578,69 +1611,97 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
         const yearVal = p.year && p.year !== "-" ? p.year : (profile?.academicYear || "2026-27");
 
         return `
-          <div class="day-block" style="margin-bottom: 15px; ${idx > 0 ? "page-break-before: always; break-before: always;" : ""} page-break-inside: avoid; break-inside: avoid;">
-            <div class="day-header" style="display: flex; justify-content: flex-end; margin-bottom: 6px;">
-              <span class="period-count" style="color: #475569; background: #f1f5f9; padding: 4px 10px; border-radius: 20px; font-weight: 600; font-size: 11px;">
-                ${(p.periods || []).length} तासिका (Periods)
-              </span>
-            </div>
-            <h2 style="font-size: 18px; font-weight: 900; text-align: center; color: #0f172a; margin: 8px 0 12px 0;">दैनंदिन पाठ टाचण</h2>
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; background: #f1f5f9; border: 2px solid #475569; border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; font-size: 11px;">
-              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">दिनांक</span><span style="font-weight:900; color:#4338ca; font-size:12px;">${formatCleanDate(p.date)}</span></div>
-              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">वार</span><span style="font-weight:900; color:#0f172a;">${dayVal}</span></div>
-              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">वर्गशिक्षक</span><span style="font-weight:900; color:#0f172a;">${teacherVal}</span></div>
-              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">शाळा</span><span style="font-weight:900; color:#0f172a;">${schoolVal}</span></div>
-              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">इयत्ता</span><span style="font-weight:900; color:#0f172a;">${stdVal}</span></div>
-              <div><span style="color:#0f172a; font-size:10px; text-transform:uppercase; font-weight:900; display:block;">सन</span><span style="font-weight:900; color:#0f172a;">${yearVal}</span></div>
-            </div>
-            ${p.thought ? `<div style="font-size:10.5px; font-style:italic; color:#78350f; background:#fffbeb; border-left:3px solid #f59e0b; padding:7px 12px; margin-bottom:10px; border-radius:4px;">✨ आजचा सुविचार : '${p.thought}'</div>` : ""}
-            <table style="width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 12px;">
-              <thead>
-                <tr style="background: #f1f5f9; color: #0f172a;">
-                  ${headers}
-                </tr>
-              </thead>
-              <tbody>${rows}</tbody>
-            </table>
-            <div style="border-top: 1px solid #e2e8f0; padding-top: 12px; margin-top: 8px; page-break-inside: avoid; break-inside: avoid;">
-              <p style="font-weight: 700; font-size: 11px; margin-bottom: 4px;">दिवसभरातील वैशिष्टपूर्ण बाबी:</p>
-              <p style="color: #cbd5e1; font-size: 11px; margin-bottom: 4px;">________________________________________________________________________________________</p>
-              <p style="color: #cbd5e1; font-size: 11px; margin-bottom: 4px;">________________________________________________________________________________________</p>
-              <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 12px; padding: 20px 30px 0;">
-                <span>वर्गशिक्षक</span><span>मुख्याध्यापक</span>
+          <div class="${idx > 0 ? "html2pdf-page-break" : ""}" style="width: 794px; height: 1040px; max-height: 1040px; box-sizing: border-box; padding: 12px 18px; background: #ffffff; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="text-align: center; margin-bottom: 8px;">
+                <h2 style="font-size: 20px; font-weight: 900; color: #0f172a; letter-spacing: 0.5px; margin: 0;">दैनंदिन पाठ टाचण</h2>
               </div>
+              <table style="width: 100%; border-collapse: collapse; border: 1.5px solid #334155; border-radius: 6px; margin-bottom: 8px; background: #ffffff;">
+                <tr>
+                  <td style="width: 33.33%; padding: 4px 8px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
+                    <div style="font-size: 9.5px; font-weight: 800; color: #475569;">दिनांक</div>
+                    <div style="font-size: 12px; font-weight: 900; color: #3730a3; margin-top: 1px;">${formatCleanDate(p.date)}</div>
+                  </td>
+                  <td style="width: 33.33%; padding: 4px 8px; border-bottom: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
+                    <div style="font-size: 9.5px; font-weight: 800; color: #475569;">वार</div>
+                    <div style="font-size: 12px; font-weight: 900; color: #0f172a; margin-top: 1px;">${dayVal}</div>
+                  </td>
+                  <td style="width: 33.33%; padding: 4px 8px; border-bottom: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
+                    <div style="font-size: 9.5px; font-weight: 800; color: #475569;">वर्गशिक्षक</div>
+                    <div style="font-size: 12px; font-weight: 900; color: #0f172a; margin-top: 1px;">${teacherVal}</div>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="width: 33.33%; padding: 4px 8px; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
+                    <div style="font-size: 9.5px; font-weight: 800; color: #475569;">शाळा</div>
+                    <div style="font-size: 12px; font-weight: 900; color: #0f172a; margin-top: 1px;">${schoolVal}</div>
+                  </td>
+                  <td style="width: 33.33%; padding: 4px 8px; border-right: 1px solid #cbd5e1; vertical-align: top; text-align: left;">
+                    <div style="font-size: 9.5px; font-weight: 800; color: #475569;">इयत्ता</div>
+                    <div style="font-size: 12px; font-weight: 900; color: #0f172a; margin-top: 1px;">${stdVal}</div>
+                  </td>
+                  <td style="width: 33.33%; padding: 4px 8px; vertical-align: top; text-align: left;">
+                    <div style="font-size: 9.5px; font-weight: 800; color: #475569;">सन</div>
+                    <div style="font-size: 12px; font-weight: 900; color: #0f172a; margin-top: 1px;">${yearVal}</div>
+                  </td>
+                </tr>
+              </table>
+              ${p.thought ? `<div style="background: #fffbeb; border: 1.5px solid #fcd34d; border-radius: 6px; padding: 4px 10px; margin-bottom: 8px; font-size: 11.5px; color: #78350f; text-align: center;"><strong style="font-weight: 900; color: #92400e;">आजचा सुविचार :</strong> "${p.thought}"</div>` : ""}
+              <table style="width: 100%; border-collapse: collapse; table-layout: fixed; border: 2px solid #0f172a; margin-bottom: 8px; background: #ffffff;">
+                <thead>
+                  <tr>
+                    ${headers}
+                  </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+              </table>
+            </div>
+            <div style="margin-top: 6px; shrink-0;">
+              <div style="font-size: 10.5px; font-weight: 900; color: #0f172a; margin-bottom: 2px;">दिवसभरातील वैशिष्टपूर्ण बाबी:</div>
+              <div style="border-bottom: 1px dashed #cbd5e1; height: 14px; margin-bottom: 2px;"></div>
+              <div style="border-bottom: 1px dashed #cbd5e1; height: 14px; margin-bottom: 2px;"></div>
+              <table style="width: 100%; border: none; margin-top: 16px; background: transparent;">
+                <tr>
+                  <td style="text-align: left; font-size: 11.5px; font-weight: 900; color: #0f172a; border: none; padding: 0 6px;">वर्गशिक्षक स्वाक्षरी</td>
+                  <td style="text-align: right; font-size: 11.5px; font-weight: 900; color: #0f172a; border: none; padding: 0 6px;">मुख्याध्यापक स्वाक्षरी</td>
+                </tr>
+              </table>
             </div>
           </div>`;
       }).join("");
 
-      const element = document.createElement("div");
-      element.innerHTML = `
-        <div style="font-family: 'Noto Sans Devanagari', Arial, sans-serif; color: #1e293b; line-height: 1.4; padding: 10px;">
-          <style>
-            table { width: 100%; border-collapse: collapse; margin-top: 4px; font-size: 10.5px; border: 2px solid #475569; }
-            table th { background-color: #f1f5f9 !important; color: #0f172a !important; font-weight: 800 !important; font-size: 10.5px !important; padding: 8px !important; border: 1.5px solid #475569 !important; text-align: left; }
-            table th:first-child { text-align: center; width: 45px; background-color: #e2e8f0 !important; }
-            table td { padding: 7px 8px !important; border: 1.5px solid #94a3b8 !important; vertical-align: top; font-size: 10px !important; line-height: 1.4 !important; }
-            thead { display: table-header-group; }
-            tr { page-break-inside: avoid; break-inside: avoid; }
-          </style>
-          ${dayBlocks}
-        </div>
-      `;
+      const wrapper = document.createElement("div");
+      wrapper.style.position = "fixed";
+      wrapper.style.top = "0";
+      wrapper.style.left = "-9999px";
+      wrapper.style.width = "794px";
+      wrapper.style.backgroundColor = "#ffffff";
+      wrapper.style.overflow = "hidden";
 
-      const html2pdf = (await import("html2pdf.js")).default;
+      const container = document.createElement("div");
+      container.style.width = "794px";
+      container.style.boxSizing = "border-box";
+      container.style.backgroundColor = "#ffffff";
+      container.style.color = "#0f172a";
+      container.style.fontFamily = "'Noto Sans Devanagari', sans-serif";
+      container.innerHTML = dayBlocks;
+
+      wrapper.appendChild(container);
+      document.body.appendChild(wrapper);
+
       const baseName = activeFileName.replace(/\.[^/.]+$/, "") || "Teaching_Diary";
       
       const opt = {
-        margin:       6,
+        margin:       [0, 0, 0, 0],
         filename:     `${baseName}.pdf`,
         image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak:    { mode: ['css'], avoid: '.day-block' }
+        html2canvas:  { scale: 2, useCORS: true, logging: false, windowWidth: 794 },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait', compress: false },
+        pagebreak:    { mode: 'css', before: '.html2pdf-page-break' }
       };
 
-      await html2pdf().set(opt).from(element).save();
+      await html2pdfFn().set(opt).from(container).save();
+      if (document.body.contains(wrapper)) document.body.removeChild(wrapper);
       toast.success(`✅ "${baseName}.pdf" डाउनलोड झाली!`);
     } catch (err) {
       console.error("Local PDF generation error:", err);
