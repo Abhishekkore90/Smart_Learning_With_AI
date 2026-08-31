@@ -1038,23 +1038,10 @@ const Result5th8th = () => {
   const handlePrint = () => {
     const printContent = document.querySelector('.modal-body');
     if (printContent) {
-
-  }
-  
-              /* Ensure the right container does not overflow */
-              .right {
-                overflow: hidden; /* Clipping any content that exceeds the container bounds */
-              }
-            </style>
-          </head>
-          <body>
-            ${printContent.innerHTML}
-          </body>
-        </html>
-      `);
-      printWindow.document.close();
-      printWindow.focus();
-      printWindow.print();
+      printReportContent(printContent, {
+        title: "5th to 8th Result Report",
+        landscape: selectedExamName !== 'All Exams',
+      });
     } else {
       console.error('Print content not found');
     }
