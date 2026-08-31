@@ -9,6 +9,7 @@ import { uploadBlobToBunny } from "@/lib/bunnyStorage";
 import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
+import { getUnifiedSchoolProfile, saveUnifiedSchoolProfile } from "@/utils/schoolProfileHelper";
 // Helper function to extract public Google Drive photos from single file links and folder links
 async function fetchGoogleDriveImages(url: string): Promise<{ src: string }[]> {
   try {
@@ -5194,7 +5195,7 @@ const SqaafResponseCard = ({ num, idx, selectedLang, selectedOptions }: SqaafRes
 };
 
 function TeacherSqaafPage() {
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const [view, setView] = useState<"info" | "dashboard" | "summary" | "certificate" | "responses" | "table_report" | "manual_summary">(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("sqaaf_school_info");
@@ -5233,13 +5234,23 @@ function TeacherSqaafPage() {
 
   // School Info Form State
   const loadSchoolInfo = () => {
+    let saved: any = {};
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("sqaaf_school_info");
-      if (saved) {
-        try { return JSON.parse(saved); } catch (e) { /* ignore */ }
+      const s = localStorage.getItem("sqaaf_school_info");
+      if (s) {
+        try { saved = JSON.parse(s); } catch (e) { /* ignore */ }
       }
     }
-    return null;
+    const uni = getUnifiedSchoolProfile();
+    return {
+      schoolName: saved?.schoolName || uni.schoolName || "",
+      headmaster: saved?.headmaster || uni.headmaster || uni.teacherName || "",
+      address: saved?.address || "",
+      centerName: saved?.centerName || uni.kendra || "",
+      taluka: saved?.taluka || uni.taluka || "",
+      district: saved?.district || uni.jilha || "",
+      udise: saved?.udise || uni.udise || "",
+    };
   };
   const savedInfo = loadSchoolInfo();
   const [infoSchoolName, setInfoSchoolName] = useState(savedInfo?.schoolName || profile?.schoolName || "");
@@ -5249,6 +5260,105 @@ function TeacherSqaafPage() {
   const [infoTaluka, setInfoTaluka] = useState(savedInfo?.taluka || "");
   const [infoDistrict, setInfoDistrict] = useState(savedInfo?.district || "");
   const [infoUdise, setInfoUdise] = useState(savedInfo?.udise || profile?.udise || "");
+
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      const uni = getUnifiedSchoolProfile();
+      if (uni.schoolName) setInfoSchoolName((prev: string) => prev || uni.schoolName);
+      if (uni.udise) setInfoUdise((prev: string) => prev || uni.udise);
+      if (uni.kendra) setInfoCenterName((prev: string) => prev || uni.kendra);
+      if (uni.taluka) setInfoTaluka((prev: string) => prev || uni.taluka);
+      if (uni.jilha) setInfoDistrict((prev: string) => prev || uni.jilha);
+      if (uni.headmaster || uni.teacherName) setInfoHeadmaster((prev: string) => prev || uni.headmaster || uni.teacherName);
+    };
+    handleProfileUpdate();
+    window.addEventListener("schoolProfileUpdated", handleProfileUpdate);
+    return () => window.removeEventListener("schoolProfileUpdated", handleProfileUpdate);
+  }, []);
+
+  const getDocId = () => {
+    if (user?.uid) return user.uid;
+    if (profile?.usid) return profile.usid;
+    if (profile?.udise) return `udise_${profile.udise}`;
+    if (profile?.email) return `email_${profile.email.replace(/[@.]/g, "_")}`;
+    return null;
+  };
+
+  const saveSqaafDataToCloud = async (
+    selOpt?: Record<number, number>,
+    compStd?: Set<number>,
+    extOpt?: Record<number, number>,
+    info?: any
+  ) => {
+    const docId = getDocId();
+    if (!docId) return;
+
+    try {
+      const docRef = doc(db, "sqaaf_evaluations", docId);
+      const payload: any = {
+        updatedAt: new Date().toISOString(),
+      };
+      if (selOpt !== undefined) payload.selectedOptions = selOpt;
+      if (compStd !== undefined) payload.completedStandards = Array.from(compStd);
+      if (extOpt !== undefined) payload.externalOptions = extOpt;
+      if (info !== undefined) payload.schoolInfo = info;
+
+      await setDoc(docRef, payload, { merge: true });
+    } catch (err) {
+      console.error("Error saving SQAAF data to Firestore:", err);
+    }
+  };
+
+  // Sync SQAAF evaluation data from Cloud on load
+  useEffect(() => {
+    const docId = getDocId();
+    if (!docId) return;
+
+    const loadCloudData = async () => {
+      try {
+        const docRef = doc(db, "sqaaf_evaluations", docId);
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          const data = snap.data();
+          if (data.selectedOptions) {
+            setSelectedOptions(prev => {
+              const merged = { ...data.selectedOptions, ...prev };
+              localStorage.setItem("sqaaf_selected_options", JSON.stringify(merged));
+              return merged;
+            });
+          }
+          if (data.completedStandards && Array.isArray(data.completedStandards)) {
+            setCompletedStandards(prev => {
+              const setStds = new Set<number>([...data.completedStandards, ...Array.from(prev)]);
+              localStorage.setItem("sqaaf_completed_standards", JSON.stringify(Array.from(setStds)));
+              return setStds;
+            });
+          }
+          if (data.externalOptions) {
+            setExternalOptions(prev => {
+              const merged = { ...data.externalOptions, ...prev };
+              localStorage.setItem("sqaaf_external_options", JSON.stringify(merged));
+              return merged;
+            });
+          }
+          if (data.schoolInfo) {
+            if (data.schoolInfo.schoolName) setInfoSchoolName((prev: string) => prev || data.schoolInfo.schoolName);
+            if (data.schoolInfo.headmaster) setInfoHeadmaster((prev: string) => prev || data.schoolInfo.headmaster);
+            if (data.schoolInfo.address) setInfoAddress((prev: string) => prev || data.schoolInfo.address);
+            if (data.schoolInfo.centerName) setInfoCenterName((prev: string) => prev || data.schoolInfo.centerName);
+            if (data.schoolInfo.taluka) setInfoTaluka((prev: string) => prev || data.schoolInfo.taluka);
+            if (data.schoolInfo.district) setInfoDistrict((prev: string) => prev || data.schoolInfo.district);
+            if (data.schoolInfo.udise) setInfoUdise((prev: string) => prev || data.schoolInfo.udise);
+            localStorage.setItem("sqaaf_school_info", JSON.stringify(data.schoolInfo));
+          }
+        }
+      } catch (err) {
+        console.error("Error loading SQAAF cloud data:", err);
+      }
+    };
+
+    loadCloudData();
+  }, [user?.uid, profile?.email, profile?.udise]);
 
   const handleInfoSubmit = () => {
     const data = {
@@ -5261,6 +5371,17 @@ function TeacherSqaafPage() {
       udise: infoUdise,
     };
     localStorage.setItem("sqaaf_school_info", JSON.stringify(data));
+    saveUnifiedSchoolProfile({
+      schoolName: infoSchoolName,
+      headmaster: infoHeadmaster,
+      teacherName: infoHeadmaster,
+      kendra: infoCenterName,
+      taluka: infoTaluka,
+      jilha: infoDistrict,
+      district: infoDistrict,
+      udise: infoUdise,
+    });
+    saveSqaafDataToCloud(selectedOptions, completedStandards, externalOptions, data);
     toast.success(selectedLang === "mr" ? "माहिती जतन केली." : "Information saved.");
     setView("dashboard");
   };
@@ -5710,6 +5831,8 @@ function TeacherSqaafPage() {
       localStorage.setItem("sqaaf_completed_standards", JSON.stringify(Array.from(updatedCompleted)));
     }
 
+    saveSqaafDataToCloud(updated, updatedCompleted, externalOptions);
+
     toast.success(selectedLang === "mr" ? `पर्याय निवडला.` : `Option selected.`);
   };
 
@@ -5724,6 +5847,7 @@ function TeacherSqaafPage() {
     }
     setCompletedStandards(updated);
     localStorage.setItem("sqaaf_completed_standards", JSON.stringify(Array.from(updated)));
+    saveSqaafDataToCloud(selectedOptions, updated, externalOptions);
   };
 
   const toggleLanguage = () => {
@@ -5752,13 +5876,14 @@ function TeacherSqaafPage() {
         } catch { return null; }
       })();
 
-      const schoolName = schoolInfo?.schoolName || infoSchoolName || profile?.schoolName || "";
-      const headmaster = schoolInfo?.headmaster || infoHeadmaster || profile?.fullName || "";
-      const udise = schoolInfo?.udise || infoUdise || profile?.udise || "";
+      const uni = getUnifiedSchoolProfile();
+      const schoolName = schoolInfo?.schoolName || infoSchoolName || profile?.schoolName || uni.schoolName || "";
+      const headmaster = schoolInfo?.headmaster || infoHeadmaster || profile?.fullName || profile?.teacherName || uni.headmaster || uni.teacherName || "";
+      const udise = schoolInfo?.udise || infoUdise || profile?.udise || uni.udise || "";
       const address = schoolInfo?.address || infoAddress || profile?.address || "";
-      const centerName = schoolInfo?.centerName || infoCenterName || "";
-      const taluka = schoolInfo?.taluka || infoTaluka || "";
-      const district = schoolInfo?.district || infoDistrict || "";
+      const centerName = schoolInfo?.centerName || infoCenterName || profile?.center || profile?.kendra || uni.kendra || "";
+      const taluka = schoolInfo?.taluka || infoTaluka || profile?.taluka || uni.taluka || "";
+      const district = schoolInfo?.district || infoDistrict || profile?.district || profile?.jilha || uni.jilha || "";
 
       // Read selected options
       const savedSelectedOptions = localStorage.getItem("sqaaf_selected_options");
