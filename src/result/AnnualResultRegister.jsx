@@ -203,10 +203,6 @@ export default function AnnualResultRegister({ initialClass, initialYear, onBack
             });
           } catch (e) { }
 
-          if (loadedStudents.length === 0) {
-            loadedStudents = SAMPLE_STUDENTS;
-          }
-
           loadedStudents.sort((a, b) => (parseInt(a.rollNo) || 0) - (parseInt(b.rollNo) || 0));
           return loadedStudents;
         })(),

@@ -556,8 +556,8 @@ export function MonthlyParipathRegister() {
               rajyageet: shortText(stateAnthemContent, 45) || "जय जय महाराष्ट्र माझा",
               // प्रतिज्ञा - भारत माझा देश आहे
               pratigya: "भारत माझा देश आहे",
-              // संविधान - आम्ही भारताचे नागरिक
-              sanvidhan: "आम्ही भारताचे नागरिक",
+              // संविधान - आम्ही भारताचे लोक
+              sanvidhan: "आम्ही भारताचे लोक",
               // प्रार्थना - short heading title of prayer
               prarthana: data.prayerTitle || data.prayerName || getPrayerShortName(prayerContent),
               // श्लोक - formatted in 1 single line
@@ -624,7 +624,7 @@ export function MonthlyParipathRegister() {
                 rashtrageet: "जन गण मन",
                 rajyageet: "जय जय महाराष्ट्र माझा",
                 pratigya: "भारत माझा देश आहे",
-                sanvidhan: "आम्ही भारताचे नागरिक",
+                sanvidhan: "आम्ही भारताचे लोक",
                 prarthana: "प्रार्थना",
                 shlok: formatShlokOneLine("", d),
                 panchang: formatPanchangTwoLines({}, thisDate),
