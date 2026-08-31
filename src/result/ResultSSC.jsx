@@ -4,6 +4,8 @@ import "../result/result.css";
 import { Link } from 'react-router-dom';
 import printJS from 'print-js'; // If using npm
 import AlertMessage from "../../AlertMessage";
+import { printReportContent } from '../utils/printHelper';
+
 
 
 function ResultSSC() {
@@ -757,95 +759,14 @@ function ResultSSC() {
 
   const handlePrint = async () => {
     try {
-      const printContent = document.querySelector('.modal-body'); // Select the modal body content
-
+      const printContent = document.querySelector('.modal-body');
       if (!printContent) {
         console.error('Print content not found');
         return;
       }
-
-      // Clone the print content and apply styles
-      const clone = printContent.cloneNode(true);
-
-      // Apply scaling with increased size
-      clone.style.padding = "10px"; // Add padding to balance scaling
-      clone.style.margin = "0 auto"; // Center the content
-      clone.style.transform = "scale(1.2)"; // Increase scale size
-      clone.style.transformOrigin = "top center"; // Scale from the center-top
-      clone.style.width = "fit-content"; // Ensure it doesn't overflow horizontally
-
-      // Reset unnecessary styles to avoid blank space
-      clone.querySelectorAll('p').forEach(p => {
-        p.style.margin = "0";
-        p.style.padding = "0";
-        p.style.lineHeight = "1.4";
-      });
-
-      // Create a temporary container for the clone
-      const printContainer = document.createElement("div");
-      printContainer.style.margin = "0 auto"; // Center container
-      printContainer.appendChild(clone);
-
-      // Use printJS to print the content
-      printJS({
-        printable: printContainer.innerHTML,
-        type: 'raw-html',
-        style: `
-                    @media print {
-                        body { margin: 0; padding: 0; }
-                        p { margin: 0; padding: 0; line-height: 1.4; }
-    
-     .table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    
-    .table th, .table td {
-      border: 1px solid #000;
-      padding: 8px;
-      text-align: center;
-      font-size: 12px
-    }
-    
-    .table th {
-      background-color: #f2f2f2;
-      font-weight: bold;
-        font-size: 12px
-    }
-    
-    .table thead th {
-      vertical-align: middle;
-    }
-    
-    .table tbody td {
-      vertical-align: middle;
-    }
-    
-    .text-center {
-      text-align: center;
-    }
-                        .school-info {
-                            display: flex;
-                            align-items: center;
-                            margin-bottom: 20px;
-                        }
-                        .school-info img {
-                            width: 100px;
-                            height: 100px;
-                            object-fit: cover;
-                            margin-right: 20px;
-                        }
-                        .grad{
-      position: absolute; /* add this */
-      bottom: 25px; /* add this */
-      left: 20px; /* add this */
-      width: 90%; /* add this */
-    }
-                        @page {
-                            margin: 0; /* Remove default page margins */
-                        }
-                    }
-                `
+      printReportContent(printContent, {
+        title: "SSC Result Report",
+        landscape: true,
       });
     } catch (error) {
       console.error('Error in handlePrint:', error);

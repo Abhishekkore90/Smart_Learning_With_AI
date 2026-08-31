@@ -2038,13 +2038,24 @@ function DailyAssemblyContent() {
       const songContent = data.samuhgeet || data.deshbhaktigeet || data.songTitle || data.patrioticSong || "";
       const maun = data.silentPasayadan || data.maun || assemblyItems[5]?.content || "";
 
+      // Ensure web fonts are completely loaded before html2canvas capture
+      if (document.fonts && document.fonts.ready) {
+        try { await document.fonts.ready; } catch (e) {}
+      }
+
       // Build ALL 16 content sections in exact sequence
       const allContent = `
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;600;700;800&family=Noto+Sans+Devanagari:wght@400;600;700;800;900&display=swap" rel="stylesheet">
         <style>
           #temp-pdf-render, #temp-pdf-render * {
             box-sizing: border-box !important;
             word-break: break-word;
             overflow-wrap: break-word;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
           }
         </style>
         <div style="padding: 14px 22px; width: 100%; box-sizing: border-box;">
@@ -2151,7 +2162,7 @@ function DailyAssemblyContent() {
         margin: [6, 8, 6, 8],
         filename: `Paripath_${dateStr}.pdf`,
         image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, letterRendering: true, windowWidth: 733 },
+        html2canvas: { scale: 2, useCORS: true, allowTaint: true, logging: false, windowWidth: 733, scrollY: 0, scrollX: 0 },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
       };
 

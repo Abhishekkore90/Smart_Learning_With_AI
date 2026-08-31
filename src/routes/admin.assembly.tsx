@@ -377,7 +377,25 @@ function AssemblyBookAdmin() {
       </div>
     `;
 
-    const styleBlock = `<style>#temp-pdf-render, #temp-pdf-render * { box-sizing: border-box !important; word-break: break-word; overflow-wrap: break-word; }</style>`;
+    if (document.fonts && document.fonts.ready) {
+      try { await document.fonts.ready; } catch (e) {}
+    }
+
+    const styleBlock = `
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;600;700;800&family=Noto+Sans+Devanagari:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+      <style>
+        #temp-pdf-render, #temp-pdf-render * {
+          box-sizing: border-box !important;
+          word-break: break-word;
+          overflow-wrap: break-word;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          color-adjust: exact !important;
+        }
+      </style>
+    `;
     tempDiv.innerHTML = styleBlock + page1 + page2 + page3 + page4 + page5 + page6;
   
     document.body.appendChild(tempDiv);
@@ -386,7 +404,7 @@ function AssemblyBookAdmin() {
       margin: [8, 10, 8, 10],
       filename: `Paripath_${dateStr}.pdf`,
       image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, letterRendering: true, windowWidth: 718 },
+      html2canvas: { scale: 2, useCORS: true, allowTaint: true, logging: false, windowWidth: 718, scrollY: 0, scrollX: 0 },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
     };
   

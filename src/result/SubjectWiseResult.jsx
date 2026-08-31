@@ -6,6 +6,8 @@ import { getTeacherId } from "../lib/teacherIsolationHelper";
 import { Download, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import "./result.css";
+import { printReportContent } from '../utils/printHelper';
+
 import { CLASS_1_OUTCOMES } from "@/data/class1_outcomes";
 import { CLASS_2_OUTCOMES } from "@/data/class2_outcomes";
 import { CLASS_3_OUTCOMES } from "@/data/class3_outcomes";
@@ -531,7 +533,14 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
   };
 
   const handlePrint = () => {
-    window.print();
+    if (printRef.current) {
+      printReportContent(printRef.current, {
+        title: "Subject Wise CCE Result Report",
+        landscape: true,
+      });
+    } else {
+      window.print();
+    }
   };
 
   const isSubjectActive = (subName) => {
