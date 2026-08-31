@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
-import { db, storage } from "@/lib/firebase";
+import { auth, db, storage } from "@/lib/firebase";
+import { useAuth } from "@/hooks/use-auth";
 import { doc, getDoc, setDoc, onSnapshot, collection } from "firebase/firestore";
-import { ref, uploadBytes, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { PDFDocument } from "pdf-lib";
 import {
   BookOpen,
@@ -36,16 +37,18 @@ import {
   Eraser,
   Save,
   RotateCcw,
-  FileUp
+  FileUp,
+  School,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
 import { saveFileToIndexedDB, getFileFromIndexedDB } from "@/lib/indexedDbStorage";
+import { uploadFileWithProgress } from "@/lib/upload";
 import { extractTableRowsFromPdf } from "@/lib/pdfParser";
 import { parseExcelFile, ParsedTableCell } from "@/lib/tableParser";
 import { parsePlanningExcelFile, PlanningCategory, PlanningDocumentRecord } from "@/lib/smartPlanningParser";
-import { extractSubjectSectionsFromExcel, splitRowsIntoSubjectSections } from "@/lib/smartSubjectSplitter";
+import { extractSubjectSectionsFromExcel } from "@/lib/smartSubjectSplitter";
 import { PlanningTableRenderer } from "@/components/teacher/PlanningTableRenderer";
 import * as XLSX from "xlsx";
 
@@ -92,6 +95,23 @@ const isSubjectHeaderOrChangeRow = (row: string[], prevRow?: string[]): boolean 
 
 type RowType = "title" | "meta" | "header_repeat" | "signature" | "data";
 
+const SECTION_KEYWORDS = [
+  "वर्ग पूर्वतयारी",
+  "पूर्वतयारी",
+  "सराव व उजळणी",
+  "प्रथम घटक",
+  "द्वितीय घटक",
+  "दिवाळी",
+  "सुट्ट्या",
+  "अतिरिक्त पूरक",
+  "चाचणी",
+  "पूरक मार्गदर्शन",
+  "मासिक व घटक नियोजन",
+  "अभ्यासक्रमाचे मासिक",
+  "वार्षिक नियोजन",
+  "अध्ययन निष्पत्ती",
+];
+
 const detectRowType = (row: string[]): RowType => {
   if (!row || !Array.isArray(row)) return "data";
   const joined = row.join(" ").toLowerCase().trim();
@@ -99,27 +119,27 @@ const detectRowType = (row: string[]): RowType => {
 
   if (nonEmpties.length === 0) return "data";
 
-  // 1. Month-End Signature row (Image 1)
+  // 1. Month-End Signature row
   if (joined.includes("वर्ग शिक्षक") || joined.includes("मुख्याध्यापक") || joined.includes("स्वाक्षरी") || joined.includes("signature")) {
     return "signature";
   }
 
-  // 2. Month-Start Title banner (Image 2 Top)
-  if (joined.includes("मासिक व घटक नियोजन") || joined.includes("अभ्यासक्रमाचे मासिक") || (nonEmpties.length === 1 && joined.includes("माहे"))) {
+  // 2. Section Header or Title banner row
+  if (SECTION_KEYWORDS.some((kw) => joined.includes(kw))) {
     return "title";
   }
 
-  // 3. Meta info row (Image 2 Middle: इयत्ता / विषय / तासिका / कामाचे दिवस)
+  // 3. Meta info row (इयत्ता / विषय / तासिका / कामाचे दिवस)
   if (joined.includes("इयत्ता") || joined.includes("नियोजित तासिका") || (joined.includes("विषय") && joined.includes("दिवस"))) {
     return "meta";
   }
 
-  // 4. Repeated column headers row (Image 2 Bottom)
+  // 4. Repeated column headers row
   if (joined.includes("दिनांक") && (joined.includes("घटक") || joined.includes("निष्पत्ती") || joined.includes("उद्दिष्ट"))) {
     return "header_repeat";
   }
 
-  // 5. Fallback for single merged banner
+  // 5. Fallback for single merged banner row
   if (nonEmpties.length === 1 && !joined.includes("१") && !joined.includes("२")) {
     return "title";
   }
@@ -145,12 +165,12 @@ const getRawColumnWidthStyle = (headerName: string, index: number, totalCols: nu
 
   // Standard 6-column Annual / Monthly layout
   if (totalCols === 6) {
-    if (h.includes("महिना") || h.includes("month") || index === 0) return { width: "6%", minWidth: "50px" };
-    if (h.includes("आठवडा") || h.includes("week") || index === 1) return { width: "5%", minWidth: "40px" };
-    if (h.includes("कामाचे") || h.includes("दिवस") || index === 2) return { width: "6%", minWidth: "55px" };
-    if (h.includes("तासिका") || index === 3) return { width: "6%", minWidth: "55px" };
-    if (h.includes("निष्पत्ती") || h.includes("outcome") || index === 5) return { width: "27%", minWidth: "200px" };
-    if (h.includes("विषय") || h.includes("घटक") || index === 4) return { width: "50%", minWidth: "320px" };
+    if (h.includes("महिना") || h.includes("month") || index === 0) return { width: "8%", minWidth: "50px" };
+    if (h.includes("आठवडा") || h.includes("week") || index === 1) return { width: "6%", minWidth: "40px" };
+    if (h.includes("कामाचे") || h.includes("दिवस") || index === 2) return { width: "8%", minWidth: "55px" };
+    if (h.includes("तासिका") || index === 3) return { width: "8%", minWidth: "55px" };
+    if (h.includes("विषय") || h.includes("घटक") || index === 4) return { width: "45%", minWidth: "320px" };
+    if (h.includes("निष्पत्ती") || h.includes("outcome") || index === 5) return { width: "25%", minWidth: "200px" };
   }
 
   // Small metadata columns
@@ -275,9 +295,32 @@ const extractExcelData = async (
     if (!firstSheetName) return empty;
 
     const worksheet = workbook.Sheets[firstSheetName];
-    // Read all rows as raw 2D array (empty string for blank cells)
-    const rawData = XLSX.utils.sheet_to_json<any[]>(worksheet, { header: 1, defval: "" });
-    if (!rawData || rawData.length === 0) return empty;
+    if (!worksheet || !worksheet["!ref"]) return empty;
+
+    // Read all cells directly by absolute coordinates starting strictly from Column 0 (A)
+    // This prevents sheet_to_json from trimming empty leading cells and shifting columns
+    const range = XLSX.utils.decode_range(worksheet["!ref"]);
+    const maxRow = range.e.r;
+    const maxCol = range.e.c;
+
+    const rawData: string[][] = [];
+    for (let r = 0; r <= maxRow; r++) {
+      const row: string[] = [];
+      for (let c = 0; c <= maxCol; c++) {
+        const cellAddr = XLSX.utils.encode_cell({ r, c });
+        const cell = worksheet[cellAddr];
+        let val = "";
+        if (cell && cell.v !== undefined && cell.v !== null) {
+          val = String(cell.w || cell.v).trim();
+          if (val.includes("$")) {
+            val = val.replace(/\$\s*/g, "").trim();
+          }
+        }
+        row.push(val);
+      }
+      rawData.push(row);
+    }
+    if (rawData.length === 0) return empty;
 
     // ── Step 1: Locate the header row ─────────────────────────────────────────
     const HEADER_KEYWORDS = [
@@ -380,10 +423,9 @@ const extractExcelData = async (
     const numCols = rawHeaders.length;
     if (numCols === 0 || rawHeaders.some((h) => isPdfNoiseLine(h))) return empty;
 
-    // ── Step 3: Gather data rows, normalize to numCols length ─────────────────
-    const startIdx = headerRowIdx + 1;
+    // ── Step 3: Gather data rows starting from row 0, normalize to numCols ─────
     const dataRows: string[][] = [];
-    for (let i = startIdx; i < rawData.length; i++) {
+    for (let i = 0; i < rawData.length; i++) {
       const row = rawData[i];
       if (!row || !Array.isArray(row)) continue;
       const strRow: string[] = Array.from({ length: numCols }, (_, ci) =>
@@ -395,27 +437,9 @@ const extractExcelData = async (
     }
     if (dataRows.length === 0) return empty;
 
-    // ── Step 4: Forward-fill merged cells row by row (Preserve all rows 1:1) ─
-    // Carry forward merged cell values (e.g. topic name merged across multiple sub-points),
-    // but reset whenever a new month section title row appears so months stay 100% distinct.
-    const lastVal: string[] = new Array(numCols).fill("");
-    const rawDataRows: string[][] = dataRows.map((row) => {
-      const nonEmpties = row.filter((c) => c !== "");
-      const isTitleRow = nonEmpties.length === 1 && (nonEmpties[0].toLowerCase().includes("नियोजन") || nonEmpties[0].toLowerCase().includes("माहे"));
-
-      if (isTitleRow) {
-        lastVal.fill("");
-        return row;
-      }
-
-      return row.map((cell, ci) => {
-        if (cell !== "") {
-          lastVal[ci] = cell;
-          return cell;
-        }
-        return nonEmpties.length > 1 ? lastVal[ci] : "";
-      });
-    });
+    // ── Step 4: Strict 1:1 Row Mapping (No cross-row value mixing) ─────────────
+    // Keep each row's data strictly in its own row without copying values from previous rows
+    const rawDataRows: string[][] = dataRows.map((row) => [...row]);
 
     // ── Step 7: Build column map for schema-mapped fallback ───────────────────
     const colMap = { srNo: -1, month: -1, subject: -1, weeks: -1, workingDays: -1, periods: -1, topics: -1, outcomes: -1 };
@@ -433,17 +457,21 @@ const extractExcelData = async (
       else if ((ct.includes("निष्पत्ती") || ct.includes("outcome") || ct.includes("साध्य") || ct.includes("skill")) && colMap.outcomes === -1) colMap.outcomes = cIdx;
     });
 
-    // ── Step 8: Build schema-mapped PlanningTableRow[] as fallback ────────────
-    const get = (row: string[], idx: number) => (idx !== -1 && row[idx] ? row[idx] : "");
+    // ── Step 8: Build schema-mapped PlanningTableRow[] with 1:1 positional fallbacks ──
+    const get = (row: string[], idx: number, fallbackIdx: number) => {
+      const targetIdx = idx !== -1 ? idx : fallbackIdx;
+      return row[targetIdx] ? row[targetIdx] : "";
+    };
+
     const mappedRows: PlanningTableRow[] = rawDataRows.map((row, i) => ({
       id: `excel_${Date.now()}_${i}`,
-      month: get(row, colMap.month) || row[0] || `महिना ${i + 1}`,
-      subject: get(row, colMap.subject) || "मराठी",
-      weeks: get(row, colMap.weeks) || "4",
-      workingDays: get(row, colMap.workingDays) || "20",
-      periods: get(row, colMap.periods) || "50",
-      topics: get(row, colMap.topics) || "घटक माहिती",
-      outcomes: get(row, colMap.outcomes) || "अध्ययन निष्पत्ती",
+      month: get(row, colMap.month, 0) || `महिना ${i + 1}`,
+      subject: get(row, colMap.subject, -1) || "मराठी",
+      weeks: get(row, colMap.weeks, 1) || "",
+      workingDays: get(row, colMap.workingDays, 2) || "",
+      periods: get(row, colMap.periods, 3) || "",
+      topics: get(row, colMap.topics, 4) || "",
+      outcomes: get(row, colMap.outcomes, 5) || "",
     }));
 
     return { mappedRows, rawHeaders, rawDataRows };
@@ -456,6 +484,7 @@ const extractExcelData = async (
 
 export interface PlanningFileRecord {
   id: string;
+  academicYear?: string;
   classId: string;
   mediumId: string;
   subjectId: string;
@@ -470,6 +499,8 @@ export interface PlanningFileRecord {
   // Raw Excel structure (exact headers + rows as uploaded)
   rawHeaders?: string[];
   rawDataRows?: string[][];
+  gridData?: ParsedTableCell[][];
+  htmlContent?: string;
 }
 
 export interface PlanningTableRow {
@@ -542,6 +573,15 @@ const MEDIUM_OPTIONS = [
   { id: "semi", labelMr: "सेमी-इंग्रजी माध्यम", labelEn: "Semi-English Medium", color: "from-teal-500 to-emerald-600" },
 ];
 
+export interface UserSchoolProfile {
+  schoolName: string;
+  kendraName: string;
+  talukaName: string;
+  udiseNumber: string;
+  teacherName: string;
+  headMasterName: string;
+}
+
 export function AcademicPlanningSystem({
   mode = "teacher",
   initialClass,
@@ -551,9 +591,97 @@ export function AcademicPlanningSystem({
   const [step, setStep] = useState<"medium" | "class" | "type" | "subject">("medium");
   const [selectedPlanningType, setSelectedPlanningType] = useState<"annual" | "monthly" | "question_bank">("annual");
 
+  const { user } = useAuth();
+
   const [selectedClass, setSelectedClass] = useState<string>(initialClass || "5th");
   const [selectedMedium, setSelectedMedium] = useState<string>("marathi");
   const [selectedSubject, setSelectedSubject] = useState<string>("");
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>("2026-27");
+
+  // One-time School & Teacher Profile State for Planning Section
+  const [schoolProfile, setSchoolProfile] = useState<UserSchoolProfile>({
+    schoolName: "",
+    kendraName: "",
+    talukaName: "",
+    udiseNumber: "",
+    teacherName: "",
+    headMasterName: "",
+  });
+  const [showSchoolForm, setShowSchoolForm] = useState<boolean>(false);
+  const [isSavingSchoolProfile, setIsSavingSchoolProfile] = useState<boolean>(false);
+  const [schoolFormData, setSchoolFormData] = useState<UserSchoolProfile>({
+    schoolName: "",
+    kendraName: "",
+    talukaName: "",
+    udiseNumber: "",
+    teacherName: "",
+    headMasterName: "",
+  });
+
+  useEffect(() => {
+    const effectiveUserId = user?.uid || auth?.currentUser?.uid || "guest_teacher";
+    const storageKey = `user_planning_school_profile_${effectiveUserId}`;
+
+    const cached = localStorage.getItem(storageKey);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        setSchoolProfile(parsed);
+        setSchoolFormData(parsed);
+        if (!parsed.schoolName) setShowSchoolForm(true);
+      } catch (e) {}
+    } else {
+      setShowSchoolForm(true);
+    }
+
+    const fetchSchoolProfile = async () => {
+      if (db && effectiveUserId && effectiveUserId !== "guest_teacher") {
+        try {
+          const docRef = doc(db, "user_planning_school_profiles", effectiveUserId);
+          const snap = await getDoc(docRef);
+          if (snap.exists()) {
+            const data = snap.data() as UserSchoolProfile;
+            setSchoolProfile(data);
+            setSchoolFormData(data);
+            localStorage.setItem(storageKey, JSON.stringify(data));
+            if (!data.schoolName) setShowSchoolForm(true);
+          }
+        } catch (err) {
+          console.warn("Planning school profile fetch notice:", err);
+        }
+      }
+    };
+
+    fetchSchoolProfile();
+  }, [user?.uid]);
+
+  const handleSaveSchoolProfile = async () => {
+    try {
+      setIsSavingSchoolProfile(true);
+      const effectiveUserId = user?.uid || auth?.currentUser?.uid || "guest_teacher";
+      const storageKey = `user_planning_school_profile_${effectiveUserId}`;
+
+      localStorage.setItem(storageKey, JSON.stringify(schoolFormData));
+
+      if (db && effectiveUserId && effectiveUserId !== "guest_teacher") {
+        try {
+          const docRef = doc(db, "user_planning_school_profiles", effectiveUserId);
+          await setDoc(docRef, { ...schoolFormData, updatedAt: new Date().toISOString() }, { merge: true });
+        } catch (e) {
+          console.warn("Firestore save planning school profile notice:", e);
+        }
+      }
+
+      setSchoolProfile(schoolFormData);
+      setShowSchoolForm(false);
+      toast.success("🎉 शाळा व शिक्षक माहिती यशस्वीरित्या जतन झाली!");
+    } catch (err) {
+      console.error("Save school profile error:", err);
+      toast.error("माहिती जतन करताना त्रुटी आली.");
+    } finally {
+      setIsSavingSchoolProfile(false);
+    }
+  };
 
   // Real-time planning files map: key -> PlanningFileRecord
   const [planningFiles, setPlanningFiles] = useState<Record<string, PlanningFileRecord>>({});
@@ -1042,28 +1170,24 @@ export function AcademicPlanningSystem({
       (snapshot) => {
         const filesMap: Record<string, PlanningFileRecord> = {};
         snapshot.docs.forEach((docSnap) => {
-          filesMap[docSnap.id] = docSnap.data() as PlanningFileRecord;
-        });
+          const data = docSnap.data() as PlanningFileRecord;
+          filesMap[docSnap.id] = data;
 
-        // Also check localStorage fallback cache (Only fill missing keys, do NOT overwrite Firestore)
-        try {
-          const cached = localStorage.getItem("cce_academic_plannings_cache");
-          if (cached) {
-            const parsed = JSON.parse(cached);
-            Object.keys(parsed).forEach((k) => {
-              if (!filesMap[k]) {
-                filesMap[k] = parsed[k];
-              }
-            });
+          // If current modal file was replaced in Firestore, update active modal view
+          if (viewModalFile && viewModalFile.id === docSnap.id && data.uploadedAt !== viewModalFile.uploadedAt) {
+            setViewModalFile(data);
           }
-        } catch (e) { }
+        });
 
         setPlanningFiles(filesMap);
         setLoadingFiles(false);
+
+        try {
+          localStorage.setItem("cce_academic_plannings_cache", JSON.stringify(filesMap));
+        } catch (e) { }
       },
       (err) => {
         console.warn("Planning files realtime listener notice:", err);
-        // Fallback to localStorage
         try {
           const cached = localStorage.getItem("cce_academic_plannings_cache");
           if (cached) {
@@ -1075,7 +1199,7 @@ export function AcademicPlanningSystem({
     );
 
     return () => unsub();
-  }, []);
+  }, [viewModalFile]);
 
   const customKey = `${selectedClass}_${selectedMedium}`;
 
@@ -1160,13 +1284,57 @@ export function AcademicPlanningSystem({
     }
   };
 
-  // Helper to construct record ID
+  // Helper to construct normalized deterministic record key:
+  // academicYear_mediumId_classId_planningType_subjectId
   const getFileRecordKey = (
     pType: "annual" | "monthly" | "question_bank" = selectedPlanningType,
-    subjName?: string
+    subjName?: string,
+    clsId?: string,
+    medId?: string,
+    yearStr?: string
   ) => {
-    const s = subjName || selectedSubject;
-    return `${selectedClass}_${selectedMedium}_${s}_${pType}`;
+    const year = (yearStr || selectedAcademicYear || "2026-27").trim();
+    const med = (medId || selectedMedium || "marathi").trim().toLowerCase();
+    const cls = (clsId || selectedClass || "1st").trim().toLowerCase();
+    const type = (pType || selectedPlanningType || "annual").trim().toLowerCase();
+    const rawSubj = subjName !== undefined ? subjName : (selectedSubject || "all");
+    const subj = (rawSubj || "all").trim().toLowerCase();
+
+    return `${year}_${med}_${cls}_${type}_${subj}`;
+  };
+
+  // Reusable helper to lookup planning file record from state with logging
+  const getPlanningFile = (
+    pType: "annual" | "monthly" | "question_bank" = selectedPlanningType,
+    subjName?: string,
+    clsId?: string,
+    medId?: string,
+    yearStr?: string
+  ): PlanningFileRecord | undefined => {
+    const fileKey = getFileRecordKey(pType, subjName, clsId, medId, yearStr);
+    let fileRecord = planningFiles[fileKey];
+
+    // Fallback check for legacy record keys (e.g. classId_mediumId_subjectId_planningType)
+    if (!fileRecord) {
+      const cls = (clsId || selectedClass || "1st").trim().toLowerCase();
+      const med = (medId || selectedMedium || "marathi").trim().toLowerCase();
+      const rawSubj = subjName !== undefined ? subjName : (selectedSubject || "all");
+      const subj = (rawSubj || "all").trim().toLowerCase();
+      const type = (pType || selectedPlanningType || "annual").trim().toLowerCase();
+
+      const legacyKey1 = `${cls}_${med}_${subj}_${type}`;
+      const legacyKey2 = `${cls}_${med}_${subj}`;
+      fileRecord = planningFiles[legacyKey1] || planningFiles[legacyKey2];
+    }
+
+    console.log("Selected Class:", clsId || selectedClass);
+    console.log("Selected Medium:", medId || selectedMedium);
+    console.log("Selected Planning Type:", pType || selectedPlanningType);
+    console.log("Selected Subject:", subjName !== undefined ? subjName : selectedSubject);
+    console.log("Generated File Key:", fileKey);
+    console.log("Fetched Planning File:", fileRecord);
+
+    return fileRecord;
   };
 
   // Handle File Select with Validations (Max 20MB, Allowed Formats: PDF, DOC, DOCX)
@@ -1204,7 +1372,7 @@ export function AcademicPlanningSystem({
     toast.success(`फाईल निवडली: ${file.name}`);
   };
 
-  // Submit / Save File Upload (PDF Compression + High-Speed Direct Upload)
+  // Submit / Save File Upload (PDF Compression + Reliable Multi-Provider Cloud Upload)
   const handleSaveFileUpload = async () => {
     if (!selectedFile) {
       toast.error("कृपया अपलोड करण्यासाठी फाईल निवडा.");
@@ -1212,13 +1380,18 @@ export function AcademicPlanningSystem({
     }
 
     setUploading(true);
-    setUploadProgress(15);
+    setUploadProgress(10);
     setCompressing(true);
 
     try {
-      const recordKey = getFileRecordKey(uploadingType);
+      const normYear = (selectedAcademicYear || "2026-27").trim();
+      const normMed = (selectedMedium || "marathi").trim().toLowerCase();
+      const normCls = (selectedClass || "1st").trim().toLowerCase();
+      const normType = (uploadingType || selectedPlanningType || "annual").trim().toLowerCase();
+      const normSubj = (selectedSubject || "all").trim().toLowerCase();
+
+      const recordKey = getFileRecordKey(uploadingType, selectedSubject || "all");
       const ext = selectedFile.name.split(".").pop()?.toLowerCase() || "pdf";
-      const cleanStoragePath = `academic_plannings/${recordKey}_${Date.now()}.${ext}`;
 
       const originalSizeMb = (selectedFile.size / (1024 * 1024)).toFixed(2);
 
@@ -1230,144 +1403,132 @@ export function AcademicPlanningSystem({
         toast.info("⚡ फाईल जोडली जात आहे...");
       }
       setCompressing(false);
-      setUploadProgress(45);
+      setUploadProgress(30);
 
       const compressedSizeMb = (finalFileBlob.size / (1024 * 1024)).toFixed(2);
 
-      // 1. Save binary Blob persistently to IndexedDB for 100% cross-refresh availability
+      // 1. Store binary Blob in local IndexedDB for instant zero-latency view
       await saveFileToIndexedDB(recordKey, finalFileBlob);
 
-      // Create instant local Blob URL (0ms)
-      const blobUrl = URL.createObjectURL(finalFileBlob);
-      let fileUrl = blobUrl;
+      // 2. Upload file directly via uploadFileWithProgress (tries Bunny Storage CDN, then Firebase Storage)
+      toast.info("⚡ सर्व्हरवर फाईल अपलोड होत आहे...");
+      const fileToUpload =
+        finalFileBlob instanceof File
+          ? finalFileBlob
+          : new File([finalFileBlob], selectedFile.name, {
+              type: finalFileBlob.type || selectedFile.type || "application/octet-stream",
+            });
 
-      // 2. Direct upload to Firebase Storage with 2.5s fallback timeout
-      if (storage) {
-        try {
-          const storageRef = ref(storage, cleanStoragePath);
-          setUploadProgress(75);
-
-          const storageUploadPromise = (async () => {
-            const uploadSnapshot = await uploadBytes(storageRef, finalFileBlob);
-            return await getDownloadURL(uploadSnapshot.ref);
-          })();
-
-          const timeoutPromise = new Promise<string>((_, reject) =>
-            setTimeout(() => reject(new Error("Firebase storage response timeout")), 2500)
-          );
-
-          fileUrl = await Promise.race([storageUploadPromise, timeoutPromise]);
-          setUploadProgress(95);
-        } catch (fbErr) {
-          console.warn("Firebase Storage timeout/notice, using persistent IndexedDB blob:", fbErr);
-          fileUrl = blobUrl;
-        }
+      let uploadedFileUrl = "";
+      try {
+        const uploadResult = await uploadFileWithProgress(fileToUpload, {
+          folderPath: `planning/${normYear}/${normMed}/${normCls}/${normType}`,
+          onProgress: (pct) => {
+            const currentPct = 30 + Math.round((pct / 100) * 55);
+            setUploadProgress(Math.min(currentPct, 88));
+          },
+        });
+        uploadedFileUrl = uploadResult.url;
+      } catch (uploadErr) {
+        console.warn("Cloud upload notice (using blob URL fallback):", uploadErr);
+        uploadedFileUrl = URL.createObjectURL(finalFileBlob);
       }
 
-      setUploadProgress(95);
+      setUploadProgress(90);
 
-      // 2. Extract structured table rows from uploaded file (PDF or Excel)
-      toast.info("🔍 फाईलमधून तक्ता व माहिती ऑटो-एक्सट्रॅक्ट होत आहे...");
+      // 3. Extract structured table rows from uploaded file (PDF or Excel)
+      toast.info("🔍 फाईलमधून तक्ता व माहिती एक्सट्रॅक्ट होत आहे...");
       let extractedRows: PlanningTableRow[] = [];
       let excelRawHeaders: string[] = [];
       let excelRawDataRows: string[][] = [];
       try {
         if (ext === "xls" || ext === "xlsx" || ext === "csv") {
-          const excelResult = await extractExcelData(selectedFile);
-          extractedRows = excelResult.mappedRows;
-          excelRawHeaders = excelResult.rawHeaders;
-          excelRawDataRows = excelResult.rawDataRows;
+          const excelResult = await parseExcelFile(fileToUpload);
+          if (excelResult.gridData && excelResult.gridData.length > 0) {
+            excelRawHeaders = excelResult.rawHeaders;
+            excelRawDataRows = excelResult.gridData.map((row) =>
+              row.map((cell) => cell.value || "")
+            );
+            extractedRows = excelResult.mappedRows;
+          } else {
+            const fallbackResult = await extractExcelData(fileToUpload);
+            extractedRows = fallbackResult.mappedRows;
+            excelRawHeaders = fallbackResult.rawHeaders;
+            excelRawDataRows = fallbackResult.rawDataRows;
+          }
         } else {
-          extractedRows = await extractTableRowsFromPdf(selectedFile);
+          extractedRows = await extractTableRowsFromPdf(fileToUpload);
         }
       } catch (exErr) {
         console.warn("File extraction notice:", exErr);
       }
 
-      let rowsToSave =
+      const rowsToSave =
         extractedRows.length > 0
           ? extractedRows
           : uploadingType === "annual"
             ? DEFAULT_ALL_SUBJECTS_ANNUAL_ROWS
             : DEFAULT_ANNUAL_ROWS;
 
-      // Tag each tableRow with correct subject using smart subject detection from rawDataRows
-      if (excelRawDataRows.length > 0 && rowsToSave.length > 0) {
-        try {
-          const subjectSectionMap = splitRowsIntoSubjectSections(excelRawDataRows, selectedSubject || "मराठी");
-          const subjectKeys = Object.keys(subjectSectionMap);
-          if (subjectKeys.length > 0) {
-            // Build a flat list of rows with subject tagged
-            const taggedRows: PlanningTableRow[] = [];
-            subjectKeys.forEach((subjKey) => {
-              const sec = subjectSectionMap[subjKey];
-              sec.rows.forEach((r, ri) => {
-                taggedRows.push({
-                  id: `upload_${Date.now()}_${subjKey}_${ri}`,
-                  month: r[0] || "",
-                  weeks: r[1] || "",
-                  workingDays: r[2] || "",
-                  periods: r[3] || "",
-                  topics: r[4] || "",
-                  outcomes: r[5] || "",
-                  subject: sec.subjectName,
-                });
-              });
-            });
-            if (taggedRows.length > 0) {
-              rowsToSave = taggedRows;
-            }
-          }
-        } catch (tagErr) {
-          console.warn("Subject tagging notice:", tagErr);
-        }
+      const fileSizeDisplay = `${compressedSizeMb} MB`;
+
+      // 4. Ensure payload is compact so setDoc never exceeds Firestore 1MB document limit
+      const safeRawDataRows =
+        excelRawDataRows.length > 0 && excelRawDataRows.length <= 50 ? excelRawDataRows : [];
+      const safeTableRows = rowsToSave.length <= 50 ? rowsToSave : [];
+
+      const newRecord: PlanningFileRecord = {
+        id: recordKey,
+        academicYear: normYear,
+        classId: selectedClass,
+        mediumId: selectedMedium,
+        subjectId: selectedSubject || "all",
+        planningType: uploadingType,
+        fileName: selectedFile.name,
+        fileUrl: uploadedFileUrl,
+        fileSize: fileSizeDisplay,
+        fileType:
+          selectedFile.type ||
+          (ext === "pdf"
+            ? "application/pdf"
+            : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+        uploadedBy: mode,
+        uploadedAt: new Date().toISOString(),
+        ...(safeTableRows.length > 0 && { tableRows: safeTableRows }),
+        ...(excelRawHeaders.length > 0 && { rawHeaders: excelRawHeaders }),
+        ...(safeRawDataRows.length > 0 && { rawDataRows: safeRawDataRows }),
+      };
+
+      // 5. Save metadata to Firestore with fallback for payload size safety
+      try {
+        await setDoc(doc(db, "academic_plannings", recordKey), newRecord, { merge: true });
+      } catch (fsErr) {
+        console.warn("Firestore save fallback notice:", fsErr);
+        const slimRecord = { ...newRecord };
+        delete (slimRecord as any).rawDataRows;
+        delete (slimRecord as any).tableRows;
+        await setDoc(doc(db, "academic_plannings", recordKey), slimRecord, { merge: true }).catch(
+          () => {}
+        );
       }
 
       setUploadProgress(100);
 
-      const fileSizeDisplay = `${compressedSizeMb} MB`;
-
-      const newRecord: PlanningFileRecord = {
-        id: recordKey,
-        classId: selectedClass,
-        mediumId: selectedMedium,
-        subjectId: selectedSubject,
-        planningType: uploadingType,
-        fileName: selectedFile.name,
-        fileUrl: fileUrl,
-        fileSize: fileSizeDisplay,
-        fileType: selectedFile.type || "application/pdf",
-        uploadedBy: mode,
-        uploadedAt: new Date().toISOString(),
-        tableRows: rowsToSave,
-        ...(excelRawHeaders.length > 0 && { rawHeaders: excelRawHeaders }),
-        ...(excelRawDataRows.length > 0 && { rawDataRows: excelRawDataRows }),
-      };
-
-      // 3. Save metadata to Firestore (~250 bytes document -> ~50ms save!)
-      try {
-        await setDoc(doc(db, "academic_plannings", recordKey), newRecord, { merge: true });
-      } catch (fsErr) {
-        console.warn("Firestore setDoc notice:", fsErr);
-      }
-
-      // 4. Update Local State and Cache
+      // 6. Update local state and cache
       setPlanningFiles((prev) => {
         const updated = { ...prev, [recordKey]: newRecord };
         try {
           localStorage.setItem("cce_academic_plannings_cache", JSON.stringify(updated));
-        } catch (e) { }
+        } catch (e) {}
         return updated;
       });
 
       if (extractedRows.length > 0) {
         toast.success(
-          `🎉 Excel/फाईलमधून ${extractedRows.length} तक्ता नोंदी (Rows) यशस्वीरित्या एक्सट्रॅक्ट करून सेव्ह झाल्या!`
+          `🎉 फाईलमधून ${extractedRows.length} तक्ता नोंदी एक्सट्रॅक्ट करून सेव्ह झाल्या!`
         );
       } else {
-        toast.success(
-          `🎉 फाईल यशस्वीरित्या जतन झाली! (${originalSizeMb}MB -> ${compressedSizeMb}MB कॉम्प्रेस झाली)`
-        );
+        toast.success(`🎉 फाईल यशस्वीरित्या जतन झाली! (${compressedSizeMb}MB)`);
       }
 
       setUploading(false);
@@ -1386,10 +1547,31 @@ export function AcademicPlanningSystem({
   // Helper to trigger VIEW preview (checks IndexedDB for persistent blob across page refreshes)
   const handleViewFile = async (rec: PlanningFileRecord) => {
     if (!rec) return;
-    let targetUrl = rec.fileUrl;
 
-    const blobFromDb = await getFileFromIndexedDB(rec.id);
-    if (blobFromDb) {
+    // Check latest Firestore realtime doc to ensure user sees file replaced by Admin
+    const latestRec = planningFiles[rec.id] || rec;
+    let targetUrl = latestRec.fileUrl;
+
+    // Check if Admin uploaded a newer version (uploadedAt changed)
+    const cachedMeta = localStorage.getItem(`cce_meta_${latestRec.id}`);
+    const isNewerAdminVersion = cachedMeta && cachedMeta !== latestRec.uploadedAt;
+
+    if (isNewerAdminVersion) {
+      try {
+        const dbReq = indexedDB.open("cce_file_store", 1);
+        dbReq.onsuccess = () => {
+          const idb = dbReq.result;
+          if (idb.objectStoreNames.contains("files")) {
+            const tx = idb.transaction("files", "readwrite");
+            tx.objectStore("files").delete(latestRec.id);
+          }
+        };
+      } catch (e) { }
+    }
+    localStorage.setItem(`cce_meta_${latestRec.id}`, latestRec.uploadedAt || "");
+
+    const blobFromDb = await getFileFromIndexedDB(latestRec.id);
+    if (blobFromDb && !isNewerAdminVersion) {
       targetUrl = URL.createObjectURL(blobFromDb);
     }
 
@@ -1401,36 +1583,38 @@ export function AcademicPlanningSystem({
     // ── Auto-parse Excel structure if rawHeaders are missing ─────────────────
     // This handles records uploaded before the raw Excel parsing logic was added.
     // We fetch the blob from IndexedDB, re-parse it, and enrich the record.
-    let enrichedRec = { ...rec, fileUrl: targetUrl };
-    const isExcel =
+    const isExcel = Boolean(
       rec.fileName?.match(/\.(xlsx?|csv)$/i) ||
+      rec.fileUrl?.match(/\.(xlsx?|csv)$/i) ||
       rec.fileType?.includes("spreadsheet") ||
       rec.fileType?.includes("excel") ||
-      rec.fileType?.includes("csv");
+      rec.fileType?.includes("sheet") ||
+      rec.fileType?.includes("csv") ||
+      (rec.gridData && rec.gridData.length > 0) ||
+      (rec.rawHeaders && rec.rawHeaders.length > 0)
+    );
 
-    if (
-      isExcel &&
-      (!rec.rawHeaders || rec.rawHeaders.length <= 1) &&
-      blobFromDb
-    ) {
+    let enrichedRec = {
+      ...rec,
+      fileUrl: targetUrl,
+      ...(isExcel && { fileType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
+    };
+
+    if (isExcel && blobFromDb) {
       try {
-        toast.info("📊 Excel संरचना वाचत आहे...", { duration: 2000 });
-        // Convert Blob to File for extractExcelData
+        toast.info("📊 Excel ची संपूर्ण माहिती (All Rows) लोड होत आहे...", { duration: 2000 });
         const excelFile = new File([blobFromDb], rec.fileName || "file.xlsx", {
           type: blobFromDb.type || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         });
-        const { rawHeaders, rawDataRows, mappedRows } = await extractExcelData(excelFile);
-        if (rawHeaders.length > 0) {
-          enrichedRec = { ...enrichedRec, rawHeaders, rawDataRows };
-          // Save enriched data back to Firestore in background (don't await — non-blocking)
-          const updatedRecord: PlanningFileRecord = {
-            ...rec,
-            rawHeaders,
-            rawDataRows,
-            ...(mappedRows.length > 0 && (!rec.tableRows || rec.tableRows.length === 0) && { tableRows: mappedRows }),
+        const excelResult = await parseExcelFile(excelFile);
+        if (excelResult.htmlContent) {
+          enrichedRec = {
+            ...enrichedRec,
+            htmlContent: excelResult.htmlContent,
+            gridData: excelResult.gridData,
+            rawHeaders: excelResult.rawHeaders,
+            rawDataRows: excelResult.gridData.map((row) => row.map((cell) => cell.value || "")),
           };
-          setDoc(doc(db, "academic_plannings", rec.id), updatedRecord, { merge: true }).catch(() => { });
-          setPlanningFiles((prev) => ({ ...prev, [rec.id]: updatedRecord }));
         }
       } catch (parseErr) {
         console.warn("Excel re-parse notice:", parseErr);
@@ -1548,50 +1732,64 @@ export function AcademicPlanningSystem({
           </div>
         </div>
 
-        {/* Current Selections Summary Badge */}
-        {selectedMedium && (
-          <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/15 text-xs font-bold">
-            <div>
-              <span className="text-slate-400 block text-[9px] uppercase">माध्यम:</span>
-              <span className="text-teal-300">
-                {selectedMedium === "semi" ? "सेमी-इंग्रजी" : "मराठी"}
-              </span>
+        {/* Current Selections Summary Badge & School Info Edit Button */}
+        <div className="flex items-center gap-3 flex-wrap justify-end">
+          <button
+            type="button"
+            onClick={() => {
+              setSchoolFormData(schoolProfile);
+              setShowSchoolForm(true);
+            }}
+            className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white px-3.5 py-2 rounded-2xl text-xs font-black shadow-md cursor-pointer transition-all active:scale-95 border border-amber-300/30 shrink-0"
+          >
+            <School className="size-4 text-amber-100" />
+            <span>🏫 शाळा माहिती {schoolProfile.schoolName ? "संपादन" : "भरा (Setup)"}</span>
+          </button>
+
+          {selectedMedium && (
+            <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/15 text-xs font-bold">
+              <div>
+                <span className="text-slate-400 block text-[9px] uppercase">माध्यम:</span>
+                <span className="text-teal-300">
+                  {selectedMedium === "semi" ? "सेमी-इंग्रजी" : "मराठी"}
+                </span>
+              </div>
+              {selectedClass && (
+                <>
+                  <div className="h-6 w-px bg-white/20" />
+                  <div>
+                    <span className="text-slate-400 block text-[9px] uppercase">इयत्ता:</span>
+                    <span className="text-amber-300">{selectedClass}</span>
+                  </div>
+                </>
+              )}
+              {step === "subject" && (
+                <>
+                  <div className="h-6 w-px bg-white/20" />
+                  <div>
+                    <span className="text-slate-400 block text-[9px] uppercase">प्रकार:</span>
+                    <span className="text-emerald-300">
+                      {selectedPlanningType === "annual"
+                        ? "वार्षिक नियोजन"
+                        : selectedPlanningType === "monthly"
+                          ? "मासिक नियोजन"
+                          : "प्रश्नपेढी"}
+                    </span>
+                  </div>
+                </>
+              )}
+              {selectedSubject && (
+                <>
+                  <div className="h-6 w-px bg-white/20" />
+                  <div>
+                    <span className="text-slate-400 block text-[9px] uppercase">विषय:</span>
+                    <span className="text-purple-300">{selectedSubject}</span>
+                  </div>
+                </>
+              )}
             </div>
-            {selectedClass && (
-              <>
-                <div className="h-6 w-px bg-white/20" />
-                <div>
-                  <span className="text-slate-400 block text-[9px] uppercase">इयत्ता:</span>
-                  <span className="text-amber-300">{selectedClass}</span>
-                </div>
-              </>
-            )}
-            {step === "subject" && (
-              <>
-                <div className="h-6 w-px bg-white/20" />
-                <div>
-                  <span className="text-slate-400 block text-[9px] uppercase">प्रकार:</span>
-                  <span className="text-emerald-300">
-                    {selectedPlanningType === "annual"
-                      ? "वार्षिक नियोजन"
-                      : selectedPlanningType === "monthly"
-                        ? "मासिक नियोजन"
-                        : "प्रश्नपेढी"}
-                  </span>
-                </div>
-              </>
-            )}
-            {selectedSubject && (
-              <>
-                <div className="h-6 w-px bg-white/20" />
-                <div>
-                  <span className="text-slate-400 block text-[9px] uppercase">विषय:</span>
-                  <span className="text-purple-300">{selectedSubject}</span>
-                </div>
-              </>
-            )}
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Progress Breadcrumbs Stepper */}
@@ -1647,6 +1845,8 @@ export function AcademicPlanningSystem({
           })}
         </div>
       </div>
+
+
 
       {/* Main Content Area */}
       <div className="w-full max-w-full mx-auto">
@@ -1794,10 +1994,9 @@ export function AcademicPlanningSystem({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-full mx-auto">
-                {/* 1. Annual Planning Card (सर्व विषयांचे एकत्र संपूर्ण नियोजन - Direct Action) */}
+                {/* 1. Annual Planning Card (इयत्तानिहाय संपूर्ण वार्षिक नियोजन - Direct Class Action) */}
                 {(() => {
-                  const annualRecKey = getFileRecordKey("annual", "all");
-                  const annualFile = planningFiles[annualRecKey];
+                  const annualFile = getPlanningFile("annual", "all");
                   return (
                     <div className="bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 text-white rounded-[2.5rem] p-7 border border-indigo-500/30 shadow-xl flex flex-col justify-between gap-6 relative overflow-hidden group hover:shadow-2xl transition-all">
                       <div className="space-y-4">
@@ -1811,7 +2010,7 @@ export function AcademicPlanningSystem({
                             </span>
                           ) : (
                             <span className="px-3 py-1 rounded-full bg-amber-400 text-slate-950 text-[10px] font-black uppercase tracking-wider">
-                              मास्टर नियोजन
+                              इयत्ता {selectedClass}
                             </span>
                           )}
                         </div>
@@ -1819,12 +2018,12 @@ export function AcademicPlanningSystem({
                         <div>
                           <h3 className="text-2xl font-black">Annual Planning</h3>
                           <p className="text-xs font-semibold text-indigo-100/90 mt-1">
-                            (वार्षिक नियोजन - एकत्र सर्व विषय)
+                            (वार्षिक नियोजन - इयत्ता {selectedClass})
                           </p>
-                          <p className="text-xs text-slate-200 mt-3 leading-relaxed">
+                          <p className="text-xs text-slate-200 mt-3 leading-relaxed font-medium">
                             {annualFile
                               ? `फाईल: ${annualFile.fileName} (${annualFile.fileSize})`
-                              : "इयत्ता १ ली ते ८ वी मधील सर्व विषयांचे एकच संपूर्ण वार्षिक नियोजन पत्रक"}
+                              : `या इयत्तेसाठी (इयत्ता ${selectedClass}) वार्षिक नियोजन PDF उपलब्ध नाही.`}
                           </p>
                         </div>
                       </div>
@@ -1835,7 +2034,7 @@ export function AcademicPlanningSystem({
                             onClick={(e) => {
                               e.stopPropagation();
                               if (annualFile) handleViewFile(annualFile);
-                              else toast.error("अद्याप संपूर्ण वार्षिक नियोजनाची फाईल अपलोड केलेली नाही.");
+                              else toast.error(`या इयत्तेसाठी (${selectedClass}) अद्याप वार्षिक नियोजनाची फाईल उपलब्ध नाही.`);
                             }}
                             className="py-3 px-4 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer backdrop-blur-xs shadow-sm"
                           >
@@ -1845,7 +2044,7 @@ export function AcademicPlanningSystem({
                             onClick={(e) => {
                               e.stopPropagation();
                               if (annualFile) handleDownloadFile(annualFile);
-                              else toast.error("अद्याप संपूर्ण वार्षिक नियोजनाची फाईल उपलब्ध नाही.");
+                              else toast.error(`या इयत्तेसाठी (${selectedClass}) अद्याप वार्षिक नियोजनाची फाईल उपलब्ध नाही.`);
                             }}
                             className="py-3 px-4 rounded-xl bg-white text-indigo-950 hover:bg-indigo-50 text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
                           >
@@ -1860,9 +2059,7 @@ export function AcademicPlanningSystem({
                           <Edit3 className="size-4" /> <span>✏️ एडिट करा (Edit)</span>
                         </button>
 
-
-
-                        {/* Admin Upload / Replace Master File */}
+                        {/* Admin Upload / Replace Class File */}
                         {mode === "admin" && (
                           <button
                             onClick={() => {
@@ -1873,7 +2070,7 @@ export function AcademicPlanningSystem({
                             className="w-full py-2.5 px-3 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md mt-1"
                           >
                             <Upload className="size-4" />
-                            {annualFile ? "REPLACE MASTER FILE (बदला)" : "UPLOAD ANNUAL REPORT (अपलोड करा)"}
+                            {annualFile ? `REPLACE ${selectedClass} ANNUAL PDF (बदला)` : `UPLOAD ${selectedClass} ANNUAL PDF (अपलोड)`}
                           </button>
                         )}
                       </div>
@@ -1994,8 +2191,7 @@ export function AcademicPlanningSystem({
               {/* Grid of Subjects with File Actions */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-full mx-auto">
                 {availableSubjects.map((subjName, idx) => {
-                  const recKey = getFileRecordKey(selectedPlanningType, subjName);
-                  const fileRec = planningFiles[recKey];
+                  const fileRec = getPlanningFile(selectedPlanningType, subjName);
                   const isCustom = (customSubjectsMap[customKey] || []).includes(subjName);
 
                   return (
@@ -2062,7 +2258,11 @@ export function AcademicPlanningSystem({
                         </div>
 
                         <button
-                          onClick={(e) => handleOpenTableEditor(e, fileRec)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (fileRec) handleViewFile(fileRec);
+                            else toast.error(`अद्याप ${subjName} ची फाईल उपलब्ध नाही.`);
+                          }}
                           className="w-full py-2.5 px-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm mt-1"
                         >
                           <Edit3 className="size-4" /> <span>✏️ एडिट करा (Edit)</span>
@@ -2277,30 +2477,28 @@ export function AcademicPlanningSystem({
                 </div>
                 <div className="min-w-0">
                   <h3 className="text-sm sm:text-base font-black tracking-tight">
-                    {selectedPlanningType === "annual" ? "वार्षिक नियोजन" : selectedPlanningType === "monthly" ? "मासिक नियोजन" : "प्रश्नपेढी"}
+                    {(() => {
+                      const recAny = viewModalFile as any;
+                      const pType = (recAny?.planningType || recAny?.category || selectedPlanningType || "").toLowerCase();
+                      const titleStr = (recAny?.title || recAny?.name || recAny?.fileName || "").toLowerCase();
+
+                      if (pType === "annual" || pType === "varshik" || titleStr.includes("वार्षिक") || titleStr.includes("annual")) {
+                        return "वार्षिक नियोजन";
+                      }
+                      if (pType === "monthly" || pType === "masik" || titleStr.includes("मासिक") || titleStr.includes("monthly")) {
+                        return "मासिक नियोजन";
+                      }
+                      if (pType === "question_bank" || pType === "prashnapedhi" || titleStr.includes("प्रश्नपेढी") || titleStr.includes("question")) {
+                        return "प्रश्नपेढी";
+                      }
+
+                      return selectedPlanningType === "annual" ? "वार्षिक नियोजन" : selectedPlanningType === "monthly" ? "मासिक नियोजन" : "प्रश्नपेढी";
+                    })()}
                   </h3>
                 </div>
               </div>
 
               <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap justify-end">
-                {/* EDIT TABLE DATA BUTTON */}
-                <button
-                  onClick={(e) => handleOpenTableEditor(e, viewModalFile)}
-                  title="माहिती एडिट करा (Edit Data)"
-                  className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
-                >
-                  <Edit3 className="size-4" />
-                  <span>✏️ एडिट करा (Edit)</span>
-                </button>
-
-                {/* DOWNLOAD */}
-                <button
-                  onClick={() => handleDownloadFile(viewModalFile)}
-                  className="px-3 sm:px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
-                >
-                  <Download className="size-4" /> <span className="hidden sm:inline">DOWNLOAD</span>
-                </button>
-
                 {/* CLOSE */}
                 <button
                   onClick={() => {
@@ -2316,180 +2514,9 @@ export function AcademicPlanningSystem({
 
             {/* Modal Preview Body */}
             <div className="flex-1 p-2 sm:p-4 overflow-hidden bg-slate-950/80 flex flex-col items-center justify-center relative">
-              {(viewModalFile.rawHeaders && viewModalFile.rawHeaders.length > 0) ||
-                (viewModalFile.tableRows && viewModalFile.tableRows.length > 0) ||
-                (viewModalFile.rawDataRows && viewModalFile.rawDataRows.length > 0) ? (
-                <div className="w-full h-full min-h-0 flex-1 relative rounded-2xl overflow-y-auto bg-white p-6 shadow-2xl flex flex-col gap-4">
-
-
-                  <div className="border border-slate-300 rounded-2xl p-6 bg-slate-50 flex-1 space-y-4">
-                    <div className="text-center border-b-2 border-slate-900 pb-3">
-                      <h2 className="text-lg font-black text-slate-950 uppercase">
-                        इयत्ता : {selectedClass} {selectedPlanningType === "annual" ? "संपूर्ण वार्षिक नियोजन" : selectedPlanningType === "monthly" ? "मासिक नियोजन" : "प्रश्नपेढी"} सन 2026-27
-                      </h2>
-                      <p className="text-xs font-bold text-slate-700 mt-1">
-                        विषय: {selectedSubject || "सर्व विषय"} | माध्यम: {selectedMedium === "semi" ? "सेमी-इंग्रजी" : "मराठी"}
-                      </p>
-                    </div>
-
-                    {/* If raw Excel headers exist & are valid (not PDF stream noise) → show exact Excel structure */}
-                    {viewModalFile.rawHeaders &&
-                      viewModalFile.rawHeaders.length > 0 &&
-                      !viewModalFile.rawHeaders.some((h) => isPdfNoiseLine(h)) &&
-                      viewModalFile.rawDataRows &&
-                      viewModalFile.rawDataRows.some((r) => !isPdfNoiseLine(r)) ? (
-                      <div className="overflow-x-auto">
-                        <table className="w-full border-collapse border border-slate-900 text-xs bg-white table-fixed">
-                          <thead>
-                            <tr className="bg-slate-200 text-slate-950 font-black text-xs border-b-2 border-slate-400">
-                              {viewModalFile.rawHeaders.filter((h) => !isPdfNoiseLine(h)).map((h, hi) => {
-                                const style = getRawColumnWidthStyle(h, hi, viewModalFile.rawHeaders!.length);
-                                return (
-                                  <th key={hi} className="border border-slate-300 bg-slate-200 text-slate-950 font-black p-2 text-center text-xs" style={style}>
-                                    {getCleanHeaderName(h)}
-                                  </th>
-                                );
-                              })}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {viewModalFile.rawDataRows.filter((r) => !isPdfNoiseLine(r)).map((row, ri) => {
-                              const numCols = viewModalFile.rawHeaders!.length;
-                              const rowType = detectRowType(row);
-
-                              if (rowType === "signature") {
-                                const leftTxt = row.find((c) => c && (c.includes("शिक्षक") || c.includes("वर्ग"))) || "विषय / वर्ग शिक्षक";
-                                const rightTxt = row.find((c) => c && c.includes("मुख्याध्यापक")) || "मुख्याध्यापक";
-                                const halfCols = Math.ceil(numCols / 2);
-                                const remCols = numCols - halfCols;
-                                return (
-                                  <tr key={ri} className="bg-slate-100 font-black border-t-2 border-b-2 border-slate-400">
-                                    <td colSpan={halfCols} className="border border-slate-300 p-3 text-left font-black text-xs text-slate-950">
-                                      {leftTxt}
-                                    </td>
-                                    <td colSpan={remCols} className="border border-slate-300 p-3 text-right font-black text-xs text-slate-950">
-                                      {rightTxt}
-                                    </td>
-                                  </tr>
-                                );
-                              }
-
-                              if (rowType === "title") {
-                                const titleTxt = row.find((c) => c && c.trim() !== "") || "अभ्यासक्रमाचे मासिक व घटक नियोजन";
-                                return (
-                                  <tr key={ri} className="bg-slate-200 font-black border-t-2 border-b-2 border-slate-400">
-                                    <td colSpan={numCols} className="border border-slate-300 p-2.5 text-center font-black text-xs text-slate-950 uppercase tracking-wide">
-                                      {titleTxt}
-                                    </td>
-                                  </tr>
-                                );
-                              }
-
-                              if (rowType === "meta") {
-                                const nonEmpties = row.filter((c) => c && c.trim() !== "");
-                                const leftTxt = nonEmpties[0] || "";
-                                const rightTxt = nonEmpties[1] || "";
-                                const halfCols = Math.ceil(numCols / 2);
-                                const remCols = numCols - halfCols;
-                                return (
-                                  <tr key={ri} className="bg-slate-50 font-bold border-b border-slate-300">
-                                    <td colSpan={halfCols} className="border border-slate-300 p-2 text-left font-bold text-xs text-slate-950">
-                                      {leftTxt}
-                                    </td>
-                                    <td colSpan={remCols} className="border border-slate-300 p-2 text-right font-bold text-xs text-slate-950">
-                                      {rightTxt}
-                                    </td>
-                                  </tr>
-                                );
-                              }
-
-                              if (rowType === "header_repeat") {
-                                return (
-                                  <tr key={ri} className="bg-slate-200 font-black border-b-2 border-slate-400">
-                                    {viewModalFile.rawHeaders!.map((h, ci) => {
-                                      const style = getRawColumnWidthStyle(h, ci, numCols);
-                                      return (
-                                        <th key={ci} className="border border-slate-300 p-2 text-center text-xs font-black text-slate-950 bg-slate-200" style={style}>
-                                          {getCleanHeaderName(h)}
-                                        </th>
-                                      );
-                                    })}
-                                  </tr>
-                                );
-                              }
-
-                              return (
-                                <tr key={ri} className="border-b border-slate-300 hover:bg-slate-50 transition-colors">
-                                  {viewModalFile.rawHeaders!.map((h, ci) => {
-                                    const style = getRawColumnWidthStyle(h, ci, numCols);
-                                    return (
-                                      <td
-                                        key={ci}
-                                        className="border border-slate-300 p-2 whitespace-pre-line break-words align-top text-slate-950 text-xs font-normal"
-                                        style={style}
-                                      >
-                                        {cleanCellContent(row[ci] ?? "")}
-                                      </td>
-                                    );
-                                  })}
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    ) : (
-                      <table className="w-full border-collapse border border-slate-900 text-xs bg-white table-fixed">
-                        <thead>
-                          <tr className="bg-slate-200 text-slate-950 font-black text-center text-xs border-b-2 border-slate-400">
-                            <th className="border border-slate-300 bg-slate-200 text-slate-950 font-black p-2 text-center w-[7%]">महिना</th>
-                            <th className="border border-slate-300 bg-slate-200 text-slate-950 font-black p-2 text-center w-[5%]">आठवडा</th>
-                            <th className="border border-slate-300 bg-slate-200 text-slate-950 font-black p-2 text-center w-[7%]">कामाचे दिवस</th>
-                            <th className="border border-slate-300 bg-slate-200 text-slate-950 font-black p-2 text-center w-[7%]">प्राप्त तासिका</th>
-                            <th className="border border-slate-300 bg-slate-200 text-slate-950 font-black p-2 text-left w-[47%]">विषय / घटक विवरण</th>
-                            <th className="border border-slate-300 bg-slate-200 text-slate-950 font-black p-2 text-left w-[27%]">अध्ययन निष्पत्ती</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {(viewModalFile.tableRows && viewModalFile.tableRows.length > 0 ? viewModalFile.tableRows : DEFAULT_ANNUAL_ROWS).map((r) => (
-                            <tr key={r.id} className="border-b border-slate-800">
-                              <td className="border border-slate-800 p-2 text-center font-bold w-[7%]">{r.month}</td>
-                              <td className="border border-slate-800 p-2 text-center w-[5%]">{r.weeks}</td>
-                              <td className="border border-slate-800 p-2 text-center w-[7%]">{r.workingDays}</td>
-                              <td className="border border-slate-800 p-2 text-center w-[7%]">{r.periods}</td>
-                              <td className="border border-slate-800 p-2 font-medium w-[47%]">{r.topics}</td>
-                              <td className="border border-slate-800 p-2 w-[27%]">{cleanCellContent(r.outcomes)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
-                </div>
-              ) : viewModalFile.fileUrl.startsWith("data:application/pdf") ||
-                viewModalFile.fileUrl.includes(".pdf") ||
-                viewModalFile.fileType?.includes("pdf") ||
-                viewModalFile.fileName?.toLowerCase().endsWith(".pdf") ? (
-                <div className="w-full h-full min-h-0 flex-1 relative rounded-xl overflow-hidden bg-white shadow-2xl">
-                  <iframe
-                    src={`${viewModalFile.fileUrl}#toolbar=1&navpanes=1&view=FitH`}
-                    className="w-full h-full border-0 bg-white"
-                    title="PDF Preview"
-                  />
-                </div>
-              ) : viewModalFile.fileUrl.startsWith("http") && !viewModalFile.fileUrl.startsWith("blob:") ? (
-                <div className="w-full h-full min-h-0 flex-1 relative rounded-xl overflow-hidden bg-white shadow-2xl">
-                  <iframe
-                    src={`https://docs.google.com/gview?url=${encodeURIComponent(viewModalFile.fileUrl)}&embedded=true`}
-                    className="w-full h-full border-0 bg-white"
-                    title="Document PDF Preview"
-                  />
-                </div>
-              ) : (
-                <div className="w-full h-full min-h-0 flex-1 relative rounded-2xl overflow-y-auto bg-white p-6 shadow-2xl flex flex-col items-center justify-center p-8">
-                  <p className="text-slate-400 font-bold text-sm">अद्याप कोणतीही माहिती उपलब्ध नाही.</p>
-                </div>
-              )}
+              <div className="w-full h-full min-h-0 flex-1 relative rounded-2xl overflow-y-auto bg-white shadow-2xl flex flex-col p-4">
+                <PlanningTableRenderer record={viewModalFile as any} fileUrl={viewModalFile.fileUrl} mode={mode} />
+              </div>
             </div>
           </motion.div>
         </div>
@@ -2979,8 +3006,14 @@ export function AcademicPlanningSystem({
             </div>
           </div>
 
-          {/* Printable table: use raw Excel structure when available */}
-          {rawEditorHeaders.length > 0 && !rawEditorHeaders.some((h) => isPdfNoiseLine(h)) && rawEditorRows.some((r) => !isPdfNoiseLine(r)) ? (
+          {/* Printable table: use raw Excel structure / htmlContent when available */}
+          {editingFileRecord?.htmlContent || viewModalFile?.htmlContent ? (
+            <div
+              dangerouslySetInnerHTML={{
+                __html: editingFileRecord?.htmlContent || viewModalFile?.htmlContent || "",
+              }}
+            />
+          ) : rawEditorHeaders.length > 0 && !rawEditorHeaders.some((h) => isPdfNoiseLine(h)) && rawEditorRows.some((r) => !isPdfNoiseLine(r)) ? (
             <table className="w-full border-collapse border border-slate-800 text-xs table-fixed">
               <thead>
                 <tr className="bg-slate-200 text-slate-950 font-black border-b-2 border-slate-900" style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
@@ -3122,6 +3155,130 @@ export function AcademicPlanningSystem({
           </div>
         </div>
       </div>
+
+      {/* 🏫 ONE-TIME SCHOOL & TEACHER INFORMATION FORM MODAL */}
+      {showSchoolForm && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl space-y-6 border border-slate-100 animate-in fade-in zoom-in duration-200 text-left">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="size-11 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
+                  <School className="size-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-950">शाळा व शिक्षक माहिती (School Details)</h3>
+                  <p className="text-xs font-semibold text-slate-500">
+                    ही माहिती १ वेळा नोंदवा, प्लॅनिंग डाक्यूमेंटच्या पहिल्या पानावर व PDF वर आपोआप दिसेल.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSchoolForm(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2 space-y-1.5">
+                <label className="block text-xs font-black text-slate-800">
+                  शाळेचे नाव (School Name): <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={schoolFormData.schoolName}
+                  onChange={(e) => setSchoolFormData({ ...schoolFormData, schoolName: e.target.value })}
+                  placeholder="उदा. जि. प. प्राथ. शाळा, नवी मुंबई"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-black text-slate-800">केंद्र (Kendra / Center):</label>
+                <input
+                  type="text"
+                  value={schoolFormData.kendraName}
+                  onChange={(e) => setSchoolFormData({ ...schoolFormData, kendraName: e.target.value })}
+                  placeholder="उदा. वाशी"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-black text-slate-800">तालुका (Taluka):</label>
+                <input
+                  type="text"
+                  value={schoolFormData.talukaName}
+                  onChange={(e) => setSchoolFormData({ ...schoolFormData, talukaName: e.target.value })}
+                  placeholder="उदा. ठाणे"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-black text-slate-800">UDISE नंबर (UDISE Number):</label>
+                <input
+                  type="text"
+                  value={schoolFormData.udiseNumber}
+                  onChange={(e) => setSchoolFormData({ ...schoolFormData, udiseNumber: e.target.value })}
+                  placeholder="उदा. 27240100101"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-black text-slate-800">वर्ग शिक्षकाचे नाव (Class Teacher):</label>
+                <input
+                  type="text"
+                  value={schoolFormData.teacherName}
+                  onChange={(e) => setSchoolFormData({ ...schoolFormData, teacherName: e.target.value })}
+                  placeholder="उदा. श्री. अमितेश शिंदे"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                />
+              </div>
+
+              <div className="sm:col-span-2 space-y-1.5">
+                <label className="block text-xs font-black text-slate-800">मुख्याध्यापकाचे नाव (Headmaster Name):</label>
+                <input
+                  type="text"
+                  value={schoolFormData.headMasterName}
+                  onChange={(e) => setSchoolFormData({ ...schoolFormData, headMasterName: e.target.value })}
+                  placeholder="उदा. श्रीमती कविता पाटील"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowSchoolForm(false)}
+                className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer"
+              >
+                रद्द करा (Cancel)
+              </button>
+              <button
+                type="button"
+                disabled={isSavingSchoolProfile}
+                onClick={handleSaveSchoolProfile}
+                className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black transition-all cursor-pointer shadow-md disabled:opacity-50 flex items-center gap-2"
+              >
+                {isSavingSchoolProfile ? (
+                  <>
+                    <RefreshCw className="size-4 animate-spin" /> जतन होत आहे...
+                  </>
+                ) : (
+                  <>
+                    <Save className="size-4" /> SUBMIT & SAVE (जतन करा)
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

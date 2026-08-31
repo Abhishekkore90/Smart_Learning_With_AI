@@ -33,10 +33,12 @@ interface DayRowData {
   isHoliday?: boolean;
   holidayReason?: string;
   rashtrageet: string;
+  rajyageet: string;
   pratigya: string;
   sanvidhan: string;
   prarthana: string;
   shlok: string;
+  panchang: string;
   suvichar: string;
   batmya: string;
   dinvishesh: string;
@@ -44,6 +46,7 @@ interface DayRowData {
   bodhkatha: string;
   samuhgeet: string;
   deshbhaktigeet: string;
+  samanyaGyan: string;
   maun: string;
   swakshari: string;
 }
@@ -74,19 +77,72 @@ const MARATHI_MONTHS = [
   "डिसेंबर",
 ];
 
-// Helper: extract the first line or a clean short version of a text
-function shortText(text: string | undefined, maxLen = 120): string {
+// Helper: clean text and fetch only as much content as fits cleanly in max 2 lines
+function shortText(text: string | undefined, maxLen = 40): string {
   if (!text) return "";
-  const firstLine = text.split("\n").map((s) => s.trim()).filter(Boolean)[0] || "";
-  if (firstLine.length <= maxLen) return firstLine;
-  return firstLine.substring(0, maxLen) + "...";
+  const cleaned = text.replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim();
+  if (cleaned.length <= maxLen) return cleaned;
+
+  // Trim to maxLen at word boundary
+  let sub = cleaned.substring(0, maxLen);
+  const lastSpace = sub.lastIndexOf(" ");
+  if (lastSpace > 12) {
+    sub = sub.substring(0, lastSpace);
+  }
+  // Trim trailing punctuation/colons/dashes
+  return sub.replace(/[:\-–,\s]+$/, "").trim();
 }
 
-// Helper: get prayer title from content
+// Helper: Extract ONLY the first single news item or single dinvishesh event
+function getSingleItem(dataRaw: any, maxLen = 65): string {
+  if (!dataRaw) return "";
+
+  let firstItem = "";
+  if (Array.isArray(dataRaw)) {
+    firstItem = dataRaw.find((item) => item && String(item).trim().length > 0) || "";
+  } else if (typeof dataRaw === "object") {
+    firstItem = Object.values(dataRaw).find((val) => val && String(val).trim().length > 0) as string || "";
+  } else {
+    firstItem = String(dataRaw);
+  }
+
+  if (!firstItem) return "";
+
+  // 1. Split by newlines first if there are multiple lines
+  const lines = firstItem.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+  let single = lines[0] || firstItem;
+
+  // 2. If it contains multiple events (e.g., "1873 : ... 1875 : ..." or "१९०१ : ... १९०५ : ...")
+  const eventMatch = single.split(/(?=\s(?:18|19|20|१८|१९|२०)\d{2}\s*[:\-–])/);
+  if (eventMatch.length > 1) {
+    single = eventMatch[0].trim();
+  }
+
+  // 3. If it contains multiple news items separated by period + capital/Devanagari or bullet point
+  const newsMatch = single.split(/(?<=[.!?।])\s+(?=[A-Z0-9\u0900-\u097F])/);
+  if (newsMatch.length > 1 && newsMatch[0].length >= 15) {
+    single = newsMatch[0].trim();
+  }
+
+  // 4. Remove leading bullet points or numbers (e.g. "1.", "•", "- ")
+  single = single.replace(/^[\d\s•\-\.\*]+/, "").trim();
+
+  // 5. If still longer than maxLen, trim at word boundary
+  if (single.length <= maxLen) return single;
+
+  let sub = single.substring(0, maxLen);
+  const lastSpace = sub.lastIndexOf(" ");
+  if (lastSpace > 15) {
+    sub = sub.substring(0, lastSpace);
+  }
+  return sub.replace(/[:\-–,\s]+$/, "").trim();
+}
+
+// Helper: get prayer heading title from content
 function getPrayerShortName(prayerContent: string | undefined): string {
   if (!prayerContent) return "प्रार्थना";
   const content = prayerContent.trim();
-  // Detect common prayers by first few words
+  // Detect common prayers by first phrase
   if (content.includes("हीच अमुची प्रार्थना")) return "हीच अमुची प्रार्थना";
   if (content.includes("इतनी शक्ति हमें")) return "इतनी शक्ति हमें देना";
   if (content.includes("दया कर दान विद्या")) return "दया कर दान विद्या का";
@@ -98,9 +154,35 @@ function getPrayerShortName(prayerContent: string | undefined): string {
   if (content.includes("वक्रतुंड महाकाय")) return "वक्रतुंड महाकाय";
   if (content.includes("गणपती बाप्पा")) return "गणपती बाप्पा मोरया";
   if (content.includes("शुभं करोति")) return "शुभं करोति कल्याणम्";
-  // Fallback: first 30 chars
-  const firstLine = content.split("\n")[0].trim();
-  return firstLine.length > 30 ? firstLine.substring(0, 30) + "..." : firstLine;
+  if (content.includes("देवा तुझे किती सुंदर")) return "देवा तुझे किती सुंदर";
+  if (content.includes("नमस्कार माझा हा")) return "नमस्कार माझा हा ज्ञानमंदिरा";
+  if (content.includes("तू बुद्धि दे तू तेज दे")) return "तू बुद्धि दे तू तेज दे";
+  if (content.includes("हे राष्ट्र देवतांचे")) return "हे राष्ट्र देवतांचे";
+  if (content.includes("खरा तो एकची धर्म")) return "खरा तो एकची धर्म";
+  if (content.includes("या भारतात बंधुभाव")) return "या भारतात बंधुभाव";
+  if (content.includes("अजाण आम्ही तुझी लेकरे")) return "अजाण आम्ही तुझी लेकरे";
+
+  // Fallback: short first phrase up to comma, dash, or 20 characters
+  const firstPhrase = content.split("\n")[0].split(",")[0].split("-")[0].trim();
+  return firstPhrase.length > 22 ? firstPhrase.substring(0, 22) + "..." : firstPhrase;
+}
+
+// Helper: get pasayadan heading title from content
+function getPasayadanShortName(pasayadanContent: string | undefined): string {
+  if (!pasayadanContent) return "आता विश्वात्मकें देवें";
+  const content = pasayadanContent.trim();
+  if (!content) return "आता विश्वात्मकें देवें";
+
+  if (content.length <= 25 && !content.includes("\n")) {
+    return content;
+  }
+
+  if (content.includes("आता विश्वात्मकें") || content.includes("आता विश्वात्मके") || content.includes("पसायदान")) {
+    return "आता विश्वात्मकें देवें";
+  }
+
+  const firstPhrase = content.split("\n")[0].split(",")[0].split("-")[0].trim();
+  return firstPhrase.length > 25 ? firstPhrase.substring(0, 25) + "..." : (firstPhrase || "आता विश्वात्मकें देवें");
 }
 
 // Helper: detect language of content
@@ -114,6 +196,81 @@ function detectLanguage(content: string | undefined): string {
   if (content.includes("भारत माझा देश") || content.includes("माझ्या")) return "मराठी";
   // Default
   return "मराठी";
+}
+
+const DEFAULT_SINGLE_LINE_SHLOKS = [
+  "वक्रतुण्ड महाकाय सूर्यकोटिसमप्रभ ।",
+  "गुरुर ब्रह्मा गुरुर विष्णुः ।",
+  "न चोरहार्यं न च राजहार्यं ।",
+  "कराग्रे वसते लक्ष्मीः ।",
+  "शुभं करोति कल्याणम् ।",
+  "सर्वमंगल मांगल्ये शिवे ।",
+  "ॐ असतो मा सद्गमय ।",
+];
+
+function formatShlokOneLine(shlokRaw: string | undefined, dayNum: number): string {
+  if (!shlokRaw || !shlokRaw.trim()) {
+    return DEFAULT_SINGLE_LINE_SHLOKS[(dayNum - 1) % DEFAULT_SINGLE_LINE_SHLOKS.length];
+  }
+  let text = shlokRaw.trim();
+  const lines = text.split(/\r?\n/).map((l: string) => l.trim()).filter(Boolean);
+  if (lines.length > 0) {
+    text = lines[0];
+  }
+  if (text.includes("।")) {
+    const part = text.split("।")[0].trim();
+    if (part.length >= 8) {
+      return `${part} ।`;
+    }
+  }
+  if (text.length > 38) {
+    let sub = text.substring(0, 38);
+    const lastSpace = sub.lastIndexOf(" ");
+    if (lastSpace > 10) {
+      sub = sub.substring(0, lastSpace);
+    }
+    return sub.replace(/[:\-–,\s]+$/, "").trim();
+  }
+  return text;
+}
+
+const MARATHI_TITHIS = [
+  "प्रथमा", "द्वितीया", "तृतीया", "चतुर्थी", "पंचमी",
+  "षष्ठी", "सप्तमी", "अष्टमी", "नवमी", "दशमी",
+  "एकादशी", "द्वादशी", "त्रयोदशी", "चतुर्दशी", "पौर्णिमा",
+  "प्रथमा", "द्वितीया", "तृतीया", "चतुर्थी", "पंचमी",
+  "षष्ठी", "सप्तमी", "अष्टमी", "नवमी", "दशमी",
+  "एकादशी", "द्वादशी", "त्रयोदशी", "चतुर्दशी", "अमावास्या"
+];
+
+const MARATHI_HINDU_MONTHS = [
+  "पौष", "माघ", "फाल्गुन", "चैत्र", "वैशाख", "ज्येष्ठ",
+  "आषाढ", "श्रावण", "भाद्रपद", "कार्तिक", "मार्गशीर्ष", "पौष"
+];
+
+function formatPanchangTwoLines(data: any, dateObj: Date): string {
+  const dayName = data.day || MARATHI_DAYS[dateObj.getDay()];
+  const monthName = data.month || MARATHI_HINDU_MONTHS[dateObj.getMonth() % 12];
+  const pakshaName = data.paksha || (dateObj.getDate() <= 15 ? "कृष्ण पक्ष" : "शुक्ल पक्ष");
+  const tithiName = data.tithi || MARATHI_TITHIS[(dateObj.getDate() - 1) % 30];
+
+  if (data.panchang && typeof data.panchang === "string" && data.panchang.trim()) {
+    const str = data.panchang.trim();
+    if (str.includes("\n")) {
+      const lines = str.split(/\r?\n/).map((l: string) => l.trim()).filter(Boolean);
+      if (lines.length >= 2) return lines.slice(0, 2).join("\n");
+    }
+    if (str.includes(",")) {
+      const parts = str.split(",").map((p: string) => p.trim()).filter(Boolean);
+      if (parts.length >= 4) {
+        return `${parts[0]}, ${parts[1]},\n${parts[2]}, ${parts[3]}`;
+      } else if (parts.length >= 2) {
+        return `${parts[0]},\n${parts.slice(1).join(", ")}`;
+      }
+    }
+  }
+
+  return `वार : ${dayName}, मास : ${monthName},\nपक्ष : ${pakshaName}, तिथी : ${tithiName}`;
 }
 
 function getCurrentAcademicYearStr(): string {
@@ -281,6 +438,17 @@ export function MonthlyParipathRegister() {
     }
     setHolidaysMap(holidays);
 
+    // Fetch admin current paripath data as fallback/update
+    let currentAdminData: any = null;
+    try {
+      const currentSnap = await getDoc(doc(db, "admin_daily_paripath", "current"));
+      if (currentSnap.exists()) {
+        currentAdminData = currentSnap.data();
+      }
+    } catch (e) {
+      console.error("Failed to fetch admin current paripath", e);
+    }
+
     try {
       for (let d = 1; d <= daysInMonth; d++) {
         const dateObj = new Date(selectedYear, selectedMonthIndex, d);
@@ -295,10 +463,12 @@ export function MonthlyParipathRegister() {
             day: dayName,
             isSunday: true,
             rashtrageet: "रविवार",
+            rajyageet: "रविवार",
             pratigya: "रविवार",
             sanvidhan: "रविवार",
             prarthana: "रविवार",
             shlok: "रविवार",
+            panchang: "रविवार",
             suvichar: "रविवार",
             batmya: "रविवार",
             dinvishesh: "रविवार",
@@ -306,6 +476,7 @@ export function MonthlyParipathRegister() {
             bodhkatha: "रविवार",
             samuhgeet: "रविवार",
             deshbhaktigeet: "रविवार",
+            samanyaGyan: "रविवार",
             maun: "रविवार",
             swakshari: "",
           };
@@ -321,10 +492,12 @@ export function MonthlyParipathRegister() {
             isHoliday: true,
             holidayReason: holidayInfo.reason || "शाळेस सुट्टी",
             rashtrageet: `सुट्टी (${holidayInfo.reason || "शाळेस सुट्टी"})`,
+            rajyageet: "सुट्टी",
             pratigya: "सुट्टी",
             sanvidhan: "सुट्टी",
             prarthana: "सुट्टी",
             shlok: "सुट्टी",
+            panchang: "सुट्टी",
             suvichar: "सुट्टी",
             batmya: "सुट्टी",
             dinvishesh: "सुट्टी",
@@ -332,61 +505,83 @@ export function MonthlyParipathRegister() {
             bodhkatha: "सुट्टी",
             samuhgeet: "सुट्टी",
             deshbhaktigeet: "सुट्टी",
+            samanyaGyan: "सुट्टी",
             maun: "सुट्टी",
             swakshari: "",
           };
           continue;
         }
 
-        // Try to fetch from Firebase archive
+        // Try to fetch from Firebase archive or admin current
         try {
           const docRef = doc(db, "daily_paripath_archive", dateKey);
           const docSnap = await getDoc(docRef);
 
+          let data: any = null;
           if (docSnap.exists()) {
-            const data = docSnap.data();
+            data = docSnap.data();
+          }
+
+          const today = new Date();
+          const todayKey = getDateKey(today.getFullYear(), today.getMonth(), today.getDate());
+
+          if (!data && currentAdminData) {
+            if (currentAdminData.archivedDate === dateKey || currentAdminData.date === dateKey || dateKey === todayKey) {
+              data = currentAdminData;
+            }
+          }
+
+          if (dateKey === todayKey && currentAdminData && currentAdminData.lastUpdated) {
+            if (!data || !data.lastUpdated || new Date(currentAdminData.lastUpdated) > new Date(data.lastUpdated)) {
+              data = currentAdminData;
+            }
+          }
+
+          if (data) {
             
             // Extract actual content from the saved daily paripath data
             const nationalAnthemContent = data.nationalAnthem || "";
+            const stateAnthemContent = data.stateAnthem || data.rajyageet || "";
             const pledgeContent = data.pledge || data.pratigya || "";
             const preambleContent = data.preamble || data.sanvidhan || "";
             const prayerContent = data.prayer || data.prarthana || "";
             
-            // Detect languages
-            const anthemLang = detectLanguage(nationalAnthemContent);
-            const pledgeLang = detectLanguage(pledgeContent);
-            const preambleLang = detectLanguage(preambleContent);
-
             newRows[d] = {
               date: d,
               day: dayName,
               isSunday: false,
               // राष्ट्रगीत - जन गण मन
               rashtrageet: "जन गण मन",
+              // राज्यगीत - जय जय महाराष्ट्र माझा
+              rajyageet: shortText(stateAnthemContent, 45) || "जय जय महाराष्ट्र माझा",
               // प्रतिज्ञा - भारत माझा देश आहे
               pratigya: "भारत माझा देश आहे",
               // संविधान - आम्ही भारताचे नागरिक
               sanvidhan: "आम्ही भारताचे नागरिक",
-              // प्रार्थना - short name of prayer
-              prarthana: getPrayerShortName(prayerContent),
-              // श्लोक - first line / short text
-              shlok: shortText(data.shlok, 70),
-              // सुविचार - full suvichar (allows up to 120 characters so it fits completely without '...')
-              suvichar: shortText(data.thought || data.suvichar, 120),
-              // बातम्या - only first line/title
-              batmya: shortText(data.valueNews || data.batmya, 80),
-              // दिनविशेष - only first line/title
-              dinvishesh: shortText(data.events || data.dinvishesh, 80),
-              // म्हण - proverb text
-              mhan: shortText(data.proverb || data.mhan, 80),
-              // बोधकथा - title
-              bodhkatha: data.storyTitle || shortText(data.story || data.bodhkatha, 50),
-              // समूहगीत - title
-              samuhgeet: data.songTitle || shortText(data.patrioticSong || data.samuhgeet, 50),
-              // देशभक्ती गीत - title
-              deshbhaktigeet: data.songTitle || shortText(data.patrioticSong || data.deshbhaktigeet, 50),
-              // मौन पसायदान - just "पसायदान"
-              maun: "पसायदान",
+              // प्रार्थना - short heading title of prayer
+              prarthana: data.prayerTitle || data.prayerName || getPrayerShortName(prayerContent),
+              // श्लोक - formatted in 1 single line
+              shlok: formatShlokOneLine(data.shlok, d),
+              // पंचांग - formatted in 2 lines
+              panchang: formatPanchangTwoLines(data, dateObj),
+              // सुविचार - 2 full lines (~88 chars)
+              suvichar: shortText(data.thought || data.suvichar, 88),
+              // बातम्या - 1 single news item (~65 chars max)
+              batmya: getSingleItem(data.valueNews || data.batmya || data.news, 65),
+              // दिनविशेष - 1 single dinvishesh event (~65 chars max)
+              dinvishesh: getSingleItem(data.events || data.dinvishesh || data.event, 65),
+              // म्हण - 1 single proverb (~65 chars max)
+              mhan: getSingleItem(data.proverb || data.mhan, 65),
+              // बोधकथा - title / 2 lines (~45 chars)
+              bodhkatha: data.storyTitle || shortText(data.story || data.bodhkatha, 45),
+              // समूहगीत - title / 2 lines (~45 chars)
+              samuhgeet: data.songTitle || shortText(data.patrioticSong || data.samuhgeet, 45),
+              // देशभक्ती गीत - title / 2 lines (~45 chars)
+              deshbhaktigeet: data.songTitle || shortText(data.patrioticSong || data.deshbhaktigeet, 45),
+              // सामान्य ज्ञान - 1 single question (~65 chars max)
+              samanyaGyan: getSingleItem(data.gkQ1 ? `प्र.१: ${data.gkQ1}` : (data.samanyaGyan || data.gk || ""), 65),
+              // मौन पसायदान - fetch heading title dynamically
+              maun: data.pasaydanTitle || data.silentPasayadanTitle || data.maunTitle || data.pasayadanHeading || getPasayadanShortName(data.silentPasayadan || data.pasaydan || data.maun),
               // वर्गशिक्षकांची स्वाक्षरी - blank
               swakshari: "",
             };
@@ -403,10 +598,12 @@ export function MonthlyParipathRegister() {
                 day: dayName,
                 isSunday: false,
                 rashtrageet: "",
+                rajyageet: "",
                 pratigya: "",
                 sanvidhan: "",
                 prarthana: "",
                 shlok: "",
+                panchang: "",
                 suvichar: "",
                 batmya: "",
                 dinvishesh: "",
@@ -414,20 +611,23 @@ export function MonthlyParipathRegister() {
                 bodhkatha: "",
                 samuhgeet: "",
                 deshbhaktigeet: "",
+                samanyaGyan: "",
                 maun: "",
                 swakshari: "",
               };
             } else {
-              // Past date but no data - show placeholder
+              // Past date but no data - format proper 1-line shlok & 2-line panchang
               newRows[d] = {
                 date: d,
                 day: dayName,
                 isSunday: false,
                 rashtrageet: "जन गण मन",
+                rajyageet: "जय जय महाराष्ट्र माझा",
                 pratigya: "भारत माझा देश आहे",
                 sanvidhan: "आम्ही भारताचे नागरिक",
                 prarthana: "प्रार्थना",
-                shlok: "",
+                shlok: formatShlokOneLine("", d),
+                panchang: formatPanchangTwoLines({}, thisDate),
                 suvichar: "",
                 batmya: "",
                 dinvishesh: "",
@@ -435,7 +635,8 @@ export function MonthlyParipathRegister() {
                 bodhkatha: "",
                 samuhgeet: "",
                 deshbhaktigeet: "",
-                maun: "पसायदान",
+                samanyaGyan: "",
+                maun: "आता विश्वात्मकें देवें",
                 swakshari: "",
               };
             }
@@ -447,10 +648,12 @@ export function MonthlyParipathRegister() {
             day: dayName,
             isSunday: false,
             rashtrageet: "",
+            rajyageet: "",
             pratigya: "",
             sanvidhan: "",
             prarthana: "",
             shlok: "",
+            panchang: "",
             suvichar: "",
             batmya: "",
             dinvishesh: "",
@@ -458,6 +661,7 @@ export function MonthlyParipathRegister() {
             bodhkatha: "",
             samuhgeet: "",
             deshbhaktigeet: "",
+            samanyaGyan: "",
             maun: "",
             swakshari: "",
           };
@@ -519,10 +723,12 @@ export function MonthlyParipathRegister() {
         day: dayName,
         isSunday,
         rashtrageet: isSunday ? "रविवार" : "",
+        rajyageet: isSunday ? "रविवार" : "",
         pratigya: isSunday ? "रविवार" : "",
         sanvidhan: isSunday ? "रविवार" : "",
         prarthana: isSunday ? "रविवार" : "",
         shlok: isSunday ? "रविवार" : "",
+        panchang: isSunday ? "रविवार" : "",
         suvichar: isSunday ? "रविवार" : "",
         batmya: isSunday ? "रविवार" : "",
         dinvishesh: isSunday ? "रविवार" : "",
@@ -530,6 +736,7 @@ export function MonthlyParipathRegister() {
         bodhkatha: isSunday ? "रविवार" : "",
         samuhgeet: isSunday ? "रविवार" : "",
         deshbhaktigeet: isSunday ? "रविवार" : "",
+        samanyaGyan: isSunday ? "रविवार" : "",
         maun: isSunday ? "रविवार" : "",
         swakshari: "",
       };
@@ -573,9 +780,11 @@ export function MonthlyParipathRegister() {
           const isCenter = ta.classList.contains("text-center") || ta.style.textAlign === "center";
           div.style.cssText = `
             font-family: 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, sans-serif;
-            font-size: 11px;
+            font-size: 10.5px;
             font-weight: 600;
             line-height: 1.3;
+            max-height: 32px;
+            overflow: hidden;
             text-align: ${isCenter ? "center" : "left"};
             padding: 2px 3px;
             word-break: break-word;
@@ -789,17 +998,20 @@ export function MonthlyParipathRegister() {
       `}</style>
 
       {/* Control Panel (Hidden in Print) */}
-      <div className="non-printable bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 md:p-8 rounded-[2.5rem] shadow-2xl space-y-6 border border-indigo-900/40">
+      <div className="non-printable bg-gradient-to-br from-[#0F172A] via-[#1E1B4B] to-[#311042] text-white p-6 md:p-8 rounded-[2.5rem] shadow-[0_25px_60px_-15px_rgba(30,27,75,0.6)] space-y-6 border border-indigo-500/30 backdrop-blur-2xl relative overflow-hidden">
+        {/* Top Decorative Glow Line */}
+        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-indigo-500 via-amber-400 to-purple-500" />
+
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
-            <div className="size-14 rounded-2xl bg-indigo-600/30 border border-indigo-400/30 flex items-center justify-center text-indigo-300 shadow-inner">
+            <div className="size-14 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 border border-indigo-400/50 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
               <FileSpreadsheet className="size-8" />
             </div>
             <div>
-              <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white">
+              <h2 className="text-2xl md:text-3xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-indigo-100 to-amber-200">
                 मासिक परिपाठ नोंदवही
               </h2>
-              <p className="text-xs font-semibold text-indigo-300/80 uppercase tracking-widest mt-1">
+              <p className="text-xs font-extrabold text-amber-300/90 uppercase tracking-widest mt-1">
                 दैनिक परिपाठातून स्वयंचलित डेटा • Day-to-Day Auto Fetch
               </p>
             </div>
@@ -810,12 +1022,12 @@ export function MonthlyParipathRegister() {
             <button
               onClick={fetchMonthlyData}
               disabled={isFetching}
-              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-amber-500/20 text-amber-200 hover:bg-amber-500/40 border border-amber-400/30 font-bold text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 disabled:opacity-50"
+              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-indigo-950/80 hover:bg-indigo-900 text-indigo-100 border border-indigo-400/40 font-bold text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 disabled:opacity-50"
             >
               {isFetching ? (
-                <Loader2 className="size-4 animate-spin" />
+                <Loader2 className="size-4 animate-spin text-amber-400" />
               ) : (
-                <RefreshCw className="size-4" />
+                <RefreshCw className="size-4 text-amber-400" />
               )}
               {isFetching ? "डेटा लोड होत आहे..." : "🔄 रिफ्रेश डेटा"}
             </button>
@@ -823,7 +1035,7 @@ export function MonthlyParipathRegister() {
             <button
               onClick={handleSaveData}
               disabled={isSaving}
-              className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-emerald-900/40 active:scale-95"
+              className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-emerald-500/30 active:scale-95"
             >
               <Save className="size-4" />
               {isSaving ? "सेव्ह होत आहे..." : "सेव्ह करा"}
@@ -831,7 +1043,7 @@ export function MonthlyParipathRegister() {
 
             <button
               onClick={() => setShowHolidayModal(true)}
-              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-amber-900/30 active:scale-95"
+              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-amber-500/30 active:scale-95"
             >
               <CalendarDays className="size-4" />
               📅 सुट्टी घोषित करा
@@ -839,7 +1051,7 @@ export function MonthlyParipathRegister() {
 
             <button
               onClick={handleDownloadPdf}
-              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-indigo-600/30 active:scale-95"
+              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-purple-500/30 active:scale-95"
             >
               <Download className="size-4" />
               PDF डाउनलोड
@@ -848,44 +1060,44 @@ export function MonthlyParipathRegister() {
         </div>
 
         {/* Inputs row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-white/10 text-xs font-medium">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-indigo-500/30 text-xs font-medium">
           <div className="space-y-1.5">
-            <label className="text-indigo-200/80 font-bold uppercase tracking-wider flex items-center gap-1.5">
-              <Building2 className="size-3.5" /> शाळेचे नाव
+            <label className="text-amber-300 font-extrabold uppercase tracking-wider flex items-center gap-1.5">
+              <Building2 className="size-3.5 text-amber-400" /> शाळेचे नाव
             </label>
             <input
               type="text"
               value={schoolName}
               onChange={(e) => setSchoolName(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white outline-none focus:border-indigo-400 font-bold"
+              className="w-full px-4 py-2.5 rounded-xl bg-[#0B0F19]/90 hover:bg-[#131927] border border-indigo-500/40 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30 text-white outline-none font-bold transition-all shadow-inner"
               placeholder="शाळेचे नाव टाका"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-indigo-200/80 font-bold uppercase tracking-wider flex items-center gap-1.5">
-              <Clock className="size-3.5" /> सन (शैक्षणिक वर्ष)
+            <label className="text-amber-300 font-extrabold uppercase tracking-wider flex items-center gap-1.5">
+              <Clock className="size-3.5 text-amber-400" /> सन (शैक्षणिक वर्ष)
             </label>
             <input
               type="text"
               value={academicYear}
               onChange={(e) => setAcademicYear(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white outline-none focus:border-indigo-400 font-bold"
+              className="w-full px-4 py-2.5 rounded-xl bg-[#0B0F19]/90 hover:bg-[#131927] border border-indigo-500/40 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30 text-white outline-none font-bold transition-all shadow-inner"
               placeholder="२०२५-२०२६"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-indigo-200/80 font-bold uppercase tracking-wider flex items-center gap-1.5">
-              <Calendar className="size-3.5" /> महिना निवडा
+            <label className="text-amber-300 font-extrabold uppercase tracking-wider flex items-center gap-1.5">
+              <Calendar className="size-3.5 text-amber-400" /> महिना निवडा
             </label>
             <select
               value={selectedMonthIndex}
               onChange={(e) => setSelectedMonthIndex(Number(e.target.value))}
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-white/20 text-white outline-none focus:border-indigo-400 font-bold cursor-pointer"
+              className="w-full px-4 py-2.5 rounded-xl bg-[#0B0F19] border border-indigo-500/40 text-amber-200 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30 font-bold cursor-pointer transition-all shadow-inner"
             >
               {MARATHI_MONTHS.map((m, idx) => (
-                <option key={idx} value={idx}>
+                <option key={idx} value={idx} className="bg-slate-900 text-white">
                   {m}
                 </option>
               ))}
@@ -893,16 +1105,16 @@ export function MonthlyParipathRegister() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-indigo-200/80 font-bold uppercase tracking-wider flex items-center gap-1.5">
+            <label className="text-amber-300 font-extrabold uppercase tracking-wider flex items-center gap-1.5">
               वर्ष निवडा
             </label>
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-white/20 text-white outline-none focus:border-indigo-400 font-bold cursor-pointer"
+              className="w-full px-4 py-2.5 rounded-xl bg-[#0B0F19] border border-indigo-500/40 text-amber-200 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30 font-bold cursor-pointer transition-all shadow-inner"
             >
               {[2024, 2025, 2026, 2027, 2028].map((y) => (
-                <option key={y} value={y}>
+                <option key={y} value={y} className="bg-slate-900 text-white">
                   {y}
                 </option>
               ))}
@@ -911,64 +1123,64 @@ export function MonthlyParipathRegister() {
         </div>
 
         {/* Additional School Info & Signatures Controls */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 pt-3 border-t border-white/10 text-xs font-medium">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 pt-3 border-t border-indigo-500/30 text-xs font-medium">
           <div className="space-y-1">
-            <label className="text-indigo-200/80 font-bold">तालुका</label>
+            <label className="text-amber-300/90 font-bold">तालुका</label>
             <input
               type="text"
               value={schoolInfo.taluka || ""}
               onChange={(e) => setSchoolInfo(prev => ({ ...prev, taluka: e.target.value }))}
-              className="w-full px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white font-bold outline-none focus:border-indigo-400"
+              className="w-full px-3 py-1.5 rounded-lg bg-[#0B0F19]/90 hover:bg-[#131927] border border-indigo-500/40 focus:border-amber-400 text-white font-bold outline-none transition-all shadow-inner"
               placeholder="तालुका"
             />
           </div>
           <div className="space-y-1">
-            <label className="text-indigo-200/80 font-bold">जिल्हा</label>
+            <label className="text-amber-300/90 font-bold">जिल्हा</label>
             <input
               type="text"
               value={schoolInfo.jilha || ""}
               onChange={(e) => setSchoolInfo(prev => ({ ...prev, jilha: e.target.value }))}
-              className="w-full px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white font-bold outline-none focus:border-indigo-400"
+              className="w-full px-3 py-1.5 rounded-lg bg-[#0B0F19]/90 hover:bg-[#131927] border border-indigo-500/40 focus:border-amber-400 text-white font-bold outline-none transition-all shadow-inner"
               placeholder="जिल्हा"
             />
           </div>
           <div className="space-y-1">
-            <label className="text-indigo-200/80 font-bold">केंद्र</label>
+            <label className="text-amber-300/90 font-bold">केंद्र</label>
             <input
               type="text"
               value={schoolInfo.kendra || ""}
               onChange={(e) => setSchoolInfo(prev => ({ ...prev, kendra: e.target.value }))}
-              className="w-full px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white font-bold outline-none focus:border-indigo-400"
+              className="w-full px-3 py-1.5 rounded-lg bg-[#0B0F19]/90 hover:bg-[#131927] border border-indigo-500/40 focus:border-amber-400 text-white font-bold outline-none transition-all shadow-inner"
               placeholder="केंद्र"
             />
           </div>
           <div className="space-y-1">
-            <label className="text-indigo-200/80 font-bold">UDISE नंबर</label>
+            <label className="text-amber-300/90 font-bold">UDISE नंबर</label>
             <input
               type="text"
               value={schoolInfo.udise || ""}
               onChange={(e) => setSchoolInfo(prev => ({ ...prev, udise: e.target.value }))}
-              className="w-full px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white font-bold outline-none focus:border-indigo-400"
+              className="w-full px-3 py-1.5 rounded-lg bg-[#0B0F19]/90 hover:bg-[#131927] border border-indigo-500/40 focus:border-amber-400 text-white font-bold outline-none transition-all shadow-inner"
               placeholder="युडायस नंबर"
             />
           </div>
           <div className="space-y-1">
-            <label className="text-indigo-200/80 font-bold">शिक्षकाचे नाव</label>
+            <label className="text-amber-300/90 font-bold">शिक्षकाचे नाव</label>
             <input
               type="text"
               value={teacherName}
               onChange={(e) => setTeacherName(e.target.value)}
-              className="w-full px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white font-bold outline-none focus:border-indigo-400"
+              className="w-full px-3 py-1.5 rounded-lg bg-[#0B0F19]/90 hover:bg-[#131927] border border-indigo-500/40 focus:border-amber-400 text-white font-bold outline-none transition-all shadow-inner"
               placeholder="शिक्षकाचे नाव"
             />
           </div>
           <div className="space-y-1">
-            <label className="text-indigo-200/80 font-bold">मुख्याध्यापकाचे नाव</label>
+            <label className="text-amber-300/90 font-bold">मुख्याध्यापकाचे नाव</label>
             <input
               type="text"
               value={headmasterName}
               onChange={(e) => setHeadmasterName(e.target.value)}
-              className="w-full px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white font-bold outline-none focus:border-indigo-400"
+              className="w-full px-3 py-1.5 rounded-lg bg-[#0B0F19]/90 hover:bg-[#131927] border border-indigo-500/40 focus:border-amber-400 text-white font-bold outline-none transition-all shadow-inner"
               placeholder="मुख्याध्यापकाचे नाव"
             />
           </div>
@@ -976,7 +1188,7 @@ export function MonthlyParipathRegister() {
 
         {/* Status info */}
         {isFetching && (
-          <div className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl">
+          <div className="flex items-center gap-3 p-4 bg-amber-500/15 border border-amber-400/30 rounded-2xl backdrop-blur-md">
             <Loader2 className="size-5 animate-spin text-amber-400" />
             <span className="text-amber-200 text-sm font-bold">
               दैनिक परिपाठ डेटा Firebase मधून लोड होत आहे... कृपया प्रतीक्षा करा.
@@ -1050,27 +1262,31 @@ export function MonthlyParipathRegister() {
                 </div>
 
                 {/* ---------- TABLE 1: दैनिक ---------- */}
-                <div className="overflow-x-auto border-2 border-slate-900 bg-white shadow-sm mb-4 w-full">
+                <div className="overflow-x-auto border-2 border-slate-900 bg-white shadow-sm mb-6 w-full">
                   <table className="w-full text-left text-[11px] text-slate-900 border-collapse align-middle table-fixed min-w-[950px]">
                     <colgroup>
-                      <col style={{ width: "5%" }} />
-                      <col style={{ width: "11%" }} />
-                      <col style={{ width: "14%" }} />
-                      <col style={{ width: "14%" }} />
-                      <col style={{ width: "14%" }} />
-                      <col style={{ width: "14%" }} />
-                      <col style={{ width: "14%" }} />
-                      <col style={{ width: "14%" }} />
+                      <col style={{ width: "32px" }} />
+                      <col style={{ width: "55px" }} />
+                      <col style={{ width: "10%" }} />
+                      <col style={{ width: "10%" }} />
+                      <col style={{ width: "10%" }} />
+                      <col style={{ width: "10%" }} />
+                      <col style={{ width: "10%" }} />
+                      <col style={{ width: "15%" }} />
+                      <col style={{ width: "15%" }} />
+                      <col style={{ width: "17%" }} />
                     </colgroup>
                     <thead>
                       <tr className="bg-slate-100 border-b-2 border-slate-900 text-center font-black text-slate-900 uppercase text-[11px]">
-                        <th className="p-2 border-r border-slate-900 text-center align-middle">दिनांक</th>
-                        <th className="p-2 border-r border-slate-900 text-center align-middle">वार</th>
+                        <th className="w-[32px] max-w-[32px] px-0.5 py-1.5 border-r border-slate-900 text-center align-middle text-[10px] whitespace-nowrap overflow-hidden">दिनांक</th>
+                        <th className="w-[55px] max-w-[55px] px-0.5 py-1.5 border-r border-slate-900 text-center align-middle text-[10px] whitespace-nowrap overflow-hidden">वार</th>
                         <th className="p-2 border-r border-slate-900 text-center align-middle">राष्ट्रगीत</th>
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">राज्यगीत</th>
                         <th className="p-2 border-r border-slate-900 text-center align-middle">प्रतिज्ञा</th>
                         <th className="p-2 border-r border-slate-900 text-center align-middle">भारताचे संविधान</th>
                         <th className="p-2 border-r border-slate-900 text-center align-middle">प्रार्थना</th>
                         <th className="p-2 border-r border-slate-900 text-center align-middle">श्लोक</th>
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">पंचांग</th>
                         <th className="p-2 text-center align-middle">सुविचार</th>
                       </tr>
                     </thead>
@@ -1085,19 +1301,19 @@ export function MonthlyParipathRegister() {
                           }`}
                         >
                           {row.isSunday ? (
-                            <td colSpan={8} className="p-2.5 text-center font-black text-rose-700 text-[13px] tracking-widest align-middle border-b border-slate-900">
+                            <td colSpan={10} className="p-2.5 text-center font-black text-rose-700 text-[13px] tracking-widest align-middle border-b border-slate-900">
                               रविवार
                             </td>
                           ) : row.isHoliday ? (
-                            <td colSpan={8} className="p-2.5 text-center font-black text-rose-700 text-[13px] tracking-wider align-middle border-b border-slate-900">
+                            <td colSpan={10} className="p-2.5 text-center font-black text-rose-700 text-[13px] tracking-wider align-middle border-b border-slate-900">
                               सुट्टी ({row.holidayReason || "शाळेस सुट्टी"})
                             </td>
                           ) : (
                             <>
-                              <td className="p-2 border-r border-slate-900 text-center font-black align-middle text-slate-900">
+                              <td className="w-[32px] max-w-[32px] px-0.5 py-1.5 border-r border-slate-900 text-center font-black align-middle text-[10px] text-slate-900 whitespace-nowrap overflow-hidden">
                                 {row.date}
                               </td>
-                              <td className="p-2 border-r border-slate-900 text-center font-bold text-[11px] align-middle text-slate-900">
+                              <td className="w-[55px] max-w-[55px] px-0.5 py-1.5 border-r border-slate-900 text-center font-bold text-[10px] align-middle text-slate-900 whitespace-nowrap overflow-hidden">
                                 {row.day}
                               </td>
                               <td className="p-1 border-r border-slate-900 align-middle">
@@ -1105,6 +1321,18 @@ export function MonthlyParipathRegister() {
                                   value={row.rashtrageet}
                                   onChange={(e) => {
                                     handleCellChange(row.date, "rashtrageet", e.target.value);
+                                    e.target.style.height = "auto";
+                                    e.target.style.height = `${e.target.scrollHeight}px`;
+                                  }}
+                                  className="w-full bg-transparent text-center outline-none font-bold text-[11px] leading-snug overflow-hidden resize-none py-1 px-1 border-0 focus:ring-1 focus:ring-indigo-500 rounded"
+                                  rows={1}
+                                />
+                              </td>
+                              <td className="p-1 border-r border-slate-900 align-middle">
+                                <textarea
+                                  value={row.rajyageet}
+                                  onChange={(e) => {
+                                    handleCellChange(row.date, "rajyageet", e.target.value);
                                     e.target.style.height = "auto";
                                     e.target.style.height = `${e.target.scrollHeight}px`;
                                   }}
@@ -1161,6 +1389,19 @@ export function MonthlyParipathRegister() {
                                   placeholder="श्लोक..."
                                 />
                               </td>
+                              <td className="p-1 border-r border-slate-900 align-middle">
+                                <textarea
+                                  value={row.panchang}
+                                  onChange={(e) => {
+                                    handleCellChange(row.date, "panchang", e.target.value);
+                                    e.target.style.height = "auto";
+                                    e.target.style.height = `${e.target.scrollHeight}px`;
+                                  }}
+                                  className="w-full bg-transparent text-left px-1.5 py-1 outline-none font-medium text-[11px] leading-snug overflow-hidden resize-none whitespace-pre-wrap break-words border-0 focus:ring-1 focus:ring-indigo-500 rounded"
+                                  rows={2}
+                                  placeholder="पंचांग..."
+                                />
+                              </td>
                               <td className="p-1 align-middle">
                                 <textarea
                                   value={row.suvichar}
@@ -1186,14 +1427,14 @@ export function MonthlyParipathRegister() {
                 <div className="overflow-x-auto border-2 border-slate-900 bg-white shadow-sm w-full">
                   <table className="w-full text-left text-[11px] text-slate-900 border-collapse align-middle table-fixed min-w-[950px]">
                     <colgroup>
+                      <col style={{ width: "17%" }} />
+                      <col style={{ width: "17%" }} />
                       <col style={{ width: "16%" }} />
+                      <col style={{ width: "11%" }} />
+                      <col style={{ width: "11%" }} />
                       <col style={{ width: "16%" }} />
-                      <col style={{ width: "14%" }} />
-                      <col style={{ width: "14%" }} />
-                      <col style={{ width: "13%" }} />
-                      <col style={{ width: "13%" }} />
-                      <col style={{ width: "7%" }} />
-                      <col style={{ width: "7%" }} />
+                      <col style={{ width: "6%" }} />
+                      <col style={{ width: "6%" }} />
                     </colgroup>
                     <thead>
                       <tr className="bg-slate-100 border-b-2 border-slate-900 text-center font-black text-slate-900 uppercase text-[11px]">
@@ -1203,14 +1444,18 @@ export function MonthlyParipathRegister() {
                         <th className="p-2 border-r border-slate-900 text-center align-middle">दिनविशेष</th>
                         <th className="p-2 border-r border-slate-900 text-center align-middle">म्हण</th>
                         <th className="p-2 border-r border-slate-900 text-center align-middle">बोधकथा</th>
-                        <th className="p-2 border-r border-slate-900 text-center align-middle">समूहगीत</th>
                         <th className="p-2 border-r border-slate-900 text-center align-middle">
-                          देशभक्ती गीत
+                          समूहगीत/देशभक्ती गीत
                         </th>
                         <th className="p-2 border-r border-slate-900 text-center align-middle">
-                          मौन पसायदान
+                          सामान्य ज्ञान
                         </th>
-                        <th className="p-2 text-center align-middle">वर्गशिक्षकांची स्वाक्षरी</th>
+                        <th className="p-2 border-r border-slate-900 text-center align-middle">
+                          मौन / पसायदान
+                        </th>
+                        <th className="p-2 text-center align-middle">
+                          स्वाक्षरी
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-900 font-medium">
@@ -1287,21 +1532,9 @@ export function MonthlyParipathRegister() {
                               </td>
                               <td className="p-1 border-r border-slate-900 align-middle">
                                 <textarea
-                                  value={row.samuhgeet}
+                                  value={row.samuhgeet || row.deshbhaktigeet}
                                   onChange={(e) => {
                                     handleCellChange(row.date, "samuhgeet", e.target.value);
-                                    e.target.style.height = "auto";
-                                    e.target.style.height = `${e.target.scrollHeight}px`;
-                                  }}
-                                  className="w-full bg-transparent text-center outline-none font-bold text-[11px] leading-snug overflow-hidden resize-none py-1 px-1 border-0 focus:ring-1 focus:ring-indigo-500 rounded"
-                                  rows={1}
-                                  placeholder="गीत शीर्षक..."
-                                />
-                              </td>
-                              <td className="p-1 border-r border-slate-900 align-middle">
-                                <textarea
-                                  value={row.deshbhaktigeet}
-                                  onChange={(e) => {
                                     handleCellChange(row.date, "deshbhaktigeet", e.target.value);
                                     e.target.style.height = "auto";
                                     e.target.style.height = `${e.target.scrollHeight}px`;
@@ -1313,7 +1546,20 @@ export function MonthlyParipathRegister() {
                               </td>
                               <td className="p-1 border-r border-slate-900 align-middle">
                                 <textarea
-                                  value={row.maun}
+                                  value={row.samanyaGyan}
+                                  onChange={(e) => {
+                                    handleCellChange(row.date, "samanyaGyan", e.target.value);
+                                    e.target.style.height = "auto";
+                                    e.target.style.height = `${e.target.scrollHeight}px`;
+                                  }}
+                                  className="w-full bg-transparent text-left px-1.5 py-1 outline-none font-medium text-[11px] leading-snug overflow-hidden resize-none whitespace-pre-wrap break-words border-0 focus:ring-1 focus:ring-indigo-500 rounded"
+                                  rows={2}
+                                  placeholder="सामान्य ज्ञान..."
+                                />
+                              </td>
+                              <td className="p-1 border-r border-slate-900 align-middle">
+                                <textarea
+                                  value={row.maun || "आता विश्वात्मकें देवें"}
                                   onChange={(e) => {
                                     handleCellChange(row.date, "maun", e.target.value);
                                     e.target.style.height = "auto";
@@ -1324,7 +1570,17 @@ export function MonthlyParipathRegister() {
                                 />
                               </td>
                               <td className="p-1 align-middle">
-                                <div className="h-6 w-full"></div>
+                                <textarea
+                                  value={row.swakshari}
+                                  onChange={(e) => {
+                                    handleCellChange(row.date, "swakshari", e.target.value);
+                                    e.target.style.height = "auto";
+                                    e.target.style.height = `${e.target.scrollHeight}px`;
+                                  }}
+                                  className="w-full bg-transparent text-center outline-none font-bold text-[11px] leading-snug overflow-hidden resize-none py-1 px-1 border-0 focus:ring-1 focus:ring-indigo-500 rounded"
+                                  rows={1}
+                                  placeholder="स्वाक्षरी..."
+                                />
                               </td>
                             </>
                           )}

@@ -83,8 +83,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { getUnifiedSchoolProfile, saveUnifiedSchoolProfile } from "@/utils/schoolProfileHelper";
-
 
 export const Route = createFileRoute("/teacher/modules/$moduleId")({
   component: ModulePage,
@@ -1778,37 +1776,20 @@ function DailyAssemblyContent() {
     setSelectedDate((prev) => prev || getLocalDateString());
   }, []);
 
-  // Load unified school info from global storage & listen for changes
+  // Load school info from local storage
   useEffect(() => {
-    const loadProfile = () => {
-      const unified = getUnifiedSchoolProfile();
-      if (unified.schoolName || unified.udise || unified.kendra || unified.taluka || unified.jilha) {
-        setSchoolInfo({
-          schoolName: unified.schoolName,
-          udise: unified.udise,
-          kendra: unified.kendra,
-          taluka: unified.taluka,
-          jilha: unified.jilha,
-        });
-      } else {
+    const savedInfo = localStorage.getItem("paripathSchoolInfo");
+    if (savedInfo) {
+      try {
+        const parsed = JSON.parse(savedInfo);
+        setSchoolInfo(parsed);
+      } catch (e) {
+        console.error("Failed to parse school info", e);
         setShowSchoolInfoModal(true);
       }
-    };
-    loadProfile();
-
-    const handleProfileUpdate = (e: any) => {
-      if (e.detail) {
-        setSchoolInfo({
-          schoolName: e.detail.schoolName || "",
-          udise: e.detail.udise || "",
-          kendra: e.detail.kendra || "",
-          taluka: e.detail.taluka || "",
-          jilha: e.detail.jilha || "",
-        });
-      }
-    };
-    window.addEventListener("schoolProfileUpdated", handleProfileUpdate);
-    return () => window.removeEventListener("schoolProfileUpdated", handleProfileUpdate);
+    } else {
+      setShowSchoolInfoModal(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -2057,24 +2038,13 @@ function DailyAssemblyContent() {
       const songContent = data.samuhgeet || data.deshbhaktigeet || data.songTitle || data.patrioticSong || "";
       const maun = data.silentPasayadan || data.maun || assemblyItems[5]?.content || "";
 
-      // Ensure web fonts are completely loaded before html2canvas capture
-      if (document.fonts && document.fonts.ready) {
-        try { await document.fonts.ready; } catch (e) {}
-      }
-
       // Build ALL 16 content sections in exact sequence
       const allContent = `
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;600;700;800&family=Noto+Sans+Devanagari:wght@400;600;700;800;900&display=swap" rel="stylesheet">
         <style>
           #temp-pdf-render, #temp-pdf-render * {
             box-sizing: border-box !important;
             word-break: break-word;
             overflow-wrap: break-word;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-            color-adjust: exact !important;
           }
         </style>
         <div style="padding: 14px 22px; width: 100%; box-sizing: border-box;">
@@ -2181,7 +2151,7 @@ function DailyAssemblyContent() {
         margin: [6, 8, 6, 8],
         filename: `Paripath_${dateStr}.pdf`,
         image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, allowTaint: true, logging: false, windowWidth: 733, scrollY: 0, scrollX: 0 },
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true, windowWidth: 733 },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
       };
 
@@ -2384,9 +2354,9 @@ function DailyAssemblyContent() {
               <DialogFooter>
                 <button 
                   onClick={() => {
-                    saveUnifiedSchoolProfile(schoolInfo);
+                    localStorage.setItem("paripathSchoolInfo", JSON.stringify(schoolInfo));
                     setShowSchoolInfoModal(false);
-                    toast.success("शाळेची माहिती यशस्वीरित्या सर्व सिस्टिमसाठी सेव्ह झाली!");
+                    toast.success("माहिती यशस्वीरित्या सेव्ह झाली!");
                   }}
                   className="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-sm uppercase tracking-wider transition-colors shadow-lg shadow-indigo-600/20"
                 >

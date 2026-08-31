@@ -146,6 +146,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setUser(null);
         updateProfileState(null);
+        if (typeof window !== "undefined") {
+          try {
+            Object.keys(sessionStorage).forEach((key) => {
+              if (key.startsWith("unlocked_section_")) {
+                sessionStorage.removeItem(key);
+              }
+            });
+          } catch (e) {}
+        }
       }
       setLoading(false);
     });

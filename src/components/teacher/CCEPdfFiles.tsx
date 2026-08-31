@@ -13,17 +13,17 @@ const safeLazy = (factory: () => Promise<any>) =>
   );
 
 // @ts-ignore
-const BoardResult = safeLazy(() => import("@/result/BoardResult"));
+import BoardResult from "@/result/BoardResult";
 // @ts-ignore
-const SubjectWiseResult = safeLazy(() => import("@/result/SubjectWiseResult"));
+import SubjectWiseResult from "@/result/SubjectWiseResult";
 // @ts-ignore
-const ProgressSheet = safeLazy(() => import("@/result/ProgressSheet"));
+import ProgressSheet from "@/result/ProgressSheet";
 // @ts-ignore
-const GradeWise = safeLazy(() => import("@/result/GradeWise"));
+import GradeWise from "@/result/GradeWise";
 // @ts-ignore
-const Result5th8th = safeLazy(() => import("@/result/Result5th8th"));
+import Result5th8th from "@/result/Result5th8th";
 // @ts-ignore
-const AnnualResultRegister = safeLazy(() => import("@/result/AnnualResultRegister"));
+import AnnualResultRegister from "@/result/AnnualResultRegister";
 
 // Custom Red/Green PDF File Icon SVG
 function PdfIcon({ className = "w-9 h-11" }: { className?: string }) {
@@ -184,7 +184,7 @@ export function CCEPdfFiles({
           <h2 className="text-base font-bold text-slate-800">श्रेणीनिहाय निकाल संकलन प्रपत्र - 1</h2>
         </div>
         <Suspense fallback={renderLoading()}>
-          <GradeWise initialClass={activeClass} initialYear={academicYear} onBack={() => setViewingReportId(null)} />
+          <GradeWise initialClass={activeClass} initialYear={academicYear} initialTerm={selectedTerm} onBack={() => setViewingReportId(null)} />
         </Suspense>
       </div>
     );

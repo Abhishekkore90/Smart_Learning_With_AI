@@ -1,5 +1,6 @@
 import React from "react";
 import { calculateCookHelperCount, calculateHonorariumDetails } from "@/utils/mdmPdfUtils";
+import { getUnifiedSchoolProfile } from "@/utils/schoolProfileHelper";
 
 export interface MDMCertificateProps {
   subTab?: "1-5" | "6-8" | "1-8";
@@ -8,6 +9,9 @@ export interface MDMCertificateProps {
   reportSchoolName?: string;
   principalName?: string;
   teacherName?: string;
+  center?: string;
+  taluka?: string;
+  district?: string;
   primaryCookedDays?: number;
   upperCookedDays?: number;
   wednesdaysCount?: number;
@@ -175,6 +179,9 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
   reportSchoolName = "",
   principalName = "",
   teacherName = "",
+  center = "",
+  taluka = "",
+  district = "",
   primaryCookedDays = 0,
   upperCookedDays = 0,
   wednesdaysCount = 0,
@@ -209,6 +216,12 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
   totalGrantAll = 0,
   vegUsageKg,
 }) => {
+  const unifiedProfile = getUnifiedSchoolProfile();
+  const finalSchoolName = reportSchoolName || unifiedProfile.schoolName || "";
+  const finalCenter = center || unifiedProfile.kendra || "";
+  const finalTaluka = taluka || unifiedProfile.taluka || "";
+  const finalDistrict = district || unifiedProfile.jilha || "";
+
   const showPrimary = subTab === "1-5" || subTab === "1-8";
   const showUpper = subTab === "6-8" || subTab === "1-8";
 
@@ -220,7 +233,7 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
       ? totalPrimaryGrant
       : subTab === "6-8"
       ? totalUpperGrant
-      : totalGrantAll;
+      : totalGrantAll || totalPrimaryGrant + totalUpperGrant;
 
   // Calculate dynamic enrolled count and cook/helper count according to Govt slabs
   const effectivePatPrimary = parseInt(toEnglishNumbers(certPatPrimary), 10) || primaryEnrolled || 0;
@@ -315,10 +328,10 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
           title="शालेय पोषण आहार उपयोगिता प्रमाणपत्र"
           month={getFormattedMonthYear()}
           academicYear={reportYear ? `${reportYear}-${(reportYear + 1).toString().slice(-2)}` : "2026-27"}
-          schoolName={reportSchoolName || "Z P SCHOOL DHONDEWADI PED"}
-          center="NARSINGPUR"
-          taluka="वाळवा"
-          district="सांगली"
+          schoolName={finalSchoolName}
+          center={finalCenter}
+          taluka={finalTaluka}
+          district={finalDistrict}
           pat={effectivePatTotal}
           classSection={subTab === "1-5" ? "इयत्ता १ ली ते ५ वी" : subTab === "6-8" ? "इयत्ता ६ वी ते ८ वी" : "इयत्ता १ ली ते ८ वी (एकत्रित)"}
           workingDays={primaryCookedDays || upperCookedDays || 25}

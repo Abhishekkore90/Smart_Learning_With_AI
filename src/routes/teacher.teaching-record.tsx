@@ -537,9 +537,9 @@ function TeachingRecordPage() {
         <TeacherSidebar />
       </div>
 
-      <main className="pt-16 min-h-screen print:pl-0 print:pt-0 pb-24">
+      <main className="w-full pt-16 min-h-screen print:pl-0 print:pt-0 pb-24">
         <PinGate sectionKey="teaching_record">
-          <div className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto space-y-6 print:p-0 print:max-w-full">
+          <div className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto w-full space-y-6 print:p-0 print:max-w-full">
             {/* Top Navigation Bar with Back Button, Tabs & Breadcrumbs */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-3.5 sm:p-4 rounded-3xl border border-slate-200/80 shadow-sm print:hidden">
               <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
@@ -555,11 +555,10 @@ function TeachingRecordPage() {
                 <button
                   type="button"
                   onClick={() => setActiveMainTab("diary")}
-                  className={`px-4 py-2 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                    activeMainTab === "diary"
+                  className={`px-4 py-2 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${activeMainTab === "diary"
                       ? "bg-slate-900 text-white shadow-md"
                       : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
-                  }`}
+                    }`}
                 >
                   <BookOpen className="size-4" />
                   <span>दैनिक टाचणवही</span>
@@ -567,11 +566,10 @@ function TeachingRecordPage() {
                 <button
                   type="button"
                   onClick={() => setActiveMainTab("school_profile")}
-                  className={`px-4 py-2 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                    activeMainTab === "school_profile"
+                  className={`px-4 py-2 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${activeMainTab === "school_profile"
                       ? "bg-orange-600 text-white shadow-md shadow-orange-500/20"
                       : "bg-orange-100 text-orange-900 hover:bg-orange-200 border border-orange-300"
-                  }`}
+                    }`}
                 >
                   <GraduationCap className="size-4 text-amber-500" />
                   <span>🏫 यू-डायस व शाळा माहिती (UDISE & School Info)</span>
@@ -784,204 +782,204 @@ function TeachingRecordPage() {
               ) : (
                 <>
 
-                {/* Step 1: Select Medium (Orange Cards) */}
-                {!selectedMedium && (
-                  <motion.div
-                    key="medium-selection"
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -15 }}
-                    className="space-y-8"
-                  >
-                    <div className="relative overflow-hidden bg-gradient-to-r from-slate-900 via-purple-950 to-slate-900 rounded-[2.5rem] p-8 md:p-12 text-white shadow-2xl border border-white/5">
-                      <div className="absolute -left-10 -top-10 size-40 bg-indigo-500/25 rounded-full blur-[50px] pointer-events-none" />
-                      <div className="absolute -right-10 -bottom-10 size-40 bg-purple-500/25 rounded-full blur-[50px] pointer-events-none" />
-                      
-                      <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                        <div className="space-y-3">
-                          <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/10 text-xs font-semibold tracking-wider text-purple-200">
-                            <Sparkles className="size-3.5 text-amber-300 animate-pulse" />
-                            REPORTS & REGISTERS (शासकीय अहवाल व नोंदी)
+                  {/* Step 1: Select Medium (Orange Cards) */}
+                  {!selectedMedium && (
+                    <motion.div
+                      key="medium-selection"
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -15 }}
+                      className="space-y-8"
+                    >
+                      <div className="relative overflow-hidden bg-gradient-to-r from-slate-900 via-purple-950 to-slate-900 rounded-[2.5rem] p-8 md:p-12 text-white shadow-2xl border border-white/5">
+                        <div className="absolute -left-10 -top-10 size-40 bg-indigo-500/25 rounded-full blur-[50px] pointer-events-none" />
+                        <div className="absolute -right-10 -bottom-10 size-40 bg-purple-500/25 rounded-full blur-[50px] pointer-events-none" />
+
+                        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                          <div className="space-y-3">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/10 text-xs font-semibold tracking-wider text-purple-200">
+                              <Sparkles className="size-3.5 text-amber-300 animate-pulse" />
+                              REPORTS & REGISTERS (शासकीय अहवाल व नोंदी)
+                            </div>
+                            <h2 className="text-4xl md:text-5xl font-black tracking-tight">
+                              Teaching Diary <span className="text-indigo-400">टाचणवही अहवाल.</span>
+                            </h2>
+                            <p className="text-xs md:text-sm text-slate-400 max-w-xl">
+                              Select Medium, Class, and Date to upload or view official Teaching Diaries.
+                            </p>
                           </div>
-                          <h2 className="text-4xl md:text-5xl font-black tracking-tight">
-                            Teaching Diary <span className="text-indigo-400">टाचणवही अहवाल.</span>
-                          </h2>
-                          <p className="text-xs md:text-sm text-slate-400 max-w-xl">
-                            Select Medium, Class, and Date to upload or view official Teaching Diaries.
-                          </p>
-                        </div>
-                        <div className="shrink-0 flex items-center justify-center size-16 md:size-20 bg-white/5 backdrop-blur-md rounded-3xl border border-white/10 shadow-inner">
-                          <BookOpen className="size-8 md:size-10 text-indigo-400" />
+                          <div className="shrink-0 flex items-center justify-center size-16 md:size-20 bg-white/5 backdrop-blur-md rounded-3xl border border-white/10 shadow-inner">
+                            <BookOpen className="size-8 md:size-10 text-indigo-400" />
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="text-center space-y-2 pt-2">
-                      <h2 className="text-3xl font-black text-slate-900 tracking-tight italic">Select Medium / माध्यम निवडा</h2>
-                      <p className="text-xs font-bold text-slate-500">
-                        वार्षिक व मासिक नियोजनासाठी प्रथम माध्यम निवडा (मराठी किंवा सेमी-इंग्रजी)
-                      </p>
-                    </div>
+                      <div className="text-center space-y-2 pt-2">
+                        <h2 className="text-3xl font-black text-slate-900 tracking-tight italic">Select Medium / माध्यम निवडा</h2>
+                        <p className="text-xs font-bold text-slate-500">
+                          वार्षिक व मासिक नियोजनासाठी प्रथम माध्यम निवडा (मराठी किंवा सेमी-इंग्रजी)
+                        </p>
+                      </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-3xl mx-auto w-full">
-                      {MEDIUMS.map((med) => (
-                        <motion.button
-                          key={med.id}
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          onClick={() => setSelectedMedium(med.id)}
-                          className="group relative p-8 rounded-[2.5rem] border text-left transition-all duration-500 shadow-lg hover:shadow-2xl cursor-pointer overflow-hidden bg-gradient-to-br from-orange-500 via-orange-500 to-orange-600 text-white border-orange-500/30"
-                        >
-                          <div className="absolute -right-8 -top-8 size-32 bg-white/10 rounded-full blur-xl pointer-events-none" />
-                          <div className="relative z-10 flex items-start gap-5">
-                            <div className="size-14 rounded-2xl flex items-center justify-center border border-white/20 bg-white/15 backdrop-blur-sm group-hover:scale-110 transition-transform text-white font-black text-xl shrink-0">
-                              {med.badge}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-3xl mx-auto w-full">
+                        {MEDIUMS.map((med) => (
+                          <motion.button
+                            key={med.id}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => setSelectedMedium(med.id)}
+                            className="group relative p-8 rounded-[2.5rem] border text-left transition-all duration-500 shadow-lg hover:shadow-2xl cursor-pointer overflow-hidden bg-gradient-to-br from-orange-500 via-orange-500 to-orange-600 text-white border-orange-500/30"
+                          >
+                            <div className="absolute -right-8 -top-8 size-32 bg-white/10 rounded-full blur-xl pointer-events-none" />
+                            <div className="relative z-10 flex items-start gap-5">
+                              <div className="size-14 rounded-2xl flex items-center justify-center border border-white/20 bg-white/15 backdrop-blur-sm group-hover:scale-110 transition-transform text-white font-black text-xl shrink-0">
+                                {med.badge}
+                              </div>
+                              <div className="space-y-2">
+                                <h4 className="font-black text-xl text-white">{med.mr}</h4>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-orange-200">{med.title}</p>
+                                <p className="text-xs text-white/80 font-semibold flex items-center gap-1 mt-2">
+                                  इयत्ता निवडण्यासाठी पुढे या <ArrowRight className="size-3.5" />
+                                </p>
+                              </div>
                             </div>
-                            <div className="space-y-2">
-                              <h4 className="font-black text-xl text-white">{med.mr}</h4>
-                              <p className="text-[10px] font-black uppercase tracking-widest text-orange-200">{med.title}</p>
-                              <p className="text-xs text-white/80 font-semibold flex items-center gap-1 mt-2">
-                                इयत्ता निवडण्यासाठी पुढे या <ArrowRight className="size-3.5" />
-                              </p>
+                            <div className="absolute top-4 right-5">
+                              <span className="px-2.5 py-1 bg-white/20 backdrop-blur-sm rounded-full text-[10px] font-black tracking-wider text-white">
+                                {med.title}
+                              </span>
                             </div>
-                          </div>
-                          <div className="absolute top-4 right-5">
-                            <span className="px-2.5 py-1 bg-white/20 backdrop-blur-sm rounded-full text-[10px] font-black tracking-wider text-white">
-                              {med.title}
-                            </span>
-                          </div>
-                        </motion.button>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
+                          </motion.button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
 
-                {/* Step 2: Select Class */}
-                {selectedMedium && !selectedClass && (
-                  <motion.div
-                    key="class-selection"
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -15 }}
-                    className="space-y-8"
-                  >
-                    <div className="text-center space-y-2 pt-2">
-                      <h2 className="text-3xl font-black text-slate-900 tracking-tight italic">Select Class / इयत्ता निवडा</h2>
-                      <p className="text-xs font-bold text-slate-500">
-                        निवडलेले माध्यम: <span className="text-orange-600 font-black">{selectedMedium === "Marathi" ? "मराठी माध्यम" : "सेमी इंग्रजी"}</span>
-                      </p>
-                    </div>
+                  {/* Step 2: Select Class */}
+                  {selectedMedium && !selectedClass && (
+                    <motion.div
+                      key="class-selection"
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -15 }}
+                      className="space-y-8"
+                    >
+                      <div className="text-center space-y-2 pt-2">
+                        <h2 className="text-3xl font-black text-slate-900 tracking-tight italic">Select Class / इयत्ता निवडा</h2>
+                        <p className="text-xs font-bold text-slate-500">
+                          निवडलेले माध्यम: <span className="text-orange-600 font-black">{selectedMedium === "Marathi" ? "मराठी माध्यम" : "सेमी इंग्रजी"}</span>
+                        </p>
+                      </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5 max-w-5xl mx-auto w-full">
-                      {DIARY_CLASSES.map((cls) => (
-                        <motion.button
-                          key={cls.id}
-                          whileHover={{ scale: 1.03 }}
-                          whileTap={{ scale: 0.97 }}
-                          onClick={() => setSelectedClass(cls.id)}
-                          className="group relative p-7 rounded-[2rem] border text-center transition-all duration-500 shadow-md hover:shadow-xl cursor-pointer overflow-hidden bg-gradient-to-br from-orange-500 via-orange-500 to-orange-600 text-white border-orange-500/30 flex flex-col items-center gap-3"
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5 max-w-5xl mx-auto w-full">
+                        {DIARY_CLASSES.map((cls) => (
+                          <motion.button
+                            key={cls.id}
+                            whileHover={{ scale: 1.03 }}
+                            whileTap={{ scale: 0.97 }}
+                            onClick={() => setSelectedClass(cls.id)}
+                            className="group relative p-7 rounded-[2rem] border text-center transition-all duration-500 shadow-md hover:shadow-xl cursor-pointer overflow-hidden bg-gradient-to-br from-orange-500 via-orange-500 to-orange-600 text-white border-orange-500/30 flex flex-col items-center gap-3"
+                          >
+                            <div className="size-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20 backdrop-blur-sm group-hover:scale-110 transition-transform">
+                              <GraduationCap className="size-6 text-white" />
+                            </div>
+                            <div className="space-y-1">
+                              <h3 className="text-lg font-black leading-tight tracking-tight">{cls.mr}</h3>
+                              <p className="text-[10px] text-white/70 font-bold uppercase tracking-wider">{cls.id}</p>
+                            </div>
+                          </motion.button>
+                        ))}
+                      </div>
+
+                      <div className="flex justify-center pt-2">
+                        <button
+                          onClick={() => setSelectedMedium(null)}
+                          className="flex items-center gap-2 px-5 py-2.5 text-orange-600 hover:text-orange-900 bg-white hover:bg-orange-50 border border-orange-200 rounded-2xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-sm"
                         >
-                          <div className="size-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20 backdrop-blur-sm group-hover:scale-110 transition-transform">
-                            <GraduationCap className="size-6 text-white" />
-                          </div>
-                          <div className="space-y-1">
-                            <h3 className="text-lg font-black leading-tight tracking-tight">{cls.mr}</h3>
-                            <p className="text-[10px] text-white/70 font-bold uppercase tracking-wider">{cls.id}</p>
-                          </div>
-                        </motion.button>
-                      ))}
-                    </div>
+                          <ArrowLeft className="size-4" /> मागे या (Back to Class)
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
 
-                    <div className="flex justify-center pt-2">
-                      <button
-                        onClick={() => setSelectedMedium(null)}
-                        className="flex items-center gap-2 px-5 py-2.5 text-orange-600 hover:text-orange-900 bg-white hover:bg-orange-50 border border-orange-200 rounded-2xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-sm"
-                      >
-                        <ArrowLeft className="size-4" /> मागे या (Back to Class)
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
+                  {/* Step 3: Select Month */}
+                  {selectedMedium && selectedClass && selectedYear && !selectedMonth && (
+                    <motion.div
+                      key="month-selection"
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -15 }}
+                      className="space-y-8"
+                    >
+                      <div className="text-center space-y-2 pt-2">
+                        <h2 className="text-3xl font-black text-slate-900 tracking-tight italic">Select Month / महिना निवडा</h2>
+                        <p className="text-xs font-bold text-slate-500">
+                          निवडलेले माध्यम: <span className="text-orange-600 font-black">{selectedMedium === "Marathi" ? "मराठी माध्यम" : "सेमी इंग्रजी"}</span> • इयत्ता: <span className="text-purple-600 font-black">{selectedClass}</span> • वर्ष: <span className="text-teal-600 font-black">{selectedYear}</span>
+                        </p>
+                      </div>
 
-                {/* Step 3: Select Month */}
-                {selectedMedium && selectedClass && selectedYear && !selectedMonth && (
-                  <motion.div
-                    key="month-selection"
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -15 }}
-                    className="space-y-8"
-                  >
-                    <div className="text-center space-y-2 pt-2">
-                      <h2 className="text-3xl font-black text-slate-900 tracking-tight italic">Select Month / महिना निवडा</h2>
-                      <p className="text-xs font-bold text-slate-500">
-                        निवडलेले माध्यम: <span className="text-orange-600 font-black">{selectedMedium === "Marathi" ? "मराठी माध्यम" : "सेमी इंग्रजी"}</span> • इयत्ता: <span className="text-purple-600 font-black">{selectedClass}</span> • वर्ष: <span className="text-teal-600 font-black">{selectedYear}</span>
-                      </p>
-                    </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 max-w-4xl mx-auto w-full">
+                        {months.map((m) => (
+                          <motion.button
+                            key={m.id}
+                            whileHover={{ scale: 1.03 }}
+                            whileTap={{ scale: 0.97 }}
+                            onClick={() => {
+                              setSelectedMonth(m.id);
+                              setSelectedWeek("Week 1");
+                              const updatedDate = new Date(selectedDate);
+                              updatedDate.setFullYear(selectedYear);
+                              updatedDate.setMonth(parseInt(m.id, 10) - 1);
+                              setSelectedDate(updatedDate);
+                            }}
+                            className="group relative p-6 rounded-2xl border-2 text-center transition-all duration-500 cursor-pointer overflow-hidden bg-pink-50/40 border-pink-100 hover:border-pink-300 hover:bg-pink-100/30 text-slate-800 flex flex-col items-center gap-2 shadow-sm"
+                          >
+                            <div className="size-10 bg-pink-200/50 rounded-xl flex items-center justify-center border border-pink-200 group-hover:scale-110 transition-transform">
+                              <Calendar className="size-5 text-pink-600" />
+                            </div>
+                            <div className="space-y-0.5">
+                              <h3 className="text-base font-black leading-tight tracking-tight text-slate-800">{m.mr}</h3>
+                              <p className="text-[10px] text-pink-500 font-bold uppercase tracking-wider">{m.name}</p>
+                            </div>
+                          </motion.button>
+                        ))}
+                      </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 max-w-4xl mx-auto w-full">
-                      {months.map((m) => (
-                        <motion.button
-                          key={m.id}
-                          whileHover={{ scale: 1.03 }}
-                          whileTap={{ scale: 0.97 }}
-                          onClick={() => {
-                            setSelectedMonth(m.id);
-                            setSelectedWeek("Week 1");
-                            const updatedDate = new Date(selectedDate);
-                            updatedDate.setFullYear(selectedYear);
-                            updatedDate.setMonth(parseInt(m.id, 10) - 1);
-                            setSelectedDate(updatedDate);
-                          }}
-                          className="group relative p-6 rounded-2xl border-2 text-center transition-all duration-500 cursor-pointer overflow-hidden bg-pink-50/40 border-pink-100 hover:border-pink-300 hover:bg-pink-100/30 text-slate-800 flex flex-col items-center gap-2 shadow-sm"
+                      <div className="flex justify-center pt-2">
+                        <button
+                          onClick={() => setSelectedClass(null)}
+                          className="flex items-center gap-2 px-5 py-2.5 text-orange-600 hover:text-orange-900 bg-white hover:bg-orange-50 border border-orange-200 rounded-2xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-sm"
                         >
-                          <div className="size-10 bg-pink-200/50 rounded-xl flex items-center justify-center border border-pink-200 group-hover:scale-110 transition-transform">
-                            <Calendar className="size-5 text-pink-600" />
-                          </div>
-                          <div className="space-y-0.5">
-                            <h3 className="text-base font-black leading-tight tracking-tight text-slate-800">{m.mr}</h3>
-                            <p className="text-[10px] text-pink-500 font-bold uppercase tracking-wider">{m.name}</p>
-                          </div>
-                        </motion.button>
-                      ))}
-                    </div>
+                          <ArrowLeft className="size-4" /> मागे या (Back to Class)
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
 
-                    <div className="flex justify-center pt-2">
-                      <button
-                        onClick={() => setSelectedClass(null)}
-                        className="flex items-center gap-2 px-5 py-2.5 text-orange-600 hover:text-orange-900 bg-white hover:bg-orange-50 border border-orange-200 rounded-2xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-sm"
-                      >
-                        <ArrowLeft className="size-4" /> मागे या (Back to Class)
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-
-              {/* Step 5: Main View */}
-              {selectedClass && selectedMedium && selectedYear && selectedMonth && (
-                <motion.div
-                  key="diary-content"
-                  initial={{ opacity: 0, scale: 0.98 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.98 }}
-                  className="max-w-5xl mx-auto w-full space-y-6"
-                >
-                  <TeacherTodayDiary
-                    selectedClass={selectedClass}
-                    selectedMedium={selectedMedium}
-                    selectedMonth={selectedMonth}
-                    onBack={handleBack}
-                    schoolProfile={schoolProfile}
-                  />
-                </motion.div>
+                  {/* Step 5: Main View */}
+                  {selectedClass && selectedMedium && selectedYear && selectedMonth && (
+                    <motion.div
+                      key="diary-content"
+                      initial={{ opacity: 0, scale: 0.98 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.98 }}
+                      className="max-w-5xl mx-auto w-full space-y-6"
+                    >
+                      <TeacherTodayDiary
+                        selectedClass={selectedClass}
+                        selectedMedium={selectedMedium}
+                        selectedMonth={selectedMonth}
+                        onBack={handleBack}
+                        schoolProfile={schoolProfile}
+                      />
+                    </motion.div>
+                  )}
+                </>
               )}
-            </>
-          )}
-        </AnimatePresence>
+            </AnimatePresence>
 
             {/* Document Live Preview Modal Backdrop & Frame */}
-            {isPreviewOpen && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-955/80 backdrop-blur-sm">
+            {isPreviewOpen && selectedRecordForPreview && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-sm">
                 <div className="bg-white rounded-3xl overflow-hidden shadow-2xl w-full max-w-[96vw] border border-slate-100 flex flex-col h-[93vh]">
                   {/* Modal Body with single unified navbar */}
                   <div className="flex-1 overflow-hidden bg-slate-100 p-2 sm:p-4">

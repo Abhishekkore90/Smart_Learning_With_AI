@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Download, Printer, Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, Download, Loader2, RefreshCw } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { matchStudentClassAndMedium, fetchStudentsForClass, fetchFirestoreMarks } from "./firestoreMarksHelper";
@@ -50,11 +50,13 @@ const getClassIndex = (rawClassStr) => {
   return -1;
 };
 
-export default function GradeWise({ initialClass, initialYear, onBack }) {
+export default function GradeWise({ initialClass, initialYear, initialTerm, onBack }) {
   const [academicYear, setAcademicYear] = useState(
     initialYear || localStorage.getItem("cce_academic_year") || "2025-26"
   );
-  const [selectedTerm, setSelectedTerm] = useState("प्रथम सत्र");
+  const [selectedTerm, setSelectedTerm] = useState(
+    initialTerm === "sem2" ? "द्वितीय सत्र" : "प्रथम सत्र"
+  );
   const [schoolName, setSchoolName] = useState(
     localStorage.getItem("schoolName") ||
     localStorage.getItem("teacher_school_name") ||
@@ -380,57 +382,185 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
     setDownloading(true);
     toast.info("श्रेणीनिहाय निकाल संकलन प्रपत्र PDF तयार होत आहे...");
     try {
-      const { default: html2pdf } = await import("html2pdf.js");
+      if (document.fonts && document.fonts.ready) {
+        await document.fonts.ready;
+      }
+
+      let html2canvas;
+      try {
+        const hModule = await import("html2canvas-pro");
+        html2canvas = hModule.default || hModule;
+      } catch (e) {
+        const hModule = await import("html2canvas");
+        html2canvas = hModule.default || hModule;
+      }
+
+      const { jsPDF } = await import("jspdf");
       const element = printRef.current;
+
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch (e) {}
+      }
+
+      if (element) {
+        const images = Array.from(element.querySelectorAll("img"));
+        await Promise.all(
+          images.map(
+            (img) =>
+              new Promise((resolve) => {
+                if (img.complete) resolve();
+                else {
+                  img.onload = resolve;
+                  img.onerror = resolve;
+                }
+              })
+          )
+        );
+      }
+
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      const tableElem = element ? element.querySelector("table") : null;
+
+      // Calculate full un-clipped width of table so no columns get cut off
+      const tableWidth = Math.max(
+        element ? element.scrollWidth : 0,
+        tableElem ? tableElem.scrollWidth : 0,
+        tableElem ? tableElem.offsetWidth : 0,
+        1200
+      );
+
+      const paddingX = 20;
+      const cloneWidth = tableWidth + paddingX * 2;
 
       // Clone element to prevent input artifacts and ensure 100% width fit
       const clone = element.cloneNode(true);
 
+      // Strip outer card padding & shadows so top title stays at the very top of PDF
+      clone.style.boxSizing = "border-box";
+      clone.style.padding = `10px ${paddingX}px 15px ${paddingX}px`;
+      clone.style.margin = "0";
+      clone.style.boxShadow = "none";
+      clone.style.border = "none";
+      clone.style.borderRadius = "0";
+      clone.style.width = `${cloneWidth}px`;
+      clone.style.minWidth = `${cloneWidth}px`;
+      clone.style.maxWidth = "none";
+      clone.style.overflow = "visible";
+      clone.style.background = "#ffffff";
+
       // Replace input elements with clean text spans in clone
       clone.querySelectorAll("input").forEach((inp) => {
-        const val = inp.value || "0";
+        const isNumber = inp.type === "number";
+        const val = inp.value !== undefined && inp.value !== null && inp.value !== ""
+          ? inp.value
+          : (isNumber ? "0" : "");
         const parent = inp.parentNode;
         if (parent) {
           const span = document.createElement("span");
           span.style.display = "inline-block";
-          span.style.width = "100%";
-          span.style.textAlign = "center";
-          span.style.fontWeight = "bold";
-          span.style.fontSize = "11px";
-          span.style.color = "#0f172a";
+          span.style.fontWeight = "900";
+          span.style.fontSize = "13px";
+          span.style.color = "#000000";
+          if (isNumber) {
+            span.style.width = "100%";
+            span.style.textAlign = "center";
+          } else {
+            span.style.minWidth = "200px";
+            span.style.textAlign = "left";
+            span.style.borderBottom = "1px dotted #94a3b8";
+            span.style.paddingLeft = "4px";
+          }
           span.textContent = val;
           parent.replaceChild(span, inp);
         }
       });
 
-      // Temporary offscreen container styled specifically for A4 landscape
+      // Ensure crisp high contrast table borders and header colors
+      clone.querySelectorAll("table").forEach((tb) => {
+        tb.style.boxSizing = "border-box";
+        tb.style.border = "2px solid #000000";
+        tb.style.borderCollapse = "collapse";
+        tb.style.width = `${tableWidth}px`;
+        tb.style.minWidth = `${tableWidth}px`;
+      });
+      clone.querySelectorAll("th").forEach((th) => {
+        th.style.backgroundColor = "#0d47a1";
+        th.style.color = "#ffffff";
+        th.style.border = "1px solid #000000";
+        th.style.verticalAlign = "middle";
+      });
+      clone.querySelectorAll("td").forEach((td) => {
+        td.style.border = "1px solid #000000";
+      });
+      clone.querySelectorAll("th span").forEach((sp) => {
+        sp.style.color = "#ffffff";
+      });
+
+      // Temporary offscreen container
       const tempContainer = document.createElement("div");
       tempContainer.style.position = "absolute";
       tempContainer.style.left = "-9999px";
-      tempContainer.style.top = "-9999px";
-      tempContainer.style.width = "1120px";
+      tempContainer.style.top = "0";
+      tempContainer.style.width = `${cloneWidth + 40}px`;
       tempContainer.style.background = "#ffffff";
-      tempContainer.style.padding = "10px";
+      tempContainer.style.zIndex = "-9999";
       tempContainer.appendChild(clone);
       document.body.appendChild(tempContainer);
 
-      const opt = {
-        margin: [4, 4, 4, 4],
-        filename: `श्रेणीनिहाय_निकाल_संकलन_प्रपत्र_${academicYear}.pdf`,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          windowWidth: 1150,
-          scrollX: 0,
-          scrollY: 0,
-        },
-        jsPDF: { unit: "mm", format: "a4", orientation: "landscape", compress: true },
-      };
+      const canvas = await html2canvas(clone, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+        windowWidth: cloneWidth + 60,
+        scrollX: 0,
+        scrollY: 0,
+        onclone: (clonedDoc) => {
+          try {
+            const styleTags = Array.from(document.querySelectorAll("style"));
+            styleTags.forEach((st) => {
+              clonedDoc.head.appendChild(st.cloneNode(true));
+            });
 
-      await html2pdf().set(opt).from(clone).save();
+            let cssText = "";
+            Array.from(document.styleSheets).forEach((sheet) => {
+              try {
+                const rules = Array.from(sheet.cssRules || sheet.rules || []);
+                rules.forEach((rule) => {
+                  cssText += rule.cssText + "\n";
+                });
+              } catch (e) {}
+            });
+
+            if (cssText) {
+              const inlineStyle = clonedDoc.createElement("style");
+              inlineStyle.textContent = cssText;
+              clonedDoc.head.appendChild(inlineStyle);
+            }
+          } catch (e) {}
+        },
+      });
+
       document.body.removeChild(tempContainer);
+
+      const imgData = canvas.toDataURL("image/jpeg", 0.98);
+      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      const pdfWidth = pdf.internal.pageSize.getWidth(); // 297 mm
+      const pdfHeight = pdf.internal.pageSize.getHeight(); // 210 mm
+      const marginX = 4; // 4mm side margin
+      const marginTop = 3; // 3mm top margin to start immediately at top
+      const availWidth = pdfWidth - marginX * 2; // 289 mm
+      const availHeight = pdfHeight - marginTop * 2; // 204 mm
+
+      const imgWidth = availWidth;
+      const imgHeight = (canvas.height * availWidth) / canvas.width;
+
+      pdf.addImage(imgData, "JPEG", marginX, marginTop, imgWidth, Math.min(imgHeight, availHeight), undefined, "FAST");
+      pdf.save(`श्रेणीनिहाय_निकाल_संकलन_प्रपत्र_${academicYear}.pdf`);
       toast.success("PDF यशस्वीरित्या डाऊनलोड झाली!");
     } catch (err) {
       console.error("PDF download error:", err);
@@ -513,7 +643,7 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
               const curM = new Date().getMonth();
               const refY = curM >= 5 ? curY : curY - 1;
               const yrs = [];
-              for (let y = refY + 1; y >= 2020; y--) {
+              for (let y = refY - 2; y <= refY + 2; y++) {
                 yrs.push(`${y}-${y + 1}`);
               }
               return yrs.map((y) => (
@@ -532,23 +662,14 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
             रीफ्रेश
           </button>
 
-          {/* Print Button */}
-          <button
-            onClick={handlePrint}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm"
-          >
-            <Printer className="size-3.5" />
-            प्रिंट काढा
-          </button>
-
-          {/* PDF Download Button */}
+          {/* Download Button */}
           <button
             onClick={handleDownloadPdf}
             disabled={downloading}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 cursor-pointer transition-colors shadow-md disabled:opacity-50"
+            className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 cursor-pointer transition-colors shadow-md disabled:opacity-50"
           >
             {downloading ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
-            PDF डाऊनलोड करा
+            {downloading ? "डाऊनलोड होत आहे..." : "डाऊनलोड"}
           </button>
         </div>
       </div>
@@ -563,16 +684,16 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
         <div className="max-w-[1400px] mx-auto overflow-x-auto">
           <div
             ref={printRef}
-            className="bg-white p-6 md:p-8 rounded-2xl border border-slate-300 shadow-lg min-w-[1050px]"
+            className="bg-white p-6 md:p-8 rounded-2xl border-2 border-black shadow-lg min-w-[1050px]"
             style={{ fontFamily: "'Inter', 'Noto Sans Devanagari', sans-serif" }}
           >
             {/* Header matching PDF structure */}
             <div className="text-center mb-5 space-y-2">
-              <h1 className="text-xl md:text-2xl font-black text-blue-900 tracking-wide">
+              <h1 className="text-xl md:text-2xl font-black text-[#0a2540] tracking-wide block w-full text-center py-1">
                 सातत्यपूर्ण सर्वंकष मूल्यमापन श्रेणीनिहाय निकाल संकलन प्रपत्र - 1
               </h1>
 
-              <div className="flex flex-wrap items-center justify-between text-xs font-bold text-slate-900 border-b-2 border-slate-800 pb-2 px-1 gap-2">
+              <div className="flex flex-wrap items-center justify-between text-xs font-bold text-slate-900 border-b-2 border-black pb-2 px-1 gap-2">
                 <div className="flex items-center gap-1">
                   <span>शाळा:</span>
                   <input
@@ -583,70 +704,71 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
                   />
                 </div>
                 <div>
-                  <span>सत्र:</span> <span className="font-extrabold">{selectedTerm}</span>
+                  <span>सत्र:</span> <span className="font-extrabold text-[#0d47a1]">{selectedTerm}</span>
                 </div>
                 <div>
-                  <span>सन:</span> <span className="font-extrabold">{academicYear}</span>
+                  <span>सन:</span> <span className="font-extrabold text-[#0d47a1]">{academicYear}</span>
                 </div>
               </div>
             </div>
+            <style dangerouslySetInnerHTML={{ __html: ".grade-matrix-table, .grade-matrix-table tr, .grade-matrix-table th, .grade-matrix-table td { border: 1px solid #000000 !important; border-color: #000000 !important; } .grade-matrix-table { border: 2px solid #000000 !important; }" }} />
 
-            <table className="w-full border-collapse border-2 border-blue-900 text-center text-[11px] font-semibold text-slate-900 grade-matrix-table" style={{ tableLayout: "fixed" }}>
+            <table className="w-full border-collapse border-2 border-black text-center text-xs font-semibold text-slate-900 grade-matrix-table" style={{ tableLayout: "fixed" }}>
               <colgroup><col style={{ width: "35px" }} /><col style={{ width: "70px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "38px" }} /><col style={{ width: "38px" }} /></colgroup>
               <thead>
-                <tr className="bg-blue-50/80 font-black border-b-2 border-blue-900 text-blue-950">
-                  <th className="border border-blue-900 p-1" rowSpan={3}>
-                    अ. क्र.
+                <tr className="font-black text-white">
+                  <th className="border border-black p-1 bg-[#0d47a1] text-white font-black align-middle" style={{ backgroundColor: "#0d47a1", borderColor: "#000000", verticalAlign: "middle" }} rowSpan={3}>
+                    <span className="relative z-10 block text-center font-black text-white text-[13px]" style={{ position: "relative", zIndex: 10, color: "#ffffff" }}>अ. क्र.</span>
                   </th>
-                  <th className="border border-blue-900 p-1" rowSpan={3}>
-                    इयत्ता
+                  <th className="border border-black p-1 bg-[#0d47a1] text-white font-black align-middle" style={{ backgroundColor: "#0d47a1", borderColor: "#000000", verticalAlign: "middle" }} rowSpan={3}>
+                    <span className="relative z-10 block text-center font-black text-white text-[13px]" style={{ position: "relative", zIndex: 10, color: "#ffffff" }}>इयत्ता</span>
                   </th>
-                  <th className="border border-blue-900 p-1" colSpan={2} rowSpan={2}>
-                    पट
+                  <th className="border border-black p-1 bg-[#0d47a1] text-white font-black align-middle" style={{ backgroundColor: "#0d47a1", borderColor: "#000000", verticalAlign: "middle" }} colSpan={2} rowSpan={2}>
+                    <span className="relative z-10 block text-center font-black text-white text-[13px]" style={{ position: "relative", zIndex: 10, color: "#ffffff" }}>पट</span>
                   </th>
-                  <th className="border border-blue-900 p-1" colSpan={18}>
-                    वर्गवार श्रेणी
+                  <th className="border border-black p-1 bg-[#0d47a1] text-white font-black align-middle" style={{ backgroundColor: "#0d47a1", borderColor: "#000000", verticalAlign: "middle" }} colSpan={18}>
+                    <span className="relative z-10 block text-center font-black text-white text-sm" style={{ position: "relative", zIndex: 10, color: "#ffffff" }}>वर्गवार श्रेणी</span>
                   </th>
-                  <th className="border border-blue-900 p-1" colSpan={2} rowSpan={2}>
-                    एकूण
+                  <th className="border border-black p-1 bg-[#0d47a1] text-white font-black align-middle" style={{ backgroundColor: "#0d47a1", borderColor: "#000000", verticalAlign: "middle" }} colSpan={2} rowSpan={2}>
+                    <span className="relative z-10 block text-center font-black text-white text-[13px]" style={{ position: "relative", zIndex: 10, color: "#ffffff" }}>एकूण</span>
                   </th>
                 </tr>
 
-                <tr className="bg-blue-50/50 font-black border-b border-blue-900 text-blue-950 text-[10px]">
-                  <th className="border border-blue-900 py-1 px-0.5" colSpan={2}>अ-1<br /><span className="text-[8px] font-normal tracking-tighter">(91 ते 100)</span></th>
-                  <th className="border border-blue-900 py-1 px-0.5" colSpan={2}>अ-2<br /><span className="text-[8px] font-normal tracking-tighter">(81 ते 90)</span></th>
-                  <th className="border border-blue-900 py-1 px-0.5" colSpan={2}>ब-1<br /><span className="text-[8px] font-normal tracking-tighter">(71 ते 80)</span></th>
-                  <th className="border border-blue-900 py-1 px-0.5" colSpan={2}>ब-2<br /><span className="text-[8px] font-normal tracking-tighter">(61 ते 70)</span></th>
-                  <th className="border border-blue-900 py-1 px-0.5" colSpan={2}>क-1<br /><span className="text-[8px] font-normal tracking-tighter">(51 ते 60)</span></th>
-                  <th className="border border-blue-900 py-1 px-0.5" colSpan={2}>क-2<br /><span className="text-[8px] font-normal tracking-tighter">(41 ते 50)</span></th>
-                  <th className="border border-blue-900 py-1 px-0.5" colSpan={2}>ड<br /><span className="text-[8px] font-normal tracking-tighter">(33 ते 40)</span></th>
-                  <th className="border border-blue-900 py-1 px-0.5" colSpan={2}>इ-1<br /><span className="text-[8px] font-normal tracking-tighter">(21 ते 32)</span></th>
-                  <th className="border border-blue-900 py-1 px-0.5" colSpan={2}>इ-2<br /><span className="text-[8px] font-normal tracking-tighter">(20 व कमी)</span></th>
+                <tr className="font-black text-white text-xs">
+                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-black text-xs" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }} colSpan={2}>अ-1<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-100">(91 ते 100)</span></th>
+                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-black text-xs" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }} colSpan={2}>अ-2<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-100">(81 ते 90)</span></th>
+                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-black text-xs" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }} colSpan={2}>ब-1<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-100">(71 ते 80)</span></th>
+                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-black text-xs" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }} colSpan={2}>ब-2<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-100">(61 ते 70)</span></th>
+                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-black text-xs" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }} colSpan={2}>क-1<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-100">(51 ते 60)</span></th>
+                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-black text-xs" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }} colSpan={2}>क-2<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-100">(41 ते 50)</span></th>
+                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-black text-xs" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }} colSpan={2}>ड<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-100">(33 ते 40)</span></th>
+                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-black text-xs" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }} colSpan={2}>इ-1<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-100">(21 ते 32)</span></th>
+                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-black text-xs" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }} colSpan={2}>इ-2<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-100">(20 व कमी)</span></th>
                 </tr>
 
-                <tr className="bg-blue-100/60 font-black border-b-2 border-blue-900 text-blue-950 text-[10px]">
-                  <th className="border border-blue-900 py-1 px-0.5">मुले</th>
-                  <th className="border border-blue-900 py-1 px-0.5">मुली</th>
-                  <th className="border border-blue-900 py-1 px-0.5">मुले</th>
-                  <th className="border border-blue-900 py-1 px-0.5">मुली</th>
-                  <th className="border border-blue-900 py-1 px-0.5">मुले</th>
-                  <th className="border border-blue-900 py-1 px-0.5">मुली</th>
-                  <th className="border border-blue-900 py-1 px-0.5">मुले</th>
-                  <th className="border border-blue-900 py-1 px-0.5">मुली</th>
-                  <th className="border border-blue-900 py-1 px-0.5">मुले</th>
-                  <th className="border border-blue-900 py-1 px-0.5">मुली</th>
-                  <th className="border border-blue-900 py-1 px-0.5">मुले</th>
-                  <th className="border border-blue-900 py-1 px-0.5">मुली</th>
-                  <th className="border border-blue-900 py-1 px-0.5">मुले</th>
-                  <th className="border border-blue-900 py-1 px-0.5">मुली</th>
-                  <th className="border border-blue-900 py-1 px-0.5">मुले</th>
-                  <th className="border border-blue-900 py-1 px-0.5">मुली</th>
-                  <th className="border border-blue-900 py-1 px-0.5">मुले</th>
-                  <th className="border border-blue-900 py-1 px-0.5">मुली</th>
-                  <th className="border border-blue-900 py-1 px-0.5">मुले</th>
-                  <th className="border border-blue-900 py-1 px-0.5">मुली</th>
-                  <th className="border border-blue-900 py-1 px-0.5 bg-blue-100">मुले</th>
-                  <th className="border border-blue-900 py-1 px-0.5 bg-blue-100">मुली</th>
+                <tr className="font-black text-white text-[11px]">
+                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-extrabold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुले</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-extrabold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुली</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-extrabold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुले</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-extrabold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुली</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-extrabold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुले</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-extrabold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुली</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-extrabold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुले</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-extrabold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुली</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-extrabold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुले</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-extrabold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुली</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-extrabold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुले</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-extrabold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुली</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-extrabold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुले</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-extrabold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुली</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-extrabold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुले</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-bold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुली</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-bold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुले</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-bold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुली</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-bold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुले</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-bold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुली</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-bold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुले</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-bold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुली</th>
                 </tr>
               </thead>
 
@@ -698,114 +820,114 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
                     const gradeKeys = ["a1", "a2", "b1", "b2", "c1", "c2", "d", "e1", "e2"];
 
                     return (
-                      <tr key={cls.id} className="border-b border-blue-900 hover:bg-blue-50/30 transition-colors">
+                      <tr key={cls.id} className="border-b border-black hover:bg-blue-50/50 transition-colors">
                         {/* Sr No */}
-                        <td className="border border-blue-900 py-1 font-extrabold">{displayIdx + 1}</td>
+                        <td className="border border-black py-1.5 text-xs font-black text-slate-900">{displayIdx + 1}</td>
 
                         {/* Class Name */}
-                        <td className="border border-blue-900 py-1 px-1 font-black text-slate-900 whitespace-nowrap overflow-hidden text-ellipsis">{cls.name}</td>
+                        <td className="border border-black py-1.5 px-1 text-xs font-black text-slate-950 whitespace-nowrap overflow-hidden text-ellipsis">{cls.name}</td>
 
                         {/* Pat (Enrolled) */}
-                        <td className="border border-blue-900 p-0">
+                        <td className="border border-black p-0">
                           <input
                             type="number"
                             value={cls.pat.boys}
                             onChange={(e) => handleCellChange(targetIdx, "pat", "boys", e.target.value)}
-                            className="w-full text-center bg-transparent focus:bg-amber-100 border-none font-bold text-xs focus:outline-none py-1"
+                            className="w-full text-center bg-transparent focus:bg-blue-100 border-none font-black text-[13px] text-slate-950 focus:outline-none py-1.5"
                           />
                         </td>
-                        <td className="border border-blue-900 p-0">
+                        <td className="border border-black p-0">
                           <input
                             type="number"
                             value={cls.pat.girls}
                             onChange={(e) => handleCellChange(targetIdx, "pat", "girls", e.target.value)}
-                            className="w-full text-center bg-transparent focus:bg-amber-100 border-none font-bold text-xs focus:outline-none py-1"
+                            className="w-full text-center bg-transparent focus:bg-blue-100 border-none font-black text-[13px] text-slate-950 focus:outline-none py-1.5"
                           />
                         </td>
 
                         {/* Grade Columns */}
                         {gradeKeys.map((gKey) => (
                           <React.Fragment key={gKey}>
-                            <td className="border border-blue-900 p-0">
+                            <td className="border border-black p-0">
                               <input
                                 type="number"
                                 value={cls[gKey]?.boys || 0}
                                 onChange={(e) => handleCellChange(targetIdx, gKey, "boys", e.target.value)}
-                                className="w-full text-center bg-transparent focus:bg-amber-100 border-none font-semibold text-xs focus:outline-none py-1"
+                                className="w-full text-center bg-transparent focus:bg-blue-100 border-none font-extrabold text-[13px] text-slate-950 focus:outline-none py-1.5"
                               />
                             </td>
-                            <td className="border border-blue-900 p-0">
+                            <td className="border border-black p-0">
                               <input
                                 type="number"
                                 value={cls[gKey]?.girls || 0}
                                 onChange={(e) => handleCellChange(targetIdx, gKey, "girls", e.target.value)}
-                                className="w-full text-center bg-transparent focus:bg-amber-100 border-none font-semibold text-xs focus:outline-none py-1"
+                                className="w-full text-center bg-transparent focus:bg-blue-100 border-none font-extrabold text-[13px] text-slate-950 focus:outline-none py-1.5"
                               />
                             </td>
                           </React.Fragment>
                         ))}
 
                         {/* Row Total */}
-                        <td className="border border-blue-900 py-1 font-black text-blue-950 bg-blue-50/30">{rowTotalBoys}</td>
-                        <td className="border border-blue-900 py-1 font-black text-blue-950 bg-blue-50/30">{rowTotalGirls}</td>
+                        <td className="border border-black py-1.5 text-[13px] font-black text-[#0d47a1] bg-[#e3f2fd]">{rowTotalBoys}</td>
+                        <td className="border border-black py-1.5 text-[13px] font-black text-[#0d47a1] bg-[#e3f2fd]">{rowTotalGirls}</td>
                       </tr>
                     );
                   });
                 })()}
 
                 {/* Bottom Total Row (एकूण) matching PDF */}
-                <tr className="bg-amber-100/80 font-black text-slate-950 text-[11px] border-t-2 border-blue-900">
-                  <td className="border border-blue-900 py-2 text-center font-black" colSpan={2}>
+                <tr className="bg-[#bbdefb] font-black text-[#0a2540] text-xs border-t-2 border-black">
+                  <td className="border border-black py-2.5 text-center text-xs font-black" colSpan={2}>
                     एकूण
                   </td>
 
                   {/* Pat Totals */}
-                  <td className="border border-blue-900 py-2 font-black">{columnTotals.pat.boys}</td>
-                  <td className="border border-blue-900 py-2 font-black">{columnTotals.pat.girls}</td>
+                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.pat.boys}</td>
+                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.pat.girls}</td>
 
                   {/* A1 Totals */}
-                  <td className="border border-blue-900 py-2 font-black">{columnTotals.a1.boys}</td>
-                  <td className="border border-blue-900 py-2 font-black">{columnTotals.a1.girls}</td>
+                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.a1.boys}</td>
+                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.a1.girls}</td>
 
                   {/* A2 Totals */}
-                  <td className="border border-blue-900 py-2 font-black">{columnTotals.a2.boys}</td>
-                  <td className="border border-blue-900 py-2 font-black">{columnTotals.a2.girls}</td>
+                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.a2.boys}</td>
+                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.a2.girls}</td>
 
                   {/* B1 Totals */}
-                  <td className="border border-blue-900 py-2 font-black">{columnTotals.b1.boys}</td>
-                  <td className="border border-blue-900 py-2 font-black">{columnTotals.b1.girls}</td>
+                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.b1.boys}</td>
+                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.b1.girls}</td>
 
                   {/* B2 Totals */}
-                  <td className="border border-blue-900 py-2 font-black">{columnTotals.b2.boys}</td>
-                  <td className="border border-blue-900 py-2 font-black">{columnTotals.b2.girls}</td>
+                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.b2.boys}</td>
+                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.b2.girls}</td>
 
                   {/* C1 Totals */}
-                  <td className="border border-blue-900 py-2 font-black">{columnTotals.c1.boys}</td>
-                  <td className="border border-blue-900 py-2 font-black">{columnTotals.c1.girls}</td>
+                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.c1.boys}</td>
+                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.c1.girls}</td>
 
                   {/* C2 Totals */}
-                  <td className="border border-blue-900 py-2 font-black">{columnTotals.c2.boys}</td>
-                  <td className="border border-blue-900 py-2 font-black">{columnTotals.c2.girls}</td>
+                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.c2.boys}</td>
+                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.c2.girls}</td>
 
                   {/* D Totals */}
-                  <td className="border border-blue-900 py-2 font-black">{columnTotals.d.boys}</td>
-                  <td className="border border-blue-900 py-2 font-black">{columnTotals.d.girls}</td>
+                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.d.boys}</td>
+                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.d.girls}</td>
 
                   {/* E1 Totals */}
-                  <td className="border border-blue-900 py-2 font-black">{columnTotals.e1.boys}</td>
-                  <td className="border border-blue-900 py-2 font-black">{columnTotals.e1.girls}</td>
+                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.e1.boys}</td>
+                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.e1.girls}</td>
 
                   {/* E2 Totals */}
-                  <td className="border border-blue-900 py-2 font-black">{columnTotals.e2.boys}</td>
-                  <td className="border border-blue-900 py-2 font-black">{columnTotals.e2.girls}</td>
+                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.e2.boys}</td>
+                  <td className="border border-black py-2.5 text-[13px] font-black">{columnTotals.e2.girls}</td>
 
                   {/* Total Sum Across All Grades */}
-                  <td className="border border-blue-900 py-2 font-black bg-amber-200">
+                  <td className="border border-black py-2.5 text-[13px] font-black bg-[#90caf9] text-slate-950">
                     {Object.keys(columnTotals)
                       .filter((k) => k !== "pat")
                       .reduce((acc, k) => acc + columnTotals[k].boys, 0)}
                   </td>
-                  <td className="border border-blue-900 py-2 font-black bg-amber-200">
+                  <td className="border border-black py-2.5 text-[13px] font-black bg-[#90caf9] text-slate-950">
                     {Object.keys(columnTotals)
                       .filter((k) => k !== "pat")
                       .reduce((acc, k) => acc + columnTotals[k].girls, 0)}
@@ -818,33 +940,7 @@ export default function GradeWise({ initialClass, initialYear, onBack }) {
       )}
 
       {/* Styles for Table Layout & Print */}
-      <style>{`
-        table.grade-matrix-table input[type=number]::-webkit-inner-spin-button,
-        table.grade-matrix-table input[type=number]::-webkit-outer-spin-button {
-          -webkit-appearance: none;
-          margin: 0;
-        }
-        table.grade-matrix-table input[type=number] {
-          -moz-appearance: textfield;
-        }
-        @media print {
-          @page {
-            size: A4 landscape;
-            margin: 4mm;
-          }
-          body {
-            background: white !important;
-            color: black !important;
-          }
-          button, select {
-            display: none !important;
-          }
-          input {
-            border: none !important;
-            background: transparent !important;
-          }
-        }
-      `}</style>
+      <style dangerouslySetInnerHTML={{ __html: "table.grade-matrix-table th { background-color: #0d47a1 !important; color: #ffffff !important; font-weight: 800 !important; } table.grade-matrix-table input[type=number]::-webkit-inner-spin-button, table.grade-matrix-table input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; } table.grade-matrix-table input[type=number] { -moz-appearance: textfield; } @media print { @page { size: A4 landscape; margin: 4mm; } body { background: white !important; color: black !important; } button, select { display: none !important; } input { border: none !important; background: transparent !important; } }" }} />
     </div>
   );
 }

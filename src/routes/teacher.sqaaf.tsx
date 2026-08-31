@@ -9,6 +9,7 @@ import { uploadBlobToBunny } from "@/lib/bunnyStorage";
 import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
+import { getUnifiedSchoolProfile, saveUnifiedSchoolProfile } from "@/utils/schoolProfileHelper";
 // Helper function to extract public Google Drive photos from single file links and folder links
 async function fetchGoogleDriveImages(url: string): Promise<{ src: string }[]> {
   try {
@@ -5194,7 +5195,7 @@ const SqaafResponseCard = ({ num, idx, selectedLang, selectedOptions }: SqaafRes
 };
 
 function TeacherSqaafPage() {
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const [view, setView] = useState<"info" | "dashboard" | "summary" | "certificate" | "responses" | "table_report" | "manual_summary">(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("sqaaf_school_info");
@@ -5233,13 +5234,23 @@ function TeacherSqaafPage() {
 
   // School Info Form State
   const loadSchoolInfo = () => {
+    let saved: any = {};
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("sqaaf_school_info");
-      if (saved) {
-        try { return JSON.parse(saved); } catch (e) { /* ignore */ }
+      const s = localStorage.getItem("sqaaf_school_info");
+      if (s) {
+        try { saved = JSON.parse(s); } catch (e) { /* ignore */ }
       }
     }
-    return null;
+    const uni = getUnifiedSchoolProfile();
+    return {
+      schoolName: saved?.schoolName || uni.schoolName || "",
+      headmaster: saved?.headmaster || uni.headmaster || uni.teacherName || "",
+      address: saved?.address || "",
+      centerName: saved?.centerName || uni.kendra || "",
+      taluka: saved?.taluka || uni.taluka || "",
+      district: saved?.district || uni.jilha || "",
+      udise: saved?.udise || uni.udise || "",
+    };
   };
   const savedInfo = loadSchoolInfo();
   const [infoSchoolName, setInfoSchoolName] = useState(savedInfo?.schoolName || profile?.schoolName || "");
@@ -5249,6 +5260,105 @@ function TeacherSqaafPage() {
   const [infoTaluka, setInfoTaluka] = useState(savedInfo?.taluka || "");
   const [infoDistrict, setInfoDistrict] = useState(savedInfo?.district || "");
   const [infoUdise, setInfoUdise] = useState(savedInfo?.udise || profile?.udise || "");
+
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      const uni = getUnifiedSchoolProfile();
+      if (uni.schoolName) setInfoSchoolName((prev: string) => prev || uni.schoolName);
+      if (uni.udise) setInfoUdise((prev: string) => prev || uni.udise);
+      if (uni.kendra) setInfoCenterName((prev: string) => prev || uni.kendra);
+      if (uni.taluka) setInfoTaluka((prev: string) => prev || uni.taluka);
+      if (uni.jilha) setInfoDistrict((prev: string) => prev || uni.jilha);
+      if (uni.headmaster || uni.teacherName) setInfoHeadmaster((prev: string) => prev || uni.headmaster || uni.teacherName);
+    };
+    handleProfileUpdate();
+    window.addEventListener("schoolProfileUpdated", handleProfileUpdate);
+    return () => window.removeEventListener("schoolProfileUpdated", handleProfileUpdate);
+  }, []);
+
+  const getDocId = () => {
+    if (user?.uid) return user.uid;
+    if (profile?.usid) return profile.usid;
+    if (profile?.udise) return `udise_${profile.udise}`;
+    if (profile?.email) return `email_${profile.email.replace(/[@.]/g, "_")}`;
+    return null;
+  };
+
+  const saveSqaafDataToCloud = async (
+    selOpt?: Record<number, number>,
+    compStd?: Set<number>,
+    extOpt?: Record<number, number>,
+    info?: any
+  ) => {
+    const docId = getDocId();
+    if (!docId) return;
+
+    try {
+      const docRef = doc(db, "sqaaf_evaluations", docId);
+      const payload: any = {
+        updatedAt: new Date().toISOString(),
+      };
+      if (selOpt !== undefined) payload.selectedOptions = selOpt;
+      if (compStd !== undefined) payload.completedStandards = Array.from(compStd);
+      if (extOpt !== undefined) payload.externalOptions = extOpt;
+      if (info !== undefined) payload.schoolInfo = info;
+
+      await setDoc(docRef, payload, { merge: true });
+    } catch (err) {
+      console.error("Error saving SQAAF data to Firestore:", err);
+    }
+  };
+
+  // Sync SQAAF evaluation data from Cloud on load
+  useEffect(() => {
+    const docId = getDocId();
+    if (!docId) return;
+
+    const loadCloudData = async () => {
+      try {
+        const docRef = doc(db, "sqaaf_evaluations", docId);
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          const data = snap.data();
+          if (data.selectedOptions) {
+            setSelectedOptions(prev => {
+              const merged = { ...data.selectedOptions, ...prev };
+              localStorage.setItem("sqaaf_selected_options", JSON.stringify(merged));
+              return merged;
+            });
+          }
+          if (data.completedStandards && Array.isArray(data.completedStandards)) {
+            setCompletedStandards(prev => {
+              const setStds = new Set<number>([...data.completedStandards, ...Array.from(prev)]);
+              localStorage.setItem("sqaaf_completed_standards", JSON.stringify(Array.from(setStds)));
+              return setStds;
+            });
+          }
+          if (data.externalOptions) {
+            setExternalOptions(prev => {
+              const merged = { ...data.externalOptions, ...prev };
+              localStorage.setItem("sqaaf_external_options", JSON.stringify(merged));
+              return merged;
+            });
+          }
+          if (data.schoolInfo) {
+            if (data.schoolInfo.schoolName) setInfoSchoolName((prev: string) => prev || data.schoolInfo.schoolName);
+            if (data.schoolInfo.headmaster) setInfoHeadmaster((prev: string) => prev || data.schoolInfo.headmaster);
+            if (data.schoolInfo.address) setInfoAddress((prev: string) => prev || data.schoolInfo.address);
+            if (data.schoolInfo.centerName) setInfoCenterName((prev: string) => prev || data.schoolInfo.centerName);
+            if (data.schoolInfo.taluka) setInfoTaluka((prev: string) => prev || data.schoolInfo.taluka);
+            if (data.schoolInfo.district) setInfoDistrict((prev: string) => prev || data.schoolInfo.district);
+            if (data.schoolInfo.udise) setInfoUdise((prev: string) => prev || data.schoolInfo.udise);
+            localStorage.setItem("sqaaf_school_info", JSON.stringify(data.schoolInfo));
+          }
+        }
+      } catch (err) {
+        console.error("Error loading SQAAF cloud data:", err);
+      }
+    };
+
+    loadCloudData();
+  }, [user?.uid, profile?.email, profile?.udise]);
 
   const handleInfoSubmit = () => {
     const data = {
@@ -5261,6 +5371,17 @@ function TeacherSqaafPage() {
       udise: infoUdise,
     };
     localStorage.setItem("sqaaf_school_info", JSON.stringify(data));
+    saveUnifiedSchoolProfile({
+      schoolName: infoSchoolName,
+      headmaster: infoHeadmaster,
+      teacherName: infoHeadmaster,
+      kendra: infoCenterName,
+      taluka: infoTaluka,
+      jilha: infoDistrict,
+      district: infoDistrict,
+      udise: infoUdise,
+    });
+    saveSqaafDataToCloud(selectedOptions, completedStandards, externalOptions, data);
     toast.success(selectedLang === "mr" ? "माहिती जतन केली." : "Information saved.");
     setView("dashboard");
   };
@@ -5710,6 +5831,8 @@ function TeacherSqaafPage() {
       localStorage.setItem("sqaaf_completed_standards", JSON.stringify(Array.from(updatedCompleted)));
     }
 
+    saveSqaafDataToCloud(updated, updatedCompleted, externalOptions);
+
     toast.success(selectedLang === "mr" ? `पर्याय निवडला.` : `Option selected.`);
   };
 
@@ -5724,6 +5847,7 @@ function TeacherSqaafPage() {
     }
     setCompletedStandards(updated);
     localStorage.setItem("sqaaf_completed_standards", JSON.stringify(Array.from(updated)));
+    saveSqaafDataToCloud(selectedOptions, updated, externalOptions);
   };
 
   const toggleLanguage = () => {
@@ -5752,13 +5876,14 @@ function TeacherSqaafPage() {
         } catch { return null; }
       })();
 
-      const schoolName = schoolInfo?.schoolName || infoSchoolName || profile?.schoolName || "";
-      const headmaster = schoolInfo?.headmaster || infoHeadmaster || profile?.fullName || "";
-      const udise = schoolInfo?.udise || infoUdise || profile?.udise || "";
+      const uni = getUnifiedSchoolProfile();
+      const schoolName = schoolInfo?.schoolName || infoSchoolName || profile?.schoolName || uni.schoolName || "";
+      const headmaster = schoolInfo?.headmaster || infoHeadmaster || profile?.fullName || profile?.teacherName || uni.headmaster || uni.teacherName || "";
+      const udise = schoolInfo?.udise || infoUdise || profile?.udise || uni.udise || "";
       const address = schoolInfo?.address || infoAddress || profile?.address || "";
-      const centerName = schoolInfo?.centerName || infoCenterName || "";
-      const taluka = schoolInfo?.taluka || infoTaluka || "";
-      const district = schoolInfo?.district || infoDistrict || "";
+      const centerName = schoolInfo?.centerName || infoCenterName || profile?.center || profile?.kendra || uni.kendra || "";
+      const taluka = schoolInfo?.taluka || infoTaluka || profile?.taluka || uni.taluka || "";
+      const district = schoolInfo?.district || infoDistrict || profile?.district || profile?.jilha || uni.jilha || "";
 
       // Read selected options
       const savedSelectedOptions = localStorage.getItem("sqaaf_selected_options");
@@ -6073,10 +6198,10 @@ function TeacherSqaafPage() {
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-size: 9px;">${dynamicRangeHtml}</td>
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-size: 10px; font-weight: bold;">${appCount}</td>
               <td style="border: 1px solid black; padding: 4px; font-size: 10px;">${dom.nameMr}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL1 || ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL2 || ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL3 || ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL4 || ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL1 ? `${selfL1} × 1` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL2 ? `${selfL2} × 2` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL3 ? `${selfL3} × 3` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL4 ? `${selfL4} × 4` : ""}</td>
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfObt}</td>
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
@@ -6154,14 +6279,14 @@ function TeacherSqaafPage() {
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-size: 9px;">${dynamicRangeHtml}</td>
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-size: 10px; font-weight: bold;">${appCount}</td>
               <td style="border: 1px solid black; padding: 4px; font-size: 10px;">${dom.nameMr}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL1 || ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL2 || ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL3 || ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL4 || ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL1 ? `${selfL1} × 1` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL1 ? `${extL1} × 1` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL2 ? `${selfL2} × 2` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL2 ? `${extL2} × 2` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL3 ? `${selfL3} × 3` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL3 ? `${extL3} × 3` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL4 ? `${selfL4} × 4` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL4 ? `${extL4} × 4` : ""}</td>
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfObt}</td>
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
             </tr>
@@ -6183,15 +6308,15 @@ function TeacherSqaafPage() {
         html = `
           <div style="font-family: 'Segoe UI', 'Noto Sans Devanagari', Arial, sans-serif; color: #0f172a; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 10px;">
             <!-- Header -->
-            <div style="border-bottom: 2.5px solid #f97316; padding-bottom: 12px; margin-bottom: 18px;">
+            <div style="border-bottom: 2.5px solid #f97316; padding-bottom: 12px; margin-bottom: 18px; text-align: center;">
               <div>
-                <div style="font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: #f97316; margin-bottom: 4px;">
+                <div style="font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: #f97316; margin-bottom: 4px; text-align: center;">
                   ${isMr ? "राज्य शैक्षणिक संशोधन व प्रशिक्षण परिषद, महाराष्ट्र" : "State Council For Educational Research and Training, Maharashtra"}
                 </div>
-                <h1 style="font-size: 20px; font-weight: 900; color: #0f172a; margin: 0 0 3px 0;">
+                <h1 style="font-size: 20px; font-weight: 900; color: #0f172a; margin: 0 0 3px 0; text-align: center;">
                   ${isMr ? "SQAAF शाळा प्रतिसाद अहवाल" : "SQAAF School Responses Report"}
                 </h1>
-                <div style="font-size: 10px; font-weight: 600; color: #475569;">
+                <div style="font-size: 10px; font-weight: 600; color: #475569; text-align: center;">
                   School Quality Assessment & Accreditation Framework
                 </div>
               </div>
@@ -6553,14 +6678,14 @@ function TeacherSqaafPage() {
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-size: 9px;">${dynamicRangeHtml}</td>
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-size: 10px; font-weight: bold;">${appCount}</td>
               <td style="border: 1px solid black; padding: 4px; font-size: 10px;">${dom.nameMr}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL1 || ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL2 || ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL3 || ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL4 || ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL1 ? `${selfL1} × 1` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL1 ? `${extL1} × 1` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL2 ? `${selfL2} × 2` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL2 ? `${extL2} × 2` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL3 ? `${selfL3} × 3` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL3 ? `${extL3} × 3` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL4 ? `${selfL4} × 4` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL4 ? `${extL4} × 4` : ""}</td>
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfObt}</td>
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
             </tr>
@@ -6583,19 +6708,19 @@ function TeacherSqaafPage() {
           <div style="font-family: 'Segoe UI', 'Noto Sans Devanagari', Arial, sans-serif; color: #0f172a; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
             
             <!-- Header -->
-            <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid #f97316; padding-bottom: 16px; margin-bottom: 20px;">
-              <div>
-                <h1 style="font-size: 26px; font-weight: 900; color: #0f172a; margin: 0 0 4px 0; letter-spacing: -0.5px;">
+            <div style="border-bottom: 3px solid #f97316; padding-bottom: 16px; margin-bottom: 20px; text-align: center; position: relative;">
+              <div style="text-align: center;">
+                <h1 style="font-size: 26px; font-weight: 900; color: #0f172a; margin: 0 0 4px 0; letter-spacing: -0.5px; text-align: center;">
                   ${isMr ? "SQAAF स्वयं मूल्यांकन अहवाल" : "SQAAF Self Evaluation Report"}
                 </h1>
-                <div style="font-size: 11px; font-weight: 600; color: #475569;">
+                <div style="font-size: 11px; font-weight: 600; color: #475569; text-align: center;">
                   School Quality Assessment & Accreditation Framework
                 </div>
               </div>
-              <div style="text-align: right;">
-                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 12px 16px;">
+              <div style="position: absolute; right: 0; bottom: 12px; text-align: right;">
+                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 8px 12px;">
                   <div style="font-size: 8px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.5px;">${isMr ? "दिनांक" : "Date"}</div>
-                  <div style="font-size: 13px; font-weight: 900; color: #0f172a;">${new Date().toLocaleDateString(isMr ? "mr-IN" : "en-IN", { year: "numeric", month: "long", day: "numeric" })}</div>
+                  <div style="font-size: 11px; font-weight: 900; color: #0f172a;">${new Date().toLocaleDateString(isMr ? "mr-IN" : "en-IN", { year: "numeric", month: "long", day: "numeric" })}</div>
                 </div>
               </div>
             </div>
@@ -6883,11 +7008,11 @@ function TeacherSqaafPage() {
         let currentPage = createNewPageContainer();
 
         const headerHtml = `
-          <div style="font-family: sans-serif; margin-bottom: 30px;">
-            <div style="color: #0f172a; font-size: 34px; font-weight: 900; margin-top: 8px;">
+          <div style="font-family: sans-serif; margin-bottom: 30px; text-align: center;">
+            <div style="color: #0f172a; font-size: 34px; font-weight: 900; margin-top: 8px; text-align: center;">
               ${isMr ? "SQAAF स्वयं मूल्यांकन अहवाल" : "SQAAF Self Evaluation Report"}
             </div>
-            <div style="color: #475569; font-size: 16px; margin-top: 4px;">
+            <div style="color: #475569; font-size: 16px; margin-top: 4px; text-align: center;">
               School Quality Assessment & Accreditation Framework
             </div>
             
@@ -7192,10 +7317,10 @@ function TeacherSqaafPage() {
                   <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; white-space: nowrap;">${dom.start} ते ${dom.end}</td>
                   <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; word-wrap: break-word; overflow-wrap: break-word;">${naText}</td>
                   <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; color: #1e1b4b;">${appCount}</td>
-                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; background-color: #fef2f2; color: #991b1b;">${selfL1 || "-"}</td>
-                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; background-color: #fff7ed; color: #c2410c;">${selfL2 || "-"}</td>
-                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; background-color: #fffbeb; color: #b45309;">${selfL3 || "-"}</td>
-                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; background-color: #f0fdf4; color: #166534;">${selfL4 || "-"}</td>
+                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; background-color: #fef2f2; color: #991b1b;">${selfL1 ? `${selfL1} × 1` : "-"}</td>
+                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; background-color: #fff7ed; color: #c2410c;">${selfL2 ? `${selfL2} × 2` : "-"}</td>
+                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; background-color: #fffbeb; color: #b45309;">${selfL3 ? `${selfL3} × 3` : "-"}</td>
+                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; background-color: #f0fdf4; color: #166534;">${selfL4 ? `${selfL4} × 4` : "-"}</td>
                   <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; color: #1e1b4b;">${selfObt}</td>
                 </tr>
             `;
@@ -8748,16 +8873,16 @@ function TeacherSqaafPage() {
                             <td className="border border-slate-300 px-3 py-3 text-center font-black">{selectedLang === "mr" ? toMarathiNumerals(row.appCount) : row.appCount}</td>
                             <td className="border border-slate-300 px-3 py-3 text-left font-bold text-slate-800 leading-relaxed">{selectedLang === "mr" ? row.nameMr : row.nameEn}</td>
                             
-                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.selfL1 ? (selectedLang === "mr" ? toMarathiNumerals(row.selfL1) : row.selfL1) : ""}</td>
-                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.selfL2 ? (selectedLang === "mr" ? toMarathiNumerals(row.selfL2) : row.selfL2) : ""}</td>
-                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.selfL3 ? (selectedLang === "mr" ? toMarathiNumerals(row.selfL3) : row.selfL3) : ""}</td>
-                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.selfL4 ? (selectedLang === "mr" ? toMarathiNumerals(row.selfL4) : row.selfL4) : ""}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.selfL1 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.selfL1)} × १` : `${row.selfL1} × 1`) : ""}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.selfL2 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.selfL2)} × २` : `${row.selfL2} × 2`) : ""}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.selfL3 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.selfL3)} × ३` : `${row.selfL3} × 3`) : ""}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.selfL4 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.selfL4)} × ४` : `${row.selfL4} × 4`) : ""}</td>
                             <td className="border border-slate-300 px-2 py-3 text-center font-black bg-amber-50 text-amber-900">{selectedLang === "mr" ? toMarathiNumerals(row.selfObt) : row.selfObt}</td>
                             
-                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.extL1 ? (selectedLang === "mr" ? toMarathiNumerals(row.extL1) : row.extL1) : ""}</td>
-                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.extL2 ? (selectedLang === "mr" ? toMarathiNumerals(row.extL2) : row.extL2) : ""}</td>
-                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.extL3 ? (selectedLang === "mr" ? toMarathiNumerals(row.extL3) : row.extL3) : ""}</td>
-                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.extL4 ? (selectedLang === "mr" ? toMarathiNumerals(row.extL4) : row.extL4) : ""}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.extL1 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.extL1)} × १` : `${row.extL1} × 1`) : ""}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.extL2 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.extL2)} × २` : `${row.extL2} × 2`) : ""}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.extL3 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.extL3)} × ३` : `${row.extL3} × 3`) : ""}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.extL4 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.extL4)} × ४` : `${row.extL4} × 4`) : ""}</td>
                             <td className="border border-slate-300 px-2 py-3 text-center font-black bg-indigo-50 text-indigo-900">{row.extObt ? (selectedLang === "mr" ? toMarathiNumerals(row.extObt) : row.extObt) : ""}</td>
                           </tr>
                         ))}

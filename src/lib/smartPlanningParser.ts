@@ -33,6 +33,7 @@ export interface PlanningDocumentRecord {
   isCustomUserEdit?: boolean;
   editedByUserId?: string;
   editedAt?: string;
+  sections?: any[];
 }
 
 export const DEFAULT_HEADERS: Record<PlanningCategory, string[]> = {
@@ -41,13 +42,14 @@ export const DEFAULT_HEADERS: Record<PlanningCategory, string[]> = {
     "आठवडा",
     "कामाचे दिवस",
     "प्राप्त तासिका",
-    "पाठ / घटक / विषयाचे नाव",
+    "विषय / घटक विवरण",
     "अध्ययन निष्पत्ती",
   ],
   masik_niyojan: [
-    "दिनांक / दिवस",
+    "दिनांक",
     "पाठ / घटक / उपघटक",
     "अध्ययन निष्पत्ती",
+    "अध्ययन मुद्दे / पाठ्यांश उद्देश",
     "अध्ययन अनुभवाचे स्वरूप",
     "उपयोगात आणावयाची साधन तंत्रे",
     "आवश्यक साहित्य",

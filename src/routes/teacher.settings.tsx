@@ -16,6 +16,7 @@ import {
   Loader2,
   School,
   MapPin,
+  GraduationCap,
 } from "lucide-react";
 
 export const Route = createFileRoute("/teacher/settings")({
@@ -30,6 +31,7 @@ function TeacherSettings() {
 
   const [formData, setFormData] = useState({
     fullName: "",
+    principalName: "",
     phone: "",
     subjects: "",
     bio: "",
@@ -37,6 +39,12 @@ function TeacherSettings() {
     schoolName: "",
     udise: "",
     address: "",
+    center: "",
+    taluka: "",
+    district: "",
+    academicYear: "2026-27",
+    cookName: "",
+    helperName: "",
   });
 
   useEffect(() => {
@@ -72,7 +80,8 @@ function TeacherSettings() {
       if (docSnap.exists()) {
         const data = docSnap.data();
         setFormData({
-          fullName: data.fullName || user.displayName || "",
+          fullName: data.fullName || data.teacherName || user.displayName || "",
+          principalName: data.principalName || data.cookName || data.swayampakiName || "",
           phone: data.phone || "",
           subjects: data.subjects || "",
           bio: data.bio || "",
@@ -80,6 +89,12 @@ function TeacherSettings() {
           schoolName: data.schoolName || "",
           udise: data.udise || "",
           address: data.address || "",
+          center: data.center || "",
+          taluka: data.taluka || "",
+          district: data.district || "",
+          academicYear: data.academicYear || localStorage.getItem("cce_academic_year") || "2026-27",
+          cookName: data.cookName || data.swayampakiName || "",
+          helperName: data.helperName || data.madatnisName || "",
         });
       } else {
         // Fallback to local storage if Firestore has no record
@@ -88,7 +103,8 @@ function TeacherSettings() {
           try {
             const parsed = JSON.parse(saved);
             setFormData({
-              fullName: parsed.fullName || user.displayName || "",
+              fullName: parsed.fullName || parsed.teacherName || user.displayName || "",
+              principalName: parsed.principalName || parsed.cookName || parsed.swayampakiName || "",
               phone: parsed.phone || "",
               subjects: parsed.subjects || "",
               bio: parsed.bio || "",
@@ -96,6 +112,12 @@ function TeacherSettings() {
               schoolName: parsed.schoolName || "",
               udise: parsed.udise || "",
               address: parsed.address || "",
+              center: parsed.center || "",
+              taluka: parsed.taluka || "",
+              district: parsed.district || "",
+              academicYear: parsed.academicYear || localStorage.getItem("cce_academic_year") || "2026-27",
+              cookName: parsed.cookName || parsed.swayampakiName || "",
+              helperName: parsed.helperName || parsed.madatnisName || "",
             });
             return;
           } catch (e) {
@@ -112,7 +134,8 @@ function TeacherSettings() {
         try {
           const parsed = JSON.parse(saved);
           setFormData({
-            fullName: parsed.fullName || user.displayName || "",
+            fullName: parsed.fullName || parsed.teacherName || user.displayName || "",
+            principalName: parsed.principalName || parsed.cookName || parsed.swayampakiName || "",
             phone: parsed.phone || "",
             subjects: parsed.subjects || "",
             bio: parsed.bio || "",
@@ -120,6 +143,12 @@ function TeacherSettings() {
             schoolName: parsed.schoolName || "",
             udise: parsed.udise || "",
             address: parsed.address || "",
+            center: parsed.center || "",
+            taluka: parsed.taluka || "",
+            district: parsed.district || "",
+            academicYear: parsed.academicYear || localStorage.getItem("cce_academic_year") || "2026-27",
+            cookName: parsed.cookName || parsed.swayampakiName || "",
+            helperName: parsed.helperName || parsed.madatnisName || "",
           });
         } catch (e) {
           setFormData((prev) => ({ ...prev, fullName: user.displayName || "" }));
@@ -133,7 +162,7 @@ function TeacherSettings() {
   };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -151,6 +180,10 @@ function TeacherSettings() {
         docRef,
         {
           ...formData,
+          teacherName: formData.fullName,
+          principalName: formData.principalName,
+          swayampakiName: formData.cookName || formData.principalName,
+          madatnisName: formData.helperName,
           updatedAt: new Date().toISOString(),
         },
         { merge: true },
@@ -162,10 +195,20 @@ function TeacherSettings() {
         userRef,
         {
           fullName: formData.fullName,
+          teacherName: formData.fullName,
+          principalName: formData.principalName,
           phone: formData.phone,
           address: formData.address,
           udise: formData.udise,
           schoolName: formData.schoolName,
+          center: formData.center,
+          taluka: formData.taluka,
+          district: formData.district,
+          academicYear: formData.academicYear,
+          cookName: formData.cookName,
+          swayampakiName: formData.cookName || formData.principalName,
+          helperName: formData.helperName,
+          madatnisName: formData.helperName,
           updatedAt: new Date().toISOString(),
         },
         { merge: true }
@@ -173,19 +216,32 @@ function TeacherSettings() {
 
       // Sync local storage profile
       const savedProfile = localStorage.getItem("sqaaf_teacher_profile");
-      let updated = { ...formData, role: "teacher" };
+      let updated = {
+        ...formData,
+        teacherName: formData.fullName,
+        principalName: formData.principalName,
+        swayampakiName: formData.cookName || formData.principalName,
+        madatnisName: formData.helperName,
+        role: "teacher"
+      };
       if (savedProfile) {
         try {
           const parsed = JSON.parse(savedProfile);
-          updated = { ...parsed, ...formData };
+          updated = { ...parsed, ...updated };
         } catch (e) {
           console.error("Failed to parse savedProfile during save sync", e);
         }
       }
       localStorage.setItem("sqaaf_teacher_profile", JSON.stringify(updated));
-      if (formData.udise) {
-        localStorage.setItem("teacher_udise", formData.udise);
-      }
+      localStorage.setItem("teacher_name", formData.fullName);
+      localStorage.setItem("teacher_principal_name", formData.principalName || formData.cookName || "");
+      localStorage.setItem("teacher_school_name", formData.schoolName);
+      localStorage.setItem("teacher_udise", formData.udise);
+      localStorage.setItem("teacher_taluka", formData.taluka);
+      localStorage.setItem("teacher_district", formData.district);
+      localStorage.setItem("teacher_center", formData.center);
+      localStorage.setItem("cce_academic_year", formData.academicYear);
+
       toast.success("Profile updated successfully!");
       setTimeout(() => {
         window.location.reload();
@@ -266,10 +322,10 @@ function TeacherSettings() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {/* Full Name */}
+                  {/* Full Name / Teacher Name */}
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                      <User className="size-4 text-indigo-500" /> Full Name
+                      <User className="size-4 text-indigo-500" /> Full Name (शिक्षकाचे नाव)
                     </label>
                     <input
                       type="text"
@@ -277,6 +333,21 @@ function TeacherSettings() {
                       value={formData.fullName}
                       onChange={handleChange}
                       required
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                    />
+                  </div>
+
+                  {/* Principal Name */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                      <User className="size-4 text-indigo-500" /> Principal Name (मुख्याध्यापकांचे नाव)
+                    </label>
+                    <input
+                      type="text"
+                      name="principalName"
+                      value={formData.principalName}
+                      onChange={handleChange}
+                      placeholder="मुख्याध्यापकांचे नाव"
                       className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
                     />
                   </div>
@@ -329,7 +400,7 @@ function TeacherSettings() {
                   {/* School Name */}
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                      <School className="size-4 text-indigo-500" /> School Name
+                      <School className="size-4 text-indigo-500" /> School Name (शाळेचे नाव)
                     </label>
                     <input
                       type="text"
@@ -344,7 +415,7 @@ function TeacherSettings() {
                   {/* School UDISE Code */}
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                      <School className="size-4 text-indigo-500" /> School UDISE Code
+                      <School className="size-4 text-indigo-500" /> School UDISE Code (यू-डायस कोड)
                     </label>
                     <input
                       type="text"
@@ -354,6 +425,69 @@ function TeacherSettings() {
                       required
                       className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono"
                     />
+                  </div>
+
+                  {/* Center Name */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                      <School className="size-4 text-indigo-500" /> School Center (केंद्राचे नाव)
+                    </label>
+                    <input
+                      type="text"
+                      name="center"
+                      value={formData.center}
+                      onChange={handleChange}
+                      placeholder="उदा. वाळवा"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                    />
+                  </div>
+
+                  {/* Taluka */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                      <MapPin className="size-4 text-indigo-500" /> Taluka (तालुका)
+                    </label>
+                    <input
+                      type="text"
+                      name="taluka"
+                      value={formData.taluka}
+                      onChange={handleChange}
+                      placeholder="उदा. वाळवा"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                    />
+                  </div>
+
+                  {/* District */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                      <MapPin className="size-4 text-indigo-500" /> District (जिल्हा)
+                    </label>
+                    <input
+                      type="text"
+                      name="district"
+                      value={formData.district}
+                      onChange={handleChange}
+                      placeholder="उदा. सांगली"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                    />
+                  </div>
+
+                  {/* Academic Year */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                      <GraduationCap className="size-4 text-indigo-500" /> Academic Year (शैक्षणिक वर्ष)
+                    </label>
+                    <select
+                      name="academicYear"
+                      value={formData.academicYear}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-bold text-slate-800"
+                    >
+                      <option value="2026-27">2026-27</option>
+                      <option value="2025-26">2025-26</option>
+                      <option value="2024-25">2024-25</option>
+                      <option value="2023-24">2023-24</option>
+                    </select>
                   </div>
 
                   {/* School Address (Jurisdiction) */}

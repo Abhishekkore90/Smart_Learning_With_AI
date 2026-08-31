@@ -12,23 +12,23 @@ const safeLazy = (factory: () => Promise<any>) =>
   );
 
 // @ts-ignore
-const BoardResult = safeLazy(() => import("@/result/BoardResult"));
+import BoardResult from "@/result/BoardResult";
 // @ts-ignore
-const SubjectWiseResult = safeLazy(() => import("@/result/SubjectWiseResult"));
+import SubjectWiseResult from "@/result/SubjectWiseResult";
 // @ts-ignore
-const ProgressSheet = safeLazy(() => import("@/result/ProgressSheet"));
+import ProgressSheet from "@/result/ProgressSheet";
 // @ts-ignore
-const Collectout = safeLazy(() => import("@/result/Collectout"));
+import Collectout from "@/result/Collectout";
 // @ts-ignore
-const GradeWise = safeLazy(() => import("@/result/GradeWise"));
+import GradeWise from "@/result/GradeWise";
 // @ts-ignore
-const Result5th8th = safeLazy(() => import("@/result/Result5th8th"));
+import Result5th8th from "@/result/Result5th8th";
 // @ts-ignore
-const ResultSSC = safeLazy(() => import("@/result/ResultSSC"));
+import ResultSSC from "@/result/ResultSSC";
 // @ts-ignore
-const ResultHSC = safeLazy(() => import("@/result/ResultHSC"));
+import ResultHSC from "@/result/ResultHSC";
 // @ts-ignore
-const AnnualResultRegister = safeLazy(() => import("@/result/AnnualResultRegister"));
+import AnnualResultRegister from "@/result/AnnualResultRegister";
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -222,7 +222,7 @@ export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
         <div className="flex-1 overflow-x-auto">
           <PdfErrorBoundary title="श्रेणीनिहाय निकाल संकलन प्रपत्र">
             <Suspense fallback={renderLoading()}>
-              <GradeWise initialClass={selectedClass} initialYear={academicYear} onBack={() => setSelectedOption(null)} />
+              <GradeWise initialClass={selectedClass} initialYear={academicYear} initialTerm={selectedTerm} onBack={() => setSelectedOption(null)} />
             </Suspense>
           </PdfErrorBoundary>
         </div>

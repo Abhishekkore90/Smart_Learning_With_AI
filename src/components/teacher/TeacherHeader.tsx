@@ -17,6 +17,7 @@ import { DICTIONARY } from "@/lib/translations";
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Link, useLocation } from "@tanstack/react-router";
+import { clearUnlockedPinSections } from "@/components/teacher/PinGate";
 
 export function TeacherHeader() {
   const { user } = useAuth();
@@ -30,6 +31,7 @@ export function TeacherHeader() {
   const handleSignOut = async () => {
     try {
       sessionStorage.removeItem("is_super_admin");
+      clearUnlockedPinSections();
       await auth.signOut();
       toast.success(t.success || "Signed out successfully");
       window.location.href = "/login";
