@@ -164,37 +164,50 @@ export function TeacherHeader() {
 
         <div className="h-8 w-px bg-slate-200 mx-1 hidden sm:block"></div>
 
-        {/* User profile & logout controls */}
-        <Link to="/teacher/settings" className="flex items-center gap-3 pl-1 hover:opacity-85 active:scale-95 transition-all cursor-pointer">
-          <div className="text-right hidden md:block">
-            <div className="text-xs font-bold text-slate-800 leading-none">
-              {user?.displayName || "Teacher"}
-            </div>
-            <div className="text-[9px] font-black uppercase tracking-widest text-indigo-500 mt-1">
-              Educator
-            </div>
-          </div>
-          <div className="size-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 font-bold shadow-inner border border-slate-200/60 overflow-hidden relative group">
-            {user?.photoURL ? (
-              <img
-                src={user.photoURL}
-                alt="Profile"
-                className="size-full object-cover group-hover:scale-110 transition-transform duration-300"
-              />
-            ) : (
-              <User className="size-5" />
-            )}
-            <div className="absolute inset-0 ring-1 ring-inset ring-black/10 rounded-full" />
-          </div>
-        </Link>
+        {/* User profile & logout controls / Guest Login Button */}
+        {user ? (
+          <>
+            <Link to="/teacher/settings" className="flex items-center gap-3 pl-1 hover:opacity-85 active:scale-95 transition-all cursor-pointer">
+              <div className="text-right hidden md:block">
+                <div className="text-xs font-bold text-slate-800 leading-none">
+                  {user.displayName || "Teacher"}
+                </div>
+                <div className="text-[9px] font-black uppercase tracking-widest text-indigo-500 mt-1">
+                  Educator
+                </div>
+              </div>
+              <div className="size-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 font-bold shadow-inner border border-slate-200/60 overflow-hidden relative group">
+                {user.photoURL ? (
+                  <img
+                    src={user.photoURL}
+                    alt="Profile"
+                    className="size-full object-cover group-hover:scale-110 transition-transform duration-300"
+                  />
+                ) : (
+                  <User className="size-5" />
+                )}
+                <div className="absolute inset-0 ring-1 ring-inset ring-black/10 rounded-full" />
+              </div>
+            </Link>
 
-        <button
-          onClick={handleSignOut}
-          className="size-10 rounded-xl bg-red-50 hover:bg-red-500 border border-red-100 hover:border-red-500 flex items-center justify-center text-red-500 hover:text-slate-800 transition-all shadow-sm hover:shadow-md active:scale-95 group ml-1"
-          title="Logout"
-        >
-          <LogOut className="size-4 group-hover:-translate-x-0.5 transition-transform" />
-        </button>
+            <button
+              onClick={handleSignOut}
+              className="size-10 rounded-xl bg-red-50 hover:bg-red-500 border border-red-100 hover:border-red-500 flex items-center justify-center text-red-500 hover:text-white transition-all shadow-sm hover:shadow-md active:scale-95 group ml-1"
+              title="Logout"
+            >
+              <LogOut className="size-4 group-hover:-translate-x-0.5 transition-transform" />
+            </button>
+          </>
+        ) : (
+          <Link
+            to="/login"
+            search={{ redirect: "/teacher", role: "teacher" } as any}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl text-xs font-black shadow-sm transition-all active:scale-95 cursor-pointer ml-1"
+          >
+            <User className="size-4" />
+            <span>{lang === "mr" ? "शिक्षक लॉगिन" : "Teacher Login"}</span>
+          </Link>
+        )}
       </div>
     </header>
   );

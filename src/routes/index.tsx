@@ -95,7 +95,7 @@ function LandingPage() {
 
   const landingCards = [
     {
-      title: "Teacher AI",
+      title: "AI Teacher",
       desc: t.c1_desc || "Access virtual AI mentors, study bots, and real-time coding assistance.",
       icon: Bot,
       color: "blue",
@@ -131,8 +131,7 @@ function LandingPage() {
       iconColor: "text-icon-green",
       btnHover: "group-hover:bg-icon-green group-hover:text-white group-hover:border-transparent",
       actionText: t.c2_action || "Enter Teacher Suite",
-      to: "/login",
-      search: { role: "teacher" },
+      to: "/teacher",
     },
     {
       title: t.c3_title || "Courses",

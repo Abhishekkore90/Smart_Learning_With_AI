@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UploadRouteImport } from './routes/upload'
+import { Route as TeacherOverviewRouteImport } from './routes/teacher-overview'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as ResourcesRouteImport } from './routes/resources'
 import { Route as ProfileRouteImport } from './routes/profile'
@@ -104,6 +105,11 @@ import { Route as WebResultUdiseNumberSrNoAcademicYearClassValueSelectedExamName
 const UploadRoute = UploadRouteImport.update({
   id: '/upload',
   path: '/upload',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TeacherOverviewRoute = TeacherOverviewRouteImport.update({
+  id: '/teacher-overview',
+  path: '/teacher-overview',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SignupRoute = SignupRouteImport.update({
@@ -584,6 +590,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/resources': typeof ResourcesRoute
   '/signup': typeof SignupRoute
+  '/teacher-overview': typeof TeacherOverviewRoute
   '/upload': typeof UploadRoute
   '/admin/ai-tools': typeof AdminAiToolsRoute
   '/admin/assembly': typeof AdminAssemblyRoute
@@ -676,6 +683,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/resources': typeof ResourcesRoute
   '/signup': typeof SignupRoute
+  '/teacher-overview': typeof TeacherOverviewRoute
   '/upload': typeof UploadRoute
   '/admin/ai-tools': typeof AdminAiToolsRoute
   '/admin/assembly': typeof AdminAssemblyRoute
@@ -770,6 +778,7 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/resources': typeof ResourcesRoute
   '/signup': typeof SignupRoute
+  '/teacher-overview': typeof TeacherOverviewRoute
   '/upload': typeof UploadRoute
   '/admin/ai-tools': typeof AdminAiToolsRoute
   '/admin/assembly': typeof AdminAssemblyRoute
@@ -865,6 +874,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/resources'
     | '/signup'
+    | '/teacher-overview'
     | '/upload'
     | '/admin/ai-tools'
     | '/admin/assembly'
@@ -957,6 +967,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/resources'
     | '/signup'
+    | '/teacher-overview'
     | '/upload'
     | '/admin/ai-tools'
     | '/admin/assembly'
@@ -1050,6 +1061,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/resources'
     | '/signup'
+    | '/teacher-overview'
     | '/upload'
     | '/admin/ai-tools'
     | '/admin/assembly'
@@ -1144,6 +1156,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   ResourcesRoute: typeof ResourcesRoute
   SignupRoute: typeof SignupRoute
+  TeacherOverviewRoute: typeof TeacherOverviewRoute
   UploadRoute: typeof UploadRoute
   AdminAiToolsRoute: typeof AdminAiToolsRoute
   AdminAssemblyRoute: typeof AdminAssemblyRoute
@@ -1214,6 +1227,13 @@ declare module '@tanstack/react-router' {
       path: '/upload'
       fullPath: '/upload'
       preLoaderRoute: typeof UploadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/teacher-overview': {
+      id: '/teacher-overview'
+      path: '/teacher-overview'
+      fullPath: '/teacher-overview'
+      preLoaderRoute: typeof TeacherOverviewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/signup': {
@@ -1926,6 +1946,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   ResourcesRoute: ResourcesRoute,
   SignupRoute: SignupRoute,
+  TeacherOverviewRoute: TeacherOverviewRoute,
   UploadRoute: UploadRoute,
   AdminAiToolsRoute: AdminAiToolsRoute,
   AdminAssemblyRoute: AdminAssemblyRoute,
