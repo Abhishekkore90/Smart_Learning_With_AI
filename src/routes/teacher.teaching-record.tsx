@@ -399,6 +399,33 @@ function TeachingRecordPage() {
     }
   };
 
+  const monthFilteredRecords = React.useMemo(() => {
+    if (!selectedMonth) return diaryRecords;
+    return diaryRecords.filter((rec) => {
+      if (rec.diaryDate === "master_diary") return true;
+      if (rec.month && String(rec.month).padStart(2, "0") === selectedMonth) return true;
+      if (rec.selectedMonth && String(rec.selectedMonth).padStart(2, "0") === selectedMonth) return true;
+      if (rec.diaryDate && typeof rec.diaryDate === "string") {
+        const parts = rec.diaryDate.split("-");
+        if (parts.length === 3 && parts[1] === selectedMonth) return true;
+      }
+      if (rec.structuredData && Array.isArray(rec.structuredData)) {
+        const hasMatchingMonth = rec.structuredData.some((entry: any) => {
+          const d = entry.date || entry.displayDate || "";
+          if (!d) return false;
+          const clean = String(d).trim();
+          let m = clean.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+          if (m) return String(m[2]).padStart(2, "0") === selectedMonth;
+          m = clean.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+          if (m) return String(m[2]).padStart(2, "0") === selectedMonth;
+          return false;
+        });
+        if (hasMatchingMonth) return true;
+      }
+      return false;
+    });
+  }, [diaryRecords, selectedMonth]);
+
   const isWordDoc = (filename?: string | null) => {
     if (!filename) return false;
     const lower = filename.toLowerCase();
@@ -510,7 +537,7 @@ function TeachingRecordPage() {
         <TeacherSidebar />
       </div>
 
-      <main className="lg:pl-64 pt-16 min-h-screen print:pl-0 print:pt-0 pb-24">
+      <main className="pt-16 min-h-screen print:pl-0 print:pt-0 pb-24">
         <PinGate sectionKey="teaching_record">
           <div className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto space-y-6 print:p-0 print:max-w-full">
             {/* Top Navigation Bar with Back Button, Tabs & Breadcrumbs */}
@@ -550,11 +577,11 @@ function TeachingRecordPage() {
                   <span>🏫 यू-डायस व शाळा माहिती (UDISE & School Info)</span>
                 </button>
 
-                {diaryRecords.length > 0 && (
+                {monthFilteredRecords.length > 0 ? (
                   <button
                     type="button"
                     onClick={() => {
-                      setSelectedRecordForPreview(diaryRecords[0]);
+                      setSelectedRecordForPreview(monthFilteredRecords[0]);
                       setIsPreviewOpen(true);
                     }}
                     className="px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white hover:from-orange-600 hover:to-amber-600 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
@@ -562,7 +589,19 @@ function TeachingRecordPage() {
                     <FileText className="size-4" />
                     <span>All Days PDF</span>
                   </button>
-                )}
+                ) : selectedMonth ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedRecordForPreview(null);
+                      setIsPreviewOpen(true);
+                    }}
+                    className="px-4 py-2 bg-gradient-to-r from-slate-400 to-slate-500 hover:from-slate-500 hover:to-slate-600 text-white rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                  >
+                    <FileText className="size-4" />
+                    <span>All Days PDF</span>
+                  </button>
+                ) : null}
               </div>
 
               {/* Dynamic Breadcrumbs & Saved profile status badge */}
@@ -606,17 +645,6 @@ function TeachingRecordPage() {
                 )}
               </div>
             </div>
-
-            {/* Saved profile status badge */}
-            {schoolProfile.schoolName && (
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-600 bg-slate-50 px-3.5 py-1.5 rounded-xl border border-slate-200">
-                <span className="text-orange-600 font-extrabold">{schoolProfile.schoolName}</span>
-                <span>•</span>
-                <span>इयत्ता: <strong className="text-slate-900">{schoolProfile.className}</strong></span>
-                <span>•</span>
-                <span>सन: <strong className="text-emerald-600 font-black">{schoolProfile.academicYear || "2026-27"}</strong></span>
-              </div>
-            )}
 
             <AnimatePresence mode="wait">
               {activeMainTab === "school_profile" ? (
@@ -811,9 +839,7 @@ function TeachingRecordPage() {
                             </div>
                             <div className="space-y-2">
                               <h4 className="font-black text-xl text-white">{med.mr}</h4>
-                              <p className="text-[10px] font-black uppercase tracking-widest text-orange-100">
-                                {med.title} MEDIUM
-                              </p>
+                              <p className="text-[10px] font-black uppercase tracking-widest text-orange-200">{med.title}</p>
                               <p className="text-xs text-white/80 font-semibold flex items-center gap-1 mt-2">
                                 इयत्ता निवडण्यासाठी पुढे या <ArrowRight className="size-3.5" />
                               </p>
@@ -830,7 +856,7 @@ function TeachingRecordPage() {
                   </motion.div>
                 )}
 
-                {/* Step 2: Select Class (Orange Cards) */}
+                {/* Step 2: Select Class */}
                 {selectedMedium && !selectedClass && (
                   <motion.div
                     key="class-selection"
@@ -839,20 +865,6 @@ function TeachingRecordPage() {
                     exit={{ opacity: 0, y: -15 }}
                     className="space-y-8"
                   >
-                    <div className="relative overflow-hidden bg-gradient-to-r from-slate-900 via-purple-950 to-slate-900 rounded-[2.5rem] p-8 md:p-12 text-white shadow-2xl border border-white/5">
-                      <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                        <div className="space-y-3">
-                          <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/10 text-xs font-semibold tracking-wider text-purple-200">
-                            <Sparkles className="size-3.5 text-amber-300 animate-pulse" />
-                            REPORTS & REGISTERS (शासकीय अहवाल व नोंदी)
-                          </div>
-                          <h2 className="text-4xl md:text-5xl font-black tracking-tight">
-                            Teaching Diary <span className="text-indigo-400">टाचणवही अहवाल.</span>
-                          </h2>
-                        </div>
-                      </div>
-                    </div>
-
                     <div className="text-center space-y-2 pt-2">
                       <h2 className="text-3xl font-black text-slate-900 tracking-tight italic">Select Class / इयत्ता निवडा</h2>
                       <p className="text-xs font-bold text-slate-500">
@@ -860,7 +872,7 @@ function TeachingRecordPage() {
                       </p>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5 max-w-full mx-auto w-full">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5 max-w-5xl mx-auto w-full">
                       {DIARY_CLASSES.map((cls) => (
                         <motion.button
                           key={cls.id}
@@ -869,12 +881,12 @@ function TeachingRecordPage() {
                           onClick={() => setSelectedClass(cls.id)}
                           className="group relative p-7 rounded-[2rem] border text-center transition-all duration-500 shadow-md hover:shadow-xl cursor-pointer overflow-hidden bg-gradient-to-br from-orange-500 via-orange-500 to-orange-600 text-white border-orange-500/30 flex flex-col items-center gap-3"
                         >
-                          <div className="size-12 bg-white/15 rounded-2xl flex items-center justify-center border border-white/20 backdrop-blur-sm group-hover:scale-110 transition-transform">
+                          <div className="size-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20 backdrop-blur-sm group-hover:scale-110 transition-transform">
                             <GraduationCap className="size-6 text-white" />
                           </div>
                           <div className="space-y-1">
                             <h3 className="text-lg font-black leading-tight tracking-tight">{cls.mr}</h3>
-                            <p className="text-[10px] text-white/80 font-bold uppercase tracking-wider">{cls.id}</p>
+                            <p className="text-[10px] text-white/70 font-bold uppercase tracking-wider">{cls.id}</p>
                           </div>
                         </motion.button>
                       ))}
@@ -885,13 +897,13 @@ function TeachingRecordPage() {
                         onClick={() => setSelectedMedium(null)}
                         className="flex items-center gap-2 px-5 py-2.5 text-orange-600 hover:text-orange-900 bg-white hover:bg-orange-50 border border-orange-200 rounded-2xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-sm"
                       >
-                        <ArrowLeft className="size-4" /> मागे या (Back to Medium)
+                        <ArrowLeft className="size-4" /> मागे या (Back to Class)
                       </button>
                     </div>
                   </motion.div>
                 )}
 
-                {/* Step 3: Select Month (Baby Pink Cards) */}
+                {/* Step 3: Select Month */}
                 {selectedMedium && selectedClass && selectedYear && !selectedMonth && (
                   <motion.div
                     key="month-selection"
@@ -900,24 +912,10 @@ function TeachingRecordPage() {
                     exit={{ opacity: 0, y: -15 }}
                     className="space-y-8"
                   >
-                    <div className="relative overflow-hidden bg-gradient-to-r from-slate-900 via-purple-950 to-slate-900 rounded-[2.5rem] p-8 md:p-12 text-white shadow-2xl border border-white/5">
-                      <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                        <div className="space-y-3">
-                          <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/10 text-xs font-semibold tracking-wider text-purple-200">
-                            <Sparkles className="size-3.5 text-amber-300 animate-pulse" />
-                            REPORTS & REGISTERS (शासकीय अहवाल व नोंदी)
-                          </div>
-                          <h2 className="text-4xl md:text-5xl font-black tracking-tight">
-                            Teaching Diary <span className="text-indigo-400">टाचणवही अहवाल.</span>
-                          </h2>
-                        </div>
-                      </div>
-                    </div>
-
                     <div className="text-center space-y-2 pt-2">
                       <h2 className="text-3xl font-black text-slate-900 tracking-tight italic">Select Month / महिना निवडा</h2>
                       <p className="text-xs font-bold text-slate-500">
-                        निवडलेले माध्यम: <span className="text-orange-600 font-black">{selectedMedium === "Marathi" ? "मराठी माध्यम" : "सेमी इंग्रजी"}</span> • इयत्ता: <span className="text-orange-600 font-black">{selectedClass}</span> • वर्ष: <span className="text-teal-600 font-black">{selectedYear}</span>
+                        निवडलेले माध्यम: <span className="text-orange-600 font-black">{selectedMedium === "Marathi" ? "मराठी माध्यम" : "सेमी इंग्रजी"}</span> • इयत्ता: <span className="text-purple-600 font-black">{selectedClass}</span> • वर्ष: <span className="text-teal-600 font-black">{selectedYear}</span>
                       </p>
                     </div>
 
@@ -982,7 +980,7 @@ function TeachingRecordPage() {
         </AnimatePresence>
 
             {/* Document Live Preview Modal Backdrop & Frame */}
-            {isPreviewOpen && selectedRecordForPreview && (
+            {isPreviewOpen && (
               <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-955/80 backdrop-blur-sm">
                 <div className="bg-white rounded-3xl overflow-hidden shadow-2xl w-full max-w-[96vw] border border-slate-100 flex flex-col h-[93vh]">
                   {/* Modal Body with single unified navbar */}

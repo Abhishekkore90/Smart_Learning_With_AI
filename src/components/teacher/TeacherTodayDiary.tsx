@@ -706,13 +706,13 @@ export const TeacherTodayDiary: React.FC<Props> = ({
     <table style="width: 100%; border-collapse: collapse; table-layout: fixed; border: 2px solid #0f172a; margin-bottom: 12px; background: #ffffff;">
       <thead>
         <tr>
-          <th style="width:6%; background-color:#0f172a !important; color:#ffffff !important; padding:10px 2px; text-align:center; font-size:13px; font-weight:900; border:1.5px solid #1e293b; letter-spacing:0.2px;">तासिका</th>
-          <th style="width:9%; background-color:#0f172a !important; color:#ffffff !important; padding:10px 2px; text-align:center; font-size:13px; font-weight:900; border:1.5px solid #1e293b; letter-spacing:0.2px;">विषय</th>
-          <th style="width:17%; background-color:#0f172a !important; color:#ffffff !important; padding:10px 4px; text-align:center; font-size:13px; font-weight:900; border:1.5px solid #1e293b; letter-spacing:0.2px;">अध्यापन मुद्दा / पाठ्यघटक</th>
-          <th style="width:27%; background-color:#0f172a !important; color:#ffffff !important; padding:10px 4px; text-align:center; font-size:13px; font-weight:900; border:1.5px solid #1e293b; letter-spacing:0.2px;">अध्ययन निष्पत्ती</th>
-          <th style="width:27%; background-color:#0f172a !important; color:#ffffff !important; padding:10px 4px; text-align:center; font-size:13px; font-weight:900; border:1.5px solid #1e293b; letter-spacing:0.2px;">अध्ययन अनुभव</th>
-          <th style="width:7%; background-color:#0f172a !important; color:#ffffff !important; padding:10px 2px; text-align:center; font-size:12px; font-weight:900; border:1.5px solid #1e293b; letter-spacing:0.2px;">साधन तंत्रे</th>
-          <th style="width:7%; background-color:#0f172a !important; color:#ffffff !important; padding:10px 2px; text-align:center; font-size:12px; font-weight:900; border:1.5px solid #1e293b; letter-spacing:0.2px;">शैक्षणिक साहित्य</th>
+          <th style="width:6%; background-color:#e2e8f0 !important; color:#000000 !important; padding:10px 2px; text-align:center; font-size:13px; font-weight:900; border:1.5px solid #1e293b; letter-spacing:0.2px;">तासिका</th>
+          <th style="width:9%; background-color:#e2e8f0 !important; color:#000000 !important; padding:10px 2px; text-align:center; font-size:13px; font-weight:900; border:1.5px solid #1e293b; letter-spacing:0.2px;">विषय</th>
+          <th style="width:17%; background-color:#e2e8f0 !important; color:#000000 !important; padding:10px 4px; text-align:center; font-size:13px; font-weight:900; border:1.5px solid #1e293b; letter-spacing:0.2px;">अध्यापन मुद्दा / पाठ्यघटक</th>
+          <th style="width:27%; background-color:#e2e8f0 !important; color:#000000 !important; padding:10px 4px; text-align:center; font-size:13px; font-weight:900; border:1.5px solid #1e293b; letter-spacing:0.2px;">अध्ययन निष्पत्ती</th>
+          <th style="width:27%; background-color:#e2e8f0 !important; color:#000000 !important; padding:10px 4px; text-align:center; font-size:13px; font-weight:900; border:1.5px solid #1e293b; letter-spacing:0.2px;">अध्ययन अनुभव</th>
+          <th style="width:7%; background-color:#e2e8f0 !important; color:#000000 !important; padding:10px 2px; text-align:center; font-size:12px; font-weight:900; border:1.5px solid #1e293b; letter-spacing:0.2px;">साधन तंत्रे</th>
+          <th style="width:7%; background-color:#e2e8f0 !important; color:#000000 !important; padding:10px 2px; text-align:center; font-size:12px; font-weight:900; border:1.5px solid #1e293b; letter-spacing:0.2px;">शैक्षणिक साहित्य</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
@@ -1028,9 +1028,9 @@ export const TeacherTodayDiary: React.FC<Props> = ({
             </h2>
           </div>
 
-          {/* Header Card (3 Cols x 2 Rows Box matching Image 2) */}
+          {/* Header Card (Centered 6-column Box) */}
           <div className="bg-white border-2 border-slate-300 rounded-2xl p-4 sm:p-5 shadow-sm">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left font-bold text-slate-900">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 text-center font-bold text-slate-900">
               <div>
                 <span className="text-slate-500 font-bold block text-xs uppercase mb-0.5">दिनांक</span>
                 <span className="text-indigo-700 font-black text-base block">{todayDiary.displayDate || (activeDate ? format(activeDate, "d/M/yyyy") : "-")}</span>
@@ -1116,15 +1116,15 @@ export const TeacherTodayDiary: React.FC<Props> = ({
                 <col style={{ width: "8%" }} />
                 <col style={{ width: "8%" }} />
               </colgroup>
-              <thead className="bg-slate-900 text-white font-black text-xs md:text-sm border-b-2 border-slate-900">
+              <thead className="bg-slate-200 text-slate-950 font-black text-xs md:text-sm border-b-2 border-slate-900">
                 <tr>
-                  <th className="py-3 px-1 text-center bg-slate-900 text-white font-black border-r border-slate-700">तासिका</th>
-                  <th className="py-3 px-1 text-center bg-slate-900 text-white font-black border-r border-slate-700">विषय</th>
-                  <th className="py-3 px-1.5 text-center bg-slate-900 text-white font-black border-r border-slate-700">अध्यापन मुद्दा / पाठ्यघटक</th>
-                  <th className="py-3 px-2 text-center bg-slate-900 text-white font-black border-r border-slate-700">अध्ययन निष्पत्ती</th>
-                  <th className="py-3 px-2 text-center bg-slate-900 text-white font-black border-r border-slate-700">अध्ययन अनुभव</th>
-                  <th className="py-3 px-1 text-center bg-slate-900 text-white font-black border-r border-slate-700">साधन तंत्रे</th>
-                  <th className="py-3 px-1 text-center bg-slate-900 text-white font-black">शैक्षणिक साहित्य</th>
+                  <th className="py-3 px-1 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400">तासिका</th>
+                  <th className="py-3 px-1 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400">विषय</th>
+                  <th className="py-3 px-1.5 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400">अध्यापन मुद्दा / पाठ्यघटक</th>
+                  <th className="py-3 px-2 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400">अध्ययन निष्पत्ती</th>
+                  <th className="py-3 px-2 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400">अध्ययन अनुभव</th>
+                  <th className="py-3 px-1 text-center bg-slate-200 text-slate-950 font-black border-r border-slate-400">साधन तंत्रे</th>
+                  <th className="py-3 px-1 text-center bg-slate-200 text-slate-950 font-black">शैक्षणिक साहित्य</th>
                 </tr>
               </thead>
               <tbody className="divide-y-2 divide-slate-400 font-medium text-slate-900 bg-white text-xs md:text-sm">
