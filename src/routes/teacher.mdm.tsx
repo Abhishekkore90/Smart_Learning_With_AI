@@ -15183,9 +15183,9 @@ function TeacherMDMPage() {
                                         reportSchoolName={reportSchoolName}
                                         principalName={reportPrincipalName || ""}
                                         teacherName={reportTeacherName || ""}
-                                        center={profile?.center || profile?.kendra || reportCenterName}
-                                        taluka={profile?.taluka || reportTaluka}
-                                        district={profile?.district || profile?.jilha || reportDistrict}
+                                        center={profile?.center || profile?.kendra}
+                                        taluka={profile?.taluka}
+                                        district={profile?.district || profile?.jilha}
                                         primaryCookedDays={primaryCookedDays}
                                         upperCookedDays={upperCookedDays}
                                         wednesdaysCount={wednesdaysCount}
