@@ -6073,10 +6073,10 @@ function TeacherSqaafPage() {
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-size: 9px;">${dynamicRangeHtml}</td>
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-size: 10px; font-weight: bold;">${appCount}</td>
               <td style="border: 1px solid black; padding: 4px; font-size: 10px;">${dom.nameMr}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL1 || ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL2 || ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL3 || ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL4 || ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL1 ? `${selfL1} × 1` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL2 ? `${selfL2} × 2` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL3 ? `${selfL3} × 3` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL4 ? `${selfL4} × 4` : ""}</td>
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfObt}</td>
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
@@ -6154,14 +6154,14 @@ function TeacherSqaafPage() {
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-size: 9px;">${dynamicRangeHtml}</td>
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-size: 10px; font-weight: bold;">${appCount}</td>
               <td style="border: 1px solid black; padding: 4px; font-size: 10px;">${dom.nameMr}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL1 || ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL2 || ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL3 || ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL4 || ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL1 ? `${selfL1} × 1` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL1 ? `${extL1} × 1` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL2 ? `${selfL2} × 2` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL2 ? `${extL2} × 2` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL3 ? `${selfL3} × 3` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL3 ? `${extL3} × 3` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL4 ? `${selfL4} × 4` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL4 ? `${extL4} × 4` : ""}</td>
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfObt}</td>
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
             </tr>
@@ -6183,15 +6183,15 @@ function TeacherSqaafPage() {
         html = `
           <div style="font-family: 'Segoe UI', 'Noto Sans Devanagari', Arial, sans-serif; color: #0f172a; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 10px;">
             <!-- Header -->
-            <div style="border-bottom: 2.5px solid #f97316; padding-bottom: 12px; margin-bottom: 18px;">
+            <div style="border-bottom: 2.5px solid #f97316; padding-bottom: 12px; margin-bottom: 18px; text-align: center;">
               <div>
-                <div style="font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: #f97316; margin-bottom: 4px;">
+                <div style="font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: #f97316; margin-bottom: 4px; text-align: center;">
                   ${isMr ? "राज्य शैक्षणिक संशोधन व प्रशिक्षण परिषद, महाराष्ट्र" : "State Council For Educational Research and Training, Maharashtra"}
                 </div>
-                <h1 style="font-size: 20px; font-weight: 900; color: #0f172a; margin: 0 0 3px 0;">
+                <h1 style="font-size: 20px; font-weight: 900; color: #0f172a; margin: 0 0 3px 0; text-align: center;">
                   ${isMr ? "SQAAF शाळा प्रतिसाद अहवाल" : "SQAAF School Responses Report"}
                 </h1>
-                <div style="font-size: 10px; font-weight: 600; color: #475569;">
+                <div style="font-size: 10px; font-weight: 600; color: #475569; text-align: center;">
                   School Quality Assessment & Accreditation Framework
                 </div>
               </div>
@@ -6553,14 +6553,14 @@ function TeacherSqaafPage() {
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-size: 9px;">${dynamicRangeHtml}</td>
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-size: 10px; font-weight: bold;">${appCount}</td>
               <td style="border: 1px solid black; padding: 4px; font-size: 10px;">${dom.nameMr}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL1 || ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL2 || ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL3 || ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL4 || ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL1 ? `${selfL1} × 1` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL1 ? `${extL1} × 1` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL2 ? `${selfL2} × 2` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL2 ? `${extL2} × 2` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL3 ? `${selfL3} × 3` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL3 ? `${extL3} × 3` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL4 ? `${selfL4} × 4` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL4 ? `${extL4} × 4` : ""}</td>
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfObt}</td>
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
             </tr>
@@ -6583,19 +6583,19 @@ function TeacherSqaafPage() {
           <div style="font-family: 'Segoe UI', 'Noto Sans Devanagari', Arial, sans-serif; color: #0f172a; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
             
             <!-- Header -->
-            <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid #f97316; padding-bottom: 16px; margin-bottom: 20px;">
-              <div>
-                <h1 style="font-size: 26px; font-weight: 900; color: #0f172a; margin: 0 0 4px 0; letter-spacing: -0.5px;">
+            <div style="border-bottom: 3px solid #f97316; padding-bottom: 16px; margin-bottom: 20px; text-align: center; position: relative;">
+              <div style="text-align: center;">
+                <h1 style="font-size: 26px; font-weight: 900; color: #0f172a; margin: 0 0 4px 0; letter-spacing: -0.5px; text-align: center;">
                   ${isMr ? "SQAAF स्वयं मूल्यांकन अहवाल" : "SQAAF Self Evaluation Report"}
                 </h1>
-                <div style="font-size: 11px; font-weight: 600; color: #475569;">
+                <div style="font-size: 11px; font-weight: 600; color: #475569; text-align: center;">
                   School Quality Assessment & Accreditation Framework
                 </div>
               </div>
-              <div style="text-align: right;">
-                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 12px 16px;">
+              <div style="position: absolute; right: 0; bottom: 12px; text-align: right;">
+                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 8px 12px;">
                   <div style="font-size: 8px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.5px;">${isMr ? "दिनांक" : "Date"}</div>
-                  <div style="font-size: 13px; font-weight: 900; color: #0f172a;">${new Date().toLocaleDateString(isMr ? "mr-IN" : "en-IN", { year: "numeric", month: "long", day: "numeric" })}</div>
+                  <div style="font-size: 11px; font-weight: 900; color: #0f172a;">${new Date().toLocaleDateString(isMr ? "mr-IN" : "en-IN", { year: "numeric", month: "long", day: "numeric" })}</div>
                 </div>
               </div>
             </div>
@@ -6883,11 +6883,11 @@ function TeacherSqaafPage() {
         let currentPage = createNewPageContainer();
 
         const headerHtml = `
-          <div style="font-family: sans-serif; margin-bottom: 30px;">
-            <div style="color: #0f172a; font-size: 34px; font-weight: 900; margin-top: 8px;">
+          <div style="font-family: sans-serif; margin-bottom: 30px; text-align: center;">
+            <div style="color: #0f172a; font-size: 34px; font-weight: 900; margin-top: 8px; text-align: center;">
               ${isMr ? "SQAAF स्वयं मूल्यांकन अहवाल" : "SQAAF Self Evaluation Report"}
             </div>
-            <div style="color: #475569; font-size: 16px; margin-top: 4px;">
+            <div style="color: #475569; font-size: 16px; margin-top: 4px; text-align: center;">
               School Quality Assessment & Accreditation Framework
             </div>
             
@@ -7192,10 +7192,10 @@ function TeacherSqaafPage() {
                   <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; white-space: nowrap;">${dom.start} ते ${dom.end}</td>
                   <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; word-wrap: break-word; overflow-wrap: break-word;">${naText}</td>
                   <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; color: #1e1b4b;">${appCount}</td>
-                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; background-color: #fef2f2; color: #991b1b;">${selfL1 || "-"}</td>
-                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; background-color: #fff7ed; color: #c2410c;">${selfL2 || "-"}</td>
-                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; background-color: #fffbeb; color: #b45309;">${selfL3 || "-"}</td>
-                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; background-color: #f0fdf4; color: #166534;">${selfL4 || "-"}</td>
+                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; background-color: #fef2f2; color: #991b1b;">${selfL1 ? `${selfL1} × 1` : "-"}</td>
+                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; background-color: #fff7ed; color: #c2410c;">${selfL2 ? `${selfL2} × 2` : "-"}</td>
+                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; background-color: #fffbeb; color: #b45309;">${selfL3 ? `${selfL3} × 3` : "-"}</td>
+                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; background-color: #f0fdf4; color: #166534;">${selfL4 ? `${selfL4} × 4` : "-"}</td>
                   <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; color: #1e1b4b;">${selfObt}</td>
                 </tr>
             `;
@@ -8748,16 +8748,16 @@ function TeacherSqaafPage() {
                             <td className="border border-slate-300 px-3 py-3 text-center font-black">{selectedLang === "mr" ? toMarathiNumerals(row.appCount) : row.appCount}</td>
                             <td className="border border-slate-300 px-3 py-3 text-left font-bold text-slate-800 leading-relaxed">{selectedLang === "mr" ? row.nameMr : row.nameEn}</td>
                             
-                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.selfL1 ? (selectedLang === "mr" ? toMarathiNumerals(row.selfL1) : row.selfL1) : ""}</td>
-                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.selfL2 ? (selectedLang === "mr" ? toMarathiNumerals(row.selfL2) : row.selfL2) : ""}</td>
-                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.selfL3 ? (selectedLang === "mr" ? toMarathiNumerals(row.selfL3) : row.selfL3) : ""}</td>
-                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.selfL4 ? (selectedLang === "mr" ? toMarathiNumerals(row.selfL4) : row.selfL4) : ""}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.selfL1 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.selfL1)} × १` : `${row.selfL1} × 1`) : ""}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.selfL2 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.selfL2)} × २` : `${row.selfL2} × 2`) : ""}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.selfL3 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.selfL3)} × ३` : `${row.selfL3} × 3`) : ""}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.selfL4 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.selfL4)} × ४` : `${row.selfL4} × 4`) : ""}</td>
                             <td className="border border-slate-300 px-2 py-3 text-center font-black bg-amber-50 text-amber-900">{selectedLang === "mr" ? toMarathiNumerals(row.selfObt) : row.selfObt}</td>
                             
-                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.extL1 ? (selectedLang === "mr" ? toMarathiNumerals(row.extL1) : row.extL1) : ""}</td>
-                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.extL2 ? (selectedLang === "mr" ? toMarathiNumerals(row.extL2) : row.extL2) : ""}</td>
-                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.extL3 ? (selectedLang === "mr" ? toMarathiNumerals(row.extL3) : row.extL3) : ""}</td>
-                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.extL4 ? (selectedLang === "mr" ? toMarathiNumerals(row.extL4) : row.extL4) : ""}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.extL1 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.extL1)} × १` : `${row.extL1} × 1`) : ""}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.extL2 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.extL2)} × २` : `${row.extL2} × 2`) : ""}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.extL3 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.extL3)} × ३` : `${row.extL3} × 3`) : ""}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.extL4 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.extL4)} × ४` : `${row.extL4} × 4`) : ""}</td>
                             <td className="border border-slate-300 px-2 py-3 text-center font-black bg-indigo-50 text-indigo-900">{row.extObt ? (selectedLang === "mr" ? toMarathiNumerals(row.extObt) : row.extObt) : ""}</td>
                           </tr>
                         ))}
