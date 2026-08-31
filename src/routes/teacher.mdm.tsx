@@ -12503,16 +12503,17 @@ function TeacherMDMPage() {
                           const parsedWDays = parseFloat(stockDemandWorkingDays);
                           const wDays = !isNaN(parsedWDays) && stockDemandWorkingDays !== "" ? parsedWDays : calculatedWDays;
 
+                          const uni = getUnifiedSchoolProfile();
                           return (
                             <CommonMDMReportHeader
                               title="धान्यादी मालाची मागणी"
                               subtitle="तांदूळ व धान्यादी मालाची मागणी किलोग्रॅम मध्ये"
                               month={formatMarathiMonthYear(stockDemandMonth, stockDemandYear)}
                               academicYear={stockDemandYear}
-                              schoolName={profile?.schoolName || "Z P SCHOOL DHONDEWADI PED"}
-                              center={profile?.center || profile?.kendra || "NARSINGPUR"}
-                              taluka={profile?.taluka || "वाळवा"}
-                              district={profile?.district || "सांगली"}
+                              schoolName={profile?.schoolName || uni.schoolName}
+                              center={profile?.center || profile?.kendra || uni.kendra}
+                              taluka={profile?.taluka || uni.taluka}
+                              district={profile?.district || profile?.jilha || uni.jilha}
                               pat={pat}
                               classSection={formatClassSectionName(stockDemandClass)}
                               workingDays={wDays}
@@ -15182,6 +15183,9 @@ function TeacherMDMPage() {
                                         reportSchoolName={reportSchoolName}
                                         principalName={reportPrincipalName || ""}
                                         teacherName={reportTeacherName || ""}
+                                        center={profile?.center || profile?.kendra || reportCenterName}
+                                        taluka={profile?.taluka || reportTaluka}
+                                        district={profile?.district || profile?.jilha || reportDistrict}
                                         primaryCookedDays={primaryCookedDays}
                                         upperCookedDays={upperCookedDays}
                                         wednesdaysCount={wednesdaysCount}
