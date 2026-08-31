@@ -519,6 +519,30 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
         windowWidth: cloneWidth + 60,
         scrollX: 0,
         scrollY: 0,
+        onclone: (clonedDoc) => {
+          try {
+            const styleTags = Array.from(document.querySelectorAll("style"));
+            styleTags.forEach((st) => {
+              clonedDoc.head.appendChild(st.cloneNode(true));
+            });
+
+            let cssText = "";
+            Array.from(document.styleSheets).forEach((sheet) => {
+              try {
+                const rules = Array.from(sheet.cssRules || sheet.rules || []);
+                rules.forEach((rule) => {
+                  cssText += rule.cssText + "\n";
+                });
+              } catch (e) {}
+            });
+
+            if (cssText) {
+              const inlineStyle = clonedDoc.createElement("style");
+              inlineStyle.textContent = cssText;
+              clonedDoc.head.appendChild(inlineStyle);
+            }
+          } catch (e) {}
+        },
       });
 
       document.body.removeChild(tempContainer);

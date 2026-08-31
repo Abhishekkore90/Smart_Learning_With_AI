@@ -587,6 +587,45 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
           scrollY: 0,
           windowWidth: isPortrait ? 794 : 1123,
           onclone: (clonedDoc, clonedElement) => {
+            try {
+              const styleTags = Array.from(document.querySelectorAll("style"));
+              styleTags.forEach((st) => {
+                clonedDoc.head.appendChild(st.cloneNode(true));
+              });
+
+              let cssText = "";
+              Array.from(document.styleSheets).forEach((sheet) => {
+                try {
+                  const rules = Array.from(sheet.cssRules || sheet.rules || []);
+                  rules.forEach((rule) => {
+                    cssText += rule.cssText + "\n";
+                  });
+                } catch (e) {}
+              });
+
+              if (cssText) {
+                const inlineStyle = clonedDoc.createElement("style");
+                inlineStyle.textContent = cssText;
+                clonedDoc.head.appendChild(inlineStyle);
+              }
+
+              const imgs = Array.from(clonedElement.querySelectorAll("img"));
+              imgs.forEach((img) => {
+                try {
+                  if (img.src && !img.src.startsWith("data:")) {
+                    const c = document.createElement("canvas");
+                    c.width = img.naturalWidth || img.width || 100;
+                    c.height = img.naturalHeight || img.height || 100;
+                    const ctx = c.getContext("2d");
+                    if (ctx) {
+                      ctx.drawImage(img, 0, 0, c.width, c.height);
+                      img.src = c.toDataURL("image/png");
+                    }
+                  }
+                } catch (e) {}
+              });
+            } catch (e) {}
+
             clonedElement.style.margin = "0";
             clonedElement.style.padding = "14px";
             clonedElement.style.display = "block";
