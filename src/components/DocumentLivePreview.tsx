@@ -893,7 +893,7 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
               दैनंदिन पाठ टाचण
             </h2>
             
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 text-xs font-bold text-slate-900 bg-slate-100/80 p-4 rounded-2xl border-2 border-slate-400 shadow-sm text-left">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 text-xs font-bold text-slate-900 bg-slate-100/80 p-4 rounded-2xl border-2 border-slate-400 shadow-sm text-center">
               <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">दिनांक</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "date", e.currentTarget.textContent || "")} className="text-orange-600 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{formatCleanDate(p.date)}</span></div>
               <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">वार</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "day", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.day && p.day !== "-" ? p.day : (getMarathiDayName(p.date) || "-")}</span></div>
               <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">वर्गशिक्षक</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "teacher", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.teacher && p.teacher !== "-" ? p.teacher : (profile?.teacherName || "-")}</span></div>
@@ -903,10 +903,10 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
             </div>
 
             {/* आजचा सुविचार Box - Always Visible & Editable */}
-            <div className="text-xs italic text-amber-950 bg-amber-50/95 p-3.5 rounded-2xl border-2 border-amber-300 text-left flex items-start gap-2.5 shadow-sm">
-              <Sparkles className="size-4 text-amber-600 shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <strong className="not-italic text-amber-950 font-black text-xs uppercase tracking-wider block mb-0.5">आजचा सुविचार :</strong> 
+            <div className="text-xs italic text-amber-950 bg-amber-50/95 p-3.5 rounded-2xl border-2 border-amber-300 text-center flex items-center justify-center gap-2.5 shadow-sm">
+              <Sparkles className="size-4 text-amber-600 shrink-0" />
+              <div>
+                <strong className="not-italic text-amber-950 font-black text-xs uppercase tracking-wider inline-block mr-1">आजचा सुविचार :</strong> 
                 "<span 
                   suppressContentEditableWarning 
                   contentEditable 
@@ -921,7 +921,7 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
 
           {p.periods.length > 0 ? (
             <div className="overflow-x-auto no-scrollbar rounded-2xl border-2 border-slate-400 shadow-md">
-              <table className="w-full text-left text-sm border-collapse table-fixed border-2 border-slate-400">
+              <table className="w-full text-center text-sm border-collapse table-fixed border-2 border-slate-400">
                 <colgroup>
                   <col style={{ width: "6%" }} />
                   <col style={{ width: "8%" }} />
@@ -941,8 +941,8 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
                       return (
                         <th
                           key={hIdx}
-                          style={{ width: colWidths[hIdx] }}
-                          className={`py-3 px-1.5 bg-slate-200 text-slate-900 font-black break-words leading-tight ${hIdx === 0 ? "text-center bg-slate-300" : ""} border-r-2 border-slate-400`}
+                          style={{ width: colWidths[hIdx], color: "#000000" }}
+                          className={`py-3 px-1.5 bg-slate-200 text-black font-black break-words leading-tight text-center ${hIdx === 0 ? "bg-slate-300" : ""} border-r-2 border-slate-400`}
                         >
                           {header}
                         </th>
@@ -956,20 +956,20 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
                       key={rIdx} 
                       className="hover:bg-indigo-50/40 transition-colors group border-b-2 border-slate-300"
                     >
-                      <td className="p-3 border-r-2 border-slate-300 text-center font-black text-indigo-700 bg-indigo-50/50 align-top">{row.period}</td>
-                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "subject", e.currentTarget.textContent || "")} className="p-3 border-r-2 border-slate-300 font-bold text-slate-900 outline-indigo-500 focus:bg-white text-xs md:text-sm align-top">{row.subject}</td>
-                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "topic", e.currentTarget.textContent || "")} className="p-3 border-r-2 border-slate-300 font-semibold text-slate-800 leading-snug outline-indigo-500 focus:bg-white text-xs md:text-sm align-top">{row.topic}</td>
-                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "outcome", e.currentTarget.textContent || "")} className="p-3 border-r-2 border-slate-300 font-medium text-emerald-800 leading-relaxed outline-indigo-500 focus:bg-white text-xs md:text-sm align-top">{row.outcome}</td>
-                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "experience", e.currentTarget.textContent || "")} className="p-3 border-r-2 border-slate-300 text-slate-800 leading-relaxed outline-indigo-500 focus:bg-white text-xs md:text-sm align-top">{row.experience}</td>
-                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "tools", e.currentTarget.textContent || "")} className="p-3 border-r-2 border-slate-300 text-slate-700 outline-indigo-500 focus:bg-white text-xs md:text-sm align-top">{row.tools}</td>
-                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "materials", e.currentTarget.textContent || "")} className="p-3 text-slate-700 outline-indigo-500 focus:bg-white text-xs md:text-sm align-top">{row.materials}</td>
+                      <td className="p-3 border-r-2 border-slate-300 text-center font-black text-indigo-700 bg-indigo-50/50 align-middle">{row.period}</td>
+                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "subject", e.currentTarget.textContent || "")} className="p-3 border-r-2 border-slate-300 font-bold text-slate-900 outline-indigo-500 focus:bg-white text-xs md:text-sm text-center align-middle">{row.subject}</td>
+                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "topic", e.currentTarget.textContent || "")} className="p-3 border-r-2 border-slate-300 font-semibold text-slate-800 leading-snug outline-indigo-500 focus:bg-white text-xs md:text-sm text-center align-middle">{row.topic}</td>
+                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "outcome", e.currentTarget.textContent || "")} className="p-3 border-r-2 border-slate-300 font-medium text-emerald-800 leading-relaxed outline-indigo-500 focus:bg-white text-xs md:text-sm text-center align-middle">{row.outcome}</td>
+                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "experience", e.currentTarget.textContent || "")} className="p-3 border-r-2 border-slate-300 text-slate-800 leading-relaxed outline-indigo-500 focus:bg-white text-xs md:text-sm text-center align-middle">{row.experience}</td>
+                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "tools", e.currentTarget.textContent || "")} className="p-3 border-r-2 border-slate-300 text-slate-700 outline-indigo-500 focus:bg-white text-xs md:text-sm text-center align-middle">{row.tools}</td>
+                      <td suppressContentEditableWarning contentEditable onBlur={(e) => updateRow(idx, rIdx, "materials", e.currentTarget.textContent || "")} className="p-3 text-slate-700 outline-indigo-500 focus:bg-white text-xs md:text-sm text-center align-middle">{row.materials}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           ) : (
-            <pre className="whitespace-pre-wrap font-sans text-xs text-slate-700 p-4 bg-slate-50 rounded-2xl border border-slate-200 leading-relaxed">
+            <pre className="whitespace-pre-wrap font-sans text-xs text-slate-700 p-4 bg-slate-50 rounded-2xl border border-slate-200 leading-relaxed text-center">
               {p.rawText}
             </pre>
           )}
@@ -978,16 +978,12 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
             className="pt-6 border-t border-slate-200 text-xs font-bold text-slate-850 space-y-3 signature-section"
             style={{ pageBreakInside: "avoid", breakInside: "avoid", pageBreakBefore: "auto", breakBefore: "auto" }}
           >
-            <div className="space-y-4">
+            <div className="space-y-2">
               <p className="text-slate-800 font-bold text-xs">
                 दिवसभरातील वैशिष्टपूर्ण बाबी:
               </p>
-              <p className="text-slate-400 font-normal leading-none">
-                ________________________________________________________________________________________
-              </p>
-              <p className="text-slate-400 font-normal leading-none">
-                ________________________________________________________________________________________
-              </p>
+              <div className="border-b border-slate-300 h-4 w-full" />
+              <div className="border-b border-slate-300 h-4 w-full" />
             </div>
             <div className="flex justify-between items-center pt-8 text-slate-800 font-extrabold text-sm px-6">
               <span>वर्गशिक्षक</span>
@@ -1038,6 +1034,7 @@ function extractTextFromBinaryDoc(arrayBuffer: ArrayBuffer): string {
 export interface DocumentLivePreviewProps {
   selectedFile?: File | null;
   savedRecord?: any;
+  selectedMonth?: string | null;
   authenticatedPdfUrl?: string | null;
   loadingPdf?: boolean;
   onBack?: () => void;
@@ -1051,6 +1048,7 @@ export interface DocumentLivePreviewRef {
 export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLivePreviewProps>(({
   selectedFile,
   savedRecord,
+  selectedMonth = null,
   authenticatedPdfUrl,
   loadingPdf = false,
   onBack,
@@ -1344,9 +1342,44 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
     return normalizeDateStr(savedRecord?.diaryDate);
   }, [savedRecord?.diaryDate]);
 
+  const isRecordMatchingMonth = useMemo(() => {
+    if (!selectedMonth || !savedRecord) return true;
+    if (savedRecord.diaryDate === "master_diary") return true;
+    if (savedRecord.month && String(savedRecord.month).padStart(2, "0") === selectedMonth) return true;
+    if (savedRecord.selectedMonth && String(savedRecord.selectedMonth).padStart(2, "0") === selectedMonth) return true;
+    if (savedRecord.diaryDate && typeof savedRecord.diaryDate === "string") {
+      const parts = savedRecord.diaryDate.split("-");
+      if (parts.length === 3 && parts[1] === selectedMonth) return true;
+    }
+    if (savedRecord.structuredData && Array.isArray(savedRecord.structuredData)) {
+      return savedRecord.structuredData.some((p: any) => {
+        const d = p.date || p.displayDate || "";
+        if (!d) return false;
+        const clean = String(d).trim();
+        let m = clean.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+        if (m) return String(m[2]).padStart(2, "0") === selectedMonth;
+        m = clean.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+        if (m) return String(m[2]).padStart(2, "0") === selectedMonth;
+        return false;
+      });
+    }
+    return false;
+  }, [savedRecord, selectedMonth]);
+
   const pagesToDisplay = useMemo(() => {
-    return structuredPages || [];
-  }, [structuredPages]);
+    if (!structuredPages || structuredPages.length === 0) return [];
+    if (!selectedMonth) return structuredPages;
+    return structuredPages.filter((p) => {
+      const d = p.date || (p as any).displayDate || "";
+      if (!d) return true;
+      const clean = String(d).trim();
+      let m = clean.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+      if (m) return String(m[2]).padStart(2, "0") === selectedMonth;
+      m = clean.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+      if (m) return String(m[2]).padStart(2, "0") === selectedMonth;
+      return true;
+    });
+  }, [structuredPages, selectedMonth]);
 
   const hasStructuredView = pagesToDisplay && pagesToDisplay.length > 0;
   const downloadUrl = savedRecord?.pageUrl || (selectedFile ? localPdfBlobUrl : null);
@@ -1817,7 +1850,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
               Loading document preview...
             </span>
           </div>
-        ) : isPdf && pdfUrlToDisplay && viewMode === "original" ? (
+        ) : isPdf && pdfUrlToDisplay && viewMode === "original" && isRecordMatchingMonth ? (
           <div className="w-full h-full rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shadow-inner flex flex-col relative">
             <iframe
               src={pdfUrlToDisplay.includes("#") ? pdfUrlToDisplay : `${pdfUrlToDisplay}#view=FitH`}
@@ -1875,14 +1908,14 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
               </table>
             </div>
           </div>
-        ) : isPdf && pdfUrlToDisplay ? (
+        ) : isPdf && pdfUrlToDisplay && isRecordMatchingMonth ? (
           /* PDF IFRAME FALLBACK */
           <iframe
             src={pdfUrlToDisplay.includes("#") ? pdfUrlToDisplay : `${pdfUrlToDisplay}#view=FitH`}
             title="Document Live Preview"
             className="w-full h-full border-none rounded-2xl bg-white"
           />
-        ) : (activeExt === "doc" || activeExt === "docx") ? (
+        ) : (activeExt === "doc" || activeExt === "docx") && isRecordMatchingMonth ? (
           /* WORD DOCUMENT LIVE PREVIEW CARD */
           <div className="w-full h-full rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/70 via-purple-50/30 to-slate-50 flex flex-col items-center justify-center text-center p-8 space-y-4">
             <div className="size-20 rounded-3xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/20">
@@ -1917,14 +1950,19 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
           </div>
         ) : (
           /* EMPTY STATE */
-          <div className="flex flex-col items-center justify-center h-full text-center p-8 space-y-3">
-            <div className="size-14 rounded-2xl bg-white flex items-center justify-center text-indigo-500 shadow-sm border border-slate-200">
-              <BookOpen className="size-7" />
+          <div className="flex flex-col items-center justify-center h-full text-center p-8 space-y-4 my-auto">
+            <div className="size-16 rounded-3xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center shadow-sm">
+              <AlertCircle className="size-8" />
             </div>
-            <div className="space-y-1 max-w-xs">
-              <p className="text-sm font-black text-slate-800">No Document Selected</p>
-              <p className="text-xs text-slate-500">
-                Select an Excel, Word (.docx), or PDF file to view its live content preview here.
+            <div className="space-y-1.5 max-w-sm">
+              <h3 className="text-lg font-black text-slate-900">
+                या महिन्यात कोणतीही टाचण नोंद उपलब्ध नाही
+              </h3>
+              <p className="text-xs font-bold text-slate-500">
+                (No Teaching Diary Found for Selected Month)
+              </p>
+              <p className="text-xs text-slate-400">
+                तुम्ही या महिन्यासाठी कोणतीही टाचण नोंद अथवा फाईल अपलोड केलेली नाही. दुसरं महिना निवडा किंवा टाचण अपलोड करा.
               </p>
             </div>
           </div>
