@@ -6,6 +6,8 @@ import React, { useState, useEffect, useMemo } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import { showToast as toast } from "@/lib/custom-toast";
+import { saveUnifiedSchoolProfile, getUnifiedSchoolProfile } from "@/utils/schoolProfileHelper";
+
 import { uploadBlobToBunny } from "@/lib/bunnyStorage";
 import {
   Utensils,
@@ -487,6 +489,7 @@ function TeacherMDMPage() {
       if (dataToSave.udise) {
         localStorage.setItem("teacher_udise", dataToSave.udise);
       }
+      saveUnifiedSchoolProfile(dataToSave);
 
       toast.success("शाळेची व प्रोफाइल माहिती अपडेट झाली!");
     } catch (error) {

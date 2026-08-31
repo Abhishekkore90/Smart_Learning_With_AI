@@ -42,6 +42,8 @@ import { StudentHeader } from "@/components/student/StudentHeader";
 
 import { useLanguage } from "@/hooks/use-language";
 
+import { getUnifiedSchoolProfile, saveUnifiedSchoolProfile } from "@/utils/schoolProfileHelper";
+
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "My Profile — SMART LEARNING" }] }),
   component: () => (
@@ -85,6 +87,12 @@ function Page() {
     dob: "",
     studentClass: "",
     rollNo: "",
+    schoolName: "",
+    udise: "",
+    kendra: "",
+    taluka: "",
+    district: "",
+    headmaster: "",
   });
   const [saving, setSaving] = useState(false);
   const [schoolStatus, setSchoolStatus] = useState<
@@ -98,23 +106,31 @@ function Page() {
     async function fetchProfile() {
       if (!user) return;
       try {
+        const unified = getUnifiedSchoolProfile();
         const docRef = doc(db, "users", user.uid);
         const docSnap = await getDoc(docRef);
+        let firestoreData: any = {};
         if (docSnap.exists()) {
-          const data = docSnap.data();
-          setProfile(data);
-          setFormData({
-            fullName: data.fullName || "",
-            location: data.location || "Mumbai, India",
-            major: data.major || "General Science",
-            gpa: data.gpa || "A+",
-            dob: data.dob || "",
-            studentClass: data.studentClass || "",
-            rollNo: data.rollNo || "",
-          });
-          if (data.schoolConnection)
-            setSchoolStatus(data.schoolConnection.status);
+          firestoreData = docSnap.data();
+          setProfile(firestoreData);
+          if (firestoreData.schoolConnection)
+            setSchoolStatus(firestoreData.schoolConnection.status);
         }
+        setFormData({
+          fullName: firestoreData.fullName || firestoreData.teacherName || unified.teacherName || "",
+          location: firestoreData.location || "Mumbai, India",
+          major: firestoreData.major || "General Science",
+          gpa: firestoreData.gpa || "A+",
+          dob: firestoreData.dob || "",
+          studentClass: firestoreData.studentClass || "",
+          rollNo: firestoreData.rollNo || "",
+          schoolName: firestoreData.schoolName || unified.schoolName || "",
+          udise: firestoreData.udise || unified.udise || "",
+          kendra: firestoreData.kendra || unified.kendra || "",
+          taluka: firestoreData.taluka || unified.taluka || "",
+          district: firestoreData.district || firestoreData.jilha || unified.district || "",
+          headmaster: firestoreData.headmaster || unified.headmaster || "",
+        });
       } catch (error) {
         console.error("Error fetching profile:", error);
       } finally {
@@ -129,10 +145,29 @@ function Page() {
     setSaving(true);
     try {
       const docRef = doc(db, "users", user.uid);
-      await setDoc(docRef, { ...profile, ...formData }, { merge: true });
-      setProfile({ ...profile, ...formData });
+      const updatePayload = {
+        ...profile,
+        ...formData,
+        jilha: formData.district,
+        teacherName: formData.fullName,
+      };
+      await setDoc(docRef, updatePayload, { merge: true });
+      setProfile(updatePayload);
+
+      // Save to unified local storage keys across MDM, Paripath and Reports
+      saveUnifiedSchoolProfile({
+        schoolName: formData.schoolName,
+        udise: formData.udise,
+        kendra: formData.kendra,
+        taluka: formData.taluka,
+        jilha: formData.district,
+        district: formData.district,
+        headmaster: formData.headmaster,
+        teacherName: formData.fullName,
+      });
+
       setIsEditing(false);
-      toast.success("Profile updated successfully!");
+      toast.success("प्रोफाईल आणि शाळेची माहिती सर्व रिपार्ट्ससाठी अपडेट झाली!");
     } catch (error: any) {
       toast.error(error.message || "Failed to update profile");
     } finally {
@@ -253,9 +288,128 @@ function Page() {
               />
 
               <div className="bg-white rounded-[3rem] p-10 border border-slate-200 shadow-sm space-y-8">
-                <h3 className="text-2xl font-black text-slate-900 tracking-tight italic flex items-center gap-3">
-                  <Book className="size-6 text-indigo-500" /> Academic Profile
-                </h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-2xl font-black text-slate-900 tracking-tight italic flex items-center gap-3">
+                    <School className="size-6 text-indigo-600" /> शाळेची व युझर प्रोफाइल माहिती (School Profile & Reports Info)
+                  </h3>
+                  <button
+                    onClick={() => setIsEditing(!isEditing)}
+                    className="px-5 py-2.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white rounded-2xl font-bold text-xs flex items-center gap-2 transition-all"
+                  >
+                    <Edit3 className="size-4" /> {isEditing ? "रद्द करा (Cancel)" : "माहिती बदला (Edit Info)"}
+                  </button>
+                </div>
+
+                {/* School Info Form Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50/80 p-6 rounded-[2rem] border border-slate-200/80">
+                  <div className="md:col-span-2">
+                    <label className="text-xs font-black text-slate-500 uppercase tracking-wider block mb-1">शाळेचे नाव (School Name)</label>
+                    {isEditing ? (
+                      <input
+                        className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
+                        value={formData.schoolName}
+                        onChange={(e) => setFormData({ ...formData, schoolName: e.target.value })}
+                        placeholder="उदा. जि. प. प्राथमिक शाळा ढोंडेवाडी"
+                      />
+                    ) : (
+                      <div className="text-base font-extrabold text-slate-900 bg-white px-4 py-2.5 rounded-xl border border-slate-200">
+                        {formData.schoolName || "माहिती भरलेली नाही"}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-black text-slate-500 uppercase tracking-wider block mb-1">युडायस नंबर (UDISE Code)</label>
+                    {isEditing ? (
+                      <input
+                        className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
+                        value={formData.udise}
+                        onChange={(e) => setFormData({ ...formData, udise: e.target.value })}
+                        placeholder="उदा. 27250608901"
+                      />
+                    ) : (
+                      <div className="text-sm font-bold text-slate-900 bg-white px-4 py-2.5 rounded-xl border border-slate-200">
+                        {formData.udise || "माहिती भरलेली नाही"}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-black text-slate-500 uppercase tracking-wider block mb-1">केंद्र (Kendra / Center)</label>
+                    {isEditing ? (
+                      <input
+                        className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
+                        value={formData.kendra}
+                        onChange={(e) => setFormData({ ...formData, kendra: e.target.value })}
+                        placeholder="उदा. पेड"
+                      />
+                    ) : (
+                      <div className="text-sm font-bold text-slate-900 bg-white px-4 py-2.5 rounded-xl border border-slate-200">
+                        {formData.kendra || "माहिती भरलेली नाही"}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-black text-slate-500 uppercase tracking-wider block mb-1">तालुका (Taluka)</label>
+                    {isEditing ? (
+                      <input
+                        className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
+                        value={formData.taluka}
+                        onChange={(e) => setFormData({ ...formData, taluka: e.target.value })}
+                        placeholder="उदा. तासगाव"
+                      />
+                    ) : (
+                      <div className="text-sm font-bold text-slate-900 bg-white px-4 py-2.5 rounded-xl border border-slate-200">
+                        {formData.taluka || "माहिती भरलेली नाही"}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-black text-slate-500 uppercase tracking-wider block mb-1">जिल्हा (District)</label>
+                    {isEditing ? (
+                      <input
+                        className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
+                        value={formData.district}
+                        onChange={(e) => setFormData({ ...formData, district: e.target.value })}
+                        placeholder="उदा. सांगली"
+                      />
+                    ) : (
+                      <div className="text-sm font-bold text-slate-900 bg-white px-4 py-2.5 rounded-xl border border-slate-200">
+                        {formData.district || "माहिती भरलेली नाही"}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="text-xs font-black text-slate-500 uppercase tracking-wider block mb-1">मुख्याध्यापक नाव (Headmaster Name)</label>
+                    {isEditing ? (
+                      <input
+                        className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
+                        value={formData.headmaster}
+                        onChange={(e) => setFormData({ ...formData, headmaster: e.target.value })}
+                        placeholder="उदा. श्री. आर. बी. पाटील"
+                      />
+                    ) : (
+                      <div className="text-sm font-bold text-slate-900 bg-white px-4 py-2.5 rounded-xl border border-slate-200">
+                        {formData.headmaster || "माहिती भरलेली नाही"}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {isEditing && (
+                  <div className="flex justify-end pt-2">
+                    <button
+                      onClick={handleSave}
+                      disabled={saving}
+                      className="px-8 py-3 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-wider hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-100"
+                    >
+                      {saving ? <Loader2 className="size-4 animate-spin" /> : "जतन करा (Save School Profile)"}
+                    </button>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {[

@@ -4,6 +4,7 @@ import "../result/result.css";
 import AlertMessage from "../../AlertMessage";
 import { useParams } from 'react-router-dom';
 import { printReportContent } from '../utils/printHelper';
+import { getUnifiedSchoolProfile } from '../utils/schoolProfileHelper';
 
 
 
@@ -72,18 +73,24 @@ const WebResult = () => {
   }, []);
 
   const fetchSchoolName = async () => {
+    const unified = getUnifiedSchoolProfile();
     try {
       const response = await fetch(
         `${process.env.REACT_APP_FIREBASE_DATABASE_URL}/schoolRegister/${udiseNumber}/schoolData.json`
       );
-      if (!response.ok) {
-        throw new Error('Failed to fetch school name');
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.schoolName && data.schoolName.trim()) {
+          setSchoolName(data.schoolName);
+          if (data.schoolLogo) setSchoolLogo(data.schoolLogo);
+          return;
+        }
       }
-      const data = await response.json();
-      setSchoolName(data.schoolName || ' ');
-      setSchoolLogo(data.schoolLogo || ''); // Add this line
     } catch (error) {
       console.error('Error fetching school name:', error);
+    }
+    if (unified.schoolName) {
+      setSchoolName(unified.schoolName);
     }
   };
 

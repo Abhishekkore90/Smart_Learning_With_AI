@@ -83,6 +83,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { getUnifiedSchoolProfile, saveUnifiedSchoolProfile } from "@/utils/schoolProfileHelper";
+
 
 export const Route = createFileRoute("/teacher/modules/$moduleId")({
   component: ModulePage,
@@ -1776,20 +1778,37 @@ function DailyAssemblyContent() {
     setSelectedDate((prev) => prev || getLocalDateString());
   }, []);
 
-  // Load school info from local storage
+  // Load unified school info from global storage & listen for changes
   useEffect(() => {
-    const savedInfo = localStorage.getItem("paripathSchoolInfo");
-    if (savedInfo) {
-      try {
-        const parsed = JSON.parse(savedInfo);
-        setSchoolInfo(parsed);
-      } catch (e) {
-        console.error("Failed to parse school info", e);
+    const loadProfile = () => {
+      const unified = getUnifiedSchoolProfile();
+      if (unified.schoolName || unified.udise || unified.kendra || unified.taluka || unified.jilha) {
+        setSchoolInfo({
+          schoolName: unified.schoolName,
+          udise: unified.udise,
+          kendra: unified.kendra,
+          taluka: unified.taluka,
+          jilha: unified.jilha,
+        });
+      } else {
         setShowSchoolInfoModal(true);
       }
-    } else {
-      setShowSchoolInfoModal(true);
-    }
+    };
+    loadProfile();
+
+    const handleProfileUpdate = (e: any) => {
+      if (e.detail) {
+        setSchoolInfo({
+          schoolName: e.detail.schoolName || "",
+          udise: e.detail.udise || "",
+          kendra: e.detail.kendra || "",
+          taluka: e.detail.taluka || "",
+          jilha: e.detail.jilha || "",
+        });
+      }
+    };
+    window.addEventListener("schoolProfileUpdated", handleProfileUpdate);
+    return () => window.removeEventListener("schoolProfileUpdated", handleProfileUpdate);
   }, []);
 
   useEffect(() => {
@@ -2365,9 +2384,9 @@ function DailyAssemblyContent() {
               <DialogFooter>
                 <button 
                   onClick={() => {
-                    localStorage.setItem("paripathSchoolInfo", JSON.stringify(schoolInfo));
+                    saveUnifiedSchoolProfile(schoolInfo);
                     setShowSchoolInfoModal(false);
-                    toast.success("माहिती यशस्वीरित्या सेव्ह झाली!");
+                    toast.success("शाळेची माहिती यशस्वीरित्या सर्व सिस्टिमसाठी सेव्ह झाली!");
                   }}
                   className="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-sm uppercase tracking-wider transition-colors shadow-lg shadow-indigo-600/20"
                 >
