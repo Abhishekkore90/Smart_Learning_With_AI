@@ -2,8 +2,14 @@
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx",
+    "daily_assembly_package/**/*.ts",
+    "daily_assembly_package/**/*.tsx",
     "vite.config.ts",
     "eslint.config.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
   ],
   "compilerOptions": {
     "target": "ES2022",

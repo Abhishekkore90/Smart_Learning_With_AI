@@ -138,10 +138,23 @@ function getSingleItem(dataRaw: any, maxLen = 65): string {
   return sub.replace(/[:\-–,\s]+$/, "").trim();
 }
 
+const DEFAULT_PRAYER_NAMES = [
+  "असतो मा सद्गमय",
+  "हीच अमुची प्रार्थना",
+  "इतनी शक्ति हमें देना",
+  "तू बुद्धि दे तू तेज दे",
+  "दया कर दान विद्या का",
+  "ऐ मालिक तेरे बंदे हम",
+  "खरा तो एकची धर्म",
+];
+
 // Helper: get prayer heading title from content
-function getPrayerShortName(prayerContent: string | undefined): string {
-  if (!prayerContent) return "प्रार्थना";
+function getPrayerShortName(prayerContent: string | undefined, dayNum?: number): string {
+  const defaultTitle = dayNum ? DEFAULT_PRAYER_NAMES[(dayNum - 1) % DEFAULT_PRAYER_NAMES.length] : "असतो मा सद्गमय";
+  if (!prayerContent) return defaultTitle;
   const content = prayerContent.trim();
+  if (!content || content === "प्रार्थना" || content === "Prayer") return defaultTitle;
+
   // Detect common prayers by first phrase
   if (content.includes("हीच अमुची प्रार्थना")) return "हीच अमुची प्रार्थना";
   if (content.includes("इतनी शक्ति हमें")) return "इतनी शक्ति हमें देना";
@@ -150,8 +163,8 @@ function getPrayerShortName(prayerContent: string | undefined): string {
   if (content.includes("हम को मन की शक्ति")) return "हम को मन की शक्ति देना";
   if (content.includes("तू प्यार का सागर")) return "तू प्यार का सागर है";
   if (content.includes("ॐ सह नाववतु")) return "ॐ सह नाववतु";
-  if (content.includes("असतो मा सद्गमय")) return "असतो मा सद्गमय";
-  if (content.includes("वक्रतुंड महाकाय")) return "वक्रतुंड महाकाय";
+  if (content.includes("असतो मा सद्गमय") || content.includes("असतो मा सदगमय")) return "असतो मा सद्गमय";
+  if (content.includes("वक्रतुंड महाकाय") || content.includes("वक्रतुण्ड महाकाय")) return "वक्रतुंड महाकाय";
   if (content.includes("गणपती बाप्पा")) return "गणपती बाप्पा मोरया";
   if (content.includes("शुभं करोति")) return "शुभं करोति कल्याणम्";
   if (content.includes("देवा तुझे किती सुंदर")) return "देवा तुझे किती सुंदर";
@@ -162,8 +175,10 @@ function getPrayerShortName(prayerContent: string | undefined): string {
   if (content.includes("या भारतात बंधुभाव")) return "या भारतात बंधुभाव";
   if (content.includes("अजाण आम्ही तुझी लेकरे")) return "अजाण आम्ही तुझी लेकरे";
 
-  // Fallback: short first phrase up to comma, dash, or 20 characters
-  const firstPhrase = content.split("\n")[0].split(",")[0].split("-")[0].trim();
+  // Fallback: short first phrase up to newline, comma, dash, or 22 characters
+  const firstLine = content.split(/\r?\n/)[0].trim();
+  const firstPhrase = firstLine.split(",")[0].split("-")[0].split("।")[0].trim();
+  if (!firstPhrase || firstPhrase === "प्रार्थना" || firstPhrase === "Prayer") return defaultTitle;
   return firstPhrase.length > 22 ? firstPhrase.substring(0, 22) + "..." : firstPhrase;
 }
 
@@ -183,6 +198,42 @@ function getPasayadanShortName(pasayadanContent: string | undefined): string {
 
   const firstPhrase = content.split("\n")[0].split(",")[0].split("-")[0].trim();
   return firstPhrase.length > 25 ? firstPhrase.substring(0, 25) + "..." : (firstPhrase || "आता विश्वात्मकें देवें");
+}
+
+// Helper: extract & normalize patriotic/group song short title cleanly
+function cleanSongTitle(data: any): string {
+  if (!data) return "";
+  let title = (data.songTitle || data.deshbhaktigeetTitle || data.samuhgeetTitle || "").trim();
+  if (!title) {
+    const rawSong = (data.patrioticSong || data.samuhgeet || data.deshbhaktigeet || "").trim();
+    if (!rawSong) return "";
+    title = rawSong.split(/\r?\n/)[0].trim();
+  }
+  if (!title) return "";
+
+  // Normalize known common patriotic / group songs
+  if (title.includes("अजिंक्य भारत")) return "अजिंक्य भारत";
+  if (title.includes("बलसागर भारत")) return "बलसागर भारत होवो";
+  if (title.includes("माझ्या देशावर")) return "माझ्या देशावर माझे प्रेम आहे";
+  if (title.includes("खरा तो एकची धर्म")) return "खरा तो एकची धर्म";
+  if (title.includes("हे राष्ट्र देवतांचे")) return "हे राष्ट्र देवतांचे";
+  if (title.includes("जयोस्तुते")) return "जयोस्तुते";
+  if (title.includes("शूर आम्ही सरदार")) return "शूर आम्ही सरदार";
+  if (title.includes("उत्तुंग आमुची")) return "उत्तुंग आमुची ध्येयधुरा";
+  if (title.includes("प्रिय आमुचा")) return "प्रिय आमुचा महाराष्ट्र देश";
+
+  // Clean trailing dots (...), colons, dashes, commas
+  title = title.replace(/[\.\s]+$/, "").replace(/[:\-–,\s]+$/, "").trim();
+
+  if (title.length > 35) {
+    let sub = title.substring(0, 35);
+    const lastSpace = sub.lastIndexOf(" ");
+    if (lastSpace > 10) {
+      sub = sub.substring(0, lastSpace);
+    }
+    title = sub.replace(/[:\-–,\s]+$/, "").trim();
+  }
+  return title;
 }
 
 // Helper: detect language of content
@@ -208,9 +259,9 @@ const DEFAULT_SINGLE_LINE_SHLOKS = [
   "ॐ असतो मा सद्गमय ।",
 ];
 
-function formatShlokOneLine(shlokRaw: string | undefined, dayNum: number): string {
+function formatShlokOneLine(shlokRaw: string | undefined): string {
   if (!shlokRaw || !shlokRaw.trim()) {
-    return DEFAULT_SINGLE_LINE_SHLOKS[(dayNum - 1) % DEFAULT_SINGLE_LINE_SHLOKS.length];
+    return "";
   }
   let text = shlokRaw.trim();
   const lines = text.split(/\r?\n/).map((l: string) => l.trim()).filter(Boolean);
@@ -249,10 +300,7 @@ const MARATHI_HINDU_MONTHS = [
 ];
 
 function formatPanchangTwoLines(data: any, dateObj: Date): string {
-  const dayName = data.day || MARATHI_DAYS[dateObj.getDay()];
-  const monthName = data.month || MARATHI_HINDU_MONTHS[dateObj.getMonth() % 12];
-  const pakshaName = data.paksha || (dateObj.getDate() <= 15 ? "कृष्ण पक्ष" : "शुक्ल पक्ष");
-  const tithiName = data.tithi || MARATHI_TITHIS[(dateObj.getDate() - 1) % 30];
+  if (!data) return "";
 
   if (data.panchang && typeof data.panchang === "string" && data.panchang.trim()) {
     const str = data.panchang.trim();
@@ -268,9 +316,33 @@ function formatPanchangTwoLines(data: any, dateObj: Date): string {
         return `${parts[0]},\n${parts.slice(1).join(", ")}`;
       }
     }
+    return str;
   }
 
-  return `वार : ${dayName}, मास : ${monthName},\nपक्ष : ${pakshaName}, तिथी : ${tithiName}`;
+  // Only return panchang string if admin filled explicit panchang fields
+  if (data.month || data.tithi || data.paksha || data.nakshatra || data.yog) {
+    const dayName = data.day || MARATHI_DAYS[dateObj.getDay()];
+    const monthName = data.month || "";
+    const pakshaName = data.paksha || "";
+    const tithiName = data.tithi || "";
+
+    const line1Parts = [];
+    if (dayName) line1Parts.push(`वार : ${dayName}`);
+    if (monthName) line1Parts.push(`मास : ${monthName}`);
+
+    const line2Parts = [];
+    if (pakshaName) line2Parts.push(`पक्ष : ${pakshaName}`);
+    if (tithiName) line2Parts.push(`तिथी : ${tithiName}`);
+
+    const line1 = line1Parts.join(", ");
+    const line2 = line2Parts.join(", ");
+
+    if (line1 && line2) return `${line1},\n${line2}`;
+    if (line1) return line1;
+    if (line2) return line2;
+  }
+
+  return "";
 }
 
 function getCurrentAcademicYearStr(): string {
@@ -526,13 +598,13 @@ export function MonthlyParipathRegister() {
           const todayKey = getDateKey(today.getFullYear(), today.getMonth(), today.getDate());
 
           if (!data && currentAdminData) {
-            if (currentAdminData.archivedDate === dateKey || currentAdminData.date === dateKey || dateKey === todayKey) {
+            if (currentAdminData.archivedDate === dateKey || currentAdminData.date === dateKey) {
               data = currentAdminData;
             }
           }
 
           if (dateKey === todayKey && currentAdminData && currentAdminData.lastUpdated) {
-            if (!data || !data.lastUpdated || new Date(currentAdminData.lastUpdated) > new Date(data.lastUpdated)) {
+            if ((currentAdminData.archivedDate === dateKey || currentAdminData.date === dateKey) && (!data || !data.lastUpdated || new Date(currentAdminData.lastUpdated) > new Date(data.lastUpdated))) {
               data = currentAdminData;
             }
           }
@@ -559,9 +631,9 @@ export function MonthlyParipathRegister() {
               // संविधान - आम्ही भारताचे लोक
               sanvidhan: "आम्ही भारताचे लोक",
               // प्रार्थना - short heading title of prayer
-              prarthana: data.prayerTitle || data.prayerName || getPrayerShortName(prayerContent),
+              prarthana: data.prayerTitle || data.prayerName || getPrayerShortName(prayerContent, d),
               // श्लोक - formatted in 1 single line
-              shlok: formatShlokOneLine(data.shlok, d),
+              shlok: formatShlokOneLine(data.shlok),
               // पंचांग - formatted in 2 lines
               panchang: formatPanchangTwoLines(data, dateObj),
               // सुविचार - 2 full lines (~88 chars)
@@ -574,10 +646,10 @@ export function MonthlyParipathRegister() {
               mhan: getSingleItem(data.proverb || data.mhan, 65),
               // बोधकथा - title / 2 lines (~45 chars)
               bodhkatha: data.storyTitle || shortText(data.story || data.bodhkatha, 45),
-              // समूहगीत - title / 2 lines (~45 chars)
-              samuhgeet: data.songTitle || shortText(data.patrioticSong || data.samuhgeet, 45),
-              // देशभक्ती गीत - title / 2 lines (~45 chars)
-              deshbhaktigeet: data.songTitle || shortText(data.patrioticSong || data.deshbhaktigeet, 45),
+              // समूहगीत - clean title
+              samuhgeet: cleanSongTitle(data),
+              // देशभक्ती गीत - clean title
+              deshbhaktigeet: cleanSongTitle(data),
               // सामान्य ज्ञान - 1 single question (~65 chars max)
               samanyaGyan: getSingleItem(data.gkQ1 ? `प्र.१: ${data.gkQ1}` : (data.samanyaGyan || data.gk || ""), 65),
               // मौन पसायदान - fetch heading title dynamically
@@ -625,9 +697,9 @@ export function MonthlyParipathRegister() {
                 rajyageet: "जय जय महाराष्ट्र माझा",
                 pratigya: "भारत माझा देश आहे",
                 sanvidhan: "आम्ही भारताचे लोक",
-                prarthana: "प्रार्थना",
-                shlok: formatShlokOneLine("", d),
-                panchang: formatPanchangTwoLines({}, thisDate),
+                prarthana: getPrayerShortName("", d),
+                shlok: formatShlokOneLine(""),
+                panchang: formatPanchangTwoLines(null, thisDate),
                 suvichar: "",
                 batmya: "",
                 dinvishesh: "",

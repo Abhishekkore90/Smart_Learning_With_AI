@@ -1855,17 +1855,22 @@ function DailyAssemblyContent() {
     let currentData: any = null;
 
     const updateCombinedData = () => {
-      let finalData: any = archiveData;
+      let finalData: any = null;
 
-      if (!finalData && currentData) {
-        if (selectedDate === todayLocalStr || currentData.archivedDate === selectedDate || currentData.date === selectedDate) {
-          finalData = currentData;
-        }
+      if (archiveData) {
+        finalData = archiveData;
       }
 
-      if (selectedDate === todayLocalStr && archiveData && currentData && currentData.lastUpdated) {
-        if (!archiveData.lastUpdated || new Date(currentData.lastUpdated) > new Date(archiveData.lastUpdated)) {
-          finalData = currentData;
+      if (currentData) {
+        const currentMatchesDate = currentData.archivedDate === selectedDate || currentData.date === selectedDate;
+        if (currentMatchesDate) {
+          if (!finalData) {
+            finalData = currentData;
+          } else if (selectedDate === todayLocalStr && currentData.lastUpdated && archiveData?.lastUpdated) {
+            if (new Date(currentData.lastUpdated) > new Date(archiveData.lastUpdated)) {
+              finalData = currentData;
+            }
+          }
         }
       }
 
@@ -2054,7 +2059,8 @@ function DailyAssemblyContent() {
         ? gkList.map((item, i) => `प्र. ${i + 1}: ${item.q}\nउत्तर: ${item.a || '-'}`).join('\n\n')
         : (data.gk || data.samanyaGyan || data.generalKnowledge || "");
 
-      const songContent = data.samuhgeet || data.deshbhaktigeet || data.songTitle || data.patrioticSong || "";
+      const songTitle = data.songTitle || (data.samuhgeet && data.samuhgeet.length <= 40 ? data.samuhgeet : "") || (data.deshbhaktigeet && data.deshbhaktigeet.length <= 40 ? data.deshbhaktigeet : "") || "";
+      const songLyrics = data.patrioticSong || (data.samuhgeet && data.samuhgeet !== songTitle ? data.samuhgeet : "") || (data.deshbhaktigeet && data.deshbhaktigeet !== songTitle ? data.deshbhaktigeet : "") || "";
       const maun = data.silentPasayadan || data.maun || assemblyItems[5]?.content || "";
 
       // Ensure web fonts are completely loaded before html2canvas capture
@@ -2151,7 +2157,7 @@ function DailyAssemblyContent() {
 
           <div style="${sectionBox('#e0e7ff')}">
             ${greenBar('१४. समूहगीत/देशभक्ती गीत')}
-            <div style="${contentText}">${nl2br(songContent || 'माहिती उपलब्ध नाही')}</div>
+            <div style="${contentText}">${nl2br(songLyrics || songTitle || 'माहिती उपलब्ध नाही')}</div>
           </div>
 
           <div style="${sectionBox('#fde68a')}">

@@ -142,9 +142,12 @@ function AssemblyBookAdmin() {
           const currentRef = doc(db, "admin_daily_paripath", "current");
           const currentSnap = await getDoc(currentRef);
           if (currentSnap.exists()) {
-            setParipathData(currentSnap.data());
-            setIsSavedForDate(true);
-            return;
+            const cData = currentSnap.data();
+            if (cData.archivedDate === dateStr || cData.date === dateStr) {
+              setParipathData(cData);
+              setIsSavedForDate(true);
+              return;
+            }
           }
         }
         setParipathData(getParipathDefaultsForDate(dateStr));
@@ -444,6 +447,8 @@ function AssemblyBookAdmin() {
         ...paripathData,
         bunnyPdfUrl,
         lastUpdated: new Date().toISOString(),
+        archivedDate: selectedDate,
+        date: selectedDate,
       };
 
       if (selectedDate === todayStr) {
@@ -451,10 +456,7 @@ function AssemblyBookAdmin() {
       }
       
       // 4. Archive under selected date
-      await setDoc(doc(db, "daily_paripath_archive", selectedDate), {
-        ...payload,
-        archivedDate: selectedDate,
-      });
+      await setDoc(doc(db, "daily_paripath_archive", selectedDate), payload);
 
       setIsSavedForDate(true);
       

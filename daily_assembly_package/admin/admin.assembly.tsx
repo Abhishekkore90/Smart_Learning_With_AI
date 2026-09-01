@@ -142,9 +142,12 @@ function AssemblyBookAdmin() {
           const currentRef = doc(db, "admin_daily_paripath", "current");
           const currentSnap = await getDoc(currentRef);
           if (currentSnap.exists()) {
-            setParipathData(currentSnap.data());
-            setIsSavedForDate(true);
-            return;
+            const cData = currentSnap.data();
+            if (cData.archivedDate === dateStr || cData.date === dateStr) {
+              setParipathData(cData);
+              setIsSavedForDate(true);
+              return;
+            }
           }
         }
         setParipathData(getParipathDefaultsForDate(dateStr));
