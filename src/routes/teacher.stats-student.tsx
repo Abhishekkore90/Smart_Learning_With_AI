@@ -23,8 +23,8 @@ export const Route = createFileRoute("/teacher/stats-student")({
 const A4: React.CSSProperties = {
   width: "100%",
   maxWidth: "920px",
-  height: "1300px",
-  padding: "24px 30px",
+  minHeight: "1000px",
+  padding: "clamp(12px, 2.5vw, 24px) clamp(12px, 3vw, 30px)",
   background: "radial-gradient(circle at top left, #ffffff 0%, #f8faff 100%)",
   fontFamily: "'Noto Sans Devanagari', 'Playfair Display', Arial, sans-serif",
   fontSize: "var(--sanchika-font-size, 12pt)",
@@ -34,7 +34,7 @@ const A4: React.CSSProperties = {
   display: "flex",
   flexDirection: "column",
   overflow: "hidden",
-  border: "8px double #0d1b4b", // page-inner navy double border
+  border: "4px double #0d1b4b", // page-inner navy double border
   position: "relative",
   borderRadius: "6px",
 };
@@ -58,7 +58,7 @@ const TBL: React.CSSProperties = {
 
 const TH = (extra?: React.CSSProperties): React.CSSProperties => ({
   border: "1.5px solid #cbd5e1",
-  padding: "10px 8px",
+  padding: "8px 4px",
   textAlign: "center",
   background: "linear-gradient(135deg, #0d1b4b 0%, #1a2e6e 100%)",
   color: "#f5d060", // gold-light
@@ -66,9 +66,10 @@ const TH = (extra?: React.CSSProperties): React.CSSProperties => ({
   fontSize: "calc(var(--sanchika-font-size, 12pt) - 2pt)",
   borderBottom: "3px solid #c9a227",
   textShadow: "0 1px 2px rgba(0,0,0,0.4)",
-  lineHeight: "1.2",
+  lineHeight: "1.3",
   whiteSpace: "normal",
-  wordBreak: "break-word",
+  wordBreak: "normal",
+  overflowWrap: "normal",
   ...extra,
 });
 
@@ -79,9 +80,10 @@ const TD = (extra?: React.CSSProperties): React.CSSProperties => ({
   fontSize: "calc(var(--sanchika-font-size, 12pt) - 2pt)",
   color: "#0d1b4b", // navy
   background: "#fff",
-  lineHeight: "1.2",
+  lineHeight: "1.3",
   whiteSpace: "normal",
-  wordBreak: "break-word",
+  wordBreak: "normal",
+  overflowWrap: "normal",
   ...extra,
 });
 
@@ -209,8 +211,8 @@ function Page1() {
 
   const coverBorder: React.CSSProperties = {
     ...A4,
-    border: "14px double #c9a227",
-    padding: "40px 60px",
+    border: "clamp(6px, 1.5vw, 14px) double #c9a227",
+    padding: "clamp(20px, 4vw, 40px) clamp(14px, 5vw, 60px)",
     background: "radial-gradient(circle at center, #ffffff 0%, #fdfaf3 100%)",
     display: "flex",
     flexDirection: "column",
@@ -712,20 +714,19 @@ function Page2({ studentPhoto, onPhotoChange }: Page2Props) {
 
         <FieldRow label="जन्मठिकाण :" />
 
-        <div style={{ display: "flex", alignItems: "flex-end", gap: "16px" }}>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: "10px 16px", flexWrap: "wrap" }}>
           <span style={{ fontWeight: "700", whiteSpace: "nowrap" }}>
             लिंग : स्त्री / पुरुष
           </span>
           <span
             contentEditable={true}
             suppressContentEditableWarning={true}
-            style={{ ...IB("80px"), outline: "none", minHeight: "22px" }}
+            style={{ ...IB("60px"), outline: "none", minHeight: "22px" }}
           ></span>
           <span
             style={{
               fontWeight: "700",
               whiteSpace: "nowrap",
-              marginLeft: "20px",
             }}
           >
             रक्तगट +ve / -ve
@@ -733,39 +734,38 @@ function Page2({ studentPhoto, onPhotoChange }: Page2Props) {
           <span
             contentEditable={true}
             suppressContentEditableWarning={true}
-            style={{ ...IB("80px"), outline: "none", minHeight: "22px" }}
+            style={{ ...IB("60px"), outline: "none", minHeight: "22px" }}
           ></span>
         </div>
 
-        <div style={{ display: "flex", alignItems: "flex-end", gap: "16px" }}>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: "10px 16px", flexWrap: "wrap" }}>
           <span style={{ fontWeight: "700" }}>धर्म :</span>
           <span
             contentEditable={true}
             suppressContentEditableWarning={true}
-            style={{ ...IB("120px"), outline: "none", minHeight: "22px" }}
+            style={{ ...IB("80px"), outline: "none", minHeight: "22px" }}
           ></span>
-          <span style={{ fontWeight: "700", marginLeft: "20px" }}>जात :</span>
+          <span style={{ fontWeight: "700" }}>जात :</span>
           <span
             contentEditable={true}
             suppressContentEditableWarning={true}
-            style={{ ...IB("120px"), outline: "none", minHeight: "22px" }}
+            style={{ ...IB("80px"), outline: "none", minHeight: "22px" }}
           ></span>
         </div>
 
-        <div style={{ display: "flex", alignItems: "flex-end", gap: "16px" }}>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: "10px 16px", flexWrap: "wrap" }}>
           <span style={{ fontWeight: "700", whiteSpace: "nowrap" }}>
             अपंग आहे का ? होय / नाही
           </span>
           <span
             contentEditable={true}
             suppressContentEditableWarning={true}
-            style={{ ...IB("80px"), outline: "none", minHeight: "22px" }}
+            style={{ ...IB("60px"), outline: "none", minHeight: "22px" }}
           ></span>
           <span
             style={{
               fontWeight: "700",
               whiteSpace: "nowrap",
-              marginLeft: "20px",
             }}
           >
             प्रवर्ग :
@@ -773,7 +773,7 @@ function Page2({ studentPhoto, onPhotoChange }: Page2Props) {
           <span
             contentEditable={true}
             suppressContentEditableWarning={true}
-            style={{ ...IB("120px"), outline: "none", minHeight: "22px" }}
+            style={{ ...IB("80px"), outline: "none", minHeight: "22px" }}
           ></span>
         </div>
 
@@ -1005,6 +1005,7 @@ function Page4() {
     <div className="a4-sheet-card" style={{ ...A4, padding: "24px 4px" }}>
       <PageHeader title="क) शाळाबाबतची माहिती" />
       <div
+        className="overflow-x-auto w-full no-scrollbar"
         style={{
           flex: 1,
           display: "flex",
@@ -1012,19 +1013,19 @@ function Page4() {
           width: "100%",
         }}
       >
-        <table style={{ ...TBL, tableLayout: "fixed", flex: 1 }}>
+        <table style={{ ...TBL, tableLayout: "fixed", flex: 1, minWidth: "1220px" }}>
           <colgroup>
-            <col style={{ width: "7%" }} />
-            <col style={{ width: "12%" }} />
-            <col style={{ width: "6%" }} />
-            <col style={{ width: "6%" }} />
-            <col style={{ width: "7%" }} />
-            <col style={{ width: "9%" }} />
-            <col style={{ width: "10.5%" }} />
-            <col style={{ width: "11.5%" }} />
-            <col style={{ width: "6%" }} />
-            <col style={{ width: "11.5%" }} />
-            <col style={{ width: "13%" }} />
+            <col style={{ width: "80px" }} />
+            <col style={{ width: "160px" }} />
+            <col style={{ width: "75px" }} />
+            <col style={{ width: "95px" }} />
+            <col style={{ width: "100px" }} />
+            <col style={{ width: "135px" }} />
+            <col style={{ width: "85px" }} />
+            <col style={{ width: "85px" }} />
+            <col style={{ width: "115px" }} />
+            <col style={{ width: "140px" }} />
+            <col style={{ width: "150px" }} />
           </colgroup>
           <thead>
             <tr>
@@ -1034,6 +1035,7 @@ function Page4() {
                   fontSize: "8pt",
                   verticalAlign: "middle",
                   padding: "6px 2px",
+                  minWidth: "80px",
                 })}
               >
                 इयत्ता
@@ -1044,6 +1046,7 @@ function Page4() {
                   fontSize: "8pt",
                   verticalAlign: "middle",
                   padding: "6px 2px",
+                  minWidth: "160px",
                 })}
               >
                 शाळेचे नाव व पत्ता
@@ -1054,6 +1057,7 @@ function Page4() {
                   fontSize: "8pt",
                   verticalAlign: "middle",
                   padding: "6px 2px",
+                  minWidth: "75px",
                 })}
               >
                 माध्यम
@@ -1064,6 +1068,7 @@ function Page4() {
                   fontSize: "8pt",
                   verticalAlign: "middle",
                   padding: "6px 2px",
+                  minWidth: "95px",
                 })}
               >
                 जन. रजि. क्रमांक
@@ -1074,6 +1079,7 @@ function Page4() {
                   fontSize: "8pt",
                   verticalAlign: "middle",
                   padding: "6px 2px",
+                  minWidth: "100px",
                 })}
               >
                 शाळा प्रविष्ट दिनांक
@@ -1084,6 +1090,7 @@ function Page4() {
                   fontSize: "8pt",
                   verticalAlign: "middle",
                   padding: "6px 2px",
+                  minWidth: "135px",
                 })}
               >
                 शाळा सोडल्याचा दिनांक व दाखला क्रमांक
@@ -1094,6 +1101,7 @@ function Page4() {
                   fontSize: "8pt",
                   verticalAlign: "middle",
                   padding: "6px 2px",
+                  minWidth: "170px",
                 })}
               >
                 शारीरिक
@@ -1104,6 +1112,7 @@ function Page4() {
                   fontSize: "8pt",
                   verticalAlign: "middle",
                   padding: "6px 2px",
+                  minWidth: "115px",
                 })}
               >
                 वैद्यकीय तपासणी
@@ -1114,6 +1123,7 @@ function Page4() {
                   fontSize: "8pt",
                   verticalAlign: "middle",
                   padding: "6px 2px",
+                  minWidth: "140px",
                 })}
               >
                 वर्ग शिक्षकाचे नाव व स्वाक्षरी
@@ -1124,6 +1134,7 @@ function Page4() {
                   fontSize: "8pt",
                   verticalAlign: "middle",
                   padding: "6px 2px",
+                  minWidth: "150px",
                 })}
               >
                 मुख्याध्यापकाचे नाव व स्वाक्षरी दिनांक
@@ -1135,6 +1146,7 @@ function Page4() {
                   fontSize: "7.5pt",
                   fontWeight: "normal",
                   padding: "4px 2px",
+                  minWidth: "85px",
                 })}
               >
                 <b>वजन:</b> Kg
@@ -1144,6 +1156,7 @@ function Page4() {
                   fontSize: "7.5pt",
                   fontWeight: "normal",
                   padding: "4px 2px",
+                  minWidth: "85px",
                 })}
               >
                 <b>उंची:</b> cm
@@ -1209,6 +1222,7 @@ function Page5() {
         ( सत्र निहाय विषयात प्राप्त केलेल्या श्रेणींची नोंद )
       </div>
       <div
+        className="overflow-x-auto w-full no-scrollbar"
         style={{
           flex: 1,
           display: "flex",
@@ -1216,14 +1230,14 @@ function Page5() {
           width: "100%",
         }}
       >
-        <table style={{ ...TBL, tableLayout: "fixed", flex: 1 }}>
+        <table style={{ ...TBL, tableLayout: "fixed", flex: 1, minWidth: "1320px" }}>
           <colgroup>
-            <col style={{ width: "12%" }} />
-            <col style={{ width: "12%" }} />
+            <col style={{ width: "140px" }} />
+            <col style={{ width: "140px" }} />
             {Array(16)
               .fill(0)
               .map((_, idx) => (
-                <col key={idx} style={{ width: "4.75%" }} />
+                <col key={idx} style={{ width: "65px" }} />
               ))}
           </colgroup>
           <thead>
@@ -1742,6 +1756,7 @@ function Page6() {
       <PageHeader title="इ) विविध शासकीय योजनांचा लाभ" />
 
       <div
+        className="overflow-x-auto w-full no-scrollbar"
         style={{
           flex: 1,
           display: "flex",
@@ -1750,12 +1765,12 @@ function Page6() {
           paddingTop: "10px",
         }}
       >
-        <table style={{ ...TBL, tableLayout: "fixed", fontSize: FONT }}>
+        <table style={{ ...TBL, tableLayout: "fixed", fontSize: FONT, minWidth: "1020px" }}>
           <colgroup>
-            <col style={{ width: "8%" }} />
-            <col style={{ width: "28%" }} />
+            <col style={{ width: "60px" }} />
+            <col style={{ width: "280px" }} />
             {CLASSES_MR.map((c) => (
-              <col key={c} style={{ width: "8%" }} />
+              <col key={c} style={{ width: "85px" }} />
             ))}
           </colgroup>
           <thead>
@@ -1763,7 +1778,7 @@ function Page6() {
               <th style={TH({ padding: "6px" })}>अ.क्र.</th>
               <th style={TH({ textAlign: "left", padding: "6px 8px" })}>योजना</th>
               {CLASSES_MR.map((c) => (
-                <th key={c} style={TH({ padding: "4px" })}>{c}</th>
+                <th key={c} style={TH({ padding: "4px", minWidth: "85px", width: "85px" })}>{c}</th>
               ))}
             </tr>
           </thead>
@@ -1911,6 +1926,7 @@ function Page7A() {
       </div>
 
       <div
+        className="overflow-x-auto w-full no-scrollbar"
         style={{
           flex: 1,
           display: "flex",
@@ -1918,11 +1934,11 @@ function Page7A() {
           width: "100%",
         }}
       >
-        <table style={{ ...TBL, tableLayout: "fixed", fontSize: FONT }}>
+        <table style={{ ...TBL, tableLayout: "fixed", fontSize: FONT, minWidth: "1050px" }}>
           <colgroup>
-            <col style={{ width: "36%" }} />
+            <col style={{ width: "370px" }} />
             {CLASSES_MR.map((c) => (
-              <col key={c} style={{ width: "8%" }} />
+              <col key={c} style={{ width: "85px" }} />
             ))}
           </colgroup>
           <thead>
@@ -1932,6 +1948,7 @@ function Page7A() {
                   textAlign: "left",
                   fontSize: "10pt",
                   padding: "6px 8px",
+                  minWidth: "370px",
                 })}
               >
                 मुद्दे
@@ -1939,7 +1956,7 @@ function Page7A() {
               {CLASSES_MR.map((c) => (
                 <th
                   key={c}
-                  style={TH({ fontSize: "9.5pt", padding: "4px 3px" })}
+                  style={TH({ fontSize: "9.5pt", padding: "4px 3px", minWidth: "85px", width: "85px" })}
                 >
                   {c}
                 </th>
@@ -2089,6 +2106,7 @@ function Page7B() {
       </div>
 
       <div
+        className="overflow-x-auto w-full no-scrollbar"
         style={{
           flex: 1,
           display: "flex",
@@ -2096,11 +2114,11 @@ function Page7B() {
           width: "100%",
         }}
       >
-        <table style={{ ...TBL, tableLayout: "fixed", fontSize: FONT }}>
+        <table style={{ ...TBL, tableLayout: "fixed", fontSize: FONT, minWidth: "1050px" }}>
           <colgroup>
-            <col style={{ width: "36%" }} />
+            <col style={{ width: "370px" }} />
             {CLASSES_MR.map((c) => (
-              <col key={c} style={{ width: "8%" }} />
+              <col key={c} style={{ width: "85px" }} />
             ))}
           </colgroup>
           <thead>
@@ -2110,6 +2128,7 @@ function Page7B() {
                   textAlign: "left",
                   fontSize: "10pt",
                   padding: "6px 8px",
+                  minWidth: "370px",
                 })}
               >
                 मुद्दे
@@ -2117,7 +2136,7 @@ function Page7B() {
               {CLASSES_MR.map((c) => (
                 <th
                   key={c}
-                  style={TH({ fontSize: "9.5pt", padding: "4px 3px" })}
+                  style={TH({ fontSize: "9.5pt", padding: "4px 3px", minWidth: "85px", width: "85px" })}
                 >
                   {c}
                 </th>
@@ -2657,6 +2676,10 @@ function StudentPortfolioPage() {
     }
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <div
       className="min-h-screen"
@@ -2739,54 +2762,153 @@ function StudentPortfolioPage() {
       `}</style>
       {/* Custom Vidyarthi Sanchika Navbar styled with light theme */}
       {!isPrinting && (
-        <header className="bg-white border-b-2 border-[#c9a227] text-slate-900 h-16 fixed top-0 left-0 right-0 z-[60] px-4 md:px-6 flex items-center justify-between shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-all">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() =>
-                window.dispatchEvent(new CustomEvent("toggle-teacher-sidebar"))
-              }
-              className="lg:hidden size-10 rounded-xl bg-slate-100 hover:bg-slate-200 border border-[#c9a227]/40 flex items-center justify-center text-slate-800 transition-all active:scale-95 shadow-sm"
-            >
-              <svg
-                className="size-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
+        <header className="bg-white border-b-2 border-[#c9a227] text-slate-900 fixed top-0 left-0 right-0 z-[60] shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-all">
+          {/* Top Row: Title and Menu */}
+          <div className="h-14 px-3 sm:px-6 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <button
+                onClick={() =>
+                  window.dispatchEvent(new CustomEvent("toggle-teacher-sidebar"))
+                }
+                className="lg:hidden size-9 sm:size-10 rounded-xl bg-slate-100 hover:bg-slate-200 border border-[#c9a227]/40 flex items-center justify-center text-slate-800 transition-all active:scale-95 shadow-sm shrink-0"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M4 6h16M4 12h16M4 18h16"
-                ></path>
-              </svg>
-            </button>
-            <Link
-              to="/teacher"
-              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-900 border border-amber-400/50 rounded-xl text-xs font-black transition-all shadow-sm active:scale-95 cursor-pointer mr-1 sm:mr-2"
-              style={{ fontFamily: "'Noto Sans Devanagari', sans-serif" }}
-              title="मुख्य डॅशबोर्डवर मागे जा (Back to Teacher Dashboard)"
-            >
-              <ArrowLeft className="size-4 shrink-0 text-amber-700" />
-              <span>मागे जा (Dashboard)</span>
-            </Link>
-            <div className="flex items-center gap-3">
-              <span className="text-xl">📚</span>
-              <h2
-                className="font-bold tracking-tight text-slate-900 font-poppins drop-shadow-sm text-sm md:text-base"
+                <svg
+                  className="size-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M4 6h16M4 12h16M4 18h16"
+                  ></path>
+                </svg>
+              </button>
+              <Link
+                to="/teacher"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-900 border border-amber-400/50 rounded-xl text-xs font-black transition-all shadow-sm active:scale-95 cursor-pointer shrink-0"
+                style={{ fontFamily: "'Noto Sans Devanagari', sans-serif" }}
+                title="मुख्य डॅशबोर्डवर मागे जा"
+              >
+                <ArrowLeft className="size-4 shrink-0 text-amber-700" />
+                <span className="hidden sm:inline">मागे जा</span>
+              </Link>
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-lg sm:text-xl shrink-0">📚</span>
+                <h2
+                  className="font-bold tracking-tight text-slate-900 font-poppins drop-shadow-sm text-sm sm:text-base truncate"
+                  style={{ fontFamily: "'Noto Sans Devanagari', sans-serif" }}
+                >
+                  {lang === "en"
+                    ? "Vidyarthi Sanchika"
+                    : lang === "hi"
+                    ? "छात्र संचिका"
+                    : "विद्यार्थी संचिका"}
+                </h2>
+              </div>
+            </div>
+
+            {/* Desktop Action Buttons Bar */}
+            <div className="hidden md:flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => {
+                  const newPage = {
+                    id: Date.now().toString(),
+                    title: `नवीन पान (${customPages.length + 1})`,
+                    content: "",
+                  };
+                  setCustomPages((prev) => [...prev, newPage]);
+                  setCurrentTab(pageNames.length);
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg text-white border border-[#c9a227]/30 bg-gradient-to-r from-[#0f172a] to-[#1e293b] hover:from-[#1e293b] hover:to-[#334155] shadow-md transition-all active:scale-95 cursor-pointer"
                 style={{ fontFamily: "'Noto Sans Devanagari', sans-serif" }}
               >
-                {lang === "en"
-                  ? "Vidyarthi Sanchika"
-                  : lang === "hi"
-                  ? "छात्र संचिका"
-                  : "विद्यार्थी संचिका"}
-              </h2>
+                ➕ नवीन पान जोडा
+              </button>
+              <button
+                onClick={() => {
+                  if (pageNames.length <= 1) {
+                    alert("⚠️ किमान एक पान असणे आवश्यक आहे");
+                    return;
+                  }
+                  if (currentTab === 0) {
+                    alert("⚠️ मुखपृष्ठ (Cover Page) काढून टाकता येणार नाही");
+                    return;
+                  }
+                  if (confirm(`तुम्हाला खात्री आहे की तुम्ही हे पान (${pageNames[currentTab]}) काढून टाकू इच्छिता?`)) {
+                    const staticCount = 10;
+                    if (currentTab >= staticCount) {
+                      const customIdx = currentTab - staticCount;
+                      const updated = customPages.filter((_, idx) => idx !== customIdx);
+                      setCustomPages(updated);
+                      localStorage.setItem("student_sanchika_custom_pages", JSON.stringify(updated));
+                    } else {
+                      let deleted = JSON.parse(localStorage.getItem("student_sanchika_deleted_pages") || "[]");
+                      if (!deleted.includes(currentTab)) {
+                        deleted.push(currentTab);
+                      }
+                      localStorage.setItem("student_sanchika_deleted_pages", JSON.stringify(deleted));
+                    }
+                    alert("🗑️ पान यशस्वीरीत्या काढून टाकले!");
+                    setCurrentTab((prev) => Math.max(0, prev - 1));
+                  }
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg text-white border border-[#c9a227]/30 bg-gradient-to-r from-[#c62828] to-[#d32f2f] hover:from-[#d32f2f] hover:to-[#e53935] shadow-md transition-all active:scale-95 cursor-pointer"
+                style={{ fontFamily: "'Noto Sans Devanagari', sans-serif" }}
+                title="चालू पान काढून टाका"
+              >
+                🗑️ हे पान काढा
+              </button>
+              <button
+                onClick={() => {
+                  if (customPages.length > 0) {
+                    alert("↩️ काढून टाकलेले पान किंवा माहिती पूर्ववत केली जात आहे!");
+                    window.location.reload();
+                  } else {
+                    alert("ℹ️ पूर्ववत (Restore) करण्यासाठी कोणतीही डिलीट झालेली पाने आढळली नाहीत.");
+                  }
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg text-white border border-[#c9a227]/30 bg-gradient-to-r from-[#0284c7] to-[#0369a1] hover:from-[#0369a1] hover:to-[#075985] shadow-md transition-all active:scale-95 cursor-pointer"
+                style={{ fontFamily: "'Noto Sans Devanagari', sans-serif" }}
+                title="काढून टाकलेले पान पूर्ववत करा"
+              >
+                ↩️ पूर्ववत करा
+              </button>
+              <button
+                onClick={handleSaveData}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg text-white border border-[#c9a227]/30 bg-gradient-to-r from-[#1b5e20] to-[#2e7d32] hover:from-[#2e7d32] hover:to-[#43a047] shadow-md transition-all active:scale-95"
+                style={{ fontFamily: "'Noto Sans Devanagari', sans-serif" }}
+              >
+                💾 जतन करा
+              </button>
+              <button
+                onClick={handleDownloadPDF}
+                disabled={downloading}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg text-white border border-[#c9a227]/30 bg-gradient-to-r from-[#9b1c1c] to-[#c62828] hover:from-[#c62828] hover:to-[#ef5350] shadow-md disabled:opacity-60 transition-all active:scale-95"
+                style={{ fontFamily: "'Noto Sans Devanagari', sans-serif" }}
+              >
+                {downloading ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <span>📥</span>
+                )}
+                PDF डाउनलोड
+              </button>
+              <button
+                onClick={handleClearData}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg text-white border border-[#c9a227]/30 bg-gradient-to-r from-[#bf360c] to-[#e64a19] hover:from-[#e64a19] hover:to-[#f4511e] shadow-md transition-all active:scale-95"
+                style={{ fontFamily: "'Noto Sans Devanagari', sans-serif" }}
+              >
+                🗑️ Clear
+              </button>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 md:gap-3">
+          {/* Mobile Action Bar Row (Visible on Mobile Screens) */}
+          <div className="md:hidden flex items-center gap-2 px-3 py-2 bg-slate-50 border-t border-slate-200/80 overflow-x-auto no-scrollbar">
             <button
               onClick={() => {
                 const newPage = {
@@ -2797,7 +2919,7 @@ function StudentPortfolioPage() {
                 setCustomPages((prev) => [...prev, newPage]);
                 setCurrentTab(pageNames.length);
               }}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs md:text-sm font-semibold rounded-lg text-white border border-[#c9a227]/30 bg-gradient-to-r from-[#0f172a] to-[#1e293b] hover:from-[#1e293b] hover:to-[#334155] shadow-md transition-all active:scale-95 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl text-white bg-slate-900 shadow-sm whitespace-nowrap cursor-pointer shrink-0"
               style={{ fontFamily: "'Noto Sans Devanagari', sans-serif" }}
             >
               ➕ नवीन पान जोडा
@@ -2830,9 +2952,8 @@ function StudentPortfolioPage() {
                   setCurrentTab((prev) => Math.max(0, prev - 1));
                 }
               }}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs md:text-sm font-semibold rounded-lg text-white border border-[#c9a227]/30 bg-gradient-to-r from-[#c62828] to-[#d32f2f] hover:from-[#d32f2f] hover:to-[#e53935] shadow-md transition-all active:scale-95 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl text-white bg-red-600 shadow-sm whitespace-nowrap cursor-pointer shrink-0"
               style={{ fontFamily: "'Noto Sans Devanagari', sans-serif" }}
-              title="चालू पान काढून टाका"
             >
               🗑️ हे पान काढा
             </button>
@@ -2845,35 +2966,30 @@ function StudentPortfolioPage() {
                   alert("ℹ️ पूर्ववत (Restore) करण्यासाठी कोणतीही डिलीट झालेली पाने आढळली नाहीत.");
                 }
               }}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs md:text-sm font-semibold rounded-lg text-white border border-[#c9a227]/30 bg-gradient-to-r from-[#0284c7] to-[#0369a1] hover:from-[#0369a1] hover:to-[#075985] shadow-md transition-all active:scale-95 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl text-white bg-sky-600 shadow-sm whitespace-nowrap cursor-pointer shrink-0"
               style={{ fontFamily: "'Noto Sans Devanagari', sans-serif" }}
-              title="काढून टाकलेले पान पूर्ववत करा"
             >
-              ↩️ पान पूर्ववत करा
+              ↩️ पूर्ववत करा
             </button>
             <button
               onClick={handleSaveData}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs md:text-sm font-semibold rounded-lg text-white border border-[#c9a227]/30 bg-gradient-to-r from-[#1b5e20] to-[#2e7d32] hover:from-[#2e7d32] hover:to-[#43a047] shadow-md transition-all active:scale-95"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl text-white bg-emerald-600 shadow-sm whitespace-nowrap cursor-pointer shrink-0"
               style={{ fontFamily: "'Noto Sans Devanagari', sans-serif" }}
             >
-              💾 माहिती जतन करा
+              💾 जतन करा
             </button>
             <button
               onClick={handleDownloadPDF}
               disabled={downloading}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs md:text-sm font-semibold rounded-lg text-white border border-[#c9a227]/30 bg-gradient-to-r from-[#9b1c1c] to-[#c62828] hover:from-[#c62828] hover:to-[#ef5350] shadow-md disabled:opacity-60 transition-all active:scale-95"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl text-white bg-rose-700 shadow-sm whitespace-nowrap cursor-pointer shrink-0 disabled:opacity-60"
               style={{ fontFamily: "'Noto Sans Devanagari', sans-serif" }}
             >
-              {downloading ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <span>📥</span>
-              )}
-              PDF डाउनलोड करा
+              {downloading ? <Loader2 className="size-3.5 animate-spin" /> : <span>📥</span>}
+              PDF डाउनलोड
             </button>
             <button
               onClick={handleClearData}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs md:text-sm font-semibold rounded-lg text-white border border-[#c9a227]/30 bg-gradient-to-r from-[#bf360c] to-[#e64a19] hover:from-[#e64a19] hover:to-[#f4511e] shadow-md transition-all active:scale-95"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl text-white bg-orange-600 shadow-sm whitespace-nowrap cursor-pointer shrink-0"
               style={{ fontFamily: "'Noto Sans Devanagari', sans-serif" }}
             >
               🗑️ Clear
@@ -2885,12 +3001,12 @@ function StudentPortfolioPage() {
       <TeacherSidebar />
 
       <main
-        className="lg:pl-0 pt-20 px-6 pb-2"
+        className="lg:pl-0 pt-32 sm:pt-24 md:pt-20 px-2 sm:px-4 md:px-6 pb-6"
         style={{ height: "fit-content" }}
       >
         {/* Sheets presentation workspace */}
         <div
-          className="bg-[#0d1b4b]/30 p-4 md:p-4 pb-2 rounded-3xl border border-[#c9a227]/20 shadow-inner flex flex-col items-center relative mx-auto"
+          className="bg-[#0d1b4b]/30 p-2 sm:p-4 pb-2 rounded-2xl sm:rounded-3xl border border-[#c9a227]/20 shadow-inner flex flex-col items-center relative mx-auto"
           style={{ width: "100%", maxWidth: "930px", height: "fit-content" }}
         >
           {/* Floating Next/Prev Arrow Controllers anchored symmetrically on left and right upper sides */}
@@ -2899,12 +3015,11 @@ function StudentPortfolioPage() {
               {currentTab > 0 && (
                 <button
                   onClick={() => setCurrentTab((prev) => Math.max(0, prev - 1))}
-                  className="nav-arrow prev-arrow flex absolute -left-3 sm:-left-6 md:-left-8 lg:-left-10 top-6 md:top-8 z-50 w-11 h-11 md:w-14 md:h-14 rounded-full items-center justify-center cursor-pointer transition-all duration-300 active:scale-90"
+                  className="nav-arrow prev-arrow flex absolute -left-1 sm:-left-6 md:-left-8 lg:-left-10 top-3 sm:top-6 md:top-8 z-50 w-8 h-8 sm:w-11 sm:h-11 md:w-14 md:h-14 rounded-full items-center justify-center cursor-pointer transition-all duration-300 active:scale-90 text-xs sm:text-base md:text-xl"
                   style={{
                     background: "rgba(13, 27, 75, 0.9)",
                     border: "2px solid #c9a227",
                     color: "#f5d060",
-                    fontSize: "20px",
                     boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
                     backdropFilter: "blur(8px)",
                   }}
@@ -2934,12 +3049,11 @@ function StudentPortfolioPage() {
                       Math.min(pageNames.length - 1, prev + 1),
                     )
                   }
-                  className="nav-arrow next-arrow flex absolute -right-3 sm:-right-6 md:-right-8 lg:-right-10 top-6 md:top-8 z-50 w-11 h-11 md:w-14 md:h-14 rounded-full items-center justify-center cursor-pointer transition-all duration-300 active:scale-90"
+                  className="nav-arrow next-arrow flex absolute -right-1 sm:-right-6 md:-right-8 lg:-right-10 top-3 sm:top-6 md:top-8 z-50 w-8 h-8 sm:w-11 sm:h-11 md:w-14 md:h-14 rounded-full items-center justify-center cursor-pointer transition-all duration-300 active:scale-90 text-xs sm:text-base md:text-xl"
                   style={{
                     background: "rgba(13, 27, 75, 0.9)",
                     border: "2px solid #c9a227",
                     color: "#f5d060",
-                    fontSize: "20px",
                     boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
                     backdropFilter: "blur(8px)",
                   }}

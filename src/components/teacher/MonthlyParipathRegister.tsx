@@ -1260,40 +1260,40 @@ export function MonthlyParipathRegister() {
 
               <div className={`page-chunk-box space-y-4 ${chunkIdx > 0 ? "page-break" : ""}`}>
                 {/* ---------- SINGLE UNIFIED HEADER ---------- */}
-                <div className="flex flex-col gap-1.5 border-b-2 border-slate-900 pb-2">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1 font-black text-slate-900 text-xs md:text-sm">
-                      <div>
-                        शाळेचे नाव :{" "}
-                        <span className="border-b border-dotted border-slate-700 px-2 py-0.5 text-indigo-950 font-extrabold">
+                <div className="flex flex-col gap-2 border-b-2 border-slate-900 pb-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-slate-900">
+                    <div className="space-y-1 font-black text-xs sm:text-sm">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span>शाळेचे नाव :</span>
+                        <span className="border-b border-dotted border-slate-700 px-1.5 py-0.5 text-indigo-950 font-extrabold">
                           {schoolName || schoolInfo.schoolName || "..................................................."}
                         </span>
                       </div>
-                      <div>
-                        शैक्षणिक वर्ष :{" "}
-                        <span className="border-b border-dotted border-slate-700 px-2 py-0.5 text-indigo-950 font-extrabold">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span>शैक्षणिक वर्ष :</span>
+                        <span className="border-b border-dotted border-slate-700 px-1.5 py-0.5 text-indigo-950 font-extrabold">
                           {academicYear || getCurrentAcademicYearStr()}
                         </span>
                       </div>
                     </div>
 
-                    <div className="text-right">
-                      <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-wider">
+                    <div className="text-left sm:text-right">
+                      <h2 className="text-base sm:text-lg md:text-2xl font-black text-slate-900 tracking-tight sm:tracking-wider leading-snug">
                         दैनिक व परिपाठातील उपक्रम ({chunk.label})
                       </h2>
-                      <p className="text-xs font-bold text-slate-700 uppercase mt-0.5">
+                      <p className="text-[11px] sm:text-xs font-bold text-slate-700 uppercase mt-0.5">
                         मासिक परिपाठ नोंदवही • माहे: {MARATHI_MONTHS[selectedMonthIndex]} {selectedYear}
                       </p>
                     </div>
                   </div>
 
                   {/* School Metadata Info Row */}
-                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs font-bold text-slate-900 pt-1.5 border-t border-slate-300">
-                    <div>शाळेचे नाव : <span className="font-extrabold text-indigo-950">{schoolName || schoolInfo.schoolName || "---"}</span></div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 text-[11px] sm:text-xs font-bold text-slate-900 pt-2 border-t border-slate-300">
+                    <div className="col-span-2 sm:col-span-1">शाळेचे नाव : <span className="font-extrabold text-indigo-950">{schoolName || schoolInfo.schoolName || "---"}</span></div>
                     <div>तालुका : <span className="font-extrabold text-indigo-950">{schoolInfo.taluka || "---"}</span></div>
                     <div>जिल्हा : <span className="font-extrabold text-indigo-950">{schoolInfo.jilha || "---"}</span></div>
                     <div>केंद्र : <span className="font-extrabold text-indigo-950">{schoolInfo.kendra || "---"}</span></div>
-                    <div>UDISE नंबर : <span className="font-extrabold text-indigo-950">{schoolInfo.udise || "---"}</span></div>
+                    <div className="col-span-2 sm:col-span-1">UDISE नंबर : <span className="font-extrabold text-indigo-950">{schoolInfo.udise || "---"}</span></div>
                   </div>
                 </div>
 

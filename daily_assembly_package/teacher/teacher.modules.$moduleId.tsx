@@ -2250,42 +2250,44 @@ function DailyAssemblyContent() {
       `}</style>
 
       {/* Mode Switcher: Daily Assembly vs Monthly Assembly Register */}
-      <div className="flex items-center justify-between p-3.5 bg-gradient-to-r from-[#0F172A] via-[#1E1B4B] to-[#0F172A] rounded-[2.5rem] shadow-[0_20px_50px_-15px_rgba(30,27,75,0.5)] border border-indigo-500/40 pdf-hide gap-3">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-2.5 sm:p-3.5 bg-gradient-to-r from-[#0F172A] via-[#1E1B4B] to-[#0F172A] rounded-2xl md:rounded-[2.5rem] shadow-[0_20px_50px_-15px_rgba(30,27,75,0.5)] border border-indigo-500/40 pdf-hide gap-2.5 sm:gap-3">
         <button
           onClick={() => navigate({ to: "/teacher" })}
-          className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-indigo-950/80 hover:bg-indigo-900 text-white font-bold text-xs md:text-sm uppercase tracking-wider border border-indigo-400/40 transition-all shadow-md active:scale-95 group shrink-0"
+          className="flex items-center justify-center sm:justify-start gap-2 px-4 md:px-5 py-2.5 md:py-3 rounded-xl md:rounded-2xl bg-indigo-950/80 hover:bg-indigo-900 text-white font-bold text-xs md:text-sm uppercase tracking-wider border border-indigo-400/40 transition-all shadow-md active:scale-95 group shrink-0 w-full sm:w-auto"
           title="मागे जा (Back to Dashboard)"
         >
-          <ArrowLeft className="size-5 group-hover:-translate-x-1 transition-transform text-amber-400" />
+          <ArrowLeft className="size-4 md:size-5 group-hover:-translate-x-1 transition-transform text-amber-400" />
           <span>मागे जा</span>
         </button>
 
-        <div className="flex gap-2 p-2 bg-[#0B0F19] rounded-2xl border border-indigo-400/40 w-full max-w-2xl shadow-inner">
+        <div className="flex gap-1.5 md:gap-2 p-1.5 md:p-2 bg-[#0B0F19] rounded-xl md:rounded-2xl border border-indigo-400/40 w-full sm:max-w-2xl shadow-inner">
           <button
             onClick={() => setAssemblyMode("daily")}
-            className={`flex-1 py-3 px-6 rounded-xl font-black text-xs md:text-sm tracking-wider uppercase transition-all duration-300 flex items-center justify-center gap-2.5 ${
+            className={`flex-1 py-2.5 md:py-3 px-2 md:px-6 rounded-lg md:rounded-xl font-black text-[11px] sm:text-xs md:text-sm tracking-wide md:tracking-wider uppercase transition-all duration-300 flex items-center justify-center gap-1.5 md:gap-2.5 ${
               assemblyMode === "daily"
                 ? "bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 text-slate-950 shadow-lg shadow-amber-500/40 ring-2 ring-amber-300/50 scale-[1.02]"
                 : "bg-white/10 hover:bg-white/20 text-white font-extrabold border border-white/20 shadow-inner"
             }`}
           >
-            <BookMarked className="size-4" />
-            {lang === "en" ? "Daily Assembly" : "दैनिक परिपाठ"}
+            <BookMarked className="size-3.5 md:size-4 shrink-0" />
+            <span className="truncate">{lang === "en" ? "Daily Assembly" : "दैनिक परिपाठ"}</span>
           </button>
 
           <button
             onClick={() => setAssemblyMode("monthly")}
-            className={`flex-1 py-3 px-6 rounded-xl font-black text-xs md:text-sm tracking-wider uppercase transition-all duration-300 flex items-center justify-center gap-2.5 ${
+            className={`flex-1 py-2.5 md:py-3 px-2 md:px-6 rounded-lg md:rounded-xl font-black text-[11px] sm:text-xs md:text-sm tracking-wide md:tracking-wider uppercase transition-all duration-300 flex items-center justify-center gap-1.5 md:gap-2.5 ${
               assemblyMode === "monthly"
                 ? "bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-500 text-slate-950 shadow-lg shadow-emerald-500/40 ring-2 ring-emerald-300/50 scale-[1.02]"
                 : "bg-white/10 hover:bg-white/20 text-white font-extrabold border border-white/20 shadow-inner"
             }`}
           >
-            <Table className="size-4" />
-            {lang === "en" ? "Monthly Assembly" : "मासिक परिपाठ (रजिस्टर)"}
+            <Table className="size-3.5 md:size-4 shrink-0" />
+            <span className="truncate">
+              {lang === "en" ? "Monthly Assembly" : <><span className="hidden sm:inline">मासिक परिपाठ (रजिस्टर)</span><span className="sm:hidden">मासिक परिपाठ</span></>}
+            </span>
           </button>
         </div>
-        <div className="w-24 hidden md:block" />
+        <div className="w-24 hidden lg:block" />
       </div>
 
       {assemblyMode === "monthly" ? (
@@ -2661,14 +2663,20 @@ function DailyAssemblyContent() {
               pageBreak={false}
             >
               {sec.isSignature ? (
-                <div className="p-6 md:p-8 bg-white border-2 border-dashed border-slate-300 rounded-[2rem] flex justify-between items-center text-slate-800 font-extrabold text-sm md:text-base pt-10">
-                  <div className="text-center">
-                    <p className="text-slate-400 font-normal mb-6">_______________________</p>
-                    <p>वर्गशिक्षक स्वाक्षरी</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-slate-400 font-normal mb-6">_______________________</p>
-                    <p>मुख्याध्यापक स्वाक्षरी</p>
+                <div className="p-4 sm:p-6 md:p-8 bg-white/90 backdrop-blur-xl border-2 border-dashed border-slate-300/80 rounded-2xl sm:rounded-[2.5rem] shadow-sm">
+                  <div className="grid grid-cols-2 gap-3 sm:gap-8 pt-4 sm:pt-6">
+                    <div className="flex flex-col items-center justify-end text-center">
+                      <div className="w-full max-w-[140px] sm:max-w-[200px] border-b-2 border-slate-400/80 border-dashed h-8 sm:h-12 mb-2 sm:mb-3" />
+                      <p className="text-xs sm:text-sm md:text-base font-black text-slate-800 tracking-tight sm:tracking-wide">
+                        वर्गशिक्षक स्वाक्षरी
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-center justify-end text-center">
+                      <div className="w-full max-w-[140px] sm:max-w-[200px] border-b-2 border-slate-400/80 border-dashed h-8 sm:h-12 mb-2 sm:mb-3" />
+                      <p className="text-xs sm:text-sm md:text-base font-black text-slate-800 tracking-tight sm:tracking-wide">
+                        मुख्याध्यापक स्वाक्षरी
+                      </p>
+                    </div>
                   </div>
                 </div>
               ) : sec.id === 'samanya_gyan' && sec.gkItems && sec.gkItems.length > 0 ? (

@@ -715,18 +715,18 @@ export function CCEAttendance({
       <div className="h-2.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600" />
 
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/40">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 bg-slate-50/40 gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={onBack}
-            className="p-2.5 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-all cursor-pointer shadow-xs"
+            className="p-2 sm:p-2.5 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-all cursor-pointer shadow-xs shrink-0"
           >
             <ArrowLeft className="size-5" />
           </button>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-slate-900 text-xl font-black tracking-tight">विद्यार्थी उपस्थिती पत्रक</h2>
-              <span className="px-2.5 py-0.5 text-[11px] font-extrabold bg-blue-100 text-blue-700 rounded-full border border-blue-200">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-slate-900 text-lg sm:text-xl font-black tracking-tight truncate">विद्यार्थी उपस्थिती पत्रक</h2>
+              <span className="px-2.5 py-0.5 text-[11px] font-extrabold bg-blue-100 text-blue-700 rounded-full border border-blue-200 shrink-0">
                 इयत्ता {selectedClass}
               </span>
             </div>
@@ -734,90 +734,90 @@ export function CCEAttendance({
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center justify-between sm:justify-end gap-2.5 shrink-0 w-full sm:w-auto">
           <button
             onClick={() => setMainView("working-days")}
-            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200/70 text-slate-700 hover:text-blue-700 text-xs font-bold rounded-xl transition-all cursor-pointer border border-slate-200 flex items-center gap-1.5 shadow-xs"
+            className="flex-1 sm:flex-none px-3.5 sm:px-4 py-2.5 bg-slate-100 hover:bg-slate-200/70 text-slate-700 hover:text-blue-700 text-xs font-bold rounded-xl transition-all cursor-pointer border border-slate-200 flex items-center justify-center gap-1.5 shadow-xs"
           >
-            <Calendar className="size-4 text-blue-600" />
+            <Calendar className="size-4 text-blue-600 shrink-0" />
             <span>कामाचे दिवस</span>
-            <ChevronRight className="size-3.5 text-slate-400" />
+            <ChevronRight className="size-3.5 text-slate-400 shrink-0" />
           </button>
 
           <button
             onClick={saveAttendance}
             disabled={saving}
-            className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:scale-95 text-white text-xs font-extrabold rounded-xl transition-all cursor-pointer shadow-md shadow-blue-500/20 disabled:opacity-50 flex items-center gap-1.5"
+            className="flex-1 sm:flex-none px-4 sm:px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:scale-95 text-white text-xs font-extrabold rounded-xl transition-all cursor-pointer shadow-md shadow-blue-500/20 disabled:opacity-50 flex items-center justify-center gap-1.5 shrink-0"
           >
-            <Save className="size-4" />
+            <Save className="size-4 shrink-0" />
             <span>{saving ? "जतन..." : "जतन करा"}</span>
           </button>
         </div>
       </div>
 
       {/* Segmented Pill Tabs */}
-      <div className="px-6 pt-4 pb-2 border-b border-slate-100 bg-slate-50/20">
-        <div className="bg-slate-200/60 p-1.5 rounded-2xl flex border border-slate-200/80 max-w-md">
+      <div className="px-4 sm:px-6 pt-3 sm:pt-4 pb-2 border-b border-slate-100 bg-slate-50/20">
+        <div className="bg-slate-200/60 p-1.5 rounded-2xl flex border border-slate-200/80 w-full sm:max-w-md">
           <button
             onClick={() => setActiveTab("student")}
-            className={`flex-1 py-2.5 text-xs font-extrabold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 ${
+            className={`flex-1 py-2 sm:py-2.5 text-[11px] sm:text-xs font-extrabold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 sm:gap-2 px-1 ${
               activeTab === "student"
                 ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/25"
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            <Users className="size-4" />
-            <span>विद्यार्थी निहाय हजेरी</span>
+            <Users className="size-3.5 sm:size-4 shrink-0" />
+            <span className="truncate">विद्यार्थी निहाय हजेरी</span>
           </button>
           <button
             onClick={() => setActiveTab("month")}
-            className={`flex-1 py-2.5 text-xs font-extrabold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 ${
+            className={`flex-1 py-2 sm:py-2.5 text-[11px] sm:text-xs font-extrabold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 sm:gap-2 px-1 ${
               activeTab === "month"
                 ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/25"
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            <Calendar className="size-4" />
-            <span>महिना निहाय हजेरी</span>
+            <Calendar className="size-3.5 sm:size-4 shrink-0" />
+            <span className="truncate">महिना निहाय हजेरी</span>
           </button>
         </div>
       </div>
 
       {/* KPI Stats Summary Bar */}
-      <div className="grid grid-cols-3 gap-3 px-6 py-4 border-b border-slate-100 bg-slate-50/40">
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
-            <Users className="size-5" />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 bg-slate-50/40">
+        <div className="bg-white p-3 sm:p-3.5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-3">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
+            <Users className="size-4 sm:size-5" />
           </div>
           <div>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">एकूण विद्यार्थी</p>
-            <p className="text-lg font-black text-slate-800">{students.length}</p>
+            <p className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">एकूण विद्यार्थी</p>
+            <p className="text-base sm:text-lg font-black text-slate-800">{students.length}</p>
           </div>
         </div>
 
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
-            <CheckCircle2 className="size-5" />
+        <div className="bg-white p-3 sm:p-3.5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-3">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+            <CheckCircle2 className="size-4 sm:size-5" />
           </div>
           <div>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">हजेरी पूर्ण</p>
-            <p className="text-lg font-black text-emerald-600">{filledStudentsCount}</p>
+            <p className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">हजेरी पूर्ण</p>
+            <p className="text-base sm:text-lg font-black text-emerald-600">{filledStudentsCount}</p>
           </div>
         </div>
 
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
-            <Clock className="size-5" />
+        <div className="bg-white p-3 sm:p-3.5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-3">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
+            <Clock className="size-4 sm:size-5" />
           </div>
           <div>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">हजेरी बाकी</p>
-            <p className="text-lg font-black text-amber-600">{Math.max(0, students.length - filledStudentsCount)}</p>
+            <p className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider">हजेरी बाकी</p>
+            <p className="text-base sm:text-lg font-black text-amber-600">{Math.max(0, students.length - filledStudentsCount)}</p>
           </div>
         </div>
       </div>
 
       {/* Main Content Area */}
-      <div className="p-6 flex-1 overflow-y-auto no-scrollbar">
+      <div className="p-3.5 sm:p-6 flex-1 overflow-y-auto no-scrollbar">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
             <div className="animate-spin rounded-full h-9 w-9 border-b-2 border-blue-600" />
@@ -845,38 +845,38 @@ export function CCEAttendance({
                   <div
                     key={student.id}
                     onClick={() => setSelectedStudentForEdit(student)}
-                    className="w-full flex items-center justify-between p-4 rounded-2xl bg-gradient-to-r from-white via-slate-50/40 to-white border border-slate-200/80 hover:border-blue-300 hover:shadow-md hover:translate-y-[-1px] active:scale-[0.995] transition-all cursor-pointer group"
+                    className="w-full flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-white via-slate-50/40 to-white border border-slate-200/80 hover:border-blue-300 hover:shadow-md hover:translate-y-[-1px] active:scale-[0.995] transition-all cursor-pointer group gap-3"
                   >
-                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
                       {/* Avatar badge */}
-                      <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-black text-sm flex items-center justify-center shadow-md shadow-blue-500/25 flex-shrink-0 group-hover:scale-105 transition-transform">
+                      <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-black text-sm flex items-center justify-center shadow-md shadow-blue-500/25 flex-shrink-0 group-hover:scale-105 transition-transform">
                         {student.rollNo || idx + 1}
                       </div>
 
-                      <div className="min-w-0">
-                        <h4 className="text-slate-900 text-base font-bold group-hover:text-blue-600 transition-colors truncate">
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-slate-900 text-xs sm:text-base font-bold group-hover:text-blue-600 transition-colors truncate">
                           {student.fullName || student.name || "विद्यार्थी"}
                         </h4>
-                        <p className="text-xs text-slate-400 font-semibold mt-0.5 flex items-center gap-2">
+                        <p className="text-[10px] sm:text-xs text-slate-400 font-semibold mt-0.5 flex items-center gap-2 truncate">
                           <span>हजेरी नोंद: {filledMonthsCount > 0 ? `${filledMonthsCount} महिने पूर्ण` : "अपूरित"}</span>
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 flex-shrink-0">
+                    <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                       {/* Filled Checkmark Badge */}
                       {isFilled && (
                         <div
-                          className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white px-3.5 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 shadow-md shadow-emerald-500/25"
+                          className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl text-[10px] sm:text-xs font-extrabold flex items-center gap-1 sm:gap-1.5 shadow-md shadow-emerald-500/25"
                           title={`${filledMonthsCount} महिन्यांची उपस्थिती नोंदवली`}
                         >
-                          <CheckCircle2 className="size-4 text-white" />
+                          <CheckCircle2 className="size-3.5 sm:size-4 text-white shrink-0" />
                           <span>हजेरी पूर्ण</span>
                         </div>
                       )}
 
-                      <div className="w-9 h-9 rounded-xl bg-slate-100 group-hover:bg-blue-600 group-hover:text-white text-slate-400 flex items-center justify-center transition-all">
-                        <ChevronRight className="size-5" />
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-100 group-hover:bg-blue-600 group-hover:text-white text-slate-400 flex items-center justify-center transition-all shrink-0">
+                        <ChevronRight className="size-4 sm:size-5" />
                       </div>
                     </div>
                   </div>

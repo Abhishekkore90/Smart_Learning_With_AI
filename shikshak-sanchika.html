@@ -903,7 +903,7 @@
         width: 44px;
         height: 44px;
         font-size: 18px;
-        top: 105px;
+        top: 125px;
         bottom: auto;
         transform: none;
       }
@@ -914,23 +914,219 @@
         right: 8px;
       }
     }
+
+    /* Clean Top Sticky Navbar Styles */
+    .print-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      background: #ffffff;
+      border-bottom: 2px solid #c9a227;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+    }
+    .print-bar .top-row {
+      height: 56px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: rgba(245, 158, 11, 0.1);
+      color: #92400e;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 800;
+      text-decoration: none;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .back-btn:hover {
+      background: rgba(245, 158, 11, 0.2);
+    }
+    .print-bar h2 {
+      color: #0f172a;
+      font-size: 16px;
+      font-family: 'Noto Sans Devanagari', sans-serif;
+      font-weight: 800;
+      margin: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .desktop-btns {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .mobile-action-bar {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+      overflow-x: auto;
+      white-space: nowrap;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .mobile-action-bar::-webkit-scrollbar {
+      display: none;
+    }
+    .mobile-action-bar button {
+      flex-shrink: 0;
+    }
+
+    @media (max-width: 800px) {
+      .desktop-btns {
+        display: none !important;
+      }
+      .mobile-action-bar {
+        display: flex !important;
+      }
+    }
+
+    /* Mobile Responsiveness for Pages & Containers */
+    @media (max-width: 960px) {
+      body {
+        padding-top: 0;
+      }
+      .pages-wrapper {
+        padding-top: 116px;
+        padding-left: 8px;
+        padding-right: 8px;
+        max-width: 100%;
+        box-sizing: border-box;
+      }
+      .page {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-height: auto !important;
+        transform: none !important;
+        margin: 0 0 20px 0 !important;
+        padding: 16px 12px !important;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.08) !important;
+        border-radius: 8px !important;
+        box-sizing: border-box !important;
+      }
+      .cover-border {
+        padding: 16px 12px !important;
+        box-sizing: border-box !important;
+        min-height: auto !important;
+      }
+      .cover-title {
+        font-size: 28px !important;
+        padding: 10px 24px !important;
+        letter-spacing: 0.5px !important;
+      }
+      .cover-title::before, .cover-title::after {
+        font-size: 14px !important;
+      }
+      .cover-title::before { left: 6px !important; }
+      .cover-title::after { right: 6px !important; }
+      #saraswati-img {
+        width: 160px !important;
+        height: 160px !important;
+      }
+      .cover-info-box {
+        width: 100% !important;
+        box-sizing: border-box !important;
+      }
+      .cover-info-box-header {
+        font-size: 15px !important;
+        padding: 10px !important;
+      }
+      .cover-info-row {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        padding: 10px 14px !important;
+        gap: 6px !important;
+      }
+      .cover-info-label {
+        min-width: auto !important;
+        font-size: 15px !important;
+      }
+      .cover-ef {
+        width: 100% !important;
+        font-size: 15px !important;
+        box-sizing: border-box !important;
+      }
+      .page-inner {
+        padding: 10px 8px !important;
+        overflow-x: hidden;
+      }
+      /* Table Horizontal Scroll Container for Mobile */
+      .table-wrapper, .table-responsive, div:has(> table) {
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        margin-bottom: 12px !important;
+        box-sizing: border-box !important;
+      }
+      table {
+        width: 100% !important;
+        min-width: 580px !important;
+        border-collapse: collapse !important;
+        table-layout: auto !important;
+      }
+      table th, table td {
+        white-space: nowrap !important;
+        word-break: normal !important;
+        padding: 8px 10px !important;
+      }
+      table .tef, table .ef {
+        min-width: 80px !important;
+      }
+    }
   </style>
 <body>
 
 <!-- Print Bar -->
-<div class="print-bar">
-  <div style="display:flex;align-items:center;gap:12px;">
-    <a href="/teacher" target="_top" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:rgba(245,208,96,0.15);color:#92400e;border:1px solid #f59e0b;border-radius:12px;font-size:12px;font-weight:800;text-decoration:none;transition:all 0.2s;" title="मुख्य डॅशबोर्डवर मागे जा">
-      ← मागे जा (Dashboard)
-    </a>
-    <h2 id="sanchika-title-heading">शिक्षक संचिका - Shikshak Sanchika</h2>
+<div class="print-bar no-print">
+  <div class="top-row">
+    <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+      <a href="/teacher" target="_top" class="back-btn" title="मुख्य डॅशबोर्डवर मागे जा">
+        <svg style="width:16px;height:16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+        </svg>
+        <span>मागे जा</span>
+      </a>
+      <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+        <span style="font-size:20px;">📚</span>
+        <h2 id="sanchika-title-heading">शिक्षक संचिका</h2>
+      </div>
+    </div>
+    <div class="desktop-btns">
+      <button class="add-page-header-btn" onclick="addNewPage()">➕ नवीन पान जोडा</button>
+      <button class="delete-page-btn" onclick="deleteCurrentPage()" title="चालू पान काढून टाका">🗑️ हे पान काढा</button>
+      <button class="restore-page-btn" onclick="restoreDeletedPages()" title="काढून टाकलेले पान पूर्ववत करा">↩️ पूर्ववत करा</button>
+      <button class="save-btn" onclick="saveData()">💾 जतन करा</button>
+      <button class="print-btn" onclick="downloadPDF()">📥 PDF डाउनलोड</button>
+      <button class="clear-btn" onclick="clearData()">🗑️ Clear</button>
+    </div>
   </div>
-  <div class="bar-btns">
-    <button class="add-page-header-btn no-print" onclick="addNewPage()">➕ नवीन पान जोडा</button>
-    <button class="delete-page-btn no-print" onclick="deleteCurrentPage()" title="चालू पान काढून टाका">🗑️ हे पान काढा</button>
-    <button class="restore-page-btn no-print" onclick="restoreDeletedPages()" title="काढून टाकलेले पान पूर्ववत करा">↩️ पान पूर्ववत करा</button>
-    <button class="save-btn" onclick="saveData()">💾 माहिती जतन करा</button>
-    <button class="print-btn" onclick="downloadPDF()">📥 PDF डाउनलोड करा</button>
+  <div class="mobile-action-bar">
+    <button class="add-page-header-btn" onclick="addNewPage()">➕ नवीन पान जोडा</button>
+    <button class="delete-page-btn" onclick="deleteCurrentPage()" title="चालू पान काढून टाका">🗑️ हे पान काढा</button>
+    <button class="restore-page-btn" onclick="restoreDeletedPages()" title="काढून टाकलेले पान पूर्ववत करा">↩️ पूर्ववत करा</button>
+    <button class="save-btn" onclick="saveData()">💾 जतन करा</button>
+    <button class="print-btn" onclick="downloadPDF()">📥 PDF डाउनलोड</button>
     <button class="clear-btn" onclick="clearData()">🗑️ Clear</button>
   </div>
 </div>
