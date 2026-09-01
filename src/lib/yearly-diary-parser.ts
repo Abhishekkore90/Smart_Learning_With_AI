@@ -109,7 +109,7 @@ export async function parseAndSaveYearlyDiary(
 
     let thought = String(row["Thought"] || row["Thought of the day"] || row["विचार"] || row["सुविचार"] || row["आजचा सुविचार"] || row["thought"] || row["suvichar"] || "").trim();
     if (!thought) {
-      thought = "जेव्हा आपण नम्रतेने महान होतो , तेव्हा आपण महानतेच्या निकट जातो";
+      thought = "";
     }
     const dinvishesh = String(row["Dinvishesh"] || row["दिनविशेष"] || row["dinvishesh"] || "").trim();
     const isHoliday = String(row["IsHoliday"] || row["सुट्टी"] || "").toLowerCase() === "true" || String(row["IsHoliday"]) === "1";

@@ -1135,31 +1135,31 @@ export function CCEStudentInfo({
       style={{ fontFamily: "'Inter', 'Noto Sans Devanagari', sans-serif" }}
     >
       {/* Gradient Header Banner */}
-      <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-800 text-white px-6 py-5 shadow-lg relative overflow-hidden">
-        <div className="relative z-10 flex items-center justify-between">
-          <div className="flex items-center gap-3.5">
+      <div className="bg-gradient-to-r from-red-600 via-orange-600 to-amber-600 text-white px-4 sm:px-6 py-4 sm:py-5 shadow-lg relative overflow-hidden">
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-3">
             <button
               onClick={onBack}
-              className="p-2.5 bg-white/10 hover:bg-white/20 active:scale-95 rounded-2xl transition-all cursor-pointer text-white flex items-center justify-center backdrop-blur-md border border-white/10"
+              className="p-2 sm:p-2.5 bg-white/10 hover:bg-white/20 active:scale-95 rounded-2xl transition-all cursor-pointer text-white flex items-center justify-center backdrop-blur-md border border-white/10 shrink-0"
             >
               <ArrowLeft className="size-5" />
             </button>
-            <div>
-              <h2 className="text-xl font-black tracking-tight text-white flex items-center gap-2">
-                <User className="size-5 text-blue-200" /> विद्यार्थ्यांची माहिती
+            <div className="min-w-0">
+              <h2 className="text-lg sm:text-xl font-black tracking-tight text-white flex items-center gap-2 truncate">
+                <User className="size-5 text-amber-200 shrink-0" /> <span>विद्यार्थ्यांची माहिती</span>
               </h2>
-              <p className="text-xs text-blue-200 font-medium">इयत्ता {selectedClass} विद्यार्थी यादी व तपशील व्यवस्थापन</p>
+              <p className="text-[11px] sm:text-xs text-amber-100 font-medium truncate">इयत्ता {selectedClass} विद्यार्थी यादी व तपशील व्यवस्थापन</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
             <div className="flex items-center bg-white/15 backdrop-blur-md p-1 rounded-2xl border border-white/20">
               <button
                 onClick={() => {
                   setSelectedMedium("marathi");
                   localStorage.setItem("cce_selected_medium", "marathi");
                 }}
-                className={`px-3 py-1.5 rounded-xl font-extrabold text-xs transition-all cursor-pointer ${
-                  selectedMedium === "marathi" ? "bg-white text-blue-900 shadow-md" : "text-blue-100 hover:text-white"
+                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl font-extrabold text-[11px] sm:text-xs transition-all cursor-pointer ${
+                  selectedMedium === "marathi" ? "bg-white text-orange-950 shadow-md" : "text-amber-100 hover:text-white"
                 }`}
               >
                 मराठी
@@ -1169,8 +1169,8 @@ export function CCEStudentInfo({
                   setSelectedMedium("semi");
                   localStorage.setItem("cce_selected_medium", "semi");
                 }}
-                className={`px-3 py-1.5 rounded-xl font-extrabold text-xs transition-all cursor-pointer ${
-                  selectedMedium === "semi" ? "bg-white text-blue-900 shadow-md" : "text-blue-100 hover:text-white"
+                className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl font-extrabold text-[11px] sm:text-xs transition-all cursor-pointer ${
+                  selectedMedium === "semi" ? "bg-white text-orange-950 shadow-md" : "text-amber-100 hover:text-white"
                 }`}
               >
                 सेमी-इंग्रजी
@@ -1178,17 +1178,18 @@ export function CCEStudentInfo({
             </div>
             <button
               onClick={() => setIsAdding(true)}
-              className="px-4 py-2.5 bg-white text-blue-700 hover:bg-blue-50 active:scale-95 font-extrabold text-xs rounded-2xl transition-all cursor-pointer shadow-lg flex items-center gap-1.5"
+              className="px-3 sm:px-4 py-2 sm:py-2.5 bg-white text-orange-700 hover:bg-amber-50 active:scale-95 font-extrabold text-xs rounded-2xl transition-all cursor-pointer shadow-lg flex items-center gap-1.5 shrink-0"
+              title="नवीन विद्यार्थी जोडा"
             >
-              <Plus className="size-4" />
-              <span>विद्यार्थी जोडा</span>
+              <Plus className="size-4 shrink-0" />
+              <span className="hidden sm:inline">विद्यार्थी जोडा</span>
             </button>
           </div>
         </div>
       </div>
 
       {/* Roster Controls Bar */}
-      <div className="px-6 pt-4 pb-2 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between gap-3">
+      <div className="px-4 sm:px-6 pt-4 pb-2 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between gap-3">
         <div className="relative flex-1">
           <Search className="size-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
@@ -1207,16 +1208,16 @@ export function CCEStudentInfo({
             </button>
           )}
         </div>
-        <span className="px-3 py-1.5 bg-blue-50 text-blue-700 font-extrabold text-xs rounded-xl border border-blue-100 whitespace-nowrap">
+        <span className="px-3 py-1.5 bg-orange-50 text-orange-700 font-extrabold text-xs rounded-xl border border-orange-200 whitespace-nowrap">
           एकूण: {students.length}
         </span>
       </div>
 
       {/* Student List Grid */}
-      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3 min-h-[400px]">
+      <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-4 space-y-3 pb-20 min-h-[400px]">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-24 gap-3">
-            <div className="w-10 h-10 rounded-full border-4 border-blue-200 border-t-blue-600 animate-spin" />
+            <div className="w-10 h-10 rounded-full border-4 border-amber-200 border-t-orange-600 animate-spin" />
             <span className="text-xs text-slate-400 font-bold">विद्यार्थी यादी लोड होत आहे...</span>
           </div>
         ) : filteredStudents.length === 0 ? (
@@ -1229,50 +1230,52 @@ export function CCEStudentInfo({
               <div
                 key={student.id}
                 onClick={() => openStudentPage(student, "view")}
-                className="group flex items-center justify-between p-4 bg-white hover:bg-blue-50/40 rounded-2xl border border-slate-200 hover:border-blue-300 shadow-sm hover:shadow-md transition-all cursor-pointer"
+                className="group flex flex-col sm:flex-row sm:items-center justify-between p-3.5 sm:p-4 bg-white hover:bg-amber-50/40 rounded-2xl border border-slate-200 hover:border-amber-300 shadow-sm hover:shadow-md transition-all cursor-pointer gap-3"
               >
-                <div className="flex items-center gap-4">
-                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-black text-sm flex items-center justify-center shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform shrink-0">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white font-black text-sm flex items-center justify-center shadow-md shadow-orange-500/20 group-hover:scale-105 transition-transform shrink-0">
                     {student.rollNo || idx + 1}
                   </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-900 group-hover:text-blue-700 transition-colors flex items-center gap-2">
-                      <span>{student.name}</span>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-orange-700 transition-colors truncate">
+                      {student.name}
                     </h4>
-                    <p className="text-[11px] text-slate-500 font-medium flex items-center gap-2 mt-0.5">
+                    <div className="text-[10px] sm:text-[11px] text-slate-500 font-medium flex items-center gap-2 mt-0.5 flex-wrap">
                       <span>इयत्ता: {selectedClass}</span>
                       {student.gender && (
-                        <span className="px-2 py-0.5 bg-slate-100 rounded-md text-[10px] font-bold text-slate-600">
+                        <span className="px-1.5 sm:px-2 py-0.5 bg-slate-100 rounded-md text-[10px] font-bold text-slate-600">
                           {student.gender === "Male" ? "👦 मुलगा" : "👧 मुलगी"}
                         </span>
                       )}
-                    </p>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between sm:justify-end gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 shrink-0" onClick={(e) => e.stopPropagation()}>
                   <button
                     onClick={() => openStudentPage(student, "view")}
-                    className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs rounded-xl border border-blue-200 transition-colors cursor-pointer flex items-center gap-1.5"
+                    className="flex-1 sm:flex-initial px-3 sm:px-3.5 py-1.5 sm:py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-[11px] sm:text-xs rounded-xl border border-amber-200 transition-colors cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
                     title="सविस्तर माहिती पाहा"
                   >
-                    <Eye className="size-3.5" />
+                    <Eye className="size-3.5 shrink-0" />
                     <span>सविस्तर माहिती</span>
                   </button>
-                  <button
-                    onClick={() => openStudentPage(student, "edit")}
-                    className="p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
-                    title="माहिती संपादन"
-                  >
-                    <Edit2 className="size-4" />
-                  </button>
-                  <button
-                    onClick={(e) => handleDeleteStudent(e, student.id, student.name)}
-                    className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
-                    title="हटवा"
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => openStudentPage(student, "edit")}
+                      className="p-1.5 sm:p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                      title="माहिती संपादन"
+                    >
+                      <Edit2 className="size-4 text-slate-600" />
+                    </button>
+                    <button
+                      onClick={(e) => handleDeleteStudent(e, student.id, student.name)}
+                      className="p-1.5 sm:p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                      title="हटवा"
+                    >
+                      <Trash2 className="size-4 text-rose-500" />
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -1283,10 +1286,10 @@ export function CCEStudentInfo({
       {/* Floating Action Button */}
       <button
         onClick={() => setIsAdding(true)}
-        className="absolute bottom-6 right-6 size-14 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-full shadow-xl shadow-blue-500/30 flex items-center justify-center hover:scale-110 active:scale-95 transition-all cursor-pointer border border-white/20 z-30"
+        className="absolute bottom-2.5 right-3.5 sm:bottom-4 sm:right-4 size-12 sm:size-14 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-full shadow-xl shadow-orange-500/40 flex items-center justify-center hover:scale-110 active:scale-95 transition-all cursor-pointer border border-white/30 z-30"
         title="विद्यार्थी जोडा"
       >
-        <Plus className="size-7 stroke-[2.5]" />
+        <Plus className="size-6 sm:size-7 stroke-[2.5]" />
       </button>
     </div>
   );

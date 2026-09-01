@@ -56,10 +56,14 @@ export const matchStudentClassAndMedium = (student, targetClass, targetMedium, c
     }
   }
 
-  // 2. Strict Class Matching
-  const stdClass = normalizeClassKey(student.class || student.currentClass || student.className || student.stdClass);
+  // 2. Strict Class Matching: Students MUST explicitly match targetClass
+  const stdClass = normalizeClassKey(student.class || student.currentClass || student.className || student.stdClass || student.std || student.studentClass);
   const tgtClass = normalizeClassKey(targetClass);
-  if (tgtClass && stdClass && stdClass !== tgtClass) return false;
+  if (tgtClass) {
+    if (!stdClass || stdClass !== tgtClass) {
+      return false;
+    }
+  }
 
   // 3. Strict Academic Year Matching
   if (targetAcademicYear && student.academicYear) {
