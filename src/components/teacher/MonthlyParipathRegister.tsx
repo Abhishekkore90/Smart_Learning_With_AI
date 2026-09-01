@@ -93,6 +93,14 @@ function shortText(text: string | undefined, maxLen = 40): string {
   return sub.replace(/[:\-–,\s]+$/, "").trim();
 }
 
+// Helper: format single line clean title for pledge/anthem/preamble
+function formatSingleLineTitle(text: string | undefined, defaultTitle: string): string {
+  if (!text || !text.trim()) return defaultTitle;
+  const firstLine = text.trim().split(/\r?\n/)[0].split(".")[0].split("।")[0].trim();
+  if (!firstLine) return defaultTitle;
+  return firstLine.length > 35 ? firstLine.substring(0, 35).replace(/[:\-–,\s]+$/, "").trim() : firstLine;
+}
+
 // Helper: Extract ONLY the first single news item or single dinvishesh event
 function getSingleItem(dataRaw: any, maxLen = 65): string {
   if (!dataRaw) return "";
@@ -138,22 +146,10 @@ function getSingleItem(dataRaw: any, maxLen = 65): string {
   return sub.replace(/[:\-–,\s]+$/, "").trim();
 }
 
-const DEFAULT_PRAYER_NAMES = [
-  "असतो मा सद्गमय",
-  "हीच अमुची प्रार्थना",
-  "इतनी शक्ति हमें देना",
-  "तू बुद्धि दे तू तेज दे",
-  "दया कर दान विद्या का",
-  "ऐ मालिक तेरे बंदे हम",
-  "खरा तो एकची धर्म",
-];
-
-// Helper: get prayer heading title from content
-function getPrayerShortName(prayerContent: string | undefined, dayNum?: number): string {
-  const defaultTitle = dayNum ? DEFAULT_PRAYER_NAMES[(dayNum - 1) % DEFAULT_PRAYER_NAMES.length] : "असतो मा सद्गमय";
-  if (!prayerContent) return defaultTitle;
-  const content = prayerContent.trim();
-  if (!content || content === "प्रार्थना" || content === "Prayer") return defaultTitle;
+// Helper: get prayer heading title from content or admin fallback
+function getPrayerShortName(prayerContent: string | undefined, adminFallback?: string): string {
+  const content = (prayerContent && prayerContent.trim()) ? prayerContent.trim() : (adminFallback && adminFallback.trim() ? adminFallback.trim() : "");
+  if (!content || content === "प्रार्थना" || content === "Prayer") return "";
 
   // Detect common prayers by first phrase
   if (content.includes("हीच अमुची प्रार्थना")) return "हीच अमुची प्रार्थना";
@@ -175,11 +171,11 @@ function getPrayerShortName(prayerContent: string | undefined, dayNum?: number):
   if (content.includes("या भारतात बंधुभाव")) return "या भारतात बंधुभाव";
   if (content.includes("अजाण आम्ही तुझी लेकरे")) return "अजाण आम्ही तुझी लेकरे";
 
-  // Fallback: short first phrase up to newline, comma, dash, or 22 characters
+  // Fallback: short first phrase up to newline, comma, dash, or 25 characters
   const firstLine = content.split(/\r?\n/)[0].trim();
   const firstPhrase = firstLine.split(",")[0].split("-")[0].split("।")[0].trim();
-  if (!firstPhrase || firstPhrase === "प्रार्थना" || firstPhrase === "Prayer") return defaultTitle;
-  return firstPhrase.length > 22 ? firstPhrase.substring(0, 22) + "..." : firstPhrase;
+  if (!firstPhrase || firstPhrase === "प्रार्थना" || firstPhrase === "Prayer") return "";
+  return firstPhrase.length > 25 ? firstPhrase.substring(0, 25) + "..." : firstPhrase;
 }
 
 // Helper: get pasayadan heading title from content
@@ -610,9 +606,8 @@ export function MonthlyParipathRegister() {
           }
 
           if (data) {
-            
-            // Extract actual content from the saved daily paripath data
-            const nationalAnthemContent = data.nationalAnthem || "";
+            // Extract actual content from the saved daily paripath data for this dateKey
+            const nationalAnthemContent = data.nationalAnthem || data.rashtrageet || "";
             const stateAnthemContent = data.stateAnthem || data.rajyageet || "";
             const pledgeContent = data.pledge || data.pratigya || "";
             const preambleContent = data.preamble || data.sanvidhan || "";
@@ -622,16 +617,16 @@ export function MonthlyParipathRegister() {
               date: d,
               day: dayName,
               isSunday: false,
-              // राष्ट्रगीत - जन गण मन
-              rashtrageet: "जन गण मन",
-              // राज्यगीत - जय जय महाराष्ट्र माझा
-              rajyageet: shortText(stateAnthemContent, 45) || "जय जय महाराष्ट्र माझा",
-              // प्रतिज्ञा - भारत माझा देश आहे
-              pratigya: "भारत माझा देश आहे",
-              // संविधान - आम्ही भारताचे लोक
-              sanvidhan: "आम्ही भारताचे लोक",
+              // राष्ट्रगीत
+              rashtrageet: formatSingleLineTitle(nationalAnthemContent, "जन गण मन"),
+              // राज्यगीत
+              rajyageet: formatSingleLineTitle(stateAnthemContent, "जय जय महाराष्ट्र माझा"),
+              // प्रतिज्ञा
+              pratigya: formatSingleLineTitle(pledgeContent, "भारत माझा देश आहे"),
+              // संविधान
+              sanvidhan: formatSingleLineTitle(preambleContent, "आम्ही भारताचे लोक"),
               // प्रार्थना - short heading title of prayer
-              prarthana: data.prayerTitle || data.prayerName || getPrayerShortName(prayerContent, d),
+              prarthana: data.prayerTitle || data.prayerName || getPrayerShortName(prayerContent),
               // श्लोक - formatted in 1 single line
               shlok: formatShlokOneLine(data.shlok),
               // पंचांग - formatted in 2 lines
@@ -658,60 +653,29 @@ export function MonthlyParipathRegister() {
               swakshari: "",
             };
           } else {
-            // No data for this day - check if it's a future date
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const thisDate = new Date(selectedYear, selectedMonthIndex, d);
-            
-            if (thisDate > today) {
-              // Future date - leave empty
-              newRows[d] = {
-                date: d,
-                day: dayName,
-                isSunday: false,
-                rashtrageet: "",
-                rajyageet: "",
-                pratigya: "",
-                sanvidhan: "",
-                prarthana: "",
-                shlok: "",
-                panchang: "",
-                suvichar: "",
-                batmya: "",
-                dinvishesh: "",
-                mhan: "",
-                bodhkatha: "",
-                samuhgeet: "",
-                deshbhaktigeet: "",
-                samanyaGyan: "",
-                maun: "",
-                swakshari: "",
-              };
-            } else {
-              // Past date but no data - format proper 1-line shlok & 2-line panchang
-              newRows[d] = {
-                date: d,
-                day: dayName,
-                isSunday: false,
-                rashtrageet: "जन गण मन",
-                rajyageet: "जय जय महाराष्ट्र माझा",
-                pratigya: "भारत माझा देश आहे",
-                sanvidhan: "आम्ही भारताचे लोक",
-                prarthana: getPrayerShortName("", d),
-                shlok: formatShlokOneLine(""),
-                panchang: formatPanchangTwoLines(null, thisDate),
-                suvichar: "",
-                batmya: "",
-                dinvishesh: "",
-                mhan: "",
-                bodhkatha: "",
-                samuhgeet: "",
-                deshbhaktigeet: "",
-                samanyaGyan: "",
-                maun: "आता विश्वात्मकें देवें",
-                swakshari: "",
-              };
-            }
+            // No admin data saved for this dateKey - auto-fill the 5 standard fixed items
+            newRows[d] = {
+              date: d,
+              day: dayName,
+              isSunday: false,
+              rashtrageet: "जन गण मन",
+              rajyageet: "जय जय महाराष्ट्र माझा",
+              pratigya: "भारत माझा देश आहे",
+              sanvidhan: "आम्ही भारताचे लोक",
+              prarthana: "",
+              shlok: "",
+              panchang: "",
+              suvichar: "",
+              batmya: "",
+              dinvishesh: "",
+              mhan: "",
+              bodhkatha: "",
+              samuhgeet: "",
+              deshbhaktigeet: "",
+              samanyaGyan: "",
+              maun: "आता विश्वात्मकें देवें",
+              swakshari: "",
+            };
           }
         } catch (dayErr) {
           console.error(`Error fetching data for ${dateKey}:`, dayErr);

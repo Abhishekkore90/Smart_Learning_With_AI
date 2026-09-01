@@ -105,6 +105,11 @@ function AssemblyBookAdmin() {
 
     return {
       ...DEFAULT_FORM_DATA.mr,
+      nationalAnthem: DEFAULT_ASSEMBLY_ITEMS.mr[0].content,
+      stateAnthem: DEFAULT_ASSEMBLY_ITEMS.mr[1].content,
+      pledge: DEFAULT_ASSEMBLY_ITEMS.mr[2].content,
+      preamble: DEFAULT_ASSEMBLY_ITEMS.mr[3].content,
+      silentPasayadan: DEFAULT_ASSEMBLY_ITEMS.mr[5].content,
       day: dayName,
       dateMonth: dateMonthStr,
       yearDay: yearDayStr,
@@ -124,7 +129,6 @@ function AssemblyBookAdmin() {
       personalityTitle: "",
       personality: "",
       silentPasayadanTitle: "",
-      silentPasayadan: "",
       valueNews: "",
     };
   };
@@ -1023,8 +1027,9 @@ function AssemblyBookAdmin() {
                     </label>
                     <textarea
                       rows={14}
-                      value={paripathData.prayer || DEFAULT_ASSEMBLY_ITEMS.mr[4].content}
+                      value={paripathData.prayer || ''}
                       onChange={(e) => setParipathData({ ...paripathData, prayer: e.target.value })}
+                      placeholder="येथे प्रार्थना प्रविष्ट करा..."
                       className="w-full px-6 py-5 bg-green-50/30 border border-green-100 hover:border-green-300 focus:bg-white rounded-2xl focus:outline-none focus:border-green-500 focus:ring-4 focus:ring-green-500/10 transition-all resize-none text-center font-bold text-slate-800 leading-relaxed"
                     />
                   </div>

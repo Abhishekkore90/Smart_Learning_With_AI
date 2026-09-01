@@ -181,7 +181,7 @@ function parseTextToDiary(rawText: string, className: string): ParsedDiaryConten
   }
 
   if (!thought) {
-    thought = "जेव्हा आपण नम्रतेने महान होतो , तेव्हा आपण महानतेच्या निकट जातो";
+    thought = "";
   }
 
   // ─── Extract dinvishesh ───

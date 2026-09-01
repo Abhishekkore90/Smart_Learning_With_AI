@@ -18,7 +18,7 @@ import {
 import { getBunnyStorageUrl } from "@/lib/bunny-auth-pdf";
 import { showToast as toast } from "@/lib/custom-toast";
 import { db } from "@/lib/firebase";
-import { doc, updateDoc, setDoc } from "firebase/firestore";
+import { doc, updateDoc, setDoc, getDoc } from "firebase/firestore";
 
 export const formatCleanDate = (raw: string | undefined | null) => {
   if (!raw) return "-";
@@ -39,6 +39,43 @@ export const formatCleanDate = (raw: string | undefined | null) => {
     return `${day}/${month}/${year}`;
   }
   return cleaned;
+};
+
+export const formatDateToIso = (raw: string | undefined | null): string => {
+  if (!raw) return "";
+  const cleaned = raw.trim();
+  
+  // 1. Direct YYYY-MM-DD pattern
+  let m = cleaned.match(/(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})/);
+  if (m) {
+    const year = m[1];
+    const month = m[2].padStart(2, "0");
+    const day = m[3].padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+  
+  // 2. Direct DD/MM/YYYY pattern
+  m = cleaned.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);
+  if (m) {
+    const day = m[1].padStart(2, "0");
+    const month = m[2].padStart(2, "0");
+    let year = m[3];
+    if (year.length === 2) year = `20${year}`;
+    return `${year}-${month}-${day}`;
+  }
+
+  // 3. Textual dates like "Saturday, 01 August 2026" or "1 August 2026"
+  try {
+    const dateObj = new Date(cleaned);
+    if (!isNaN(dateObj.getTime())) {
+      const year = dateObj.getFullYear();
+      const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+      const day = String(dateObj.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+  } catch (e) {}
+
+  return "";
 };
 
 const normalizeDateStr = (raw: string | undefined | null) => {
@@ -902,21 +939,18 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
               <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">सन</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "year", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.year && p.year !== "-" ? p.year : (profile?.academicYear || "2026-27")}</span></div>
             </div>
 
-            {/* आजचा सुविचार Box - Always Visible & Editable */}
-            <div className="text-xs italic text-amber-950 bg-amber-50/95 p-3.5 rounded-2xl border-2 border-amber-300 text-center flex items-center justify-center gap-2.5 shadow-sm">
-              <Sparkles className="size-4 text-amber-600 shrink-0" />
-              <div>
-                <strong className="not-italic text-amber-950 font-black text-xs uppercase tracking-wider inline-block mr-1">आजचा सुविचार :</strong> 
-                "<span 
-                  suppressContentEditableWarning 
-                  contentEditable 
-                  onBlur={(e) => updateHeader(idx, "thought", e.currentTarget.textContent?.replace(/^["']|["']$/g, "").trim() || "")} 
-                  className="outline-amber-500 focus:bg-white px-1 rounded font-bold text-sm text-amber-900 not-italic inline-block min-w-[200px]"
-                >
-                  {p.thought || "आजचा सुविचार प्रविष्ट करण्यासाठी येथे क्लिक करा..."}
-                </span>"
+            {/* आजचा सुविचार Box - Display ONLY when filled for this day */}
+            {p.thought && p.thought.trim() && !p.thought.includes("प्रविष्ट करण्यासाठी") ? (
+              <div className="text-xs italic text-amber-950 bg-amber-50/95 p-3 rounded-2xl border border-amber-300 text-center flex items-center justify-center gap-2.5 shadow-sm my-2">
+                <Sparkles className="size-4 text-amber-600 shrink-0" />
+                <div>
+                  <strong className="not-italic text-amber-950 font-black text-xs uppercase tracking-wider inline-block mr-1">आजचा सुविचार :</strong> 
+                  <span className="font-bold text-sm text-amber-900 not-italic inline-block">
+                    "{p.thought}"
+                  </span>
+                </div>
               </div>
-            </div>
+            ) : null}
           </div>
 
           {p.periods.length > 0 ? (
@@ -1189,7 +1223,17 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
     setFilterSingleDate(false);
 
     if (savedRecord && (savedRecord as any).structuredData && (savedRecord as any).structuredData.length > 0) {
-      setStructuredPages((savedRecord as any).structuredData);
+      const cls = savedRecord.className || "";
+      const med = savedRecord.medium || "";
+      const enrichedPages = ((savedRecord as any).structuredData as StructuredDayPage[]).map((p) => {
+        const isoDate = formatDateToIso(p.date);
+        const localThought = (isoDate && (localStorage.getItem(`suvichar_${cls}_${med}_${isoDate}`) || localStorage.getItem(`suvichar_${isoDate}`))) || "";
+        if (localThought && (!p.thought || p.thought.trim() === "" || p.thought.includes("प्रविष्ट करण्यासाठी"))) {
+          return { ...p, thought: localThought };
+        }
+        return p;
+      });
+      setStructuredPages(enrichedPages);
       setViewMode("structured");
       return;
     }
@@ -1365,6 +1409,102 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
     }
     return false;
   }, [savedRecord, selectedMonth]);
+
+  // Auto-sync date-wise thoughts from teaching_diaries collection in Firestore
+  useEffect(() => {
+    if (!savedRecord || !savedRecord.id) return;
+    let isCancelled = false;
+
+    async function syncThoughtsFromFirestore() {
+      try {
+        const cls = savedRecord.className;
+        const med = savedRecord.medium;
+        if (!cls || !med) return;
+
+        // 1. Synchronously update local storage thoughts if available
+        setStructuredPages((prevPages) => {
+          if (!prevPages || prevPages.length === 0) return prevPages;
+          let changed = false;
+          const next = prevPages.map((p) => {
+            const isoDate = formatDateToIso(p.date);
+            if (!isoDate) return p;
+            const localThought =
+              localStorage.getItem(`suvichar_${cls}_${med}_${isoDate}`) ||
+              localStorage.getItem(`suvichar_${isoDate}`) ||
+              "";
+            if (localThought && (!p.thought || p.thought.trim() === "" || p.thought.includes("प्रविष्ट करण्यासाठी"))) {
+              changed = true;
+              return { ...p, thought: localThought };
+            }
+            return p;
+          });
+          return changed ? next : prevPages;
+        });
+
+        // 2. Asynchronously fetch thoughts from Firestore once per savedRecord
+        const pagesList = savedRecord.structuredData || [];
+        if (!Array.isArray(pagesList) || pagesList.length === 0) return;
+
+        const docPromises = pagesList.map(async (p: any) => {
+          const isoDate = formatDateToIso(p.date);
+          if (!isoDate) return { date: p.date, isoDate: "", thought: "" };
+
+          let foundThought = "";
+          try {
+            const tdDocId = `${cls}_${med}_${isoDate}`;
+            const tdSnap = await getDoc(doc(db, "teaching_diaries", tdDocId));
+            if (tdSnap.exists() && tdSnap.data().thought) {
+              foundThought = tdSnap.data().thought;
+            }
+          } catch (e) {}
+
+          if (!foundThought) {
+            try {
+              const altSnap = await getDoc(doc(db, "teacher_diaries", cls, med, isoDate));
+              if (altSnap.exists()) {
+                const aData = altSnap.data();
+                foundThought = aData.thought || (aData.parsedContent ? aData.parsedContent.thought : "");
+              }
+            } catch (e) {}
+          }
+
+          if (foundThought && isoDate) {
+            try {
+              localStorage.setItem(`suvichar_${cls}_${med}_${isoDate}`, foundThought);
+              localStorage.setItem(`suvichar_${isoDate}`, foundThought);
+            } catch (e) {}
+          }
+
+          return { date: p.date, isoDate, thought: foundThought };
+        });
+
+        const results = await Promise.all(docPromises);
+        if (isCancelled) return;
+
+        setStructuredPages((prevPages) => {
+          if (!prevPages || prevPages.length === 0) return prevPages;
+          let hasUpdate = false;
+          const next = prevPages.map((p) => {
+            const iso = formatDateToIso(p.date);
+            const match = results.find((r) => (r.isoDate && r.isoDate === iso) || (r.date && r.date === p.date));
+            if (match && match.thought && match.thought !== p.thought) {
+              hasUpdate = true;
+              return { ...p, thought: match.thought };
+            }
+            return p;
+          });
+          return hasUpdate ? next : prevPages;
+        });
+      } catch (e) {
+        console.error("Failed to sync date-wise thoughts in DocumentLivePreview:", e);
+      }
+    }
+
+    syncThoughtsFromFirestore();
+    return () => {
+      isCancelled = true;
+    };
+  }, [savedRecord?.id]);
 
   const pagesToDisplay = useMemo(() => {
     if (!structuredPages || structuredPages.length === 0) return [];

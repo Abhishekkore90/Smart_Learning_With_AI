@@ -349,6 +349,10 @@ export const TeacherTodayDiary: React.FC<Props> = ({
 
         if (docSnap.exists()) {
           const data = docSnap.data() as DailyDiary;
+          const localThought = localStorage.getItem(`suvichar_${selectedClass}_${selectedMedium}_${isoDate}`) || localStorage.getItem(`suvichar_${isoDate}`);
+          if (localThought && (!data.thought || data.thought.trim() === "")) {
+            data.thought = localThought;
+          }
           const rawPageUrl = data.pageUrl || (data as any).pageURL || (data as any).masterPdfUrl || (data as any).pdfUrl || "";
           const dataMonth = data.date ? data.date.split("-")[1] : (data.displayDate ? data.displayDate.split("-")[1] : targetMonthStr);
           
@@ -534,6 +538,24 @@ export const TeacherTodayDiary: React.FC<Props> = ({
       ...todayDiary,
       thought: newThought,
     });
+    if (isoDate) {
+      try {
+        localStorage.setItem(`suvichar_${selectedClass}_${selectedMedium}_${isoDate}`, newThought);
+        localStorage.setItem(`suvichar_${isoDate}`, newThought);
+      } catch (e) {}
+
+      try {
+        const tdDocId = `${selectedClass}_${selectedMedium}_${isoDate}`;
+        const tdDocRef = doc(db, "teaching_diaries", tdDocId);
+        setDoc(tdDocRef, {
+          className: selectedClass,
+          medium: selectedMedium,
+          date: isoDate,
+          thought: newThought,
+          updatedAt: Date.now(),
+        }, { merge: true });
+      } catch (e) {}
+    }
   };
 
   const handleProfileChange = (field: string, value: string) => {
@@ -594,6 +616,12 @@ export const TeacherTodayDiary: React.FC<Props> = ({
         },
         { merge: true }
       );
+
+      // Save to localStorage instantly
+      try {
+        localStorage.setItem(`suvichar_${selectedClass}_${selectedMedium}_${isoDate}`, todayDiary.thought || "");
+        localStorage.setItem(`suvichar_${isoDate}`, todayDiary.thought || "");
+      } catch (e) {}
 
       try {
         const userEmail = (user?.email || profile?.email || "").toLowerCase().trim();
@@ -673,9 +701,9 @@ export const TeacherTodayDiary: React.FC<Props> = ({
       </table>
 
       <!-- Suvichar Box -->
-      <div style="background: #fffbeb; border: 1.5px solid #fcd34d; border-radius: 8px; padding: 10px 16px; margin-bottom: 14px; font-size: 13.5px; color: #78350f; text-align: center;">
-        <strong style="font-weight: 900; color: #92400e;">आजचा सुविचार :</strong> "${todayDiary.thought || 'जेव्हा आपण नम्रतेने महान होतो , तेव्हा आपण महानतेच्या निकट जातो'}"
-      </div>
+      ${todayDiary.thought ? `<div style="background: #fffbeb; border: 1.5px solid #fcd34d; border-radius: 8px; padding: 10px 16px; margin-bottom: 14px; font-size: 13.5px; color: #78350f; text-align: center;">
+        <strong style="font-weight: 900; color: #92400e;">आजचा सुविचार :</strong> "${todayDiary.thought}"
+      </div>` : ''}
 
       <!-- Main Table -->
       <table style="width: 100%; border-collapse: collapse; table-layout: fixed; border: 2px solid #0f172a; margin-bottom: 16px; background: #ffffff;">
@@ -1108,7 +1136,7 @@ export const TeacherTodayDiary: React.FC<Props> = ({
               className="font-extrabold text-sm text-amber-900 not-italic hover:bg-amber-100/80 focus:bg-amber-100 focus:outline-none rounded px-1 transition-all cursor-text inline-block min-w-[200px]"
               title="सुविचार बदलण्यासाठी येथे क्लिक करा"
             >
-              "{todayDiary.thought || "जेव्हा आपण नम्रतेने महान होतो , तेव्हा आपण महानतेच्या निकट जातो"}"
+              "{todayDiary.thought || "आजचा सुविचार प्रविष्ट करण्यासाठी येथे क्लिक करा..."}"
             </span>
           </div>
 
