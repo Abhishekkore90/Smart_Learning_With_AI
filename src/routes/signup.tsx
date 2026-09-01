@@ -38,7 +38,7 @@ import loginBg from "@/assets/login-bg.jpg";
 
 export const Route = createFileRoute("/signup")({
   head: () => ({
-    meta: [{ title: "Student Registration Hub — SGK Brainova Smart Learning With AI" }],
+    meta: [{ title: "User Registration — SGK Brainova Smart Learning With AI" }],
   }),
   component: RegistrationPage,
 });
@@ -109,10 +109,10 @@ function RegistrationPage() {
       );
       const user = userCredential.user;
 
-      // Save comprehensive student profile to Firestore
+      // Save general user profile to Firestore
       await setDoc(doc(db, "users", user.uid), {
         ...formData,
-        role: "student",
+        role: "user",
         createdAt: new Date().toISOString(),
       });
 

@@ -18,6 +18,8 @@ import { Route as ProductsRouteImport } from './routes/products'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as MentorsRouteImport } from './routes/mentors'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as Digital_schoolRouteImport } from './routes/digital_school'
+import { Route as DigitalSchoolRouteImport } from './routes/digital-school'
 import { Route as CoursesRouteImport } from './routes/courses'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as AiToolsRouteImport } from './routes/ai-tools'
@@ -75,6 +77,7 @@ import { Route as AdminModulePaymentsRouteImport } from './routes/admin.module-p
 import { Route as AdminMeetingTemplatesRouteImport } from './routes/admin.meeting-templates'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as AdminEnrollmentsRouteImport } from './routes/admin.enrollments'
+import { Route as AdminContactMessagesRouteImport } from './routes/admin.contact-messages'
 import { Route as AdminCceRemarksRouteImport } from './routes/admin.cce-remarks'
 import { Route as AdminAssemblyRouteImport } from './routes/admin.assembly'
 import { Route as AdminAiToolsRouteImport } from './routes/admin.ai-tools'
@@ -145,6 +148,16 @@ const MentorsRoute = MentorsRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Digital_schoolRoute = Digital_schoolRouteImport.update({
+  id: '/digital_school',
+  path: '/digital_school',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DigitalSchoolRoute = DigitalSchoolRouteImport.update({
+  id: '/digital-school',
+  path: '/digital-school',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CoursesRoute = CoursesRouteImport.update({
@@ -432,6 +445,11 @@ const AdminEnrollmentsRoute = AdminEnrollmentsRouteImport.update({
   path: '/admin/enrollments',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminContactMessagesRoute = AdminContactMessagesRouteImport.update({
+  id: '/admin/contact-messages',
+  path: '/admin/contact-messages',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminCceRemarksRoute = AdminCceRemarksRouteImport.update({
   id: '/admin/cce-remarks',
   path: '/admin/cce-remarks',
@@ -583,6 +601,8 @@ export interface FileRoutesByFullPath {
   '/ai-tools': typeof AiToolsRoute
   '/contact': typeof ContactRoute
   '/courses': typeof CoursesRouteWithChildren
+  '/digital-school': typeof DigitalSchoolRoute
+  '/digital_school': typeof Digital_schoolRoute
   '/login': typeof LoginRoute
   '/mentors': typeof MentorsRoute
   '/pricing': typeof PricingRoute
@@ -595,6 +615,7 @@ export interface FileRoutesByFullPath {
   '/admin/ai-tools': typeof AdminAiToolsRoute
   '/admin/assembly': typeof AdminAssemblyRoute
   '/admin/cce-remarks': typeof AdminCceRemarksRoute
+  '/admin/contact-messages': typeof AdminContactMessagesRoute
   '/admin/enrollments': typeof AdminEnrollmentsRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/meeting-templates': typeof AdminMeetingTemplatesRoute
@@ -676,6 +697,8 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/ai-tools': typeof AiToolsRoute
   '/contact': typeof ContactRoute
+  '/digital-school': typeof DigitalSchoolRoute
+  '/digital_school': typeof Digital_schoolRoute
   '/login': typeof LoginRoute
   '/mentors': typeof MentorsRoute
   '/pricing': typeof PricingRoute
@@ -688,6 +711,7 @@ export interface FileRoutesByTo {
   '/admin/ai-tools': typeof AdminAiToolsRoute
   '/admin/assembly': typeof AdminAssemblyRoute
   '/admin/cce-remarks': typeof AdminCceRemarksRoute
+  '/admin/contact-messages': typeof AdminContactMessagesRoute
   '/admin/enrollments': typeof AdminEnrollmentsRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/meeting-templates': typeof AdminMeetingTemplatesRoute
@@ -771,6 +795,8 @@ export interface FileRoutesById {
   '/ai-tools': typeof AiToolsRoute
   '/contact': typeof ContactRoute
   '/courses': typeof CoursesRouteWithChildren
+  '/digital-school': typeof DigitalSchoolRoute
+  '/digital_school': typeof Digital_schoolRoute
   '/login': typeof LoginRoute
   '/mentors': typeof MentorsRoute
   '/pricing': typeof PricingRoute
@@ -783,6 +809,7 @@ export interface FileRoutesById {
   '/admin/ai-tools': typeof AdminAiToolsRoute
   '/admin/assembly': typeof AdminAssemblyRoute
   '/admin/cce-remarks': typeof AdminCceRemarksRoute
+  '/admin/contact-messages': typeof AdminContactMessagesRoute
   '/admin/enrollments': typeof AdminEnrollmentsRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/meeting-templates': typeof AdminMeetingTemplatesRoute
@@ -867,6 +894,8 @@ export interface FileRouteTypes {
     | '/ai-tools'
     | '/contact'
     | '/courses'
+    | '/digital-school'
+    | '/digital_school'
     | '/login'
     | '/mentors'
     | '/pricing'
@@ -879,6 +908,7 @@ export interface FileRouteTypes {
     | '/admin/ai-tools'
     | '/admin/assembly'
     | '/admin/cce-remarks'
+    | '/admin/contact-messages'
     | '/admin/enrollments'
     | '/admin/login'
     | '/admin/meeting-templates'
@@ -960,6 +990,8 @@ export interface FileRouteTypes {
     | '/about'
     | '/ai-tools'
     | '/contact'
+    | '/digital-school'
+    | '/digital_school'
     | '/login'
     | '/mentors'
     | '/pricing'
@@ -972,6 +1004,7 @@ export interface FileRouteTypes {
     | '/admin/ai-tools'
     | '/admin/assembly'
     | '/admin/cce-remarks'
+    | '/admin/contact-messages'
     | '/admin/enrollments'
     | '/admin/login'
     | '/admin/meeting-templates'
@@ -1054,6 +1087,8 @@ export interface FileRouteTypes {
     | '/ai-tools'
     | '/contact'
     | '/courses'
+    | '/digital-school'
+    | '/digital_school'
     | '/login'
     | '/mentors'
     | '/pricing'
@@ -1066,6 +1101,7 @@ export interface FileRouteTypes {
     | '/admin/ai-tools'
     | '/admin/assembly'
     | '/admin/cce-remarks'
+    | '/admin/contact-messages'
     | '/admin/enrollments'
     | '/admin/login'
     | '/admin/meeting-templates'
@@ -1149,6 +1185,8 @@ export interface RootRouteChildren {
   AiToolsRoute: typeof AiToolsRoute
   ContactRoute: typeof ContactRoute
   CoursesRoute: typeof CoursesRouteWithChildren
+  DigitalSchoolRoute: typeof DigitalSchoolRoute
+  Digital_schoolRoute: typeof Digital_schoolRoute
   LoginRoute: typeof LoginRoute
   MentorsRoute: typeof MentorsRoute
   PricingRoute: typeof PricingRoute
@@ -1161,6 +1199,7 @@ export interface RootRouteChildren {
   AdminAiToolsRoute: typeof AdminAiToolsRoute
   AdminAssemblyRoute: typeof AdminAssemblyRoute
   AdminCceRemarksRoute: typeof AdminCceRemarksRoute
+  AdminContactMessagesRoute: typeof AdminContactMessagesRoute
   AdminEnrollmentsRoute: typeof AdminEnrollmentsRoute
   AdminLoginRoute: typeof AdminLoginRoute
   AdminMeetingTemplatesRoute: typeof AdminMeetingTemplatesRoute
@@ -1283,6 +1322,20 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/digital_school': {
+      id: '/digital_school'
+      path: '/digital_school'
+      fullPath: '/digital_school'
+      preLoaderRoute: typeof Digital_schoolRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/digital-school': {
+      id: '/digital-school'
+      path: '/digital-school'
+      fullPath: '/digital-school'
+      preLoaderRoute: typeof DigitalSchoolRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/courses': {
@@ -1684,6 +1737,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminEnrollmentsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/contact-messages': {
+      id: '/admin/contact-messages'
+      path: '/admin/contact-messages'
+      fullPath: '/admin/contact-messages'
+      preLoaderRoute: typeof AdminContactMessagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/cce-remarks': {
       id: '/admin/cce-remarks'
       path: '/admin/cce-remarks'
@@ -1939,6 +1999,8 @@ const rootRouteChildren: RootRouteChildren = {
   AiToolsRoute: AiToolsRoute,
   ContactRoute: ContactRoute,
   CoursesRoute: CoursesRouteWithChildren,
+  DigitalSchoolRoute: DigitalSchoolRoute,
+  Digital_schoolRoute: Digital_schoolRoute,
   LoginRoute: LoginRoute,
   MentorsRoute: MentorsRoute,
   PricingRoute: PricingRoute,
@@ -1951,6 +2013,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminAiToolsRoute: AdminAiToolsRoute,
   AdminAssemblyRoute: AdminAssemblyRoute,
   AdminCceRemarksRoute: AdminCceRemarksRoute,
+  AdminContactMessagesRoute: AdminContactMessagesRoute,
   AdminEnrollmentsRoute: AdminEnrollmentsRoute,
   AdminLoginRoute: AdminLoginRoute,
   AdminMeetingTemplatesRoute: AdminMeetingTemplatesRoute,

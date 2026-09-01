@@ -18,7 +18,7 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 export function StudentHeader() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const { lang, setLang } = useLanguage();
@@ -64,7 +64,7 @@ export function StudentHeader() {
             <GraduationCap className="size-5 text-white" />
           </div>
           <h1 className="font-bold tracking-tight hidden sm:block uppercase text-sm">
-            Student Portal {user?.displayName ? `(${user.displayName})` : ""}
+            {profile?.role === "teacher" ? "Educator Portal" : "Learning Portal"} {profile?.fullName || user?.displayName ? `(${profile?.fullName || user?.displayName})` : ""}
           </h1>
         </div>
       </div>
@@ -137,27 +137,36 @@ export function StudentHeader() {
 
           <div className="h-6 w-px bg-white/20"></div>
 
-          <div className="flex items-center gap-3">
-            <div className="text-right hidden sm:block">
-              <div className="text-xs font-bold leading-none">
-                {user?.displayName || "Student"}
+          {user ? (
+            <div className="flex items-center gap-3">
+              <div className="text-right hidden sm:block">
+                <div className="text-xs font-bold leading-none">
+                  {profile?.fullName || profile?.name || user.displayName || user.email || "User"}
+                </div>
+                <div className="text-[10px] text-amber-400 font-bold mt-1">
+                  {profile?.role === "teacher" || localStorage.getItem("teacher_udise") ? "Educator" : profile?.role === "admin" ? "Admin" : "Learner"}
+                </div>
               </div>
-              <div className="text-[10px] text-white/70 font-medium mt-1">
-                Scholar
+              <div className="size-9 bg-amber-500 rounded-xl flex items-center justify-center text-slate-950 font-bold shadow-md">
+                <User className="size-5" />
               </div>
+              <button
+                onClick={handleSignOut}
+                className="p-2 hover:bg-red-500 hover:text-white rounded-lg transition-all text-white/70 ml-1"
+                title="Logout"
+              >
+                <LogOut className="size-5" />
+              </button>
             </div>
-            <div className="size-9 bg-amber-500 rounded-xl flex items-center justify-center text-slate-950 font-bold shadow-md">
-              <User className="size-5" />
-            </div>
-          </div>
-
-          <button
-            onClick={handleSignOut}
-            className="p-2 hover:bg-red-500 hover:text-white rounded-lg transition-all text-white/70"
-            title="Logout"
-          >
-            <LogOut className="size-5" />
-          </button>
+          ) : (
+            <button
+              onClick={() => navigate({ to: "/login" as any, search: { redirect: location.pathname } as any })}
+              className="flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 text-xs font-black uppercase tracking-widest shadow-md transition-all active:scale-95"
+            >
+              <User className="size-4" />
+              <span>{lang === "mr" ? "लॉगिन" : lang === "hi" ? "लॉगिन" : "Login"}</span>
+            </button>
+          )}
         </div>
       </div>
     </header>

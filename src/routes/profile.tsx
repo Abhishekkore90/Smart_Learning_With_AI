@@ -39,6 +39,8 @@ import { showToast as toast } from "@/lib/custom-toast";
 import { StudentBirthdaySystem } from "@/components/StudentBirthdaySystem";
 import { StudentSidebar } from "@/components/student/StudentSidebar";
 import { StudentHeader } from "@/components/student/StudentHeader";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 
 import { useLanguage } from "@/hooks/use-language";
 
@@ -182,304 +184,240 @@ function Page() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
-      <StudentHeader />
-      <StudentSidebar />
+    <div className="min-h-screen bg-[#FDFDFF] text-[#111827]">
+      <Header />
 
-      <main className="lg:pl-64 pt-16 min-h-screen bg-slate-50/50">
-        <div className="p-6 max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Left Sidebar Info */}
-            <motion.div {...fade} className="lg:col-span-1 space-y-6">
-              <div className="bg-white rounded-[3rem] p-10 border border-slate-200 shadow-sm flex flex-col items-center text-center">
-                <div className="size-32 rounded-[2.5rem] bg-indigo-600 flex items-center justify-center text-white text-4xl font-black mb-6 shadow-xl shadow-indigo-100">
-                  {formData.fullName?.[0] || user?.email?.[0]?.toUpperCase()}
-                </div>
+      <main className="max-w-6xl mx-auto px-6 pt-28 pb-24">
+        {/* Header Back Link */}
+        <div className="mb-8">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 text-xs font-black text-[#6B7280] hover:text-indigo-600 uppercase tracking-widest transition-colors"
+          >
+            ← {lang === "mr" ? "मुख्यपृष्ठावर परत जा" : "Back to Home"}
+          </Link>
+        </div>
 
-                {isEditing ? (
-                  <input
-                    className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-center font-black text-xl w-full"
-                    value={formData.fullName}
-                    onChange={(e) =>
-                      setFormData({ ...formData, fullName: e.target.value })
-                    }
-                  />
-                ) : (
-                  <h2 className="text-3xl font-black text-slate-900 tracking-tight italic">
-                    {profile?.fullName || "Scholar"}
-                  </h2>
-                )}
+        <div className="grid lg:grid-cols-3 gap-8 items-start">
+          {/* Left Profile Card */}
+          <motion.div {...fade} className="lg:col-span-1 space-y-6">
+            <div className="bg-white rounded-[3rem] p-8 border border-slate-200 shadow-sm flex flex-col items-center text-center">
+              <div className="size-28 rounded-[2rem] bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center text-white text-4xl font-black mb-5 shadow-lg shadow-indigo-200">
+                {formData.fullName?.[0] || user?.email?.[0]?.toUpperCase()}
+              </div>
 
-                <p className="text-slate-400 font-bold text-xs flex items-center gap-2 mt-2 uppercase tracking-widest">
-                  <ShieldCheck className="size-4 text-indigo-500" /> Verified
-                  Student
-                </p>
+              {isEditing ? (
+                <input
+                  className="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-center font-black text-lg w-full"
+                  value={formData.fullName}
+                  onChange={(e) =>
+                    setFormData({ ...formData, fullName: e.target.value })
+                  }
+                  placeholder="Full Name"
+                />
+              ) : (
+                <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+                  {profile?.fullName || user?.displayName || "User"}
+                </h2>
+              )}
 
-                <div className="w-full mt-10 space-y-4">
-                  <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                    <Mail className="size-5 text-indigo-500" />
-                    <div className="text-left">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                        Email
-                      </p>
-                      <p className="text-sm font-bold truncate max-w-[150px]">
-                        {user?.email}
-                      </p>
-                    </div>
+              <p className="text-indigo-600 font-extrabold text-xs flex items-center gap-1.5 mt-2 uppercase tracking-wider bg-indigo-50 px-4 py-1.5 rounded-full border border-indigo-100">
+                <ShieldCheck className="size-4 text-indigo-600" />
+                <span>
+                  {profile?.role === "teacher" || localStorage.getItem("teacher_udise")
+                    ? "Educator Profile"
+                    : profile?.role === "admin"
+                    ? "Administrator Profile"
+                    : "Learner Profile"}
+                </span>
+              </p>
+
+              <div className="w-full mt-8 space-y-3.5">
+                <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                  <Mail className="size-5 text-indigo-500 shrink-0" />
+                  <div className="text-left overflow-hidden">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      Email Address
+                    </p>
+                    <p className="text-xs font-bold text-slate-800 truncate">
+                      {user?.email}
+                    </p>
                   </div>
-                  <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                    <MapPin className="size-5 text-indigo-500" />
-                    <div className="text-left">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                        Location
-                      </p>
-                      <p className="text-sm font-bold">{formData.location}</p>
-                    </div>
-                  </div>
                 </div>
+              </div>
 
+              <div className="w-full mt-6 space-y-3">
                 <button
                   onClick={() => setIsEditing(!isEditing)}
-                  className="w-full mt-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-indigo-600 transition-all shadow-xl shadow-indigo-100"
+                  className="w-full py-3.5 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-indigo-600 transition-all shadow-md active:scale-95"
                 >
                   {isEditing ? (
-                    "Cancel"
+                    "रद्द करा (Cancel)"
                   ) : (
                     <>
-                      <Edit3 className="size-4" /> Edit Profile
+                      <Edit3 className="size-4" /> माहिती बदला (Edit Profile)
                     </>
                   )}
                 </button>
+
                 {isEditing && (
                   <button
                     onClick={handleSave}
-                    className="w-full mt-3 py-4 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"
+                    disabled={saving}
+                    className="w-full py-3.5 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-md active:scale-95"
                   >
                     {saving ? (
                       <Loader2 className="size-4 animate-spin" />
                     ) : (
-                      "Save Changes"
+                      "जतन करा (Save Changes)"
                     )}
                   </button>
                 )}
-              </div>
 
-              <div className="bg-indigo-600 rounded-[3rem] p-8 text-white shadow-2xl shadow-indigo-100 relative overflow-hidden">
-                <Award className="size-12 mb-4 opacity-50" />
-                <h3 className="font-black text-xl italic">
-                  Scholar Distinction
+                <button
+                  onClick={async () => {
+                    await auth.signOut();
+                    toast.success("Signed out successfully.");
+                    window.location.href = "/";
+                  }}
+                  className="w-full py-3 bg-red-50 text-red-600 hover:bg-red-500 hover:text-white rounded-2xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 border border-red-100 transition-all active:scale-95"
+                >
+                  <LogOut className="size-4" /> बाहेर पडा (Sign Out)
+                </button>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Right Main Info Details */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white rounded-[3rem] p-8 md:p-10 border border-slate-200 shadow-sm space-y-6">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-5">
+                <h3 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                  <School className="size-6 text-indigo-600" /> प्रोफाइल व शाळा माहिती (User Profile Details)
                 </h3>
-                <p className="text-indigo-100 text-sm font-medium mt-2">
-                  You are performing exceptionally well. Keep up the excellence!
-                </p>
+                <button
+                  onClick={() => setIsEditing(!isEditing)}
+                  className="px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white rounded-xl font-bold text-xs flex items-center gap-2 transition-all"
+                >
+                  <Edit3 className="size-4" /> {isEditing ? "Cancel" : "Edit Info"}
+                </button>
               </div>
-            </motion.div>
 
-            {/* Main Content Info */}
-            <div className="lg:col-span-2 space-y-8">
-              {/* Birthday System Integration */}
-              <StudentBirthdaySystem
-                student={{
-                  fullName: profile?.fullName || user?.displayName || "Student",
-                  class: profile?.studentClass,
-                  rollNo: profile?.rollNo,
-                  dob: profile?.dob,
-                }}
-              />
+              {/* User / School Info Form Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 bg-slate-50/80 p-6 rounded-[2rem] border border-slate-200/80">
+                <div className="md:col-span-2">
+                  <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider block mb-1">शाळेचे नाव (School Name)</label>
+                  {isEditing ? (
+                    <input
+                      className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
+                      value={formData.schoolName}
+                      onChange={(e) => setFormData({ ...formData, schoolName: e.target.value })}
+                      placeholder="शाळेचे नाव प्रविष्ट करा (Enter School Name)"
+                    />
+                  ) : (
+                    <div className="text-sm font-extrabold text-slate-900 bg-white px-4 py-2.5 rounded-xl border border-slate-200">
+                      {formData.schoolName || "माहिती भरलेली नाही"}
+                    </div>
+                  )}
+                </div>
 
-              <div className="bg-white rounded-[3rem] p-10 border border-slate-200 shadow-sm space-y-8">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-2xl font-black text-slate-900 tracking-tight italic flex items-center gap-3">
-                    <School className="size-6 text-indigo-600" /> शाळेची व युझर प्रोफाइल माहिती (School Profile & Reports Info)
-                  </h3>
+                <div>
+                  <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider block mb-1">युडायस नंबर (UDISE Code)</label>
+                  {isEditing ? (
+                    <input
+                      className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
+                      value={formData.udise}
+                      onChange={(e) => setFormData({ ...formData, udise: e.target.value })}
+                      placeholder="11 अंकी UDISE कोड प्रविष्ट करा"
+                    />
+                  ) : (
+                    <div className="text-xs font-bold text-slate-900 bg-white px-4 py-2.5 rounded-xl border border-slate-200">
+                      {formData.udise || "माहिती भरलेली नाही"}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider block mb-1">केंद्र (Kendra / Center)</label>
+                  {isEditing ? (
+                    <input
+                      className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
+                      value={formData.kendra}
+                      onChange={(e) => setFormData({ ...formData, kendra: e.target.value })}
+                      placeholder="केंद्र नाव प्रविष्ट करा"
+                    />
+                  ) : (
+                    <div className="text-xs font-bold text-slate-900 bg-white px-4 py-2.5 rounded-xl border border-slate-200">
+                      {formData.kendra || "माहिती भरलेली नाही"}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider block mb-1">तालुका (Taluka)</label>
+                  {isEditing ? (
+                    <input
+                      className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
+                      value={formData.taluka}
+                      onChange={(e) => setFormData({ ...formData, taluka: e.target.value })}
+                      placeholder="तालुका प्रविष्ट करा"
+                    />
+                  ) : (
+                    <div className="text-xs font-bold text-slate-900 bg-white px-4 py-2.5 rounded-xl border border-slate-200">
+                      {formData.taluka || "माहिती भरलेली नाही"}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider block mb-1">जिल्हा (District)</label>
+                  {isEditing ? (
+                    <input
+                      className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
+                      value={formData.district}
+                      onChange={(e) => setFormData({ ...formData, district: e.target.value })}
+                      placeholder="जिल्हा प्रविष्ट करा"
+                    />
+                  ) : (
+                    <div className="text-xs font-bold text-slate-900 bg-white px-4 py-2.5 rounded-xl border border-slate-200">
+                      {formData.district || "माहिती भरलेली नाही"}
+                    </div>
+                  )}
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider block mb-1">मुख्याध्यापक नाव (Headmaster Name)</label>
+                  {isEditing ? (
+                    <input
+                      className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
+                      value={formData.headmaster}
+                      onChange={(e) => setFormData({ ...formData, headmaster: e.target.value })}
+                      placeholder="मुख्याध्यापक नाव प्रविष्ट करा"
+                    />
+                  ) : (
+                    <div className="text-xs font-bold text-slate-900 bg-white px-4 py-2.5 rounded-xl border border-slate-200">
+                      {formData.headmaster || "माहिती भरलेली नाही"}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {isEditing && (
+                <div className="flex justify-end pt-2">
                   <button
-                    onClick={() => setIsEditing(!isEditing)}
-                    className="px-5 py-2.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white rounded-2xl font-bold text-xs flex items-center gap-2 transition-all"
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="px-8 py-3 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-wider hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-100"
                   >
-                    <Edit3 className="size-4" /> {isEditing ? "रद्द करा (Cancel)" : "माहिती बदला (Edit Info)"}
+                    {saving ? <Loader2 className="size-4 animate-spin" /> : "जतन करा (Save Info)"}
                   </button>
                 </div>
-
-                {/* School Info Form Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50/80 p-6 rounded-[2rem] border border-slate-200/80">
-                  <div className="md:col-span-2">
-                    <label className="text-xs font-black text-slate-500 uppercase tracking-wider block mb-1">शाळेचे नाव (School Name)</label>
-                    {isEditing ? (
-                      <input
-                        className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
-                        value={formData.schoolName}
-                        onChange={(e) => setFormData({ ...formData, schoolName: e.target.value })}
-                        placeholder="उदा. जि. प. प्राथमिक शाळा ढोंडेवाडी"
-                      />
-                    ) : (
-                      <div className="text-base font-extrabold text-slate-900 bg-white px-4 py-2.5 rounded-xl border border-slate-200">
-                        {formData.schoolName || "माहिती भरलेली नाही"}
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-black text-slate-500 uppercase tracking-wider block mb-1">युडायस नंबर (UDISE Code)</label>
-                    {isEditing ? (
-                      <input
-                        className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
-                        value={formData.udise}
-                        onChange={(e) => setFormData({ ...formData, udise: e.target.value })}
-                        placeholder="उदा. 27250608901"
-                      />
-                    ) : (
-                      <div className="text-sm font-bold text-slate-900 bg-white px-4 py-2.5 rounded-xl border border-slate-200">
-                        {formData.udise || "माहिती भरलेली नाही"}
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-black text-slate-500 uppercase tracking-wider block mb-1">केंद्र (Kendra / Center)</label>
-                    {isEditing ? (
-                      <input
-                        className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
-                        value={formData.kendra}
-                        onChange={(e) => setFormData({ ...formData, kendra: e.target.value })}
-                        placeholder="उदा. पेड"
-                      />
-                    ) : (
-                      <div className="text-sm font-bold text-slate-900 bg-white px-4 py-2.5 rounded-xl border border-slate-200">
-                        {formData.kendra || "माहिती भरलेली नाही"}
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-black text-slate-500 uppercase tracking-wider block mb-1">तालुका (Taluka)</label>
-                    {isEditing ? (
-                      <input
-                        className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
-                        value={formData.taluka}
-                        onChange={(e) => setFormData({ ...formData, taluka: e.target.value })}
-                        placeholder="उदा. तासगाव"
-                      />
-                    ) : (
-                      <div className="text-sm font-bold text-slate-900 bg-white px-4 py-2.5 rounded-xl border border-slate-200">
-                        {formData.taluka || "माहिती भरलेली नाही"}
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-black text-slate-500 uppercase tracking-wider block mb-1">जिल्हा (District)</label>
-                    {isEditing ? (
-                      <input
-                        className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
-                        value={formData.district}
-                        onChange={(e) => setFormData({ ...formData, district: e.target.value })}
-                        placeholder="उदा. सांगली"
-                      />
-                    ) : (
-                      <div className="text-sm font-bold text-slate-900 bg-white px-4 py-2.5 rounded-xl border border-slate-200">
-                        {formData.district || "माहिती भरलेली नाही"}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="text-xs font-black text-slate-500 uppercase tracking-wider block mb-1">मुख्याध्यापक नाव (Headmaster Name)</label>
-                    {isEditing ? (
-                      <input
-                        className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none"
-                        value={formData.headmaster}
-                        onChange={(e) => setFormData({ ...formData, headmaster: e.target.value })}
-                        placeholder="उदा. श्री. आर. बी. पाटील"
-                      />
-                    ) : (
-                      <div className="text-sm font-bold text-slate-900 bg-white px-4 py-2.5 rounded-xl border border-slate-200">
-                        {formData.headmaster || "माहिती भरलेली नाही"}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {isEditing && (
-                  <div className="flex justify-end pt-2">
-                    <button
-                      onClick={handleSave}
-                      disabled={saving}
-                      className="px-8 py-3 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-wider hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-100"
-                    >
-                      {saving ? <Loader2 className="size-4 animate-spin" /> : "जतन करा (Save School Profile)"}
-                    </button>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {[
-                    {
-                      label: "Current Class",
-                      value: formData.studentClass || "Not Set",
-                      icon: GraduationCap,
-                    },
-                    {
-                      label: "Roll Number",
-                      value: formData.rollNo || "Not Set",
-                      icon: ClipboardList,
-                    },
-                    {
-                      label: "Performance",
-                      value: formData.gpa || "A+",
-                      icon: Star,
-                    },
-                  ].map((item, i) => (
-                    <div
-                      key={i}
-                      className="p-6 bg-slate-50 rounded-3xl border border-slate-100"
-                    >
-                      <item.icon className="size-6 text-indigo-500 mb-3" />
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                        {item.label}
-                      </p>
-                      <p className="text-lg font-black text-slate-900 mt-1">
-                        {item.value}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="pt-8 border-t border-slate-100">
-                  <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-6">
-                    School Resources
-                  </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    {SCHOOL_RESOURCES.slice(0, 4).map((res, i) => {
-                      const keys = [
-                        "timetable",
-                        "special-day",
-                        "template",
-                        "annual-monthly-planning",
-                      ];
-                      const key = keys[i];
-                      return (
-                        <Link
-                          key={i}
-                          to="/school/resource/$resourceId"
-                          params={{ resourceId: key }}
-                          className="p-4 bg-white border border-slate-100 rounded-2xl flex flex-col items-center text-center gap-2 hover:border-indigo-200 transition-all cursor-pointer group"
-                        >
-                          <div className="size-10 rounded-xl bg-slate-50 text-indigo-500 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                            <res.icon className="size-5" />
-                          </div>
-                          <p className="text-[10px] font-black text-slate-900 leading-tight">
-                            {lang === "en" ? res.e : res.m}
-                          </p>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
       </main>
+      <Footer />
     </div>
   );
 }

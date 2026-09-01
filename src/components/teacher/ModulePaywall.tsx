@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, setDoc, onSnapshot, collection } from "firebase/firestore";
+import { useAuth } from "@/hooks/use-auth";
 // @ts-ignore
 import { getTeacherId } from "@/lib/teacherIsolationHelper";
 import { processRazorpayPayment } from "@/lib/razorpayService";
@@ -51,20 +52,46 @@ export function ModulePaywall({ moduleId, defaultTitle, children }: ModulePaywal
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [paymentInfo, setPaymentInfo] = useState<any>(null);
   
-  // Payment Mode Tab: "qr" (Scanner) vs "razorpay" (Card/NetBanking/Online)
-  const [paymentTab, setPaymentTab] = useState<"qr" | "razorpay">("qr");
+  // Payment Mode Tab: "razorpay" (Card/NetBanking/Online/UPI) as DEFAULT for all users
+  const [paymentTab, setPaymentTab] = useState<"qr" | "razorpay">("razorpay");
   
   // Manual UTR submission state
   const [utrNumber, setUtrNumber] = useState("");
   const [copiedUpi, setCopiedUpi] = useState(false);
 
-  const teacherId = getTeacherId() || "teacher_guest";
+  const { user, profile } = useAuth();
+  const teacherId = getTeacherId(user, profile) || "teacher_guest";
 
   useEffect(() => {
     let unsubPricing: () => void;
     let unsubPayment: () => void;
     let unsubAccess: () => void;
-    let unsubAllAccess: () => void;
+
+    const userKeys = Array.from(
+      new Set(
+        [
+          teacherId,
+          user?.uid,
+          user?.email,
+          profile?.id,
+          profile?.email,
+          localStorage.getItem("teacher_email"),
+          localStorage.getItem("user_email"),
+        ].filter((k): k is string => Boolean(k))
+      )
+    );
+
+    // Super Admin check -> Instant free access to everything
+    if (
+      (user as any)?.role === "admin" ||
+      (profile as any)?.role === "admin" ||
+      localStorage.getItem("is_super_admin") === "true" ||
+      sessionStorage.getItem("is_super_admin") === "true"
+    ) {
+      setIsUnlocked(true);
+      setLoading(false);
+      return;
+    }
 
     const checkAccess = async () => {
       setLoading(true);
@@ -74,12 +101,11 @@ export function ModulePaywall({ moduleId, defaultTitle, children }: ModulePaywal
           if (snap.exists()) {
             setPricing(snap.data() as ModulePricing);
           } else {
-            // Default pricing if admin hasn't configured yet
             setPricing({
               id: moduleId,
               title: defaultTitle || moduleId,
               price: 149,
-              enabled: false, // Default false until admin explicitly enables paywall
+              enabled: true,
               features: [
                 "अन्लिमिटेड CCE डेटा जनरेशन",
                 "A4 HD PDF रिपोर्ट डाऊनलोड",
@@ -91,67 +117,81 @@ export function ModulePaywall({ moduleId, defaultTitle, children }: ModulePaywal
           }
         });
 
-        // 2. Listen to teacher payment doc
-        const paymentDocKey = `${teacherId}_${moduleId}`;
-        unsubPayment = onSnapshot(doc(db, "teacher_module_payments", paymentDocKey), (snap) => {
-          if (snap.exists() && snap.data().status === "SUCCESS") {
-            const pData = snap.data();
-            // Check expiry if set
-            if (pData.expiresAt) {
-              const expDate = new Date(pData.expiresAt);
-              if (expDate > new Date()) {
-                setIsUnlocked(true);
-                setPaymentInfo(pData);
-              } else {
-                setIsUnlocked(false);
+        // 2. Listen to admin-granted access collection in real time
+        unsubAccess = onSnapshot(collection(db, "teacher_module_access"), (snap: any) => {
+          let granted = false;
+          let grantData: any = null;
+
+          snap.docs.forEach((docSnap: any) => {
+            const data = docSnap.data();
+            if (data && data.status === "GRANTED") {
+              const matchesUser =
+                userKeys.includes(data.teacherId) ||
+                userKeys.includes(data.teacherEmail) ||
+                (data.id && userKeys.some((k) => data.id.startsWith(k)));
+
+              const matchesModule =
+                data.moduleId === "ALL" || data.moduleId === moduleId;
+
+              if (matchesUser && matchesModule) {
+                granted = true;
+                grantData = data;
               }
-            } else {
+            }
+          });
+
+          if (granted) {
+            setIsUnlocked(true);
+            setPaymentInfo({ ...grantData, grantedByAdmin: true });
+            setLoading(false);
+          } else {
+            // Check paid records if admin grant not found
+            checkPaidRecords();
+          }
+        });
+
+        // 3. Helper to check user payments if admin grant doc not present
+        const checkPaidRecords = () => {
+          unsubPayment = onSnapshot(collection(db, "teacher_module_payments"), (snap: any) => {
+            let paid = false;
+            let paidData: any = null;
+
+            snap.docs.forEach((docSnap: any) => {
+              const data = docSnap.data();
+              if (data && data.status === "SUCCESS") {
+                const matchesUser =
+                  userKeys.includes(data.teacherId) ||
+                  userKeys.includes(data.teacherEmail) ||
+                  (data.id && userKeys.some((k) => data.id.startsWith(k)));
+
+                const matchesModule =
+                  data.moduleId === "ALL" || data.moduleId === moduleId;
+
+                if (matchesUser && matchesModule) {
+                  if (data.expiresAt) {
+                    if (new Date(data.expiresAt) > new Date()) {
+                      paid = true;
+                      paidData = data;
+                    }
+                  } else {
+                    paid = true;
+                    paidData = data;
+                  }
+                }
+              }
+            });
+
+            if (paid) {
               setIsUnlocked(true);
-              setPaymentInfo(pData);
+              setPaymentInfo(paidData);
+            } else {
+              setIsUnlocked(false);
             }
-          }
-          // Don't set isUnlocked=false here — admin access check below may grant it
-        });
-
-        // 3. Listen to admin-granted free access (per-module OR all-modules)
-        const accessDocKey = `${teacherId}_${moduleId}`;
-        const allAccessDocKey = `${teacherId}_ALL`;
-        let moduleAccessGranted = false;
-        let allAccessGranted = false;
-
-        unsubAccess = onSnapshot(doc(db, "teacher_module_access", accessDocKey), (snap) => {
-          if (snap.exists() && snap.data().status === "GRANTED") {
-            moduleAccessGranted = true;
-            setIsUnlocked(true);
-            setPaymentInfo({ ...snap.data(), grantedByAdmin: true });
-          } else {
-            moduleAccessGranted = false;
-            if (!allAccessGranted) {
-              // Only keep locked if ALL access also not granted
-            }
-          }
-          if (!allAccessGranted && !moduleAccessGranted) {
-            // Will be resolved by allAccess listener
-          }
-          setLoading(false);
-        });
-
-        // 4. Listen to ALL-modules access grant (admin gave access to ALL sections)
-        unsubAllAccess = onSnapshot(doc(db, "teacher_module_access", allAccessDocKey), (snap) => {
-          if (snap.exists() && snap.data().status === "GRANTED") {
-            allAccessGranted = true;
-            setIsUnlocked(true);
-            setPaymentInfo({ ...snap.data(), grantedByAdmin: true, allAccess: true });
-          } else {
-            allAccessGranted = false;
-            if (!moduleAccessGranted) {
-              // Neither module nor all access granted — stay locked (payment check already ran)
-            }
-          }
-          setLoading(false);
-        });
+            setLoading(false);
+          });
+        };
       } catch (err) {
-        console.error("Paywall error:", err);
+        console.error("Paywall access check error:", err);
         setLoading(false);
       }
     };
@@ -161,9 +201,8 @@ export function ModulePaywall({ moduleId, defaultTitle, children }: ModulePaywal
       if (unsubPricing) unsubPricing();
       if (unsubPayment) unsubPayment();
       if (unsubAccess) unsubAccess();
-      if (unsubAllAccess) unsubAllAccess();
     };
-  }, [moduleId, teacherId]);
+  }, [moduleId, teacherId, user, profile]);
 
   // Handle Razorpay Online Gateway Checkout
   const handlePayNow = async () => {
@@ -207,6 +246,17 @@ export function ModulePaywall({ moduleId, defaultTitle, children }: ModulePaywal
             };
 
             await setDoc(doc(db, "teacher_module_payments", paymentDocKey), record, { merge: true });
+            
+            // Promote user to Teacher role upon purchasing any module
+            try {
+              if (teacherId && teacherId !== "teacher_guest") {
+                await setDoc(doc(db, "users", teacherId), { role: "teacher", is_teacher: true, isTeacher: true }, { merge: true });
+                await setDoc(doc(db, "teachers", teacherId), { role: "teacher", is_teacher: true, email: teacherEmail, fullName: teacherName }, { merge: true });
+              }
+            } catch (roleErr) {
+              console.warn("User role upgrade error:", roleErr);
+            }
+
             setIsUnlocked(true);
             setPaying(false);
             toast.success("अभिनंदन! हे मॉड्यूल यशस्वीरित्या अनलॉक झाले आहे!");
@@ -264,6 +314,17 @@ export function ModulePaywall({ moduleId, defaultTitle, children }: ModulePaywal
       };
 
       await setDoc(doc(db, "teacher_module_payments", paymentDocKey), record, { merge: true });
+
+      // Promote user to Teacher role upon purchasing any module
+      try {
+        if (teacherId && teacherId !== "teacher_guest") {
+          await setDoc(doc(db, "users", teacherId), { role: "teacher", is_teacher: true, isTeacher: true }, { merge: true });
+          await setDoc(doc(db, "teachers", teacherId), { role: "teacher", is_teacher: true, email: teacherEmail, fullName: teacherName }, { merge: true });
+        }
+      } catch (roleErr) {
+        console.warn("User role upgrade error:", roleErr);
+      }
+
       setIsUnlocked(true);
       setSubmittingUtr(false);
       toast.success("UTR व्हॅलिडेट झाले! हे मॉड्यूल यशस्वीरित्या अनलॉक झाले आहे!");
@@ -329,6 +390,18 @@ export function ModulePaywall({ moduleId, defaultTitle, children }: ModulePaywal
           {/* Payment Method Selector Tabs */}
           <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200 max-w-md mx-auto">
             <button
+              onClick={() => setPaymentTab("razorpay")}
+              className={`flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                paymentTab === "razorpay"
+                  ? "bg-white text-purple-700 shadow-md border border-slate-200/80"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <CreditCard className="size-4.5 text-purple-600" />
+              <span>Razorpay गेटवे (Instant Online)</span>
+            </button>
+
+            <button
               onClick={() => setPaymentTab("qr")}
               className={`flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
                 paymentTab === "qr"
@@ -338,18 +411,6 @@ export function ModulePaywall({ moduleId, defaultTitle, children }: ModulePaywal
             >
               <QrCode className="size-4.5 text-blue-600" />
               <span>QR कोड स्कॅनर (Direct UPI)</span>
-            </button>
-
-            <button
-              onClick={() => setPaymentTab("razorpay")}
-              className={`flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                paymentTab === "razorpay"
-                  ? "bg-white text-purple-700 shadow-md border border-slate-200/80"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              <CreditCard className="size-4.5 text-purple-600" />
-              <span>Razorpay गेटवे</span>
             </button>
           </div>
 

@@ -315,7 +315,7 @@ export function AboutPage() {
   const currentLang = (lang === "mr" || lang === "hi" || lang === "en") ? lang : "en";
   const t = LOCAL_TRANSLATIONS[currentLang];
 
-  const [activeTab, setActiveTab] = useState<"about" | "offerings" | "corporate">("about");
+  const [activeTab, setActiveTab] = useState<"about" | "offerings">("about");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalImage, setModalImage] = useState<string | null>(null);
 
@@ -427,8 +427,7 @@ export function AboutPage() {
         <div className="bg-slate-200/50 dark:bg-white/5 border border-slate-300/60 dark:border-white/10 backdrop-blur-md rounded-full p-1.5 flex gap-1 sm:gap-2 shadow-lg max-w-max">
           {[
             { id: "about", label: t.about_title, icon: GraduationCap },
-            { id: "offerings", label: t.offer_title, icon: Award },
-            { id: "corporate", label: t.company_info_title, icon: Building }
+            { id: "offerings", label: t.offer_title, icon: Award }
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -755,118 +754,7 @@ export function AboutPage() {
             </motion.div>
           )}
 
-          {activeTab === "corporate" && (
-            <motion.div
-              key="corporate-tab"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.3 }}
-              className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start"
-            >
-              {/* Detailed Registration Grid */}
-              <div className="lg:col-span-7 space-y-6">
-                <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white flex items-center gap-3">
-                  <span className="h-8 w-1.5 rounded-full bg-indigo-500" />
-                  {t.company_info_title}
-                </h2>
 
-                <div className="rounded-3xl bg-white/70 border border-slate-200/80 divide-y divide-slate-200/80 overflow-hidden shadow-xl dark:bg-slate-800/40 dark:border-slate-700/50 dark:divide-slate-700/50">
-                  {/* Company Name */}
-                  <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <span className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t.company_name}</span>
-                    <span className="text-base font-extrabold text-slate-800 dark:text-white text-right">{t.badge}</span>
-                  </div>
-
-                  {/* CIN */}
-                  <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <span className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t.cin}</span>
-                    <span className="text-base font-mono font-extrabold text-teal-650 bg-teal-50 border border-teal-100 dark:text-teal-400 dark:bg-teal-500/5 dark:border-teal-500/10 px-3 py-1 rounded-md">
-                      U85499PN2026PTC256078
-                    </span>
-                  </div>
-
-                  {/* PAN & TAN */}
-                  <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t.pan}</span>
-                      <span className="text-sm font-mono font-bold text-slate-800 dark:text-slate-200">ABTCS8869A</span>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t.tan}</span>
-                      <span className="text-sm font-mono font-bold text-slate-800 dark:text-slate-200">KLPS18427D</span>
-                    </div>
-                  </div>
-
-                  {/* Registered Address */}
-                  <div className="p-5 space-y-4">
-                    <div className="flex items-start gap-3">
-                      <MapPin className="size-5 text-indigo-500 dark:text-indigo-400 shrink-0 mt-0.5" />
-                      <div>
-                        <span className="block text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">
-                          {t.reg_address}
-                        </span>
-                        <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed font-medium">
-                          145/A, 194/A/2, Plot No. 100, Shree Capital-2,<br />
-                          Warnali, Willingdon College Road,<br />
-                          Miraj, Sangli - 416415, Maharashtra, India.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Address verification snippet inline */}
-                    <div className="mt-3 p-3 bg-slate-100/70 border border-slate-200/80 dark:bg-slate-900/60 rounded-2xl dark:border-slate-700/50 flex flex-col md:flex-row gap-4 items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <FileText className="size-5 text-slate-500 shrink-0" />
-                        <div>
-                          <h4 className="text-xs font-extrabold text-slate-700 dark:text-slate-300">{t.address_snippet}</h4>
-                          <p className="text-[10px] text-slate-500">Government Registry Matching</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => openImageModal(addressSnippetImg)}
-                        className="shrink-0 p-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 hover:text-slate-900 border border-slate-350/80 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-400 dark:hover:text-slate-200 dark:border-slate-700/60 flex items-center gap-1 transition-colors text-[10px] font-bold"
-                      >
-                        <Maximize2 className="size-3" />
-                        <span>Inspect</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Incorporation Certificate Side Card */}
-              <div className="lg:col-span-5 space-y-4">
-                <h3 className="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2 px-1">
-                  <ShieldCheck className="size-5 text-teal-500 dark:text-teal-400" />
-                  {t.inc_cert}
-                </h3>
-
-                <div className="p-4 rounded-3xl bg-white/70 border border-slate-200/80 dark:bg-slate-800/40 dark:border-slate-700/50 shadow-xl space-y-4">
-                  <div
-                    onClick={() => openImageModal(certificateImg)}
-                    className="relative rounded-2xl overflow-hidden cursor-pointer group aspect-[3/4] border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-950/60"
-                  >
-                    <img
-                      src={certificateImg}
-                      alt="Certificate of Incorporation SGK Brainova"
-                      className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <div className="px-4 py-2 rounded-xl bg-teal-500 text-slate-900 text-xs font-bold flex items-center gap-2 shadow-lg">
-                        <Maximize2 className="size-4" />
-                        <span>{t.view_cert}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <p className="text-center text-xs text-slate-500">
-                    Incorporated on 23rd May 2026 under Registrar of Companies, Pune.
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-          )}
         </AnimatePresence>
       </main>
 

@@ -1134,33 +1134,54 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           : "⚡ सर्व विषयांचे एकत्र (Combined) PDF तयार होत आहे..."
       );
 
-      const printElement = printContainerRef.current;
-      if (!printElement) {
+      const sourceElement = printContainerRef.current;
+      if (!sourceElement) {
         toast.error("प्रिन्ट घटक उपलब्ध नाही.");
         setIsGeneratingPdf(false);
         return;
       }
 
+      // Clone clean DOM element without interactive UI controls
+      const clone = sourceElement.cloneNode(true) as HTMLElement;
+      clone.querySelectorAll(".no-print, button, input, select, textarea").forEach((el) => el.remove());
+
+      // Create hidden offscreen container with explicit A4 width
+      const container = document.createElement("div");
+      container.className = "pdf-export-active";
+      container.style.position = "absolute";
+      container.style.left = "-9999px";
+      container.style.top = "0";
+      container.style.width = "850px";
+      container.style.background = "#ffffff";
+      container.style.color = "#000000";
+      container.style.padding = "10px";
+      container.appendChild(clone);
+      document.body.appendChild(container);
+
       const html2pdfModule = await import("html2pdf.js");
       const html2pdf = html2pdfModule.default || html2pdfModule;
 
       const opt = {
-        margin: [6, 6, 6, 6],
+        margin: [8, 8, 8, 8],
         filename: isSingleSubject
           ? `इयत्ता_${record?.classId || "1"}_वार्षिक_नियोजन_${selectedSubjectFilter}_२०२६-२७.pdf`
           : `इयत्ता_${record?.classId || "1"}_संपूर्ण_वार्षिक_नियोजन_२०२६-२७.pdf`,
         image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
+        html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 850 },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
         pagebreak: {
-          mode: ["css", "legacy"],
-          after: ".html2pdf__page-break",
-          avoid: ["tr", "td", "th"],
+          mode: ["avoid-all", "css", "legacy"],
+          before: ".html2pdf__page-break",
         },
       };
 
-      await (html2pdf() as any).from(printElement).set(opt).save();
-      setIsGeneratingPdf(false);
+      await (html2pdf() as any).from(container).set(opt).save();
+
+      // Remove temp offscreen container
+      if (document.body.contains(container)) {
+        document.body.removeChild(container);
+      }
+
       toast.success(
         isSingleSubject
           ? `🎉 विषय : ${selectedSubjectFilter} चे PDF यशस्वीरित्या डाऊनलोड झाले!`
@@ -1168,8 +1189,9 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
       );
     } catch (err) {
       console.error("PDF download error:", err);
-      setIsGeneratingPdf(false);
       toast.error("PDF डाऊनलोड करताना अडचण आली.");
+    } finally {
+      setIsGeneratingPdf(false);
     }
   };
 
@@ -1514,11 +1536,16 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                     font-size: 9.5px !important;
                     font-weight: 800 !important;
                   }
+                  .pdf-export-active tr {
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
+                  }
                   .pdf-export-active td {
                     border: 1px solid #333 !important;
-                    padding: 2px 4px !important;
-                    font-size: 9px !important;
+                    padding: 3px 4px !important;
+                    font-size: 9.5px !important;
                     color: #000 !important;
+                    vertical-align: middle !important;
                   }
                   .pdf-export-active .pdf-signature-bar {
                     border-top: 1px solid #000 !important;
@@ -1821,20 +1848,20 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                                     ) : (
                                       categoryHeaders.map((_: string, cIdx: number) => {
                                          const cellInfo = sectionRowMatrix[rIdx]?.[cIdx];
-                                         if (!isInlineEditing && cellInfo?.skip) {
-                                           return null;
-                                         }
+                                          if (!isInlineEditing && cellInfo?.skip) {
+                                            return null;
+                                          }
 
-                                         return (
-                                           <td
-                                             key={cIdx}
-                                             rowSpan={!isInlineEditing && cellInfo?.rowSpan ? cellInfo.rowSpan : 1}
-                                             className={`border border-slate-300 p-2.5 align-middle text-slate-900 leading-relaxed ${(cellInfo?.isExam || isExamOrAssessmentText(cellInfo?.displayValue)) ? "text-center font-bold text-slate-900 bg-amber-50/40" : cIdx === 0 ? "text-center font-bold" : "text-left whitespace-pre-line"}`}
-                                             style={{ pageBreakInside: "avoid", breakInside: "avoid" }}
-                                           >
-                                             {cellInfo ? cellInfo.displayValue : r[cIdx] || "-"}
-                                           </td>
-                                         );
+                                          return (
+                                            <td
+                                              key={cIdx}
+                                              rowSpan={!isInlineEditing && cellInfo?.rowSpan ? cellInfo.rowSpan : 1}
+                                              className={`border border-slate-300 p-2.5 align-middle text-slate-900 leading-relaxed ${(cellInfo?.isExam || isExamOrAssessmentText(cellInfo?.displayValue)) ? "text-center font-bold text-slate-900 bg-amber-50/40" : cIdx <= 3 ? "text-center font-bold text-slate-900" : "text-left whitespace-pre-line"}`}
+                                              style={{ pageBreakInside: "avoid", breakInside: "avoid" }}
+                                            >
+                                              {cellInfo ? cellInfo.displayValue : r[cIdx] || "-"}
+                                            </td>
+                                          );
                                        })
                                     )}
                                   </tr>

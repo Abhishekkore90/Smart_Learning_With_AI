@@ -118,7 +118,7 @@ function LandingPage() {
       iconColor: "text-icon-pink",
       btnHover: "group-hover:bg-icon-pink group-hover:text-white group-hover:border-transparent",
       actionText: "Open Digital School",
-      to: "#",
+      to: "/digital-school",
     },
     {
       title: t.c2_title || "Teacher Section",

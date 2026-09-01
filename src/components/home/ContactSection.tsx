@@ -16,18 +16,42 @@ import { showToast as toast } from "@/lib/custom-toast";
 import { useLanguage } from "@/hooks/use-language";
 import { DICTIONARY } from "@/lib/translations";
 
+import { db } from "@/lib/firebase";
+import { collection, addDoc } from "firebase/firestore";
+
 export function ContactPage() {
   const [loading, setLoading] = useState(false);
   const { lang } = useLanguage();
   const t = DICTIONARY[lang] as any;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    type: "General Inquiry",
+    message: "",
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.name || !formData.email || !formData.message) {
+      toast.error("कृपया सर्व माहिती प्रविष्ट करा.");
+      return;
+    }
     setLoading(true);
-    setTimeout(() => {
+    try {
+      await addDoc(collection(db, "contact_inquiries"), {
+        ...formData,
+        createdAt: new Date().toISOString(),
+        status: "UNREAD",
+      });
       setLoading(false);
-      toast.success(t.success);
-    }, 1500);
+      toast.success(lang === "mr" ? "तुमचा संदेश यशस्वीरित्या प्राप्त झाला आहे! आम्ही लवकरच संपर्क साधू." : "Message dispatched successfully! We will contact you soon.");
+      setFormData({ name: "", email: "", type: "General Inquiry", message: "" });
+    } catch (err) {
+      console.error("Form error:", err);
+      setLoading(false);
+      toast.error("संदेश पाठवताना अडचण आली. कृपया पुन्हा प्रयत्न करा.");
+    }
   };
 
   return (
@@ -106,6 +130,8 @@ export function ContactPage() {
                       required
                       type="text"
                       placeholder="John Doe"
+                      value={formData.name}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                       className="w-full px-6 py-4 bg-slate-50 border border-border rounded-2xl focus:border-primary/50 focus:bg-white focus:text-slate-900 dark:bg-slate-900/50 dark:border-white/10 dark:focus:bg-slate-900 dark:focus:border-teal-500/30 dark:focus:text-white transition-all outline-none text-text dark:text-white font-bold placeholder:text-slate-400 dark:placeholder:text-slate-500"
                     />
                   </div>
@@ -117,6 +143,8 @@ export function ContactPage() {
                       required
                       type="email"
                       placeholder="john@example.com"
+                      value={formData.email}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
                       className="w-full px-6 py-4 bg-slate-50 border border-border rounded-2xl focus:border-primary/50 focus:bg-white focus:text-slate-900 dark:bg-slate-900/50 dark:border-white/10 dark:focus:bg-slate-900 dark:focus:border-teal-500/30 dark:focus:text-white transition-all outline-none text-text dark:text-white font-bold placeholder:text-slate-400 dark:placeholder:text-slate-500"
                     />
                   </div>
@@ -126,7 +154,11 @@ export function ContactPage() {
                   <label className="text-[10px] font-black uppercase tracking-[0.2em] text-light-text dark:text-slate-300 ml-2">
                     {t.contact_form_type}
                   </label>
-                  <select className="w-full px-6 py-4 bg-slate-50 border border-border rounded-2xl focus:border-primary/50 focus:bg-white focus:text-slate-900 dark:bg-slate-900/50 dark:border-white/10 dark:focus:bg-slate-900 dark:focus:border-teal-500/30 dark:focus:text-white transition-all outline-none text-text dark:text-white font-bold appearance-none">
+                  <select
+                    value={formData.type}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, type: e.target.value }))}
+                    className="w-full px-6 py-4 bg-slate-50 border border-border rounded-2xl focus:border-primary/50 focus:bg-white focus:text-slate-900 dark:bg-slate-900/50 dark:border-white/10 dark:focus:bg-slate-900 dark:focus:border-teal-500/30 dark:focus:text-white transition-all outline-none text-text dark:text-white font-bold appearance-none"
+                  >
                     <option className="bg-white text-slate-900 dark:bg-slate-950 dark:text-white">{t.contact_type_general}</option>
                     <option className="bg-white text-slate-900 dark:bg-slate-950 dark:text-white">{t.contact_type_partners}</option>
                     <option className="bg-white text-slate-900 dark:bg-slate-950 dark:text-white">{t.contact_type_support}</option>
@@ -142,6 +174,8 @@ export function ContactPage() {
                     required
                     placeholder="..."
                     rows={5}
+                    value={formData.message}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, message: e.target.value }))}
                     className="w-full px-6 py-4 bg-slate-50 border border-border rounded-2xl focus:border-primary/50 focus:bg-white focus:text-slate-900 dark:bg-slate-900/50 dark:border-white/10 dark:focus:bg-slate-900 dark:focus:border-teal-500/30 dark:focus:text-white transition-all outline-none text-text dark:text-white font-bold resize-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
                   />
                 </div>
@@ -190,13 +224,13 @@ export function ContactPage() {
                     {
                       icon: Mail,
                       title: t.contact_info_email,
-                      detail: "brgkendre86@gmail.com",
+                      detail: "sgkbrainova@gmail.com",
                       sub: "Email Support",
                     },
                     {
                       icon: Phone,
                       title: t.contact_info_phone,
-                      detail: "9422778992",
+                      detail: "9730784233",
                       sub: "Contact Number",
                     },
                   ].map((item, i) => (
@@ -224,28 +258,7 @@ export function ContactPage() {
                 </div>
               </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                className="p-8 bg-gradient-to-br from-feature-blue to-feature-purple dark:from-indigo-950 dark:to-purple-950 border border-border dark:border-indigo-900/50 rounded-[3rem] text-text dark:text-white relative overflow-hidden group shadow-2xl dark:shadow-none"
-              >
-                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform">
-                  <Globe className="size-32" />
-                </div>
-                <div className="relative z-10">
-                  <h4 className="text-2xl font-black text-heading dark:text-white mb-4">
-                    {t.contact_enterprise_title}
-                  </h4>
-                  <p className="text-text dark:text-slate-400 text-sm font-medium mb-8 leading-relaxed">
-                    {t.contact_enterprise_desc}
-                  </p>
-                  <button className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary hover:text-primary-dark dark:text-teal-400 dark:hover:text-white transition-colors group">
-                    {t.contact_enterprise_btn}{" "}
-                    <ArrowRight className="size-4 group-hover:translate-x-2 transition-transform" />
-                  </button>
-                </div>
-              </motion.div>
+
 
               <div className="flex items-center gap-6 px-4">
                 <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-300">

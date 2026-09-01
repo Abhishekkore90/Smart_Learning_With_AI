@@ -105,9 +105,9 @@ const ROLE_CONFIGS: {
 function UnifiedLoginPortal() {
   const { redirect, role: urlRole } = Route.useSearch();
   const [activeRole, setActiveRole] = useState<AuthRole>(
-    (urlRole as AuthRole) || "student",
+    urlRole === "admin" ? "admin" : urlRole === "uploader" ? "uploader" : "teacher"
   );
-  const roleConfigRaw = ROLE_CONFIGS.find((r) => r.id === activeRole)!;
+  const roleConfigRaw = ROLE_CONFIGS.find((r) => r.id === activeRole) || ROLE_CONFIGS[1];
   const { lang } = useLanguage();
   const t = DICTIONARY[lang] as any;
   const roleConfig = {
@@ -171,54 +171,33 @@ function UnifiedLoginPortal() {
       );
       const user = userCredential.user;
 
-      let userDoc;
-      if (activeRole === "teacher") {
-        userDoc = await getDoc(doc(db, "teachers", user.uid));
-        if (!userDoc.exists()) {
-          const fallbackDoc = await getDoc(doc(db, "users", user.uid));
-          if (fallbackDoc.exists()) {
-            userDoc = fallbackDoc;
-          }
-        }
-      } else {
+      let userDoc = await getDoc(doc(db, "teachers", user.uid));
+      if (!userDoc.exists()) {
         userDoc = await getDoc(doc(db, "users", user.uid));
       }
 
-      if (!userDoc || !userDoc.exists()) {
-        await auth.signOut();
-        throw new Error("User profile not found in database.");
-      }
+      const userData = userDoc && userDoc.exists() ? userDoc.data() : {};
 
-      const userData = userDoc.data();
-      const userRole = activeRole === "teacher" && userDoc.ref.parent.id === "teachers" ? "teacher" : (userData.role || "student");
-
-      if (userRole !== activeRole) {
-        await auth.signOut();
-        throw new Error(
-          `Access Denied: You are registered as ${userRole}. Please select the correct login gateway.`,
-        );
-      }
-
-      if (activeRole === "teacher" && userData.udise) {
+      if (userData.udise) {
         localStorage.setItem("teacher_udise", userData.udise);
         localStorage.setItem("sqaaf_teacher_profile", JSON.stringify({
-          fullName: userData.fullName,
-          email: userData.email,
+          fullName: userData.fullName || user.displayName || "Educator",
+          email: userData.email || user.email,
           udise: userData.udise,
-          schoolName: userData.schoolName,
-          address: userData.address,
+          schoolName: userData.schoolName || "",
+          address: userData.address || "",
           role: "teacher"
         }));
       }
 
       toast.success(`Identity Verified. Welcome back!`);
 
-      if (activeRole === "student") {
-        window.location.href = redirect || "/student";
-      } else if (activeRole === "teacher") {
-        window.location.href = redirect || "/teacher";
-      } else if (activeRole === "uploader") {
-        window.location.href = redirect || "/courses?action=upload";
+      if ((activeRole as string) === "admin") {
+        window.location.href = "/admin";
+      } else if (redirect) {
+        window.location.href = redirect;
+      } else {
+        window.location.href = "/courses";
       }
     } catch (error: any) {
       toast.error(
@@ -261,49 +240,6 @@ function UnifiedLoginPortal() {
           transition={{ duration: 0.5, type: "spring", damping: 20 }}
           className="w-full max-w-lg"
         >
-          {/* Role Selector Card */}
-          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-[1.8rem] p-2 mb-4 shadow-lg">
-            <div className="grid grid-cols-4 gap-1.5">
-              {ROLE_CONFIGS.map((r) => {
-                const Icon = r.icon;
-                const isActive = activeRole === r.id;
-                return (
-                  <motion.button
-                    key={r.id}
-                    onClick={() => handleRoleSwitch(r.id)}
-                    whileTap={{ scale: 0.95 }}
-                    className={`relative flex flex-col items-center gap-1.5 py-3 px-1 rounded-2xl text-center transition-all duration-300 overflow-hidden ${
-                      isActive
-                        ? "text-white shadow-lg"
-                        : "text-slate-400 hover:text-white hover:bg-white/5"
-                    }`}
-                  >
-                    {isActive && (
-                      <motion.div
-                        layoutId="roleTab"
-                        className={`absolute inset-0 bg-gradient-to-br ${r.color} rounded-2xl`}
-                        transition={{
-                          type: "spring",
-                          bounce: 0.2,
-                          duration: 0.5,
-                        }}
-                      />
-                    )}
-                    <div className="relative z-10 flex flex-col items-center gap-1">
-                      <Icon
-                        className="size-4"
-                        strokeWidth={isActive ? 2.5 : 1.5}
-                      />
-                      <span className="text-[9px] font-black uppercase tracking-widest leading-none">
-                        {t[r.labelKey]}
-                      </span>
-                    </div>
-                  </motion.button>
-                );
-              })}
-            </div>
-          </div>
-
           {/* Login Form Card */}
           <AnimatePresence mode="wait">
             <motion.div

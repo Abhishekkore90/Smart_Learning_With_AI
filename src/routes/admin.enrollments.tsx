@@ -45,6 +45,16 @@ interface Enrollment {
   progress: number;
 }
 
+interface ContactInquiry {
+  id: string;
+  name: string;
+  email: string;
+  type: string;
+  message: string;
+  createdAt: string;
+  status?: string;
+}
+
 function EnrollmentsAdmin() {
   const navigate = useNavigate();
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);

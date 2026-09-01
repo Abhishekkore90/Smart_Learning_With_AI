@@ -157,8 +157,7 @@ function TeacherDashboard() {
   const t = DICTIONARY[lang];
 
   const handleModuleAccess = (targetPath: string) => {
-    const isAuthTeacher = user && (profile?.role === "teacher" || sessionStorage.getItem("is_super_admin"));
-    if (isAuthTeacher) {
+    if (user) {
       navigate({ to: targetPath as any });
     } else {
       navigate({
