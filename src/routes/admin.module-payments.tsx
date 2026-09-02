@@ -161,22 +161,17 @@ function AdminModulePaymentsPage() {
       setAccessRecords(list);
     });
 
-    // 4. Fetch registered teachers from users collection
-    const fetchUsers = async () => {
-      try {
-        const q = query(collection(db, "users"), where("role", "==", "teacher"));
-        const snap = await getDocs(q);
-        setUsersTeachers(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      } catch (e) {
-        console.error("Fetch users error:", e);
-      }
-    };
-    fetchUsers();
+    // 4. Fetch all real registered users from users collection (teachers, users, admins)
+    const unsubUsers = onSnapshot(collection(db, "users"), (snap) => {
+      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setUsersTeachers(list);
+    });
 
     return () => {
       unsubPricing();
       unsubPayments();
       unsubAccess();
+      unsubUsers();
     };
   }, []);
 
@@ -227,49 +222,41 @@ function AdminModulePaymentsPage() {
     setSaving(false);
   };
 
-  // Compile list of unique teachers (grouped by teacherId / Email)
+  // Compile list of unique real teachers & users from Firestore users collection
   const teacherMap = new Map<string, UniqueTeacher>();
 
-  // From registered users
+  // 1. Add ALL real registered users from Firestore users collection (teacher & user roles)
   usersTeachers.forEach((u) => {
-    const id = u.id || u.email || u.uid;
-    if (id) {
-      teacherMap.set(id, {
-        teacherId: id,
-        teacherName: u.name || u.displayName || u.email || id,
-        teacherEmail: u.email || "",
-        teacherPhone: u.phone || u.phoneNumber || "",
+    const email = (u.email || "").trim().toLowerCase();
+    const id = u.uid || u.id || email;
+    if (id || email) {
+      const key = email || id;
+      teacherMap.set(key, {
+        teacherId: u.uid || u.id || email,
+        teacherName: u.displayName || u.name || u.teacherName || (email ? email.split("@")[0] : id),
+        teacherEmail: u.email || (id.includes("@") ? id : ""),
+        teacherPhone: u.phone || u.phoneNumber || u.mobile || "",
       });
     }
   });
 
-  // From access records
+  // 2. Enhance metadata for existing real users from access & payment logs (without creating fake users)
   accessRecords.forEach((a) => {
     if (a.teacherId) {
-      const existing = teacherMap.get(a.teacherId);
-      if (!existing) {
-        teacherMap.set(a.teacherId, {
-          teacherId: a.teacherId,
-          teacherName: a.teacherName || a.teacherId,
-          teacherEmail: a.teacherId.includes("@") ? a.teacherId : "",
-        });
-      } else if (a.teacherName && existing.teacherName === existing.teacherId) {
+      const emailKey = (a.teacherEmail || a.teacherId || "").trim().toLowerCase();
+      const existing = teacherMap.get(a.teacherId) || (emailKey ? teacherMap.get(emailKey) : undefined);
+      if (existing && a.teacherName && existing.teacherName === existing.teacherId) {
         existing.teacherName = a.teacherName;
       }
     }
   });
 
-  // From payments
   payments.forEach((p) => {
     if (p.teacherId) {
-      const existing = teacherMap.get(p.teacherId);
-      if (!existing) {
-        teacherMap.set(p.teacherId, {
-          teacherId: p.teacherId,
-          teacherName: p.teacherName || p.teacherId,
-          teacherEmail: p.teacherEmail || (p.teacherId.includes("@") ? p.teacherId : ""),
-          teacherPhone: p.teacherPhone || "",
-        });
+      const emailKey = (p.teacherEmail || p.teacherId || "").trim().toLowerCase();
+      const existing = teacherMap.get(p.teacherId) || (emailKey ? teacherMap.get(emailKey) : undefined);
+      if (existing && p.teacherPhone && !existing.teacherPhone) {
+        existing.teacherPhone = p.teacherPhone;
       }
     }
   });
@@ -750,22 +737,7 @@ function AdminModulePaymentsPage() {
                       </div>
                     </div>
 
-                    {/* UPI ID Configuration */}
-                    <div className="pt-1">
-                      <label className="text-[11px] font-extrabold text-slate-600 block mb-1">UPI ID (QR स्कॅनर साठी)</label>
-                      <input
-                        type="text"
-                        placeholder="उदा. example@upi, example@ybl"
-                        value={item.upiId || ""}
-                        onChange={(e) =>
-                          setPricings((prev) => ({
-                            ...prev,
-                            [mod.id]: { ...prev[mod.id], upiId: e.target.value },
-                          }))
-                        }
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-sm font-extrabold text-slate-900 outline-none font-mono"
-                      />
-                    </div>
+
 
                     <div className="pt-2 flex justify-end">
                       <button
