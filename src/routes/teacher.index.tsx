@@ -60,78 +60,78 @@ import { DICTIONARY } from "@/lib/translations";
 const MODULE_CARDS = [
   {
     labelKey: "timetable_teacher",
-    fallbackLabel: "वेळापत्रक",
+    fallbackLabel: "१. वेळापत्रक",
     to: "/teacher/timetable",
     icon: CalendarIcon,
-    description: "शिक्षकांचे व वर्गांचे दैनिक तसेच साप्ताहिक वेळापत्रक व्यवस्थापन.",
+    description: "या विभागात आपणास इयत्ता पहिली ते आठवीचे वर्गनिहाय दैनिक व साप्ताहिक वेळापत्रक उपलब्ध होईल यामध्ये आवश्यक तो बदल करून एडिट करून शाळेच्या शिक्षकाच्या आणि मुख्याध्यापकांच्या नावासह आपणास ते प्रिंट करून आपल्या वर्गात वापरता येईल.",
   },
   {
     labelKey: "specialDay",
-    fallbackLabel: "परिपाठ",
+    fallbackLabel: "२. परिपाठ",
     to: "/teacher/modules/special-day",
     icon: Star,
-    description: "शाळेचा दैनिक परिपाठ आणि विशेष दिनाची माहिती नोंदवणे व व्यवस्थापन.",
+    description: "या विभागांतर्गत आपणास शाळेतील दैनिक परिपाठ उपलब्ध होईल या परिपाठाची पीडीएफ डाऊनलोड करून आपण ती विद्यार्थ्यांना व्हाट्सअप ग्रुप वर शेअर करू शकता तसेच परिपाठ रजिस्टर साठी महिन्याची एकत्रित पीडीएफ देखील उपलब्ध आहे.",
   },
   {
     labelKey: "templates",
-    fallbackLabel: "टेम्पलेट्स",
+    fallbackLabel: "३. टेम्पलेट",
     to: "/teacher/templates",
     icon: Layout,
-    description: "विविध शुभेच्छा संदेश, क्रीडा आणि स्नेहसंमेलन कार्यक्रम पत्रिका डिझाइन टेम्पलेट्स.",
+    description: "या विभागात आपण विद्यार्थ्यांच्या नावासह नाव, फोटो इयत्ता आकर्षक संदेश एडिट करून आकर्षक टेम्पलेट सह वाढदिवसाच्या शुभेच्छा, प्रवेश स्वागत, क्रीडा दिन, सांस्कृतिक कार्यक्रम, स्नेहसंमेलन, निकाल आणि यश असे विविध शुभेच्छा संदेश व्हाट्सअप वर पाठवू शकता.",
   },
   {
     labelKey: "planningQuestionBank",
-    fallbackLabel: "नियोजन व प्रश्नपेढी",
+    fallbackLabel: "४. वार्षिक नियोजन, मासिक नियोजन व प्रश्नपेढी",
     to: "/teacher/modules/annual-monthly-planning",
     icon: Target,
-    description: "वार्षिक व मासिक अभ्यासक्रम नियोजन आणि प्रश्नपेढी निर्मिती.",
+    description: "या विभागात आपणास इयत्ता पहिली ते आठवी पर्यंतचे मराठी तसेच सेमी माध्यमचे वार्षिक नियोजन मासिक नियोजन आणि प्रश्नपेढी उपलब्ध होईल. त्यात आपण शाळेचे नाव शिक्षकाचे नाव मुख्याध्यापकांचे नाव आवश्यक बाबी भरून प्रिंट काढून वापरता येईल जर आपणास त्यात बदल करायचा असेल तर एडिट करण्याची सोय सुद्धा उपलब्ध आहे.",
   },
   {
     labelKey: "teachingRecord",
-    fallbackLabel: "टाचनवही",
+    fallbackLabel: "५. टाचणवही",
     to: "/teacher/teaching-record",
     icon: Notebook,
-    description: "शिक्षकांची दैनिक अध्यापन टाचनवही (Teaching Diary) नोंदी.",
+    description: "या विभागात आपणास इयत्ता पहिली ते आठवी मराठी आणि सेमी माध्यमचे टाचण उपलब्ध आहे. प्रत्येक दिवसाचे टाचण एडिट करून त्यात हवा तो बदल करून प्रिंट काढता येईल. शाळेच्या वर्ग शिक्षकाच्या आणि मुख्याध्यापकाच्या नावासह आपण प्रिंट काढून वापरू शकतो.",
   },
 
   {
     labelKey: "results",
-    fallbackLabel: "CCE निकाल",
+    fallbackLabel: "६. CCE निकाल",
     to: "/teacher/result",
     icon: FileSpreadsheet,
-    description: "विद्यार्थ्यांचे गुण नोंदणी, प्रगती पत्रके आणि निकाल विश्लेषण.",
+    description: "या विभागात इयत्ता पहिली ते आठवी मराठी व सेमी माध्यमाचा निकाल आपणास तयार करता येईल. सर्व नोंदी निवडून सातत्यपूर्ण सर्वंकष मूल्यमापन नोंदवही, गुणपत्रक, प्रगती पत्रक, श्रेणी निहाय निकाल सर्व बाबी या ठिकाणी उपलब्ध आहेत.",
   },
   {
     labelKey: "hpcCard",
-    fallbackLabel: "Holistic Progress Card (HPC)",
+    fallbackLabel: "७. Holistic Progress Card (HPC)",
     to: "/teacher/hpc-card",
     icon: Sparkles,
     description: "विद्यार्थ्यांचे समग्र व सर्वंकष प्रगती पत्रक (HPC Card) मूल्यमापन.",
   },
   {
     labelKey: "monthlyMeeting",
-    fallbackLabel: "मासिक सभा",
+    fallbackLabel: "८. मासिक सभा",
     to: "/teacher/meeting",
     icon: Users,
     description: "विविध शालेय समित्यांचे मासिक अहवाल, इतिवृत्त आणि स्वाक्षरी नोंदणी.",
   },
   {
     labelKey: "mdm",
-    fallbackLabel: "माध्यान्ह भोजन",
+    fallbackLabel: "९. माध्यान्ह भोजन",
     to: "/teacher/mdm",
     icon: Utensils,
     description: "माध्यान्ह भोजन (MDM) योजना मधील साहित्य साठा आणि नोंदणी.",
   },
   {
     labelKey: "statsTeacher",
-    fallbackLabel: "शिक्षक संचिका",
+    fallbackLabel: "१०. शिक्षक संचिका",
     to: "/teacher/stats-teacher",
     icon: FolderOpen,
     description: "शिक्षकांची वैयक्तिक आणि व्यावसायिक माहिती संचिका.",
   },
   {
     labelKey: "statsStudent",
-    fallbackLabel: "विद्यार्थी संचिका",
+    fallbackLabel: "११. विद्यार्थी संचिका",
     to: "/teacher/stats-student",
     icon: Folder,
     description: "विद्यार्थ्यांची वैयक्तिक, शैक्षणिक आणि प्रगती संचिका.",
@@ -139,7 +139,7 @@ const MODULE_CARDS = [
 
   {
     labelKey: "sqaaf",
-    fallbackLabel: "SQAAF मूल्यमापन",
+    fallbackLabel: "१२. SQAAF मूल्यमापन",
     to: "/teacher/sqaaf",
     icon: ClipboardCheck,
     description: "शालेय गुणवत्ता आश्वासन फ्रेमवर्क (SQAAF) स्वयं-मूल्यमापन.",
@@ -156,32 +156,16 @@ function TeacherDashboard() {
   const { lang } = useLanguage();
   const t = DICTIONARY[lang];
 
-  useEffect(() => {
-    if (!authLoading) {
-      if (sessionStorage.getItem("is_super_admin")) {
-        return;
-      }
-      if (!user || profile?.role !== "teacher") {
-        navigate({
-          to: "/login",
-          search: { redirect: "/teacher", role: "teacher" } as any,
-        });
-        return;
-      }
+  const handleModuleAccess = (targetPath: string) => {
+    if (user) {
+      navigate({ to: targetPath as any });
+    } else {
+      navigate({
+        to: "/login",
+        search: { redirect: targetPath, role: "teacher" } as any,
+      });
     }
-  }, [user, profile, authLoading, navigate]);
-
-  if (authLoading || !user)
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="size-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin" />
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 animate-pulse">
-            Verifying Educator Credentials...
-          </p>
-        </div>
-      </div>
-    );
+  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -198,7 +182,7 @@ function TeacherDashboard() {
                   <Sparkles className="size-5 text-indigo-600 animate-pulse" /> शिक्षक विभाग सेवा सूची (Teacher Modules)
                 </h2>
                 <p className="text-xs font-bold text-slate-500">
-                  माहिती भरण्यासाठी किंवा अहवाल पाहण्यासाठी खालीलपैकी कोणतेही एक मॉड्यूल निवडा.
+                  वापरण्यासाठी किंवा अहवाल पाहण्यासाठी खालीलपैकी कोणतेही एक मॉड्यूल निवडा {!user && "(लॉगिन आवश्यक)"}.
                 </p>
               </div>
               <div className="flex items-center gap-2 text-xs font-black text-indigo-600 bg-indigo-50 border border-indigo-100 px-4 py-2 rounded-xl">
@@ -215,8 +199,8 @@ function TeacherDashboard() {
                     whileTap={{ scale: 0.98 }}
                     key={idx}
                   >
-                    <Link
-                      to={item.to}
+                    <div
+                      onClick={() => handleModuleAccess(item.to)}
                       className="h-64 bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white rounded-[2.5rem] p-8 shadow-md hover:shadow-[0_20px_45px_rgba(139,92,246,0.3)] text-left flex flex-col justify-between transition-all border border-[#7c3aed]/30 relative overflow-hidden group cursor-pointer block w-full"
                     >
                       {/* Watermark background icon */}
@@ -244,7 +228,7 @@ function TeacherDashboard() {
                         प्रवेश करा{" "}
                         <ArrowRight className="size-3 group-hover:translate-x-1.5 transition-transform duration-300" />
                       </div>
-                    </Link>
+                    </div>
                   </motion.div>
                 );
               })}

@@ -979,7 +979,7 @@ export function AcademicPlanningSystem({
         container.style.position = "fixed";
         container.style.left = "-9999px";
         container.style.top = "0px";
-        container.style.width = "190mm";
+        container.style.width = "275mm";
         container.style.margin = "0px";
         container.style.padding = "0px";
         container.style.display = "block";
@@ -1014,7 +1014,7 @@ export function AcademicPlanningSystem({
       const fileNameStr = `इयत्ता_${classNameStr}_${selectedPlanningType === "annual" ? "संपूर्ण_वार्षिक_नियोजन" : subjectName}_2026-27.pdf`;
 
       const opt = {
-        margin: [10, 10, 10, 10],
+        margin: [6, 6, 6, 6],
         filename: fileNameStr,
         image: { type: "jpeg", quality: 0.98 },
         html2canvas: {
@@ -1023,9 +1023,10 @@ export function AcademicPlanningSystem({
           logging: false,
           scrollX: 0,
           scrollY: 0,
+          windowWidth: 1300,
           letterRendering: true,
         },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+        jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
         pagebreak: { mode: ["avoid-all", "css"], avoid: ["tr", "td", "th", "div", "p", ".avoid-break"] },
       };
 

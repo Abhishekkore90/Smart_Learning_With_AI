@@ -30,11 +30,35 @@ export const processRazorpayPayment = async (options: RazorpayPaymentOptions) =>
     throw new Error("रेझरपे SDK लोड होऊ शकले नाही. इंटरनेट कनेक्शन तपासा.");
   }
 
-  const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_5y2n0qg7s8u9v0";
-
+  const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_live_TRgZXfPjk5xEuo";
   const amountInPaise = Math.round(options.amount * 100);
 
-  const rzpOptions = {
+  let generatedOrderId: string | undefined = undefined;
+
+  // Try creating Razorpay Order via PHP backend endpoint if configured
+  const phpEndpoint = import.meta.env.VITE_RAZORPAY_PHP_ENDPOINT || "https://learnify-academy.in/create_razorpay_order.php";
+
+  try {
+    const res = await fetch(phpEndpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        amount: options.amount,
+        moduleId: options.moduleId,
+        moduleTitle: options.moduleTitle,
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.id) {
+        generatedOrderId = data.id;
+      }
+    }
+  } catch (err) {
+    console.warn("PHP Order creation endpoint not reached, attempting fallback checkout...", err);
+  }
+
+  const rzpOptions: any = {
     key: razorpayKey,
     amount: amountInPaise,
     currency: "INR",
@@ -43,7 +67,7 @@ export const processRazorpayPayment = async (options: RazorpayPaymentOptions) =>
     image: "https://cdn-icons-png.flaticon.com/512/2991/2991148.png",
     handler: function (response: any) {
       if (response && response.razorpay_payment_id) {
-        options.onSuccess(response.razorpay_payment_id, response.razorpay_order_id);
+        options.onSuccess(response.razorpay_payment_id, response.razorpay_order_id || generatedOrderId);
       } else {
         if (options.onError) options.onError("पेमेंट ट्रान्सॅक्शन आयडी मिळाला नाही.");
       }
@@ -61,6 +85,10 @@ export const processRazorpayPayment = async (options: RazorpayPaymentOptions) =>
       color: "#2563eb",
     },
   };
+
+  if (generatedOrderId) {
+    rzpOptions.order_id = generatedOrderId;
+  }
 
   const razorpayInstance = new (window as any).Razorpay(rzpOptions);
   razorpayInstance.on("payment.failed", function (response: any) {

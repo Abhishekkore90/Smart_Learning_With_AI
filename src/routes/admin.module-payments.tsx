@@ -343,6 +343,7 @@ function AdminModulePaymentsPage() {
               await setDoc(doc(db, "teacher_module_access", mKey), {
                 id: mKey,
                 teacherId: tId,
+                teacherEmail: teacher.teacherEmail || (tId.includes("@") ? tId : ""),
                 teacherName: teacher.teacherName,
                 moduleId: mod.id,
                 moduleTitle: mod.title,
@@ -359,6 +360,7 @@ function AdminModulePaymentsPage() {
         await setDoc(doc(db, "teacher_module_access", docKey), {
           id: docKey,
           teacherId: tId,
+          teacherEmail: teacher.teacherEmail || (tId.includes("@") ? tId : ""),
           teacherName: teacher.teacherName,
           moduleId,
           moduleTitle: modTitle,
@@ -391,6 +393,7 @@ function AdminModulePaymentsPage() {
         await setDoc(doc(db, "teacher_module_access", allDocKey), {
           id: allDocKey,
           teacherId: tId,
+          teacherEmail: teacher.teacherEmail || (tId.includes("@") ? tId : ""),
           teacherName: teacher.teacherName,
           moduleId: "ALL",
           moduleTitle: "सर्व मॉड्यूल्स (All Sections)",
@@ -403,6 +406,7 @@ function AdminModulePaymentsPage() {
           await setDoc(doc(db, "teacher_module_access", mKey), {
             id: mKey,
             teacherId: tId,
+            teacherEmail: teacher.teacherEmail || (tId.includes("@") ? tId : ""),
             teacherName: teacher.teacherName,
             moduleId: mod.id,
             moduleTitle: mod.title,

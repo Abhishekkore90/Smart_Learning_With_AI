@@ -174,20 +174,20 @@ function AIChatWorkspace() {
       prev.map((c) =>
         c.id === currentChatId
           ? {
-              ...c,
-              messages: [
-                ...c.messages,
-                {
-                  id: Date.now().toString(),
-                  sender: "user",
-                  text: messageText,
-                  fileName: currentFile?.name,
-                  fileSize: currentFile
-                    ? (currentFile.size / 1024).toFixed(1) + " KB"
-                    : undefined,
-                } as any,
-              ],
-            }
+            ...c,
+            messages: [
+              ...c.messages,
+              {
+                id: Date.now().toString(),
+                sender: "user",
+                text: messageText,
+                fileName: currentFile?.name,
+                fileSize: currentFile
+                  ? (currentFile.size / 1024).toFixed(1) + " KB"
+                  : undefined,
+              } as any,
+            ],
+          }
           : c,
       ),
     );
@@ -199,15 +199,15 @@ function AIChatWorkspace() {
     let response =
       lang === "en"
         ? "I have processed your request with " +
-          MODEL_CONFIGS[activeModel].name +
-          ". How else can I help?"
+        MODEL_CONFIGS[activeModel].name +
+        ". How else can I help?"
         : lang === "mr"
           ? "मी " +
-            MODEL_CONFIGS[activeModel].name +
-            " सह तुमची विनंती पूर्ण केली आहे. मी अजून काय मदत करू शकतो?"
+          MODEL_CONFIGS[activeModel].name +
+          " सह तुमची विनंती पूर्ण केली आहे. मी अजून काय मदत करू शकतो?"
           : "मैंने " +
-            MODEL_CONFIGS[activeModel].name +
-            " के साथ आपके अनुरोध को प्रोसेस किया है। मैं आपकी और क्या सहायता कर सकता हूँ?";
+          MODEL_CONFIGS[activeModel].name +
+          " के साथ आपके अनुरोध को प्रोसेस किया है। मैं आपकी और क्या सहायता कर सकता हूँ?";
 
     const aiMessageId = `ai-${Date.now()}`;
 
@@ -215,12 +215,12 @@ function AIChatWorkspace() {
       prev.map((c) =>
         c.id === chatId
           ? {
-              ...c,
-              messages: [
-                ...c.messages,
-                { id: aiMessageId, sender: "ai", text: "" },
-              ],
-            }
+            ...c,
+            messages: [
+              ...c.messages,
+              { id: aiMessageId, sender: "ai", text: "" },
+            ],
+          }
           : c,
       ),
     );
@@ -237,13 +237,13 @@ function AIChatWorkspace() {
         prev.map((c) =>
           c.id === chatId
             ? {
-                ...c,
-                messages: c.messages.map((m) =>
-                  m.id === aiMessageId
-                    ? { ...m, text: response.slice(0, i) }
-                    : m,
-                ),
-              }
+              ...c,
+              messages: c.messages.map((m) =>
+                m.id === aiMessageId
+                  ? { ...m, text: response.slice(0, i) }
+                  : m,
+              ),
+            }
             : c,
         ),
       );

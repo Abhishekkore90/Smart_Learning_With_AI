@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
+import { ModulePaywall } from "@/components/teacher/ModulePaywall";
 import React, { useState, useEffect } from "react";
 import {
   BookOpen,
@@ -538,7 +539,8 @@ function TeachingRecordPage() {
       </div>
 
       <main className="w-full pt-16 min-h-screen print:pl-0 print:pt-0 pb-24">
-        <PinGate sectionKey="teaching_record">
+        <ModulePaywall moduleId="teaching-record" defaultTitle="दैनिक अध्यापन टाचणवही (Teaching Diary)">
+          <PinGate sectionKey="teaching_record">
           <div className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto w-full space-y-6 print:p-0 print:max-w-full">
             {/* Top Navigation Bar with Back Button, Tabs & Breadcrumbs */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-3.5 sm:p-4 rounded-3xl border border-slate-200/80 shadow-sm print:hidden">
@@ -1000,7 +1002,8 @@ function TeachingRecordPage() {
             )}
           </div>
         </PinGate>
-      </main>
+      </ModulePaywall>
+    </main>
     </div>
   );
 }

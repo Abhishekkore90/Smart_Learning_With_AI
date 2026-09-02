@@ -107,6 +107,9 @@ export function Header() {
       path.startsWith("/courses") ||
       path.startsWith("/profile") ||
       path.startsWith("/ai-tools") ||
+      path.startsWith("/digital-school") ||
+      path.startsWith("/digital_school") ||
+      path === "/digital_school.html" ||
       path === "/login" ||
       path === "/signup"
     );
@@ -129,20 +132,31 @@ export function Header() {
         <div className="flex items-center justify-between relative">
           {/* Logo Section */}
           <div className="flex items-center z-10">
-            <Link to="/" className="flex items-center gap-2 md:gap-3.5 group mt-[-4px] md:mt-0">
+            <Link
+              to="/"
+              className={`flex items-center gap-2 md:gap-3.5 group transition-all duration-300 ${
+                !scrolled
+                  ? "bg-white/90 dark:bg-white/90 px-4 py-1.5 rounded-full border border-slate-200/60 shadow-sm"
+                  : "bg-transparent p-0 border-none shadow-none"
+              }`}
+            >
               <div className="relative">
                 <img
                   src={logoImg}
                   alt="SGK Brainova Logo"
-                  className="size-8 md:size-12 rounded-[0.8rem] md:rounded-[1.2rem] object-cover shadow-[0_4px_20px_rgba(108,78,246,0.25)] group-hover:-translate-y-0.5 group-hover:shadow-[0_8px_25px_rgba(108,78,246,0.35)] transition-all duration-500"
+                  className="size-8 md:size-10 rounded-[0.8rem] md:rounded-[1rem] object-cover shadow-sm group-hover:-translate-y-0.5 transition-all duration-500"
                 />
-                <div className="absolute inset-0 bg-primary-light blur-xl rounded-[1.2rem] opacity-0 group-hover:opacity-40 transition-opacity duration-500" />
+                <div className="absolute inset-0 bg-primary-light blur-xl rounded-[1rem] opacity-0 group-hover:opacity-40 transition-opacity duration-500" />
               </div>
               <div className="flex flex-col justify-center">
-                <span className="font-black text-[13px] md:text-2xl tracking-tighter text-nav-text dark:text-white leading-none whitespace-nowrap group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-primary group-hover:to-primary-light transition-all duration-500 py-0.5">
+                <span className={`font-black text-[13px] md:text-xl tracking-tighter leading-none whitespace-nowrap py-0.5 transition-colors ${
+                  !scrolled ? "text-slate-950" : "text-nav-text dark:text-white"
+                }`}>
                   SGK Brainova
                 </span>
-                <span className="text-[7px] md:text-[8.5px] font-black tracking-[0.12em] md:tracking-[0.2em] text-primary dark:text-teal-400/80 uppercase mt-0.5 whitespace-nowrap">
+                <span className={`text-[7px] md:text-[8px] font-black tracking-[0.12em] md:tracking-[0.18em] uppercase mt-0.5 whitespace-nowrap ${
+                  !scrolled ? "text-primary font-black" : "text-primary dark:text-teal-400/80"
+                }`}>
                   Smart Learning With AI
                 </span>
               </div>
@@ -151,7 +165,7 @@ export function Header() {
 
           {/* Desktop Navigation (Centered) */}
           <div className="hidden lg:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 items-center justify-center z-0">
-            <nav className="flex items-center gap-1">
+            <nav className="flex items-center gap-1.5">
               {nav.map((n) => {
                 const active = n.exact
                   ? loc.pathname === n.to
@@ -160,18 +174,16 @@ export function Header() {
                   <Link
                     key={n.to}
                     to={n.to}
-                    className={`px-5 py-2.5 rounded-full text-[13px] font-black uppercase tracking-[0.2em] transition-all relative ${active
-                      ? "text-primary dark:text-indigo-400"
-                      : "text-slate-600 hover:text-primary dark:text-slate-350 dark:hover:text-white"
-                      }`}
+                    className={`px-5 py-2 rounded-full text-[13px] uppercase tracking-[0.2em] transition-all duration-300 relative ${
+                      !scrolled
+                        ? active
+                          ? "bg-white text-primary shadow-md font-black border border-primary/20 scale-105"
+                          : "bg-white/85 text-slate-900 hover:bg-white hover:text-primary font-black shadow-sm border border-slate-200/60"
+                        : active
+                          ? "bg-primary/10 text-primary dark:bg-white/10 dark:text-indigo-400 font-black shadow-none border-none"
+                          : "bg-transparent text-slate-700 hover:text-primary dark:text-slate-300 dark:hover:text-white font-bold border-none"
+                    }`}
                   >
-                    {active && (
-                      <motion.div
-                        layoutId="active-tab"
-                        className="absolute inset-0 bg-slate-100/80 dark:bg-white/5 rounded-full z-[-1]"
-                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                      />
-                    )}
                     <span>{t[n.labelKey as keyof typeof t]}</span>
                   </Link>
                 );
@@ -197,32 +209,19 @@ export function Header() {
                     <LogOut className="size-4.5" />
                   </button>
                 </div>
-              ) : (
-                <div className="flex items-center gap-1.5 md:gap-3">
-                  <Link
-                    to="/login"
-                    className="hidden sm:flex items-center px-5 py-2.5 text-[13px] font-black uppercase tracking-widest text-heading hover:text-primary dark:text-slate-350 dark:hover:text-indigo-400 hover:bg-slate-100/50 dark:hover:bg-white/5 rounded-full transition-all duration-300"
-                  >
-                    <UserCircle2 className="size-4 mr-1.5 shrink-0 text-heading dark:text-slate-300" />
-                    {t.login}
-                  </Link>
-                  <Link
-                    to="/signup"
-                    className="px-3 md:px-7 py-1.5 md:py-3 bg-button-gradient hover:bg-button-hover text-white text-[11px] md:text-[13px] font-black uppercase tracking-widest rounded-full shadow-lg hover:-translate-y-0.5 active:scale-95 transition-all duration-300"
-                  >
-                    {t.getStarted}
-                  </Link>
-                </div>
-              )}
+              ) : null}
 
               {/* Language Selector */}
               <div className="relative ml-1 md:ml-2">
                 <button
                   onClick={() => setLangOpen(!langOpen)}
-                  className={`flex items-center gap-2 px-2.5 md:px-4 py-1.5 md:py-2.5 rounded-full transition-all border shadow-sm duration-300 ${langOpen
-                    ? "bg-indigo-55 border-indigo-500/20 text-indigo-700 dark:bg-indigo-950/80 dark:border-indigo-500/30 dark:text-indigo-300"
-                    : "bg-slate-100/60 border-slate-200/80 text-slate-700 hover:bg-slate-200/60 hover:border-indigo-500/20 hover:text-indigo-650 dark:bg-white/5 dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/10 dark:hover:border-indigo-500/30 dark:hover:text-indigo-300"
-                    }`}
+                  className={`flex items-center gap-2 px-2.5 md:px-4 py-1.5 md:py-2.5 rounded-full transition-all border shadow-sm duration-300 ${
+                    !scrolled
+                      ? "bg-white/85 text-slate-900 border-slate-200/60 hover:bg-white hover:text-primary font-black"
+                      : langOpen
+                      ? "bg-indigo-55 border-indigo-500/20 text-indigo-700 dark:bg-indigo-950/80 dark:border-indigo-500/30 dark:text-indigo-300"
+                      : "bg-slate-100/60 border-slate-200/80 text-slate-700 hover:bg-slate-200/60 hover:border-indigo-500/20 hover:text-indigo-650 dark:bg-white/5 dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/10 dark:hover:border-indigo-500/30 dark:hover:text-indigo-300"
+                  }`}
                 >
                   <Globe className="size-4" />
                   <span className="text-xs font-black uppercase tracking-widest hidden md:inline">
@@ -314,25 +313,8 @@ export function Header() {
                   </Link>
                 ))}
 
-                <div className="pt-4 mt-4 border-t border-slate-100 flex flex-col gap-4">
-                  {!user ? (
-                    <div className="grid grid-cols-2 gap-3">
-                      <Link
-                        to="/login"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className="py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-905 bg-slate-100 text-center hover:bg-slate-200 transition-colors"
-                      >
-                        {t.login}
-                      </Link>
-                      <Link
-                        to="/signup"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className="py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white bg-indigo-600 text-center hover:bg-indigo-750 shadow-md transition-all"
-                      >
-                        {t.getStarted}
-                      </Link>
-                    </div>
-                  ) : (
+                {user && (
+                  <div className="pt-4 mt-4 border-t border-slate-100 flex flex-col gap-4">
                     <button
                       onClick={() => {
                         handleSignOut();
@@ -347,8 +329,8 @@ export function Header() {
                           ? "बाहेर पडा"
                           : "लॉग आउट"}
                     </button>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
