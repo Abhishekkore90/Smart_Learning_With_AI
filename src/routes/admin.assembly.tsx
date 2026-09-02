@@ -62,6 +62,7 @@ function AssemblyBookAdmin() {
   const [paripathData, setParipathData] = useState<any>(DEFAULT_FORM_DATA.mr);
   const [savingParipath, setSavingParipath] = useState(false);
   const [isSavedForDate, setIsSavedForDate] = useState(false);
+  const [showSundayForm, setShowSundayForm] = useState(false);
 
   useEffect(() => {
     const isAdmin = sessionStorage.getItem("is_super_admin");
@@ -77,6 +78,7 @@ function AssemblyBookAdmin() {
   }, [navigate]);
 
   useEffect(() => {
+    setShowSundayForm(false);
     fetchParipath(selectedDate);
   }, [selectedDate]);
 
@@ -103,6 +105,8 @@ function AssemblyBookAdmin() {
     const dayOfYear = Math.floor(diff / oneDay) + 1;
     const yearDayStr = toDevanagariDigits(dayOfYear);
 
+    const isSunday = dateObj.getDay() === 0;
+
     return {
       ...DEFAULT_FORM_DATA.mr,
       nationalAnthem: DEFAULT_ASSEMBLY_ITEMS.mr[0].content,
@@ -110,26 +114,28 @@ function AssemblyBookAdmin() {
       pledge: DEFAULT_ASSEMBLY_ITEMS.mr[2].content,
       preamble: DEFAULT_ASSEMBLY_ITEMS.mr[3].content,
       silentPasayadan: DEFAULT_ASSEMBLY_ITEMS.mr[5].content,
+      songTitle: DEFAULT_FORM_DATA.mr.songTitle || "समूहगीत / राष्ट्रगीत",
+      patrioticSong: DEFAULT_FORM_DATA.mr.patrioticSong,
       day: dayName,
       dateMonth: dateMonthStr,
       yearDay: yearDayStr,
-      events: "",
+      isSunday: isSunday,
+      isHoliday: isSunday,
+      events: isSunday ? "रविवार - शाळा सुट्टी" : "",
       birthdays: "",
       deaths: "",
       thought: "",
-      shlok: "",
+      shlok: "गुरुर ब्रह्मा गुरुर विष्णुः,\nगुरुर देवो महेश्वरः।\nगुरुर साक्षात् परं ब्रह्म,\nतस्मै श्री गुरवे नमः॥",
       panchang: "",
       proverb: "",
       proverbMeaning: "",
       storyTitle: "",
       story: "",
       moral: "",
-      songTitle: "",
-      patrioticSong: "",
       personalityTitle: "",
       personality: "",
-      silentPasayadanTitle: "",
-      valueNews: "",
+      silentPasayadanTitle: "पसायदान",
+      valueNews: DEFAULT_FORM_DATA.mr.valueNews,
     };
   };
 
@@ -885,6 +891,21 @@ function AssemblyBookAdmin() {
                   }`}>
                     {isSavedForDate ? "✓ डेटा सेव्ह आहे" : "✨ नवीन तारीख एंट्री"}
                   </span>
+                  {(() => {
+                    if (!selectedDate) return null;
+                    const parts = selectedDate.split("-").map(Number);
+                    if (parts.length === 3) {
+                      const d = new Date(parts[0], parts[1] - 1, parts[2]);
+                      if (d.getDay() === 0) {
+                        return (
+                          <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-300 relative z-20">
+                            🎉 रविवार सुट्टी (Sunday Off)
+                          </span>
+                        );
+                      }
+                    }
+                    return null;
+                  })()}
                 </div>
               </div>
               <button
@@ -897,7 +918,31 @@ function AssemblyBookAdmin() {
               </button>
             </div>
 
-            <div className="flex flex-col space-y-12 max-w-4xl mx-auto w-full">
+            {(() => {
+              if (!selectedDate) return false;
+              const parts = selectedDate.split("-").map(Number);
+              return parts.length === 3 && new Date(parts[0], parts[1] - 1, parts[2]).getDay() === 0;
+            })() && !showSundayForm ? (
+              <div className="p-10 md:p-14 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border-2 border-amber-400 rounded-[3rem] text-center space-y-6 shadow-sm my-6">
+                <div className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-amber-500 text-white text-sm font-black rounded-full uppercase tracking-wider shadow-md">
+                  🎉 आज रविवार सुट्टी आहे (SUNDAY OFF)
+                </div>
+                <h3 className="text-2xl md:text-4xl font-black text-amber-950 tracking-tight leading-snug pt-2">
+                  आज शाळेस रविवारची सुट्टी आहे!
+                </h3>
+                <div className="pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowSundayForm(true)}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-[#6C63FF] hover:bg-indigo-600 text-white text-xs font-black uppercase tracking-wider rounded-2xl shadow-lg transition-all"
+                  >
+                    <Edit3 className="size-4" /> परिपाठ माहिती एडिट करा (Edit Paripath Data)
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col space-y-12 max-w-4xl mx-auto w-full">
+
               {/* Assembly Start Section */}
               <div className="space-y-8 p-8 md:p-12 bg-gradient-to-br from-green-50/80 to-emerald-100/50 border border-green-200/60 rounded-[3rem] shadow-[0_8px_30px_rgb(34,197,94,0.12)] relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-green-300/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
@@ -1337,6 +1382,7 @@ function AssemblyBookAdmin() {
               </div>
 
             </div>
+            )}
           </div>
         )}
       </main>
