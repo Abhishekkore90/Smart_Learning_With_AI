@@ -61,6 +61,31 @@ async function extractTextFromPDF(base64Data: string): Promise<string> {
   }
 }
 
+async function extractTextFromPDFArrayBuffer(arrayBuffer: ArrayBuffer): Promise<string> {
+  try {
+    const pdfjsLib = await import("pdfjs-dist");
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+
+    const bytes = new Uint8Array(arrayBuffer);
+    const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+    const textParts: string[] = [];
+
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items
+        .map((item: any) => item.str)
+        .join(" ");
+      textParts.push(pageText);
+    }
+
+    return textParts.join("\n");
+  } catch (err) {
+    console.error("PDF extraction from ArrayBuffer error:", err);
+    return "";
+  }
+}
+
 /**
  * Extract text from a DOCX file using mammoth
  */
@@ -163,15 +188,16 @@ function parseTextToDiary(rawText: string, className: string): ParsedDiaryConten
   // ─── Extract thought (suvichar) ───
   let thought = "";
   const thoughtPatterns = [
-    /(?:आजचा\s*सुव\u200Dिचार|आजचा\s*(?:सु)?विचार|सुविचार|Thought|Today.?s Thought|Suvichar|िचार|विचार)\s*[:：\-]?\s*([^\n\r]+)/i,
-    /(?:आजचा\s*सुविचार\s*[:：\-]?\s*)([^\n\r]+)/i,
+    /(?:आजचा\s*सुव\u200Dिचार|आजचा\s*सुविचार|आजचा\s*(?:सु)?विचार|सुविचार|Today.?s Thought|Suvichar|Thought)\s*[:：\-]?\s*([^\n\r]+)/i,
+    /(?:िचार|विचार)\s*[:：\-]?\s*([^\n\r]+)/i,
   ];
   for (const pattern of thoughtPatterns) {
     const match = fullText.match(pattern);
     if (match) {
       const candidate = match[1]
-        .replace(/^[:\s\u0903-]+/, "")
+        .replace(/^[:\s\u0903\-"'”’„«»]+/, "")
         .replace(/\s*(?:इयत्त्?ता|Class|Std|सन|Year|वार|Day|वर्गशिक्षक|शिक्षक|शाळा|दिनांक|तारीख).*$/i, "")
+        .replace(/^["'”’„«»]+|["'”’„«»]+$/g, "")
         .trim();
       if (candidate && candidate.length > 2) {
         thought = candidate;
@@ -640,7 +666,7 @@ export function parseAndStandardizeDate(dateStr: string | undefined | null): str
 }
 
 export function splitTextByDates(rawText: string, className: string): ParsedDiaryContent[] {
-  const dateRegex = /(?:तारीख|दिनांक|Date)\s*[:：]?\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/gi;
+  const dateRegex = /(?:तारीख|दिनांक|Date)\s*[:：]?\s*(\d{1,2}\s*[\/\-\.]\s*\d{1,2}\s*[\/\-\.]\s*\d{2,4})/gi;
   const matches: { dateStr: string; index: number }[] = [];
   let match;
   
@@ -1175,6 +1201,20 @@ export async function parseDiaryFileFromArrayBuffer(
     const lowerType = fileType.toLowerCase();
 
     if (
+      lowerType.includes("pdf") ||
+      lowerType.endsWith(".pdf")
+    ) {
+      const rawText = await extractTextFromPDFArrayBuffer(arrayBuffer);
+      if (rawText && rawText.trim().length > 10) {
+        // Attempt structured AI parsing first
+        const aiParsed = await parseDiaryTextWithAI(rawText, className);
+        if (aiParsed && aiParsed.length > 0) {
+          return aiParsed;
+        }
+        return splitTextByDates(rawText, className);
+      }
+      return null;
+    } else if (
       lowerType.includes("officedocument.wordprocessingml.document") ||
       lowerType.includes("docx")
     ) {
@@ -1305,7 +1345,14 @@ export async function saveParsedEntriesToFirestore({
   const masterDocRef = doc(db, "teacher_diaries", selectedClass, selectedMedium, masterDocId);
   const primaryDateStr = `${selectedYear}-${monthStr}-${String(baseDay).padStart(2, "0")}`;
 
-  const masterData = {
+  const cleanFirestoreData = (data: any): any => {
+    if (data === undefined || data === null) return "";
+    return JSON.parse(
+      JSON.stringify(data, (_key, value) => (value === undefined ? "" : value))
+    );
+  };
+
+  const masterData = cleanFirestoreData({
     id: masterDocId,
     pageUrl: fileUrl,
     masterPdfUrl: fileUrl,
@@ -1318,9 +1365,9 @@ export async function saveParsedEntriesToFirestore({
     medium: selectedMedium,
     week: selectedWeek,
     month: selectedMonth,
-    structuredData: validEntries.length > 0 ? validEntries : undefined,
+    structuredData: validEntries.length > 0 ? validEntries : [],
     periods: validEntries[0]?.periods || [],
-  };
+  });
 
   batch.set(masterDocRef, masterData, { merge: true });
 
@@ -1356,7 +1403,7 @@ export async function saveParsedEntriesToFirestore({
     const dayName = dObj && !isNaN(dObj.getTime()) ? daysOfWeek[dObj.getDay()] : (entry?.day || "");
     const periods = entry?.periods || (validEntries[0]?.periods || []);
 
-    const recordData = {
+    const recordData = cleanFirestoreData({
       pageUrl: fileUrl,
       masterPdfUrl: fileUrl,
       fileName,
@@ -1374,8 +1421,8 @@ export async function saveParsedEntriesToFirestore({
       dinvishesh: entry?.dinvishesh || "",
       periods: periods,
       parsedContent: entry || { date: targetDateStr, day: dayName, periods },
-      structuredData: validEntries.length > 0 ? validEntries : undefined,
-    };
+      structuredData: validEntries.length > 0 ? validEntries : [],
+    });
 
     // 1. Save to teacher_diaries doc for specific date
     const teacherDocRef = doc(db, "teacher_diaries", selectedClass, selectedMedium, targetDateStr);
