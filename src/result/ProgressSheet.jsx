@@ -1065,7 +1065,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
           }
           .cce-pdf-generating .pdf-page {
             margin: 0 !important;
-            padding: 6px !important;
+            padding: 14px !important;
             box-shadow: none !important;
             border: 2px solid #f97316 !important;
             border-radius: 16px !important;
@@ -1116,7 +1116,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
               min-width: ${layoutMode === "portrait" ? "210mm" : "297mm"} !important;
               min-height: ${layoutMode === "portrait" ? "294mm" : "207mm"} !important;
               margin: 0 !important;
-              padding: 4px !important;
+              padding: 14px !important;
               page-break-before: auto !important;
               page-break-after: always !important;
               break-after: page !important;
@@ -1145,152 +1145,151 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
             const isLastStudent = idx === displayedStudents.length - 1;
 
             const renderSinglePageProgressSheet = () => (
-              <div className="grid grid-cols-12 gap-2 h-full w-full">
-                {/* LEFT SIDE: Attendance, Shreni Takta, Student Profile & Photo */}
-                <div className="col-span-6 border-r-2 border-orange-400 border-dashed pr-2 flex flex-col justify-between h-full">
-                  <div className="space-y-1">
-                    {/* Header, Photo & Student Info */}
+              <div className="flex flex-col w-full bg-white p-3 border-2 border-orange-500 rounded-2xl shadow-xs font-sans text-slate-900 space-y-2">
+                {/* 1. TOP HEADER BAR */}
+                <div className="flex items-center justify-between border-b-2 border-orange-400 pb-1 px-1">
+                  {/* Top Left: Logo */}
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-6 h-6 bg-orange-600 text-white rounded-full flex items-center justify-center font-black text-[9px] shadow-xs shrink-0">
+                      SS
+                    </div>
                     <div>
-                      <div className="flex items-center justify-between border-b-2 border-orange-400 pb-0.5 mb-1">
-                        <div className="flex items-center gap-1">
-                          <div className="w-5 h-5 bg-orange-600 text-white rounded-lg flex items-center justify-center font-black text-[8px] shadow-sm shrink-0">
-                            SS
-                          </div>
-                          <div>
-                            <h3 className="text-[9px] font-black text-orange-700 tracking-wider uppercase">समग्र शिक्षा</h3>
-                            <p className="text-[6.5px] text-slate-500 font-bold">Samagra Shiksha</p>
-                          </div>
-                        </div>
-                        <div className="text-center bg-amber-50 px-2 py-0.5 rounded-xl border border-orange-300">
-                          <h2 className="text-[10px] font-black text-amber-950 tracking-tight">
-                            विद्यार्थी प्रगतीपत्रक सन {academicYear}
-                          </h2>
-                        </div>
-                        {/* Student Photo */}
-                        <div className="w-[62px] h-[72px] rounded-xl overflow-hidden border-2 border-orange-500 bg-white flex items-center justify-center shrink-0 shadow-sm p-0.5">
-                          {student.photoUrl ? (
-                            <img
-                              src={student.photoUrl}
-                              alt={student.fullName || student.name}
-                              className="w-full h-full object-cover rounded-lg"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                                const fallbackElem = e.currentTarget.parentElement?.querySelector('.photo-fallback');
-                                if (fallbackElem) fallbackElem.style.display = 'flex';
-                              }}
-                            />
-                          ) : null}
-                          <div
-                            className="photo-fallback flex flex-col items-center justify-center text-center p-0.5"
-                            style={{ display: student.photoUrl ? 'none' : 'flex' }}
-                          >
-                            <User className="size-4 text-orange-400 mb-0.5" />
-                            <span className="text-[8px] font-extrabold text-orange-950 leading-tight">फोटो</span>
-                          </div>
-                        </div>
-                      </div>
+                      <h3 className="text-[10.5px] font-black text-orange-700 tracking-wider uppercase leading-none">समग्र शिक्षा</h3>
+                      <p className="text-[7.5px] text-slate-500 font-bold leading-none mt-0.5">Samagra Shiksha</p>
+                    </div>
+                  </div>
 
-                      <div className="border-2 border-orange-400 rounded-xl overflow-hidden bg-white text-[10px]">
-                        <table className="w-full border-collapse">
-                          <tbody>
-                            <tr className="border-b border-orange-200">
-                              <td className="w-[50%] py-0.2 px-1 font-black text-slate-800 border-r border-orange-200 text-[10px]">
-                                हजेरी क्र. : <b className="text-black font-black text-[11.5px]">{student.rollNo || idx + 1}</b>
-                              </td>
-                              <td className="w-[50%] py-0.2 px-1 font-black text-slate-800 text-[10px]">
-                                यु-डायस: <b className="text-black font-black text-[10.5px]">{schoolData.udise || student.udise || "-"}</b>
-                              </td>
-                            </tr>
-                            <tr className="border-b border-orange-200 bg-orange-50/20">
-                              <td colSpan={2} className="py-0.2 px-1 font-black text-slate-800 text-[10px]">
-                                शाळेचे नाव: <b className="text-amber-950 font-black text-[10.5px]">{schoolData.schoolName || student.schoolName || "-"}</b>
-                              </td>
-                            </tr>
-                            <tr className="border-b border-orange-200 bg-amber-100/60">
-                              <td colSpan={2} className="py-0.2 px-1 font-black text-slate-900 text-[10.5px]">
-                                विद्यार्थ्याचे नाव: <b className="text-blue-950 font-bold text-[10.5px]">{student.fullName || student.name || "-"}</b>
-                              </td>
-                            </tr>
-                            <tr className="border-b border-orange-200">
-                              <td className="w-[50%] py-0.2 px-1 font-black text-slate-800 border-r border-orange-200 text-[10px]">
-                                जन्म दिनांक: <b className="text-black font-black text-[10px]">{formatDob(student.dob)}</b>
-                              </td>
-                              <td className="w-[50%] py-0.2 px-1 font-black text-slate-800 text-[10px]">
-                                आधार: <b className="text-black font-black text-[10px]">{student.aadhar || "-"}</b>
-                              </td>
-                            </tr>
-                            <tr className="border-b border-orange-200 bg-orange-50/20">
-                              <td colSpan={2} className="py-0.2 px-1 font-black text-slate-800 text-[10px]">
-                                इयत्ता: <b className="text-black font-black text-[10.5px]">{getMarathiClassName(selectedClass)}</b> &nbsp;&nbsp;&nbsp;&nbsp;
-                                तुकडी: <b className="text-black font-black text-[10.5px]">{division}</b> &nbsp;&nbsp;&nbsp;&nbsp;
-                                रजि. नं. : <b className="text-black font-black text-[10.5px]">{student.generalRegNo || "-"}</b>
-                              </td>
-                            </tr>
-                            <tr className="border-b border-orange-200">
-                              <td colSpan={2} className="py-0.2 px-1 font-black text-slate-800 text-[10px]">
-                                पेन नं. : <b className="text-black font-black text-[10.5px]">{student.penNo || student.studentId || "-"}</b>
-                              </td>
-                            </tr>
-                            <tr className="border-b border-orange-200 bg-orange-50/20">
-                              <td className="w-[50%] py-0.2 px-1 font-black text-slate-800 border-r border-orange-200 text-[10px]">
-                                वडिलांचे नाव: <b className="text-black font-black text-[10px]">{student.fatherName || "-"}</b>
-                              </td>
-                              <td className="w-[50%] py-0.2 px-1 font-black text-slate-800 text-[10px]">
-                                व्यवसाय: <b className="text-black font-black text-[10px]">{student.fatherOccupation || "-"}</b>
-                              </td>
-                            </tr>
-                            <tr className="border-b border-orange-200">
-                              <td className="w-[50%] py-0.2 px-1 font-black text-slate-800 border-r border-orange-200 text-[10px]">
-                                आईचे नाव: <b className="text-black font-black text-[10px]">{student.motherName || "-"}</b>
-                              </td>
-                              <td className="w-[50%] py-0.2 px-1 font-black text-slate-800 text-[10px]">
-                                व्यवसाय: <b className="text-black font-black text-[10px]">{student.motherOccupation || "-"}</b>
-                              </td>
-                            </tr>
-                            <tr className="border-b border-orange-200 bg-orange-50/20">
-                              <td className="w-[50%] py-0.2 px-1 font-black text-slate-800 border-r border-orange-200 text-[10px]">
-                                मातृभाषा: <b className="text-black font-black text-[10px]">{student.motherTongue || "मराठी"}</b>
-                              </td>
-                              <td className="w-[50%] py-0.2 px-1 font-black text-slate-800 text-[10px]">
-                                माध्यम: <b className="text-black font-black text-[10px]">{student.medium || "मराठी"}</b>
-                              </td>
-                            </tr>
-                            <tr className="border-b border-orange-200">
-                              <td className="w-[50%] py-0.2 px-1 font-black text-slate-800 border-r border-orange-200 text-[10px]">
-                                धर्म: <b className="text-black font-black text-[10px]">{student.religion || "हिंदू"}</b>
-                              </td>
-                              <td className="w-[50%] py-0.2 px-1 font-black text-slate-800 text-[10px]">
-                                संवर्ग: <b className="text-black font-black text-[10px]">{student.caste || "ओपन"}</b>
-                              </td>
-                            </tr>
-                            <tr className="border-b border-orange-200 bg-orange-50/20">
-                              <td colSpan={2} className="py-0.2 px-1 font-black text-slate-800 text-[10px]">
-                                पत्ता: <b className="text-black font-black text-[10px]">{student.address || schoolData.address || "-"}</b>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td colSpan={2} className="py-0.2 px-1 font-black text-slate-800 text-[10px]">
-                                संपर्क: <b className="text-black font-black text-[10px]">{student.mobile || "-"}</b>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
+                  {/* Top Center: Title Pill & UDISE */}
+                  <div className="text-center">
+                    <div className="bg-amber-100/90 px-4 py-0.5 rounded-full border border-orange-400 inline-block shadow-2xs">
+                      <h2 className="text-[11px] font-black text-amber-950 tracking-tight">
+                        विद्यार्थी प्रगतीपुस्तक सत्र {academicYear}
+                      </h2>
+                    </div>
+                    <p className="text-[8.5px] font-extrabold text-slate-800 mt-0.5">
+                      दूरध्वनी क्र. : <span className="font-black text-slate-950">{schoolData.udise || student.udise || "27350800701"}</span>
+                    </p>
+                  </div>
+
+                  {/* Top Right: Circular Photo Frame */}
+                  <div className="w-[52px] h-[52px] rounded-full overflow-hidden border-2 border-orange-500 bg-white flex items-center justify-center shrink-0 shadow-xs p-0.5">
+                    {student.photoUrl ? (
+                      <img
+                        src={student.photoUrl}
+                        alt={student.fullName || student.name}
+                        className="w-full h-full object-cover rounded-full"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          const fallbackElem = e.currentTarget.parentElement?.querySelector('.photo-fallback');
+                          if (fallbackElem) fallbackElem.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div
+                      className="photo-fallback flex flex-col items-center justify-center text-center p-0.5"
+                      style={{ display: student.photoUrl ? 'none' : 'flex' }}
+                    >
+                      <User className="size-4 text-orange-500 mb-0.5" />
+                      <span className="text-[7px] font-extrabold text-orange-950 leading-tight">फोटो</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. MAIN 2-COLUMN CONTENT BODY */}
+                <div className="grid grid-cols-12 gap-2">
+                  {/* LEFT COLUMN (6 cols): Student Info + Attendance + Performance */}
+                  <div className="col-span-6 space-y-2">
+                    {/* Student Info Box */}
+                    <div className="border-2 border-orange-400 rounded-xl overflow-hidden bg-white text-[9.5px]">
+                      <table className="w-full border-collapse">
+                        <tbody>
+                          <tr className="border-b border-orange-300 bg-orange-50/20">
+                            <td className="w-[33%] py-0.5 px-1 font-bold text-slate-800 border-r border-orange-300">
+                              अनुक्रमांक क्र. : <b className="text-slate-950 font-black">{student.rollNo || idx + 1}</b>
+                            </td>
+                            <td className="w-[34%] py-0.5 px-1 font-bold text-slate-800 border-r border-orange-300 text-center">
+                              शाळेचा प्रकार : <b className="text-slate-950 font-black">वि.प्रा.शाळा समिती (1 ते 8)</b>
+                            </td>
+                            <td className="w-[33%] py-0.5 px-1 font-bold text-slate-800 text-right">
+                              UDISE क्र. : <b className="text-slate-950 font-black">{schoolData.udise || student.udise || "27350800701"}</b>
+                            </td>
+                          </tr>
+                          <tr className="border-b border-orange-300 bg-amber-100/90">
+                            <td colSpan={3} className="py-0.5 px-1 font-black text-slate-950 text-[10.5px] text-center">
+                              विद्यार्थ्याचे नाव : <b className="text-blue-950 font-black">{student.fullName || student.name || "-"}</b>
+                            </td>
+                          </tr>
+                          <tr className="border-b border-orange-300">
+                            <td colSpan={3} className="py-0.5 px-1 font-bold text-slate-800">
+                              <div className="flex justify-between items-center text-[9px] px-0.5">
+                                <span>जन्म दिनांक : <b className="text-slate-950 font-black">{formatDob(student.dob)}</b></span>
+                                <span>इयत्ता : <b className="text-slate-950 font-black">{getMarathiClassName(selectedClass)}</b></span>
+                                <span>तुकडी : <b className="text-slate-950 font-black">{division}</b></span>
+                                <span>रोल नं. : <b className="text-slate-950 font-black">{student.rollNo || idx + 1}</b></span>
+                                <span>प्रवर्ग : <b className="text-slate-950 font-black">{student.casteCategory || student.caste || "-"}</b></span>
+                              </div>
+                            </td>
+                          </tr>
+                          <tr className="border-b border-orange-300 bg-orange-50/20">
+                            <td className="w-[50%] py-0.5 px-1 font-bold text-slate-800 border-r border-orange-300" colSpan={2}>
+                              वडील नाव : <b className="text-slate-950 font-bold">{student.fatherName || "-"}</b>
+                            </td>
+                            <td className="w-[50%] py-0.5 px-1 font-bold text-slate-800">
+                              आई नाव : <b className="text-slate-950 font-bold">{student.motherName || "-"}</b>
+                            </td>
+                          </tr>
+                          <tr className="border-b border-orange-300">
+                            <td className="w-[50%] py-0.5 px-1 font-bold text-slate-800 border-r border-orange-300" colSpan={2}>
+                              शाळा : <b className="text-slate-950 font-bold">{schoolData.schoolName || student.schoolName || "-"}</b>
+                            </td>
+                            <td className="w-[50%] py-0.5 px-1 font-bold text-slate-800">
+                              ग्रामपंचायत : <b className="text-slate-950 font-bold">{student.grampanchayat || "-"}</b>
+                            </td>
+                          </tr>
+                          <tr className="border-b border-orange-300 bg-orange-50/20">
+                            <td className="w-[33%] py-0.5 px-1 font-bold text-slate-800 border-r border-orange-300">
+                              तालुका : <b className="text-slate-950 font-bold">{student.taluka || "तासगाव"}</b>
+                            </td>
+                            <td className="w-[34%] py-0.5 px-1 font-bold text-slate-800 border-r border-orange-300 text-center">
+                              जिल्हा : <b className="text-slate-950 font-bold">{student.district || "सांगली"}</b>
+                            </td>
+                            <td className="w-[33%] py-0.5 px-1 font-bold text-slate-800 text-right">
+                              माध्यम : <b className="text-slate-950 font-bold">{student.medium || "marathi"}</b>
+                            </td>
+                          </tr>
+                          <tr className="border-b border-orange-300">
+                            <td className="w-[33%] py-0.5 px-1 font-bold text-slate-800 border-r border-orange-300">
+                              लिंग : <b className="text-slate-950 font-bold">{student.gender || "पुरुष"}</b>
+                            </td>
+                            <td className="w-[34%] py-0.5 px-1 font-bold text-slate-800 border-r border-orange-300 text-center">
+                              धर्म : <b className="text-slate-950 font-bold">{student.religion || "हिंदू"}</b>
+                            </td>
+                            <td className="w-[33%] py-0.5 px-1 font-bold text-slate-800 text-right">
+                              वर्ग : <b className="text-slate-950 font-bold">{student.caste || "ओबीसी"}</b>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td colSpan={3} className="py-0.5 px-1 font-bold text-slate-800">
+                              पत्ता : <b className="text-slate-950 font-bold">{student.address || schoolData.address || "-"}</b>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
                     </div>
 
-                    {/* Attendance Table & Shreni Takta Side-by-Side */}
-                    <div className="grid grid-cols-12 gap-2 my-0.5">
+                    {/* Bottom Left: Attendance & Performance Tables Side-by-Side */}
+                    <div className="grid grid-cols-12 gap-1.5">
                       {/* Attendance Table */}
-                      <div className="col-span-7 border border-orange-400 rounded-xl overflow-hidden bg-white">
-                        <h4 className="text-[10.5px] font-black text-orange-950 text-center bg-orange-100/90 py-0.2 border-b border-orange-400">
+                      <div className="col-span-6 border-2 border-orange-400 rounded-xl overflow-hidden bg-white">
+                        <h4 className="text-[10px] font-black text-orange-950 text-center bg-amber-100/90 py-0.5 border-b border-orange-400">
                           उपस्थिती
                         </h4>
-                        <table className="w-full text-center text-[10px] border-collapse border border-orange-300">
+                        <table className="w-full text-center text-[9.5px] border-collapse">
                           <thead>
-                            <tr className="bg-amber-100/90 font-black text-amber-950 border-b border-orange-300 text-[10px] h-[15px]">
-                              <th className="border border-orange-300 px-0.5 py-0 w-[34%]">महिना</th>
-                              <th className="border border-orange-300 px-0.5 py-0 w-[33%]">कामाचे दिवस</th>
-                              <th className="border border-orange-300 px-0.5 py-0 w-[33%]">हजर दिवस</th>
+                            <tr className="bg-orange-50/60 font-black text-slate-900 border-b border-orange-300 text-[9px] h-[14px]">
+                              <th className="border-r border-orange-300 px-0.5 py-0 w-[34%]">महिना</th>
+                              <th className="border-r border-orange-300 px-0.5 py-0 w-[33%]">शाळा दिवस</th>
+                              <th className="px-0.5 py-0 w-[33%]">उपस्थित दिवस</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1299,9 +1298,9 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                               const pres = getStudentPresentDays(student, m);
                               return (
                                 <tr key={m.key} className="border-b border-orange-200 h-[12.5px]">
-                                  <td className="border border-orange-300 px-0.5 py-0 font-black text-slate-900 bg-orange-50/40 text-[10px]">{m.label}</td>
-                                  <td className="border border-orange-300 px-0.5 py-0 font-black text-slate-900 text-[10px]">{workingDays}</td>
-                                  <td className="border border-orange-300 px-0.5 py-0 font-black text-blue-950 text-[10.5px]">{pres}</td>
+                                  <td className="border-r border-orange-300 px-0.5 py-0 font-bold text-slate-900 bg-orange-50/20 text-[9px]">{m.label}</td>
+                                  <td className="border-r border-orange-300 px-0.5 py-0 font-bold text-slate-900 text-[9px]">{workingDays}</td>
+                                  <td className="px-0.5 py-0 font-black text-blue-950 text-[9.5px]">{pres}</td>
                                 </tr>
                               );
                             })}
@@ -1309,83 +1308,84 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                         </table>
                       </div>
 
-                      {/* Shreni Takta Table */}
-                      <div className="col-span-5 border border-orange-400 rounded-xl overflow-hidden bg-white">
-                        <h4 className="text-[10.5px] font-black text-orange-950 text-center bg-orange-100/90 py-0.2 border-b border-orange-400">
-                          श्रेणी तक्ता
+                      {/* Grade Scale Table (शैक्षणिक कामगिरी) */}
+                      <div className="col-span-6 border-2 border-orange-400 rounded-xl overflow-hidden bg-white">
+                        <h4 className="text-[10px] font-black text-orange-950 text-center bg-amber-100/90 py-0.5 border-b border-orange-400">
+                          शैक्षणिक कामगिरी
                         </h4>
-                        <table className="w-full text-center text-[10px] border-collapse border border-orange-300">
+                        <table className="w-full text-center text-[9.5px] border-collapse">
                           <thead>
-                            <tr className="bg-amber-100/90 font-black text-amber-950 border-b border-orange-300 text-[10px] h-[15px]">
-                              <th className="border border-orange-300 px-0.5 py-0 w-[65%]">गुणांचे वर्गीकरण</th>
-                              <th className="border border-orange-300 px-0.5 py-0 w-[35%]">श्रेणी</th>
+                            <tr className="bg-orange-50/60 font-black text-slate-900 border-b border-orange-300 text-[9px] h-[14px]">
+                              <th className="border-r border-orange-300 px-0.5 py-0 w-[65%]">गुणांचे प्रतिशत</th>
+                              <th className="px-0.5 py-0 w-[35%]">श्रेणी</th>
                             </tr>
                           </thead>
                           <tbody>
-                            <tr className="border-b border-orange-200 h-[12.5px]"><td className="border border-orange-300 px-0.5 py-0 font-black text-slate-900">91% ते 100%</td><td className="border border-orange-300 px-0.5 py-0 font-black text-blue-900 text-[10.5px]">अ-1</td></tr>
-                            <tr className="border-b border-orange-200 h-[12.5px]"><td className="border border-orange-300 px-0.5 py-0 font-black text-slate-900">81% ते 90%</td><td className="border border-orange-300 px-0.5 py-0 font-black text-blue-900 text-[10.5px]">अ-2</td></tr>
-                            <tr className="border-b border-orange-200 h-[12.5px]"><td className="border border-orange-300 px-0.5 py-0 font-black text-slate-900">71% ते 80%</td><td className="border border-orange-300 px-0.5 py-0 font-black text-blue-900 text-[10.5px]">ब-1</td></tr>
-                            <tr className="border-b border-orange-200 h-[12.5px]"><td className="border border-orange-300 px-0.5 py-0 font-black text-slate-900">61% ते 70%</td><td className="border border-orange-300 px-0.5 py-0 font-black text-blue-900 text-[10.5px]">ब-2</td></tr>
-                            <tr className="border-b border-orange-200 h-[12.5px]"><td className="border border-orange-300 px-0.5 py-0 font-black text-slate-900">51% ते 60%</td><td className="border border-orange-300 px-0.5 py-0 font-black text-blue-900 text-[10.5px]">क-1</td></tr>
-                            <tr className="border-b border-orange-200 h-[12.5px]"><td className="border border-orange-300 px-0.5 py-0 font-black text-slate-900">41% ते 50%</td><td className="border border-orange-300 px-0.5 py-0 font-black text-blue-900 text-[10.5px]">क-2</td></tr>
-                            <tr className="border-b border-orange-200 h-[12.5px]"><td className="border border-orange-300 px-0.5 py-0 font-black text-slate-900">33% ते 40%</td><td className="border border-orange-300 px-0.5 py-0 font-black text-blue-900 text-[10.5px]">ड</td></tr>
-                            <tr className="border-b border-orange-200 h-[12.5px]"><td className="border border-orange-300 px-0.5 py-0 font-black text-slate-900">21% ते 32%</td><td className="border border-orange-300 px-0.5 py-0 font-black text-blue-900 text-[10.5px]">इ-1</td></tr>
-                            <tr className="h-[12.5px]"><td className="border border-orange-300 px-0.5 py-0 font-black text-slate-900">20% व कमी</td><td className="border border-orange-300 px-0.5 py-0 font-black text-blue-900 text-[10.5px]">इ-2</td></tr>
+                            <tr className="border-b border-orange-200 h-[16.7px]"><td className="border-r border-orange-300 px-0.5 py-0 font-bold text-slate-900">91% ते 100%</td><td className="px-0.5 py-0 font-black text-blue-900 text-[9.5px]">अ-1</td></tr>
+                            <tr className="border-b border-orange-200 h-[16.7px]"><td className="border-r border-orange-300 px-0.5 py-0 font-bold text-slate-900">81% ते 90%</td><td className="px-0.5 py-0 font-black text-blue-900 text-[9.5px]">अ-2</td></tr>
+                            <tr className="border-b border-orange-200 h-[16.7px]"><td className="border-r border-orange-300 px-0.5 py-0 font-bold text-slate-900">71% ते 80%</td><td className="px-0.5 py-0 font-black text-blue-900 text-[9.5px]">ब-1</td></tr>
+                            <tr className="border-b border-orange-200 h-[16.7px]"><td className="border-r border-orange-300 px-0.5 py-0 font-bold text-slate-900">61% ते 70%</td><td className="px-0.5 py-0 font-black text-blue-900 text-[9.5px]">ब-2</td></tr>
+                            <tr className="border-b border-orange-200 h-[16.7px]"><td className="border-r border-orange-300 px-0.5 py-0 font-bold text-slate-900">51% ते 60%</td><td className="px-0.5 py-0 font-black text-blue-900 text-[9.5px]">क-1</td></tr>
+                            <tr className="border-b border-orange-200 h-[16.7px]"><td className="border-r border-orange-300 px-0.5 py-0 font-bold text-slate-900">41% ते 50%</td><td className="px-0.5 py-0 font-black text-blue-900 text-[9.5px]">क-2</td></tr>
+                            <tr className="border-b border-orange-200 h-[16.7px]"><td className="border-r border-orange-300 px-0.5 py-0 font-bold text-slate-900">33% ते 40%</td><td className="px-0.5 py-0 font-black text-blue-900 text-[9.5px]">ड</td></tr>
+                            <tr className="border-b border-orange-200 h-[16.7px]"><td className="border-r border-orange-300 px-0.5 py-0 font-bold text-slate-900">21% ते 32%</td><td className="px-0.5 py-0 font-black text-blue-900 text-[9.5px]">इ-1</td></tr>
+                            <tr className="h-[16.7px]"><td className="border-r border-orange-300 px-0.5 py-0 font-bold text-slate-900">20% व कमी</td><td className="px-0.5 py-0 font-black text-blue-900 text-[9.5px]">इ-2</td></tr>
                           </tbody>
                         </table>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* RIGHT SIDE: First Semester & Second Semester Subject Grades & Remarks */}
-                <div className="col-span-6 pl-2 flex flex-col justify-between h-full space-y-1">
-                  {/* Stacked Term 1 & Term 2 Vertically */}
-                  <div className="flex flex-col justify-between space-y-1 flex-1">
-                    {/* Term 1 - TOP */}
-                    <div className="flex flex-col border border-orange-400 rounded-lg overflow-hidden bg-white">
-                      <h3 className="text-[13.5px] font-black text-orange-950 text-center py-0.5 border-b border-orange-400 bg-orange-100/90 shrink-0">
+                  {/* RIGHT COLUMN (6 cols): Term 1 & Term 2 Subject Tables */}
+                  <div className="col-span-6 space-y-2">
+                    {/* Term 1 Box */}
+                    <div className="border-2 border-orange-400 rounded-xl overflow-hidden bg-white">
+                      <h3 className="text-[11px] font-black text-orange-950 text-center py-0.5 border-b border-orange-400 bg-amber-100/90">
                         प्रथम सत्र
                       </h3>
-                      <table className="w-full border-collapse text-[11px] text-center font-medium">
+                      <table className="w-full border-collapse text-[9.5px] text-center font-medium">
                         <thead>
-                          <tr className="bg-amber-100/90 font-black text-amber-950 border-b border-orange-400 text-[11px] h-[18px]">
-                            <th className="border border-orange-300 p-0.5 text-left w-[35%] pl-1">विषय</th>
-                            <th className="border border-orange-300 p-0.5 w-[15%]">श्रेणी</th>
-                            <th className="border border-orange-300 p-0.5 w-[50%]">वर्णनात्मक नोंदी</th>
+                          <tr className="bg-orange-50/60 font-black text-slate-900 border-b border-orange-300 text-[9px] h-[16px]">
+                            <th className="border-r border-orange-300 p-0.5 text-left w-[30%] pl-1">विषय</th>
+                            <th className="border-r border-orange-300 p-0.5 w-[15%]">श्रेणी</th>
+                            <th className="border-r border-orange-300 p-0.5 w-[15%]">वर्गनिहाय श्रेणी</th>
+                            <th className="p-0.5 w-[40%]">विषय श्रेणी</th>
                           </tr>
                         </thead>
                         <tbody>
                           {subjects.map((subName, sIdx) => {
                             const sem1Grade = getSubjectGradeForTerm(student, subName, "sem1");
                             return (
-                              <tr key={subName} className="border-b border-orange-200 h-[22px]">
-                                <td className="border border-orange-300 p-0.2 text-left font-black text-slate-950 bg-orange-50/20 text-[10.5px] pl-1">
+                              <tr key={subName} className="border-b border-orange-200 h-[23.5px]">
+                                <td className="border-r border-orange-300 p-0.2 text-left font-bold text-slate-950 bg-orange-50/10 text-[9.5px] pl-1">
                                   {subName}
                                 </td>
-                                <td className="border border-orange-300 p-0.2 font-black text-blue-950 text-[12px]">
+                                <td className="border-r border-orange-300 p-0.2 font-black text-blue-950 text-[11px]">
                                   {sem1Grade}
                                 </td>
+                                <td className="border-r border-orange-300 p-0.2 font-bold text-slate-800 text-[10px]">
+                                  {/* वर्गनिहाय श्रेणी */}
+                                </td>
                                 {sIdx === 0 && (
-                                  <td rowSpan={2} className="border border-orange-300 p-0.2 text-left align-top bg-orange-50/10 w-[50%] overflow-hidden">
-                                    <span className="font-black text-orange-950 block text-center mb-0.2 text-[9.5px]">विशेष प्रगती</span>
-                                    <p className="text-slate-950 leading-snug font-bold px-0.5 text-[8.5px] line-clamp-2 max-h-[30px]">
+                                  <td rowSpan={2} className="p-0.2 text-left align-top bg-orange-50/10 w-[40%] overflow-hidden border-l border-orange-200">
+                                    <span className="font-black text-orange-950 block text-center mb-0.1 text-[9px]">विशेष प्रगती</span>
+                                    <p className="text-slate-950 leading-tight font-extrabold px-0.5 text-[8.5px] line-clamp-2">
                                       {getFormattedRemark(student, "विशेष प्रगती", "sem1")}
                                     </p>
                                   </td>
                                 )}
                                 {sIdx === 2 && (
-                                  <td rowSpan={2} className="border border-orange-300 p-0.2 text-left align-top bg-orange-50/10 w-[50%] overflow-hidden">
-                                    <span className="font-black text-orange-950 block text-center mb-0.2 text-[9.5px]">आवड / छंद</span>
-                                    <p className="text-slate-950 leading-snug font-bold px-0.5 text-[8.5px] line-clamp-2 max-h-[30px]">
+                                  <td rowSpan={2} className="p-0.2 text-left align-top bg-orange-50/10 w-[40%] overflow-hidden border-l border-orange-200">
+                                    <span className="font-black text-orange-950 block text-center mb-0.1 text-[9px]">आवड / छंद</span>
+                                    <p className="text-slate-950 leading-tight font-extrabold px-0.5 text-[8.5px] line-clamp-2">
                                       {getFormattedRemark(student, "आवड / छंद", "sem1")}
                                     </p>
                                   </td>
                                 )}
                                 {sIdx === 4 && (
-                                  <td rowSpan={2} className="border border-orange-300 p-0.2 text-left align-top bg-orange-50/10 w-[50%] overflow-hidden">
-                                    <span className="font-black text-orange-950 block text-center mb-0.2 text-[9.5px]">सुधारणा आवश्यक</span>
-                                    <p className="text-slate-950 leading-snug font-bold px-0.5 text-[8.5px] line-clamp-2 max-h-[30px]">
+                                  <td rowSpan={2} className="p-0.2 text-left align-top bg-orange-50/10 w-[40%] overflow-hidden border-l border-orange-200">
+                                    <span className="font-black text-orange-950 block text-center mb-0.1 text-[9px]">सुधारणा आवश्यक</span>
+                                    <p className="text-slate-950 leading-tight font-extrabold px-0.5 text-[8.5px] line-clamp-2">
                                       {getFormattedRemark(student, "सुधारणा आवश्यक", "sem1")}
                                     </p>
                                   </td>
@@ -1397,50 +1397,54 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                       </table>
                     </div>
 
-                    {/* Term 2 - BOTTOM */}
-                    <div className="flex flex-col border border-orange-400 rounded-lg overflow-hidden bg-white">
-                      <h3 className="text-[12px] font-black text-orange-950 text-center py-0.2 border-b border-orange-400 bg-orange-100/90 shrink-0">
+                    {/* Term 2 Box */}
+                    <div className="border-2 border-orange-400 rounded-xl overflow-hidden bg-white">
+                      <h3 className="text-[11px] font-black text-orange-950 text-center py-0.5 border-b border-orange-400 bg-amber-100/90">
                         द्वितीय सत्र
                       </h3>
-                      <table className="w-full border-collapse text-[10.5px] text-center font-medium">
+                      <table className="w-full border-collapse text-[9.5px] text-center font-medium">
                         <thead>
-                          <tr className="bg-amber-100/90 font-black text-amber-950 border-b border-orange-400 text-[10.5px] h-[18px]">
-                            <th className="border border-orange-300 p-0.5 text-left w-[35%] pl-1">विषय</th>
-                            <th className="border border-orange-300 p-0.5 w-[15%]">श्रेणी</th>
-                            <th className="border border-orange-300 p-0.5 w-[50%]">वर्णनात्मक नोंदी</th>
+                          <tr className="bg-orange-50/60 font-black text-slate-900 border-b border-orange-300 text-[9px] h-[16px]">
+                            <th className="border-r border-orange-300 p-0.5 text-left w-[30%] pl-1">विषय</th>
+                            <th className="border-r border-orange-300 p-0.5 w-[15%]">श्रेणी</th>
+                            <th className="border-r border-orange-300 p-0.5 w-[15%]">वर्गनिहाय श्रेणी</th>
+                            <th className="p-0.5 w-[40%]">विषय श्रेणी</th>
                           </tr>
                         </thead>
                         <tbody>
                           {subjects.map((subName, sIdx) => {
                             const sem2Grade = getSubjectGradeForTerm(student, subName, "sem2");
                             return (
-                              <tr key={subName} className="border-b border-orange-200 h-[22px]">
-                                <td className="border border-orange-300 p-0.2 text-left font-black text-slate-950 bg-orange-50/20 text-[10.5px] pl-1">
+                              <tr key={subName} className="border-b border-orange-200 h-[26.8px]">
+                                <td className="border-r border-orange-300 p-0.2 text-left font-bold text-slate-950 bg-orange-50/10 text-[9.5px] pl-1">
                                   {subName}
                                 </td>
-                                <td className="border border-orange-300 p-0.2 font-black text-blue-950 text-[12px]">
+                                <td className="border-r border-orange-300 p-0.2 font-black text-blue-950 text-[11px]">
                                   {sem2Grade}
                                 </td>
+                                <td className="border-r border-orange-300 p-0.2 font-bold text-slate-800 text-[10px]">
+                                  {/* वर्गनिहाय श्रेणी */}
+                                </td>
                                 {sIdx === 0 && (
-                                  <td rowSpan={2} className="border border-orange-300 p-0.2 text-left align-top bg-orange-50/10 w-[50%] overflow-hidden">
-                                    <span className="font-black text-orange-950 block text-center mb-0.2 text-[9.5px]">विशेष प्रगती</span>
-                                    <p className="text-slate-950 leading-snug font-bold px-0.5 text-[8.5px] line-clamp-2 max-h-[30px]">
+                                  <td rowSpan={2} className="p-0.2 text-left align-top bg-orange-50/10 w-[40%] overflow-hidden border-l border-orange-200">
+                                    <span className="font-black text-orange-950 block text-center mb-0.1 text-[9px]">विशेष प्रगती</span>
+                                    <p className="text-slate-950 leading-tight font-extrabold px-0.5 text-[8.5px] line-clamp-2">
                                       {getFormattedRemark(student, "विशेष प्रगती", "sem2")}
                                     </p>
                                   </td>
                                 )}
                                 {sIdx === 2 && (
-                                  <td rowSpan={2} className="border border-orange-300 p-0.2 text-left align-top bg-orange-50/10 w-[50%] overflow-hidden">
-                                    <span className="font-black text-orange-950 block text-center mb-0.2 text-[9.5px]">आवड / छंद</span>
-                                    <p className="text-slate-950 leading-snug font-bold px-0.5 text-[8.5px] line-clamp-2 max-h-[30px]">
+                                  <td rowSpan={2} className="p-0.2 text-left align-top bg-orange-50/10 w-[40%] overflow-hidden border-l border-orange-200">
+                                    <span className="font-black text-orange-950 block text-center mb-0.1 text-[9px]">आवड / छंद</span>
+                                    <p className="text-slate-950 leading-tight font-extrabold px-0.5 text-[8.5px] line-clamp-2">
                                       {getFormattedRemark(student, "आवड / छंद", "sem2")}
                                     </p>
                                   </td>
                                 )}
                                 {sIdx === 4 && (
-                                  <td rowSpan={2} className="border border-orange-300 p-0.2 text-left align-top bg-orange-50/10 w-[50%] overflow-hidden">
-                                    <span className="font-black text-orange-950 block text-center mb-0.2 text-[9.5px]">सुधारणा आवश्यक</span>
-                                    <p className="text-slate-950 leading-snug font-bold px-0.5 text-[8.5px] line-clamp-2 max-h-[30px]">
+                                  <td rowSpan={2} className="p-0.2 text-left align-top bg-orange-50/10 w-[40%] overflow-hidden border-l border-orange-200">
+                                    <span className="font-black text-orange-950 block text-center mb-0.1 text-[9px]">सुधारणा आवश्यक</span>
+                                    <p className="text-slate-950 leading-tight font-extrabold px-0.5 text-[8.5px] line-clamp-2">
                                       {getFormattedRemark(student, "सुधारणा आवश्यक", "sem2")}
                                     </p>
                                   </td>
@@ -1451,26 +1455,26 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                         </tbody>
                       </table>
                     </div>
+                  </div>
+                </div>
 
-                    {/* Signatures Footer */}
-                    <div className="flex items-center justify-between border border-orange-400 py-0.5 text-[8.5px] font-bold text-slate-900 shrink-0 bg-orange-50/40 px-3 rounded-lg mt-auto">
-                      <div className="text-center min-w-[90px]">
-                        <div className="h-[18px] flex items-end justify-center pb-0.5 font-black text-slate-950 text-[9px]">
-                          {schoolData.teacherName || ""}
-                        </div>
-                        <p className="text-[8px] text-slate-900 font-black border-t border-slate-400 pt-0.5">वर्गशिक्षक स्वाक्षरी</p>
-                      </div>
-                      <div className="text-center min-w-[90px]">
-                        <div className="h-[18px] flex items-end justify-center pb-0.5 font-black text-slate-950 text-[9px]">
-                          {schoolData.headmasterName || ""}
-                        </div>
-                        <p className="text-[8.5px] text-slate-900 font-black border-t border-slate-400 pt-0.5">मुख्याध्यापक स्वाक्षरी</p>
-                      </div>
-                      <div className="text-center min-w-[90px]">
-                        <div className="h-[18px]"></div>
-                        <p className="text-[8px] text-slate-900 font-black border-t border-slate-400 pt-0.5">पालक स्वाक्षरी</p>
-                      </div>
-                    </div>
+                {/* 3. FULL WIDTH BOTTOM FOOTER SIGNATURES */}
+                <div className="flex items-center justify-between border-2 border-orange-400 py-2.5 px-6 text-[10px] font-black text-slate-900 bg-orange-50/20 rounded-xl">
+                  <div className="text-center w-[140px] flex flex-col items-center justify-between h-[42px]">
+                    <span className="text-[10px] font-black text-slate-950 block">विद्यार्थ्याचे पालक/पालक सही</span>
+                    <div className="border-b-2 border-slate-700 w-full"></div>
+                  </div>
+                  <div className="text-center w-[140px] flex flex-col items-center justify-between h-[42px]">
+                    <span className="text-[10px] font-black text-slate-950 block">वर्ग शिक्षकांची सही</span>
+                    <div className="border-b-2 border-slate-700 w-full"></div>
+                  </div>
+                  <div className="text-center w-[140px] flex flex-col items-center justify-between h-[42px]">
+                    <span className="text-[10px] font-black text-slate-950 block">मुख्याध्यापकांची सही</span>
+                    <div className="border-b-2 border-slate-700 w-full"></div>
+                  </div>
+                  <div className="text-center flex items-center gap-1 h-[42px]">
+                    <span className="text-[10px] font-black text-slate-950 whitespace-nowrap">दिनांक :</span>
+                    <div className="border-b-2 border-slate-700 w-28"></div>
                   </div>
                 </div>
               </div>
@@ -1827,7 +1831,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                       }}
                     >
                       <div
-                        className="w-[297mm] h-[207mm] max-w-[297mm] max-h-[207mm] bg-white p-2 box-border flex flex-col justify-between shrink-0"
+                        className="w-[297mm] h-[207mm] max-w-[297mm] max-h-[207mm] bg-white p-3.5 box-border flex flex-col justify-center items-center shrink-0"
                         style={{
                           transform: "rotate(-90deg)",
                           transformOrigin: "center center",
@@ -1838,7 +1842,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                     </div>
                   ) : (
                     <div
-                      className="pdf-page bg-white relative w-[297mm] max-w-[297mm] min-w-[297mm] h-[207mm] max-h-[207mm] min-h-[207mm] mx-auto overflow-hidden mb-8 print:mb-0 shadow-md print:shadow-none p-2 box-border border-2 border-orange-500 rounded-xl"
+                      className="pdf-page bg-white relative w-[297mm] max-w-[297mm] min-w-[297mm] h-[207mm] max-h-[207mm] min-h-[207mm] mx-auto overflow-hidden mb-8 print:mb-0 shadow-md print:shadow-none p-3.5 box-border border-2 border-orange-500 rounded-xl flex flex-col justify-center items-center"
                       style={{
                         pageBreakAfter: "always",
                         breakAfter: "page",
@@ -1864,7 +1868,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                       }}
                     >
                       <div
-                        className="w-[297mm] h-[207mm] max-w-[297mm] max-h-[207mm] bg-white p-2 box-border flex flex-col justify-between shrink-0"
+                        className="w-[297mm] h-[207mm] max-w-[297mm] max-h-[207mm] bg-white p-3.5 box-border flex flex-col justify-center items-center shrink-0"
                         style={{
                           transform: "rotate(-90deg)",
                           transformOrigin: "center center",
@@ -1875,7 +1879,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                     </div>
                   ) : (
                     <div
-                      className="pdf-page bg-white relative w-[297mm] max-w-[297mm] min-w-[297mm] h-[207mm] max-h-[207mm] min-h-[207mm] mx-auto overflow-hidden mb-8 print:mb-0 shadow-md print:shadow-none p-2 box-border border-2 border-orange-500 rounded-xl flex flex-col justify-between"
+                      className="pdf-page bg-white relative w-[297mm] max-w-[297mm] min-w-[297mm] h-[207mm] max-h-[207mm] min-h-[207mm] mx-auto overflow-hidden mb-8 print:mb-0 shadow-md print:shadow-none p-3.5 box-border border-2 border-orange-500 rounded-xl flex flex-col justify-center items-center"
                       style={{
                         pageBreakAfter: isLastStudent ? "avoid" : "always",
                         breakAfter: isLastStudent ? "avoid" : "page",
@@ -1908,7 +1912,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                     }}
                   >
                     <div
-                      className="w-[297mm] h-[207mm] max-w-[297mm] max-h-[207mm] bg-white p-2 box-border flex flex-col justify-between shrink-0"
+                      className="w-[297mm] h-[207mm] max-w-[297mm] max-h-[207mm] bg-white p-3 box-border flex flex-col justify-center items-center shrink-0"
                       style={{
                         transform: "rotate(-90deg)",
                         transformOrigin: "center center",
@@ -1920,7 +1924,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                 ) : (
                   /* LANDSCAPE BOOKLET (A4 297mm x 210mm SINGLE PAGE LANDSCAPE PDF) */
                   <div
-                    className="pdf-page bg-white relative w-[297mm] max-w-[297mm] min-w-[297mm] h-[207mm] max-h-[207mm] min-h-[207mm] mx-auto overflow-hidden mb-8 print:mb-0 shadow-md print:shadow-none p-2 box-border border-2 border-orange-500 rounded-xl flex flex-col justify-between"
+                    className="pdf-page bg-white relative w-[297mm] max-w-[297mm] min-w-[297mm] h-[207mm] max-h-[207mm] min-h-[207mm] mx-auto overflow-hidden mb-8 print:mb-0 shadow-md print:shadow-none p-3 box-border border-2 border-orange-500 rounded-xl flex flex-col justify-center items-center"
                     style={{
                       pageBreakAfter: isLastStudent ? "avoid" : "always",
                       breakAfter: isLastStudent ? "avoid" : "page",
