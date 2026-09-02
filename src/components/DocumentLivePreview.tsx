@@ -320,11 +320,12 @@ export function parseMultiPageTextToStructuredDiaries(fullText: string): Structu
     }
 
     let thought = "";
-    const thoughtMatch = chunkText.match(/(?:आजचा\s*विचार|आजचा\s*सुविचार|सुविचार|िचार|विचार|Thought)\s*[:：]?\s*([^\n]+)/i);
+    const thoughtMatch = chunkText.match(/(?:आजचा\s*सुव\u200Dिचार|आजचा\s*सुविचार|आजचा\s*(?:सु)?विचार|सुविचार|Today.?s Thought|Suvichar|Thought)\s*[:：\-]?\s*([^\n\r]+)/i);
     if (thoughtMatch) {
       thought = thoughtMatch[1]
-        .replace(/^[:\s\u0903-]+/, "")
-        .replace(/\s*(?:इयत्ता|Class|Std|सन|Year).*$/i, "")
+        .replace(/^[:\s\u0903\-"'”’„«»]+/, "")
+        .replace(/\s*(?:इयत्त्?ता|Class|Std|सन|Year|वार|Day|वर्गशिक्षक|शिक्षक|शाळा|दिनांक|तारीख).*$/i, "")
+        .replace(/^["'”’„«»]+|["'”’„«»]+$/g, "")
         .trim();
     }
 
@@ -489,12 +490,13 @@ export function parseHtmlToStructuredDiaries(htmlString: string): StructuredDayP
 
     let thought = "";
     const thoughtMatch = sectionText.match(
-      /(?:आजचा\s*सुव\u200Dिचार|आजचा\s*(?:सु)?विचार|सुविचार|Thought)\s*[:：]?\s*([^\n]+)/i
+      /(?:आजचा\s*सुव\u200Dिचार|आजचा\s*सुविचार|आजचा\s*(?:सु)?विचार|सुविचार|Thought)\s*[:：\-]?\s*([^\n\r]+)/i
     );
     if (thoughtMatch) {
       thought = thoughtMatch[1]
-        .replace(/^[:\s]+/, "")
-        .replace(/\s*(?:इयत्त्?ता|Class|Std|सन|Year).*$/i, "")
+        .replace(/^[:\s\u0903\-"'”’„«»]+/, "")
+        .replace(/\s*(?:इयत्त्?ता|Class|Std|सन|Year|वार|Day|वर्गशिक्षक|शिक्षक|शाळा|दिनांक|तारीख).*$/i, "")
+        .replace(/^["'”’„«»]+|["'”’„«»]+$/g, "")
         .trim();
     }
 
@@ -939,18 +941,23 @@ export const StructuredDayPageList = forwardRef<StructuredDayPageListRef, { page
               <div><span className="text-slate-900 font-black block text-xs uppercase mb-0.5">सन</span> <span suppressContentEditableWarning contentEditable onBlur={(e) => updateHeader(idx, "year", e.currentTarget.textContent || "")} className="text-slate-900 font-black text-sm outline-indigo-500 focus:bg-white px-1 rounded block">{p.year && p.year !== "-" ? p.year : (profile?.academicYear || "2026-27")}</span></div>
             </div>
 
-            {/* आजचा सुविचार Box - Display ONLY when filled for this day */}
-            {p.thought && p.thought.trim() && !p.thought.includes("प्रविष्ट करण्यासाठी") ? (
-              <div className="text-xs italic text-amber-950 bg-amber-50/95 p-3 rounded-2xl border border-amber-300 text-center flex items-center justify-center gap-2.5 shadow-sm my-2">
-                <Sparkles className="size-4 text-amber-600 shrink-0" />
-                <div>
-                  <strong className="not-italic text-amber-950 font-black text-xs uppercase tracking-wider inline-block mr-1">आजचा सुविचार :</strong> 
-                  <span className="font-bold text-sm text-amber-900 not-italic inline-block">
-                    "{p.thought}"
-                  </span>
-                </div>
+            {/* आजचा सुविचार Box - Always displayed & editable for each day */}
+            <div className="text-xs italic text-amber-950 bg-amber-50/95 p-3 rounded-2xl border border-amber-300 text-center flex items-center justify-center gap-2.5 shadow-sm my-2">
+              <Sparkles className="size-4 text-amber-600 shrink-0" />
+              <div className="flex-1">
+                <strong className="not-italic text-amber-950 font-black text-xs uppercase tracking-wider inline-block mr-1">आजचा सुविचार :</strong> 
+                <span 
+                  suppressContentEditableWarning 
+                  contentEditable 
+                  onBlur={(e) => updateHeader(idx, "thought", e.currentTarget.textContent || "")}
+                  className="font-bold text-sm text-amber-900 not-italic inline-block outline-indigo-500 focus:bg-white px-2 py-0.5 rounded cursor-text border border-dashed border-amber-300 hover:border-amber-500 transition-colors"
+                >
+                  {p.thought && p.thought.trim() && !p.thought.includes("प्रविष्ट करण्यासाठी")
+                    ? p.thought.replace(/^["'”’„«»]+|["'”’„«»]+$/g, "").trim()
+                    : "आजचा सुविचार प्रविष्ट करा..."}
+                </span>
               </div>
-            ) : null}
+            </div>
           </div>
 
           {p.periods.length > 0 ? (
@@ -1110,6 +1117,13 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
   const [isInnerDownloading, setIsInnerDownloading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  const cleanFirestoreData = (data: any): any => {
+    if (data === undefined || data === null) return "";
+    return JSON.parse(
+      JSON.stringify(data, (_key, value) => (value === undefined ? "" : value))
+    );
+  };
+
   const handleSaveChanges = async () => {
     if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
@@ -1138,9 +1152,9 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
       const firstDay = editedData[0];
       const mainPeriods = firstDay?.periods || [];
 
-      // 1. Update teacher_diaries document
+      // 1. Update teacher_diaries document safely
       const diaryDocRef = doc(db, "teacher_diaries", cls, med, savedRecord.id);
-      await updateDoc(diaryDocRef, {
+      const cleanMainPayload = cleanFirestoreData({
         structuredData: editedData,
         parsedContent: {
           ...(savedRecord.parsedContent || {}),
@@ -1151,6 +1165,7 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
         periods: mainPeriods,
         updatedAt: Date.now(),
       });
+      await setDoc(diaryDocRef, cleanMainPayload, { merge: true });
 
       // 2. Update teaching_diaries documents for ALL dates in editedData
       if (Array.isArray(editedData) && editedData.length > 0) {
@@ -1159,21 +1174,18 @@ export const DocumentLivePreview = forwardRef<DocumentLivePreviewRef, DocumentLi
           if (dKey && String(dKey).match(/^\d{4}-\d{2}-\d{2}$/)) {
             const tdDocId = `${cls}_${med}_${dKey}`;
             const tdDocRef = doc(db, "teaching_diaries", tdDocId);
-            await setDoc(
-              tdDocRef,
-              {
-                className: cls,
-                medium: med,
-                date: dKey,
-                displayDate: dayEntry.date || dKey,
-                day: dayEntry.day || "",
-                thought: dayEntry.thought || "",
-                periods: dayEntry.periods || [],
-                structuredData: editedData,
-                updatedAt: Date.now(),
-              },
-              { merge: true }
-            );
+            const cleanTdPayload = cleanFirestoreData({
+              className: cls,
+              medium: med,
+              date: dKey,
+              displayDate: dayEntry.date || dKey,
+              day: dayEntry.day || "",
+              thought: dayEntry.thought || "",
+              periods: dayEntry.periods || [],
+              structuredData: editedData,
+              updatedAt: Date.now(),
+            });
+            await setDoc(tdDocRef, cleanTdPayload, { merge: true });
           }
         }
       }

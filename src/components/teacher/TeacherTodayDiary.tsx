@@ -571,6 +571,13 @@ export const TeacherTodayDiary: React.FC<Props> = ({
     }
   };
 
+  const cleanFirestoreData = (data: any): any => {
+    if (data === undefined || data === null) return "";
+    return JSON.parse(
+      JSON.stringify(data, (_key, value) => (value === undefined ? "" : value))
+    );
+  };
+
   const handleSaveChanges = async () => {
     if (!todayDiary || !isoDate) return;
     setIsSaving(true);
@@ -578,44 +585,38 @@ export const TeacherTodayDiary: React.FC<Props> = ({
       // 1. Save to primary teaching_diaries collection
       const tdDocId = `${selectedClass}_${selectedMedium}_${isoDate}`;
       const tdDocRef = doc(db, "teaching_diaries", tdDocId);
-      await setDoc(
-        tdDocRef,
-        {
-          className: selectedClass,
-          medium: selectedMedium,
-          date: isoDate,
-          displayDate: todayDiary.displayDate || displayFormattedDate,
-          day: todayDiary.day || "",
-          thought: todayDiary.thought || "",
-          periods: todayDiary.periods,
-          updatedAt: Date.now(),
-        },
-        { merge: true }
-      );
+      const tdPayload = cleanFirestoreData({
+        className: selectedClass,
+        medium: selectedMedium,
+        date: isoDate,
+        displayDate: todayDiary.displayDate || displayFormattedDate,
+        day: todayDiary.day || "",
+        thought: todayDiary.thought || "",
+        periods: todayDiary.periods || [],
+        updatedAt: Date.now(),
+      });
+      await setDoc(tdDocRef, tdPayload, { merge: true });
 
       // 2. Save to teacher_diaries collection under class & medium subcollection
       const targetDocId = (todayDiary as any)?.id || isoDate;
       const mainDocRef = doc(db, "teacher_diaries", selectedClass, selectedMedium, targetDocId);
-      await setDoc(
-        mainDocRef,
-        {
-          className: selectedClass,
-          medium: selectedMedium,
-          diaryDate: isoDate,
-          date: isoDate,
-          displayDate: todayDiary.displayDate || displayFormattedDate,
+      const mainPayload = cleanFirestoreData({
+        className: selectedClass,
+        medium: selectedMedium,
+        diaryDate: isoDate,
+        date: isoDate,
+        displayDate: todayDiary.displayDate || displayFormattedDate,
+        day: todayDiary.day || "",
+        thought: todayDiary.thought || "",
+        periods: todayDiary.periods || [],
+        parsedContent: {
           day: todayDiary.day || "",
           thought: todayDiary.thought || "",
-          periods: todayDiary.periods,
-          parsedContent: {
-            day: todayDiary.day || "",
-            thought: todayDiary.thought || "",
-            periods: todayDiary.periods,
-          },
-          updatedAt: Date.now(),
+          periods: todayDiary.periods || [],
         },
-        { merge: true }
-      );
+        updatedAt: Date.now(),
+      });
+      await setDoc(mainDocRef, mainPayload, { merge: true });
 
       // Save to localStorage instantly
       try {

@@ -1763,6 +1763,7 @@ function DailyAssemblyContent() {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const [dbFormData, setDbFormData] = useState<any>(null);
   const [holidayNotice, setHolidayNotice] = useState<{ isHoliday: boolean; reason: string } | null>(null);
+  const [activeAssemblyTab, setActiveAssemblyTab] = useState<"sutti" | "content">("content");
 
   const [schoolInfo, setSchoolInfo] = useState({
     schoolName: "",
@@ -1777,6 +1778,24 @@ function DailyAssemblyContent() {
   useEffect(() => {
     setSelectedDate((prev) => prev || getLocalDateString());
   }, []);
+
+  // Sync active tab for Sunday / declared holiday
+  useEffect(() => {
+    if (!selectedDate) return;
+    const parts = selectedDate.split("-").map(Number);
+    if (parts.length === 3) {
+      const d = new Date(parts[0], parts[1] - 1, parts[2]);
+      if (d.getDay() === 0) {
+        setActiveAssemblyTab("sutti");
+        return;
+      }
+    }
+    if (holidayNotice?.isHoliday) {
+      setActiveAssemblyTab("sutti");
+    } else {
+      setActiveAssemblyTab("content");
+    }
+  }, [selectedDate, holidayNotice]);
 
   // Load unified school info from global storage & listen for changes
   useEffect(() => {
@@ -1914,7 +1933,20 @@ function DailyAssemblyContent() {
   };
 
   const getDynamicFormDataForDate = (dateStr: string, currentLang: "mr" | "en" | "hi") => {
-    const baseData = dbFormData || DEFAULT_FORM_DATA[currentLang];
+    const defaultAssembly = DEFAULT_ASSEMBLY_ITEMS[currentLang] || DEFAULT_ASSEMBLY_ITEMS.mr;
+    const defaultForm = DEFAULT_FORM_DATA[currentLang] || DEFAULT_FORM_DATA.mr;
+
+    const baseData = {
+      ...defaultForm,
+      nationalAnthem: defaultAssembly[0]?.content || "",
+      stateAnthem: defaultAssembly[1]?.content || "",
+      pledge: defaultAssembly[2]?.content || "",
+      preamble: defaultAssembly[3]?.content || "",
+      silentPasayadan: defaultAssembly[5]?.content || "",
+      songTitle: defaultForm.songTitle || "समूहगीत / राष्ट्रगीत",
+      patrioticSong: defaultForm.patrioticSong || "",
+      ...dbFormData,
+    };
     
     const parts = dateStr.split("-").map(Number);
     if (parts.length !== 3 || isNaN(parts[0])) return baseData;
@@ -2503,37 +2535,66 @@ function DailyAssemblyContent() {
             </div>
           </div>
 
-          {holidayNotice?.isHoliday ? (
-            <div className="bg-gradient-to-br from-amber-500/10 via-orange-500/10 to-amber-500/20 border-2 border-amber-400/40 p-8 md:p-14 rounded-[3rem] text-center space-y-6 shadow-xl my-6">
-              <div className="size-20 bg-amber-500/20 border border-amber-400/50 rounded-3xl flex items-center justify-center mx-auto text-amber-600 shadow-inner">
-                <SunMedium className="size-10 animate-pulse" />
-              </div>
-              <div className="space-y-2">
-                <span className="px-4 py-1.5 rounded-full bg-amber-500/20 text-amber-900 border border-amber-400/40 font-black text-xs uppercase tracking-widest inline-block">
-                  🏖️ सुट्टीची सूचना / School Holiday Notice
-                </span>
-                <h3 className="text-2xl md:text-4xl font-black text-amber-950 tracking-tight pt-2">
-                  आज शाळेस सुट्टी आहे!
-                </h3>
-                <p className="text-base md:text-xl font-bold text-amber-800">
-                  कारण: <span className="underline decoration-amber-400 font-black text-amber-900">{holidayNotice.reason || "शाळेस सुट्टी"}</span>
-                </p>
-              </div>
-              <p className="text-slate-600 text-sm max-w-lg mx-auto font-semibold pt-2">
-                मासिक परिपाठ नोंदवहीमध्ये या दिनांकास सुट्टी म्हणून घोषित केले आहे. त्यामुळे या दिनांकाचा दैनिक परिपाठ स्थगित राहील.
-              </p>
+          {/* Sunday / Holiday Tab Bar Switcher if Sunday or Holiday */}
+          {((() => {
+            if (!selectedDate) return false;
+            const parts = selectedDate.split("-").map(Number);
+            if (parts.length === 3) {
+              const d = new Date(parts[0], parts[1] - 1, parts[2]);
+              if (d.getDay() === 0) return true;
+            }
+            return !!holidayNotice?.isHoliday;
+          })()) && (
+            <div className="flex bg-amber-50/90 backdrop-blur-md p-1.5 rounded-2xl border border-amber-300 shadow-md w-fit mx-auto my-2 pdf-hide gap-1.5">
+              <button
+                type="button"
+                onClick={() => setActiveAssemblyTab("sutti")}
+                className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
+                  activeAssemblyTab === "sutti"
+                    ? "bg-amber-500 text-white shadow-lg scale-[1.02]"
+                    : "text-amber-900 hover:bg-amber-200/60"
+                }`}
+              >
+                <SunMedium className="size-4" />
+                <span>🏖️ सुट्टीचा टॅब (Sunday Off)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveAssemblyTab("content")}
+                className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
+                  activeAssemblyTab === "content"
+                    ? "bg-[#6C63FF] text-white shadow-lg scale-[1.02]"
+                    : "text-slate-700 hover:bg-slate-200/60"
+                }`}
+              >
+                <BookOpen className="size-4" />
+                <span>📖 परिपाठ घटक (Assembly Items)</span>
+              </button>
             </div>
-          ) : !dbFormData ? (
-            <div className="bg-amber-50/80 border-2 border-dashed border-amber-200 p-10 md:p-14 rounded-[3rem] text-center space-y-4 shadow-sm my-6 pdf-hide">
-              <div className="size-16 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto text-amber-600 shadow-inner">
-                <Calendar className="size-8" />
+          )}
+
+          {activeAssemblyTab === "sutti" && (holidayNotice?.isHoliday || (() => {
+            if (!selectedDate) return false;
+            const parts = selectedDate.split("-").map(Number);
+            return parts.length === 3 && new Date(parts[0], parts[1] - 1, parts[2]).getDay() === 0;
+          })()) ? (
+            <div className="p-10 md:p-14 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border-2 border-amber-400 rounded-[3rem] text-center space-y-6 shadow-sm my-6">
+              <div className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-amber-500 text-white text-sm font-black rounded-full uppercase tracking-wider shadow-md">
+                🎉 आज रविवार सुट्टी आहे (SUNDAY OFF)
               </div>
-              <h3 className="text-xl md:text-2xl font-black text-amber-900">
-                दिनांक {formData.dateMonth} ({formData.day}) साठी परिपाठ उपलब्ध नाही
+              <h3 className="text-2xl md:text-4xl font-black text-amber-950 tracking-tight leading-snug pt-2">
+                आज शाळेस रविवारची सुट्टी आहे!
               </h3>
-              <p className="text-slate-600 text-sm max-w-md mx-auto font-medium">
-                या दिनांकाचा परिपाठ सुपर ॲडमिन कडून अजून अपलोड केलेला नाही. कृपया कॅलेंडरमधून इतर दिनांक निवडा किंवा ॲडमिन कडून अपडेट होण्याची वाट पहा.
-              </p>
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveAssemblyTab("content")}
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-[#6C63FF] hover:bg-indigo-600 text-white font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-indigo-500/25 active:scale-95"
+                >
+                  <BookOpen className="size-4" />
+                  <span>📖 परिपाठ घटक पहा (View Assembly Items)</span>
+                </button>
+              </div>
             </div>
           ) : (
             <>
