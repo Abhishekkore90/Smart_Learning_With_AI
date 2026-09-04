@@ -6198,10 +6198,10 @@ function TeacherSqaafPage() {
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-size: 9px;">${dynamicRangeHtml}</td>
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-size: 10px; font-weight: bold;">${appCount}</td>
               <td style="border: 1px solid black; padding: 4px; font-size: 10px;">${dom.nameMr}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL1 ? `${selfL1} × 1` : ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL2 ? `${selfL2} × 2` : ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL3 ? `${selfL3} × 3` : ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL4 ? `${selfL4} × 4` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL1 ? `${selfL1} × 1 = ${selfL1 * 1}` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL2 ? `${selfL2} × 2 = ${selfL2 * 2}` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL3 ? `${selfL3} × 3 = ${selfL3 * 3}` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL4 ? `${selfL4} × 4 = ${selfL4 * 4}` : ""}</td>
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfObt}</td>
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
@@ -6279,14 +6279,14 @@ function TeacherSqaafPage() {
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-size: 9px;">${dynamicRangeHtml}</td>
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-size: 10px; font-weight: bold;">${appCount}</td>
               <td style="border: 1px solid black; padding: 4px; font-size: 10px;">${dom.nameMr}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL1 ? `${selfL1} × 1` : ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL1 ? `${extL1} × 1` : ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL2 ? `${selfL2} × 2` : ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL2 ? `${extL2} × 2` : ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL3 ? `${selfL3} × 3` : ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL3 ? `${extL3} × 3` : ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL4 ? `${selfL4} × 4` : ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL4 ? `${extL4} × 4` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL1 ? `${selfL1} × 1 = ${selfL1 * 1}` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL1 ? `${extL1} × 1 = ${extL1 * 1}` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL2 ? `${selfL2} × 2 = ${selfL2 * 2}` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL2 ? `${extL2} × 2 = ${extL2 * 2}` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL3 ? `${selfL3} × 3 = ${selfL3 * 3}` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL3 ? `${extL3} × 3 = ${extL3 * 3}` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL4 ? `${selfL4} × 4 = ${selfL4 * 4}` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL4 ? `${extL4} × 4 = ${extL4 * 4}` : ""}</td>
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfObt}</td>
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
             </tr>
@@ -6678,14 +6678,14 @@ function TeacherSqaafPage() {
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-size: 9px;">${dynamicRangeHtml}</td>
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-size: 10px; font-weight: bold;">${appCount}</td>
               <td style="border: 1px solid black; padding: 4px; font-size: 10px;">${dom.nameMr}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL1 ? `${selfL1} × 1` : ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL1 ? `${extL1} × 1` : ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL2 ? `${selfL2} × 2` : ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL2 ? `${extL2} × 2` : ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL3 ? `${selfL3} × 3` : ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL3 ? `${extL3} × 3` : ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL4 ? `${selfL4} × 4` : ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL4 ? `${extL4} × 4` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL1 ? `${selfL1} × 1 = ${selfL1 * 1}` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL1 ? `${extL1} × 1 = ${extL1 * 1}` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL2 ? `${selfL2} × 2 = ${selfL2 * 2}` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL2 ? `${extL2} × 2 = ${extL2 * 2}` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL3 ? `${selfL3} × 3 = ${selfL3 * 3}` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL3 ? `${extL3} × 3 = ${extL3 * 3}` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL4 ? `${selfL4} × 4 = ${selfL4 * 4}` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL4 ? `${extL4} × 4 = ${extL4 * 4}` : ""}</td>
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfObt}</td>
               <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
             </tr>
@@ -7317,10 +7317,10 @@ function TeacherSqaafPage() {
                   <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; white-space: nowrap;">${dom.start} ते ${dom.end}</td>
                   <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; word-wrap: break-word; overflow-wrap: break-word;">${naText}</td>
                   <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; color: #1e1b4b;">${appCount}</td>
-                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; background-color: #fef2f2; color: #991b1b;">${selfL1 ? `${selfL1} × 1` : "-"}</td>
-                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; background-color: #fff7ed; color: #c2410c;">${selfL2 ? `${selfL2} × 2` : "-"}</td>
-                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; background-color: #fffbeb; color: #b45309;">${selfL3 ? `${selfL3} × 3` : "-"}</td>
-                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; background-color: #f0fdf4; color: #166534;">${selfL4 ? `${selfL4} × 4` : "-"}</td>
+                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; background-color: #fef2f2; color: #991b1b;">${selfL1 ? `${selfL1} × 1 = ${selfL1 * 1}` : "-"}</td>
+                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; background-color: #fff7ed; color: #c2410c;">${selfL2 ? `${selfL2} × 2 = ${selfL2 * 2}` : "-"}</td>
+                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; background-color: #fffbeb; color: #b45309;">${selfL3 ? `${selfL3} × 3 = ${selfL3 * 3}` : "-"}</td>
+                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; background-color: #f0fdf4; color: #166534;">${selfL4 ? `${selfL4} × 4 = ${selfL4 * 4}` : "-"}</td>
                   <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; color: #1e1b4b;">${selfObt}</td>
                 </tr>
             `;
@@ -8835,7 +8835,7 @@ function TeacherSqaafPage() {
                     <h3 className="text-[14px] md:text-[16px] font-black text-slate-900 uppercase tracking-wider text-center">
                       {selectedLang === "mr" ? "SQAAF - क्षेत्र, उपक्षेत्र, आणि मानके / बेंच मार्किंग व बाह्यमूल्यांकन स्टेटमेंट" : "SQAAF - Domain, Sub-domain and Standards / Benchmarking & External Evaluation Statement"}
                     </h3>
-                    <table className="min-w-full border-collapse border border-slate-300 text-xs text-slate-950">
+                    <table className="min-w-[1000px] w-full border-collapse border border-slate-300 text-xs text-slate-950">
                       <thead>
                         <tr className="bg-slate-50 text-slate-900 font-bold border-b border-slate-300">
                           <th rowSpan={2} className="border border-slate-300 px-3 py-3 text-center w-[10%]">{selectedLang === "mr" ? "मानक क्र." : "Standard Range"}</th>
@@ -8873,16 +8873,16 @@ function TeacherSqaafPage() {
                             <td className="border border-slate-300 px-3 py-3 text-center font-black">{selectedLang === "mr" ? toMarathiNumerals(row.appCount) : row.appCount}</td>
                             <td className="border border-slate-300 px-3 py-3 text-left font-bold text-slate-800 leading-relaxed">{selectedLang === "mr" ? row.nameMr : row.nameEn}</td>
                             
-                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.selfL1 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.selfL1)} × १` : `${row.selfL1} × 1`) : ""}</td>
-                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.selfL2 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.selfL2)} × २` : `${row.selfL2} × 2`) : ""}</td>
-                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.selfL3 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.selfL3)} × ३` : `${row.selfL3} × 3`) : ""}</td>
-                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.selfL4 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.selfL4)} × ४` : `${row.selfL4} × 4`) : ""}</td>
-                            <td className="border border-slate-300 px-2 py-3 text-center font-black bg-amber-50 text-amber-900">{selectedLang === "mr" ? toMarathiNumerals(row.selfObt) : row.selfObt}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700 whitespace-nowrap">{row.selfL1 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.selfL1)} × १ = ${toMarathiNumerals(row.selfL1 * 1)}` : `${row.selfL1} × 1 = ${row.selfL1 * 1}`) : ""}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700 whitespace-nowrap">{row.selfL2 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.selfL2)} × २ = ${toMarathiNumerals(row.selfL2 * 2)}` : `${row.selfL2} × 2 = ${row.selfL2 * 2}`) : ""}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700 whitespace-nowrap">{row.selfL3 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.selfL3)} × ३ = ${toMarathiNumerals(row.selfL3 * 3)}` : `${row.selfL3} × 3 = ${row.selfL3 * 3}`) : ""}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700 whitespace-nowrap">{row.selfL4 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.selfL4)} × ४ = ${toMarathiNumerals(row.selfL4 * 4)}` : `${row.selfL4} × 4 = ${row.selfL4 * 4}`) : ""}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-black bg-amber-50 text-amber-900 whitespace-nowrap">{selectedLang === "mr" ? toMarathiNumerals(row.selfObt) : row.selfObt}</td>
                             
-                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.extL1 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.extL1)} × १` : `${row.extL1} × 1`) : ""}</td>
-                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.extL2 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.extL2)} × २` : `${row.extL2} × 2`) : ""}</td>
-                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.extL3 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.extL3)} × ३` : `${row.extL3} × 3`) : ""}</td>
-                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700">{row.extL4 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.extL4)} × ४` : `${row.extL4} × 4`) : ""}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700 whitespace-nowrap">{row.extL1 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.extL1)} × १ = ${toMarathiNumerals(row.extL1 * 1)}` : `${row.extL1} × 1 = ${row.extL1 * 1}`) : ""}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700 whitespace-nowrap">{row.extL2 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.extL2)} × २ = ${toMarathiNumerals(row.extL2 * 2)}` : `${row.extL2} × 2 = ${row.extL2 * 2}`) : ""}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700 whitespace-nowrap">{row.extL3 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.extL3)} × ३ = ${toMarathiNumerals(row.extL3 * 3)}` : `${row.extL3} × 3 = ${row.extL3 * 3}`) : ""}</td>
+                            <td className="border border-slate-300 px-2 py-3 text-center font-bold text-slate-700 whitespace-nowrap">{row.extL4 ? (selectedLang === "mr" ? `${toMarathiNumerals(row.extL4)} × ४ = ${toMarathiNumerals(row.extL4 * 4)}` : `${row.extL4} × 4 = ${row.extL4 * 4}`) : ""}</td>
                             <td className="border border-slate-300 px-2 py-3 text-center font-black bg-indigo-50 text-indigo-900">{row.extObt ? (selectedLang === "mr" ? toMarathiNumerals(row.extObt) : row.extObt) : ""}</td>
                           </tr>
                         ))}
