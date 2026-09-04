@@ -146,14 +146,7 @@ const MOCK_NAMES = [
 
 const cleanMeetingMembers = (meeting: any) => {
   if (!meeting) return null;
-  const cleaned = { ...meeting };
-  if (cleaned.members) {
-    cleaned.members = cleaned.members.filter((m: any) => {
-      if (!m || !m.name) return false;
-      return !MOCK_NAMES.includes(m.name.trim());
-    });
-  }
-  return cleaned;
+  return meeting;
 };
 
 const SAKHI_SAVITRI_DESIGNATIONS = [
@@ -575,7 +568,29 @@ function TeacherMeetingPage() {
 
       const loadProfile = async () => {
         try {
-          if (savedMeetings.length > 0) {
+          const profileDoc = await getDoc(doc(db, "teacher_committee_profiles", `${udise}_${selectedCommittee.id}`));
+          if (profileDoc.exists()) {
+            const data = profileDoc.data();
+            setSchoolName(data.schoolName || profile?.schoolName || "");
+            setHeadmasterName(data.headmasterName || profile?.fullName || "");
+            setPresidentName(data.presidentName || "");
+            setCommitteeName(data.committeeName || selectedCommittee.name);
+            setFormMembers(ensureTenMembers(data.formMembers));
+            setHasSavedProfile(true);
+            setFormStep(2);
+
+            if (savedMeetings.length > 0) {
+              const prevMeeting = savedMeetings[0];
+              const prevNum = parseInt(prevMeeting.meetingNumber || "");
+              if (!isNaN(prevNum)) {
+                setMeetingNumber((prevNum + 1).toString());
+              } else {
+                setMeetingNumber("");
+              }
+            } else {
+              setMeetingNumber("१");
+            }
+          } else if (savedMeetings.length > 0) {
             const prevMeeting = savedMeetings[0];
 
             setSchoolName(prevMeeting.schoolName || profile?.schoolName || "");
@@ -590,54 +605,30 @@ function TeacherMeetingPage() {
               setMeetingNumber("");
             }
 
-            // Check if prevMeeting.members matches selectedCommittee.defaultMembers
-            const isDefaultMock = selectedCommittee.defaultMembers &&
-              prevMeeting.members &&
-              prevMeeting.members.length === selectedCommittee.defaultMembers.length &&
-              prevMeeting.members.every((m: any, idx: number) => {
-                const dm = selectedCommittee.defaultMembers[idx];
-                return m.name === dm.name && m.post === dm.post && m.role === dm.role;
-              });
-
-            if (isDefaultMock) {
-              setFormMembers(ensureTenMembers([]));
-            } else {
-              setFormMembers(
-                ensureTenMembers(
-                  prevMeeting.members && prevMeeting.members.length > 0
-                    ? JSON.parse(JSON.stringify(prevMeeting.members))
-                    : []
-                )
-              );
-            }
-
-            const profileDoc = await getDoc(doc(db, "teacher_committee_profiles", `${udise}_${selectedCommittee.id}`));
-            setHasSavedProfile(profileDoc.exists());
+            setFormMembers(
+              ensureTenMembers(
+                prevMeeting.members && prevMeeting.members.length > 0
+                  ? JSON.parse(JSON.stringify(prevMeeting.members))
+                  : []
+              )
+            );
+            setHasSavedProfile(true);
+            setFormStep(2);
           } else {
-            const profileDoc = await getDoc(doc(db, "teacher_committee_profiles", `${udise}_${selectedCommittee.id}`));
-            if (profileDoc.exists()) {
-              const data = profileDoc.data();
-              setSchoolName(data.schoolName || profile?.schoolName || "");
-              setHeadmasterName(data.headmasterName || profile?.fullName || "");
-              setPresidentName(data.presidentName || "");
-              setCommitteeName(data.committeeName || selectedCommittee.name);
-              setFormMembers(ensureTenMembers(data.formMembers));
-              setHasSavedProfile(true);
-            } else {
-              setHasSavedProfile(false);
-              setSchoolName("");
-              setHeadmasterName("");
-              setPresidentName("");
-              setMeetingNumber("१");
-              setFormMembers(
-                ensureTenMembers(
-                  selectedCommittee.defaultMembers && selectedCommittee.defaultMembers.length > 0
-                    ? JSON.parse(JSON.stringify(selectedCommittee.defaultMembers))
-                    : []
-                )
-              );
-              setCommitteeName(selectedCommittee.name);
-            }
+            setHasSavedProfile(false);
+            setSchoolName(profile?.schoolName || "");
+            setHeadmasterName(profile?.fullName || "");
+            setPresidentName("");
+            setMeetingNumber("१");
+            setFormMembers(
+              ensureTenMembers(
+                selectedCommittee.defaultMembers && selectedCommittee.defaultMembers.length > 0
+                  ? JSON.parse(JSON.stringify(selectedCommittee.defaultMembers))
+                  : []
+              )
+            );
+            setCommitteeName(selectedCommittee.name);
+            setFormStep(1);
           }
         } catch (error) {
           console.error("Error loading committee profile / previous meeting:", error);
@@ -650,7 +641,6 @@ function TeacherMeetingPage() {
       setFormResolutions([]);
       setSelectedMonth("");
       setStartResolutionNo(1);
-      setFormStep(1);
       setMeetingNumber("१");
     } else if (!selectedCommittee) {
       setFormMembers(Array.from({ length: 10 }, () => ({ name: "", post: "", role: "" })));
@@ -2884,7 +2874,40 @@ function TeacherMeetingPage() {
                         )}
 
                         {formStep === 2 && (
-                          <div className="space-y-12">
+                          <div className="space-y-8">
+                            {/* Committee Info & Member Summary Banner */}
+                            <div className="bg-gradient-to-r from-blue-50/90 via-indigo-50/60 to-slate-50 border border-blue-150 p-4 sm:p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+                              <div className="flex items-center gap-3.5">
+                                <div className="p-3 bg-blue-600 text-white rounded-2xl shadow-sm shrink-0">
+                                  <Users className="size-6" />
+                                </div>
+                                <div className="space-y-1">
+                                  <h4 className="text-sm sm:text-base font-black text-slate-900 leading-tight">
+                                    समिती प्राथमिक माहिती व सदस्य (Committee Info & Members)
+                                  </h4>
+                                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-bold text-slate-600">
+                                    {schoolName && (
+                                      <>
+                                        <span>शाळा: <strong className="text-slate-900">{schoolName}</strong></span>
+                                        <span className="text-slate-300">•</span>
+                                      </>
+                                    )}
+                                    <span>अध्यक्ष: <strong className="text-slate-900">{presidentName || formMembers.find((m: any) => m.role === "अध्यक्ष")?.name || "________"}</strong></span>
+                                    <span className="text-slate-300">•</span>
+                                    <span>सदस्य संख्या: <strong className="text-blue-700 font-extrabold">{formMembers.filter((m: any) => m.name?.trim()).length} सदस्य</strong></span>
+                                  </div>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setFormStep(1)}
+                                className="flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-blue-600 hover:text-white text-blue-700 font-black rounded-xl text-xs border-2 border-blue-200 hover:border-blue-600 transition-all shadow-sm active:scale-95 cursor-pointer shrink-0"
+                              >
+                                <Edit2 className="size-4" />
+                                समिती सदस्य / माहिती बदला (Edit Members)
+                              </button>
+                            </div>
+
                             <div className="space-y-6">
                               {/* Month Selection Navbar & Metadata */}
                               <div className="bg-slate-50 border border-slate-200/80 p-4 sm:p-5 rounded-2xl space-y-4">
