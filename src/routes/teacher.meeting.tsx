@@ -181,7 +181,7 @@ const SAFETY_DESIGNATIONS = [
   "सरपंच",
   "नगरसेवक",
   "स्थानिक प्रा. प्रतिनिधी",
-  "शिक्षक प्रतिनिधि ",
+  "शिक्षक प्रतिनिधी",
   "स्थानिक शिक्षणतज्ज्ञ",
   "बालविकास तज्ज्ञ",
   "समुपदेशक",
@@ -1811,8 +1811,13 @@ function TeacherMeetingPage() {
 
                           .register-table th, .register-table td {
                             border: 1px solid #475569;
-                            padding: 0.5rem 0.8rem;
+                            padding: 0.4rem 0.5rem;
                             text-align: left;
+                          }
+
+                          .register-table th.role-cell, .register-table td.role-cell {
+                            white-space: nowrap !important;
+                            word-break: keep-all !important;
                           }
 
                           .register-table th {
@@ -2416,13 +2421,13 @@ function TeacherMeetingPage() {
                                           <table className="register-table w-full table-fixed">
                                             <thead>
                                               <tr className="bg-slate-100">
-                                                <th style={{ width: '8%' }} className="text-center px-1 py-2">
+                                                <th style={{ width: '6%', whiteSpace: 'nowrap' }} className="text-center px-1 py-2 whitespace-nowrap">
                                                   अ.क्र.
                                                 </th>
-                                                <th style={{ width: '38%' }} className="text-left px-2 py-2">सदस्याचे नाव</th>
-                                                <th style={{ width: '31%' }} className="text-left px-2 py-2">पदनाम</th>
-                                                <th style={{ width: '11%' }} className="text-left px-2 py-2">पद</th>
-                                                <th style={{ width: '12%' }} className="text-center px-2 py-2">
+                                                <th style={{ width: '32%' }} className="text-left px-2 py-2">सदस्याचे नाव</th>
+                                                <th style={{ width: '24%' }} className="text-left px-2 py-2">पदनाम</th>
+                                                <th style={{ width: '26%', whiteSpace: 'nowrap' }} className="text-left px-2 py-2 whitespace-nowrap role-cell">पद</th>
+                                                <th style={{ width: '12%', whiteSpace: 'nowrap' }} className="text-center px-2 py-2 whitespace-nowrap">
                                                   स्वाक्षरी
                                                 </th>
                                               </tr>
@@ -2442,7 +2447,7 @@ function TeacherMeetingPage() {
                                                       {member.name}
                                                     </td>
                                                     <td className="px-2 py-2 whitespace-normal break-words">{member.post}</td>
-                                                    <td className="px-2 py-2 whitespace-normal break-words">{member.role || "सदस्य"}</td>
+                                                    <td style={{ whiteSpace: 'nowrap', wordBreak: 'keep-all' }} className="px-2 py-2 whitespace-nowrap role-cell">{member.role || "सदस्य"}</td>
                                                     <td className="text-center px-2 py-2">
                                                       {/* Left blank for physical signing as requested */}
                                                       <div className="h-6 w-full" />
