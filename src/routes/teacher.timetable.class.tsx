@@ -20,6 +20,7 @@ import { useLanguage } from "@/hooks/use-language";
 import { useAuth } from "@/hooks/use-auth";
 import { motion, AnimatePresence } from "framer-motion";
 import { uploadBlobToBunny } from "@/lib/bunnyStorage";
+import { getUnifiedSchoolProfile } from "@/utils/schoolProfileHelper";
 import logoImg from "@/assets/logo.jpeg";
 
 
@@ -602,21 +603,27 @@ function ClassTimetablePage() {
         [field]: value
       }
     }));
-  }; useEffect(() => {
+  };
+
+  useEffect(() => {
     setLoading(true);
     setGridData(null);
 
-    // Subscribe/read from shared class_timetables/${selectedClass}
-    const docRef = doc(db, "class_timetables", selectedClass);
-    const unsubscribe = onSnapshot(docRef, async (snapshot) => {
+    const selectedClassNameMr = CLASS_NAME_MAP[selectedClass]?.mr || selectedClass;
+
+    // Load from user-specific document if user is logged in, otherwise fallback to class_timetables
+    const targetDocRef = user
+      ? doc(db, "teacher_edited_timetables", `${user.uid}_${selectedClass}`)
+      : doc(db, "class_timetables", selectedClass);
+
+    const unsubscribe = onSnapshot(targetDocRef, (snapshot) => {
       if (snapshot.exists()) {
         const docData = snapshot.data();
         if (docData && docData.district === "सोलापूर") {
           docData.district = "";
         }
-        const selectedClassNameMr = CLASS_NAME_MAP[selectedClass]?.mr || selectedClass;
-        const defaultGrid = generateDefaultGrid(selectedClass, selectedClassNameMr);
 
+        const defaultGrid = generateDefaultGrid(selectedClass, selectedClassNameMr);
         const hasOldITDefault = docData.rows && docData.rows.some((r: any) => r.friday === "माहिती तंत्रज्ञान");
         const hasWrongRowCount = docData.rows && docData.rows.length !== 14;
         const isOldAcademicYear = docData.academicYear !== "2026-27";
@@ -624,62 +631,41 @@ function ClassTimetablePage() {
 
         if (isOldAcademicYear || ((selectedClass === "1st" || selectedClass === "2nd") && (hasOldITDefault || hasWrongRowCount))) {
           setGridData(defaultGrid);
-          try {
-            await setDoc(docRef, defaultGrid);
-          } catch (e) {
-            console.error("Auto reset save error:", e);
-          }
         } else if (hasOldClassName) {
           const updatedDoc = { ...docData, classNameMr: selectedClassNameMr };
           setGridData(updatedDoc);
-          try {
-            await setDoc(docRef, updatedDoc);
-          } catch (e) {
-            console.error("Auto update className error:", e);
-          }
         } else {
           setGridData(docData);
         }
         setLoading(false);
       } else {
-        // Fallback: Check if there is old teacher-specific data in teacher_edited_timetables
-        try {
-          if (user) {
-            const oldRef = doc(db, "teacher_edited_timetables", `${user.uid}_${selectedClass}`);
-            const oldSnap = await getDoc(oldRef);
-            if (oldSnap.exists()) {
-              const oldData = oldSnap.data();
-              if (oldData && oldData.district === "सोलापूर") {
-                oldData.district = "";
-              }
-              setGridData(oldData);
-              setLoading(false);
-              return;
-            }
-          }
-        } catch (e) {
-          console.error("Fallback load error:", e);
-        }
-
-        // If neither exists, generate a default ZP timetable template
-        const selectedClassNameMr = CLASS_NAME_MAP[selectedClass]?.mr || selectedClass;
+        // No saved doc exists for this user -> generate a clean default grid with user's own profile info
         const defaultGrid = generateDefaultGrid(selectedClass, selectedClassNameMr);
 
-        // Pre-populate ZP school info from teacher profile lock cached details if available
+        // Pre-populate ZP school info from unified profile or cached setup
+        const unifiedProfile = getUnifiedSchoolProfile();
+        if (unifiedProfile.schoolName) defaultGrid.schoolName = unifiedProfile.schoolName;
+        if (unifiedProfile.centerName) defaultGrid.center = unifiedProfile.centerName;
+        if (unifiedProfile.taluka) defaultGrid.taluka = unifiedProfile.taluka;
+        if (unifiedProfile.district) defaultGrid.district = unifiedProfile.district;
+        if (unifiedProfile.teacherName) defaultGrid.teacherName = unifiedProfile.teacherName;
+        if (unifiedProfile.headmaster) defaultGrid.headmasterName = unifiedProfile.headmaster;
+
         const cachedSetup = localStorage.getItem("teacher_module_setup_data");
         if (cachedSetup) {
           try {
             const parsed = JSON.parse(cachedSetup);
-            if (parsed.schoolName) defaultGrid.schoolName = parsed.schoolName;
-            if (parsed.center) defaultGrid.center = parsed.center;
-            if (parsed.taluka) defaultGrid.taluka = parsed.taluka;
-            if (parsed.district) defaultGrid.district = parsed.district;
-            if (parsed.teacherName) defaultGrid.teacherName = parsed.teacherName;
-            if (parsed.headmasterName) defaultGrid.headmasterName = parsed.headmasterName;
+            if (!defaultGrid.schoolName && parsed.schoolName) defaultGrid.schoolName = parsed.schoolName;
+            if (!defaultGrid.center && parsed.center) defaultGrid.center = parsed.center;
+            if (!defaultGrid.taluka && parsed.taluka) defaultGrid.taluka = parsed.taluka;
+            if (!defaultGrid.district && parsed.district) defaultGrid.district = parsed.district;
+            if (!defaultGrid.teacherName && parsed.teacherName) defaultGrid.teacherName = parsed.teacherName;
+            if (!defaultGrid.headmasterName && parsed.headmasterName) defaultGrid.headmasterName = parsed.headmasterName;
           } catch (e) {
             // ignore
           }
         }
+
         setGridData(defaultGrid);
         setLoading(false);
       }
@@ -701,10 +687,15 @@ function ClassTimetablePage() {
 
   const handleSaveGridOnly = async () => {
     if (!gridData) return;
+    if (!user) {
+      toast.error(lang === "mr" ? "कृपया बदल जतन करण्यासाठी लॉगिन करा." : "Please login to save changes.");
+      return;
+    }
     setSavingGrid(true);
     try {
-      await setDoc(doc(db, "class_timetables", selectedClass), gridData);
-      toast.success(lang === "mr" ? "बदल यशस्वीरित्या जतन झाले!" : "Changes saved successfully!");
+      const targetDocRef = doc(db, "teacher_edited_timetables", `${user.uid}_${selectedClass}`);
+      await setDoc(targetDocRef, gridData);
+      toast.success(lang === "mr" ? "बदल यशस्वीरित्या तुमच्या अकाऊंटवर जतन झाले!" : "Changes saved successfully to your account!");
     } catch (err) {
       console.error("Save error:", err);
       toast.error(lang === "mr" ? "जतन करताना त्रुटी आली." : "Failed to save changes.");
@@ -757,7 +748,7 @@ function ClassTimetablePage() {
     });
 
     const opt = {
-      margin: 0,
+      margin: [0.5, 0.3, 0.3, 0.3],
       filename: `${selectedClass}_Timetable.pdf`,
       image: { type: "jpeg", quality: 1.0 },
       html2canvas: {
@@ -781,7 +772,7 @@ function ClassTimetablePage() {
     try {
       element.style.zoom = '1';
       (element.style as any).WebkitZoom = '1';
-      element.style.transform = 'scale(0.90)';
+      element.style.transform = 'scale(0.86)';
       element.style.transformOrigin = 'top center';
 
       const html2pdf = (await import("html2pdf.js")).default;
@@ -880,7 +871,15 @@ function ClassTimetablePage() {
                       onClick={() => {
                         if (window.confirm(lang === "mr" ? "तुम्हाला खात्री आहे की तुम्हाला हे वेळापत्रक मूळ स्वरूपात पुनर्संचयित करायचे आहे? (यामुळे आधीचे सर्व बदल नष्ट होतील)" : "Are you sure you want to reset this timetable to default template? (This will overwrite all existing edits)")) {
                           const selectedClassNameMr = CLASS_NAME_MAP[selectedClass]?.mr || selectedClass;
-                          setGridData(generateDefaultGrid(selectedClass, selectedClassNameMr));
+                          const defaultGrid = generateDefaultGrid(selectedClass, selectedClassNameMr);
+                          const unifiedProfile = getUnifiedSchoolProfile();
+                          if (unifiedProfile.schoolName) defaultGrid.schoolName = unifiedProfile.schoolName;
+                          if (unifiedProfile.centerName) defaultGrid.center = unifiedProfile.centerName;
+                          if (unifiedProfile.taluka) defaultGrid.taluka = unifiedProfile.taluka;
+                          if (unifiedProfile.district) defaultGrid.district = unifiedProfile.district;
+                          if (unifiedProfile.teacherName) defaultGrid.teacherName = unifiedProfile.teacherName;
+                          if (unifiedProfile.headmaster) defaultGrid.headmasterName = unifiedProfile.headmaster;
+                          setGridData(defaultGrid);
                           toast.success(lang === "mr" ? "वेळापत्रक मूळ स्वरूपात आणले गेले आहे. ते जतन करण्यासाठी 'बदल जतन करा' वर क्लिक करा." : "Timetable reset to default. Click 'Save Changes' to commit.");
                         }
                       }}
@@ -948,7 +947,7 @@ function ClassTimetablePage() {
                 >
                   <div
                     id="editable-timetable-container"
-                    className="p-4 bg-white text-slate-900 border border-black shadow-sm font-sans space-y-2 w-[1000px] min-w-[1000px] mx-auto overflow-hidden"
+                    className="p-4 pt-10 bg-white text-slate-900 border border-black shadow-sm font-sans space-y-3 w-[1000px] min-w-[1000px] mx-auto overflow-hidden"
                     style={
                       zoomMode === 'fit' && scale < 1
                         ? {
@@ -986,7 +985,7 @@ function ClassTimetablePage() {
 
                     <div className="border border-black text-[10px] font-bold grid grid-cols-12 bg-white">
                       <div className="col-span-5 flex items-center gap-1 p-1.5 bg-white whitespace-nowrap" style={{ borderRight: '1px solid black' }}>
-                        <span className="whitespace-nowrap flex-shrink-0">जिल्हा परिषद प्राथमिक शाळा :</span>
+                        <span className="whitespace-nowrap flex-shrink-0">शाळेचे नाव :</span>
                         <input
                           type="text"
                           value={gridData.schoolName}

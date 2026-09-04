@@ -176,19 +176,7 @@ function TeacherDashboard() {
         <div className="p-6 space-y-6">
           {/* Quick Access Modules Card Grid */}
           <div className="space-y-6">
-            <div className="bg-gradient-to-r from-violet-50 to-indigo-50/50 p-8 rounded-[2rem] border border-indigo-100/50 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm">
-              <div className="space-y-1">
-                <h2 className="text-lg font-black text-slate-800 flex items-center gap-2">
-                  <Sparkles className="size-5 text-indigo-600 animate-pulse" /> शिक्षक विभाग सेवा सूची (Teacher Modules)
-                </h2>
-                <p className="text-xs font-bold text-slate-500">
-                  वापरण्यासाठी किंवा अहवाल पाहण्यासाठी खालीलपैकी कोणतेही एक मॉड्यूल निवडा {!user && "(लॉगिन आवश्यक)"}.
-                </p>
-              </div>
-              <div className="flex items-center gap-2 text-xs font-black text-indigo-600 bg-indigo-50 border border-indigo-100 px-4 py-2 rounded-xl">
-                <span>एकूण {MODULE_CARDS.length} सक्रिय मॉड्यूल्स</span>
-              </div>
-            </div>
+
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 pt-2">
               {MODULE_CARDS.map((item, idx) => {

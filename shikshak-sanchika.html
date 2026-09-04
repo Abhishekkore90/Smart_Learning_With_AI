@@ -900,18 +900,7 @@
 
     @media (max-width: 800px) {
       .nav-arrow {
-        width: 44px;
-        height: 44px;
-        font-size: 18px;
-        top: 125px;
-        bottom: auto;
-        transform: none;
-      }
-      .nav-arrow.prev-arrow {
-        left: 8px;
-      }
-      .nav-arrow.next-arrow {
-        right: 8px;
+        display: none !important;
       }
     }
 
@@ -931,11 +920,11 @@
     }
     .print-bar .top-row {
       height: 56px;
-      padding: 0 16px;
+      padding: 0 12px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
+      gap: 8px;
       width: 100%;
       box-sizing: border-box;
     }
@@ -976,20 +965,24 @@
     .mobile-action-bar {
       display: none;
       align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
+      gap: 6px;
+      padding: 6px 10px;
       background: #f8fafc;
       border-top: 1px solid #e2e8f0;
       overflow-x: auto;
       white-space: nowrap;
       width: 100%;
       box-sizing: border-box;
+      -webkit-overflow-scrolling: touch;
     }
     .mobile-action-bar::-webkit-scrollbar {
       display: none;
     }
     .mobile-action-bar button {
       flex-shrink: 0;
+      padding: 6px 10px;
+      font-size: 11px;
+      border-radius: 6px;
     }
 
     @media (max-width: 800px) {
@@ -1007,7 +1000,8 @@
         padding-top: 0;
       }
       .pages-wrapper {
-        padding-top: 116px;
+        padding-top: 110px;
+        padding-bottom: 80px;
         padding-left: 8px;
         padding-right: 8px;
         max-width: 100%;
@@ -1019,56 +1013,66 @@
         min-height: auto !important;
         transform: none !important;
         margin: 0 0 20px 0 !important;
-        padding: 16px 12px !important;
+        padding: 14px 10px !important;
         box-shadow: 0 4px 16px rgba(0,0,0,0.08) !important;
         border-radius: 8px !important;
         box-sizing: border-box !important;
       }
       .cover-border {
-        padding: 16px 12px !important;
+        padding: 16px 10px !important;
         box-sizing: border-box !important;
         min-height: auto !important;
       }
       .cover-title {
-        font-size: 28px !important;
-        padding: 10px 24px !important;
+        font-size: 24px !important;
+        padding: 8px 16px !important;
         letter-spacing: 0.5px !important;
       }
       .cover-title::before, .cover-title::after {
-        font-size: 14px !important;
+        font-size: 12px !important;
       }
-      .cover-title::before { left: 6px !important; }
-      .cover-title::after { right: 6px !important; }
+      .cover-title::before { left: 4px !important; }
+      .cover-title::after { right: 4px !important; }
       #saraswati-img {
-        width: 160px !important;
-        height: 160px !important;
+        width: 140px !important;
+        height: 140px !important;
       }
       .cover-info-box {
         width: 100% !important;
         box-sizing: border-box !important;
       }
       .cover-info-box-header {
-        font-size: 15px !important;
-        padding: 10px !important;
+        font-size: 14px !important;
+        padding: 8px !important;
       }
       .cover-info-row {
         flex-direction: column !important;
         align-items: flex-start !important;
-        padding: 10px 14px !important;
-        gap: 6px !important;
+        padding: 8px 12px !important;
+        gap: 4px !important;
       }
       .cover-info-label {
         min-width: auto !important;
-        font-size: 15px !important;
+        font-size: 14px !important;
       }
       .cover-ef {
         width: 100% !important;
-        font-size: 15px !important;
+        font-size: 14px !important;
         box-sizing: border-box !important;
       }
       .page-inner {
         padding: 10px 8px !important;
         overflow-x: hidden;
+      }
+      .page-header {
+        font-size: 16px !important;
+        padding: 10px 12px !important;
+        margin-bottom: 12px !important;
+      }
+      .photo-box {
+        float: none !important;
+        margin: 0 auto 16px auto !important;
+        display: flex !important;
       }
       /* Table Horizontal Scroll Container for Mobile */
       .table-wrapper, .table-responsive, div:has(> table) {
@@ -1081,17 +1085,44 @@
       }
       table {
         width: 100% !important;
-        min-width: 580px !important;
+        min-width: 520px !important;
         border-collapse: collapse !important;
         table-layout: auto !important;
       }
       table th, table td {
         white-space: nowrap !important;
         word-break: normal !important;
-        padding: 8px 10px !important;
+        padding: 6px 8px !important;
+        font-size: 12px !important;
       }
       table .tef, table .ef {
-        min-width: 80px !important;
+        min-width: 70px !important;
+        font-size: 12px !important;
+      }
+      .bottom-controller {
+        bottom: 14px !important;
+        padding: 6px 12px !important;
+        gap: 8px !important;
+        width: max-content !important;
+        max-width: 96% !important;
+      }
+      .page-select-dropdown {
+        max-width: 140px !important;
+        padding: 4px 8px !important;
+        font-size: 11.5px !important;
+      }
+      .counter-text {
+        font-size: 11px !important;
+        min-width: 55px !important;
+      }
+      .controller-btn {
+        padding: 4px 10px !important;
+        font-size: 14px !important;
+      }
+    }
+    @media (max-width: 600px) {
+      .dots-container {
+        display: none !important;
       }
     }
   </style>
@@ -1578,6 +1609,15 @@
 
 </div><!-- end pages-wrapper -->
 
+<!-- Fixed Bottom Floating Navigation Bar -->
+<div class="bottom-controller no-print">
+  <button class="controller-btn" id="slider-prev-btn" onclick="changeSlide(-1)" title="मागील पान">◀</button>
+  <select class="page-select-dropdown" id="slider-page-select" onchange="selectPageFromDropdown(this.value)" title="पान निवडा"></select>
+  <button class="controller-btn" id="slider-next-btn" onclick="changeSlide(1)" title="पुढील पान">▶</button>
+  <div class="counter-text" id="slider-counter-text"></div>
+  <div class="dots-container" id="slider-dots-container"></div>
+</div>
+
 <script>
 let currentSlideIndex = 0;
 // ===== DOCUMENT UPLOAD =====
@@ -1954,8 +1994,16 @@ function deleteDynamicPage(pageNum) {
 
 // ===== PAGE SCALING =====
 function adjustPageScale() {
-  const targetWidth = 810; // A4 page width in px (210mm ≈ 793px, + padding)
   const viewportWidth = window.innerWidth;
+  if (viewportWidth <= 960) {
+    document.documentElement.style.setProperty('--page-scale', '1');
+    document.querySelectorAll('.page').forEach(p => {
+      p.style.marginBottom = '20px';
+    });
+    return;
+  }
+
+  const targetWidth = 810; // A4 page width in px (210mm ≈ 793px, + padding)
   
   // Scale to fill full viewport width
   const scale = viewportWidth / targetWidth;
@@ -1965,9 +2013,6 @@ function adjustPageScale() {
   
   document.documentElement.style.setProperty('--page-scale', clampedScale);
   
-  // Since transform: scale() doesn't change layout size,
-  // adjust the layout footprint using margin-bottom
-  // Use currentSlideIndex because .active-slide might not be applied yet
   const pages = document.querySelectorAll('.page');
   const activePage = pages[typeof currentSlideIndex !== 'undefined' ? currentSlideIndex : 0];
   if (activePage) {

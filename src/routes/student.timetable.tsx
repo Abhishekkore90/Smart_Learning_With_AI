@@ -182,7 +182,7 @@ function StudentTimetablePage() {
     if (!element) return;
 
     const opt = {
-      margin: 0,
+      margin: [0.5, 0.3, 0.3, 0.3],
       filename: `${selectedClass}_Timetable.pdf`,
       image: { type: "jpeg", quality: 1.0 },
       html2canvas: {
@@ -206,7 +206,7 @@ function StudentTimetablePage() {
     try {
       element.style.zoom = '1';
       (element.style as any).WebkitZoom = '1';
-      element.style.transform = 'scale(0.90)';
+      element.style.transform = 'scale(0.86)';
       element.style.transformOrigin = 'top center';
 
       const html2pdf = (await import("html2pdf.js")).default;
@@ -294,7 +294,7 @@ function StudentTimetablePage() {
                 <div className="w-full overflow-x-auto pb-4" ref={containerRef}>
                   <div 
                     id="student-timetable-container" 
-                    className="p-4 bg-white text-slate-900 border border-black shadow-sm font-sans space-y-2 w-[1000px] mx-auto overflow-hidden origin-top"
+                    className="p-4 pt-10 bg-white text-slate-900 border border-black shadow-sm font-sans space-y-3 w-[1000px] mx-auto overflow-hidden origin-top"
                     style={{
                       ["zoom" as any]: scale,
                       ["WebkitZoom" as any]: scale,
@@ -326,7 +326,7 @@ function StudentTimetablePage() {
                     {/* ZP Info bar */}
                     <div className="border border-black text-[10px] font-bold grid grid-cols-12 bg-white">
                       <div className="col-span-5 flex items-center gap-1 p-1.5 bg-white whitespace-nowrap" style={{ borderRight: '1px solid black' }}>
-                        <span className="whitespace-nowrap flex-shrink-0">जिल्हा परिषद प्राथमिक शाळा :</span>
+                        <span className="whitespace-nowrap flex-shrink-0">शाळेचे नाव :</span>
                         <span className="font-bold text-slate-800 px-1 whitespace-nowrap overflow-hidden text-ellipsis">{gridData.schoolName}</span>
                       </div>
                       <div className="col-span-2 flex items-center gap-1 p-1.5 whitespace-nowrap" style={{ backgroundColor: '#C6E0B4', borderRight: '1px solid black' }}>
