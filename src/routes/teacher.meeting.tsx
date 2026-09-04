@@ -24,6 +24,7 @@ import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import { PinGate } from "@/components/teacher/PinGate";
 import { ModulePaywall } from "@/components/teacher/ModulePaywall";
+import { getUnifiedSchoolProfile } from "@/utils/schoolProfileHelper";
 import {
   Users,
   Calendar,
@@ -396,9 +397,27 @@ function TeacherMeetingPage() {
   // Invitation letter state
   const [invitationTitle, setInvitationTitle] = useState("");
   const [invitationSubtitle, setInvitationSubtitle] = useState("सभेचे निमंत्रण पत्र तयार करा");
-  const [invitationVillage, setInvitationVillage] = useState("");
-  const [invitationTaluka, setInvitationTaluka] = useState("");
-  const [invitationDistrict, setInvitationDistrict] = useState("");
+  const [invitationVillage, setInvitationVillage] = useState(() => {
+    if (typeof window !== "undefined") {
+      const uni = getUnifiedSchoolProfile();
+      return uni.address || "";
+    }
+    return "";
+  });
+  const [invitationTaluka, setInvitationTaluka] = useState(() => {
+    if (typeof window !== "undefined") {
+      const uni = getUnifiedSchoolProfile();
+      return uni.taluka || "";
+    }
+    return "";
+  });
+  const [invitationDistrict, setInvitationDistrict] = useState(() => {
+    if (typeof window !== "undefined") {
+      const uni = getUnifiedSchoolProfile();
+      return uni.jilha || uni.district || "";
+    }
+    return "";
+  });
   const [invitationOutwardNo, setInvitationOutwardNo] = useState("");
   const [invitationLetterDate, setInvitationLetterDate] = useState("");
 
@@ -421,6 +440,31 @@ function TeacherMeetingPage() {
   const [invitationSelectedMonth, setInvitationSelectedMonth] = useState("");
 
   const currentCommName = committeeName || selectedCommittee?.name || "शाळा व्यवस्थापन समिती (SMC)";
+
+  // Auto-sync village, taluka, district, schoolName from profile / getUnifiedSchoolProfile
+  useEffect(() => {
+    const uni = getUnifiedSchoolProfile();
+    const detectedSchool = profile?.schoolName || uni.schoolName || "";
+    const detectedVillage = (profile as any)?.village || (profile as any)?.gaav || uni.address || (profile as any)?.address || "";
+    const detectedTaluka = (profile as any)?.taluka || uni.taluka || "";
+    const detectedDistrict = (profile as any)?.district || (profile as any)?.jilha || uni.jilha || uni.district || "";
+
+    if (detectedSchool) setSchoolName((prev: string) => prev || detectedSchool);
+    if (detectedVillage) setInvitationVillage((prev: string) => prev || detectedVillage);
+    if (detectedTaluka) setInvitationTaluka((prev: string) => prev || detectedTaluka);
+    if (detectedDistrict) setInvitationDistrict((prev: string) => prev || detectedDistrict);
+
+    const handleProfileUpdate = () => {
+      const updatedUni = getUnifiedSchoolProfile();
+      if (updatedUni.schoolName) setSchoolName((prev: string) => prev || updatedUni.schoolName);
+      if (updatedUni.address) setInvitationVillage((prev: string) => prev || updatedUni.address);
+      if (updatedUni.taluka) setInvitationTaluka((prev: string) => prev || updatedUni.taluka);
+      if (updatedUni.jilha || updatedUni.district) setInvitationDistrict((prev: string) => prev || updatedUni.jilha || updatedUni.district);
+    };
+
+    window.addEventListener("schoolProfileUpdated", handleProfileUpdate);
+    return () => window.removeEventListener("schoolProfileUpdated", handleProfileUpdate);
+  }, [profile]);
 
   useEffect(() => {
     if (currentCommName) {
@@ -3004,6 +3048,7 @@ function TeacherMeetingPage() {
                                           <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 size-5 pointer-events-none" />
                                           <input
                                             type="date"
+                                            onClick={(e) => { try { e.currentTarget.showPicker(); } catch {} }}
                                             value={meetingDate}
                                             onChange={(e) => handleDateChange(e.target.value)}
                                             className="w-full pl-12 pr-5 py-3.5 bg-white border-2 border-slate-300 rounded-xl text-base font-extrabold outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600 text-slate-955 cursor-pointer shadow-md transition-all"
@@ -3924,9 +3969,10 @@ function TeacherMeetingPage() {
                               <label className="text-sm font-black text-slate-700 block">पत्र दिनांक</label>
                               <input
                                 type="date"
+                                onClick={(e) => { try { e.currentTarget.showPicker(); } catch {} }}
                                 value={invitationLetterDate}
                                 onChange={(e) => setInvitationLetterDate(e.target.value)}
-                                className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 font-bold text-slate-950 bg-white text-base"
+                                className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 font-bold text-slate-950 bg-white text-base cursor-pointer"
                               />
                             </div>
                           </div>
@@ -4028,6 +4074,7 @@ function TeacherMeetingPage() {
                               <label className="text-sm font-black text-slate-700 block">दिनांक</label>
                               <input
                                 type="date"
+                                onClick={(e) => { try { e.currentTarget.showPicker(); } catch {} }}
                                 value={invitationDate}
                                 onChange={(e) => {
                                   const dateVal = e.target.value;
@@ -4040,7 +4087,7 @@ function TeacherMeetingPage() {
                                     setInvitationDay("");
                                   }
                                 }}
-                                className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 font-bold text-slate-950 bg-white text-base"
+                                className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 font-bold text-slate-950 bg-white text-base cursor-pointer"
                               />
                             </div>
                             <div className="space-y-2">

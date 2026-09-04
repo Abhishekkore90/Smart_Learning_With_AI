@@ -4465,11 +4465,20 @@ function TeacherSqafPage() {
   const [pdfLang, setPdfLang] = useState<"mr" | "en">("mr");
   const [activeStandardDetails, setActiveStandardDetails] = useState<number | null>(null);
 
+  const getCurrentAcademicYear = () => {
+    const now = new Date();
+    const currentCalYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    const currentAcademicStart = currentMonth >= 5 ? currentCalYear : currentCalYear - 1;
+    return `${currentAcademicStart}-${(currentAcademicStart + 1).toString().slice(-2)}`;
+  };
+
   const [academicYear, setAcademicYear] = useState<string>(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("sqaf_selected_academic_year") || "2026-27";
+      const saved = localStorage.getItem("sqaf_selected_academic_year");
+      if (saved && saved !== "2024-25") return saved;
     }
-    return "2026-27";
+    return getCurrentAcademicYear();
   });
 
   const academicYearsList = useMemo(() => {
