@@ -217,19 +217,19 @@ function AchievementTemplatesPage() {
                     ))}
                   </div>
 
-                  <div className="relative h-full p-10 flex flex-col items-center justify-center text-center">
+                  <div className="relative h-full p-4 sm:p-6 md:p-10 flex flex-col items-center justify-center text-center">
                     <motion.div
                       animate={{
                         scale: [1, 1.2, 1],
                         rotate: [0, 10, -10, 0],
                       }}
                       transition={{ duration: 3, repeat: Infinity }}
-                      className="size-24 bg-white/10 backdrop-blur-2xl rounded-[2.5rem] flex items-center justify-center mb-8 border border-white/20 shadow-2xl"
+                      className="size-12 sm:size-18 md:size-24 bg-white/10 backdrop-blur-2xl rounded-[1.5rem] sm:rounded-[2.5rem] flex items-center justify-center mb-3 sm:mb-8 border border-white/20 shadow-2xl"
                     >
-                      <template.icon className="size-12 text-white" />
+                      <template.icon className="size-6 sm:size-9 md:size-12 text-white" />
                     </motion.div>
 
-                    <h4 className="text-4xl font-black text-white tracking-tighter italic mb-2 leading-none">
+                    <h4 className="text-xl sm:text-3xl md:text-4xl font-black text-white tracking-tighter italic mb-1 sm:mb-2 leading-none">
                       {lang === "mr"
                         ? "हार्दिक अभिनंदन!"
                         : lang === "hi"
@@ -237,11 +237,11 @@ function AchievementTemplatesPage() {
                           : "CONGRATULATIONS"}
                     </h4>
                     <div
-                      className="h-1.5 w-16 bg-white/30 rounded-full mb-8"
+                      className="h-1 sm:h-1.5 w-10 sm:w-16 bg-white/30 rounded-full mb-3 sm:mb-8"
                       style={{ background: template.accent }}
                     />
 
-                    <p className="text-xs font-black uppercase tracking-normal text-white/80 mb-3">
+                    <p className="text-[10px] sm:text-xs font-black uppercase tracking-normal text-white/80 mb-1 sm:mb-3">
                       {lang === "mr"
                         ? "यशस्वी संपादन पुरस्कार"
                         : lang === "hi"
@@ -249,7 +249,7 @@ function AchievementTemplatesPage() {
                           : "Achievement Award"}
                     </p>
                     <h5
-                      className="text-4xl md:text-5xl font-black text-white tracking-normal leading-tight py-1 px-4"
+                      className="text-xl sm:text-3xl md:text-5xl font-black text-white tracking-normal leading-tight py-0.5 sm:py-1 px-2 sm:px-4 break-words max-w-full"
                       style={{
                         backgroundImage: template.accent,
                         WebkitBackgroundClip: "text",
@@ -260,19 +260,19 @@ function AchievementTemplatesPage() {
                       {studentName}
                     </h5>
 
-                    <div className="mt-10 px-12 py-5 rounded-3xl bg-black/30 backdrop-blur-xl border border-white/10 shadow-2xl">
-                      <span className="text-xs font-black text-white uppercase tracking-wider italic">
+                    <div className="mt-3 sm:mt-10 px-4 py-1.5 sm:px-12 sm:py-5 rounded-full sm:rounded-3xl bg-black/30 backdrop-blur-xl border border-white/10 shadow-2xl">
+                      <span className="text-[10px] sm:text-xs font-black text-white uppercase tracking-wider italic">
                         {achievementType}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="px-10 py-12 space-y-6">
+                <div className="p-4 sm:p-6 md:p-10 space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="max-w-[70%]">
-                      <div className="flex items-center gap-3 mb-3">
-                        <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg bg-blue-100 text-blue-600">
+                      <div className="flex items-center gap-2 mb-1.5 sm:mb-3">
+                        <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest px-2 py-0.5 sm:px-3 sm:py-1.5 rounded-lg bg-blue-100 text-blue-600">
                           {lang === "mr"
                             ? template.typeMr
                             : lang === "hi"
@@ -280,7 +280,7 @@ function AchievementTemplatesPage() {
                               : template.type}
                         </span>
                       </div>
-                      <p className="text-3xl font-black text-slate-900 tracking-tight leading-none mb-3">
+                      <p className="text-lg sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-none mb-1 sm:mb-3">
                         {lang === "mr"
                           ? template.nameMr
                           : lang === "hi"
@@ -307,15 +307,11 @@ function AchievementTemplatesPage() {
                       params={{
                         templateId: `achievement-${template.id}`,
                       }}
-                      className="flex-1 py-3.5 bg-slate-950 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-slate-800 transition-all shadow-md text-center font-black"
+                      className="w-full py-3.5 bg-slate-950 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-slate-800 transition-all shadow-md text-center font-black"
                     >
                       <Edit3 className="size-4" />{" "}
                       {lang === "mr" ? "संपादन" : lang === "hi" ? "संपादन" : "Edit"}
                     </Link>
-                    <button className="flex-1 py-3.5 bg-blue-600 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-blue-700 transition-all shadow-md font-black">
-                      <Download className="size-4" />{" "}
-                      {lang === "mr" ? "डाउनलोड" : lang === "hi" ? "डाउनलोड" : "Download"}
-                    </button>
                   </div>
                 </div>
               </motion.div>

@@ -211,13 +211,13 @@ function BirthdayTemplatesPage() {
                 className="group relative bg-white rounded-[3rem] p-4 shadow-xl border border-slate-100"
               >
                 <div
-                  className="aspect-video rounded-[2rem] overflow-hidden relative shadow-inner"
+                  className="aspect-[4/3] sm:aspect-video rounded-[2rem] overflow-hidden relative shadow-inner min-h-[220px]"
                   style={{ background: template.bg }}
                 >
                   <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]" />
-                  <div className="relative h-full p-8 flex flex-col items-center justify-center text-center">
-                    <template.icon className="size-10 text-white mb-4 drop-shadow-lg" />
-                    <h4 className="text-2xl font-black text-white tracking-tighter italic mb-1">
+                  <div className="relative h-full p-4 sm:p-6 md:p-8 flex flex-col items-center justify-center text-center">
+                    <template.icon className="size-7 sm:size-9 md:size-10 text-white mb-2 sm:mb-3 drop-shadow-lg" />
+                    <h4 className="text-lg sm:text-xl md:text-2xl font-black text-white tracking-tighter italic mb-1 leading-tight">
                       {lang === "mr"
                         ? "वाढदिवसाच्या हार्दिक शुभेच्छा!"
                         : lang === "hi"
@@ -225,14 +225,14 @@ function BirthdayTemplatesPage() {
                           : "Happy Birthday!"}
                     </h4>
                     <div
-                      className="h-0.5 w-10 bg-white/30 rounded-full mb-4"
+                      className="h-0.5 w-10 bg-white/30 rounded-full mb-2 sm:mb-3"
                       style={{ background: template.accent }}
                     />
-                    <p className="text-xs font-black uppercase tracking-normal text-white/80 mb-1">
+                    <p className="text-[10px] sm:text-xs font-black uppercase tracking-normal text-white/80 mb-0.5 sm:mb-1">
                       {lang === "mr" ? "नाव" : lang === "hi" ? "नाम" : "Presented To"}
                     </p>
                     <h5
-                      className="text-2xl font-black text-white tracking-normal leading-tight py-1"
+                      className="text-lg sm:text-xl md:text-2xl font-black text-white tracking-normal leading-tight py-0.5 sm:py-1 break-words max-w-full px-2"
                       style={{
                         backgroundImage: template.accent,
                         WebkitBackgroundClip: "text",
@@ -241,8 +241,8 @@ function BirthdayTemplatesPage() {
                     >
                       {studentName}
                     </h5>
-                    <div className="mt-4 px-6 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/10">
-                      <span className="text-xs font-black text-white uppercase tracking-wider">
+                    <div className="mt-2 sm:mt-4 px-4 py-1 sm:px-6 sm:py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/10">
+                      <span className="text-[10px] sm:text-xs font-black text-white uppercase tracking-wider">
                         {studentClass}
                       </span>
                     </div>
@@ -280,15 +280,11 @@ function BirthdayTemplatesPage() {
                     <Link
                       to="/teacher/templates/edit/$templateId"
                       params={{ templateId: `birthday-${template.id}` }}
-                      className="flex-1 py-3 bg-slate-950 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-slate-800 transition-all shadow-md text-center font-black"
+                      className="w-full py-3 bg-slate-950 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-slate-800 transition-all shadow-md text-center font-black"
                     >
                       <Edit3 className="size-3.5" />{" "}
                       {lang === "mr" ? "संपादन" : lang === "hi" ? "संपादन" : "Edit"}
                     </Link>
-                    <button className="flex-1 py-3 bg-blue-600 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-blue-700 transition-all shadow-md font-black">
-                      <Download className="size-3.5" />{" "}
-                      {lang === "mr" ? "डाउनलोड" : lang === "hi" ? "डाउनलोड" : "Download"}
-                    </button>
                   </div>
                 </div>
               </motion.div>

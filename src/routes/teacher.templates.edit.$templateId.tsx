@@ -995,15 +995,15 @@ function TemplateEditorPage() {
           </div>
 
           {/* Attractive Preview Card */}
-          <div className="sticky top-24">
+          <div className="sticky top-24 w-full max-w-lg mx-auto xl:max-w-none">
             <motion.div
               ref={templateRef}
               layout
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="w-full aspect-[3/4] rounded-[4rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] overflow-hidden relative group border-[12px] border-white"
+              className="w-full aspect-[3/4] min-h-[480px] sm:min-h-[560px] rounded-[2rem] sm:rounded-[3rem] md:rounded-[4rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.4)] overflow-hidden relative group border-4 sm:border-8 md:border-[12px] border-white"
             >
-              <div className="w-full h-full relative overflow-hidden">
+              <div className="w-full h-full relative overflow-hidden flex flex-col">
                 {/* Dynamic Background */}
                 <div
                   className="absolute inset-0"
@@ -1041,108 +1041,110 @@ function TemplateEditorPage() {
                 <div className="absolute -bottom-32 -left-32 size-96 bg-black/40 rounded-full blur-[120px]" />
 
                 {/* Card Content */}
-                <div className="relative h-full flex flex-col items-center justify-center p-16 text-center">
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: "spring", damping: 12 }}
-                    className="size-28 bg-white/10 rounded-[2.5rem] flex items-center justify-center mb-10 border border-white/20 shadow-2xl relative backdrop-blur-2xl"
-                  >
-                    {studentPhoto ? (
-                      <img 
-                        src={studentPhoto} 
-                        alt="Student" 
-                        className="w-full h-full object-cover rounded-[2.5rem]" 
-                      />
-                    ) : (
-                      <configToUse.icon className="size-14 text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]" />
-                    )}
-                    <div
-                      className="absolute -top-4 -right-4 size-10 bg-pink-500 rounded-2xl flex items-center justify-center shadow-lg rotate-12 animate-pulse"
+                <div className="relative z-10 w-full h-full flex flex-col items-center justify-between p-4 sm:p-8 md:p-12 text-center overflow-y-auto no-scrollbar">
+                  <div className="w-full flex flex-col items-center my-auto py-2 sm:py-4">
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", damping: 12 }}
+                      className="size-16 sm:size-20 md:size-24 lg:size-28 bg-white/10 rounded-[1.5rem] sm:rounded-[2rem] md:rounded-[2.5rem] flex items-center justify-center mb-3 sm:mb-6 md:mb-8 border border-white/20 shadow-2xl relative backdrop-blur-2xl shrink-0"
                     >
-                      <Heart className="size-5 text-white" fill="white" />
+                      {studentPhoto ? (
+                        <img 
+                          src={studentPhoto} 
+                          alt="Student" 
+                          className="w-full h-full object-cover rounded-[1.5rem] sm:rounded-[2rem] md:rounded-[2.5rem]" 
+                        />
+                      ) : (
+                        <configToUse.icon className="size-8 sm:size-10 md:size-12 lg:size-14 text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]" />
+                      )}
+                      <div
+                        className="absolute -top-2 -right-2 sm:-top-3 sm:-right-3 size-7 sm:size-9 md:size-10 bg-pink-500 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg rotate-12 animate-pulse"
+                      >
+                        <Heart className="size-3.5 sm:size-4 md:size-5 text-white" fill="white" />
+                      </div>
+                    </motion.div>
+
+                    <motion.h1
+                      key={configToUse.title}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-normal py-1 mb-2 sm:mb-4 italic drop-shadow-2xl leading-tight"
+                    >
+                      {configToUse.title}
+                    </motion.h1>
+
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: "60px" }}
+                      className="h-1 sm:h-1.5 bg-white/30 rounded-full mb-3 sm:mb-6 md:mb-8 shadow-glow"
+                      style={{ background: configToUse.accent }}
+                    />
+
+                    <div className="space-y-1 sm:space-y-2 mb-3 sm:mb-6 md:mb-8 max-w-full px-2">
+                      <p className="text-white/80 font-black uppercase tracking-normal text-[10px] sm:text-xs md:text-sm">
+                        {lang === "mr" ? "नाव" : lang === "hi" ? "नाम" : "Presented To"}
+                      </p>
+                      <motion.h2
+                        key={studentName}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="text-2xl sm:text-3xl md:text-4xl lg:text-6xl font-black tracking-normal leading-tight py-1 break-words max-w-full"
+                        style={{
+                          backgroundImage: configToUse.accent,
+                          WebkitBackgroundClip: "text",
+                          WebkitTextFillColor: "transparent",
+                          filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.4))",
+                        }}
+                      >
+                        {studentName}
+                      </motion.h2>
                     </div>
-                  </motion.div>
 
-                  <motion.h1
-                    key={configToUse.title}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-5xl font-black text-white tracking-normal py-1 mb-4 italic drop-shadow-2xl"
-                  >
-                    {configToUse.title}
-                  </motion.h1>
+                    <div className="max-w-[95%] mx-auto mb-3 sm:mb-6 md:mb-8">
+                      <motion.p
+                        key={configToUse.quote}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="text-white/90 font-bold text-xs sm:text-sm md:text-base lg:text-lg italic leading-relaxed"
+                      >
+                        "{configToUse.quote}"
+                      </motion.p>
+                    </div>
 
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: "80px" }}
-                    className="h-1.5 bg-white/30 rounded-full mb-10 shadow-glow"
-                    style={{ background: configToUse.accent }}
-                  />
-
-                  <div className="space-y-4 mb-10">
-                    <p className="text-white/80 font-black uppercase tracking-normal text-xs sm:text-sm">
-                      {lang === "mr" ? "नाव" : lang === "hi" ? "नाम" : "Presented To"}
-                    </p>
-                    <motion.h2
-                      key={studentName}
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="text-5xl md:text-6xl font-black tracking-normal leading-tight py-1"
-                      style={{
-                        backgroundImage: configToUse.accent,
-                        WebkitBackgroundClip: "text",
-                        WebkitTextFillColor: "transparent",
-                        filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.4))",
-                      }}
+                    <motion.div
+                      initial={{ y: 20, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      className="bg-black/30 px-4 sm:px-8 md:px-10 py-2 sm:py-3 md:py-4 rounded-[1rem] sm:rounded-[1.25rem] md:rounded-[1.5rem] border border-white/10 shadow-2xl flex items-center gap-2 sm:gap-3 backdrop-blur-xl mb-2 sm:mb-4"
                     >
-                      {studentName}
-                    </motion.h2>
+                      {isAnnual ? (
+                        <Theater className="size-4 sm:size-5 text-white/70" />
+                      ) : isCultural ? (
+                        <PaletteIcon className="size-4 sm:size-5 text-white/70" />
+                      ) : isAchievement ? (
+                        <Trophy className="size-4 sm:size-5 text-white/70" />
+                      ) : (
+                        <GraduationCap className="size-4 sm:size-5 text-white/70" />
+                      )}
+                      <span className="text-white font-black text-xs sm:text-sm tracking-wider uppercase italic">
+                        {studentClass}
+                      </span>
+                    </motion.div>
                   </div>
-
-                  <div className="max-w-[90%] mx-auto mb-12">
-                    <motion.p
-                      key={configToUse.quote}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="text-white/90 font-bold text-lg italic leading-relaxed"
-                    >
-                      "{configToUse.quote}"
-                    </motion.p>
-                  </div>
-
-                  <motion.div
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    className="bg-black/30 px-10 py-4 rounded-[1.5rem] border border-white/10 shadow-2xl flex items-center gap-3 backdrop-blur-xl"
-                  >
-                    {isAnnual ? (
-                      <Theater className="size-5 text-white/70" />
-                    ) : isCultural ? (
-                      <PaletteIcon className="size-5 text-white/70" />
-                    ) : isAchievement ? (
-                      <Trophy className="size-5 text-white/70" />
-                    ) : (
-                      <GraduationCap className="size-5 text-white/70" />
-                    )}
-                    <span className="text-white font-black text-sm tracking-wider uppercase italic">
-                      {studentClass}
-                    </span>
-                  </motion.div>
 
                   {/* Footer Branding */}
-                  <div className="absolute bottom-16 left-0 right-0 px-16 flex justify-between items-end opacity-50">
+                  <div className="w-full pt-2 px-2 flex justify-between items-end opacity-50 shrink-0">
                     <div className="text-left">
-                      <p className="text-[10px] font-black text-white uppercase tracking-widest">
+                      <p className="text-[9px] sm:text-[10px] font-black text-white uppercase tracking-widest">
                         {lang === "mr" ? "प्रीमियम कार्ड" : lang === "hi" ? "प्रीमियम कार्ड" : "Premium Card"}
                       </p>
-                      <p className="text-[8px] font-bold text-white/60">
+                      <p className="text-[7px] sm:text-[8px] font-bold text-white/60">
                         ID: {templateId?.toUpperCase()}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="size-8 bg-white/10 rounded-lg flex items-center justify-center border border-white/20">
-                        <Star className="size-4 text-white" />
+                      <div className="size-6 sm:size-8 bg-white/10 rounded-lg flex items-center justify-center border border-white/20">
+                        <Star className="size-3 sm:size-4 text-white" />
                       </div>
                     </div>
                   </div>
@@ -1153,7 +1155,7 @@ function TemplateEditorPage() {
               <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 to-white/0 pointer-events-none group-hover:translate-x-full transition-transform duration-1500 ease-in-out" />
             </motion.div>
 
-            <p className="mt-8 text-slate-600 font-extrabold text-xs sm:text-sm tracking-normal flex items-center justify-center gap-3">
+            <p className="mt-6 text-slate-600 font-extrabold text-xs sm:text-sm tracking-normal flex items-center justify-center gap-3">
               <PartyPopper className="size-4 text-pink-500" /> {lang === "mr" ? "अल्ट्रा-प्रीमियम डिजिटल कार्ड" : lang === "hi" ? "अल्ट्रा-प्रीमियम डिजिटल एसेट" : "Ultra-Premium Digital Asset"}
             </p>
           </div>

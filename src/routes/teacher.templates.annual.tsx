@@ -218,19 +218,19 @@ function AnnualTemplatesPage() {
                     ))}
                   </div>
 
-                  <div className="relative h-full p-10 flex flex-col items-center justify-center text-center">
+                  <div className="relative h-full p-4 sm:p-6 md:p-10 flex flex-col items-center justify-center text-center">
                     <motion.div
                       animate={{
                         scale: [1, 1.1, 1],
                         rotate: [0, 5, -5, 0],
                       }}
                       transition={{ duration: 4, repeat: Infinity }}
-                      className="size-20 bg-white/10 backdrop-blur-2xl rounded-[1.8rem] flex items-center justify-center mb-6 border border-white/20 shadow-2xl"
+                      className="size-12 sm:size-16 md:size-20 bg-white/10 backdrop-blur-2xl rounded-[1.2rem] sm:rounded-[1.8rem] flex items-center justify-center mb-3 sm:mb-6 border border-white/20 shadow-2xl"
                     >
-                      <template.icon className="size-10 text-white" />
+                      <template.icon className="size-6 sm:size-8 md:size-10 text-white" />
                     </motion.div>
 
-                    <h4 className="text-3xl font-black text-white tracking-tighter italic mb-2">
+                    <h4 className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tighter italic mb-1 sm:mb-2 leading-tight">
                       {lang === "mr"
                         ? "महा सोहळा"
                         : lang === "hi"
@@ -238,11 +238,11 @@ function AnnualTemplatesPage() {
                           : "GRAND FINALE"}
                     </h4>
                     <div
-                      className="h-1 w-12 bg-white/30 rounded-full mb-6"
+                      className="h-1 w-8 sm:w-12 bg-white/30 rounded-full mb-3 sm:mb-6"
                       style={{ background: template.accent }}
                     />
 
-                    <p className="text-xs font-black uppercase tracking-normal text-white/80 mb-2">
+                    <p className="text-[10px] sm:text-xs font-black uppercase tracking-normal text-white/80 mb-1 sm:mb-2">
                       {lang === "mr"
                         ? "वार्षिक स्नेहसंमेलन"
                         : lang === "hi"
@@ -250,7 +250,7 @@ function AnnualTemplatesPage() {
                           : "Annual Celebration"}
                     </p>
                     <h5
-                      className="text-3xl md:text-4xl font-black text-white tracking-normal leading-tight py-1 px-4"
+                      className="text-xl sm:text-2xl md:text-4xl font-black text-white tracking-normal leading-tight py-0.5 sm:py-1 px-2 sm:px-4 break-words max-w-full"
                       style={{
                         backgroundImage: template.accent,
                         WebkitBackgroundClip: "text",
@@ -261,19 +261,19 @@ function AnnualTemplatesPage() {
                       {studentName}
                     </h5>
 
-                    <div className="mt-8 px-10 py-4 rounded-3xl bg-black/20 backdrop-blur-xl border border-white/10 shadow-2xl">
-                      <span className="text-xs font-black text-white uppercase tracking-wider italic">
+                    <div className="mt-3 sm:mt-8 px-4 py-1.5 sm:px-10 sm:py-4 rounded-full sm:rounded-3xl bg-black/20 backdrop-blur-xl border border-white/10 shadow-2xl">
+                      <span className="text-[10px] sm:text-xs font-black text-white uppercase tracking-wider italic">
                         {eventName}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="px-8 py-10 space-y-6">
+                <div className="p-4 sm:p-6 md:p-8 space-y-4">
                   <div className="flex items-center justify-between">
-                    <div className="max-w-[80%]">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-md bg-amber-100 text-amber-600">
+                    <div className="max-w-[70%]">
+                      <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
+                        <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 sm:py-1 rounded-md bg-amber-100 text-amber-600">
                           {lang === "mr"
                             ? template.typeMr
                             : lang === "hi"
@@ -281,7 +281,7 @@ function AnnualTemplatesPage() {
                               : template.type}
                         </span>
                       </div>
-                      <p className="text-2xl font-black text-slate-900 tracking-tight leading-none mb-2">
+                      <p className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight leading-none mb-1 sm:mb-2">
                         {lang === "mr"
                           ? template.nameMr
                           : lang === "hi"
@@ -306,15 +306,11 @@ function AnnualTemplatesPage() {
                     <Link
                       to="/teacher/templates/edit/$templateId"
                       params={{ templateId: `annual-${template.id}` }}
-                      className="flex-1 py-3.5 bg-slate-950 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-slate-800 transition-all shadow-md text-center font-black"
+                      className="w-full py-3.5 bg-slate-950 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-slate-800 transition-all shadow-md text-center font-black"
                     >
                       <Edit3 className="size-4" />{" "}
                       {lang === "mr" ? "संपादन" : lang === "hi" ? "संपादन" : "Edit"}
                     </Link>
-                    <button className="flex-1 py-3.5 bg-blue-600 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-blue-700 transition-all shadow-md font-black">
-                      <Download className="size-4" />{" "}
-                      {lang === "mr" ? "डाउनलोड" : lang === "hi" ? "डाउनलोड" : "Download"}
-                    </button>
                   </div>
                 </div>
               </motion.div>

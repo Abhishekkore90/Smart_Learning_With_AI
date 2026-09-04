@@ -266,16 +266,16 @@ function AdmissionTemplatesPage() {
                     ))}
                   </div>
 
-                  <div className="relative h-full p-10 flex flex-col items-center justify-center text-center">
+                  <div className="relative h-full p-4 sm:p-6 md:p-10 flex flex-col items-center justify-center text-center">
                     <motion.div
                       animate={{ y: [0, -10, 0], rotate: [0, 5, -5, 0] }}
                       transition={{ duration: 4, repeat: Infinity }}
-                      className="size-20 bg-white/10 backdrop-blur-2xl rounded-[1.8rem] flex items-center justify-center mb-6 border border-white/20 shadow-2xl"
+                      className="size-12 sm:size-16 md:size-20 bg-white/10 backdrop-blur-2xl rounded-[1.2rem] sm:rounded-[1.8rem] flex items-center justify-center mb-3 sm:mb-6 border border-white/20 shadow-2xl"
                     >
-                      <template.icon className="size-10 text-white" />
+                      <template.icon className="size-6 sm:size-8 md:size-10 text-white" />
                     </motion.div>
 
-                    <h4 className="text-3xl font-black text-white tracking-tighter italic mb-2">
+                    <h4 className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tighter italic mb-1 sm:mb-2 leading-tight">
                       {lang === "mr"
                         ? "हार्दिक अभिनंदन!"
                         : lang === "hi"
@@ -283,11 +283,11 @@ function AdmissionTemplatesPage() {
                           : "Congratulations!"}
                     </h4>
                     <div
-                      className="h-1 w-12 bg-white/30 rounded-full mb-6"
+                      className="h-1 w-12 bg-white/30 rounded-full mb-3 sm:mb-6"
                       style={{ background: template.accent }}
                     />
 
-                    <p className="text-xs font-black uppercase tracking-normal text-white/80 mb-2">
+                    <p className="text-[10px] sm:text-xs font-black uppercase tracking-normal text-white/80 mb-1 sm:mb-2">
                       {lang === "mr"
                         ? "शाळेत आपले स्वागत आहे"
                         : lang === "hi"
@@ -295,7 +295,7 @@ function AdmissionTemplatesPage() {
                           : "Welcome to the Academy"}
                     </p>
                     <h5
-                      className="text-3xl md:text-4xl font-black text-white tracking-normal leading-tight py-1 px-4"
+                      className="text-xl sm:text-2xl md:text-4xl font-black text-white tracking-normal leading-tight py-1 px-2 sm:px-4 break-words max-w-full"
                       style={{
                         backgroundImage: template.accent,
                         WebkitBackgroundClip: "text",
@@ -306,7 +306,7 @@ function AdmissionTemplatesPage() {
                       {studentName}
                     </h5>
 
-                    <div className="mt-8 px-10 py-4 rounded-3xl bg-black/20 backdrop-blur-xl border border-white/10 shadow-2xl">
+                    <div className="mt-3 sm:mt-6 px-4 py-1.5 sm:px-8 sm:py-3 rounded-2xl sm:rounded-3xl bg-black/20 backdrop-blur-xl border border-white/10 shadow-2xl">
                       <span className="text-[10px] font-black text-white uppercase tracking-[0.2em] italic">
                         {studentClass}
                       </span>
@@ -344,15 +344,11 @@ function AdmissionTemplatesPage() {
                       params={{
                         templateId: `admission-${template.id}`,
                       }}
-                      className="flex-1 py-3.5 bg-slate-950 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-slate-800 transition-all shadow-md text-center font-black"
+                      className="w-full py-3.5 bg-slate-950 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-slate-800 transition-all shadow-md text-center font-black"
                     >
                       <Edit3 className="size-4" />{" "}
                       {lang === "mr" ? "संपादन" : lang === "hi" ? "संपादन" : "Edit"}
                     </Link>
-                    <button className="flex-1 py-3.5 bg-blue-600 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-blue-700 transition-all shadow-md font-black">
-                      <Download className="size-4" />{" "}
-                      {lang === "mr" ? "डाउनलोड" : lang === "hi" ? "डाउनलोड" : "Download"}
-                    </button>
                   </div>
                 </div>
               </motion.div>
