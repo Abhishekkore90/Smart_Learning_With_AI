@@ -2029,35 +2029,16 @@ export function AcademicPlanningSystem({
                         </div>
                       </div>
 
-                      <div className="space-y-2 pt-3 border-t border-white/15">
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (annualFile) handleViewFile(annualFile);
-                              else toast.error(`या इयत्तेसाठी (${selectedClass}) अद्याप वार्षिक नियोजनाची फाईल उपलब्ध नाही.`);
-                            }}
-                            className="py-3 px-4 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer backdrop-blur-xs shadow-sm"
-                          >
-                            <Eye className="size-4 text-amber-300" /> VIEW PDF
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (annualFile) handleDownloadFile(annualFile);
-                              else toast.error(`या इयत्तेसाठी (${selectedClass}) अद्याप वार्षिक नियोजनाची फाईल उपलब्ध नाही.`);
-                            }}
-                            className="py-3 px-4 rounded-xl bg-white text-indigo-950 hover:bg-indigo-50 text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
-                          >
-                            <Download className="size-4" /> DOWNLOAD
-                          </button>
-                        </div>
-
+                      <div className="pt-3 border-t border-white/15">
                         <button
-                          onClick={(e) => handleOpenTableEditor(e, annualFile)}
-                          className="w-full py-2.5 px-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md mt-1"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (annualFile) handleViewFile(annualFile);
+                            else toast.error(`या इयत्तेसाठी (${selectedClass}) अद्याप वार्षिक नियोजनाची फाईल उपलब्ध नाही.`);
+                          }}
+                          className="w-full py-3.5 px-4 rounded-xl bg-white text-indigo-950 hover:bg-amber-300 text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md active:scale-95"
                         >
-                          <Edit3 className="size-4" /> <span>✏️ एडिट करा (Edit)</span>
+                          <Eye className="size-4 text-indigo-700" /> VIEW PDF
                         </button>
 
                         {/* Admin Upload / Replace Class File */}
@@ -2233,40 +2214,16 @@ export function AcademicPlanningSystem({
                         </div>
                       </div>
 
-                      {/* Action Buttons */}
-                      <div className="space-y-2 pt-3 border-t border-slate-100">
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (fileRec) handleViewFile(fileRec);
-                              else toast.error(`अद्याप ${subjName} ची फाईल उपलब्ध नाही.`);
-                            }}
-                            className="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                          >
-                            <Eye className="size-4 text-indigo-600" /> VIEW PDF
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (fileRec) handleDownloadFile(fileRec);
-                              else toast.error(`अद्याप ${subjName} ची फाईल उपलब्ध नाही.`);
-                            }}
-                            className="py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
-                          >
-                            <Download className="size-4" /> DOWNLOAD
-                          </button>
-                        </div>
-
+                      <div className="pt-3 border-t border-slate-100">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             if (fileRec) handleViewFile(fileRec);
                             else toast.error(`अद्याप ${subjName} ची फाईल उपलब्ध नाही.`);
                           }}
-                          className="w-full py-2.5 px-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm mt-1"
+                          className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md active:scale-95"
                         >
-                          <Edit3 className="size-4" /> <span>✏️ एडिट करा (Edit)</span>
+                          <Eye className="size-4 text-amber-300" /> VIEW PDF
                         </button>
 
 

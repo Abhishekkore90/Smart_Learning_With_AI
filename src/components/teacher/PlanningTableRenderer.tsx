@@ -1123,8 +1123,9 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
     toast.info("🔄 मूळ एडमिन फाईल यशस्वीरित्या रिस्टोअर झाली.");
   };
 
-  // Generate Multi-Subject / Single-Subject PDF
+  // Generate Multi-Subject / Single-Subject PDF using jsPDF + html2canvas (Direct Subject Capture)
   const handleDownloadCombinedPdf = async () => {
+    const printElement = printContainerRef.current;
     try {
       setIsGeneratingPdf(true);
       const isSingleSubject = selectedSubjectFilter !== "all";
@@ -1134,53 +1135,100 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
           : "⚡ सर्व विषयांचे एकत्र (Combined) PDF तयार होत आहे..."
       );
 
-      const sourceElement = printContainerRef.current;
-      if (!sourceElement) {
+      if (!printElement) {
         toast.error("प्रिन्ट घटक उपलब्ध नाही.");
         setIsGeneratingPdf(false);
         return;
       }
 
-      // Clone clean DOM element without interactive UI controls
-      const clone = sourceElement.cloneNode(true) as HTMLElement;
-      clone.querySelectorAll(".no-print, button, input, select, textarea").forEach((el) => el.remove());
+      // Activate PDF export mode on live element
+      printElement.classList.add("pdf-export-active");
 
-      // Create hidden offscreen container with explicit A4 width
-      const container = document.createElement("div");
-      container.className = "pdf-export-active";
-      container.style.position = "absolute";
-      container.style.left = "-9999px";
-      container.style.top = "0";
-      container.style.width = "850px";
-      container.style.background = "#ffffff";
-      container.style.color = "#000000";
-      container.style.padding = "10px";
-      container.appendChild(clone);
-      document.body.appendChild(container);
+      const { jsPDF } = await import("jspdf");
+      const html2canvasModule = await import("html2canvas");
+      const html2canvas = html2canvasModule.default || html2canvasModule;
 
-      const html2pdfModule = await import("html2pdf.js");
-      const html2pdf = html2pdfModule.default || html2pdfModule;
+      const pdf = new jsPDF({
+        unit: "mm",
+        format: "a4",
+        orientation: "portrait",
+      });
 
-      const opt = {
-        margin: [8, 8, 8, 8],
-        filename: isSingleSubject
-          ? `इयत्ता_${record?.classId || "1"}_वार्षिक_नियोजन_${selectedSubjectFilter}_२०२६-२७.pdf`
-          : `इयत्ता_${record?.classId || "1"}_संपूर्ण_वार्षिक_नियोजन_२०२६-२७.pdf`,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: 850 },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        pagebreak: {
-          mode: ["avoid-all", "css", "legacy"],
-          before: ".html2pdf__page-break",
-        },
-      };
+      const schoolHeader = printElement.querySelector(".pdf-school-header") as HTMLElement;
+      const subjectSections = Array.from(
+        printElement.querySelectorAll(".pdf-subject-section")
+      ) as HTMLElement[];
 
-      await (html2pdf() as any).from(container).set(opt).save();
-
-      // Remove temp offscreen container
-      if (document.body.contains(container)) {
-        document.body.removeChild(container);
+      if (subjectSections.length === 0) {
+        toast.error("विषय तक्ता आढळला नाही.");
+        setIsGeneratingPdf(false);
+        return;
       }
+
+      let isFirstPage = true;
+
+      // Capture school header canvas once
+      let headerCanvas: HTMLCanvasElement | null = null;
+      if (schoolHeader) {
+        headerCanvas = await html2canvas(schoolHeader, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: "#ffffff",
+        });
+      }
+
+      for (let i = 0; i < subjectSections.length; i++) {
+        const sec = subjectSections[i];
+
+        const secCanvas = await html2canvas(sec, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: "#ffffff",
+        });
+
+        const imgWidth = 190; // A4 width 210mm - 20mm margin
+        const pageHeight = 277; // A4 height 297mm - 20mm margin
+
+        if (!isFirstPage) {
+          pdf.addPage();
+        }
+
+        let startY = 10;
+
+        // Draw school header on Page 1 above subject 1
+        if (i === 0 && headerCanvas) {
+          const headerImgData = headerCanvas.toDataURL("image/jpeg", 0.98);
+          const headerHeight = (headerCanvas.height * imgWidth) / headerCanvas.width;
+          pdf.addImage(headerImgData, "JPEG", 10, 10, imgWidth, headerHeight);
+          startY = 10 + headerHeight + 4;
+        }
+
+        const secImgData = secCanvas.toDataURL("image/jpeg", 0.98);
+        const secHeight = (secCanvas.height * imgWidth) / secCanvas.width;
+
+        let heightLeft = secHeight;
+        let position = startY;
+
+        pdf.addImage(secImgData, "JPEG", 10, position, imgWidth, secHeight);
+        heightLeft -= (pageHeight - startY + 10);
+
+        while (heightLeft > 0) {
+          position = heightLeft - secHeight + 10;
+          pdf.addPage();
+          pdf.addImage(secImgData, "JPEG", 10, position, imgWidth, secHeight);
+          heightLeft -= pageHeight;
+        }
+
+        isFirstPage = false;
+      }
+
+      const filename = isSingleSubject
+        ? `इयत्ता_${record?.classId || "1"}_वार्षिक_नियोजन_${selectedSubjectFilter}_२०२६-२७.pdf`
+        : `इयत्ता_${record?.classId || "1"}_संपूर्ण_वार्षिक_नियोजन_२०२६-२७.pdf`;
+
+      pdf.save(filename);
 
       toast.success(
         isSingleSubject
@@ -1191,6 +1239,9 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
       console.error("PDF download error:", err);
       toast.error("PDF डाऊनलोड करताना अडचण आली.");
     } finally {
+      if (printElement) {
+        printElement.classList.remove("pdf-export-active");
+      }
       setIsGeneratingPdf(false);
     }
   };
@@ -1470,6 +1521,12 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                   }
 
                   /* Dedicated Clean PDF Export Mode (Activated ONLY during handleDownloadCombinedPdf) */
+                  .pdf-export-active .print\:hidden,
+                  .pdf-export-active .no-print,
+                  .pdf-export-active input,
+                  .pdf-export-active select {
+                    display: none !important;
+                  }
                   .pdf-export-active .pdf-school-header {
                     background: transparent !important;
                     border: none !important;
@@ -1523,28 +1580,35 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                   }
                   .pdf-export-active table {
                     border-collapse: collapse !important;
-                    border: 1px solid #333 !important;
-                    font-size: 9px !important;
-                    line-height: 1.15 !important;
+                    border: 1px solid #000000 !important;
+                    font-size: 10px !important;
+                    line-height: 1.25 !important;
                     width: 100% !important;
+                    background-color: #ffffff !important;
                   }
                   .pdf-export-active th {
                     background-color: #f1f5f9 !important;
-                    color: #000 !important;
-                    border: 1px solid #333 !important;
-                    padding: 3px 4px !important;
-                    font-size: 9.5px !important;
+                    background: #f1f5f9 !important;
+                    color: #000000 !important;
+                    border: 1px solid #000000 !important;
+                    padding: 4px 6px !important;
+                    font-size: 10.5px !important;
                     font-weight: 800 !important;
                   }
                   .pdf-export-active tr {
                     page-break-inside: avoid !important;
                     break-inside: avoid !important;
+                    background-color: #ffffff !important;
+                    background: #ffffff !important;
                   }
                   .pdf-export-active td {
-                    border: 1px solid #333 !important;
-                    padding: 3px 4px !important;
-                    font-size: 9.5px !important;
-                    color: #000 !important;
+                    border: 1px solid #000000 !important;
+                    padding: 4px 6px !important;
+                    font-size: 10px !important;
+                    color: #000000 !important;
+                    font-weight: 600 !important;
+                    background-color: #ffffff !important;
+                    background: #ffffff !important;
                     vertical-align: middle !important;
                   }
                   .pdf-export-active .pdf-signature-bar {
@@ -1671,36 +1735,28 @@ export const PlanningTableRenderer: React.FC<PlanningTableRendererProps> = ({
                               )}
                             </colgroup>
                             <thead>
-                              <tr
-                                className="bg-slate-900 text-amber-300 font-black text-center text-xs border-b-2 border-slate-950"
-                                style={{ backgroundColor: "#0f172a", color: "#fef08a" }}
-                              >
+                              <tr className="bg-slate-100 text-slate-900 font-black text-center text-xs border-b border-slate-400">
                                 {categoryHeaders.map((hText: string, i: number) => (
                                   <th
                                     key={i}
-                                    className="border border-slate-700 p-2.5 text-center font-black tracking-wide text-xs"
-                                    style={{ backgroundColor: "#0f172a", color: "#fef08a" }}
+                                    className="border border-slate-400 p-2.5 text-center font-black tracking-wide text-xs bg-slate-100 text-slate-900"
                                   >
                                     {!isMonthly && i === 4 ? `विषय : ${sec.subjectName}` : hText}
                                   </th>
                                 ))}
                                 {isInlineEditing && (
-                                  <th
-                                    className="border border-slate-700 p-2.5 text-center font-black tracking-wide text-xs"
-                                    style={{ backgroundColor: "#0f172a", color: "#fef08a" }}
-                                  >
+                                  <th className="border border-slate-400 p-2.5 text-center font-black tracking-wide text-xs bg-slate-100 text-slate-900">
                                     क्रिया
                                   </th>
                                 )}
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-300">
+                            <tbody>
                               {filteredRows.length > 0 ? (
                                 filteredRows.map((r, rIdx) => (
                                   <tr
                                     key={rIdx}
-                                    className={`hover:bg-indigo-50/40 transition-colors ${rIdx % 2 === 0 ? "bg-white" : "bg-slate-50/60"
-                                      }`}
+                                    className="bg-white hover:bg-slate-50 transition-colors"
                                     style={{ pageBreakInside: "avoid", breakInside: "avoid" }}
                                   >
                                     {isInlineEditing ? (
