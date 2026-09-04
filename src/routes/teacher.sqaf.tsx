@@ -7,6 +7,8 @@ import { ArrowLeft, Languages, Eye, School, CheckCircle2, ChevronRight, Upload, 
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
+import { db } from "@/lib/firebase";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 // print-js is imported dynamically to avoid SSR "window is not defined" error
 
 export const Route = createFileRoute("/teacher/sqaf")({
@@ -4457,11 +4459,81 @@ const standardsDetailData: Record<number, {
 };
 
 function TeacherSqafPage() {
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const [view, setView] = useState<"info" | "dashboard" | "summary" | "certificate">("info");
   const [selectedLang, setSelectedLang] = useState<"mr" | "en">("mr");
   const [pdfLang, setPdfLang] = useState<"mr" | "en">("mr");
   const [activeStandardDetails, setActiveStandardDetails] = useState<number | null>(null);
+
+  const [academicYear, setAcademicYear] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("sqaf_selected_academic_year") || "2026-27";
+    }
+    return "2026-27";
+  });
+
+  const academicYearsList = useMemo(() => {
+    const startYear = 2024;
+    const now = new Date();
+    const currentCalYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    const currentAcademicStart = currentMonth >= 5 ? currentCalYear : currentCalYear - 1;
+    const maxYear = Math.max(currentAcademicStart + 2, 2028);
+
+    const devDigits = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
+    const toDevanagari = (num: number) =>
+      num.toString().split("").map(d => devDigits[parseInt(d)] || d).join("");
+
+    const list: { value: string; label: string }[] = [];
+    for (let y = startYear; y <= maxYear; y++) {
+      const y1 = y;
+      const y2 = y + 1;
+      const val = `${y1}-${y2.toString().slice(-2)}`;
+      const mrStr = `२०${toDevanagari(y1 % 100)}-${toDevanagari(y2 % 100)}`;
+      list.push({
+        value: val,
+        label: `${mrStr} (${val})`,
+      });
+    }
+    return list;
+  }, []);
+
+  const getDocId = (yearStr?: string) => {
+    const yr = yearStr || academicYear;
+    let baseId = null;
+    if (user?.uid) baseId = user.uid;
+    else if (profile?.usid) baseId = profile.usid;
+    else if (profile?.udise) baseId = `udise_${profile.udise}`;
+    else if (profile?.email) baseId = `email_${profile.email.replace(/[@.]/g, "_")}`;
+    if (!baseId) return null;
+    return `${baseId}_${yr.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+  };
+
+  const saveSqaafDataToCloud = async (
+    selOpt?: Record<number, number>,
+    compStd?: Set<number>,
+    info?: any,
+    yearStr?: string
+  ) => {
+    const yr = yearStr || academicYear;
+    const docId = getDocId(yr);
+    if (!docId) return;
+
+    try {
+      const docRef = doc(db, "sqaaf_evaluations", docId);
+      const payload: any = {
+        academicYear: yr,
+        updatedAt: new Date().toISOString(),
+      };
+      if (selOpt !== undefined) payload.selectedOptions = selOpt;
+      if (compStd !== undefined) payload.completedStandards = Array.from(compStd);
+      if (info !== undefined) payload.schoolInfo = info;
+
+      await setDoc(docRef, payload, { merge: true });
+    } catch (err) {
+      console.error("Error saving SQAAF data to Firestore:", err);
+    }
+  };
 
   // School Info Form State
   const loadSchoolInfo = () => {
@@ -4493,6 +4565,7 @@ function TeacherSqafPage() {
       udise: infoUdise,
     };
     localStorage.setItem("sqaf_school_info", JSON.stringify(data));
+    saveSqaafDataToCloud(undefined, undefined, data);
     toast.success(selectedLang === "mr" ? "माहिती जतन केली." : "Information saved.");
     setView("dashboard");
   };
@@ -4739,6 +4812,109 @@ function TeacherSqafPage() {
     return groups;
   }, [currentDetail, selectedLang]);
 
+  // Sync SQAAF evaluation data from Cloud on load or when academicYear changes
+  // Sync SQAAF evaluation data from Cloud on load or when academicYear changes
+  useEffect(() => {
+    const docId = getDocId(academicYear);
+    if (!docId) return;
+
+    const loadCloudData = async () => {
+      try {
+        let docRef = doc(db, "sqaaf_evaluations", docId);
+        let snap = await getDoc(docRef);
+
+        // Fallback: If no document for current academic year (e.g. 2026-27), check legacy documents (2025-26 or baseId)
+        if (!snap.exists()) {
+          let baseId = null;
+          if (user?.uid) baseId = user.uid;
+          else if (profile?.usid) baseId = profile.usid;
+          else if (profile?.udise) baseId = `udise_${profile.udise}`;
+          else if (profile?.email) baseId = `email_${profile.email.replace(/[@.]/g, "_")}`;
+
+          if (baseId) {
+            const fallback2025Ref = doc(db, "sqaaf_evaluations", `${baseId}_2025_26`);
+            const fallback2025Snap = await getDoc(fallback2025Ref);
+            if (fallback2025Snap.exists()) {
+              snap = fallback2025Snap;
+            } else {
+              const fallbackBaseRef = doc(db, "sqaaf_evaluations", baseId);
+              const fallbackBaseSnap = await getDoc(fallbackBaseRef);
+              if (fallbackBaseSnap.exists()) {
+                snap = fallbackBaseSnap;
+              }
+            }
+          }
+        }
+
+        if (snap.exists()) {
+          const data = snap.data();
+          if (data.selectedOptions) {
+            setSelectedOptions(data.selectedOptions);
+            localStorage.setItem(`sqaf_selected_options_${academicYear}`, JSON.stringify(data.selectedOptions));
+            localStorage.setItem("sqaf_selected_options", JSON.stringify(data.selectedOptions));
+          } else {
+            setSelectedOptions({});
+          }
+          if (data.completedStandards && Array.isArray(data.completedStandards)) {
+            const setStds = new Set<number>(data.completedStandards);
+            setCompletedStandards(setStds);
+            localStorage.setItem(`sqaf_completed_standards_${academicYear}`, JSON.stringify(Array.from(setStds)));
+            localStorage.setItem("sqaf_completed_standards", JSON.stringify(Array.from(setStds)));
+          } else {
+            setCompletedStandards(new Set());
+          }
+          if (data.schoolInfo) {
+            if (data.schoolInfo.schoolName) setInfoSchoolName(data.schoolInfo.schoolName);
+            if (data.schoolInfo.headmaster) setInfoHeadmaster(data.schoolInfo.headmaster);
+            if (data.schoolInfo.address) setInfoAddress(data.schoolInfo.address);
+            if (data.schoolInfo.centerName) setInfoCenterName(data.schoolInfo.centerName);
+            if (data.schoolInfo.taluka) setInfoTaluka(data.schoolInfo.taluka);
+            if (data.schoolInfo.district) setInfoDistrict(data.schoolInfo.district);
+            if (data.schoolInfo.udise) setInfoUdise(data.schoolInfo.udise);
+            localStorage.setItem("sqaf_school_info", JSON.stringify(data.schoolInfo));
+          }
+
+          // Auto-migrate legacy data to current academicYear in cloud if needed
+          if (snap.id !== docId) {
+            await saveSqaafDataToCloud(
+              data.selectedOptions,
+              data.completedStandards ? new Set<number>(data.completedStandards) : undefined,
+              data.schoolInfo,
+              academicYear
+            );
+          }
+        } else {
+          // If no cloud data for this academic year yet, check local storage for that year or un-suffixed fallbacks
+          const yearSavedOpts = localStorage.getItem(`sqaf_selected_options_${academicYear}`) || localStorage.getItem("sqaf_selected_options") || localStorage.getItem("sqaf_selected_options_2025-26");
+          if (yearSavedOpts) {
+            try { setSelectedOptions(JSON.parse(yearSavedOpts)); } catch { setSelectedOptions({}); }
+          } else {
+            setSelectedOptions({});
+          }
+
+          const yearSavedStds = localStorage.getItem(`sqaf_completed_standards_${academicYear}`) || localStorage.getItem("sqaf_completed_standards") || localStorage.getItem("sqaf_completed_standards_2025-26");
+          if (yearSavedStds) {
+            try { setCompletedStandards(new Set(JSON.parse(yearSavedStds))); } catch { setCompletedStandards(new Set()); }
+          } else {
+            setCompletedStandards(new Set());
+          }
+        }
+      } catch (err) {
+        console.error("Error loading SQAAF cloud data:", err);
+      }
+    };
+
+    loadCloudData();
+  }, [user?.uid, profile?.email, profile?.udise, academicYear]);
+
+  const handleAcademicYearChange = (newYear: string) => {
+    setAcademicYear(newYear);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("sqaf_selected_academic_year", newYear);
+    }
+    toast.success(`शैक्षणिक वर्ष बदलले: ${newYear}`);
+  };
+
   const selectOption = (standardId: number, optionIdx: number) => {
     const updated = { ...selectedOptions, [standardId]: optionIdx };
     setSelectedOptions(updated);
@@ -4751,6 +4927,8 @@ function TeacherSqafPage() {
       setCompletedStandards(updatedCompleted);
       localStorage.setItem("sqaf_completed_standards", JSON.stringify(Array.from(updatedCompleted)));
     }
+
+    saveSqaafDataToCloud(updated, updatedCompleted);
 
     toast.success(selectedLang === "mr" ? `पर्याय निवडला.` : `Option selected.`);
   };
@@ -4766,6 +4944,7 @@ function TeacherSqafPage() {
     }
     setCompletedStandards(updated);
     localStorage.setItem("sqaf_completed_standards", JSON.stringify(Array.from(updated)));
+    saveSqaafDataToCloud(selectedOptions, updated);
   };
 
   const toggleLanguage = () => {
@@ -5474,11 +5653,30 @@ function TeacherSqafPage() {
                     </div>
                   </div>
 
-                  {/* Language Selector Button with Automatic Toggle */}
-                  <div>
+                  {/* Academic Year & Language Controls */}
+                  <div className="flex items-center gap-3">
+                    {/* Academic Year Selector */}
+                    <div className="flex items-center gap-2 bg-slate-900/30 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-white/20 text-white shadow-sm">
+                      <span className="text-xs font-black uppercase tracking-wider hidden sm:inline text-amber-200">
+                        {selectedLang === "mr" ? "शैक्षणिक वर्ष:" : "Academic Year:"}
+                      </span>
+                      <select
+                        value={academicYear}
+                        onChange={(e) => handleAcademicYearChange(e.target.value)}
+                        className="bg-slate-900 text-amber-300 border border-amber-400/40 rounded-xl px-3 py-1 text-xs font-extrabold outline-none cursor-pointer hover:bg-slate-950 transition-colors"
+                      >
+                        {academicYearsList.map((item) => (
+                          <option key={item.value} value={item.value}>
+                            {item.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Language Selector Button */}
                     <button
                       onClick={toggleLanguage}
-                      className="p-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-2xl transition-all shadow-sm flex items-center gap-2 text-white border border-white/20"
+                      className="p-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-2xl transition-all shadow-sm flex items-center gap-2 text-white border border-white/20 cursor-pointer"
                     >
                       <Languages className="size-5" />
                       <span className="text-xs font-black uppercase tracking-wider hidden sm:inline">
