@@ -83,7 +83,38 @@ export const matchStudentClassAndMedium = (student, targetClass, targetMedium, c
 };
 
 /**
- * Fetch students for a class from Firestore (users & students collections) and Bunny Storage CDN
+ * Helper to check if a student has any filled marks, attendance, or remarks data
+ */
+export const hasStudentFilledData = (student, marksData = {}, sem1MarksData = {}, sem2MarksData = {}, attendanceData = {}, remarksData = {}) => {
+  if (!student) return false;
+  const sId = String(student.id || student.studentId || "").trim();
+  const sRoll = String(student.rollNo || student.srNo || "").trim();
+  const sName = String(student.fullName || student.name || "").trim().toLowerCase();
+
+  const checkObj = (container) => {
+    if (!container || typeof container !== "object") return false;
+    // Look up by sId, sRoll, or sName
+    const entry = container[sId] || container[sRoll] || (sName && container[sName]);
+    if (!entry) return false;
+    if (typeof entry === "number" && entry > 0) return true;
+    if (typeof entry === "string" && entry.trim() !== "" && entry !== "0" && entry !== "-") return true;
+    if (typeof entry === "object" && entry !== null) {
+      return Object.values(entry).some(val => {
+        if (val === undefined || val === null || val === "" || val === 0 || val === "0" || val === "-") return false;
+        if (typeof val === "object" && val !== null) {
+          return Object.values(val).some(v => v !== undefined && v !== null && v !== "" && v !== 0 && v !== "0" && v !== "-");
+        }
+        return true;
+      });
+    }
+    return false;
+  };
+
+  return checkObj(marksData) || checkObj(sem1MarksData) || checkObj(sem2MarksData) || checkObj(attendanceData) || checkObj(remarksData);
+};
+
+/**
+ * Fetch students for a class from Firestore (users, students, cce_students collections) and Bunny Storage CDN
  */
 export const fetchStudentsForClass = async (selectedClass, medium, teacherId = null) => {
   let loadedStudents = [];
@@ -92,69 +123,43 @@ export const fetchStudentsForClass = async (selectedClass, medium, teacherId = n
   const activeTeacherId = teacherId || (typeof localStorage !== "undefined" ? localStorage.getItem("current_teacher_id") : null);
 
   try {
-    const [uSnap, studentsSnap] = await Promise.all([
+    const [uSnap, studentsSnap, cceSnap] = await Promise.all([
       getDocs(query(collection(db, "users"), where("role", "==", "student"))).catch(() => null),
       getDocs(collection(db, "students")).catch(() => null),
+      getDocs(collection(db, "cce_students")).catch(() => null),
     ]);
 
-    if (uSnap) {
-      uSnap.forEach((docSnap) => {
-        const d = docSnap.data();
-        const studentObj = { id: docSnap.id, ...d };
-        if (matchStudentClassAndMedium(studentObj, targetClassNorm, selectedMedium, activeTeacherId)) {
-          loadedStudents.push({
-            id: docSnap.id,
-            srNo: String(d.rollNo || d.srNo || loadedStudents.length + 1),
-            rollNo: String(d.rollNo || d.srNo || loadedStudents.length + 1),
-            name: d.fullName || d.name || d.studentName || "",
-            fullName: d.fullName || d.name || d.studentName || "",
-            stdName: d.name || d.fullName || "",
-            stdFather: d.fatherName || d.stdFather || "",
-            stdSurname: d.surname || d.stdSurname || "",
-            stdMother: d.motherName || d.stdMother || "",
-            currentClass: d.class || d.currentClass || selectedClass,
-            medium: d.medium,
-            isSemiEnglish: d.isSemiEnglish,
-            teacherId: d.teacherId || d.createdById,
-            division: d.division || "1",
-            dob: d.dob || d.birthDate || "",
-            caste: d.caste || d.category || "",
-            gender: d.gender || d.sex || d.ling || d.genderType || d.studentGender || "",
-            studentId: d.studentId || docSnap.id,
-            photoUrl: d.photoUrl || d.profilePhoto || d.photoURL || d.studentPhoto || d.photo || d.imageUrl || d.profileImage || "",
-          });
-        }
-      });
-    }
+    const processDoc = (docSnap) => {
+      const d = docSnap.data();
+      const studentObj = { id: docSnap.id, ...d };
+      if (matchStudentClassAndMedium(studentObj, targetClassNorm, selectedMedium, activeTeacherId)) {
+        loadedStudents.push({
+          id: docSnap.id,
+          srNo: String(d.rollNo || d.srNo || loadedStudents.length + 1),
+          rollNo: String(d.rollNo || d.srNo || loadedStudents.length + 1),
+          name: d.fullName || d.name || d.studentName || "",
+          fullName: d.fullName || d.name || d.studentName || "",
+          stdName: d.name || d.fullName || "",
+          stdFather: d.fatherName || d.stdFather || "",
+          stdSurname: d.surname || d.stdSurname || "",
+          stdMother: d.motherName || d.stdMother || "",
+          currentClass: d.class || d.currentClass || selectedClass,
+          medium: d.medium,
+          isSemiEnglish: d.isSemiEnglish,
+          teacherId: d.teacherId || d.createdById,
+          division: d.division || "1",
+          dob: d.dob || d.birthDate || "",
+          caste: d.caste || d.category || "",
+          gender: d.gender || d.sex || d.ling || d.genderType || d.studentGender || "",
+          studentId: d.studentId || docSnap.id,
+          photoUrl: d.photoUrl || d.profilePhoto || d.photoURL || d.studentPhoto || d.photo || d.imageUrl || d.profileImage || "",
+        });
+      }
+    };
 
-    if (studentsSnap) {
-      studentsSnap.forEach((docSnap) => {
-        const d = docSnap.data();
-        const studentObj = { id: docSnap.id, ...d };
-        if (matchStudentClassAndMedium(studentObj, targetClassNorm, selectedMedium, activeTeacherId)) {
-          loadedStudents.push({
-            id: docSnap.id,
-            srNo: String(d.rollNo || d.srNo || loadedStudents.length + 1),
-            rollNo: String(d.rollNo || d.srNo || loadedStudents.length + 1),
-            name: d.fullName || d.name || d.studentName || "",
-            fullName: d.fullName || d.name || d.studentName || "",
-            stdName: d.name || d.fullName || "",
-            stdFather: d.fatherName || d.stdFather || "",
-            stdSurname: d.surname || d.stdSurname || "",
-            stdMother: d.motherName || d.stdMother || "",
-            currentClass: d.class || d.currentClass || selectedClass,
-            medium: d.medium,
-            isSemiEnglish: d.isSemiEnglish,
-            division: d.division || "1",
-            dob: d.dob || d.birthDate || "",
-            caste: d.caste || d.category || "",
-            gender: d.gender || d.sex || d.ling || d.genderType || d.studentGender || "",
-            studentId: d.studentId || docSnap.id,
-            photoUrl: d.photoUrl || d.profilePhoto || d.photoURL || d.studentPhoto || d.photo || d.imageUrl || d.profileImage || "",
-          });
-        }
-      });
-    }
+    if (uSnap) uSnap.forEach(processDoc);
+    if (studentsSnap) studentsSnap.forEach(processDoc);
+    if (cceSnap) cceSnap.forEach(processDoc);
   } catch (e) {}
 
   // Fetch detailed student profiles from student_details collection
@@ -181,9 +186,9 @@ export const fetchStudentsForClass = async (selectedClass, medium, teacherId = n
         aadhar: det.aadhar || s.aadhar || "",
         registrationNo: det.registrationNo || s.registrationNo || s.generalRegNo || "",
         generalRegNo: det.registrationNo || s.registrationNo || s.generalRegNo || "",
-        motherTongue: det.motherTongue || s.motherTongue || "",
-        caste: det.caste || s.caste || "",
-        religion: det.religion || s.religion || "",
+        motherTongue: det.motherTongue || (s.motherTongue && s.motherTongue !== "मराठी" ? s.motherTongue : "") || "",
+        caste: det.caste || det.casteCategory || (s.caste && s.caste !== "OPEN (ओपन)" && s.caste !== "ओपन" ? s.caste : "") || "",
+        religion: det.religion || (s.religion && s.religion !== "हिंदू" ? s.religion : "") || "",
         gender: det.gender || det.sex || det.ling || s.gender || s.sex || s.ling || s.genderType || s.studentGender || "",
         address: det.address || s.address || "",
         mobile: det.phone || s.phone || s.mobile || "",

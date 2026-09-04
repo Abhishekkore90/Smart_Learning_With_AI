@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { getTeacherId } from "@/lib/teacherIsolationHelper";
-import { fetchStudentsForClass } from "./firestoreMarksHelper";
+import { fetchStudentsForClass, hasStudentFilledData } from "./firestoreMarksHelper";
 import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
 
 // Marathi Grade Calculation Helper
@@ -372,7 +372,7 @@ export default function AnnualResultRegister({ initialClass, initialYear, onBack
 
   // Helper to extract student attendance accurately
   const getStudentAttendance = (student, attData) => {
-    if (!student) return 234;
+    if (!student) return 0;
 
     if (student.attendance && Number(student.attendance) > 0) return Number(student.attendance);
     if (student.presentDays && Number(student.presentDays) > 0) return Number(student.presentDays);
@@ -397,7 +397,7 @@ export default function AnnualResultRegister({ initialClass, initialYear, onBack
       }
     }
 
-    return 234;
+    return 0;
   };
 
   const [downloading, setDownloading] = useState(false);
@@ -804,9 +804,13 @@ export default function AnnualResultRegister({ initialClass, initialYear, onBack
             </thead>
 
             <tbody>
-              {students.map((st, idx) => {
-                let grandTotalObt = 0;
-                const grandTotalMax = subjects.length * 200;
+              {(() => {
+                const dataFilledStudents = students.filter(st => hasStudentFilledData(st, {}, sem1MarksData, sem2MarksData, attendanceData));
+                const displayedStudents = dataFilledStudents.length > 0 ? dataFilledStudents : students;
+
+                return displayedStudents.map((st, idx) => {
+                  let grandTotalObt = 0;
+                  const grandTotalMax = subjects.length * 200;
 
                 const subjectRows = subjects.map((sub) => {
                   const m1 = getSubjectMarkForTerm(st, sub, sem1MarksData, "sem1");
@@ -865,7 +869,8 @@ export default function AnnualResultRegister({ initialClass, initialYear, onBack
                     </td>
                   </tr>
                 );
-              })}
+              });
+              })()}
             </tbody>
           </table>
         </div>

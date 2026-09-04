@@ -5,7 +5,7 @@ import { Download, ArrowLeft, Loader2, AlertCircle, FileText, Copy } from "lucid
 import { toast } from "sonner";
 import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
 import { getTeacherId, matchStudentTeacherClassAndMedium } from "../lib/teacherIsolationHelper";
-import { fetchStudentsForClass } from "./firestoreMarksHelper";
+import { fetchStudentsForClass, hasStudentFilledData } from "./firestoreMarksHelper";
 import "./result.css";
 
 const DEFAULT_SUBJECTS = [
@@ -1132,8 +1132,12 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
         </div>
 
         {/* -------------------- STUDENT PAGES -------------------- */}
-        {students.map((student, sIdx) => {
-          const studentId = student.id || student.name;
+        {(() => {
+          const dataFilledStudents = students.filter(st => hasStudentFilledData(st, marksData, sem1MarksData, sem2MarksData, attendanceData, remarksData));
+          const displayedStudents = dataFilledStudents.length > 0 ? dataFilledStudents : students;
+
+          return displayedStudents.map((student, sIdx) => {
+            const studentId = student.id || student.name;
           const studentMarks = marksData[student.id]
             || marksData[student.rollNo]
             || marksData[student.name]
@@ -1771,7 +1775,8 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
               )}
             </React.Fragment>
           );
-        })}
+        });
+        })()}
 
         {/* -------------------- DYNAMIC CALCULATIONS FOR FINAL 3 PAGES -------------------- */}
         {(() => {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { db } from "../lib/firebase";
 import { doc, getDoc, collection, getDocs, query, where } from "firebase/firestore";
-import { matchStudentClassAndMedium } from "./firestoreMarksHelper";
+import { matchStudentClassAndMedium, fetchStudentsForClass, hasStudentFilledData } from "./firestoreMarksHelper";
 import { getTeacherId } from "../lib/teacherIsolationHelper";
 import { Download, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -714,7 +714,11 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
 
       {/* -------------------- PRINT CONTAINER (CLASS-SPECIFIC OUTCOMES & USER SELECTED LEVELS) -------------------- */}
       <div ref={printRef} className="cce-pdf-container max-w-4xl mx-auto">
-        {students.map((student, sIdx) => {
+        {(() => {
+          const dataFilledStudents = students.filter(st => hasStudentFilledData(st, outcomesRatings, {}, {}, {}, {}));
+          const displayedStudents = dataFilledStudents.length > 0 ? dataFilledStudents : students;
+
+          return displayedStudents.map((student, sIdx) => {
           const activeSubjectSections = [
             { key: "मराठी", title: "प्रथम भाषा: मराठी", outcomes: marathiOutcomes, subjectName: "मराठी" },
             { key: "हिंदी", title: "द्वितीय भाषा: हिंदी", outcomes: hindiOutcomes, subjectName: "हिंदी" },
@@ -789,7 +793,8 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
               </div>
             );
           });
-        })}
+        });
+        })()}
       </div>
     </div>
   );

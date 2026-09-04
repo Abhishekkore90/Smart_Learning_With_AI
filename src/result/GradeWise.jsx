@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { ArrowLeft, Download, Loader2, RefreshCw } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
-import { matchStudentClassAndMedium, fetchStudentsForClass, fetchFirestoreMarks } from "./firestoreMarksHelper";
+import { matchStudentClassAndMedium, fetchStudentsForClass, fetchFirestoreMarks, hasStudentFilledData } from "./firestoreMarksHelper";
 import { getTeacherId } from "@/lib/teacherIsolationHelper";
 import { DEFAULT_MARATHI_SUBJECTS_MAP, getDefaultSubjectsForClass } from "@/data/cceSubjects";
 import { toast } from "sonner";
@@ -226,7 +226,10 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
             const classSubjects = getDefaultSubjectsForClass(clsObj.id, currentMedium) || DEFAULT_MARATHI_SUBJECTS_MAP[clsObj.id] || DEFAULT_MARATHI_SUBJECTS_MAP["1st"];
             const totalMax = classSubjects.length * 100;
 
-            classStudents.forEach((st) => {
+            const dataFilledStudents = classStudents.filter(st => hasStudentFilledData(st, semMarks));
+            const activeStudents = dataFilledStudents.length > 0 ? dataFilledStudents : classStudents;
+
+            activeStudents.forEach((st) => {
               const gStr = String(st.gender || st.sex || st.ling || st.studentGender || st.genderType || "").toLowerCase().trim();
               const isGirl =
                 gStr === "female" || gStr === "f" || gStr === "2" ||

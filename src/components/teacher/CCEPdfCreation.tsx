@@ -196,13 +196,7 @@ export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
         <div className="flex-1 overflow-x-auto">
           <PdfErrorBoundary title="वार्षिक निकाल पत्रक">
             <Suspense fallback={renderLoading()}>
-              {["5th", "8th"].includes(selectedClass) ? (
-                <Result5th8th initialClass={selectedClass} initialYear={academicYear} />
-              ) : selectedClass === "12th" ? (
-                <ResultHSC initialClass={selectedClass} initialYear={academicYear} />
-              ) : (
-                <AnnualResultRegister initialClass={selectedClass} initialYear={academicYear} onBack={() => setSelectedOption(null)} />
-              )}
+              <AnnualResultRegister initialClass={selectedClass} initialYear={academicYear} onBack={() => setSelectedOption(null)} />
             </Suspense>
           </PdfErrorBoundary>
         </div>

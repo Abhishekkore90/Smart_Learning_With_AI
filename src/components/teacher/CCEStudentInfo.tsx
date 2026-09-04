@@ -261,8 +261,8 @@ function FloatSelect({
             color: value ? "#0f172a" : "#94a3b8",
           }}
         >
-          <option value="" disabled hidden>
-            {placeholder || "-- निवडा --"}
+          <option value="">
+            {placeholder ? `-- निवडा (${placeholder}) --` : "-- निवडा --"}
           </option>
           {allOptions.map((opt) => (
             <option key={opt} value={opt} className="text-slate-900 font-semibold py-1">
