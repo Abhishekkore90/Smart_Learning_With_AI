@@ -2057,12 +2057,12 @@ function DailyAssemblyContent() {
         </div>
       ` : '';
 
-      // --- All 14 Monthly Paripath Register Content Sections ---
+      // --- All Monthly Paripath Register Content Sections ---
       const rashtrageet = data.nationalAnthem || data.rashtrageet || data.nationalAnthem_mr || assemblyItems[0]?.content || "";
       const rajyageet = data.stateAnthem || data.rajyageet || data.stateAnthem_mr || assemblyItems[1]?.content || "";
       const pratigya = data.pledge || data.pratigya || data.pledge_mr || assemblyItems[2]?.content || "";
       const sanvidhan = data.preamble || data.sanvidhan || data.preamble_mr || assemblyItems[3]?.content || "";
-      const prarthana = data.prayer || data.prarthana || data.prayer_mr || assemblyItems[4]?.content || "";
+      const prarthana = data.prayer || data.prarthana || data.prayer_mr || "";
       const shlok = data.shlok || data.shlok_mr || "";
       const panchang = data.panchang
         ? (typeof data.panchang === "string" ? data.panchang : Object.values(data.panchang).filter(Boolean).join(" "))
@@ -2100,7 +2100,52 @@ function DailyAssemblyContent() {
         try { await document.fonts.ready; } catch (e) {}
       }
 
-      // Build ALL 16 content sections in exact sequence
+      // Build PDF sections dynamically (only 5 set items + non-empty admin sections + signature)
+      const pdfSectionsConfig = [
+        { title: '१. राष्ट्रगीत', content: rashtrageet, bg: '#bbf7d0', isSetItem: true },
+        { title: '२. राज्यगीत', content: rajyageet, bg: '#fef08a', isSetItem: true },
+        { title: '३. प्रतिज्ञा', content: pratigya, bg: '#bbf7d0', isSetItem: true },
+        { title: '४. भारताचे संविधान', content: sanvidhan, bg: '#fed7aa', isSetItem: true },
+        { title: '५. प्रार्थना', content: prarthana, bg: '#bbf7d0' },
+        { title: '६. श्लोक', content: shlok, bg: '#fecaca' },
+        { title: '७. पंचांग', content: panchang, bg: '#ffedd5' },
+        { title: '८. सुविचार', content: suvichar, bg: '#ede9fe', isItalic: true },
+        { title: '९. सुसंस्कारक्षम बातम्या', content: batmya, bg: '#a7f3d0', alignLeft: true },
+        { title: '१०. दिनविशेष', content: dinvishesh, bg: '#bfdbfe', alignLeft: true, extra: (formData.yearDay || data.yearDay) ? `हा वर्षातील ${formData.yearDay || data.yearDay} वा दिवस आहे.` : "" },
+        { title: '११. म्हण', content: mhan, bg: '#ccfbf1', meaning: mhanMeaning },
+        { title: '१२. बोधकथा', content: bodhkatha, bg: '#fecdd3', storyTitle, moral, alignLeft: true },
+        { title: '१३. सामान्य ज्ञान', content: gkText, bg: '#fef3c7', alignLeft: true },
+        { title: '१४. समूहगीत/देशभक्ती गीत', content: songLyrics || songTitle, bg: '#e0e7ff' },
+        { title: '१५. मौन पसायदान', content: maun, bg: '#fde68a', isSetItem: true },
+      ];
+
+      let secCounter = 1;
+      const pdfSectionsHtml = pdfSectionsConfig
+        .filter((sec) => sec.isSetItem || (sec.content && sec.content.trim()))
+        .map((sec) => {
+          const numTitle = `${secCounter++}. ${sec.title.replace(/^[०-९0-9]+\.\s*/, "")}${sec.storyTitle ? ': ' + sec.storyTitle : ''}`;
+          return `
+            <div style="${sectionBox(sec.bg)}">
+              ${greenBar(numTitle)}
+              ${sec.extra ? `<div style="font-size: 11px; font-weight: 700; color: #1e40af; text-align: center; margin-bottom: 4px;">${sec.extra}</div>` : ''}
+              <div style="${contentText} ${sec.alignLeft ? 'text-align: left;' : ''} ${sec.isItalic ? 'font-style: italic;' : ''}">${nl2br(sec.content)}</div>
+              ${sec.meaning ? `<div style="font-size: 12px; color: #4b5563; text-align: center; margin-top: 6px;"><b>अर्थ:</b> ${sec.meaning}</div>` : ''}
+              ${sec.moral ? `<div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 6px 12px; border-radius: 4px; margin-top: 6px; font-size: 12px; font-weight: 700; color: #92400e;"><b>तात्पर्य:</b> ${sec.moral}</div>` : ''}
+            </div>
+          `;
+        })
+        .join("\n");
+
+      const signatureSectionHtml = `
+        <div style="${sectionBox('#e2e8f0')}">
+          ${greenBar(`${secCounter}. वर्गशिक्षकांची स्वाक्षरी`)}
+          <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 800; color: #1e293b; padding: 25px 20px 5px 20px;">
+            <span>वर्गशिक्षक स्वाक्षरी</span>
+            <span>मुख्याध्यापक स्वाक्षरी</span>
+          </div>
+        </div>
+      `;
+
       const allContent = `
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -2118,92 +2163,8 @@ function DailyAssemblyContent() {
         <div style="padding: 14px 22px; width: 100%; box-sizing: border-box;">
           ${pageHeader}
           ${schoolHeader}
-
-          <div style="${sectionBox('#bbf7d0')}">
-            ${greenBar('१. राष्ट्रगीत')}
-            <div style="${contentText} font-weight: 700;">${nl2br(rashtrageet || 'जन गण मन...')}</div>
-          </div>
-
-          <div style="${sectionBox('#fef08a')}">
-            ${greenBar('२. राज्यगीत')}
-            <div style="${contentText} font-weight: 700;">${nl2br(rajyageet || 'जय जय महाराष्ट्र माझा...')}</div>
-          </div>
-
-          <div style="${sectionBox('#bbf7d0')}">
-            ${greenBar('३. प्रतिज्ञा')}
-            <div style="${contentText}">${nl2br(pratigya || 'भारत माझा देश आहे...')}</div>
-          </div>
-
-          <div style="${sectionBox('#fed7aa')}">
-            ${greenBar('४. भारताचे संविधान')}
-            <div style="${contentText}">${nl2br(sanvidhan || 'आम्ही भारताचे लोक...')}</div>
-          </div>
-
-          <div style="${sectionBox('#bbf7d0')}">
-            ${greenBar('५. प्रार्थना')}
-            <div style="${contentText}">${nl2br(prarthana)}</div>
-          </div>
-
-          <div style="${sectionBox('#fecaca')}">
-            ${greenBar('६. श्लोक')}
-            <div style="${contentText}">${nl2br(shlok || 'माहिती उपलब्ध नाही')}</div>
-          </div>
-
-          <div style="${sectionBox('#ffedd5')}">
-            ${greenBar('७. पंचांग')}
-            <div style="${contentText}">${nl2br(panchang || 'माहिती उपलब्ध नाही')}</div>
-          </div>
-
-          <div style="${sectionBox('#ede9fe')}">
-            ${greenBar('८. सुविचार')}
-            <div style="${contentText} font-style: italic;">${suvichar ? `"${suvichar}"` : 'माहिती उपलब्ध नाही'}</div>
-          </div>
-
-          <div style="${sectionBox('#a7f3d0')}">
-            ${greenBar('९. सुसंस्कारक्षम बातम्या')}
-            <div style="${contentText} text-align: left;">${nl2br(batmya || 'माहिती उपलब्ध नाही')}</div>
-          </div>
-
-          <div style="${sectionBox('#bfdbfe')}">
-            ${greenBar('१०. दिनविशेष')}
-            ${(formData.yearDay || data.yearDay) ? `<div style="font-size: 11px; font-weight: 700; color: #1e40af; text-align: center; margin-bottom: 4px;">हा वर्षातील ${formData.yearDay || data.yearDay} वा दिवस आहे.</div>` : ''}
-            <div style="${contentText} text-align: left;">${nl2br(dinvishesh || 'माहिती उपलब्ध नाही')}</div>
-          </div>
-
-          <div style="${sectionBox('#ccfbf1')}">
-            ${greenBar('११. म्हण')}
-            <div style="${contentText} font-weight: 800;">${mhan ? `"${mhan}"` : 'माहिती उपलब्ध नाही'}</div>
-            ${mhanMeaning ? `<div style="font-size: 12px; color: #4b5563; text-align: center; margin-top: 6px;"><b>अर्थ:</b> ${mhanMeaning}</div>` : ''}
-          </div>
-
-          <div style="${sectionBox('#fecdd3')}">
-            ${greenBar(`१२. बोधकथा${storyTitle ? ': ' + storyTitle : ''}`)}
-            <div style="${contentText} text-align: left;">${nl2br(bodhkatha || 'माहिती उपलब्ध नाही')}</div>
-            ${moral ? `<div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 6px 12px; border-radius: 4px; margin-top: 6px; font-size: 12px; font-weight: 700; color: #92400e;"><b>तात्पर्य:</b> ${moral}</div>` : ''}
-          </div>
-
-          <div style="${sectionBox('#fef3c7')}">
-            ${greenBar('१३. सामान्य ज्ञान')}
-            <div style="${contentText} text-align: left;">${nl2br(gkText || 'माहिती उपलब्ध नाही')}</div>
-          </div>
-
-          <div style="${sectionBox('#e0e7ff')}">
-            ${greenBar('१४. समूहगीत/देशभक्ती गीत')}
-            <div style="${contentText}">${nl2br(songLyrics || songTitle || 'माहिती उपलब्ध नाही')}</div>
-          </div>
-
-          <div style="${sectionBox('#fde68a')}">
-            ${greenBar('१५. मौन पसायदान')}
-            <div style="${contentText}">${nl2br(maun || 'पसायदान')}</div>
-          </div>
-
-          <div style="${sectionBox('#e2e8f0')}">
-            ${greenBar('१६. वर्गशिक्षकांची स्वाक्षरी')}
-            <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 800; color: #1e293b; padding: 25px 20px 5px 20px;">
-              <span>वर्गशिक्षक स्वाक्षरी</span>
-              <span>मुख्याध्यापक स्वाक्षरी</span>
-            </div>
-          </div>
+          ${pdfSectionsHtml}
+          ${signatureSectionHtml}
 
           <div style="width: 100%; height: 1.5px; background: linear-gradient(90deg, transparent, #cbd5e1, transparent); margin: 14px 0;"></div>
           <div style="text-align: center; padding: 8px 0; font-size: 10px; font-weight: 700; color: #9ca3af; font-family: 'Noto Sans Devanagari', sans-serif;">
@@ -2623,7 +2584,13 @@ function DailyAssemblyContent() {
 
 
 
-          {/* Exact 14 Headings Sequence matching Monthly Paripath Register */}
+          {!dbFormData && (
+            <div className="p-4 bg-amber-500/10 border border-amber-400/40 rounded-2xl text-center text-amber-950 font-bold text-xs md:text-sm shadow-sm mb-4">
+              📌 ॲडमिनद्वारे या तारखेचा परिपाठ अपडेट केलेला नाही. (केवळ ५ मूळ घटक दाखवले जात आहेत)
+            </div>
+          )}
+
+          {/* Exact Headings Sequence matching Monthly Paripath Register */}
           {[
             {
               id: 'rashtrageet',
@@ -2631,6 +2598,7 @@ function DailyAssemblyContent() {
               emoji: '🇮🇳',
               gradient: 'from-emerald-100/80 via-teal-50/60 to-green-100/80',
               content: formData[`nationalAnthem_${lang}`] || (lang === 'mr' ? (formData.nationalAnthem || formData.rashtrageet) : undefined) || assemblyItems[0]?.content || "",
+              isSetItem: true,
             },
             {
               id: 'rajyageet',
@@ -2638,6 +2606,7 @@ function DailyAssemblyContent() {
               emoji: '🚩',
               gradient: 'from-amber-100/80 via-yellow-50/60 to-orange-100/80',
               content: formData.stateAnthem || formData.rajyageet || assemblyItems[1]?.content || "",
+              isSetItem: true,
             },
             {
               id: 'pratigya',
@@ -2645,6 +2614,7 @@ function DailyAssemblyContent() {
               emoji: '✋',
               gradient: 'from-blue-100/80 via-indigo-50/60 to-cyan-100/80',
               content: formData[`pledge_${lang}`] || (lang === 'mr' ? (formData.pledge || formData.pratigya) : undefined) || assemblyItems[2]?.content || "",
+              isSetItem: true,
             },
             {
               id: 'sanvidhan',
@@ -2652,13 +2622,14 @@ function DailyAssemblyContent() {
               emoji: '📜',
               gradient: 'from-amber-100/80 via-orange-50/60 to-yellow-100/80',
               content: formData[`preamble_${lang}`] || (lang === 'mr' ? (formData.preamble || formData.sanvidhan) : undefined) || assemblyItems[3]?.content || "",
+              isSetItem: true,
             },
             {
               id: 'prarthana',
               title: 'प्रार्थना',
               emoji: '🙏🏻',
               gradient: 'from-rose-100/80 via-pink-50/60 to-purple-100/80',
-              content: formData.prayer || formData.prarthana || formData.prayer_mr || assemblyItems[4]?.content || "",
+              content: formData.prayer || formData.prarthana || formData.prayer_mr || "",
             },
             {
               id: 'shlok',
@@ -2735,6 +2706,7 @@ function DailyAssemblyContent() {
               emoji: '✨',
               gradient: 'from-yellow-100/80 via-amber-50/60 to-orange-100/80',
               content: formData.silentPasayadan || formData.maun || assemblyItems[5]?.content || "",
+              isSetItem: true,
             },
             {
               id: 'swakshari',
@@ -2743,7 +2715,9 @@ function DailyAssemblyContent() {
               gradient: 'from-slate-100 via-gray-50 to-zinc-100',
               isSignature: true,
             },
-          ].map((sec) => (
+          ]
+            .filter((sec) => sec.isSetItem || sec.isSignature || sec.content?.trim() || (sec.id === 'samanya_gyan' && sec.gkItems && sec.gkItems.length > 0))
+            .map((sec) => (
             <SectionCard
               key={sec.id}
               id={sec.id}

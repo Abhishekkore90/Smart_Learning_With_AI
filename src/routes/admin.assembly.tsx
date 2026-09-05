@@ -125,7 +125,7 @@ function AssemblyBookAdmin() {
       birthdays: "",
       deaths: "",
       thought: "",
-      shlok: "गुरुर ब्रह्मा गुरुर विष्णुः,\nगुरुर देवो महेश्वरः।\nगुरुर साक्षात् परं ब्रह्म,\nतस्मै श्री गुरवे नमः॥",
+      shlok: "",
       panchang: "",
       proverb: "",
       proverbMeaning: "",
@@ -135,7 +135,7 @@ function AssemblyBookAdmin() {
       personalityTitle: "",
       personality: "",
       silentPasayadanTitle: "पसायदान",
-      valueNews: DEFAULT_FORM_DATA.mr.valueNews,
+      valueNews: "",
     };
   };
 
