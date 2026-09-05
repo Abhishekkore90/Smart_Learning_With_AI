@@ -492,18 +492,19 @@ input:-webkit-autofill:active {
   background: #1d4ed8 !important;
 }
 
-/* Date Picker Icon Brightness & Visibility */
+/* Date Picker Icon Brightness & Visibility (Pure Dark/Black for high contrast) */
 input[type="date"]::-webkit-calendar-picker-indicator {
   cursor: pointer !important;
-  filter: brightness(0) saturate(100%) invert(82%) sepia(90%) saturate(1200%) hue-rotate(350deg) brightness(115%) !important;
-  opacity: 1 !important;
+  filter: invert(0%) brightness(0) !important;
+  opacity: 0.85 !important;
   display: inline-block !important;
-  width: 18px !important;
-  height: 18px !important;
+  width: 20px !important;
+  height: 20px !important;
   transition: all 0.2s ease !important;
 }
 
 input[type="date"]::-webkit-calendar-picker-indicator:hover {
-  filter: brightness(0) saturate(100%) invert(100%) !important;
-  transform: scale(1.2) !important;
+  filter: invert(0%) brightness(0) !important;
+  opacity: 1 !important;
+  transform: scale(1.15) !important;
 }

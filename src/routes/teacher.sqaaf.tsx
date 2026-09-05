@@ -5276,11 +5276,20 @@ function TeacherSqaafPage() {
     return () => window.removeEventListener("schoolProfileUpdated", handleProfileUpdate);
   }, []);
 
+  const getCurrentAcademicYear = () => {
+    const now = new Date();
+    const currentCalYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    const currentAcademicStart = currentMonth >= 5 ? currentCalYear : currentCalYear - 1;
+    return `${currentAcademicStart}-${(currentAcademicStart + 1).toString().slice(-2)}`;
+  };
+
   const [academicYear, setAcademicYear] = useState<string>(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("sqaaf_selected_academic_year") || "2026-27";
+      const saved = localStorage.getItem("sqaaf_selected_academic_year");
+      if (saved && saved !== "2024-25") return saved;
     }
-    return "2026-27";
+    return getCurrentAcademicYear();
   });
 
   const academicYearsList = useMemo(() => {
@@ -6144,10 +6153,10 @@ function TeacherSqaafPage() {
           <div style="background: #fff; border: 1px solid #cbd5e1; padding: 16px; page-break-inside: avoid; break-inside: avoid; margin-bottom: 12px; display: block;">
             
             <!-- 1. Standard (Manak) Header & Description -->
-            <div style="font-size: 13px; font-weight: 900; color: #1e293b; margin-bottom: 6px;">
+            <div style="font-size: 15px; font-weight: 900; color: #0f172a; margin-bottom: 6px;">
               ${isMr ? `मानक क्र. ${toMarathiNumerals(s.num)}` : `Standard No. ${s.num}`}
             </div>
-            <div style="font-size: 11px; font-weight: 600; color: #475569; line-height: 1.5; margin-bottom: 12px; background: #f8fafc; border-left: 3px solid #64748b; padding: 8px 12px;">
+            <div style="font-size: 13px; font-weight: 700; color: #1e293b; line-height: 1.5; margin-bottom: 12px; background: #f8fafc; border-left: 3px solid #64748b; padding: 8px 12px;">
               ${s.orangeDesc}
             </div>
 
@@ -6155,21 +6164,21 @@ function TeacherSqaafPage() {
             ${s.isSelected ? `
               <div style="margin-bottom: 12px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                  <div style="font-size: 10px; font-weight: 900; color: #16a34a; text-transform: uppercase;">
+                  <div style="font-size: 12px; font-weight: 900; color: #16a34a; text-transform: uppercase;">
                     ${isMr ? "निवडलेला स्तर" : "SELECTED LEVEL"}: ${s.levelLabel}
                   </div>
                   ${!s.isNotApplicable ? `
-                    <div style="font-size: 10px; font-weight: 900; color: #15803d; background: #e8f5e9; padding: 2px 6px; border: 1px solid #86efac; border-radius: 4px;">
+                    <div style="font-size: 12px; font-weight: 900; color: #15803d; background: #e8f5e9; padding: 2px 8px; border: 1px solid #86efac; border-radius: 4px;">
                       ${isMr ? `प्राप्त गुण: ${toMarathiNumerals(s.marks)} / ४` : `Obtained Marks: ${s.marks} / 4`}
                     </div>
                   ` : ""}
                 </div>
-                <div style="font-size: 11px; font-weight: 700; color: #0f172a; line-height: 1.5; background: #f0fdf4; border: 1px solid #86efac; padding: 8px 12px;">
+                <div style="font-size: 13px; font-weight: 700; color: #0f172a; line-height: 1.5; background: #f0fdf4; border: 1px solid #86efac; padding: 8px 12px;">
                   ${s.responseText}
                 </div>
               </div>
             ` : `
-              <div style="font-size: 11px; font-weight: 700; color: #64748b; line-height: 1.5; background: #f8fafc; border: 1px solid #cbd5e1; padding: 8px 12px; margin-bottom: 12px;">
+              <div style="font-size: 13px; font-weight: 700; color: #64748b; line-height: 1.5; background: #f8fafc; border: 1px solid #cbd5e1; padding: 8px 12px; margin-bottom: 12px;">
                 ${isMr ? "अपूर्ण / प्रतिसाद दिलेला नाही" : "Incomplete / No response"}
               </div>
             `}
@@ -6413,9 +6422,9 @@ function TeacherSqaafPage() {
         html = `
           <div style="font-family: 'Segoe UI', 'Noto Sans Devanagari', Arial, sans-serif; color: #0f172a; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 10px;">
             <!-- Header -->
-            <div style="border-bottom: 2.5px solid #f97316; padding-bottom: 12px; margin-bottom: 18px; text-align: center;">
+            <div style="border-bottom: 2.5px solid #fdba74; padding-bottom: 12px; margin-bottom: 18px; text-align: center;">
               <div>
-                <div style="font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: #f97316; margin-bottom: 4px; text-align: center;">
+                <div style="font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: #ea580c; margin-bottom: 4px; text-align: center;">
                   ${isMr ? "राज्य शैक्षणिक संशोधन व प्रशिक्षण परिषद, महाराष्ट्र" : "State Council For Educational Research and Training, Maharashtra"}
                 </div>
                 <h1 style="font-size: 20px; font-weight: 900; color: #0f172a; margin: 0 0 3px 0; text-align: center;">
@@ -6429,37 +6438,40 @@ function TeacherSqaafPage() {
 
             <!-- School Info -->
             <div style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 12px 16px; margin-bottom: 16px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #cbd5e1;">
-                <div>
+              <div style="display: flex; justify-content: center; align-items: center; gap: 40px; text-align: center; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #cbd5e1;">
+                <div style="text-align: center;">
                   <div style="font-size: 7px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8; margin-bottom: 2px;">${isMr ? "शाळेचे नाव" : "School Name"}</div>
                   <div style="font-size: 15px; font-weight: 900; color: #0f172a; text-transform: uppercase;">${schoolName}</div>
                 </div>
-                ${udise ? `<div style="background: #6d28d9; color: white; padding: 4px 10px; font-weight: 800; font-size: 11px; border-radius: 4px;">
-                  ${isMr ? "युडायस कोड" : "UDISE CODE"}: ${udise}
+                ${udise ? `<div style="text-align: center;">
+                  <div style="font-size: 7px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8; margin-bottom: 2px;">${isMr ? "युडायस कोड" : "UDISE CODE"}</div>
+                  <div style="background: #f3e8ff; border: 1px solid #d8b4fe; color: #6b21a8; padding: 4px 12px; font-weight: 800; font-size: 11px; border-radius: 4px; display: inline-block;">
+                    ${udise}
+                  </div>
                 </div>` : ""}
               </div>
-              <div style="display: flex; gap: 20px; flex-wrap: wrap; font-size: 10px;">
-                ${headmaster ? `<div>
+              <div style="display: flex; justify-content: space-around; align-items: center; text-align: center; flex-wrap: wrap; font-size: 10px; width: 100%; gap: 15px;">
+                ${headmaster ? `<div style="text-align: center;">
                   <span style="font-weight: 800; color: #94a3b8; text-transform: uppercase; font-size: 7px; letter-spacing: 1px;">${isMr ? "मुख्याध्यापक" : "Headmaster"}</span>
                   <div style="font-weight: 700; color: #334155;">${headmaster}</div>
                 </div>` : ""}
-                ${address ? `<div>
+                ${address ? `<div style="text-align: center;">
                   <span style="font-weight: 800; color: #94a3b8; text-transform: uppercase; font-size: 7px; letter-spacing: 1px;">${isMr ? "पत्ता" : "Address"}</span>
                   <div style="font-weight: 700; color: #334155;">${address}</div>
                 </div>` : ""}
-                ${centerName ? `<div>
+                ${centerName ? `<div style="text-align: center;">
                   <span style="font-weight: 800; color: #94a3b8; text-transform: uppercase; font-size: 7px; letter-spacing: 1px;">${isMr ? "केंद्र" : "Center"}</span>
                   <div style="font-weight: 700; color: #334155;">${centerName}</div>
                 </div>` : ""}
-                ${taluka ? `<div>
+                ${taluka ? `<div style="text-align: center;">
                   <span style="font-weight: 800; color: #94a3b8; text-transform: uppercase; font-size: 7px; letter-spacing: 1px;">${isMr ? "तालुका" : "Taluka"}</span>
                   <div style="font-weight: 700; color: #334155;">${taluka}</div>
                 </div>` : ""}
-                ${district ? `<div>
+                ${district ? `<div style="text-align: center;">
                   <span style="font-weight: 800; color: #94a3b8; text-transform: uppercase; font-size: 7px; letter-spacing: 1px;">${isMr ? "जिल्हा" : "District"}</span>
                   <div style="font-weight: 700; color: #334155;">${district}</div>
                 </div>` : ""}
-                <div>
+                <div style="text-align: center;">
                   <span style="font-weight: 800; color: #94a3b8; text-transform: uppercase; font-size: 7px; letter-spacing: 1px;">${isMr ? "दिनांक" : "Date"}</span>
                   <div style="font-weight: 700; color: #334155;">${new Date().toLocaleDateString(isMr ? "mr-IN" : "en-IN", { year: "numeric", month: "long", day: "numeric" })}</div>
                 </div>
@@ -6468,9 +6480,9 @@ function TeacherSqaafPage() {
 
             <!-- Summary badge -->
             <div style="display: flex; gap: 10px; margin-bottom: 18px;">
-              <div style="flex: 1; background: #16a34a; padding: 8px 12px; color: white;">
-                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;">${isMr ? "प्रतिसाद नोंदवलेले" : "Responded"}</div>
-                <div style="font-size: 20px; font-weight: 900;">${totalAnswered} <span style="font-size: 11px; opacity: 0.7;">/ 128</span></div>
+              <div style="flex: 1; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 8px 12px; color: #166534; border-radius: 6px;">
+                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #16a34a;">${isMr ? "प्रतिसाद नोंदवलेले" : "Responded"}</div>
+                <div style="font-size: 20px; font-weight: 900; color: #14532d;">${totalAnswered} <span style="font-size: 11px; opacity: 0.7;">/ 128</span></div>
               </div>
             </div>
 
@@ -6643,12 +6655,12 @@ function TeacherSqaafPage() {
 
           return `
             <tr style="${isNotApplicable ? 'opacity: 0.6;' : ''}">
-              <td style="text-align: center; font-weight: 800; font-size: 12px; color: #334155; vertical-align: top; padding: 8px 4px; border: 1px solid #cbd5e1; width: 35px;">${isMr ? toMarathiNumerals(num) : num}</td>
-              <td style="font-size: 9px; font-weight: 600; color: #1e293b; vertical-align: top; padding: 8px 6px; border: 1px solid #cbd5e1; width: 160px; line-height: 1.4;">${orangeDesc}</td>
-              <td style="font-size: 8px; color: #334155; vertical-align: top; padding: 6px 5px; border: 1px solid #cbd5e1; line-height: 1.35; white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word; max-width: 150px; ${cellStyle(0)}">${getLevelText(0)}</td>
-              <td style="font-size: 8px; color: #334155; vertical-align: top; padding: 6px 5px; border: 1px solid #cbd5e1; line-height: 1.35; white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word; max-width: 150px; ${cellStyle(1)}">${getLevelText(1)}</td>
-              <td style="font-size: 8px; color: #334155; vertical-align: top; padding: 6px 5px; border: 1px solid #cbd5e1; line-height: 1.35; white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word; max-width: 150px; ${cellStyle(2)}">${getLevelText(2)}</td>
-              <td style="font-size: 8px; color: #334155; vertical-align: top; padding: 6px 5px; border: 1px solid #cbd5e1; line-height: 1.35; white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word; max-width: 150px; ${cellStyle(3)}">${getLevelText(3)}</td>
+              <td style="text-align: center; font-weight: 900; font-size: 13px; color: #0f172a; vertical-align: top; padding: 8px 4px; border: 1px solid #cbd5e1; width: 35px;">${isMr ? toMarathiNumerals(num) : num}</td>
+              <td style="font-size: 11px; font-weight: 700; color: #0f172a; vertical-align: top; padding: 8px 6px; border: 1px solid #cbd5e1; width: 160px; line-height: 1.45;">${orangeDesc}</td>
+              <td style="font-size: 10px; font-weight: 600; color: #1e293b; vertical-align: top; padding: 6px 5px; border: 1px solid #cbd5e1; line-height: 1.45; white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word; max-width: 150px; ${cellStyle(0)}">${getLevelText(0)}</td>
+              <td style="font-size: 10px; font-weight: 600; color: #1e293b; vertical-align: top; padding: 6px 5px; border: 1px solid #cbd5e1; line-height: 1.45; white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word; max-width: 150px; ${cellStyle(1)}">${getLevelText(1)}</td>
+              <td style="font-size: 10px; font-weight: 600; color: #1e293b; vertical-align: top; padding: 6px 5px; border: 1px solid #cbd5e1; line-height: 1.45; white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word; max-width: 150px; ${cellStyle(2)}">${getLevelText(2)}</td>
+              <td style="font-size: 10px; font-weight: 600; color: #1e293b; vertical-align: top; padding: 6px 5px; border: 1px solid #cbd5e1; line-height: 1.45; white-space: pre-wrap; word-break: break-word; overflow-wrap: break-word; max-width: 150px; ${cellStyle(3)}">${getLevelText(3)}</td>
               <td style="text-align: center; vertical-align: middle; padding: 6px 4px; border: 1px solid #cbd5e1; width: 50px; ${evalStyle}">${evalValue}</td>
               <td style="text-align: center; vertical-align: middle; padding: 6px 4px; border: 1px solid #cbd5e1; width: 50px; ${extStyle}">${extValue}</td>
             </tr>
@@ -6813,7 +6825,7 @@ function TeacherSqaafPage() {
           <div style="font-family: 'Segoe UI', 'Noto Sans Devanagari', Arial, sans-serif; color: #0f172a; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
             
             <!-- Header -->
-            <div style="border-bottom: 3px solid #f97316; padding-bottom: 16px; margin-bottom: 20px; text-align: center; position: relative;">
+            <div style="border-bottom: 3px solid #fdba74; padding-bottom: 16px; margin-bottom: 20px; text-align: center; position: relative;">
               <div style="text-align: center;">
                 <h1 style="font-size: 26px; font-weight: 900; color: #0f172a; margin: 0 0 4px 0; letter-spacing: -0.5px; text-align: center;">
                   ${isMr ? "SQAAF स्वयं मूल्यांकन अहवाल" : "SQAAF Self Evaluation Report"}
@@ -6832,33 +6844,36 @@ function TeacherSqaafPage() {
 
             <!-- School Info Card -->
             <div style="background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 14px; padding: 20px 24px; margin-bottom: 20px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2px solid #e2e8f0;">
-                <div>
+              <div style="display: flex; justify-content: center; align-items: center; gap: 50px; text-align: center; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2px solid #e2e8f0;">
+                <div style="text-align: center;">
                   <div style="font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: #94a3b8; margin-bottom: 3px;">${isMr ? "शाळेचे नाव" : "School Name"}</div>
                   <div style="font-size: 18px; font-weight: 900; color: #0f172a; text-transform: uppercase;">${schoolName}</div>
                 </div>
-                ${udise ? `<div style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: white; padding: 8px 18px; border-radius: 10px; font-weight: 800; font-size: 13px; letter-spacing: 1px;">
-                  ${udise}
+                ${udise ? `<div style="text-align: center;">
+                  <div style="font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: #94a3b8; margin-bottom: 3px;">${isMr ? "युडायस कोड" : "UDISE Code"}</div>
+                  <div style="background: #f3e8ff; border: 1.5px solid #d8b4fe; color: #6b21a8; padding: 6px 18px; border-radius: 10px; font-weight: 800; font-size: 13px; letter-spacing: 1px; display: inline-block;">
+                    ${udise}
+                  </div>
                 </div>` : ""}
               </div>
-              <div style="display: flex; gap: 30px; flex-wrap: wrap;">
-                ${headmaster ? `<div>
+              <div style="display: flex; justify-content: space-around; align-items: center; text-align: center; flex-wrap: wrap; width: 100%; gap: 20px;">
+                ${headmaster ? `<div style="text-align: center;">
                   <div style="font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8;">${isMr ? "मुख्याध्यापक" : "Headmaster"}</div>
                   <div style="font-size: 12px; font-weight: 700; color: #334155; text-transform: uppercase;">${headmaster}</div>
                 </div>` : ""}
-                ${address ? `<div>
+                ${address ? `<div style="text-align: center;">
                   <div style="font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8;">${isMr ? "पत्ता" : "Address"}</div>
                   <div style="font-size: 12px; font-weight: 700; color: #334155; text-transform: uppercase;">${address}</div>
                 </div>` : ""}
-                ${centerName ? `<div>
+                ${centerName ? `<div style="text-align: center;">
                   <div style="font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8;">${isMr ? "केंद्र" : "Center"}</div>
                   <div style="font-size: 12px; font-weight: 700; color: #334155; text-transform: uppercase;">${centerName}</div>
                 </div>` : ""}
-                ${taluka ? `<div>
+                ${taluka ? `<div style="text-align: center;">
                   <div style="font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8;">${isMr ? "तालुका" : "Taluka"}</div>
                   <div style="font-size: 12px; font-weight: 700; color: #334155; text-transform: uppercase;">${taluka}</div>
                 </div>` : ""}
-                ${district ? `<div>
+                ${district ? `<div style="text-align: center;">
                   <div style="font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8;">${isMr ? "जिल्हा" : "District"}</div>
                   <div style="font-size: 12px; font-weight: 700; color: #334155; text-transform: uppercase;">${district}</div>
                 </div>` : ""}
@@ -6867,44 +6882,44 @@ function TeacherSqaafPage() {
 
             <!-- Summary Stats -->
             <div style="display: flex; gap: 8px; margin-bottom: 20px;">
-              <div style="flex: 1; background: linear-gradient(135deg, #3b82f6, #2563eb); border-radius: 10px; padding: 10px 12px; color: white;">
-                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;">${isMr ? "एकूण मानके" : "Total Standards"}</div>
-                <div style="font-size: 20px; font-weight: 900; margin-top: 4px;">${totalStds}</div>
+              <div style="flex: 1; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 10px 12px; color: #1e40af;">
+                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #2563eb;">${isMr ? "एकूण मानके" : "Total Standards"}</div>
+                <div style="font-size: 20px; font-weight: 900; margin-top: 4px; color: #1e3a8a;">${totalStds}</div>
               </div>
-              <div style="flex: 1; background: linear-gradient(135deg, #22c55e, #16a34a); border-radius: 10px; padding: 10px 12px; color: white;">
-                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;">${isMr ? "प्रतिसाद नोंदवलेले" : "Responded"}</div>
-                <div style="font-size: 20px; font-weight: 900; margin-top: 4px;">${completedCount_}</div>
+              <div style="flex: 1; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 10px 12px; color: #166534;">
+                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #16a34a;">${isMr ? "प्रतिसाद नोंदवलेले" : "Responded"}</div>
+                <div style="font-size: 20px; font-weight: 900; margin-top: 4px; color: #14532d;">${completedCount_}</div>
               </div>
-              <div style="flex: 1; background: linear-gradient(135deg, #f97316, #ea580c); border-radius: 10px; padding: 10px 12px; color: white;">
-                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;">${isMr ? "प्रतिसाद बाकी" : "Pending"}</div>
-                <div style="font-size: 20px; font-weight: 900; margin-top: 4px;">${totalStds - completedCount_}</div>
+              <div style="flex: 1; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px; padding: 10px 12px; color: #c2410c;">
+                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #ea580c;">${isMr ? "प्रतिसाद बाकी" : "Pending"}</div>
+                <div style="font-size: 20px; font-weight: 900; margin-top: 4px; color: #7c2d12;">${totalStds - completedCount_}</div>
               </div>
-              <div style="flex: 1; background: linear-gradient(135deg, #0ea5e9, #0284c7); border-radius: 10px; padding: 10px 12px; color: white;">
-                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;">${isMr ? "लागू असलेले मानक" : "Applicable"}</div>
-                <div style="font-size: 20px; font-weight: 900; margin-top: 4px;">${applicableCount_}</div>
+              <div style="flex: 1; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 10px; padding: 10px 12px; color: #0369a1;">
+                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #0284c7;">${isMr ? "लागू असलेले मानक" : "Applicable"}</div>
+                <div style="font-size: 20px; font-weight: 900; margin-top: 4px; color: #0c4a6e;">${applicableCount_}</div>
               </div>
-              <div style="flex: 1; background: linear-gradient(135deg, #94a3b8, #64748b); border-radius: 10px; padding: 10px 12px; color: white;">
-                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;">${isMr ? "लागू नसलेले मानक" : "Not Applicable"}</div>
-                <div style="font-size: 20px; font-weight: 900; margin-top: 4px;">${notApplicableCount_}</div>
+              <div style="flex: 1; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 10px 12px; color: #475569;">
+                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #64748b;">${isMr ? "लागू नसलेले मानक" : "Not Applicable"}</div>
+                <div style="font-size: 20px; font-weight: 900; margin-top: 4px; color: #1e293b;">${notApplicableCount_}</div>
               </div>
-              <div style="flex: 1; background: linear-gradient(135deg, #8b5cf6, #7c3aed); border-radius: 10px; padding: 10px 12px; color: white;">
-                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8;">${isMr ? "गुण" : "Marks"}</div>
-                <div style="font-size: 20px; font-weight: 900; margin-top: 4px;">${obtainedMarks_}<span style="font-size: 11px; opacity: 0.7;"> / ${totalPossibleMarks}</span></div>
+              <div style="flex: 1; background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 10px; padding: 10px 12px; color: #6b21a8;">
+                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #7c3aed;">${isMr ? "गुण" : "Marks"}</div>
+                <div style="font-size: 20px; font-weight: 900; margin-top: 4px; color: #581c87;">${obtainedMarks_}<span style="font-size: 11px; opacity: 0.7;"> / ${totalPossibleMarks}</span></div>
               </div>
             </div>
 
             <!-- Main Table -->
-            <table style="width: 100%; table-layout: fixed; border-collapse: collapse; border: 2px solid #94a3b8; border-radius: 8px; overflow: hidden; font-size: 9px;">
+            <table style="width: 100%; table-layout: fixed; border-collapse: collapse; border: 2px solid #cbd5e1; border-radius: 8px; overflow: hidden; font-size: 11px;">
               <thead>
-                <tr style="background: linear-gradient(135deg, #1e293b, #334155);">
-                  <th style="color: white; font-weight: 900; padding: 12px 6px; text-align: center; border: 1px solid #475569; font-size: 10px; width: 35px;">${isMr ? "अ.क्र." : "Sr."}</th>
-                  <th style="color: white; font-weight: 900; padding: 12px 6px; text-align: center; border: 1px solid #475569; font-size: 10px; width: 160px;">${isMr ? "मानक" : "Standard"}</th>
-                  <th style="color: white; font-weight: 900; padding: 12px 6px; text-align: center; border: 1px solid #475569; font-size: 10px; background: linear-gradient(135deg, #dc2626, #b91c1c);">${isMr ? "स्तर १" : "Level 1"}</th>
-                  <th style="color: white; font-weight: 900; padding: 12px 6px; text-align: center; border: 1px solid #475569; font-size: 10px; background: linear-gradient(135deg, #f97316, #ea580c);">${isMr ? "स्तर २" : "Level 2"}</th>
-                  <th style="color: white; font-weight: 900; padding: 12px 6px; text-align: center; border: 1px solid #475569; font-size: 10px; background: linear-gradient(135deg, #eab308, #ca8a04);">${isMr ? "स्तर ३" : "Level 3"}</th>
-                  <th style="color: white; font-weight: 900; padding: 12px 6px; text-align: center; border: 1px solid #475569; font-size: 10px; background: linear-gradient(135deg, #22c55e, #16a34a);">${isMr ? "स्तर ४" : "Level 4"}</th>
-                  <th style="color: white; font-weight: 900; padding: 12px 6px; text-align: center; border: 1px solid #475569; font-size: 10px; width: 50px; background: linear-gradient(135deg, #8b5cf6, #7c3aed);">${isMr ? "स्वमूल्यांकन" : "Self Eval"}</th>
-                  <th style="color: white; font-weight: 900; padding: 12px 6px; text-align: center; border: 1px solid #475569; font-size: 10px; width: 50px; background: linear-gradient(135deg, #6366f1, #4f46e5);">${isMr ? "बाह्यमूल्यांकन" : "Ext Eval"}</th>
+                <tr style="background: #f1f5f9;">
+                  <th style="color: #1e293b; font-weight: 900; padding: 10px 6px; text-align: center; border: 1px solid #cbd5e1; font-size: 12px; width: 35px; background-color: #f1f5f9;">${isMr ? "अ.क्र." : "Sr."}</th>
+                  <th style="color: #1e293b; font-weight: 900; padding: 10px 6px; text-align: center; border: 1px solid #cbd5e1; font-size: 12px; width: 160px; background-color: #f1f5f9;">${isMr ? "मानक" : "Standard"}</th>
+                  <th style="color: #991b1b; font-weight: 900; padding: 10px 6px; text-align: center; border: 1px solid #cbd5e1; font-size: 12px; background-color: #fee2e2;">${isMr ? "स्तर १" : "Level 1"}</th>
+                  <th style="color: #9a3412; font-weight: 900; padding: 10px 6px; text-align: center; border: 1px solid #cbd5e1; font-size: 12px; background-color: #ffedd5;">${isMr ? "स्तर २" : "Level 2"}</th>
+                  <th style="color: #854d0e; font-weight: 900; padding: 10px 6px; text-align: center; border: 1px solid #cbd5e1; font-size: 12px; background-color: #fef9c3;">${isMr ? "स्तर ३" : "Level 3"}</th>
+                  <th style="color: #166534; font-weight: 900; padding: 10px 6px; text-align: center; border: 1px solid #cbd5e1; font-size: 12px; background-color: #dcfce7;">${isMr ? "स्तर ४" : "Level 4"}</th>
+                  <th style="color: #6b21a8; font-weight: 900; padding: 10px 6px; text-align: center; border: 1px solid #cbd5e1; font-size: 12px; width: 55px; background-color: #f3e8ff;">${isMr ? "स्वमूल्यांकन" : "Self Eval"}</th>
+                  <th style="color: #3730a3; font-weight: 900; padding: 10px 6px; text-align: center; border: 1px solid #cbd5e1; font-size: 12px; width: 55px; background-color: #e0e7ff;">${isMr ? "बाह्यमूल्यांकन" : "Ext Eval"}</th>
                 </tr>
               </thead>
               <tbody>
@@ -7121,66 +7136,66 @@ function TeacherSqaafPage() {
               School Quality Assessment & Accreditation Framework
             </div>
             
-            <div style="margin-top: 24px; border: 1px solid #e2e8f0; background-color: #f8fafc; border-radius: 12px; padding: 20px; display: flex; justify-content: space-between; align-items: center;">
-               <div>
+            <div style="margin-top: 24px; border: 1px solid #e2e8f0; background-color: #f8fafc; border-radius: 12px; padding: 20px; display: flex; justify-content: center; align-items: center; gap: 60px; text-align: center;">
+               <div style="text-align: center;">
                  <div style="color: #94a3b8; font-size: 14px; font-weight: bold;">${isMr ? "शाळेचे नाव" : "SCHOOL NAME"}</div>
                  <div style="color: #0f172a; font-size: 24px; font-weight: bold; margin-top: 4px;">${schoolName.toUpperCase()}</div>
                </div>
-               ${udise ? `<div style="text-align: right;">
+               ${udise ? `<div style="text-align: center;">
                  <div style="color: #94a3b8; font-size: 14px; font-weight: bold; margin-bottom: 6px;">${isMr ? "युडायस कोड" : "UDISE CODE"}</div>
-                 <div style="background-color: #6d28d9; color: white; padding: 10px 20px; border-radius: 8px; font-weight: bold; font-size: 18px; display: inline-block;">
+                 <div style="background-color: #f3e8ff; border: 1.5px solid #d8b4fe; color: #6b21a8; padding: 10px 20px; border-radius: 8px; font-weight: bold; font-size: 18px; display: inline-block;">
                    ${udise}
                  </div>
                </div>` : ""}
             </div>
             
-            <div style="display: flex; gap: 40px; flex-wrap: wrap; margin-top: 20px;">
-               ${headmaster ? `<div>
+            <div style="display: flex; justify-content: space-around; align-items: center; text-align: center; flex-wrap: wrap; margin-top: 20px; width: 100%; gap: 20px;">
+               ${headmaster ? `<div style="text-align: center;">
                  <div style="color: #94a3b8; font-size: 14px; font-weight: bold;">${isMr ? "मुख्याध्यापक" : "HEADMASTER"}</div>
                  <div style="color: #334155; font-size: 18px; font-weight: bold; margin-top: 4px;">${headmaster.toUpperCase()}</div>
                </div>` : ""}
-               ${address ? `<div>
+               ${address ? `<div style="text-align: center;">
                  <div style="color: #94a3b8; font-size: 14px; font-weight: bold;">${isMr ? "पत्ता" : "ADDRESS"}</div>
                  <div style="color: #334155; font-size: 18px; font-weight: bold; margin-top: 4px;">${address.toUpperCase()}</div>
                </div>` : ""}
-               ${centerName ? `<div>
+               ${centerName ? `<div style="text-align: center;">
                  <div style="color: #94a3b8; font-size: 14px; font-weight: bold;">${isMr ? "केंद्र" : "CENTER"}</div>
                  <div style="color: #334155; font-size: 18px; font-weight: bold; margin-top: 4px;">${centerName.toUpperCase()}</div>
                </div>` : ""}
-               ${taluka ? `<div>
+               ${taluka ? `<div style="text-align: center;">
                  <div style="color: #94a3b8; font-size: 14px; font-weight: bold;">${isMr ? "तालुका" : "TALUKA"}</div>
                  <div style="color: #334155; font-size: 18px; font-weight: bold; margin-top: 4px;">${taluka.toUpperCase()}</div>
                </div>` : ""}
-               ${district ? `<div>
+               ${district ? `<div style="text-align: center;">
                  <div style="color: #94a3b8; font-size: 14px; font-weight: bold;">${isMr ? "जिल्हा" : "DISTRICT"}</div>
                  <div style="color: #334155; font-size: 18px; font-weight: bold; margin-top: 4px;">${district.toUpperCase()}</div>
                </div>` : ""}
             </div>
             
             <div style="display: flex; gap: 16px; margin-top: 24px;">
-               <div style="background-color: #2563eb; color: white; border-radius: 12px; padding: 16px; flex: 1;">
-                  <div style="font-size: 12px; opacity: 0.9; font-weight: 500;">${isMr ? "एकूण मानके" : "TOTAL STANDARDS"}</div>
-                  <div style="font-size: 28px; font-weight: bold; margin-top: 8px;">128</div>
+               <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; border-radius: 12px; padding: 16px; flex: 1;">
+                  <div style="font-size: 12px; font-weight: bold; color: #2563eb;">${isMr ? "एकूण मानके" : "TOTAL STANDARDS"}</div>
+                  <div style="font-size: 28px; font-weight: bold; margin-top: 8px; color: #1e3a8a;">128</div>
                </div>
-               <div style="background-color: #16a34a; color: white; border-radius: 12px; padding: 16px; flex: 1;">
-                  <div style="font-size: 12px; opacity: 0.9; font-weight: 500;">${isMr ? "प्रतिसाद नोंदवलेले" : "RESPONDED"}</div>
-                  <div style="font-size: 28px; font-weight: bold; margin-top: 8px;">${completedCount}</div>
+               <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; border-radius: 12px; padding: 16px; flex: 1;">
+                  <div style="font-size: 12px; font-weight: bold; color: #16a34a;">${isMr ? "प्रतिसाद नोंदवलेले" : "RESPONDED"}</div>
+                  <div style="font-size: 28px; font-weight: bold; margin-top: 8px; color: #14532d;">${completedCount}</div>
                </div>
-               <div style="background-color: #ea580c; color: white; border-radius: 12px; padding: 16px; flex: 1;">
-                  <div style="font-size: 12px; opacity: 0.9; font-weight: 500;">${isMr ? "प्रतिसाद बाकी" : "PENDING"}</div>
-                  <div style="font-size: 28px; font-weight: bold; margin-top: 8px;">${128 - completedCount}</div>
+               <div style="background-color: #fff7ed; border: 1px solid #fed7aa; color: #c2410c; border-radius: 12px; padding: 16px; flex: 1;">
+                  <div style="font-size: 12px; font-weight: bold; color: #ea580c;">${isMr ? "प्रतिसाद बाकी" : "PENDING"}</div>
+                  <div style="font-size: 28px; font-weight: bold; margin-top: 8px; color: #7c2d12;">${128 - completedCount}</div>
                </div>
-               <div style="background-color: #0284c7; color: white; border-radius: 12px; padding: 16px; flex: 1;">
-                  <div style="font-size: 12px; opacity: 0.9; font-weight: 500;">${isMr ? "लागू असलेले मानक" : "APPLICABLE"}</div>
-                  <div style="font-size: 28px; font-weight: bold; margin-top: 8px;">${applicableCount}</div>
+               <div style="background-color: #f0f9ff; border: 1px solid #bae6fd; color: #0369a1; border-radius: 12px; padding: 16px; flex: 1;">
+                  <div style="font-size: 12px; font-weight: bold; color: #0284c7;">${isMr ? "लागू असलेले मानक" : "APPLICABLE"}</div>
+                  <div style="font-size: 28px; font-weight: bold; margin-top: 8px; color: #0c4a6e;">${applicableCount}</div>
                </div>
-               <div style="background-color: #64748b; color: white; border-radius: 12px; padding: 16px; flex: 1;">
-                  <div style="font-size: 12px; opacity: 0.9; font-weight: 500;">${isMr ? "लागू नसलेले मानक" : "NOT APPLICABLE"}</div>
-                  <div style="font-size: 28px; font-weight: bold; margin-top: 8px;">${notApplicableCount}</div>
+               <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; color: #475569; border-radius: 12px; padding: 16px; flex: 1;">
+                  <div style="font-size: 12px; font-weight: bold; color: #64748b;">${isMr ? "लागू नसलेले मानक" : "NOT APPLICABLE"}</div>
+                  <div style="font-size: 28px; font-weight: bold; margin-top: 8px; color: #1e293b;">${notApplicableCount}</div>
                </div>
-               <div style="background-color: #7c3aed; color: white; border-radius: 12px; padding: 16px; flex: 1;">
-                  <div style="font-size: 12px; opacity: 0.9; font-weight: 500;">${isMr ? "गुण" : "MARKS"}</div>
-                  <div style="font-size: 28px; font-weight: bold; margin-top: 8px;">${obtainedMarks} / ${totalPossible}</div>
+               <div style="background-color: #faf5ff; border: 1px solid #e9d5ff; color: #6b21a8; border-radius: 12px; padding: 16px; flex: 1;">
+                  <div style="font-size: 12px; font-weight: bold; color: #7c3aed;">${isMr ? "गुण" : "MARKS"}</div>
+                  <div style="font-size: 28px; font-weight: bold; margin-top: 8px; color: #581c87;">${obtainedMarks} / ${totalPossible}</div>
                </div>
             </div>
           </div>
@@ -7219,16 +7234,15 @@ function TeacherSqaafPage() {
             const cloneThead = thead.cloneNode(true) as HTMLTableSectionElement;
             const headers = cloneThead.querySelectorAll("th");
             headers.forEach((th, idx) => {
-              th.style.color = "white";
-              th.style.padding = "12px";
-              th.style.border = "1px solid #94a3b8";
-              if (idx === 0 || idx === 1) th.style.backgroundColor = "#1e293b";
-              if (idx === 2) th.style.backgroundColor = "#dc2626";
-              if (idx === 3) th.style.backgroundColor = "#ea580c";
-              if (idx === 4) th.style.backgroundColor = "#ca8a04";
-              if (idx === 5) th.style.backgroundColor = "#16a34a";
-              if (idx === 6) th.style.backgroundColor = "#7c3aed";
-              if (idx === 7) th.style.backgroundColor = "#4f46e5";
+              th.style.padding = "10px";
+              th.style.border = "1px solid #cbd5e1";
+              if (idx === 0 || idx === 1) { th.style.backgroundColor = "#f1f5f9"; th.style.color = "#1e293b"; }
+              if (idx === 2) { th.style.backgroundColor = "#fee2e2"; th.style.color = "#991b1b"; }
+              if (idx === 3) { th.style.backgroundColor = "#ffedd5"; th.style.color = "#9a3412"; }
+              if (idx === 4) { th.style.backgroundColor = "#fef9c3"; th.style.color = "#854d0e"; }
+              if (idx === 5) { th.style.backgroundColor = "#dcfce7"; th.style.color = "#166534"; }
+              if (idx === 6) { th.style.backgroundColor = "#f3e8ff"; th.style.color = "#6b21a8"; }
+              if (idx === 7) { th.style.backgroundColor = "#e0e7ff"; th.style.color = "#3730a3"; }
             });
             currentTable.appendChild(cloneThead);
           }
@@ -7261,16 +7275,15 @@ function TeacherSqaafPage() {
                 const cloneThead = thead.cloneNode(true) as HTMLTableSectionElement;
                 const headers = cloneThead.querySelectorAll("th");
                 headers.forEach((th, idx) => {
-                  th.style.color = "white";
-                  th.style.padding = "12px";
-                  th.style.border = "1px solid #94a3b8";
-                  if (idx === 0 || idx === 1) th.style.backgroundColor = "#1e293b";
-                  if (idx === 2) th.style.backgroundColor = "#dc2626";
-                  if (idx === 3) th.style.backgroundColor = "#ea580c";
-                  if (idx === 4) th.style.backgroundColor = "#ca8a04";
-                  if (idx === 5) th.style.backgroundColor = "#16a34a";
-                  if (idx === 6) th.style.backgroundColor = "#7c3aed";
-                  if (idx === 7) th.style.backgroundColor = "#4f46e5";
+                  th.style.padding = "10px";
+                  th.style.border = "1px solid #cbd5e1";
+                  if (idx === 0 || idx === 1) { th.style.backgroundColor = "#f1f5f9"; th.style.color = "#1e293b"; }
+                  if (idx === 2) { th.style.backgroundColor = "#fee2e2"; th.style.color = "#991b1b"; }
+                  if (idx === 3) { th.style.backgroundColor = "#ffedd5"; th.style.color = "#9a3412"; }
+                  if (idx === 4) { th.style.backgroundColor = "#fef9c3"; th.style.color = "#854d0e"; }
+                  if (idx === 5) { th.style.backgroundColor = "#dcfce7"; th.style.color = "#166534"; }
+                  if (idx === 6) { th.style.backgroundColor = "#f3e8ff"; th.style.color = "#6b21a8"; }
+                  if (idx === 7) { th.style.backgroundColor = "#e0e7ff"; th.style.color = "#3730a3"; }
                 });
                 currentTable.appendChild(cloneThead);
               }
@@ -7445,7 +7458,7 @@ function TeacherSqaafPage() {
           finalHtml = `
             <div style="font-family: Arial, sans-serif; font-size: 10px; padding: 10px 15px; background: white; width: 100%; box-sizing: border-box;">
               <!-- Premium Header Bar matching View -->
-              <div style="background-color: #ffaf66; padding: 8px 15px; margin-bottom: 12px; text-align: center; border: 1px solid #e2e8f0;">
+              <div style="background-color: #fff7ed; padding: 8px 15px; margin-bottom: 12px; text-align: center; border: 1px solid #fed7aa; border-radius: 6px;">
                 <h2 style="font-size: 15px; font-weight: 900; margin: 0; color: #0f172a; letter-spacing: -0.3px;">SQAAF एकत्रित गुणनोंद तक्ता</h2>
                 <div style="font-size: 9px; color: #1e293b; font-weight: 800; margin-top: 1px; opacity: 0.85;">गट: पायाभूत (अंगणवाडी ते १ली २री / पूर्वतयारी ३री ते ५ वी / पूर्व माध्यमिक ६वी ते ८वी )</div>
               </div>

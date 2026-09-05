@@ -69,6 +69,23 @@ export const getUnifiedSchoolProfile = (): UnifiedSchoolProfile => {
     }
   } catch (e) {}
 
+  // 3. Check sqaaf_school_info / sqaf_school_info
+  try {
+    const sqInfoRaw = localStorage.getItem("sqaaf_school_info") || localStorage.getItem("sqaf_school_info");
+    if (sqInfoRaw) {
+      const parsed = JSON.parse(sqInfoRaw);
+      if (parsed) {
+        if (!profile.schoolName && parsed.schoolName) profile.schoolName = parsed.schoolName;
+        if (!profile.udise && parsed.udise) profile.udise = parsed.udise;
+        if (!profile.kendra && (parsed.centerName || parsed.kendra)) profile.kendra = parsed.centerName || parsed.kendra;
+        if (!profile.taluka && parsed.taluka) profile.taluka = parsed.taluka;
+        if (!profile.jilha && (parsed.district || parsed.jilha)) profile.jilha = parsed.district || parsed.jilha;
+        if (!profile.headmaster && parsed.headmaster) profile.headmaster = parsed.headmaster;
+        if (!profile.address && parsed.address) profile.address = parsed.address;
+      }
+    }
+  } catch (e) {}
+
   // 3. Check simple localStorage fallbacks
   const fallbackSchoolName = localStorage.getItem("teacher_school_name");
   if (!profile.schoolName && fallbackSchoolName) profile.schoolName = fallbackSchoolName;
