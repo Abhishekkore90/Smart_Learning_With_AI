@@ -107,8 +107,8 @@ const PDF_OPTIONS = [
   },
 ];
 
-export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
-  selectedClass: string; academicYear: string; onBack: () => void;
+export function CCEPdfCreation({ selectedClass, academicYear, selectedMedium, onBack }: {
+  selectedClass: string; academicYear: string; selectedMedium?: string; onBack: () => void;
 }) {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [selectedTerm, setSelectedTerm] = useState<"sem1" | "sem2">("sem2");
@@ -134,7 +134,7 @@ export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
         <div className="flex-1 overflow-x-auto">
           <PdfErrorBoundary title="CCE मूल्यांकन नोंदवही">
             <Suspense fallback={renderLoading()}>
-              <BoardResult initialClass={selectedClass} initialYear={academicYear} initialTerm={selectedTerm} />
+              <BoardResult initialClass={selectedClass} initialYear={academicYear} initialTerm={selectedTerm} initialMedium={selectedMedium} />
             </Suspense>
           </PdfErrorBoundary>
         </div>
@@ -154,7 +154,7 @@ export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
         <div className="flex-1 overflow-x-auto">
           <PdfErrorBoundary title="अध्ययन निष्पती प्रगतीदर्शक">
             <Suspense fallback={renderLoading()}>
-              <SubjectWiseResult initialClass={selectedClass} initialYear={academicYear} />
+              <SubjectWiseResult initialClass={selectedClass} initialYear={academicYear} initialMedium={selectedMedium} />
             </Suspense>
           </PdfErrorBoundary>
         </div>
@@ -176,7 +176,7 @@ export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
         <div className="flex-1 overflow-x-auto">
           <PdfErrorBoundary title="प्रगती पत्रक">
             <Suspense fallback={renderLoading()}>
-              <ProgressSheet initialClass={selectedClass} initialYear={academicYear} onBack={() => setSelectedOption(null)} />
+              <ProgressSheet initialClass={selectedClass} initialYear={academicYear} initialMedium={selectedMedium} onBack={() => setSelectedOption(null)} />
             </Suspense>
           </PdfErrorBoundary>
         </div>
@@ -196,7 +196,7 @@ export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
         <div className="flex-1 overflow-x-auto">
           <PdfErrorBoundary title="वार्षिक निकाल पत्रक">
             <Suspense fallback={renderLoading()}>
-              <AnnualResultRegister initialClass={selectedClass} initialYear={academicYear} onBack={() => setSelectedOption(null)} />
+              <AnnualResultRegister initialClass={selectedClass} initialYear={academicYear} initialMedium={selectedMedium} onBack={() => setSelectedOption(null)} />
             </Suspense>
           </PdfErrorBoundary>
         </div>
@@ -216,7 +216,7 @@ export function CCEPdfCreation({ selectedClass, academicYear, onBack }: {
         <div className="flex-1 overflow-x-auto">
           <PdfErrorBoundary title="श्रेणीनिहाय निकाल संकलन प्रपत्र">
             <Suspense fallback={renderLoading()}>
-              <GradeWise initialClass={selectedClass} initialYear={academicYear} initialTerm={selectedTerm} onBack={() => setSelectedOption(null)} />
+              <GradeWise initialClass={selectedClass} initialYear={academicYear} initialTerm={selectedTerm} initialMedium={selectedMedium} onBack={() => setSelectedOption(null)} />
             </Suspense>
           </PdfErrorBoundary>
         </div>

@@ -183,15 +183,45 @@ const getStudentCasteCategory = (student) => {
   return null;
 };
 
-const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTerm = "sem2", onBack }) => {
+const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTerm = "sem2", initialMedium, onBack }) => {
   const [selectedClass, setSelectedClass] = useState(initialClass || "1st");
   const [academicYear, setAcademicYear] = useState(initialYear || "2025-26");
   const [division, setDivision] = useState("1");
   const [pageMode, setPageMode] = useState("2pages");
   const [showLayoutModal, setShowLayoutModal] = useState(true);
-  const [selectedMedium, setSelectedMedium] = useState("marathi");
+  const [selectedMedium, setSelectedMedium] = useState(() => {
+    if (initialMedium) return initialMedium;
+    if (typeof localStorage !== "undefined") {
+      return localStorage.getItem("cce_selected_medium") || "marathi";
+    }
+    return "marathi";
+  });
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
+
+  useEffect(() => {
+    if (initialMedium && initialMedium !== selectedMedium) {
+      setSelectedMedium(initialMedium);
+    }
+  }, [initialMedium]);
+
+  useEffect(() => {
+    const handleMediumUpdate = () => {
+      if (typeof localStorage !== "undefined") {
+        const storedMedium = localStorage.getItem("cce_selected_medium");
+        if (storedMedium && storedMedium !== selectedMedium) {
+          setSelectedMedium(storedMedium);
+        }
+      }
+    };
+
+    window.addEventListener("cce_settings_updated", handleMediumUpdate);
+    window.addEventListener("storage", handleMediumUpdate);
+    return () => {
+      window.removeEventListener("cce_settings_updated", handleMediumUpdate);
+      window.removeEventListener("storage", handleMediumUpdate);
+    };
+  }, [selectedMedium]);
 
   // User's School & Teacher Settings (No hardcoded sample names)
   const [schoolData, setSchoolData] = useState({

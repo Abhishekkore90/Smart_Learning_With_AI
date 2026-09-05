@@ -241,11 +241,14 @@ function TeacherResultsPage() {
   useEffect(() => {
     const unsubSettings = onSnapshot(doc(db, "school_settings", `${teacherId}_general`), (snap) => {
       if (snap.exists() && snap.data().medium) {
-        const isSemi = String(snap.data().medium).toLowerCase().includes("semi");
-        const m = isSemi ? "semi" : "marathi";
-        setSelectedMedium(m);
-        localStorage.setItem(`cce_selected_medium_${teacherId}`, m);
-        localStorage.setItem("cce_selected_medium", m);
+        const stored = localStorage.getItem("cce_selected_medium");
+        if (!stored) {
+          const isSemi = String(snap.data().medium).toLowerCase().includes("semi");
+          const m = isSemi ? "semi" : "marathi";
+          setSelectedMedium(m);
+          localStorage.setItem(`cce_selected_medium_${teacherId}`, m);
+          localStorage.setItem("cce_selected_medium", m);
+        }
       }
     });
 
@@ -997,6 +1000,7 @@ function TeacherResultsPage() {
               <CCEPdfCreation 
                 selectedClass={selectedClass} 
                 academicYear={academicYear} 
+                selectedMedium={selectedMedium}
                 onBack={() => navigate({ to: "/teacher/result", search: { tab: "dashboard" } as any })}
               />
             </motion.div>

@@ -182,7 +182,7 @@ function StudentTimetablePage() {
     if (!element) return;
 
     const opt = {
-      margin: [0.5, 0.3, 0.3, 0.3],
+      margin: [0.15, 0.15, 0.15, 0.15],
       filename: `${selectedClass}_Timetable.pdf`,
       image: { type: "jpeg", quality: 1.0 },
       html2canvas: {
@@ -206,7 +206,7 @@ function StudentTimetablePage() {
     try {
       element.style.zoom = '1';
       (element.style as any).WebkitZoom = '1';
-      element.style.transform = 'scale(0.86)';
+      element.style.transform = 'scale(0.95)';
       element.style.transformOrigin = 'top center';
 
       const html2pdf = (await import("html2pdf.js")).default;

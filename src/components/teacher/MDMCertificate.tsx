@@ -274,47 +274,13 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
     const currentRaw = cookCount !== undefined && cookCount !== null ? cookCount : totalStaffCount;
     const numericVal = parseInt(currentRaw.toString(), 10) || 0;
 
-    const handleDecrement = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      const nextVal = Math.max(0, numericVal - 1);
-      onCookCountChange?.(nextVal.toString());
-      onHelperCountChange?.(nextVal.toString());
-    };
-
-    const handleIncrement = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      const nextVal = Math.min(10, numericVal + 1);
-      onCookCountChange?.(nextVal.toString());
-      onHelperCountChange?.(nextVal.toString());
-    };
-
     return (
-      <div className="flex flex-col items-center justify-center gap-1.5 p-1 text-xs">
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-1 w-full">
-          <span className="text-[11px] font-extrabold text-slate-900 whitespace-nowrap">स्वयंपाकी / मदतनीस:</span>
-          <div className="flex items-center justify-center gap-1">
-            <select
-              value={numericVal || 1}
-              onClick={(e) => e.stopPropagation()}
-              onChange={(e) => {
-                const val = e.target.value;
-                onCookCountChange?.(val);
-                onHelperCountChange?.(val);
-              }}
-              className="px-2 py-0.5 bg-amber-50/90 border border-amber-400 rounded text-xs font-black text-slate-900 cursor-pointer outline-none print:hidden"
-            >
-              <option value={1}>1 व्यक्ती (₹2,500)</option>
-              <option value={2}>2 व्यक्ती (₹5,000)</option>
-              <option value={3}>3 व्यक्ती (₹7,500)</option>
-              <option value={4}>4 व्यक्ती (₹10,000)</option>
-            </select>
-            <span className="hidden print:inline font-black text-xs text-slate-900">
-              {numericVal} व्यक्ती (मानधन ₹{(numericVal * 2500).toLocaleString('en-IN')})
-            </span>
-          </div>
-        </div>
+      <div className="flex flex-col items-center justify-center gap-1 p-1 text-xs">
+        <span className="font-extrabold text-xs text-slate-900">
+          {toMarathiNumbers(numericVal)} व्यक्ती
+        </span>
         <div className="text-[10px] text-slate-600 font-bold">
-          (निकष: {dynamicStaffCount} व्यक्ती)
+          (निकष: {toMarathiNumbers(numericVal)} व्यक्ती)
         </div>
       </div>
     );

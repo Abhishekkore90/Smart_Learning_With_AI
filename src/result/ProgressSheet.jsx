@@ -32,18 +32,58 @@ const getGrade = (percentage) => {
   return "इ-2";
 };
 
-const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialSemester = "sem2", onBack }) => {
+// Helper to filter out auto-generated internal student IDs (e.g. student_1st_...)
+const getCleanStudentId = (id) => {
+  if (!id) return "";
+  const str = String(id).trim();
+  if (str.startsWith("student_") || str.startsWith("student-")) return "";
+  return str;
+};
+
+const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialSemester = "sem2", initialMedium, onBack }) => {
   const [selectedClass, setSelectedClass] = useState(initialClass || "1st");
   const [academicYear, setAcademicYear] = useState(initialYear || "2025-26");
   const [selectedSemester, setSelectedSemester] = useState(initialSemester || "sem2"); // sem1 = प्रथम सत्र | sem2 = द्वितीय सत्र
-  const [division, setDivision] = useState("1");
+  const [division, setDivision] = useState("सर्व");
   const [selectedStudentId, setSelectedStudentId] = useState("all");
-  const [selectedMedium, setSelectedMedium] = useState("marathi");
+  const [selectedMedium, setSelectedMedium] = useState(() => {
+    if (initialMedium) return initialMedium;
+    if (typeof localStorage !== "undefined") {
+      return localStorage.getItem("cce_selected_medium") || "marathi";
+    }
+    return "marathi";
+  });
   const [layoutMode, setLayoutMode] = useState("landscape"); // "portrait" (उभा) | "landscape" (फोल्डिंग)
   const [showLayoutModal, setShowLayoutModal] = useState(true);
   const [pageMode, setPageMode] = useState("1page"); // "1page" | "2pages"
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
+
+  // Sync initialMedium when prop changes
+  useEffect(() => {
+    if (initialMedium && initialMedium !== selectedMedium) {
+      setSelectedMedium(initialMedium);
+    }
+  }, [initialMedium]);
+
+  // Sync selectedMedium from localStorage / event triggers
+  useEffect(() => {
+    const syncMedium = () => {
+      if (typeof localStorage !== "undefined") {
+        const saved = localStorage.getItem("cce_selected_medium");
+        if (saved && saved !== selectedMedium) {
+          setSelectedMedium(saved);
+        }
+      }
+    };
+
+    window.addEventListener("cce_settings_updated", syncMedium);
+    window.addEventListener("storage", syncMedium);
+    return () => {
+      window.removeEventListener("cce_settings_updated", syncMedium);
+      window.removeEventListener("storage", syncMedium);
+    };
+  }, [selectedMedium]);
 
   const [schoolData, setSchoolData] = useState({
     schoolName: "",
@@ -64,9 +104,9 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
   const printRef = useRef(null);
 
   useEffect(() => {
-    // 0. Check LocalStorage Cache first for initial render, but strictly filter by selectedClass
-    const cacheKey = `cce_progress_cache_${selectedClass}_${academicYear}`;
+    // 0. Check LocalStorage Cache first for initial render, but strictly filter by selectedClass, selectedMedium & teacherId
     const currentTeacherId = getTeacherId();
+    const cacheKey = `cce_progress_cache_${currentTeacherId}_${selectedClass}_${selectedMedium}_${academicYear}`;
     try {
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
@@ -147,10 +187,39 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
           let headmasterName = "";
           let address = "";
           let slogan = "✦ ज्ञान, संस्कार आणि प्रगतीसाठी ✦";
+          const uid = currentTeacherId;
+          const medKey = currentMedium.toLowerCase().includes("semi") ? "semi" : "marathi";
 
-          // 1. Check school_settings collection (Where CCESettings saves!)
+          // 1. Check cce_settings collection FIRST for class + medium specific teacherName and principalName
           try {
-            const uid = currentTeacherId;
+            const cceDocIds = [
+              uid ? `${uid}_${selectedClass}_${medKey}_${academicYear}` : null,
+              uid ? `${uid}_${selectedClass}_${academicYear}` : null,
+              `${selectedClass}_${currentMedium}_${academicYear}`,
+              `${selectedClass}_${medKey}_${academicYear}`,
+              docId,
+              "global",
+            ].filter(Boolean);
+
+            for (const cId of cceDocIds) {
+              const cRef = doc(db, "cce_settings", cId);
+              const cSnap = await getDoc(cRef);
+              if (cSnap.exists()) {
+                const data = cSnap.data();
+                if (!schoolName) schoolName = data.schoolName || data.school_name || "";
+                if (!udise) udise = data.udiseCode || data.udise || "";
+                if (!teacherName && data.teacherName) teacherName = data.teacherName;
+                if (!headmasterName && (data.principalName || data.headmasterName || data.hmName)) {
+                  headmasterName = data.principalName || data.headmasterName || data.hmName;
+                }
+                if (!address) address = data.address || "";
+                if (data.slogan) slogan = data.slogan;
+              }
+            }
+          } catch (e) { }
+
+          // 2. Check school_settings collection (Where CCESettings saves general school settings & principalName)
+          try {
             const settingsDocIds = [
               uid ? `${uid}_general` : null,
               uid ? uid : null,
@@ -166,78 +235,60 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                 const data = sSnap.data();
                 if (!schoolName) schoolName = data.schoolName || data.school_name || data.school || "";
                 if (!udise) udise = data.udiseCode || data.udise || data.udiseNo || "";
-                if (!teacherName) teacherName = data.teacherName || data.fullName || "";
-                if (!headmasterName) headmasterName = data.principalName || data.headmasterName || "";
+                if (!teacherName && data.teacherName) teacherName = data.teacherName;
+                if (!headmasterName && (data.principalName || data.headmasterName || data.hmName)) {
+                  headmasterName = data.principalName || data.headmasterName || data.hmName;
+                }
                 if (!address) address = data.address || "";
                 if (data.slogan) slogan = data.slogan;
               }
             }
           } catch (e) { }
 
-          // 2. Check cce_settings collection
-          try {
-            const cceDocIds = [
-              docId,
-              `${selectedClass}_${currentMedium}_${academicYear}`,
-              "global",
-            ];
-            for (const cId of cceDocIds) {
-              const cRef = doc(db, "cce_settings", cId);
-              const cSnap = await getDoc(cRef);
-              if (cSnap.exists()) {
-                const data = cSnap.data();
-                if (!schoolName) schoolName = data.schoolName || data.school_name || "";
-                if (!udise) udise = data.udiseCode || data.udise || "";
-                if (!teacherName) teacherName = data.teacherName || "";
-                if (!headmasterName) headmasterName = data.principalName || data.headmasterName || "";
-                if (!address) address = data.address || "";
-                if (data.slogan) slogan = data.slogan;
-              }
-            }
-          } catch (e) { }
+          // 3. Check LocalStorage (cce_general_school_settings & CCESettings caches)
+          const cacheKeys = [
+            uid ? `cce_general_school_settings_${uid}` : null,
+            "cce_general_school_settings",
+            "sqaaf_teacher_profile",
+            "teacher_profile",
+            "school_profile",
+          ].filter(Boolean);
 
-          // 3. Check teachers / users collection fallback
-          try {
-            const uid = currentTeacherId;
-            if (uid) {
+          cacheKeys.forEach(k => {
+            try {
+              const val = localStorage.getItem(k);
+              if (val) {
+                const p = JSON.parse(val);
+                if (!schoolName && (p.schoolName || p.school_name)) schoolName = p.schoolName || p.school_name;
+                if (!udise && (p.udiseCode || p.udise)) udise = p.udiseCode || p.udise;
+                if (!teacherName && p.teacherName) teacherName = p.teacherName;
+                if (!headmasterName && (p.principalName || p.headmasterName || p.hmName)) {
+                  headmasterName = p.principalName || p.headmasterName || p.hmName;
+                }
+              }
+            } catch (e) { }
+          });
+
+          // 4. Fallback for teacherName ONLY if still missing: check logged-in teacher's profile/doc
+          if (uid && !teacherName) {
+            try {
               const tSnap = await getDoc(doc(db, "teachers", uid));
               if (tSnap.exists()) {
                 const data = tSnap.data();
                 if (!schoolName) schoolName = data.schoolName || "";
                 if (!udise) udise = data.udise || "";
-                if (!teacherName) teacherName = data.fullName || "";
+                if (!teacherName) teacherName = data.teacherName || data.fullName || "";
               }
-              const uSnap = await getDoc(doc(db, "users", uid));
-              if (uSnap.exists()) {
-                const data = uSnap.data();
-                if (!schoolName) schoolName = data.schoolName || data.school_name || "";
-                if (!udise) udise = data.udise || data.udiseCode || "";
-              }
-            }
-          } catch (e) { }
-
-          // 4. Check LocalStorage (cce_general_school_settings & CCESettings caches)
-          if (!schoolName || !udise) {
-            const cacheKeys = [
-              currentTeacherId ? `cce_general_school_settings_${currentTeacherId}` : null,
-              "cce_general_school_settings",
-              "sqaaf_teacher_profile",
-              "teacher_profile",
-              "school_profile",
-            ].filter(Boolean);
-
-            cacheKeys.forEach(k => {
-              try {
-                const val = localStorage.getItem(k);
-                if (val) {
-                  const p = JSON.parse(val);
-                  if (!schoolName && (p.schoolName || p.school_name)) schoolName = p.schoolName || p.school_name;
-                  if (!udise && (p.udiseCode || p.udise)) udise = p.udiseCode || p.udise;
-                  if (!teacherName && (p.fullName || p.teacherName)) teacherName = p.fullName || p.teacherName;
-                  if (!headmasterName && (p.principalName || p.headmasterName)) headmasterName = p.principalName || p.headmasterName;
+              if (!teacherName) {
+                const uSnap = await getDoc(doc(db, "users", uid));
+                if (uSnap.exists()) {
+                  const data = uSnap.data();
+                  if (!schoolName) schoolName = data.schoolName || data.school_name || "";
+                  if (!udise) udise = data.udise || data.udiseCode || "";
+                  if (!teacherName) teacherName = data.teacherName || data.fullName || "";
                 }
-              } catch (e) { }
-            });
+              }
+            } catch (e) { }
           }
 
           const schoolObj = {
@@ -331,7 +382,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                 dob: det.dob || s.dob || info.dob || "",
                 aadhar: det.aadhar || det.aadharNo || det.aadhaarNo || s.aadhar || info.aadhaarNo || "",
                 generalRegNo: det.generalRegNo || det.registrationNo || det.grNo || s.generalRegNo || s.grNo || info.grNo || "",
-                studentId: det.studentId || det.saralId || det.studentID || s.studentId || s.saralId || info.studentId || "",
+                studentId: getCleanStudentId(det.studentId || det.saralId || det.studentID || s.studentId || s.saralId || info.studentId || ""),
                 motherTongue: det.motherTongue || (s.motherTongue && s.motherTongue !== "मराठी" ? s.motherTongue : "") || "",
                 religion: det.religion || (s.religion && s.religion !== "हिंदू" ? s.religion : "") || "",
                 caste: det.casteCategory || det.caste || (s.casteCategory && s.casteCategory !== "OPEN (ओपन)" && s.casteCategory !== "ओपन" ? s.casteCategory : "") || (s.caste && s.caste !== "OPEN (ओपन)" && s.caste !== "ओपन" ? s.caste : "") || "",
@@ -340,6 +391,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                 mobile: det.mobile || det.phone || det.parentMobile || s.mobile || s.phone || s.parentMobile || info.mobile || "",
                 weight: det.weight || s.weight || info.weight || "",
                 height: det.height || s.height || info.height || "",
+                division: det.division || s.division || info.division || s.section || "",
                 penNo: det.penNo || det.pen_no || s.penNo || info.penNo || "",
               };
             });
@@ -490,7 +542,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
       if (attResult.workingDays) setWorkingDaysData(attResult.workingDays);
 
       // Save to localStorage cache
-      const cacheKey = `cce_progress_cache_${selectedClass}_${academicYear}`;
+      const cacheKey = `cce_progress_cache_${currentTeacherId}_${selectedClass}_${currentMedium}_${academicYear}`;
       try {
         localStorage.setItem(
           cacheKey,
@@ -870,10 +922,25 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
     return names[n] || `${n + 1} वी`;
   };
 
+  const formatDivision = (divVal) => {
+    if (!divVal) return "";
+    const str = String(divVal).trim().toUpperCase();
+    if (str === "A" || str === "अ") return "अ";
+    if (str === "B" || str === "2" || str === "ब") return "ब";
+    if (str === "C" || str === "3" || str === "K" || str === "क") return "क";
+    if (str === "D" || str === "4" || str === "ड") return "ड";
+    if (str.length > 0 && str !== "1" && str !== "NULL" && str !== "UNDEFINED") return str;
+    return "";
+  };
+
+  const filteredByDiv = division === "सर्व"
+    ? students
+    : students.filter((s) => formatDivision(s.division || s.studentInfo?.division || s.section, division) === division);
+
   // Every student added to the class MUST appear in Pragati Patrak regardless of filled data
   const displayedStudents = selectedStudentId === "all"
-    ? students
-    : students.filter((s) => String(s.id) === String(selectedStudentId) || String(s.rollNo) === String(selectedStudentId) || String(s.studentId) === String(selectedStudentId));
+    ? filteredByDiv
+    : filteredByDiv.filter((s) => String(s.id) === String(selectedStudentId) || String(s.rollNo) === String(selectedStudentId) || String(s.studentId) === String(selectedStudentId));
 
   if (loading) {
     return (
@@ -1021,6 +1088,22 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
           </button>
         </div>
 
+        {/* Division Selector Dropdown */}
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-black text-orange-950 whitespace-nowrap">तुकडी निवडा:</label>
+          <select
+            value={division}
+            onChange={(e) => setDivision(e.target.value)}
+            className="px-3.5 py-2 bg-orange-50 border border-orange-300 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer shadow-xs"
+          >
+            <option value="सर्व">सर्व तुकड्या</option>
+            <option value="अ">तुकडी अ (A)</option>
+            <option value="ब">तुकडी ब (B)</option>
+            <option value="क">तुकडी क (C)</option>
+            <option value="ड">तुकडी ड (D)</option>
+          </select>
+        </div>
+
         {/* Student Selector Dropdown */}
         <div className="flex items-center gap-2">
           <label className="text-xs font-black text-orange-950 whitespace-nowrap">विद्यार्थी निवडा:</label>
@@ -1029,8 +1112,8 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
             onChange={(e) => setSelectedStudentId(e.target.value)}
             className="px-3.5 py-2 bg-orange-50 border border-orange-300 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer shadow-xs"
           >
-            <option value="all">सर्व विद्यार्थी ({students.length})</option>
-            {students.map((st, idx) => (
+            <option value="all">सर्व विद्यार्थी ({filteredByDiv.length})</option>
+            {filteredByDiv.map((st, idx) => (
               <option key={st.id || idx} value={st.id}>
                 {st.rollNo ? `${st.rollNo}. ` : `${idx + 1}. `}{st.fullName || st.name}
               </option>
@@ -1231,7 +1314,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                                 <span>जन्म दिनांक : <b className="text-slate-950 font-black">{formatDob(student.dob)}</b></span>
                                 <span>इयत्ता : <b className="text-slate-950 font-black">{getMarathiClassName(selectedClass)}</b></span>
                                 <span>आधार क्रमांक : <b className="text-slate-950 font-black">{student.aadhar || student.aadhaarNo || ""}</b></span>
-                                <span>तुकडी : <b className="text-slate-950 font-black">{division || ""}</b></span>
+                                <span>तुकडी : <b className="text-slate-950 font-black">{formatDivision(student.division || student.studentInfo?.division || student.section, division)}</b></span>
                               </div>
                             </td>
                           </tr>
@@ -1239,7 +1322,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                           {/* 5. स्टुडन्ट आयडी & जन. रजि. नं */}
                           <tr className="border-b border-orange-300 bg-orange-50/20">
                             <td className="w-[60%] py-0.5 px-1.5 font-bold text-slate-800 border-r border-orange-300">
-                              स्टुडन्ट आयडी : <b className="text-slate-950 font-bold">{student.studentId || student.saralId || student.penNo || ""}</b>
+                              स्टुडन्ट आयडी : <b className="text-slate-950 font-bold">{getCleanStudentId(student.studentId || student.saralId || student.penNo)}</b>
                             </td>
                             <td className="w-[40%] py-0.5 px-1.5 font-bold text-slate-800 text-right">
                               जन. रजि. नं : <b className="text-slate-950 font-bold">{student.generalRegNo || student.grNo || ""}</b>
@@ -1386,33 +1469,33 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                           {subjects.map((subName, sIdx) => {
                             const sem1Grade = getSubjectGradeForTerm(student, subName, "sem1");
                             return (
-                              <tr key={subName} className="border-b border-orange-200 h-[23.5px]">
-                                <td className="border-r border-orange-300 p-0.2 text-left font-bold text-slate-950 bg-orange-50/10 text-[9.5px] pl-1">
+                              <tr key={subName} className="h-[23.5px]">
+                                <td className="border-r border-b border-orange-300 border-b-orange-200 p-0.2 text-left font-bold text-slate-950 bg-orange-50/10 text-[9.5px] pl-1">
                                   {subName}
                                 </td>
-                                <td className="border-r border-orange-300 p-0.2 font-black text-blue-950 text-[11px]">
+                                <td className="border-r border-b border-orange-300 border-b-orange-200 p-0.2 font-black text-blue-950 text-[11px]">
                                   {sem1Grade}
                                 </td>
                                 {sIdx === 0 && (
-                                  <td rowSpan={2} className="p-0.2 text-left align-top bg-orange-50/10 overflow-hidden border-l border-orange-200">
-                                    <span className="font-black text-orange-950 block text-center mb-0.1 text-[9px]">विशेष प्रगती</span>
-                                    <p className="text-slate-950 leading-tight font-extrabold px-0.5 text-[8.5px] line-clamp-2">
+                                  <td rowSpan={2} className="py-1 px-0.5 text-center align-top bg-orange-50/10 border-l border-b border-orange-200">
+                                    <span className="font-black text-orange-950 block text-center mb-0.5 text-[9.5px] leading-normal">विशेष प्रगती</span>
+                                    <p className="text-slate-950 leading-normal font-extrabold px-0.5 text-[8.5px] text-center line-clamp-2 pt-0.5">
                                       {getFormattedRemark(student, "विशेष प्रगती", "sem1")}
                                     </p>
                                   </td>
                                 )}
                                 {sIdx === 2 && (
-                                  <td rowSpan={2} className="p-0.2 text-left align-top bg-orange-50/10 overflow-hidden border-l border-orange-200">
-                                    <span className="font-black text-orange-950 block text-center mb-0.1 text-[9px]">आवड / छंद</span>
-                                    <p className="text-slate-950 leading-tight font-extrabold px-0.5 text-[8.5px] line-clamp-2">
+                                  <td rowSpan={2} className="py-1 px-0.5 text-center align-top bg-orange-50/10 border-l border-b border-orange-200">
+                                    <span className="font-black text-orange-950 block text-center mb-0.5 text-[9.5px] leading-normal">आवड / छंद</span>
+                                    <p className="text-slate-950 leading-normal font-extrabold px-0.5 text-[8.5px] text-center line-clamp-2 pt-0.5">
                                       {getFormattedRemark(student, "आवड / छंद", "sem1")}
                                     </p>
                                   </td>
                                 )}
                                 {sIdx === 4 && (
-                                  <td rowSpan={2} className="p-0.2 text-left align-top bg-orange-50/10 overflow-hidden border-l border-orange-200">
-                                    <span className="font-black text-orange-950 block text-center mb-0.1 text-[9px]">सुधारणा आवश्यक</span>
-                                    <p className="text-slate-950 leading-tight font-extrabold px-0.5 text-[8.5px] line-clamp-2">
+                                  <td rowSpan={2} className="py-1 px-0.5 text-center align-top bg-orange-50/10 border-l border-b border-orange-200">
+                                    <span className="font-black text-orange-950 block text-center mb-0.5 text-[9.5px] leading-normal">सुधारणा आवश्यक</span>
+                                    <p className="text-slate-950 leading-normal font-extrabold px-0.5 text-[8.5px] text-center line-clamp-2 pt-0.5">
                                       {getFormattedRemark(student, "सुधारणा आवश्यक", "sem1")}
                                     </p>
                                   </td>
@@ -1446,33 +1529,33 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                           {subjects.map((subName, sIdx) => {
                             const sem2Grade = getSubjectGradeForTerm(student, subName, "sem2");
                             return (
-                              <tr key={subName} className="border-b border-orange-200 h-[23.5px]">
-                                <td className="border-r border-orange-300 p-0.2 text-left font-bold text-slate-950 bg-orange-50/10 text-[9.5px] pl-1">
+                              <tr key={subName} className="h-[23.5px]">
+                                <td className="border-r border-b border-orange-300 border-b-orange-200 p-0.2 text-left font-bold text-slate-950 bg-orange-50/10 text-[9.5px] pl-1">
                                   {subName}
                                 </td>
-                                <td className="border-r border-orange-300 p-0.2 font-black text-blue-950 text-[11px]">
+                                <td className="border-r border-b border-orange-300 border-b-orange-200 p-0.2 font-black text-blue-950 text-[11px]">
                                   {sem2Grade}
                                 </td>
                                 {sIdx === 0 && (
-                                  <td rowSpan={2} className="p-0.2 text-left align-top bg-orange-50/10 overflow-hidden border-l border-orange-200">
-                                    <span className="font-black text-orange-950 block text-center mb-0.1 text-[9px]">विशेष प्रगती</span>
-                                    <p className="text-slate-950 leading-tight font-extrabold px-0.5 text-[8.5px] line-clamp-2">
+                                  <td rowSpan={2} className="py-1 px-0.5 text-center align-top bg-orange-50/10 border-l border-b border-orange-200">
+                                    <span className="font-black text-orange-950 block text-center mb-0.5 text-[9.5px] leading-normal">विशेष प्रगती</span>
+                                    <p className="text-slate-950 leading-normal font-extrabold px-0.5 text-[8.5px] text-center line-clamp-2 pt-0.5">
                                       {getFormattedRemark(student, "विशेष प्रगती", "sem2")}
                                     </p>
                                   </td>
                                 )}
                                 {sIdx === 2 && (
-                                  <td rowSpan={2} className="p-0.2 text-left align-top bg-orange-50/10 overflow-hidden border-l border-orange-200">
-                                    <span className="font-black text-orange-950 block text-center mb-0.1 text-[9px]">आवड / छंद</span>
-                                    <p className="text-slate-950 leading-tight font-extrabold px-0.5 text-[8.5px] line-clamp-2">
+                                  <td rowSpan={2} className="py-1 px-0.5 text-center align-top bg-orange-50/10 border-l border-b border-orange-200">
+                                    <span className="font-black text-orange-950 block text-center mb-0.5 text-[9.5px] leading-normal">आवड / छंद</span>
+                                    <p className="text-slate-950 leading-normal font-extrabold px-0.5 text-[8.5px] text-center line-clamp-2 pt-0.5">
                                       {getFormattedRemark(student, "आवड / छंद", "sem2")}
                                     </p>
                                   </td>
                                 )}
                                 {sIdx === 4 && (
-                                  <td rowSpan={2} className="p-0.2 text-left align-top bg-orange-50/10 overflow-hidden border-l border-orange-200">
-                                    <span className="font-black text-orange-950 block text-center mb-0.1 text-[9px]">सुधारणा आवश्यक</span>
-                                    <p className="text-slate-950 leading-tight font-extrabold px-0.5 text-[8.5px] line-clamp-2">
+                                  <td rowSpan={2} className="py-1 px-0.5 text-center align-top bg-orange-50/10 border-l border-b border-orange-200">
+                                    <span className="font-black text-orange-950 block text-center mb-0.5 text-[9.5px] leading-normal">सुधारणा आवश्यक</span>
+                                    <p className="text-slate-950 leading-normal font-extrabold px-0.5 text-[8.5px] text-center line-clamp-2 pt-0.5">
                                       {getFormattedRemark(student, "सुधारणा आवश्यक", "sem2")}
                                     </p>
                                   </td>
@@ -1488,17 +1571,23 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
 
                 {/* 3. FULL WIDTH BOTTOM FOOTER SIGNATURES */}
                 <div className="flex items-center justify-around border-2 border-orange-400 py-1.5 px-8 text-[10px] font-black text-slate-900 bg-orange-50/20 rounded-xl mt-0.5">
-                  <div className="text-center w-[170px] flex flex-col items-center justify-between h-[42px]">
-                    <span className="text-[10px] font-black text-slate-950 block">विद्यार्थ्याचे पालक/पालक सही</span>
-                    <div className="border-b-2 border-slate-700 w-full"></div>
+                  <div className="text-center w-[170px] flex flex-col justify-end items-center h-[46px] pb-0.5">
+                    <span className="font-black text-slate-950 text-[11px] leading-tight truncate w-full px-0.5 mb-0.5">
+                      {schoolData.teacherName || ""}
+                    </span>
+                    <span className="text-[10.5px] font-black text-slate-950 block leading-tight">वर्गशिक्षक स्वाक्षरी</span>
                   </div>
-                  <div className="text-center w-[170px] flex flex-col items-center justify-between h-[42px]">
-                    <span className="text-[10px] font-black text-slate-950 block">वर्ग शिक्षकांची सही</span>
-                    <div className="border-b-2 border-slate-700 w-full"></div>
+                  <div className="text-center w-[170px] flex flex-col justify-end items-center h-[46px] pb-0.5">
+                    <span className="font-black text-slate-950 text-[11px] leading-tight truncate w-full px-0.5 mb-0.5">
+                      {schoolData.headmasterName || ""}
+                    </span>
+                    <span className="text-[10.5px] font-black text-slate-950 block leading-tight">मुख्याध्यापक स्वाक्षरी</span>
                   </div>
-                  <div className="text-center w-[170px] flex flex-col items-center justify-between h-[42px]">
-                    <span className="text-[10px] font-black text-slate-950 block">मुख्याध्यापकांची सही</span>
-                    <div className="border-b-2 border-slate-700 w-full"></div>
+                  <div className="text-center w-[170px] flex flex-col justify-end items-center h-[46px] pb-0.5">
+                    <span className="font-black text-slate-950 text-[11px] leading-tight truncate w-full px-0.5 mb-0.5 invisible">
+                      -
+                    </span>
+                    <span className="text-[10.5px] font-black text-slate-950 block leading-tight">पालक स्वाक्षरी</span>
                   </div>
                 </div>
               </div>
@@ -1611,10 +1700,10 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                           <div className="flex border-b border-slate-200 pb-0.5 justify-between">
                             <div><span className="text-slate-800 font-bold text-[11.5px]">इयत्ता : </span><b className="text-slate-900 text-[11.5px]">{getMarathiClassName(selectedClass)}</b></div>
                             <div><span className="text-slate-800 font-bold text-[11.5px]">आधार क्रमांक : </span><b className="text-slate-900 text-[11.5px]">{student.aadhar || student.aadhaarNo || ""}</b></div>
-                            <div><span className="text-slate-800 font-bold text-[11.5px]">तुकडी : </span><b className="text-slate-950 text-[11.5px]">{division || ""}</b></div>
+                            <div><span className="text-slate-800 font-bold text-[11.5px]">तुकडी : </span><b className="text-slate-950 text-[11.5px]">{formatDivision(student.division || student.studentInfo?.division || student.section, division)}</b></div>
                           </div>
                           <div className="flex border-b border-slate-200 pb-0.5 justify-between">
-                            <div><span className="text-slate-800 font-bold text-[11.5px]">स्टुडन्ट आयडी : </span><b className="text-slate-900 text-[11.5px]">{student.studentId || student.saralId || student.penNo || ""}</b></div>
+                            <div><span className="text-slate-800 font-bold text-[11.5px]">स्टुडन्ट आयडी : </span><b className="text-slate-900 text-[11.5px]">{getCleanStudentId(student.studentId || student.saralId || student.penNo)}</b></div>
                             <div><span className="text-slate-800 font-bold text-[11.5px]">जन. रजि. नं : </span><b className="text-slate-900 text-[11.5px]">{student.generalRegNo || student.grNo || ""}</b></div>
                           </div>
                           <div className="flex border-b border-slate-200 pb-0.5 justify-between">
@@ -1664,7 +1753,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                     </div>
                     <div className="flex items-center gap-5 text-[14px]">
                       <span>इयत्ता: <b className="font-black text-[14.5px]">{getMarathiClassName(selectedClass)}</b></span>
-                      <span>तुकडी: <b className="font-black text-[14.5px]">{division}</b></span>
+                      <span>तुकडी: <b className="font-black text-[14.5px]">{formatDivision(student.division || student.studentInfo?.division || student.section, division)}</b></span>
                       <span>हजेरी क्र.: <b className="font-black text-[15px] text-blue-950">{student.rollNo || idx + 1}</b></span>
                     </div>
                   </div>
@@ -1691,7 +1780,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                             {subjects.map((subName, sIdx) => {
                               const sem1Grade = getSubjectGradeForTerm(student, subName, "sem1");
                               return (
-                                <tr key={subName} className="border-b border-orange-200 h-[96px]">
+                                <tr key={subName} className="h-[96px]">
                                   <td className="border border-orange-300 py-2 px-1.5 text-left font-black text-slate-950 bg-orange-50/20 text-[13.5px] pl-2 align-middle">
                                     {subName}
                                   </td>
@@ -1699,25 +1788,25 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                                     {sem1Grade}
                                   </td>
                                   {sIdx === 0 && (
-                                    <td rowSpan={2} className="border border-orange-300 p-1.5 text-left align-top bg-orange-50/10">
-                                      <span className="font-black text-orange-950 block text-center mb-1 text-[12px]">विशेष प्रगती</span>
-                                      <p className="text-slate-950 leading-snug font-black px-1 text-[11.5px]">
+                                    <td rowSpan={2} className="border border-orange-300 p-2 text-center align-top bg-orange-50/10">
+                                      <span className="font-black text-orange-950 block text-center mb-1.5 text-[12.5px] leading-normal">विशेष प्रगती</span>
+                                      <p className="text-slate-950 leading-relaxed font-black px-1 text-[11.5px] text-center pt-1">
                                         {getFormattedRemark(student, "विशेष प्रगती", "sem1")}
                                       </p>
                                     </td>
                                   )}
                                   {sIdx === 2 && (
-                                    <td rowSpan={2} className="border border-orange-300 p-1.5 text-left align-top bg-orange-50/10">
-                                      <span className="font-black text-orange-950 block text-center mb-1 text-[12px]">आवड / छंद</span>
-                                      <p className="text-slate-950 leading-snug font-black px-1 text-[11.5px]">
+                                    <td rowSpan={2} className="border border-orange-300 p-2 text-center align-top bg-orange-50/10">
+                                      <span className="font-black text-orange-950 block text-center mb-1.5 text-[12.5px] leading-normal">आवड / छंद</span>
+                                      <p className="text-slate-950 leading-relaxed font-black px-1 text-[11.5px] text-center pt-1">
                                         {getFormattedRemark(student, "आवड / छंद", "sem1")}
                                       </p>
                                     </td>
                                   )}
                                   {sIdx === 4 && (
-                                    <td rowSpan={2} className="border border-orange-300 p-1.5 text-left align-top bg-orange-50/10">
-                                      <span className="font-black text-orange-950 block text-center mb-1 text-[12px]">सुधारणा आवश्यक</span>
-                                      <p className="text-slate-950 leading-snug font-black px-1 text-[11.5px]">
+                                    <td rowSpan={2} className="border border-orange-300 p-2 text-center align-top bg-orange-50/10">
+                                      <span className="font-black text-orange-950 block text-center mb-1.5 text-[12.5px] leading-normal">सुधारणा आवश्यक</span>
+                                      <p className="text-slate-950 leading-relaxed font-black px-1 text-[11.5px] text-center pt-1">
                                         {getFormattedRemark(student, "सुधारणा आवश्यक", "sem1")}
                                       </p>
                                     </td>
@@ -1731,29 +1820,23 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
 
                       {/* First Term Signatures Footer */}
                       <div className="grid grid-cols-3 gap-1 border-2 border-orange-400 py-1.5 text-[10px] font-bold text-slate-950 shrink-0 bg-orange-50/40 px-2 rounded-xl mt-auto">
-                        <div className="text-center flex flex-col justify-between items-center h-[42px]">
-                          <div className="font-black text-slate-950 text-[12px] leading-tight pt-0.5 truncate w-full px-0.5">
-                            {schoolData.teacherName || "-"}
-                          </div>
-                          <div className="w-full border-t-2 border-slate-700 pt-0.5">
-                            <span className="text-[10.5px] text-slate-950 font-black block">वर्गशिक्षक स्वाक्षरी</span>
-                          </div>
+                        <div className="text-center flex flex-col justify-end items-center h-[46px] pb-0.5">
+                          <span className="font-black text-slate-950 text-[11.5px] leading-tight truncate w-full px-0.5 mb-0.5">
+                            {schoolData.teacherName || ""}
+                          </span>
+                          <span className="text-[10.5px] text-slate-950 font-black block leading-tight">वर्गशिक्षक स्वाक्षरी</span>
                         </div>
-                        <div className="text-center flex flex-col justify-between items-center h-[42px]">
-                          <div className="font-black text-slate-950 text-[12px] leading-tight pt-0.5 truncate w-full px-0.5">
-                            {schoolData.headmasterName || "-"}
-                          </div>
-                          <div className="w-full border-t-2 border-slate-700 pt-0.5">
-                            <span className="text-[10.5px] text-slate-950 font-black block">मुख्याध्यापक स्वाक्षरी</span>
-                          </div>
+                        <div className="text-center flex flex-col justify-end items-center h-[46px] pb-0.5">
+                          <span className="font-black text-slate-950 text-[11.5px] leading-tight truncate w-full px-0.5 mb-0.5">
+                            {schoolData.headmasterName || ""}
+                          </span>
+                          <span className="text-[10.5px] text-slate-950 font-black block leading-tight">मुख्याध्यापक स्वाक्षरी</span>
                         </div>
-                        <div className="text-center flex flex-col justify-between items-center h-[42px]">
-                          <div className="font-black text-slate-950 text-[12px] leading-tight pt-0.5 invisible w-full">
+                        <div className="text-center flex flex-col justify-end items-center h-[46px] pb-0.5">
+                          <span className="font-black text-slate-950 text-[11.5px] leading-tight truncate w-full px-0.5 mb-0.5 invisible">
                             -
-                          </div>
-                          <div className="w-full border-t-2 border-slate-700 pt-0.5">
-                            <span className="text-[10.5px] text-slate-950 font-black block">पालक स्वाक्षरी</span>
-                          </div>
+                          </span>
+                          <span className="text-[10.5px] text-slate-950 font-black block leading-tight">पालक स्वाक्षरी</span>
                         </div>
                       </div>
                     </div>
@@ -1780,7 +1863,7 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                             {subjects.map((subName, sIdx) => {
                               const sem2Grade = getSubjectGradeForTerm(student, subName, "sem2");
                               return (
-                                <tr key={subName} className="border-b border-orange-200 h-[96px]">
+                                <tr key={subName} className="h-[96px]">
                                   <td className="border border-orange-300 py-2 px-1.5 text-left font-black text-slate-950 bg-orange-50/20 text-[13.5px] pl-2 align-middle">
                                     {subName}
                                   </td>
@@ -1788,25 +1871,25 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                                     {sem2Grade}
                                   </td>
                                   {sIdx === 0 && (
-                                    <td rowSpan={2} className="border border-orange-300 p-1.5 text-left align-top bg-orange-50/10">
-                                      <span className="font-black text-orange-950 block text-center mb-1 text-[12px]">विशेष प्रगती</span>
-                                      <p className="text-slate-950 leading-snug font-black px-1 text-[11.5px]">
+                                    <td rowSpan={2} className="border border-orange-300 p-2 text-center align-top bg-orange-50/10">
+                                      <span className="font-black text-orange-950 block text-center mb-1.5 text-[12.5px] leading-normal">विशेष प्रगती</span>
+                                      <p className="text-slate-950 leading-relaxed font-black px-1 text-[11.5px] text-center pt-1">
                                         {getFormattedRemark(student, "विशेष प्रगती", "sem2")}
                                       </p>
                                     </td>
                                   )}
                                   {sIdx === 2 && (
-                                    <td rowSpan={2} className="border border-orange-300 p-1.5 text-left align-top bg-orange-50/10">
-                                      <span className="font-black text-orange-950 block text-center mb-1 text-[12px]">आवड / छंद</span>
-                                      <p className="text-slate-950 leading-snug font-black px-1 text-[11.5px]">
+                                    <td rowSpan={2} className="border border-orange-300 p-2 text-center align-top bg-orange-50/10">
+                                      <span className="font-black text-orange-950 block text-center mb-1.5 text-[12.5px] leading-normal">आवड / छंद</span>
+                                      <p className="text-slate-950 leading-relaxed font-black px-1 text-[11.5px] text-center pt-1">
                                         {getFormattedRemark(student, "आवड / छंद", "sem2")}
                                       </p>
                                     </td>
                                   )}
                                   {sIdx === 4 && (
-                                    <td rowSpan={2} className="border border-orange-300 p-1.5 text-left align-top bg-orange-50/10">
-                                      <span className="font-black text-orange-950 block text-center mb-1 text-[12px]">सुधारणा आवश्यक</span>
-                                      <p className="text-slate-950 leading-snug font-black px-1 text-[11.5px]">
+                                    <td rowSpan={2} className="border border-orange-300 p-2 text-center align-top bg-orange-50/10">
+                                      <span className="font-black text-orange-950 block text-center mb-1.5 text-[12.5px] leading-normal">सुधारणा आवश्यक</span>
+                                      <p className="text-slate-950 leading-relaxed font-black px-1 text-[11.5px] text-center pt-1">
                                         {getFormattedRemark(student, "सुधारणा आवश्यक", "sem2")}
                                       </p>
                                     </td>
@@ -1820,29 +1903,23 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
 
                       {/* Second Term Signatures Footer */}
                       <div className="grid grid-cols-3 gap-1 border-2 border-orange-400 py-1.5 text-[10px] font-bold text-slate-950 shrink-0 bg-orange-50/40 px-2 rounded-xl mt-auto">
-                        <div className="text-center flex flex-col justify-between items-center h-[42px]">
-                          <div className="font-black text-slate-950 text-[12px] leading-tight pt-0.5 truncate w-full px-0.5">
-                            {schoolData.teacherName || "-"}
-                          </div>
-                          <div className="w-full border-t-2 border-slate-700 pt-0.5">
-                            <span className="text-[10.5px] text-slate-950 font-black block">वर्गशिक्षक स्वाक्षरी</span>
-                          </div>
+                        <div className="text-center flex flex-col justify-end items-center h-[46px] pb-0.5">
+                          <span className="font-black text-slate-950 text-[11.5px] leading-tight truncate w-full px-0.5 mb-0.5">
+                            {schoolData.teacherName || ""}
+                          </span>
+                          <span className="text-[10.5px] text-slate-950 font-black block leading-tight">वर्गशिक्षक स्वाक्षरी</span>
                         </div>
-                        <div className="text-center flex flex-col justify-between items-center h-[42px]">
-                          <div className="font-black text-slate-950 text-[12px] leading-tight pt-0.5 truncate w-full px-0.5">
-                            {schoolData.headmasterName || "-"}
-                          </div>
-                          <div className="w-full border-t-2 border-slate-700 pt-0.5">
-                            <span className="text-[10.5px] text-slate-950 font-black block">मुख्याध्यापक स्वाक्षरी</span>
-                          </div>
+                        <div className="text-center flex flex-col justify-end items-center h-[46px] pb-0.5">
+                          <span className="font-black text-slate-950 text-[11.5px] leading-tight truncate w-full px-0.5 mb-0.5">
+                            {schoolData.headmasterName || ""}
+                          </span>
+                          <span className="text-[10.5px] text-slate-950 font-black block leading-tight">मुख्याध्यापक स्वाक्षरी</span>
                         </div>
-                        <div className="text-center flex flex-col justify-between items-center h-[42px]">
-                          <div className="font-black text-slate-950 text-[12px] leading-tight pt-0.5 invisible w-full">
+                        <div className="text-center flex flex-col justify-end items-center h-[46px] pb-0.5">
+                          <span className="font-black text-slate-950 text-[11.5px] leading-tight truncate w-full px-0.5 mb-0.5 invisible">
                             -
-                          </div>
-                          <div className="w-full border-t-2 border-slate-700 pt-0.5">
-                            <span className="text-[10.5px] text-slate-950 font-black block">पालक स्वाक्षरी</span>
-                          </div>
+                          </span>
+                          <span className="text-[10.5px] text-slate-950 font-black block leading-tight">पालक स्वाक्षरी</span>
                         </div>
                       </div>
                     </div>

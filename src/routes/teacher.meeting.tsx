@@ -2465,13 +2465,13 @@ function TeacherMeetingPage() {
                                           <table className="register-table w-full table-fixed">
                                             <thead>
                                               <tr className="bg-slate-100">
-                                                <th style={{ width: '6%', whiteSpace: 'nowrap' }} className="text-center px-1 py-2 whitespace-nowrap">
+                                                <th style={{ width: '5%', whiteSpace: 'nowrap' }} className="text-center px-1 py-2 whitespace-nowrap">
                                                   अ.क्र.
                                                 </th>
-                                                <th style={{ width: '32%' }} className="text-left px-2 py-2">सदस्याचे नाव</th>
-                                                <th style={{ width: '24%' }} className="text-left px-2 py-2">पदनाम</th>
-                                                <th style={{ width: '26%', whiteSpace: 'nowrap' }} className="text-left px-2 py-2 whitespace-nowrap role-cell">पद</th>
-                                                <th style={{ width: '12%', whiteSpace: 'nowrap' }} className="text-center px-2 py-2 whitespace-nowrap">
+                                                <th style={{ width: '38%' }} className="text-left px-2 py-2">सदस्याचे नाव</th>
+                                                <th style={{ width: '27%' }} className="text-left px-2 py-2">पदनाम</th>
+                                                <th style={{ width: '10%', whiteSpace: 'nowrap' }} className="text-left px-2 py-2 whitespace-nowrap role-cell">पद</th>
+                                                <th style={{ width: '20%', whiteSpace: 'nowrap' }} className="text-center px-2 py-2 whitespace-nowrap">
                                                   स्वाक्षरी
                                                 </th>
                                               </tr>

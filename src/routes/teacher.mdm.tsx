@@ -1614,20 +1614,26 @@ function TeacherMDMPage() {
         const imgData = canvas.toDataURL("image/png");
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
-        const margin = 4;
+        const margin = 3;
         const availWidth = pdfWidth - (margin * 2);
         const availHeight = pdfHeight - (margin * 2);
 
         let imgWidth = availWidth;
         let imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-        if (imgHeight > availHeight) {
+        // For portrait reports like daily_tandul_register, force full width across the page
+        if (isPortraitReport) {
+          imgWidth = availWidth;
+          if (imgHeight > availHeight) {
+            imgHeight = availHeight;
+          }
+        } else if (imgHeight > availHeight) {
           imgHeight = availHeight;
           imgWidth = (canvas.width * imgHeight) / canvas.height;
         }
 
         const xPos = (pdfWidth - imgWidth) / 2;
-        const yPos = 6;
+        const yPos = 3;
 
         if (i > 0) pdf.addPage('a4', dynamicOrientation === 'landscape' ? 'l' : 'p');
         pdf.addImage(imgData, "PNG", xPos, yPos, imgWidth, imgHeight, undefined, "FAST");
@@ -13204,95 +13210,95 @@ function TeacherMDMPage() {
                             : defaultDays;
 
                           return (
-                            <div className="space-y-1.5 font-sans text-slate-900">
+                            <div className="space-y-2 font-sans text-slate-900">
                               {/* Title Header */}
-                              <div className="text-center space-y-0 mb-0.5">
-                                <h1 className="text-sm md:text-base font-black text-[#056e38] tracking-wide">
+                              <div className="text-center space-y-0.5 mb-1">
+                                <h1 className="text-base md:text-xl font-black text-[#056e38] tracking-wide">
                                   प्रधानमंत्री पोषण शक्ती निर्माण योजना
                                 </h1>
-                                <h2 className="text-xs font-extrabold text-[#056e38]">
+                                <h2 className="text-xs md:text-sm font-extrabold text-[#056e38]">
                                   दैनंदिन तांदूळ खर्च नोंदवही (भाग १)
                                 </h2>
                               </div>
 
                               {/* Info Grid Box */}
-                              <div className="border border-slate-700 text-xs font-medium bg-white">
+                              <div className="border border-slate-700 text-xs md:text-sm font-semibold bg-white">
                                 <div className="grid grid-cols-1 md:grid-cols-12 divide-y md:divide-y-0 md:divide-x divide-slate-700 border-b border-slate-700">
-                                  <div className="p-1.5 md:col-span-3">
-                                    शाळेचे नाव : <span className="font-bold text-slate-900">{schoolName}</span>
+                                  <div className="p-2 md:col-span-3">
+                                    शाळेचे नाव : <span className="font-extrabold text-slate-900">{schoolName}</span>
                                   </div>
-                                  <div className="p-1.5 md:col-span-3">
-                                    इयत्ता गट : <span className="font-bold text-slate-900">{monthlyReportClass === "6 To 8" ? "उच्च प्राथमिक ( इयत्ता ६ ते ८ )" : "प्राथमिक ( इयत्ता १ ते ५ )"}</span>
+                                  <div className="p-2 md:col-span-3">
+                                    इयत्ता गट : <span className="font-extrabold text-slate-900">{monthlyReportClass === "6 To 8" ? "उच्च प्राथमिक ( इयत्ता ६ ते ८ )" : "प्राथमिक ( इयत्ता १ ते ५ )"}</span>
                                   </div>
-                                  <div className="p-1.5 md:col-span-2">
-                                    केंद्र : <span className="font-bold text-slate-900">{kendra}</span>
+                                  <div className="p-2 md:col-span-2">
+                                    केंद्र : <span className="font-extrabold text-slate-900">{kendra}</span>
                                   </div>
-                                  <div className="p-1.5 md:col-span-2">
-                                    बीट : <span className="font-bold text-slate-900">{beat}</span>
+                                  <div className="p-2 md:col-span-2">
+                                    बीट : <span className="font-extrabold text-slate-900">{beat}</span>
                                   </div>
-                                  <div className="p-1.5 md:col-span-2 flex gap-2">
-                                    <span>ता. : <strong className="font-bold">{taluka}</strong></span>
-                                    <span>जिल्हा : <strong className="font-bold">{district}</strong></span>
+                                  <div className="p-2 md:col-span-2 flex gap-2">
+                                    <span>ता. : <strong className="font-extrabold">{taluka}</strong></span>
+                                    <span>जिल्हा : <strong className="font-extrabold">{district}</strong></span>
                                   </div>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-700 border-b border-slate-700">
-                                  <div className="p-1.5">
-                                    महिना : <span className="font-bold text-slate-900">{monthlyMdmReportMonth}</span>
+                                  <div className="p-2">
+                                    महिना : <span className="font-extrabold text-slate-900">{monthlyMdmReportMonth}</span>
                                   </div>
-                                  <div className="p-1.5">
-                                    पटसंख्या ({monthlyReportClass === "6 To 8" ? "६ ते ८" : "१ ते ५"}) : <span className="font-bold text-slate-900">{patSelectedClass}</span>
+                                  <div className="p-2">
+                                    पटसंख्या ({monthlyReportClass === "6 To 8" ? "६ ते ८" : "१ ते ५"}) : <span className="font-extrabold text-slate-900">{patSelectedClass}</span>
                                   </div>
-                                  <div className="p-1.5">
-                                    एकूण पटसंख्या : <span className="font-bold text-slate-900">{totalPat}</span>
+                                  <div className="p-2">
+                                    एकूण पटसंख्या : <span className="font-extrabold text-slate-900">{totalPat}</span>
                                   </div>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-700">
-                                  <div className="p-1.5">
-                                    एकूण कामाचे दिवस : <span className="font-bold text-slate-900">{effectiveWorkingDays}</span>
+                                  <div className="p-2">
+                                    एकूण कामाचे दिवस : <span className="font-extrabold text-slate-900">{effectiveWorkingDays}</span>
                                   </div>
-                                  <div className="p-1.5">
-                                    तांदूळ दिलेले दिवस : <span className="font-bold text-slate-900">{totalRiceDistributedDays}</span>
+                                  <div className="p-2">
+                                    तांदूळ दिलेले दिवस : <span className="font-extrabold text-slate-900">{totalRiceDistributedDays}</span>
                                   </div>
-                                  <div className="p-1.5">
-                                    तांदूळ प्राप्त दिनांक : <span className="font-bold text-slate-900">{riceReceivedDateStr}</span>
+                                  <div className="p-2">
+                                    तांदूळ प्राप्त दिनांक : <span className="font-extrabold text-slate-900">{riceReceivedDateStr}</span>
                                   </div>
                                 </div>
                               </div>
 
                               {/* Sub-header counter text */}
-                              <div className="text-xs font-bold text-slate-800">
+                              <div className="text-xs md:text-sm font-bold text-slate-800">
                                 {recordedDaysCount} / {daysInMonth} दिवसांची नोंद या महिन्यासाठी.
                               </div>
 
                               {/* Daily Rice Consumption Table */}
                               <div className="w-full overflow-x-auto">
-                                <table className="w-full border-collapse border border-slate-700 text-center text-xs font-medium" style={{ tableLayout: 'auto' }}>
+                                <table className="w-full border-collapse border border-slate-700 text-center text-[13.5px] font-black table-fixed">
                                   <thead>
-                                    <tr className="bg-slate-100 text-slate-900 font-bold border-b border-slate-700 text-xs">
-                                      <th className="border-r border-slate-700 py-0.5 px-1 min-w-[32px]">अ.नं.</th>
-                                      <th className="border-r border-slate-700 py-0.5 px-1 min-w-[85px]">दिनांक</th>
-                                      <th className="border-r border-slate-700 py-0.5 px-1 min-w-[65px]">वार</th>
-                                      <th className="border-r border-slate-700 py-0.5 px-1 min-w-[100px]">मागील शिल्लक<br/>(KG)</th>
-                                      <th className="border-r border-slate-700 py-0.5 px-1 min-w-[80px]">प्राप्त<br/>(KG)</th>
-                                      <th className="border-r border-slate-700 py-0.5 px-1 min-w-[105px]">एकूण तांदूळ (4+5)<br/>(KG)</th>
-                                      <th className="border-r border-slate-700 py-0.5 px-1 min-w-[65px]">लाभार्थी</th>
-                                      <th className="border-r border-slate-700 py-0.5 px-1 min-w-[95px]">खर्च तांदूळ<br/>(KG)</th>
-                                      <th className="border-r border-slate-700 py-0.5 px-1 min-w-[105px]">शिल्लक तांदूळ (6-8)<br/>(KG)</th>
-                                      <th className="border-r border-slate-700 py-0.5 px-1 min-w-[65px]">सही</th>
+                                    <tr className="bg-slate-100 text-slate-900 font-black border-b border-slate-700 text-[13.5px]">
+                                      <th className="border-r border-slate-700 py-2 px-0.5 w-[4%] font-black">अ.नं.</th>
+                                      <th className="border-r border-slate-700 py-2 px-0.5 w-[11.5%] font-black">दिनांक</th>
+                                      <th className="border-r border-slate-700 py-2 px-0.5 w-[8.5%] font-black">वार</th>
+                                      <th className="border-r border-slate-700 py-2 px-0.5 w-[12%] font-black">मागील शिल्लक<br/>(KG)</th>
+                                      <th className="border-r border-slate-700 py-2 px-0.5 w-[9%] font-black">प्राप्त<br/>(KG)</th>
+                                      <th className="border-r border-slate-700 py-2 px-0.5 w-[13%] font-black">एकूण तांदूळ<br/>(4+5) (KG)</th>
+                                      <th className="border-r border-slate-700 py-2 px-0.5 w-[8%] font-black">लाभार्थी</th>
+                                      <th className="border-r border-slate-700 py-2 px-0.5 w-[11%] font-black">खर्च तांदूळ<br/>(KG)</th>
+                                      <th className="border-r border-slate-700 py-2 px-0.5 w-[13%] font-black">शिल्लक तांदूळ<br/>(6-8) (KG)</th>
+                                      <th className="border-r border-slate-700 py-2 px-0.5 w-[10%] font-black">सही</th>
                                     </tr>
-                                    <tr className="bg-slate-200/80 text-slate-800 font-bold border-b border-slate-700 text-xs">
-                                      <th className="border-r border-slate-700 p-0.5">1</th>
-                                      <th className="border-r border-slate-700 p-0.5">2</th>
-                                      <th className="border-r border-slate-700 p-0.5">3</th>
-                                      <th className="border-r border-slate-700 p-0.5">4</th>
-                                      <th className="border-r border-slate-700 p-0.5">5</th>
-                                      <th className="border-r border-slate-700 p-0.5">6</th>
-                                      <th className="border-r border-slate-700 p-0.5">7</th>
-                                      <th className="border-r border-slate-700 p-0.5">8</th>
-                                      <th className="border-r border-slate-700 p-0.5">9</th>
-                                      <th className="border-r border-slate-700 p-0.5">10</th>
+                                    <tr className="bg-slate-200/80 text-slate-800 font-black border-b border-slate-700 text-[13px]">
+                                      <th className="border-r border-slate-700 p-1 font-black">1</th>
+                                      <th className="border-r border-slate-700 p-1 font-black">2</th>
+                                      <th className="border-r border-slate-700 p-1 font-black">3</th>
+                                      <th className="border-r border-slate-700 p-1 font-black">4</th>
+                                      <th className="border-r border-slate-700 p-1 font-black">5</th>
+                                      <th className="border-r border-slate-700 p-1 font-black">6</th>
+                                      <th className="border-r border-slate-700 p-1 font-black">7</th>
+                                      <th className="border-r border-slate-700 p-1 font-black">8</th>
+                                      <th className="border-r border-slate-700 p-1 font-black">9</th>
+                                      <th className="border-r border-slate-700 p-1 font-black">10</th>
                                     </tr>
                                   </thead>
                                   <tbody>
@@ -13301,7 +13307,7 @@ function TeacherMDMPage() {
                                       return (
                                         <tr
                                           key={r.sr}
-                                          className={`border-b border-slate-700 text-xs ${
+                                          className={`border-b border-slate-700 text-[13.5px] font-black h-10 ${
                                             isSundayOrHoliday
                                               ? "bg-[#fce8e6]"
                                               : r.sr % 2 === 0
@@ -13309,32 +13315,32 @@ function TeacherMDMPage() {
                                               : "bg-white"
                                           }`}
                                         >
-                                          <td className="border-r border-slate-700 py-0.5 px-1 font-bold">{r.sr}</td>
-                                          <td className={`border-r border-slate-700 py-0.5 px-1 ${isSundayOrHoliday ? "text-red-700 font-semibold" : ""}`}>
+                                          <td className="border-r border-slate-700 py-2 px-1 font-black">{r.sr}</td>
+                                          <td className={`border-r border-slate-700 py-2 px-1 font-black ${isSundayOrHoliday ? "text-red-700" : ""}`}>
                                             {r.dateFormatted}
                                           </td>
-                                          <td className={`border-r border-slate-700 py-0.5 px-1 ${isSundayOrHoliday ? "text-red-700 font-semibold" : ""}`}>
+                                          <td className={`border-r border-slate-700 py-2 px-1 font-black ${isSundayOrHoliday ? "text-red-700" : ""}`}>
                                             {r.weekday}
                                           </td>
-                                          <td className="border-r border-slate-700 py-0.5 px-1">
+                                          <td className="border-r border-slate-700 py-2 px-1 font-black">
                                             {r.magilShillak.toFixed(4)}
                                           </td>
-                                          <td className="border-r border-slate-700 py-0.5 px-1">
+                                          <td className="border-r border-slate-700 py-2 px-1 font-black">
                                             {r.prapt > 0 ? r.prapt.toFixed(4) : ""}
                                           </td>
-                                          <td className="border-r border-slate-700 py-0.5 px-1">
+                                          <td className="border-r border-slate-700 py-2 px-1 font-black">
                                             {r.ekunTandul.toFixed(4)}
                                           </td>
-                                          <td className="border-r border-slate-700 py-0.5 px-1 font-bold">
+                                          <td className="border-r border-slate-700 py-2 px-1 font-black">
                                             {r.bene > 0 ? r.bene : ""}
                                           </td>
-                                          <td className="border-r border-slate-700 py-0.5 px-1 font-semibold">
+                                          <td className="border-r border-slate-700 py-2 px-1 font-black">
                                             {r.kharch > 0 ? r.kharch.toFixed(4) : ""}
                                           </td>
-                                          <td className="border-r border-slate-700 py-0.5 px-1 font-bold">
+                                          <td className="border-r border-slate-700 py-2 px-1 font-black">
                                             {r.shillakTandul.toFixed(4)}
                                           </td>
-                                          <td className="border-r border-slate-700 py-0.5 px-1"></td>
+                                          <td className="border-r border-slate-700 py-2 px-1 font-black"></td>
                                         </tr>
                                       );
                                     })}
@@ -14837,114 +14843,114 @@ function TeacherMDMPage() {
                                   const isHolidayOrSunday = isSunday || (classRec && classRec.isHoliday);
 
                                   dailyRows.push(
-                                    <tr key={d} className={`h-6 text-[9.5px] ${isHolidayOrSunday ? "bg-[#fce8e6]" : "hover:bg-slate-50"}`}>
-                                      <td className="border border-black p-0.5 font-bold">{d}</td>
-                                      <td className="border border-black p-0.5 font-bold">{dateStrFormatted}</td>
-                                      <td className="border border-black p-0.5">{enrolled > 0 ? enrolled : ""}</td>
-                                      <td className="border border-black p-0.5 font-mono">{prev.toFixed(4)}</td>
-                                      <td className="border border-black p-0.5 font-mono">{incomingQty > 0 ? incomingQty.toFixed(4) : ""}</td>
-                                      <td className="border border-black p-0.5 font-mono font-bold">{total.toFixed(4)}</td>
-                                      <td className="border border-black p-0.5 font-semibold">{beneficiary > 0 ? beneficiary : ""}</td>
-                                      <td className="border border-black p-0.5 font-mono">{used > 0 ? used.toFixed(4) : ""}</td>
-                                      <td className={`border border-black p-0.5 font-mono font-bold ${closing < 0 ? "text-red-600 bg-red-50 font-extrabold" : "text-emerald-800"}`}>{closing.toFixed(4)}</td>
-                                      <td className="border border-black p-0.5"></td>
+                                    <tr key={d} className={`h-8.5 text-[13.5px] font-black text-slate-900 ${isHolidayOrSunday ? "bg-[#fce8e6]" : "hover:bg-slate-50"}`}>
+                                      <td className="border border-black p-0.5 py-1 font-black text-center">{d}</td>
+                                      <td className="border border-black p-0.5 py-1 font-black text-center">{dateStrFormatted}</td>
+                                      <td className="border border-black p-0.5 py-1 text-center font-black">{enrolled > 0 ? enrolled : ""}</td>
+                                      <td className="border border-black p-0.5 py-1 font-mono text-center font-black">{prev.toFixed(4)}</td>
+                                      <td className="border border-black p-0.5 py-1 font-mono text-center font-black">{incomingQty > 0 ? incomingQty.toFixed(4) : ""}</td>
+                                      <td className="border border-black p-0.5 py-1 font-mono font-black text-center">{total.toFixed(4)}</td>
+                                      <td className="border border-black p-0.5 py-1 font-black text-center">{beneficiary > 0 ? beneficiary : ""}</td>
+                                      <td className="border border-black p-0.5 py-1 font-mono text-center font-black">{used > 0 ? used.toFixed(4) : ""}</td>
+                                      <td className={`border border-black p-0.5 py-1 font-mono font-black text-center ${closing < 0 ? "text-red-600 bg-red-50 font-black" : "text-emerald-900"}`}>{closing.toFixed(4)}</td>
+                                      <td className="border border-black p-0.5 py-1"></td>
                                     </tr>
                                   );
                                 }
 
                                 return (
-                                  <div key={cls} className="print-page border border-slate-400 p-6 bg-white text-black font-sans text-xs relative w-full mx-auto shadow-md flex flex-col justify-between print:w-full print:h-auto print:border-none print:shadow-none print:p-0 mb-6">
+                                  <div key={cls} className="print-page border border-slate-400 p-4 bg-white text-black font-sans relative w-full mx-auto shadow-md flex flex-col justify-between print:w-full print:h-auto print:border-none print:shadow-none print:p-0 mb-6">
                                     <div>
                                       {/* Top Header */}
-                                      <div className="text-center space-y-1 mb-3">
-                                        <h1 className="text-base md:text-lg font-black text-[#047857] tracking-wide">
+                                      <div className="text-center space-y-0.5 mb-2">
+                                        <h1 className="text-xl md:text-2xl font-black text-[#047857] tracking-wide">
                                           प्रधानमंत्री पोषण शक्ती निर्माण योजना
                                         </h1>
-                                        <h2 className="text-xs md:text-sm font-extrabold text-slate-800">
+                                        <h2 className="text-sm md:text-base font-black text-slate-900">
                                           दैनंदिन तांदूळ खर्च नोंदवही (भाग १)
                                         </h2>
                                       </div>
 
                                       {/* Info Grid */}
-                                      <table className="w-full border-collapse border border-black text-[9.5px] font-bold mb-2">
+                                      <table className="w-full border-collapse border border-black text-[13px] font-black mb-1.5">
                                         <tbody>
                                           <tr className="border-b border-black">
                                             <td className="border-r border-black p-1">
-                                              शाळेचे नाव : <span className="font-extrabold">{reportSchoolName || profile?.schoolName || ""}</span>
+                                              शाळेचे नाव : <span className="font-black">{reportSchoolName || profile?.schoolName || ""}</span>
                                             </td>
                                             <td className="border-r border-black p-1">
-                                              शाळा गट : <span className="font-extrabold">{marathiClsLabel}</span>
+                                              शाळा गट : <span className="font-black">{marathiClsLabel}</span>
                                             </td>
                                             <td className="border-r border-black p-1">
-                                              केंद्र : <span className="font-extrabold">{profile?.center || profile?.kendra || ""}</span>
+                                              केंद्र : <span className="font-black">{profile?.center || profile?.kendra || ""}</span>
                                             </td>
                                             <td className="border-r border-black p-1">
-                                              बीओ : <span className="font-extrabold">{profile?.bo || ""}</span>
+                                              बीओ : <span className="font-black">{profile?.bo || ""}</span>
                                             </td>
                                             <td className="border-r border-black p-1">
-                                              ता : <span className="font-extrabold">{profile?.taluka || ""}</span>
+                                              ता : <span className="font-black">{profile?.taluka || ""}</span>
                                             </td>
-                                            <td className="p-2.5">
-                                              जिल्हा : <span className="font-extrabold">{profile?.district || ""}</span>
+                                            <td className="p-1">
+                                              जिल्हा : <span className="font-black">{profile?.district || ""}</span>
                                             </td>
                                           </tr>
                                           <tr className="border-b border-black">
                                             <td className="border-r border-black p-1" colSpan={2}>
-                                              माहे : <span className="font-extrabold">{marathiMonthName}/{reportYear} सन {annualReportYear || "2026/27"}</span>
+                                              माहे : <span className="font-black">{marathiMonthName}/{reportYear} सन {annualReportYear || "2026/27"}</span>
                                             </td>
                                             <td className="border-r border-black p-1" colSpan={2}>
-                                              पटसंख्या ({isPrimary ? "१ ते ५" : "६ ते ८"}) : <span className="font-extrabold">{enrolledCount}</span>
+                                              पटसंख्या ({isPrimary ? "१ ते ५" : "६ ते ८"}) : <span className="font-black">{enrolledCount}</span>
                                             </td>
                                             <td className="p-1" colSpan={2}>
-                                              एकूण लाभार्थी संख्या : <span className="font-extrabold">{beneficiarySum}</span>
+                                              एकूण लाभार्थी संख्या : <span className="font-black">{beneficiarySum}</span>
                                             </td>
                                           </tr>
                                           <tr>
                                             <td className="border-r border-black p-1" colSpan={2}>
-                                              एकूण कामाचे दिवस : <span className="font-extrabold">{cookedDays}</span>
+                                              एकूण कामाचे दिवस : <span className="font-black">{cookedDays}</span>
                                             </td>
                                             <td className="border-r border-black p-1" colSpan={2}>
-                                              निव्वळ शिजवलेले दिवस : <span className="font-extrabold">{cookedDays}</span>
+                                              निव्वळ शिजवलेले दिवस : <span className="font-black">{cookedDays}</span>
                                             </td>
                                             <td className="p-1" colSpan={2}>
-                                              तांदूळ प्राप्त दिनांक : <span className="font-extrabold"></span>
+                                              तांदूळ प्राप्त दिनांक : <span className="font-black"></span>
                                             </td>
                                           </tr>
                                         </tbody>
                                       </table>
 
                                       {/* Sub-header */}
-                                      <p className="text-[9.5px] font-bold text-slate-700 mb-1.5 pl-0.5">
+                                      <p className="text-[13px] font-black text-slate-900 mb-1 pl-0.5">
                                         ० ते ३१ दिवसांची नोंद व वहीतक्ताडी
                                       </p>
 
                                       {/* Main Table */}
                                       <div className="w-full overflow-x-auto">
-                                        <table className="w-full border-collapse border border-black text-center text-[9.5px] font-sans">
+                                        <table className="w-full border-collapse border border-black text-center text-[13.5px] font-sans font-black table-fixed">
                                           <thead>
-                                            <tr className="bg-slate-100 font-extrabold text-slate-900 border-b border-black">
-                                              <th className="border border-black p-1 min-w-[30px]">अ.न.</th>
-                                              <th className="border border-black p-1 min-w-[85px]">दिनांक</th>
-                                              <th className="border border-black p-1 min-w-[40px]">पट.</th>
-                                              <th className="border border-black p-1 min-w-[90px]">मागील शिल्लक (KG)</th>
-                                              <th className="border border-black p-1 min-w-[70px]">प्राप्त (KG)</th>
-                                              <th className="border border-black p-1 min-w-[100px]">एकूण तांदूळ (4+5) (KG)</th>
-                                              <th className="border border-black p-1 min-w-[60px]">लाभार्थी</th>
-                                              <th className="border border-black p-1 min-w-[90px]">खर्च तांदूळ (KG)</th>
-                                              <th className="border border-black p-1 min-w-[100px]">शिल्लक तांदूळ (6-8) (KG)</th>
-                                              <th className="border border-black p-1 min-w-[60px]">सही</th>
+                                            <tr className="bg-slate-100 font-black text-slate-900 border-b border-black text-[13.5px]">
+                                              <th className="border border-black py-1 px-0.5 w-[4%] font-black">अ.न.</th>
+                                              <th className="border border-black py-1 px-0.5 w-[11.5%] font-black">दिनांक</th>
+                                              <th className="border border-black py-1 px-0.5 w-[8.5%] font-black">पट.</th>
+                                              <th className="border border-black py-1 px-0.5 w-[12%] font-black">मागील शिल्लक<br/>(KG)</th>
+                                              <th className="border border-black py-1 px-0.5 w-[9%] font-black">प्राप्त<br/>(KG)</th>
+                                              <th className="border border-black py-1 px-0.5 w-[13%] font-black">एकूण तांदूळ<br/>(4+5) (KG)</th>
+                                              <th className="border border-black py-1 px-0.5 w-[8%] font-black">लाभार्थी</th>
+                                              <th className="border border-black py-1 px-0.5 w-[11%] font-black">खर्च तांदूळ<br/>(KG)</th>
+                                              <th className="border border-black py-1 px-0.5 w-[13%] font-black">शिल्लक तांदूळ<br/>(6-8) (KG)</th>
+                                              <th className="border border-black py-1 px-0.5 w-[10%] font-black">सही</th>
                                             </tr>
-                                            <tr className="bg-slate-200 text-slate-900 font-bold border-b border-slate-700 text-xs">
-                                              <th className="border border-black py-0.5">1</th>
-                                              <th className="border border-black py-0.5">2</th>
-                                              <th className="border border-black py-0.5">3</th>
-                                              <th className="border border-black py-0.5">4</th>
-                                              <th className="border border-black py-0.5">5</th>
-                                              <th className="border border-black py-0.5">6</th>
-                                              <th className="border border-black py-0.5">7</th>
-                                              <th className="border border-black py-0.5">8</th>
-                                              <th className="border border-black py-0.5">9</th>
-                                              <th className="border border-black py-0.5">10</th>
+                                            <tr className="bg-slate-200 text-slate-900 font-black border-b border-slate-700 text-[13px]">
+                                              <th className="border border-black py-0.5 font-black">1</th>
+                                              <th className="border border-black py-0.5 font-black">2</th>
+                                              <th className="border border-black py-0.5 font-black">3</th>
+                                              <th className="border border-black py-0.5 font-black">4</th>
+                                              <th className="border border-black py-0.5 font-black">5</th>
+                                              <th className="border border-black py-0.5 font-black">6</th>
+                                              <th className="border border-black py-0.5 font-black">7</th>
+                                              <th className="border border-black py-0.5 font-black">8</th>
+                                              <th className="border border-black py-0.5 font-black">9</th>
+                                              <th className="border border-black py-0.5 font-black">10</th>
                                             </tr>
                                           </thead>
                                           <tbody>
@@ -15151,11 +15157,11 @@ function TeacherMDMPage() {
                                                         const isHolidayOrSunday = isSunday || (classRec && classRec.isHoliday);
 
                                                         rows.push(
-                                                          <tr key={d} className={`h-6 text-xs ${isHolidayOrSunday ? "bg-[#fce8e6]" : "hover:bg-slate-50"}`}>
-                                                            <td className="border border-black p-0.5 font-bold">{d}</td>
-                                                            <td className="border border-black p-0.5 font-bold">{dateStrFormatted}</td>
-                                                            <td className="border border-black p-0.5">{enrolled > 0 ? enrolled : ""}</td>
-                                                            <td className="border border-black p-0.5 font-semibold">{beneficiary > 0 ? beneficiary : ""}</td>
+                                                          <tr key={d} className={`h-8 text-xs ${isHolidayOrSunday ? "bg-[#fce8e6]" : "hover:bg-slate-50"}`}>
+                                                            <td className="border border-black p-1 py-1.5 font-bold">{d}</td>
+                                                            <td className="border border-black p-1 py-1.5 font-bold">{dateStrFormatted}</td>
+                                                            <td className="border border-black p-1 py-1.5">{enrolled > 0 ? enrolled : ""}</td>
+                                                            <td className="border border-black p-1 py-1.5 font-semibold">{beneficiary > 0 ? beneficiary : ""}</td>
                                                             {part.items.map((it) => {
                                                               const prev = itemStocks[it.key];
                                                               const recQty = d === 1 ? getIncomingForItem(it.key, monthlyReportMonth || "April", calcYear, cls) : 0;
@@ -15173,11 +15179,11 @@ function TeacherMDMPage() {
 
                                                               return (
                                                                 <React.Fragment key={it.key}>
-                                                                  <td className="border border-black p-0.5 font-mono">{prev.toFixed(4)}</td>
-                                                                  <td className="border border-black p-0.5 font-mono">{recQty > 0 ? recQty.toFixed(4) : ""}</td>
-                                                                  <td className="border border-black p-0.5 font-mono font-bold">{total.toFixed(4)}</td>
-                                                                  <td className="border border-black p-0.5 font-mono">{used > 0 ? used.toFixed(4) : ""}</td>
-                                                                  <td className={`border border-black p-0.5 font-mono font-bold ${closing < 0 ? "text-red-600 bg-red-50 font-extrabold" : "text-emerald-800"}`}>{closing.toFixed(4)}</td>
+                                                                  <td className="border border-black p-1 py-1.5 font-mono">{prev.toFixed(4)}</td>
+                                                                  <td className="border border-black p-1 py-1.5 font-mono">{recQty > 0 ? recQty.toFixed(4) : ""}</td>
+                                                                  <td className="border border-black p-1 py-1.5 font-mono font-bold">{total.toFixed(4)}</td>
+                                                                  <td className="border border-black p-1 py-1.5 font-mono">{used > 0 ? used.toFixed(4) : ""}</td>
+                                                                  <td className={`border border-black p-1 py-1.5 font-mono font-bold ${closing < 0 ? "text-red-600 bg-red-50 font-extrabold" : "text-emerald-800"}`}>{closing.toFixed(4)}</td>
                                                                 </React.Fragment>
                                                               );
                                                             })}

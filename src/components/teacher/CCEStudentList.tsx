@@ -14,7 +14,7 @@ import { toast } from "sonner";
 
 import { useAuth } from "@/hooks/use-auth";
 // @ts-ignore
-import { matchStudentClassAndMedium } from "@/result/firestoreMarksHelper";
+import { matchStudentClassAndMedium, isSemiMedium } from "@/result/firestoreMarksHelper";
 // @ts-ignore
 import { getTeacherId, matchStudentTeacherClassAndMedium } from "@/lib/teacherIsolationHelper";
 
@@ -140,8 +140,21 @@ export function CCEStudentList({
 
   const [selectedMedium, setSelectedMedium] = useState<"marathi" | "semi">(() => {
     const stored = localStorage.getItem("cce_selected_medium");
-    return stored === "semi" ? "semi" : "marathi";
+    return isSemiMedium(stored) ? "semi" : "marathi";
   });
+
+  useEffect(() => {
+    const updateMed = () => {
+      const stored = localStorage.getItem("cce_selected_medium");
+      setSelectedMedium(isSemiMedium(stored) ? "semi" : "marathi");
+    };
+    window.addEventListener("cce_settings_updated", updateMed);
+    window.addEventListener("storage", updateMed);
+    return () => {
+      window.removeEventListener("cce_settings_updated", updateMed);
+      window.removeEventListener("storage", updateMed);
+    };
+  }, []);
 
   // Subscribe to students list
   useEffect(() => {
