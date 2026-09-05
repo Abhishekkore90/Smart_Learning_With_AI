@@ -108,7 +108,8 @@ const PhotoUploader = ({ standardId, lang, evidenceUrl }: { standardId: number; 
     try {
       const storageApiKey = import.meta.env.VITE_BUNNY_STORAGE_API_KEY;
       const storageZone = import.meta.env.VITE_BUNNY_STORAGE_ZONE || "sgkbrainova";
-      const cdnHostname = import.meta.env.VITE_BUNNY_STORAGE_CDN_HOSTNAME || "vz-7a00d099-4a8.b-cdn.net";
+      const rawCdnHostname = import.meta.env.VITE_BUNNY_STORAGE_CDN_HOSTNAME || "sgkbrainova.b-cdn.net";
+      const cdnHostname = rawCdnHostname.replace(/^https?:\/\//, "").replace(/\/$/, "").toLowerCase();
 
       if (storageApiKey) {
         const ext = file.name.substring(file.name.lastIndexOf("."));
@@ -186,7 +187,8 @@ const PhotoUploader = ({ standardId, lang, evidenceUrl }: { standardId: number; 
     try {
       const storageApiKey = import.meta.env.VITE_BUNNY_STORAGE_API_KEY;
       const storageZone = import.meta.env.VITE_BUNNY_STORAGE_ZONE || "sgkbrainova";
-      const cdnHostname = import.meta.env.VITE_BUNNY_STORAGE_CDN_HOSTNAME || "vz-7a00d099-4a8.b-cdn.net";
+      const rawCdnHostname = import.meta.env.VITE_BUNNY_STORAGE_CDN_HOSTNAME || "sgkbrainova.b-cdn.net";
+      const cdnHostname = rawCdnHostname.replace(/^https?:\/\//, "").replace(/\/$/, "").toLowerCase();
 
       if (storageApiKey) {
         const ext = file.name.substring(file.name.lastIndexOf("."));

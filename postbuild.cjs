@@ -161,6 +161,30 @@ if (fs.existsSync(clientPath)) {
     }
   });
 
+  // Create compressed dist.zip
+  const { execSync } = require('child_process');
+  const zipPath = path.join(__dirname, 'dist.zip');
+  try {
+    if (fs.existsSync(zipPath)) {
+      fs.unlinkSync(zipPath);
+    }
+    console.log('Post-build: Creating high-compression dist.zip...');
+    try {
+      execSync(`tar -a -c -f "${zipPath}" -C "${distPath}" .`);
+    } catch (e1) {
+      const psDist = distPath.replace(/'/g, "''");
+      const psZip = zipPath.replace(/'/g, "''");
+      execSync(`powershell -Command "$ProgressPreference = 'SilentlyContinue'; Compress-Archive -Path '${psDist}\\*' -DestinationPath '${psZip}' -CompressionLevel Optimal -Force"`);
+    }
+    if (fs.existsSync(zipPath)) {
+      const stats = fs.statSync(zipPath);
+      const mbSize = (stats.size / (1024 * 1024)).toFixed(2);
+      console.log(`Post-build: Success! Created compressed dist.zip (${mbSize} MB) in project root.`);
+    }
+  } catch (err) {
+    console.warn('Post-build: Zip creation notice:', err.message);
+  }
+
   console.log('Post-build: Success! Subproject dist/ and Root dist/ folders are now vercel-friendly.');
 } else {
   console.log('Post-build: dist/client directory not found, skipping flattening.');
