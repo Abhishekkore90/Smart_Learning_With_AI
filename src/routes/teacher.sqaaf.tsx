@@ -72,7 +72,7 @@ const sanitizeUrl = (url: string | null | undefined): string => {
     }
   }
 
-  if (typeof window !== "undefined" && import.meta.env.DEV && cleaned.includes("sgkbrainova.b-cdn.net")) {
+  if (cleaned.includes("sgkbrainova.b-cdn.net")) {
     cleaned = cleaned.replace(/https?:\/\/sgkbrainova\.b-cdn\.net/gi, "/api/bunny-storage/sgkbrainova");
   }
   return cleaned;

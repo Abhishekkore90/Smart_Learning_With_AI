@@ -105,7 +105,7 @@ if (fs.existsSync(clientPath)) {
     const vercelConfig = {
       rewrites: [
         { source: "/api/bunny-stream/(.*)", destination: "https://video.bunnycdn.com/$1" },
-        { source: "/api/bunny-storage/(.*)", destination: "https://storage.bunnycdn.com/$1" },
+        { source: "/api/bunny-storage/(.*)", destination: "/api/bunny-storage?path=$1" },
         { source: "/api/anthropic/(.*)", destination: "https://api.anthropic.com/$1" },
         { source: "/(.*)", destination: "/index.html" }
       ]
