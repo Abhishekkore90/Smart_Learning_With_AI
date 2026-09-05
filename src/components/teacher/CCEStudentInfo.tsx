@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 // @ts-ignore
-import { matchStudentClassAndMedium } from "@/result/firestoreMarksHelper";
+import { matchStudentClassAndMedium, isSemiMedium } from "@/result/firestoreMarksHelper";
 // @ts-ignore
 import { getTeacherId, matchStudentTeacherClassAndMedium } from "@/lib/teacherIsolationHelper";
 import { db } from "@/lib/firebase";
@@ -68,6 +68,13 @@ export const CASTE_OPTIONS = [
   "OTHER (इतर)",
 ];
 
+export const DIVISION_OPTIONS = [
+  "अ",
+  "ब",
+  "क",
+  "ड",
+];
+
 interface StudentRecord {
   id: string;
   name: string;
@@ -104,6 +111,7 @@ export interface StudentDetails {
   siblingsAge: string;
   motherTongue: string; // 14. मातृभाषा
   regionType: "ग्रामीण" | "शहरी"; // 15. प्रदेश प्रकार
+  division: string; // 16. तुकडी (अ, ब, क, ड)
 }
 
 const emptyDetails = (): StudentDetails => ({
@@ -129,6 +137,7 @@ const emptyDetails = (): StudentDetails => ({
   siblingsAge: "",
   motherTongue: "",
   regionType: "ग्रामीण",
+  division: "",
 });
 
 // Floating label input component
@@ -488,8 +497,21 @@ export function CCEStudentInfo({
 
   const [selectedMedium, setSelectedMedium] = useState<"marathi" | "semi">(() => {
     const stored = localStorage.getItem("cce_selected_medium");
-    return stored === "semi" ? "semi" : "marathi";
+    return isSemiMedium(stored) ? "semi" : "marathi";
   });
+
+  useEffect(() => {
+    const updateMed = () => {
+      const stored = localStorage.getItem("cce_selected_medium");
+      setSelectedMedium(isSemiMedium(stored) ? "semi" : "marathi");
+    };
+    window.addEventListener("cce_settings_updated", updateMed);
+    window.addEventListener("storage", updateMed);
+    return () => {
+      window.removeEventListener("cce_settings_updated", updateMed);
+      window.removeEventListener("storage", updateMed);
+    };
+  }, []);
 
   const set = <K extends keyof StudentDetails>(key: K, val: StudentDetails[K]) =>
     setDetails((prev) => ({ ...prev, [key]: val }));
@@ -698,6 +720,13 @@ export function CCEStudentInfo({
           <CreditCard className="size-4 text-blue-600" /> नोंदणी व ओळख क्रमांक (IDs)
         </h3>
         <FloatInput label="General Register No. (नोंदणी क्रमांक)" value={currentDetails.registrationNo} onChange={(v) => updateFn("registrationNo", v)} icon={Hash} placeholder="उदा. 1042" />
+        <FloatSelect
+          label="तुकडी (Division)"
+          value={currentDetails.division || ""}
+          onChange={(v) => updateFn("division", v)}
+          options={["", ...DIVISION_OPTIONS]}
+          placeholder="तुकडी निवडा (अ, ब, क, ड)"
+        />
         <FloatDatePicker label="जन्म तारीख (Birthdate)" value={currentDetails.dob} onChange={(v) => updateFn("dob", v)} icon={Calendar} />
         <FloatInput label="Student ID (सरल आयडी)" value={currentDetails.studentId} onChange={(v) => updateFn("studentId", v)} icon={CreditCard} placeholder="उदा. 201827..." />
         <FloatInput label="APAR ID (अपार आयडी)" value={currentDetails.aparId} onChange={(v) => updateFn("aparId", v)} icon={Shield} placeholder="उदा. APAAR-890..." />

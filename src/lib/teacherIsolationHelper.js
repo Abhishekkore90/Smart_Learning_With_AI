@@ -1,5 +1,5 @@
 import { auth } from "./firebase";
-import { normalizeClassKey, isStudentSemiEnglish } from "../result/firestoreMarksHelper";
+import { normalizeClassKey, isStudentSemiEnglish, isSemiMedium } from "../result/firestoreMarksHelper";
 
 /**
  * Get current logged in teacher ID (unique per Firebase user login)
@@ -66,7 +66,7 @@ export const matchStudentTeacherClassAndMedium = (student, currentTeacherId, sel
   }
 
   // 4. Strict Medium Isolation: Marathi vs Semi-English MUST NEVER MIX
-  const targetIsSemi = String(selectedMedium || "marathi").toLowerCase().trim() === "semi";
+  const targetIsSemi = isSemiMedium(selectedMedium);
   const studentIsSemi = isStudentSemiEnglish(student);
   if (targetIsSemi !== studentIsSemi) {
     return false;

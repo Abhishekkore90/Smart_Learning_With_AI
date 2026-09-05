@@ -93,7 +93,7 @@ const SAMPLE_STUDENTS = [
   }
 ];
 
-export default function AnnualResultRegister({ initialClass, initialYear, onBack }) {
+export default function AnnualResultRegister({ initialClass, initialYear, initialMedium, onBack }) {
   const [selectedClass, setSelectedClass] = useState(
     initialClass || (typeof localStorage !== "undefined" ? localStorage.getItem("cce_selected_class") : null) || "1st"
   );
@@ -101,8 +101,32 @@ export default function AnnualResultRegister({ initialClass, initialYear, onBack
     initialYear || (typeof localStorage !== "undefined" ? localStorage.getItem("cce_academic_year") : null) || "2025-26"
   );
   const [selectedMedium, setSelectedMedium] = useState(
-    (typeof localStorage !== "undefined" ? localStorage.getItem("cce_selected_medium") : null) || "marathi"
+    initialMedium || (typeof localStorage !== "undefined" ? localStorage.getItem("cce_selected_medium") : null) || "marathi"
   );
+
+  useEffect(() => {
+    if (initialMedium && initialMedium !== selectedMedium) {
+      setSelectedMedium(initialMedium);
+    }
+  }, [initialMedium]);
+
+  useEffect(() => {
+    const handleMediumUpdate = () => {
+      if (typeof localStorage !== "undefined") {
+        const storedMedium = localStorage.getItem("cce_selected_medium");
+        if (storedMedium && storedMedium !== selectedMedium) {
+          setSelectedMedium(storedMedium);
+        }
+      }
+    };
+
+    window.addEventListener("cce_settings_updated", handleMediumUpdate);
+    window.addEventListener("storage", handleMediumUpdate);
+    return () => {
+      window.removeEventListener("cce_settings_updated", handleMediumUpdate);
+      window.removeEventListener("storage", handleMediumUpdate);
+    };
+  }, [selectedMedium]);
 
   const [schoolName, setSchoolName] = useState(
     "जिल्हा परिषद शाळा धोंडेवाडी(पेड)ता.तासगाव जि.सांगली"
@@ -120,19 +144,25 @@ export default function AnnualResultRegister({ initialClass, initialYear, onBack
 
   useEffect(() => {
     // 0. Check Instant LocalStorage Cache first for 0ms initial render
-    const cacheKey = `cce_annual_register_cache_${selectedClass}_${academicYear}`;
+    const currentTeacherId = getTeacherId();
+    const cacheKey = `cce_annual_register_cache_${currentTeacherId}_${selectedClass}_${selectedMedium}_${academicYear}`;
     try {
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
         const parsed = JSON.parse(cached);
         if (parsed && parsed.students && parsed.students.length > 0) {
-          if (parsed.schoolName) setSchoolName(parsed.schoolName);
-          if (parsed.students) setStudents(parsed.students);
-          if (parsed.subjects) setSubjects(parsed.subjects);
-          if (parsed.sem1MarksData) setSem1MarksData(parsed.sem1MarksData);
-          if (parsed.sem2MarksData) setSem2MarksData(parsed.sem2MarksData);
-          if (parsed.attendanceData) setAttendanceData(parsed.attendanceData);
-          setLoading(false); // Instant 0ms show!
+          const validStudents = parsed.students.filter(s => matchStudentClassAndMedium(s, selectedClass, selectedMedium, currentTeacherId, academicYear));
+          if (validStudents.length > 0) {
+            if (parsed.schoolName) setSchoolName(parsed.schoolName);
+            setStudents(validStudents);
+            if (parsed.subjects) setSubjects(parsed.subjects);
+            if (parsed.sem1MarksData) setSem1MarksData(parsed.sem1MarksData);
+            if (parsed.sem2MarksData) setSem2MarksData(parsed.sem2MarksData);
+            if (parsed.attendanceData) setAttendanceData(parsed.attendanceData);
+            setLoading(false);
+          } else {
+            setStudents([]);
+          }
         }
       }
     } catch (e) { }
@@ -286,7 +316,7 @@ export default function AnnualResultRegister({ initialClass, initialYear, onBack
 
       // Save LocalStorage Cache for 0ms instant next load
       try {
-        const cacheKey = `cce_annual_register_cache_${selectedClass}_${academicYear}`;
+        const cacheKey = `cce_annual_register_cache_${currentTeacherId}_${selectedClass}_${selectedMedium}_${academicYear}`;
         localStorage.setItem(cacheKey, JSON.stringify({
           schoolName: schoolResult?.sName,
           students: studentsResult,

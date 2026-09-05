@@ -16,13 +16,18 @@ export const normalizeClassKey = (cls) => {
   return s.replace(/[^0-9a-z]/g, "");
 };
 
+export const isSemiMedium = (med) => {
+  if (!med) return false;
+  const m = String(med).toLowerCase().trim();
+  return m === "semi" || m.includes("semi") || m.includes("सेमी") || m.includes("english");
+};
+
 export const isStudentSemiEnglish = (s) => {
+  if (!s) return false;
   if (s.isSemiEnglish === true) return true;
   if (s.isSemiEnglish === false) return false;
   if (s.medium) {
-    const m = String(s.medium).toLowerCase().trim();
-    if (m === "semi" || m.includes("semi") || m.includes("सेमी") || m.includes("english")) return true;
-    if (m === "marathi" || m.includes("मराठी")) return false;
+    return isSemiMedium(s.medium);
   }
   if (s.class || s.currentClass || s.className) {
     const c = String(s.class || s.currentClass || s.className).toLowerCase();
@@ -73,7 +78,7 @@ export const matchStudentClassAndMedium = (student, targetClass, targetMedium, c
   }
 
   // 4. Strict Medium Isolation: Marathi vs Semi-English MUST NEVER MIX
-  const targetIsSemi = String(targetMedium || "marathi").toLowerCase().trim() === "semi";
+  const targetIsSemi = isSemiMedium(targetMedium);
   const studentIsSemi = isStudentSemiEnglish(student);
   if (targetIsSemi !== studentIsSemi) {
     return false;
@@ -147,11 +152,11 @@ export const fetchStudentsForClass = async (selectedClass, medium, teacherId = n
           medium: d.medium,
           isSemiEnglish: d.isSemiEnglish,
           teacherId: d.teacherId || d.createdById,
-          division: d.division || "1",
+          division: d.division || "",
           dob: d.dob || d.birthDate || "",
           caste: d.caste || d.category || "",
           gender: d.gender || d.sex || d.ling || d.genderType || d.studentGender || "",
-          studentId: d.studentId || docSnap.id,
+          studentId: (d.studentId && !String(d.studentId).startsWith("student_")) ? d.studentId : "",
           photoUrl: d.photoUrl || d.profilePhoto || d.photoURL || d.studentPhoto || d.photo || d.imageUrl || d.profileImage || "",
         });
       }
@@ -193,7 +198,7 @@ export const fetchStudentsForClass = async (selectedClass, medium, teacherId = n
         address: det.address || s.address || "",
         mobile: det.phone || s.phone || s.mobile || "",
         photoUrl: det.photoUrl || det.profilePhoto || det.photoURL || det.studentPhoto || det.photo || det.imageUrl || det.profileImage || s.photoUrl || s.profilePhoto || s.photoURL || s.studentPhoto || s.photo || s.imageUrl || s.profileImage || "",
-        studentId: det.studentId || s.studentId || s.id || "",
+        studentId: (det.studentId && !String(det.studentId).startsWith("student_")) ? det.studentId : ((s.studentId && !String(s.studentId).startsWith("student_")) ? s.studentId : ""),
         aparId: det.aparId || "",
         height: det.height || "",
         weight: det.weight || "",

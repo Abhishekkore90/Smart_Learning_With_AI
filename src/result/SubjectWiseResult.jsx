@@ -133,15 +133,47 @@ const OutcomeTable = ({ title, outcomes, subjectName, getUserSelectedLevel, stud
 
 import { getDefaultSubjectsForClass } from "../data/cceSubjects";
 
-const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", initialSemester = "sem2", onBack }) => {
+const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", initialSemester = "sem2", initialMedium, onBack }) => {
   const [selectedClass, setSelectedClass] = useState(initialClass || "1st");
   const [academicYear, setAcademicYear] = useState(initialYear || "2025-26");
   const [selectedSemester, setSelectedSemester] = useState(initialSemester || "sem2");
   const [division, setDivision] = useState("1");
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
+  const [selectedMedium, setSelectedMedium] = useState(() => {
+    if (initialMedium) return initialMedium;
+    if (typeof localStorage !== "undefined") {
+      return localStorage.getItem("cce_selected_medium") || "marathi";
+    }
+    return "marathi";
+  });
+
+  useEffect(() => {
+    if (initialMedium && initialMedium !== selectedMedium) {
+      setSelectedMedium(initialMedium);
+    }
+  }, [initialMedium]);
+
+  useEffect(() => {
+    const handleMediumUpdate = () => {
+      if (typeof localStorage !== "undefined") {
+        const storedMedium = localStorage.getItem("cce_selected_medium");
+        if (storedMedium && storedMedium !== selectedMedium) {
+          setSelectedMedium(storedMedium);
+        }
+      }
+    };
+
+    window.addEventListener("cce_settings_updated", handleMediumUpdate);
+    window.addEventListener("storage", handleMediumUpdate);
+    return () => {
+      window.removeEventListener("cce_settings_updated", handleMediumUpdate);
+      window.removeEventListener("storage", handleMediumUpdate);
+    };
+  }, [selectedMedium]);
+
   const [configuredSubjects, setConfiguredSubjects] = useState(() => {
-    const med = localStorage.getItem("cce_selected_medium") || "marathi";
+    const med = selectedMedium;
     const stored = localStorage.getItem(`cce_subjects_${initialClass}_${initialYear}_${med}`) ||
       localStorage.getItem(`cce_subjects_${initialClass}_${initialYear}`);
     if (stored) {
@@ -170,7 +202,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
 
   useEffect(() => {
     loadData();
-  }, [selectedClass, academicYear]);
+  }, [selectedClass, academicYear, selectedMedium]);
 
   const loadData = async () => {
     setLoading(true);
