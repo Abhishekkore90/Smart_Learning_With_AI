@@ -14782,8 +14782,8 @@ function TeacherMDMPage() {
                                         <table className="border-collapse border border-black text-center text-xs font-sans">
                                           <thead>
                                             <tr className="bg-slate-100 font-bold border-b border-black text-xs">
-                                              <th className="border border-black px-8 py-1 min-w-[120px]">तपशील</th>
-                                              <th className="border border-black px-8 py-1 min-w-[160px]" colSpan={2}>वापर</th>
+                                              <th className="border border-black px-8 py-1 min-w-[120px] text-center">तपशील</th>
+                                              <th className="border border-black px-8 py-1 min-w-[160px] text-center" colSpan={2}>वापर</th>
                                             </tr>
                                           </thead>
                                           <tbody>

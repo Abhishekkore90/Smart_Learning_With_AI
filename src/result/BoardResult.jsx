@@ -240,6 +240,8 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
   const [marksData, setMarksData] = useState({});
   const [remarksData, setRemarksData] = useState({});
   const [attendanceData, setAttendanceData] = useState({});
+  const [sem1MarksData, setSem1MarksData] = useState({});
+  const [sem2MarksData, setSem2MarksData] = useState({});
   const [totalWorkingDays, setTotalWorkingDays] = useState(0);
   const [weightageData, setWeightageData] = useState({});
   const [selectedTerm, setSelectedTerm] = useState(initialTerm || "sem2"); // "sem1" = प्रथम सत्र | "sem2" = द्वितीय सत्र
