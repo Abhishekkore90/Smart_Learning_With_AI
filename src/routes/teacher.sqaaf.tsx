@@ -8503,7 +8503,7 @@ function TeacherSqaafPage() {
                       if (fields.length === 0) return null;
 
                       return (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 text-slate-800 text-[13px] md:text-[15px] font-medium leading-relaxed uppercase tracking-wide border-t border-slate-900/10 pt-6">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 md:gap-6 text-slate-800 text-[13px] md:text-[15px] font-medium leading-relaxed uppercase tracking-wide border-t border-slate-900/10 pt-6">
                           {fields.map((f, idx) => (
                             <div key={idx}>
                               <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1 uppercase">
@@ -8861,7 +8861,7 @@ function TeacherSqaafPage() {
                         if (fields.length === 0) return null;
 
                         return (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 text-slate-800 text-[13px] md:text-[15px] font-medium leading-relaxed uppercase tracking-wide border-t border-slate-900/10 pt-6">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 md:gap-6 text-slate-800 text-[13px] md:text-[15px] font-medium leading-relaxed uppercase tracking-wide border-t border-slate-900/10 pt-6">
                             {fields.map((f, idx) => (
                               <div key={idx}>
                                 <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1 uppercase">
@@ -9213,7 +9213,7 @@ function TeacherSqaafPage() {
                       if (fields.length === 0) return null;
 
                       return (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 text-slate-800 text-[13px] md:text-[15px] font-medium leading-relaxed uppercase tracking-wide border-t border-slate-900/10 pt-6">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 md:gap-6 text-slate-800 text-[13px] md:text-[15px] font-medium leading-relaxed uppercase tracking-wide border-t border-slate-900/10 pt-6">
                           {fields.map((f, idx) => (
                             <div key={idx}>
                               <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1 uppercase">
