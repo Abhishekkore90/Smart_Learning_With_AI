@@ -44,8 +44,8 @@ export async function uploadFileWithProgress(
   const storageApiKey = import.meta.env.VITE_BUNNY_STORAGE_API_KEY;
   const storageZone = import.meta.env.VITE_BUNNY_STORAGE_ZONE || "sgkbrainova";
   const cdnHostname = (
-    import.meta.env.VITE_BUNNY_STORAGE_CDN_HOSTNAME || "vz-7a00d099-4a8.b-cdn.net"
-  ).replace(/^https?:\/\//, "").replace(/\/$/, "");
+    import.meta.env.VITE_BUNNY_STORAGE_CDN_HOSTNAME || "sgkbrainova.b-cdn.net"
+  ).replace(/^https?:\/\//, "").replace(/\/$/, "").toLowerCase();
 
   // Attempt Bunny Storage upload if API key is provided and Firebase isn't explicitly preferred
   if (storageApiKey && storageZone && options.preferredProvider !== "firebase") {

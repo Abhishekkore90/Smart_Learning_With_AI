@@ -6,7 +6,7 @@
     },
     {
       "source": "/api/bunny-storage/(.*)",
-      "destination": "https://storage.bunnycdn.com/$1"
+      "destination": "/api/bunny-storage?path=$1"
     },
     {
       "source": "/api/anthropic/(.*)",

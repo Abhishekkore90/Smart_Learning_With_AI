@@ -108,7 +108,8 @@ const PhotoUploader = ({ standardId, lang, evidenceUrl }: { standardId: number; 
     try {
       const storageApiKey = import.meta.env.VITE_BUNNY_STORAGE_API_KEY;
       const storageZone = import.meta.env.VITE_BUNNY_STORAGE_ZONE || "sgkbrainova";
-      const cdnHostname = import.meta.env.VITE_BUNNY_STORAGE_CDN_HOSTNAME || "vz-7a00d099-4a8.b-cdn.net";
+      const rawCdnHostname = import.meta.env.VITE_BUNNY_STORAGE_CDN_HOSTNAME || "sgkbrainova.b-cdn.net";
+      const cdnHostname = rawCdnHostname.replace(/^https?:\/\//, "").replace(/\/$/, "").toLowerCase();
 
       if (storageApiKey) {
         const ext = file.name.substring(file.name.lastIndexOf("."));
@@ -186,7 +187,8 @@ const PhotoUploader = ({ standardId, lang, evidenceUrl }: { standardId: number; 
     try {
       const storageApiKey = import.meta.env.VITE_BUNNY_STORAGE_API_KEY;
       const storageZone = import.meta.env.VITE_BUNNY_STORAGE_ZONE || "sgkbrainova";
-      const cdnHostname = import.meta.env.VITE_BUNNY_STORAGE_CDN_HOSTNAME || "vz-7a00d099-4a8.b-cdn.net";
+      const rawCdnHostname = import.meta.env.VITE_BUNNY_STORAGE_CDN_HOSTNAME || "sgkbrainova.b-cdn.net";
+      const cdnHostname = rawCdnHostname.replace(/^https?:\/\//, "").replace(/\/$/, "").toLowerCase();
 
       if (storageApiKey) {
         const ext = file.name.substring(file.name.lastIndexOf("."));
@@ -5740,7 +5742,7 @@ function TeacherSqafPage() {
                       if (fields.length === 0) return null;
 
                       return (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 text-slate-800 text-[13px] md:text-[15px] font-medium leading-relaxed uppercase tracking-wide border-t border-slate-900/10 pt-6">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 md:gap-6 text-slate-800 text-[13px] md:text-[15px] font-medium leading-relaxed uppercase tracking-wide border-t border-slate-900/10 pt-6">
                           {fields.map((f, idx) => (
                             <div key={idx}>
                               <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1 uppercase">

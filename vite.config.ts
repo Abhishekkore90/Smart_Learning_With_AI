@@ -20,6 +20,28 @@ export default defineConfig({
   vite: {
     build: {
       minify: 'esbuild',
+      sourcemap: false,
+      chunkSizeWarningLimit: 1500,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.includes('pdfjs-dist') || id.includes('jspdf') || id.includes('pdfkit') || id.includes('html2canvas') || id.includes('html2pdf')) {
+                return 'vendor-pdf';
+              }
+              if (id.includes('xlsx') || id.includes('mammoth')) {
+                return 'vendor-office';
+              }
+              if (id.includes('recharts') || id.includes('chart.js') || id.includes('framer-motion')) {
+                return 'vendor-charts';
+              }
+              if (id.includes('lucide-react')) {
+                return 'vendor-icons';
+              }
+            }
+          }
+        }
+      }
     },
     resolve: {
       alias: {
@@ -55,6 +77,7 @@ export default defineConfig({
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api\/bunny-storage/, ''),
           headers: {
+            'AccessKey': process.env.VITE_BUNNY_STORAGE_API_KEY || 'bc06a0c2-aad1-436c-b88a1c197eca-d74a-44e8',
             'Referer': 'https://storage.bunnycdn.com',
             'Origin': 'https://storage.bunnycdn.com'
           }

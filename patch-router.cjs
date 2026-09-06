@@ -3,6 +3,17 @@ const path = require('path');
 
 const startDir = path.join(__dirname, 'node_modules');
 
+// Pre-build clean: Remove old dist folder so build assets don't accumulate
+const distFolder = path.join(__dirname, 'dist');
+if (fs.existsSync(distFolder)) {
+  try {
+    console.log('[patch-router] Cleaning previous dist directory...');
+    fs.rmSync(distFolder, { recursive: true, force: true });
+  } catch (err) {
+    console.warn('[patch-router] Could not clean dist folder:', err.message);
+  }
+}
+
 function findFiles(dir, fileNames, results = []) {
   if (!fs.existsSync(dir)) return results;
   

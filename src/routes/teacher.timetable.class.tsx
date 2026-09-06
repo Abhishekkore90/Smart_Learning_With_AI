@@ -768,12 +768,37 @@ function ClassTimetablePage() {
 
     const prevZoom = element.style.zoom;
     const prevWebkitZoom = (element.style as any).WebkitZoom;
+    const prevMarginTop = element.style.marginTop;
 
     try {
       element.style.zoom = '1';
       (element.style as any).WebkitZoom = '1';
       element.style.transform = 'scale(0.95)';
       element.style.transformOrigin = 'top center';
+
+      const renderedHeight = (element.offsetHeight || element.getBoundingClientRect().height || 520) * 0.95;
+      const pageHeightPx = 735;
+      const freeSpace = pageHeightPx - renderedHeight;
+      const topOffset = Math.max(20, Math.floor(freeSpace / 2));
+
+      element.style.marginTop = `${topOffset}px`;
+
+      const opt = {
+        margin: [0, 0.15, 0, 0.15],
+        filename: `${selectedClass}_Timetable.pdf`,
+        image: { type: "jpeg", quality: 1.0 },
+        html2canvas: {
+          scale: 3,
+          useCORS: true,
+          logging: false,
+          letterRendering: true,
+          windowWidth: 1050,
+          scrollX: 0,
+          scrollY: 0
+        },
+        jsPDF: { unit: "in", format: "a4", orientation: "landscape" },
+        pagebreak: { mode: ['css'] }
+      };
 
       const html2pdf = (await import("html2pdf.js")).default;
       const worker = html2pdf().set(opt).from(element);
@@ -795,6 +820,7 @@ function ClassTimetablePage() {
       (element.style as any).WebkitZoom = prevWebkitZoom;
       element.style.transform = '';
       element.style.transformOrigin = '';
+      element.style.marginTop = prevMarginTop;
       tempSpans.forEach(({ input, span }) => {
         input.style.display = '';
         span.parentNode?.removeChild(span);

@@ -59,6 +59,25 @@ async function fetchGoogleDriveImages(url: string): Promise<{ src: string }[]> {
   return [];
 }
 
+const sanitizeUrl = (url: string | null | undefined): string => {
+  if (!url) return "";
+  let cleaned = url
+    .replace(/vz-7a00d099-4a8\.b-cdn\.net/gi, "sgkbrainova.b-cdn.net")
+    .replace(/SGKBRAINOVA\.b-cdn\.net/gi, "sgkbrainova.b-cdn.net");
+
+  if (cleaned.includes("sqaaf_evidences/")) {
+    const match = cleaned.match(/(sqaaf_evidences\/.*)/);
+    if (match) {
+      return `/api/bunny-storage/sgkbrainova/${match[1]}`;
+    }
+  }
+
+  if (cleaned.includes("sgkbrainova.b-cdn.net")) {
+    cleaned = cleaned.replace(/https?:\/\/sgkbrainova\.b-cdn\.net/gi, "/api/bunny-storage/sgkbrainova");
+  }
+  return cleaned;
+};
+
 export const Route = createFileRoute("/teacher/sqaaf")({
   component: TeacherSqaafPage,
 });
@@ -110,6 +129,31 @@ function compressImage(file: File, maxWidth = 1000, quality = 0.75): Promise<str
     reader.readAsDataURL(file);
   });
 }
+
+export const renderBoldStandardNumber = (desc: string) => {
+  if (!desc) return null;
+  const match = desc.match(/^([\d\u0966-\u096F]+(?:\.[\d\u0966-\u096F]+)*(?:\s*[:\-])?)\s*(.*)/);
+  if (match) {
+    const [, stdNum, rest] = match;
+    return (
+      <>
+        <span className="font-black text-slate-950 mr-1.5 text-[14px] inline-block">{stdNum}</span>
+        <span>{rest}</span>
+      </>
+    );
+  }
+  return desc;
+};
+
+export const formatOrangeDescWithBoldNum = (desc: string) => {
+  if (!desc) return "";
+  const match = desc.match(/^([\d\u0966-\u096F]+(?:\.[\d\u0966-\u096F]+)*(?:\s*[:\-])?)\s*(.*)/);
+  if (match) {
+    const [, stdNum, rest] = match;
+    return `<b style="font-weight: 900; font-size: 14px; color: #0f172a;">${stdNum}</b> ${rest}`;
+  }
+  return desc;
+};
 
 // Photo Uploader Component for Evidences with option list support and PDF support
 const PhotoUploader = ({
@@ -214,10 +258,10 @@ const PhotoUploader = ({
 
       const previewSaved = localStorage.getItem(`sqaaf_file_preview_${standardId}_${selectedOptionIdx}_${idx}`);
       if (previewSaved) {
-        previews[idx] = previewSaved;
+        previews[idx] = sanitizeUrl(previewSaved);
       } else if (selectedOptionIdx === 0) {
         const oldPreview = localStorage.getItem(`sqaaf_evidence_file_preview_${standardId}_${idx}`);
-        if (oldPreview) previews[idx] = oldPreview;
+        if (oldPreview) previews[idx] = sanitizeUrl(oldPreview);
       }
 
       const typeSaved = localStorage.getItem(`sqaaf_file_type_${standardId}_${selectedOptionIdx}_${idx}`);
@@ -258,7 +302,7 @@ const PhotoUploader = ({
                 localStorage.setItem(`sqaaf_file_name_${standardId}_${selectedOptionIdx}_${idx}`, dbNames[idx]);
               }
               if (dbPreviews[idx] !== undefined) {
-                previews[idx] = dbPreviews[idx];
+                previews[idx] = sanitizeUrl(dbPreviews[idx]);
                 localStorage.setItem(`sqaaf_file_preview_${standardId}_${selectedOptionIdx}_${idx}`, dbPreviews[idx]);
               }
               if (dbTypes[idx] !== undefined) {
@@ -338,12 +382,16 @@ const PhotoUploader = ({
       try {
         const storageApiKey = import.meta.env.VITE_BUNNY_STORAGE_API_KEY;
         const storageZone = import.meta.env.VITE_BUNNY_STORAGE_ZONE || "sgkbrainova";
-        const cdnHostname = import.meta.env.VITE_BUNNY_STORAGE_CDN_HOSTNAME || "vz-7a00d099-4a8.b-cdn.net";
+        const rawCdnHostname = import.meta.env.VITE_BUNNY_STORAGE_CDN_HOSTNAME || "sgkbrainova.b-cdn.net";
+        const cdnHostname = rawCdnHostname.replace(/^https?:\/\//, "").replace(/\/$/, "").toLowerCase();
 
         if (storageApiKey) {
+          const userUdise = (localStorage.getItem("teacher_udise") || profile?.udise || "general").replace(/[^a-zA-Z0-9_-]/g, "");
           const ext = file.name.substring(file.name.lastIndexOf("."));
-          const cleanName = `sqaaf_${Date.now()}_${Math.random().toString(36).substring(2, 7)}${ext}`;
-          const res = await fetch(`/api/bunny-storage/${storageZone}/documents/${cleanName}`, {
+          const cleanName = `sqaaf_std${standardId}_opt${selectedOptionIdx}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}${ext}`;
+          const bunnyFilePath = `sqaaf_evidences/${userUdise}/${cleanName}`;
+
+          const res = await fetch(`/api/bunny-storage/${storageZone}/${bunnyFilePath}`, {
             method: "PUT",
             headers: {
               "AccessKey": storageApiKey,
@@ -353,8 +401,8 @@ const PhotoUploader = ({
           });
 
           if (res.ok) {
-            const cdnUrl = `https://${cdnHostname}/documents/${cleanName}`;
-            newPreviews[idx] = cdnUrl;
+            const cdnUrl = `https://${cdnHostname}/${bunnyFilePath}`;
+            newPreviews[idx] = sanitizeUrl(cdnUrl);
             try {
               localStorage.setItem(`sqaaf_file_name_${standardId}_${selectedOptionIdx}_${idx}`, file.name);
               localStorage.setItem(`sqaaf_file_preview_${standardId}_${selectedOptionIdx}_${idx}`, cdnUrl);
@@ -5008,24 +5056,29 @@ const SqaafResponseCard = ({ num, idx, selectedLang, selectedOptions }: SqaafRes
         parsedOpts = [selectedLang === "mr" ? "सर्वसाधारण पुरावे / General Evidences" : "General Evidences"];
       }
       const optsLength = parsedOpts.length;
+      const maxScan = Math.max(optsLength, 35);
 
-      for (let pIdx = 0; pIdx < optsLength; pIdx++) {
+      for (let pIdx = 0; pIdx < maxScan; pIdx++) {
         let isChecked = localStorage.getItem(`sqaaf_checked_${num}_${idx}_${pIdx}`) === "true";
         if (!isChecked && idx === 0) {
           isChecked = localStorage.getItem(`sqaaf_evidence_checked_${num}_${pIdx}`) === "true";
         }
-        if (isChecked) {
+        if (isChecked && pIdx < optsLength) {
           subOptions.push(parsedOpts[pIdx]);
         }
 
-        let preview = localStorage.getItem(`sqaaf_file_preview_${num}_${idx}_${pIdx}`);
-        if (!preview && idx === 0) {
-          preview = localStorage.getItem(`sqaaf_evidence_file_preview_${num}_${pIdx}`);
+        let rawPreview = localStorage.getItem(`sqaaf_file_preview_${num}_${idx}_${pIdx}`);
+        if (!rawPreview && idx === 0) {
+          rawPreview = localStorage.getItem(`sqaaf_evidence_file_preview_${num}_${pIdx}`);
         }
-        if (preview && (preview.startsWith("data:image") || preview.startsWith("https://"))) {
+        const preview = sanitizeUrl(rawPreview);
+        if (preview && (preview.startsWith("data:image") || preview.startsWith("https://") || preview.startsWith("http://") || preview.startsWith("/api/") || preview.startsWith("/"))) {
+          const itemLabel = (pIdx < optsLength && parsedOpts[pIdx])
+            ? parsedOpts[pIdx]
+            : (localStorage.getItem(`sqaaf_file_name_${num}_${idx}_${pIdx}`) || (selectedLang === "mr" ? "अहवाल पुरावा फोटो" : "Evidence Photo"));
           localPhotos.push({
             src: preview,
-            label: parsedOpts[pIdx] || ""
+            label: itemLabel
           });
         }
       }
@@ -5089,7 +5142,7 @@ const SqaafResponseCard = ({ num, idx, selectedLang, selectedOptions }: SqaafRes
           {selectedLang === "mr" ? `मानक क्र. ${toMarathiNumerals(num)}` : `Standard No. ${num}`}
         </h3>
         <p className="text-[13px] text-slate-700 leading-relaxed mb-4 font-medium">
-          {orangeDesc}
+          {renderBoldStandardNumber(orangeDesc)}
         </p>
 
         {/* Chosen Level Badge & Response */}
@@ -5141,17 +5194,14 @@ const SqaafResponseCard = ({ num, idx, selectedLang, selectedOptions }: SqaafRes
             </span>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {localPhotos.map((photo, index) => (
-                <div key={index} className="border border-slate-200 rounded-xl p-2.5 bg-slate-50/80 flex flex-col items-center justify-between min-h-[160px] shadow-sm hover:shadow transition-shadow">
+                <div key={index} className="border border-slate-200 rounded-xl p-2.5 bg-slate-50/80 flex flex-col items-center justify-center shadow-sm hover:shadow transition-shadow">
                   <div className="w-full h-32 flex items-center justify-center bg-white rounded-lg p-1 border border-slate-100 overflow-hidden">
                     <img
                       src={photo.src}
-                      alt={photo.label}
+                      alt={`Evidence ${index + 1}`}
                       className="max-h-full max-w-full object-contain rounded-md"
                     />
                   </div>
-                  <span className="text-[10px] font-bold text-slate-700 text-center mt-2 leading-tight break-words w-full px-1">
-                    {photo.label}
-                  </span>
                 </div>
               ))}
             </div>
@@ -5172,17 +5222,14 @@ const SqaafResponseCard = ({ num, idx, selectedLang, selectedOptions }: SqaafRes
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {drivePhotos.map((photo, index) => (
-                  <div key={index} className="border border-slate-200 rounded-xl p-2.5 bg-slate-50/80 flex flex-col items-center justify-between min-h-[160px] shadow-sm hover:shadow transition-shadow">
+                  <div key={index} className="border border-slate-200 rounded-xl p-2.5 bg-slate-50/80 flex flex-col items-center justify-center shadow-sm hover:shadow transition-shadow">
                     <div className="w-full h-32 flex items-center justify-center bg-white rounded-lg p-1 border border-slate-100 overflow-hidden">
                       <img
                         src={photo.src}
-                        alt={photo.label}
+                        alt={`Drive evidence ${index + 1}`}
                         className="max-h-full max-w-full object-contain rounded-md"
                       />
                     </div>
-                    <span className="text-[10px] font-bold text-slate-700 text-center mt-2 leading-tight break-words w-full px-1">
-                      {photo.label}
-                    </span>
                   </div>
                 ))}
               </div>
@@ -5817,13 +5864,13 @@ function TeacherSqaafPage() {
     }).join("");
 
     const finalHtml = `
-      <div style="font-family: 'Segoe UI', 'Noto Sans Devanagari', Arial, sans-serif; color: #0f172a; padding: 10px;">
-        <h2 style="text-align: center; font-size: 16px; font-weight: bold; margin-bottom: 4px;">SQAAF एकत्रित गुणनोंद तक्ता</h2>
-        <div style="text-align: center; font-size: 11px; font-weight: bold; margin-bottom: 12px;">
+      <div style="font-family: 'Segoe UI', 'Noto Sans Devanagari', Arial, sans-serif; color: #0f172a; padding: 12px;">
+        <h2 style="text-align: center; font-size: 18px; font-weight: 900; margin-bottom: 4px;">SQAAF एकत्रित गुणनोंद तक्ता</h2>
+        <div style="text-align: center; font-size: 12px; font-weight: bold; margin-bottom: 14px;">
           गट: पायाभूत (अंगणवाडी ते १ली २री / पूर्वतयारी ३री ते ५ वी / पूर्व माध्यमिक ६वी ते ८वी )
         </div>
         
-        <div style="font-size: 10px; font-weight: bold; margin-bottom: 10px;">
+        <div style="font-size: 11.5px; font-weight: bold; margin-bottom: 12px; line-height: 1.5;">
           ${infoSchoolName ? `शाळेचे नाव: ${infoSchoolName} &nbsp;&nbsp;&nbsp;` : ""}
           ${infoUdise ? `U Dise No: ${infoUdise} &nbsp;&nbsp;&nbsp;` : ""}
           ${infoHeadmaster ? `मुख्याध्यापक: ${infoHeadmaster} &nbsp;&nbsp;&nbsp;` : ""}
@@ -5833,59 +5880,59 @@ function TeacherSqaafPage() {
           ${infoDistrict ? `जिल्हा: ${infoDistrict}` : ""}
         </div>
         
-        <table style="width: 100%; border-collapse: collapse; border: 1px solid black; font-size: 9px; table-layout: fixed; word-wrap: break-word; word-break: break-word;">
+        <table style="width: 100%; border-collapse: collapse; border: 1px solid black; font-size: 11px; table-layout: fixed; word-wrap: break-word; word-break: break-word;">
           <thead>
-            <tr>
-              <th style="border: 1px solid black; padding: 4px; background-color: #f1f5f9; text-align: center; width: 5%;">अ. क्र.</th>
-              <th style="border: 1px solid black; padding: 4px; background-color: #f1f5f9; text-align: center; width: 24%;">क्षेत्राचे नाव</th>
-              <th style="border: 1px solid black; padding: 4px; background-color: #f1f5f9; text-align: center; width: 12%;">मानक क्र.</th>
-              <th style="border: 1px solid black; padding: 4px; background-color: #f1f5f9; text-align: center; width: 15%;">लागू नसलेली मानके</th>
-              <th style="border: 1px solid black; padding: 4px; background-color: #f1f5f9; text-align: center; width: 10%;">लागू मानक<br/>संख्या</th>
-              <th style="border: 1px solid black; padding: 4px; background-color: #f1f5f9; text-align: center; width: 7%;">स्तर १<br/><span style="font-size: 8px; font-weight: normal;">प्रारंभिक</span></th>
-              <th style="border: 1px solid black; padding: 4px; background-color: #f1f5f9; text-align: center; width: 7%;">स्तर २<br/><span style="font-size: 8px; font-weight: normal;">प्रगतशील</span></th>
-              <th style="border: 1px solid black; padding: 4px; background-color: #f1f5f9; text-align: center; width: 7%;">स्तर ३<br/><span style="font-size: 8px; font-weight: normal;">प्रगत</span></th>
-              <th style="border: 1px solid black; padding: 4px; background-color: #f1f5f9; text-align: center; width: 7%;">स्तर ४<br/><span style="font-size: 8px; font-weight: normal;">प्रवीण</span></th>
-              <th style="border: 1px solid black; padding: 4px; background-color: #f1f5f9; text-align: center; width: 6%;">एकूण<br/><span style="font-size: 8px; font-weight: normal;">गुण</span></th>
+            <tr style="font-size: 12px; font-weight: 900;">
+              <th style="border: 1px solid black; padding: 6px 4px; background-color: #f1f5f9; text-align: center; width: 5%;">अ. क्र.</th>
+              <th style="border: 1px solid black; padding: 6px 6px; background-color: #f1f5f9; text-align: center; width: 24%;">क्षेत्राचे नाव</th>
+              <th style="border: 1px solid black; padding: 6px 4px; background-color: #f1f5f9; text-align: center; width: 12%;">मानक क्र.</th>
+              <th style="border: 1px solid black; padding: 6px 4px; background-color: #f1f5f9; text-align: center; width: 15%;">लागू नसलेली मानके</th>
+              <th style="border: 1px solid black; padding: 6px 4px; background-color: #f1f5f9; text-align: center; width: 10%;">लागू मानक<br/>संख्या</th>
+              <th style="border: 1px solid black; padding: 6px 4px; background-color: #f1f5f9; text-align: center; width: 7%;">स्तर १<br/><span style="font-size: 9.5px; font-weight: normal;">प्रारंभिक</span></th>
+              <th style="border: 1px solid black; padding: 6px 4px; background-color: #f1f5f9; text-align: center; width: 7%;">स्तर २<br/><span style="font-size: 9.5px; font-weight: normal;">प्रगतशील</span></th>
+              <th style="border: 1px solid black; padding: 6px 4px; background-color: #f1f5f9; text-align: center; width: 7%;">स्तर ३<br/><span style="font-size: 9.5px; font-weight: normal;">प्रगत</span></th>
+              <th style="border: 1px solid black; padding: 6px 4px; background-color: #f1f5f9; text-align: center; width: 7%;">स्तर ४<br/><span style="font-size: 9.5px; font-weight: normal;">प्रवीण</span></th>
+              <th style="border: 1px solid black; padding: 6px 4px; background-color: #f1f5f9; text-align: center; width: 6%;">एकूण<br/><span style="font-size: 9.5px; font-weight: normal;">गुण</span></th>
             </tr>
           </thead>
           <tbody>
             ${summaryRowsHtml}
-            <tr>
-              <td style="border: 1px solid black; padding: 4px;"></td>
-              <td style="border: 1px solid black; padding: 4px;"></td>
-              <td style="border: 1px solid black; padding: 4px;"></td>
-              <td style="border: 1px solid black; padding: 4px; text-align: right; font-weight: bold;">एकूण</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${totalApplicable}</td>
-              <td style="border: 1px solid black; padding: 4px;"></td>
-              <td style="border: 1px solid black; padding: 4px;"></td>
-              <td style="border: 1px solid black; padding: 4px;"></td>
-              <td style="border: 1px solid black; padding: 4px;"></td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${obtainedMarks_}</td>
+            <tr style="font-size: 12px; font-weight: 900;">
+              <td style="border: 1px solid black; padding: 5px;"></td>
+              <td style="border: 1px solid black; padding: 5px;"></td>
+              <td style="border: 1px solid black; padding: 5px;"></td>
+              <td style="border: 1px solid black; padding: 5px; text-align: right; font-weight: 900;">एकूण</td>
+              <td style="border: 1px solid black; padding: 5px; text-align: center; font-weight: 900;">${totalApplicable}</td>
+              <td style="border: 1px solid black; padding: 5px;"></td>
+              <td style="border: 1px solid black; padding: 5px;"></td>
+              <td style="border: 1px solid black; padding: 5px;"></td>
+              <td style="border: 1px solid black; padding: 5px;"></td>
+              <td style="border: 1px solid black; padding: 5px; text-align: center; font-weight: 900;">${obtainedMarks_}</td>
             </tr>
           </tbody>
         </table>
         
-        <div style="margin-top: 15px; font-size: 9px; font-weight: bold; padding-top: 10px;">
+        <div style="margin-top: 18px; font-size: 11.5px; font-weight: bold; padding-top: 10px;">
           <div style="margin-bottom: 8px;">(एकूण मानके - १२८, एकूण गुण - ${totalApplicable * 4} ) &nbsp;&nbsp;&nbsp;&nbsp; (गुणांकन - स्तर १ - १ गुण, स्तर २ - २ गुण, स्तर ३ - ३ गुण, स्तर ४ - ४ गुण)</div>
           
-          <div style="margin-bottom: 5px; font-size: 10px; text-decoration: underline;">श्रेणी तक्ता</div>
-          <table style="width: 50%; border-collapse: collapse; border: 1px solid black; font-size: 9px; text-align: center;">
+          <div style="margin-bottom: 6px; font-size: 12px; font-weight: 900; text-decoration: underline;">श्रेणी तक्ता</div>
+          <table style="width: 55%; border-collapse: collapse; border: 1px solid black; font-size: 11px; text-align: center;">
             <thead>
-              <tr>
-                <th style="border: 1px solid black; padding: 4px; background-color: #f1f5f9;">श्रेणी</th>
-                <th style="border: 1px solid black; padding: 4px; background-color: #f1f5f9;">टक्केवारी</th>
-                <th style="border: 1px solid black; padding: 4px; background-color: #f1f5f9;">एकूण गुण</th>
-                <th style="border: 1px solid black; padding: 4px; background-color: #f1f5f9;">शाळा प्राप्त गुण</th>
-                <th style="border: 1px solid black; padding: 4px; background-color: #f1f5f9;">प्राप्त श्रेणी</th>
+              <tr style="font-weight: 900; background-color: #f1f5f9;">
+                <th style="border: 1px solid black; padding: 5px; background-color: #f1f5f9;">श्रेणी</th>
+                <th style="border: 1px solid black; padding: 5px; background-color: #f1f5f9;">टक्केवारी</th>
+                <th style="border: 1px solid black; padding: 5px; background-color: #f1f5f9;">एकूण गुण</th>
+                <th style="border: 1px solid black; padding: 5px; background-color: #f1f5f9;">शाळा प्राप्त गुण</th>
+                <th style="border: 1px solid black; padding: 5px; background-color: #f1f5f9;">प्राप्त श्रेणी</th>
               </tr>
             </thead>
             <tbody>
-              <tr><td style="border: 1px solid black; padding: 4px;">A+</td><td style="border: 1px solid black; padding: 4px;">९१ ते १००</td><td rowspan="6" style="border: 1px solid black; padding: 4px; vertical-align: middle; font-weight: bold;">${totalApplicable * 4}</td><td rowspan="6" style="border: 1px solid black; padding: 4px; vertical-align: middle; font-weight: bold; font-size: 14px;">${obtainedMarks_}</td><td rowspan="6" style="border: 1px solid black; padding: 4px; vertical-align: middle; font-weight: bold; font-size: 16px; color: #16a34a;">${getGrade(overallSelfPct)}</td></tr>
-              <tr><td style="border: 1px solid black; padding: 4px;">A</td><td style="border: 1px solid black; padding: 4px;">८१ ते ९०</td></tr>
-              <tr><td style="border: 1px solid black; padding: 4px;">B+</td><td style="border: 1px solid black; padding: 4px;">७१ ते ८०</td></tr>
-              <tr><td style="border: 1px solid black; padding: 4px;">B</td><td style="border: 1px solid black; padding: 4px;">६१ ते ७०</td></tr>
-              <tr><td style="border: 1px solid black; padding: 4px;">C+</td><td style="border: 1px solid black; padding: 4px;">५१ ते ६०</td></tr>
-              <tr><td style="border: 1px solid black; padding: 4px;">C</td><td style="border: 1px solid black; padding: 4px;">५० पेक्षा कमी</td></tr>
+              <tr><td style="border: 1px solid black; padding: 5px; font-weight: 900;">A+</td><td style="border: 1px solid black; padding: 5px; font-weight: bold;">९१ ते १००</td><td rowspan="6" style="border: 1px solid black; padding: 5px; vertical-align: middle; font-weight: 900;">${totalApplicable * 4}</td><td rowspan="6" style="border: 1px solid black; padding: 5px; vertical-align: middle; font-weight: 900; font-size: 14px;">${obtainedMarks_}</td><td rowspan="6" style="border: 1px solid black; padding: 5px; vertical-align: middle; font-weight: 900; font-size: 16px; color: #16a34a;">${getGrade(overallSelfPct)}</td></tr>
+              <tr><td style="border: 1px solid black; padding: 5px; font-weight: 900;">A</td><td style="border: 1px solid black; padding: 5px; font-weight: bold;">८१ ते ९०</td></tr>
+              <tr><td style="border: 1px solid black; padding: 5px; font-weight: 900;">B+</td><td style="border: 1px solid black; padding: 5px; font-weight: bold;">७१ ते ८०</td></tr>
+              <tr><td style="border: 1px solid black; padding: 5px; font-weight: 900;">B</td><td style="border: 1px solid black; padding: 5px; font-weight: bold;">६१ ते ७०</td></tr>
+              <tr><td style="border: 1px solid black; padding: 5px; font-weight: 900;">C+</td><td style="border: 1px solid black; padding: 5px; font-weight: bold;">५१ ते ६०</td></tr>
+              <tr><td style="border: 1px solid black; padding: 5px; font-weight: 900;">C</td><td style="border: 1px solid black; padding: 5px; font-weight: bold;">५० पेक्षा कमी</td></tr>
             </tbody>
           </table>
         </div>
@@ -6071,11 +6118,12 @@ function TeacherSqaafPage() {
                 }
 
                 // Collect photos from any sub-option (checked or unchecked)
-                let preview = localStorage.getItem(`sqaaf_file_preview_${num}_${idx}_${pIdx}`);
-                if (!preview && idx === 0) {
-                  preview = localStorage.getItem(`sqaaf_evidence_file_preview_${num}_${pIdx}`);
+                let rawPreview = localStorage.getItem(`sqaaf_file_preview_${num}_${idx}_${pIdx}`);
+                if (!rawPreview && idx === 0) {
+                  rawPreview = localStorage.getItem(`sqaaf_evidence_file_preview_${num}_${pIdx}`);
                 }
-                if (preview && (preview.startsWith("data:image") || preview.startsWith("https://"))) {
+                const preview = sanitizeUrl(rawPreview);
+                if (preview && (preview.startsWith("data:image") || preview.startsWith("https://") || preview.startsWith("http://") || preview.startsWith("/api/") || preview.startsWith("/"))) {
                   localPhotos.push({
                     src: preview,
                     label: parsedOpts[pIdx] || ""
@@ -6157,7 +6205,7 @@ function TeacherSqaafPage() {
               ${isMr ? `मानक क्र. ${toMarathiNumerals(s.num)}` : `Standard No. ${s.num}`}
             </div>
             <div style="font-size: 13px; font-weight: 700; color: #1e293b; line-height: 1.5; margin-bottom: 12px; background: #f8fafc; border-left: 3px solid #64748b; padding: 8px 12px;">
-              ${s.orangeDesc}
+              ${formatOrangeDescWithBoldNum(s.orangeDesc)}
             </div>
 
             <!-- 2. Chosen Option (Level) -->
@@ -6424,56 +6472,56 @@ function TeacherSqaafPage() {
             <!-- Header -->
             <div style="border-bottom: 2.5px solid #fdba74; padding-bottom: 12px; margin-bottom: 18px; text-align: center;">
               <div>
-                <div style="font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: #ea580c; margin-bottom: 4px; text-align: center;">
+                <div style="font-size: 11px; font-weight: 900; text-transform: uppercase; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 1.5px;"} color: #ea580c; margin-bottom: 4px; text-align: center;">
                   ${isMr ? "राज्य शैक्षणिक संशोधन व प्रशिक्षण परिषद, महाराष्ट्र" : "State Council For Educational Research and Training, Maharashtra"}
                 </div>
-                <h1 style="font-size: 20px; font-weight: 900; color: #0f172a; margin: 0 0 3px 0; text-align: center;">
+                <h1 style="font-size: 22px; font-weight: 900; color: #0f172a; margin: 0 0 3px 0; text-align: center;">
                   ${isMr ? "SQAAF शाळा प्रतिसाद अहवाल" : "SQAAF School Responses Report"}
                 </h1>
-                <div style="font-size: 10px; font-weight: 600; color: #475569; text-align: center;">
+                <div style="font-size: 11px; font-weight: 700; color: #475569; text-align: center;">
                   School Quality Assessment & Accreditation Framework
                 </div>
               </div>
             </div>
 
             <!-- School Info -->
-            <div style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 12px 16px; margin-bottom: 16px;">
-              <div style="display: flex; justify-content: center; align-items: center; gap: 40px; text-align: center; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #cbd5e1;">
+            <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; padding: 14px 18px; margin-bottom: 16px;">
+              <div style="display: flex; justify-content: center; align-items: center; gap: 40px; text-align: center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #cbd5e1;">
                 <div style="text-align: center;">
-                  <div style="font-size: 7px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8; margin-bottom: 2px;">${isMr ? "शाळेचे नाव" : "School Name"}</div>
-                  <div style="font-size: 15px; font-weight: 900; color: #0f172a; text-transform: uppercase;">${schoolName}</div>
+                  <div style="font-size: 12px; font-weight: 900; text-transform: uppercase; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 0.5px;"} color: #1e293b; margin-bottom: 3px; white-space: nowrap;">${isMr ? "शाळेचे नाव" : "School Name"}</div>
+                  <div style="font-size: 18px; font-weight: 900; color: #0f172a; text-transform: uppercase; white-space: nowrap;">${schoolName}</div>
                 </div>
                 ${udise ? `<div style="text-align: center;">
-                  <div style="font-size: 7px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8; margin-bottom: 2px;">${isMr ? "युडायस कोड" : "UDISE CODE"}</div>
-                  <div style="background: #f3e8ff; border: 1px solid #d8b4fe; color: #6b21a8; padding: 4px 12px; font-weight: 800; font-size: 11px; border-radius: 4px; display: inline-block;">
+                  <div style="font-size: 12px; font-weight: 900; text-transform: uppercase; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 0.5px;"} color: #1e293b; margin-bottom: 3px; white-space: nowrap;">${isMr ? "युडायस कोड" : "UDISE CODE"}</div>
+                  <div style="background: #f3e8ff; border: 1.5px solid #d8b4fe; color: #6b21a8; padding: 5px 14px; font-weight: 900; font-size: 14px; border-radius: 6px; display: inline-block; white-space: nowrap;">
                     ${udise}
                   </div>
                 </div>` : ""}
               </div>
-              <div style="display: flex; justify-content: space-around; align-items: center; text-align: center; flex-wrap: wrap; font-size: 10px; width: 100%; gap: 15px;">
+              <div style="display: flex; justify-content: space-around; align-items: center; text-align: center; flex-wrap: nowrap; font-size: 12px; width: 100%; gap: 10px;">
                 ${headmaster ? `<div style="text-align: center;">
-                  <span style="font-weight: 800; color: #94a3b8; text-transform: uppercase; font-size: 7px; letter-spacing: 1px;">${isMr ? "मुख्याध्यापक" : "Headmaster"}</span>
-                  <div style="font-weight: 700; color: #334155;">${headmaster}</div>
+                  <div style="font-weight: 900; color: #1e293b; text-transform: uppercase; font-size: 12px; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 0.3px;"} margin-bottom: 3px; white-space: nowrap;">${isMr ? "मुख्याध्यापक" : "Headmaster"}</div>
+                  <div style="font-weight: 900; color: #0f172a; font-size: 13.5px; white-space: nowrap;">${headmaster}</div>
                 </div>` : ""}
                 ${address ? `<div style="text-align: center;">
-                  <span style="font-weight: 800; color: #94a3b8; text-transform: uppercase; font-size: 7px; letter-spacing: 1px;">${isMr ? "पत्ता" : "Address"}</span>
-                  <div style="font-weight: 700; color: #334155;">${address}</div>
+                  <div style="font-weight: 900; color: #1e293b; text-transform: uppercase; font-size: 12px; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 0.3px;"} margin-bottom: 3px; white-space: nowrap;">${isMr ? "पत्ता" : "Address"}</div>
+                  <div style="font-weight: 900; color: #0f172a; font-size: 13.5px; white-space: nowrap;">${address}</div>
                 </div>` : ""}
                 ${centerName ? `<div style="text-align: center;">
-                  <span style="font-weight: 800; color: #94a3b8; text-transform: uppercase; font-size: 7px; letter-spacing: 1px;">${isMr ? "केंद्र" : "Center"}</span>
-                  <div style="font-weight: 700; color: #334155;">${centerName}</div>
+                  <div style="font-weight: 900; color: #1e293b; text-transform: uppercase; font-size: 12px; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 0.3px;"} margin-bottom: 3px; white-space: nowrap;">${isMr ? "केंद्र" : "Center"}</div>
+                  <div style="font-weight: 900; color: #0f172a; font-size: 13.5px; white-space: nowrap;">${centerName}</div>
                 </div>` : ""}
                 ${taluka ? `<div style="text-align: center;">
-                  <span style="font-weight: 800; color: #94a3b8; text-transform: uppercase; font-size: 7px; letter-spacing: 1px;">${isMr ? "तालुका" : "Taluka"}</span>
-                  <div style="font-weight: 700; color: #334155;">${taluka}</div>
+                  <div style="font-weight: 900; color: #1e293b; text-transform: uppercase; font-size: 12px; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 0.3px;"} margin-bottom: 3px; white-space: nowrap;">${isMr ? "तालुका" : "Taluka"}</div>
+                  <div style="font-weight: 900; color: #0f172a; font-size: 13.5px; white-space: nowrap;">${taluka}</div>
                 </div>` : ""}
                 ${district ? `<div style="text-align: center;">
-                  <span style="font-weight: 800; color: #94a3b8; text-transform: uppercase; font-size: 7px; letter-spacing: 1px;">${isMr ? "जिल्हा" : "District"}</span>
-                  <div style="font-weight: 700; color: #334155;">${district}</div>
+                  <div style="font-weight: 900; color: #1e293b; text-transform: uppercase; font-size: 12px; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 0.3px;"} margin-bottom: 3px; white-space: nowrap;">${isMr ? "जिल्हा" : "District"}</div>
+                  <div style="font-weight: 900; color: #0f172a; font-size: 13.5px; white-space: nowrap;">${district}</div>
                 </div>` : ""}
                 <div style="text-align: center;">
-                  <span style="font-weight: 800; color: #94a3b8; text-transform: uppercase; font-size: 7px; letter-spacing: 1px;">${isMr ? "दिनांक" : "Date"}</span>
-                  <div style="font-weight: 700; color: #334155;">${new Date().toLocaleDateString(isMr ? "mr-IN" : "en-IN", { year: "numeric", month: "long", day: "numeric" })}</div>
+                  <div style="font-weight: 900; color: #1e293b; text-transform: uppercase; font-size: 12px; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 0.3px;"} margin-bottom: 3px; white-space: nowrap;">${isMr ? "दिनांक" : "Date"}</div>
+                  <div style="font-weight: 900; color: #0f172a; font-size: 13.5px; white-space: nowrap;">${new Date().toLocaleDateString(isMr ? "mr-IN" : "en-IN", { year: "numeric", month: "long", day: "numeric" })}</div>
                 </div>
               </div>
             </div>
@@ -6481,8 +6529,8 @@ function TeacherSqaafPage() {
             <!-- Summary badge -->
             <div style="display: flex; gap: 10px; margin-bottom: 18px;">
               <div style="flex: 1; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 8px 12px; color: #166534; border-radius: 6px;">
-                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #16a34a;">${isMr ? "प्रतिसाद नोंदवलेले" : "Responded"}</div>
-                <div style="font-size: 20px; font-weight: 900; color: #14532d;">${totalAnswered} <span style="font-size: 11px; opacity: 0.7;">/ 128</span></div>
+                <div style="font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #15803d;">${isMr ? "प्रतिसाद नोंदवलेले" : "Responded"}</div>
+                <div style="font-size: 20px; font-weight: 900; color: #14532d;">${totalAnswered} <span style="font-size: 12px; opacity: 0.8; font-weight: bold;">/ 128</span></div>
               </div>
             </div>
 
@@ -6582,16 +6630,11 @@ function TeacherSqaafPage() {
               </div>
 
               <!-- Footer -->
-              <div style="margin-top: 30px; padding: 12px 20px; border-top: 1.5px solid #e2e8f0; display: flex; justify-content: space-between; align-items: flex-end;">
-                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8;">${isMr ? "हा अहवाल SMART LEARNING द्वारे तयार केला आहे." : "Report generated by SMART LEARNING."}</div>
+              <div style="margin-top: 15px; padding: 6px 12px; page-break-inside: avoid; display: flex; justify-content: flex-end; align-items: flex-end;">
                 <div style="display: flex; gap: 30px;">
                   <div style="text-align: center;">
-                    <div style="width: 120px; border-bottom: 1px solid #94a3b8; margin-bottom: 3px; height: 24px;"></div>
-                    <div style="font-size: 7px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">${isMr ? "मुख्याध्यापकाची सही" : "Headmaster's Signature"}</div>
-                  </div>
-                  <div style="text-align: center;">
-                    <div style="width: 120px; border-bottom: 1px solid #94a3b8; margin-bottom: 3px; height: 24px;"></div>
-                    <div style="font-size: 7px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">${isMr ? "शिक्षकाची सही" : "Teacher's Signature"}</div>
+                    <div style="font-size: 13px; font-weight: 900; color: #0f172a; text-transform: uppercase; margin-bottom: 4px; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 0.5px;"}">${isMr ? "मुख्याध्यापकाची सही" : "Headmaster's Signature"}</div>
+                    <div style="width: 200px; border-bottom: 2px solid #334155; margin-bottom: 25px; height: 0px;"></div>
                   </div>
                 </div>
               </div>
@@ -6792,19 +6835,19 @@ function TeacherSqaafPage() {
 
           return `
             <tr style="">
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-size: 9px;">${dynamicRangeHtml}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-size: 10px; font-weight: bold;">${appCount}</td>
-              <td style="border: 1px solid black; padding: 4px; font-size: 10px;">${dom.nameMr}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL1 ? `${selfL1} × 1 = ${selfL1 * 1}` : ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL1 ? `${extL1} × 1 = ${extL1 * 1}` : ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL2 ? `${selfL2} × 2 = ${selfL2 * 2}` : ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL2 ? `${extL2} × 2 = ${extL2 * 2}` : ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL3 ? `${selfL3} × 3 = ${selfL3 * 3}` : ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL3 ? `${extL3} × 3 = ${extL3 * 3}` : ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfL4 ? `${selfL4} × 4 = ${selfL4 * 4}` : ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${extL4 ? `${extL4} × 4 = ${extL4 * 4}` : ""}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${selfObt}</td>
-              <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
+              <td style="border: 1px solid black; padding: 4px 3px; text-align: center; font-size: 10.5px; font-weight: bold;">${dynamicRangeHtml}</td>
+              <td style="border: 1px solid black; padding: 4px 3px; text-align: center; font-size: 12px; font-weight: 900;">${appCount}</td>
+              <td style="border: 1px solid black; padding: 4px 5px; font-size: 11.5px; font-weight: bold; line-height: 1.3;">${dom.nameMr}</td>
+              <td style="border: 1px solid black; padding: 4px 1px; text-align: center; font-size: 10.5px; font-weight: 900; white-space: nowrap; letter-spacing: -0.3px;">${selfL1 ? `${selfL1} × 1 = ${selfL1 * 1}` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px 1px; text-align: center; font-size: 10.5px; font-weight: 900; white-space: nowrap; letter-spacing: -0.3px;">${extL1 ? `${extL1} × 1 = ${extL1 * 1}` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px 1px; text-align: center; font-size: 10.5px; font-weight: 900; white-space: nowrap; letter-spacing: -0.3px;">${selfL2 ? `${selfL2} × 2 = ${selfL2 * 2}` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px 1px; text-align: center; font-size: 10.5px; font-weight: 900; white-space: nowrap; letter-spacing: -0.3px;">${extL2 ? `${extL2} × 2 = ${extL2 * 2}` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px 1px; text-align: center; font-size: 10.5px; font-weight: 900; white-space: nowrap; letter-spacing: -0.3px;">${selfL3 ? `${selfL3} × 3 = ${selfL3 * 3}` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px 1px; text-align: center; font-size: 10.5px; font-weight: 900; white-space: nowrap; letter-spacing: -0.3px;">${extL3 ? `${extL3} × 3 = ${extL3 * 3}` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px 1px; text-align: center; font-size: 10.5px; font-weight: 900; white-space: nowrap; letter-spacing: -0.3px;">${selfL4 ? `${selfL4} × 4 = ${selfL4 * 4}` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px 1px; text-align: center; font-size: 10.5px; font-weight: 900; white-space: nowrap; letter-spacing: -0.3px;">${extL4 ? `${extL4} × 4 = ${extL4 * 4}` : ""}</td>
+              <td style="border: 1px solid black; padding: 4px 2px; text-align: center; font-size: 12.5px; font-weight: 900; color: #1e1b4b;">${selfObt}</td>
+              <td style="border: 1px solid black; padding: 4px 2px; text-align: center; font-size: 12.5px; font-weight: 900;"></td>
             </tr>
           `;
         }).join("");
@@ -6846,36 +6889,36 @@ function TeacherSqaafPage() {
             <div style="background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 14px; padding: 20px 24px; margin-bottom: 20px;">
               <div style="display: flex; justify-content: center; align-items: center; gap: 50px; text-align: center; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2px solid #e2e8f0;">
                 <div style="text-align: center;">
-                  <div style="font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: #94a3b8; margin-bottom: 3px;">${isMr ? "शाळेचे नाव" : "School Name"}</div>
-                  <div style="font-size: 18px; font-weight: 900; color: #0f172a; text-transform: uppercase;">${schoolName}</div>
+                  <div style="font-size: 12px; font-weight: 900; text-transform: uppercase; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 0.5px;"} color: #1e293b; margin-bottom: 3px; white-space: nowrap;">${isMr ? "शाळेचे नाव" : "School Name"}</div>
+                  <div style="font-size: 20px; font-weight: 900; color: #0f172a; text-transform: uppercase; white-space: nowrap;">${schoolName}</div>
                 </div>
                 ${udise ? `<div style="text-align: center;">
-                  <div style="font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: #94a3b8; margin-bottom: 3px;">${isMr ? "युडायस कोड" : "UDISE Code"}</div>
-                  <div style="background: #f3e8ff; border: 1.5px solid #d8b4fe; color: #6b21a8; padding: 6px 18px; border-radius: 10px; font-weight: 800; font-size: 13px; letter-spacing: 1px; display: inline-block;">
+                  <div style="font-size: 12px; font-weight: 900; text-transform: uppercase; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 0.5px;"} color: #1e293b; margin-bottom: 3px; white-space: nowrap;">${isMr ? "युडायस कोड" : "UDISE Code"}</div>
+                  <div style="background: #f3e8ff; border: 1.5px solid #d8b4fe; color: #6b21a8; padding: 6px 18px; border-radius: 10px; font-weight: 900; font-size: 14px; letter-spacing: 1px; display: inline-block; white-space: nowrap;">
                     ${udise}
                   </div>
                 </div>` : ""}
               </div>
-              <div style="display: flex; justify-content: space-around; align-items: center; text-align: center; flex-wrap: wrap; width: 100%; gap: 20px;">
+              <div style="display: flex; justify-content: space-around; align-items: center; text-align: center; flex-wrap: nowrap; width: 100%; gap: 15px;">
                 ${headmaster ? `<div style="text-align: center;">
-                  <div style="font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8;">${isMr ? "मुख्याध्यापक" : "Headmaster"}</div>
-                  <div style="font-size: 12px; font-weight: 700; color: #334155; text-transform: uppercase;">${headmaster}</div>
+                  <div style="font-size: 12px; font-weight: 900; text-transform: uppercase; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 0.3px;"} color: #1e293b; margin-bottom: 3px; white-space: nowrap;">${isMr ? "मुख्याध्यापक" : "Headmaster"}</div>
+                  <div style="font-size: 13.5px; font-weight: 900; color: #0f172a; text-transform: uppercase; white-space: nowrap;">${headmaster}</div>
                 </div>` : ""}
                 ${address ? `<div style="text-align: center;">
-                  <div style="font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8;">${isMr ? "पत्ता" : "Address"}</div>
-                  <div style="font-size: 12px; font-weight: 700; color: #334155; text-transform: uppercase;">${address}</div>
+                  <div style="font-size: 12px; font-weight: 900; text-transform: uppercase; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 0.3px;"} color: #1e293b; margin-bottom: 3px; white-space: nowrap;">${isMr ? "पत्ता" : "Address"}</div>
+                  <div style="font-size: 13.5px; font-weight: 900; color: #0f172a; text-transform: uppercase; white-space: nowrap;">${address}</div>
                 </div>` : ""}
                 ${centerName ? `<div style="text-align: center;">
-                  <div style="font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8;">${isMr ? "केंद्र" : "Center"}</div>
-                  <div style="font-size: 12px; font-weight: 700; color: #334155; text-transform: uppercase;">${centerName}</div>
+                  <div style="font-size: 12px; font-weight: 900; text-transform: uppercase; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 0.3px;"} color: #1e293b; margin-bottom: 3px; white-space: nowrap;">${isMr ? "केंद्र" : "Center"}</div>
+                  <div style="font-size: 13.5px; font-weight: 900; color: #0f172a; text-transform: uppercase; white-space: nowrap;">${centerName}</div>
                 </div>` : ""}
                 ${taluka ? `<div style="text-align: center;">
-                  <div style="font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8;">${isMr ? "तालुका" : "Taluka"}</div>
-                  <div style="font-size: 12px; font-weight: 700; color: #334155; text-transform: uppercase;">${taluka}</div>
+                  <div style="font-size: 12px; font-weight: 900; text-transform: uppercase; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 0.3px;"} color: #1e293b; margin-bottom: 3px; white-space: nowrap;">${isMr ? "तालुका" : "Taluka"}</div>
+                  <div style="font-size: 13.5px; font-weight: 900; color: #0f172a; text-transform: uppercase; white-space: nowrap;">${taluka}</div>
                 </div>` : ""}
                 ${district ? `<div style="text-align: center;">
-                  <div style="font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8;">${isMr ? "जिल्हा" : "District"}</div>
-                  <div style="font-size: 12px; font-weight: 700; color: #334155; text-transform: uppercase;">${district}</div>
+                  <div style="font-size: 12px; font-weight: 900; text-transform: uppercase; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 0.3px;"} color: #1e293b; margin-bottom: 3px; white-space: nowrap;">${isMr ? "जिल्हा" : "District"}</div>
+                  <div style="font-size: 13.5px; font-weight: 900; color: #0f172a; text-transform: uppercase; white-space: nowrap;">${district}</div>
                 </div>` : ""}
               </div>
             </div>
@@ -6883,28 +6926,28 @@ function TeacherSqaafPage() {
             <!-- Summary Stats -->
             <div style="display: flex; gap: 8px; margin-bottom: 20px;">
               <div style="flex: 1; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 10px 12px; color: #1e40af;">
-                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #2563eb;">${isMr ? "एकूण मानके" : "Total Standards"}</div>
+                <div style="font-size: 10px; font-weight: 900; text-transform: uppercase; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 1px;"} color: #1d4ed8;">${isMr ? "एकूण मानके" : "Total Standards"}</div>
                 <div style="font-size: 20px; font-weight: 900; margin-top: 4px; color: #1e3a8a;">${totalStds}</div>
               </div>
               <div style="flex: 1; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 10px 12px; color: #166534;">
-                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #16a34a;">${isMr ? "प्रतिसाद नोंदवलेले" : "Responded"}</div>
+                <div style="font-size: 10px; font-weight: 900; text-transform: uppercase; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 1px;"} color: #15803d;">${isMr ? "प्रतिसाद नोंदवलेले" : "Responded"}</div>
                 <div style="font-size: 20px; font-weight: 900; margin-top: 4px; color: #14532d;">${completedCount_}</div>
               </div>
               <div style="flex: 1; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px; padding: 10px 12px; color: #c2410c;">
-                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #ea580c;">${isMr ? "प्रतिसाद बाकी" : "Pending"}</div>
+                <div style="font-size: 10px; font-weight: 900; text-transform: uppercase; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 1px;"} color: #c2410c;">${isMr ? "प्रतिसाद बाकी" : "Pending"}</div>
                 <div style="font-size: 20px; font-weight: 900; margin-top: 4px; color: #7c2d12;">${totalStds - completedCount_}</div>
               </div>
               <div style="flex: 1; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 10px; padding: 10px 12px; color: #0369a1;">
-                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #0284c7;">${isMr ? "लागू असलेले मानक" : "Applicable"}</div>
+                <div style="font-size: 10px; font-weight: 900; text-transform: uppercase; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 1px;"} color: #0369a1;">${isMr ? "लागू असलेले मानक" : "Applicable"}</div>
                 <div style="font-size: 20px; font-weight: 900; margin-top: 4px; color: #0c4a6e;">${applicableCount_}</div>
               </div>
               <div style="flex: 1; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 10px 12px; color: #475569;">
-                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #64748b;">${isMr ? "लागू नसलेले मानक" : "Not Applicable"}</div>
+                <div style="font-size: 10px; font-weight: 900; text-transform: uppercase; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 1px;"} color: #334155;">${isMr ? "लागू नसलेले मानक" : "Not Applicable"}</div>
                 <div style="font-size: 20px; font-weight: 900; margin-top: 4px; color: #1e293b;">${notApplicableCount_}</div>
               </div>
               <div style="flex: 1; background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 10px; padding: 10px 12px; color: #6b21a8;">
-                <div style="font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #7c3aed;">${isMr ? "गुण" : "Marks"}</div>
-                <div style="font-size: 20px; font-weight: 900; margin-top: 4px; color: #581c87;">${obtainedMarks_}<span style="font-size: 11px; opacity: 0.7;"> / ${totalPossibleMarks}</span></div>
+                <div style="font-size: 10px; font-weight: 900; text-transform: uppercase; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 1px;"} color: #6d28d9;">${isMr ? "गुण" : "Marks"}</div>
+                <div style="font-size: 20px; font-weight: 900; margin-top: 4px; color: #581c87;">${obtainedMarks_}<span style="font-size: 12px; opacity: 0.8; font-weight: bold;"> / ${totalPossibleMarks}</span></div>
               </div>
             </div>
 
@@ -6931,121 +6974,114 @@ function TeacherSqaafPage() {
             <div class="html2pdf__page-break" style="margin-top: 30px; padding-top: 10px;">
               <table style="width: 100%; table-layout: fixed; border-collapse: collapse; border: 1px solid black; font-size: 10px; font-family: 'Noto Sans Devanagari', Arial, sans-serif;">
                 <colgroup>
-                  <col style="width: 60px;">
-                  <col style="width: 40px;">
+                  <col style="width: 55px;">
+                  <col style="width: 45px;">
                   <col style="width: 170px;">
-                  <col style="width: 32px;">
-                  <col style="width: 32px;">
-                  <col style="width: 32px;">
-                  <col style="width: 32px;">
-                  <col style="width: 32px;">
-                  <col style="width: 32px;">
-                  <col style="width: 32px;">
-                  <col style="width: 32px;">
-                  <col style="width: 32px;">
-                  <col style="width: 32px;">
+                  <col style="width: 48px;">
+                  <col style="width: 48px;">
+                  <col style="width: 48px;">
+                  <col style="width: 48px;">
+                  <col style="width: 48px;">
+                  <col style="width: 48px;">
+                  <col style="width: 48px;">
+                  <col style="width: 48px;">
+                  <col style="width: 45px;">
+                  <col style="width: 45px;">
                 </colgroup>
                 <thead>
                   <tr>
-                    <th colspan="13" style="border: 1px solid black; padding: 6px; text-align: center; font-size: 11px; font-weight: bold;">
-                      SQAAF - क्षेत्र,उपक्षेत्र,आणि मानके / बेंच मार्किंग व बाह्यमूल्यांकन स्टेटमेंट ( गट - पायाभूत (अंगणवाडी ते १ली २री / पूर्वतयारी ३री ते ५ वी / पूर्व माध्यमिक ६ वी ते ८ वी )
+                    <th colspan="13" style="border: 1px solid black; padding: 8px 6px; text-align: center; font-size: 14px; font-weight: 900; background-color: #f8fafc;">
+                      SQAAF - क्षेत्र,उपक्षेत्र,आणि मानके / लहान गट - पायाभूत (अंगणवाडी ते १ली २री / पूर्वतयारी ३री ते ५ वी / पूर्व माध्यमिक ६ वी ते ८ वी )
                     </th>
                   </tr>
                   <tr>
-                    <th colspan="13" style="border: 1px solid black; padding: 6px; text-align: center; font-size: 11px; font-weight: normal;">
-                      ${schoolName ? `<span style="font-weight: bold;">शाळेचे नाव -</span> ${schoolName} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;` : ""}
-                      ${udise ? `<span style="font-weight: bold;">यू-डायस -</span> ${udise} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;` : ""}
-                      ${headmaster ? `<span style="font-weight: bold;">मुख्याध्यापक -</span> ${headmaster} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;` : ""}
-                      ${address ? `<span style="font-weight: bold;">पत्ता -</span> ${address} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;` : ""}
-                      ${centerName ? `<span style="font-weight: bold;">केंद्र -</span> ${centerName} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;` : ""}
-                      ${taluka ? `<span style="font-weight: bold;">ता.</span> ${taluka} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;` : ""}
-                      ${district ? `<span style="font-weight: bold;">जि.</span> ${district} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;` : ""}
-                      <span style="font-weight: bold;">सन -</span> २०२४ - २५
+                    <th colspan="13" style="border: 1px solid black; padding: 8px 6px; text-align: center; font-size: 12.5px; font-weight: bold; background-color: #f8fafc; line-height: 1.5;">
+                      ${schoolName ? `<span style="font-weight: 900;">शाळेचे नाव -</span> ${schoolName} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;` : ""}
+                      ${udise ? `<span style="font-weight: 900;">यू-डायस -</span> ${udise} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;` : ""}
+                      ${headmaster ? `<span style="font-weight: 900;">मुख्याध्यापक -</span> ${headmaster} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;` : ""}
+                      ${address ? `<span style="font-weight: 900;">पत्ता -</span> ${address} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;` : ""}
+                      ${centerName ? `<span style="font-weight: 900;">केंद्र -</span> ${centerName} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;` : ""}
+                      ${taluka ? `<span style="font-weight: 900;">ता.</span> ${taluka} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;` : ""}
+                      ${district ? `<span style="font-weight: 900;">जि.</span> ${district} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;` : ""}
+                      <span style="font-weight: 900;">सन -</span> २०२४ - २५
                     </th>
                   </tr>
                   <tr>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px; text-align: center; width: 60px;">मानक क्र.</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px; text-align: center; width: 40px;">लागू<br/>मानक<br/>संख्या</th>
-                    <th rowspan="2" style="border: 1px solid black; padding: 4px; text-align: center; width: 170px;">क्षेत्र</th>
-                    <th colspan="2" style="border: 1px solid black; padding: 4px; text-align: center;">स्तर १</th>
-                    <th colspan="2" style="border: 1px solid black; padding: 4px; text-align: center;">स्तर २</th>
-                    <th colspan="2" style="border: 1px solid black; padding: 4px; text-align: center;">स्तर ३</th>
-                    <th colspan="2" style="border: 1px solid black; padding: 4px; text-align: center;">स्तर ४</th>
-                    <th colspan="2" style="border: 1px solid black; padding: 4px; text-align: center;">एकूण</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 6px 4px; text-align: center; width: 55px; font-size: 12.5px; font-weight: 900;">मानक क्र.</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 6px 4px; text-align: center; width: 45px; font-size: 12px; font-weight: 900;">लागू<br/>मानक<br/>संख्या</th>
+                    <th rowspan="2" style="border: 1px solid black; padding: 6px 4px; text-align: center; width: 170px; font-size: 13px; font-weight: 900;">क्षेत्र</th>
+                    <th colspan="2" style="border: 1px solid black; padding: 6px 4px; text-align: center; font-size: 12.5px; font-weight: 900;">स्तर १</th>
+                    <th colspan="2" style="border: 1px solid black; padding: 6px 4px; text-align: center; font-size: 12.5px; font-weight: 900;">स्तर २</th>
+                    <th colspan="2" style="border: 1px solid black; padding: 6px 4px; text-align: center; font-size: 12.5px; font-weight: 900;">स्तर ३</th>
+                    <th colspan="2" style="border: 1px solid black; padding: 6px 4px; text-align: center; font-size: 12.5px; font-weight: 900;">स्तर ४</th>
+                    <th colspan="2" style="border: 1px solid black; padding: 6px 4px; text-align: center; font-size: 12.5px; font-weight: 900;">एकूण</th>
                   </tr>
                   <tr>
-                    <th style="border: 1px solid black; padding: 2px; text-align: center; width: 32px; font-size: 9px; line-height: 1.2;">स्वय<br/>मूल्यां<br/>कन</th>
-                    <th style="border: 1px solid black; padding: 2px; text-align: center; width: 32px; font-size: 9px; line-height: 1.2;">बाह्य<br/>मूल्यां<br/>कन</th>
-                    <th style="border: 1px solid black; padding: 2px; text-align: center; width: 32px; font-size: 9px; line-height: 1.2;">स्वय<br/>मूल्यां<br/>कन</th>
-                    <th style="border: 1px solid black; padding: 2px; text-align: center; width: 32px; font-size: 9px; line-height: 1.2;">बाह्य<br/>मूल्यां<br/>कन</th>
-                    <th style="border: 1px solid black; padding: 2px; text-align: center; width: 32px; font-size: 9px; line-height: 1.2;">स्वय<br/>मूल्यां<br/>कन</th>
-                    <th style="border: 1px solid black; padding: 2px; text-align: center; width: 32px; font-size: 9px; line-height: 1.2;">बाह्य<br/>मूल्यां<br/>कन</th>
-                    <th style="border: 1px solid black; padding: 2px; text-align: center; width: 32px; font-size: 9px; line-height: 1.2;">स्वय<br/>मूल्यां<br/>कन</th>
-                    <th style="border: 1px solid black; padding: 2px; text-align: center; width: 32px; font-size: 9px; line-height: 1.2;">बाह्य<br/>मूल्यां<br/>कन</th>
-                    <th style="border: 1px solid black; padding: 2px; text-align: center; width: 32px; font-size: 9px; line-height: 1.2;">स्वय<br/>मूल्यां<br/>कन</th>
-                    <th style="border: 1px solid black; padding: 2px; text-align: center; width: 32px; font-size: 9px; line-height: 1.2;">बाह्य<br/>मूल्यां<br/>कन</th>
+                    <th style="border: 1px solid black; padding: 4px 1px; text-align: center; font-size: 10px; font-weight: bold; line-height: 1.1;">स्वयं<br/>मूल्यांकन</th>
+                    <th style="border: 1px solid black; padding: 4px 1px; text-align: center; font-size: 10px; font-weight: bold; line-height: 1.1;">बाह्य<br/>मूल्यांकन</th>
+                    <th style="border: 1px solid black; padding: 4px 1px; text-align: center; font-size: 10px; font-weight: bold; line-height: 1.1;">स्वयं<br/>मूल्यांकन</th>
+                    <th style="border: 1px solid black; padding: 4px 1px; text-align: center; font-size: 10px; font-weight: bold; line-height: 1.1;">बाह्य<br/>मूल्यांकन</th>
+                    <th style="border: 1px solid black; padding: 4px 1px; text-align: center; font-size: 10px; font-weight: bold; line-height: 1.1;">स्वयं<br/>मूल्यांकन</th>
+                    <th style="border: 1px solid black; padding: 4px 1px; text-align: center; font-size: 10px; font-weight: bold; line-height: 1.1;">बाह्य<br/>मूल्यांकन</th>
+                    <th style="border: 1px solid black; padding: 4px 1px; text-align: center; font-size: 10px; font-weight: bold; line-height: 1.1;">स्वयं<br/>मूल्यांकन</th>
+                    <th style="border: 1px solid black; padding: 4px 1px; text-align: center; font-size: 10px; font-weight: bold; line-height: 1.1;">बाह्य<br/>मूल्यांकन</th>
+                    <th style="border: 1px solid black; padding: 4px 1px; text-align: center; font-size: 10px; font-weight: bold; line-height: 1.1;">स्वयं<br/>मूल्यांकन</th>
+                    <th style="border: 1px solid black; padding: 4px 1px; text-align: center; font-size: 10px; font-weight: bold; line-height: 1.1;">बाह्य<br/>मूल्यांकन</th>
                   </tr>
                 </thead>
                 <tbody>
                   ${domainRowsLegacyHtml}
                   <tr>
-                    <td colspan="1" style="border: 1px solid black; padding: 4px;"></td>
-                    <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${totalApplicable}</td>
-                    <td style="border: 1px solid black; padding: 4px; text-align: right; font-weight: bold;">एकूण</td>
-                    <td colspan="8" style="border: 1px solid black; padding: 4px;"></td>
-                    <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${obtainedMarks_}</td>
-                    <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
+                    <td colspan="1" style="border: 1px solid black; padding: 5px;"></td>
+                    <td style="border: 1px solid black; padding: 5px; text-align: center; font-weight: 900; font-size: 13px;">${totalApplicable}</td>
+                    <td style="border: 1px solid black; padding: 5px 8px; text-align: right; font-weight: 900; font-size: 13px;">एकूण</td>
+                    <td colspan="8" style="border: 1px solid black; padding: 5px;"></td>
+                    <td style="border: 1px solid black; padding: 5px; text-align: center; font-weight: 900; font-size: 13.5px; color: #1e1b4b;">${obtainedMarks_}</td>
+                    <td style="border: 1px solid black; padding: 5px; text-align: center; font-weight: 900; font-size: 13.5px;"></td>
                   </tr>
                   <tr>
-                    <td colspan="2" style="border: 1px solid black; padding: 4px;"></td>
-                    <td style="border: 1px solid black; padding: 4px; text-align: right; font-weight: bold;">एकूण पैकी</td>
-                    <td colspan="8" style="border: 1px solid black; padding: 4px;"></td>
-                    <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${totalPossibleMarks}</td>
-                    <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
+                    <td colspan="2" style="border: 1px solid black; padding: 5px;"></td>
+                    <td style="border: 1px solid black; padding: 5px 8px; text-align: right; font-weight: 900; font-size: 13px;">एकूण पैकी</td>
+                    <td colspan="8" style="border: 1px solid black; padding: 5px;"></td>
+                    <td style="border: 1px solid black; padding: 5px; text-align: center; font-weight: 900; font-size: 13.5px; color: #1e1b4b;">${totalPossibleMarks}</td>
+                    <td style="border: 1px solid black; padding: 5px; text-align: center; font-weight: 900; font-size: 13.5px;"></td>
                   </tr>
                   <tr>
-                    <td colspan="2" style="border: 1px solid black; padding: 4px;"></td>
-                    <td style="border: 1px solid black; padding: 4px; text-align: right; font-weight: bold;">टक्केवारी</td>
-                    <td colspan="8" style="border: 1px solid black; padding: 4px;"></td>
-                    <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${overallSelfPct}%</td>
-                    <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
+                    <td colspan="2" style="border: 1px solid black; padding: 5px;"></td>
+                    <td style="border: 1px solid black; padding: 5px 8px; text-align: right; font-weight: 900; font-size: 13px;">टक्केवारी</td>
+                    <td colspan="8" style="border: 1px solid black; padding: 5px;"></td>
+                    <td style="border: 1px solid black; padding: 5px; text-align: center; font-weight: 900; font-size: 13.5px; color: #1e1b4b;">${overallSelfPct}%</td>
+                    <td style="border: 1px solid black; padding: 5px; text-align: center; font-weight: 900; font-size: 13.5px;"></td>
                   </tr>
                   <tr>
-                    <td colspan="2" style="border: 1px solid black; padding: 4px;"></td>
-                    <td style="border: 1px solid black; padding: 4px; text-align: right; font-weight: bold;">श्रेणी</td>
-                    <td colspan="8" style="border: 1px solid black; padding: 4px;"></td>
-                    <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;">${getGrade(overallSelfPct)}</td>
-                    <td style="border: 1px solid black; padding: 4px; text-align: center; font-weight: bold;"></td>
+                    <td colspan="2" style="border: 1px solid black; padding: 5px;"></td>
+                    <td style="border: 1px solid black; padding: 5px 8px; text-align: right; font-weight: 900; font-size: 13px;">श्रेणी</td>
+                    <td colspan="8" style="border: 1px solid black; padding: 5px;"></td>
+                    <td style="border: 1px solid black; padding: 5px; text-align: center; font-weight: 900; font-size: 15px; color: #16a34a;">${getGrade(overallSelfPct)}</td>
+                    <td style="border: 1px solid black; padding: 5px; text-align: center; font-weight: 900; font-size: 13.5px;"></td>
                   </tr>
                 </tbody>
               </table>
               
-              <div style="margin-top: 15px; font-size: 11px; font-weight: bold; font-family: 'Noto Sans Devanagari', Arial, sans-serif;">
+              <div style="margin-top: 18px; font-size: 12.5px; font-weight: bold; font-family: 'Segoe UI', 'Noto Sans Devanagari', Arial, sans-serif;">
                 <div style="margin-bottom: 8px;">(गुणांकन : स्तर १ - १ गुण, स्तर २ - २ गुण, स्तर ३ - ३ गुण, स्तर ४ - ४ गुण)</div>
-                <div style="margin-bottom: 4px;">श्रेणी तक्ता :</div>
-                <table style="font-size: 11px; font-weight: bold; border-collapse: collapse;">
-                  <tr><td style="padding: 2px 15px 2px 0;">A+</td><td style="padding: 2px 0;">= ९१ ते १००</td></tr>
-                  <tr><td style="padding: 2px 15px 2px 0;">A</td><td style="padding: 2px 0;">= ८१ ते ९०</td></tr>
-                  <tr><td style="padding: 2px 15px 2px 0;">B+</td><td style="padding: 2px 0;">= ७१ ते ८०</td></tr>
-                  <tr><td style="padding: 2px 15px 2px 0;">B</td><td style="padding: 2px 0;">= ६१ ते ७०</td></tr>
-                  <tr><td style="padding: 2px 15px 2px 0;">C+</td><td style="padding: 2px 0;">= ५१ ते ६०</td></tr>
-                  <tr><td style="padding: 2px 15px 2px 0;">C</td><td style="padding: 2px 0;">= ५० पेक्षा कमी</td></tr>
+                <div style="margin-bottom: 4px; font-weight: 900;">श्रेणी तक्ता :</div>
+                <table style="font-size: 12px; font-weight: bold; border-collapse: collapse;">
+                  <tr><td style="padding: 3px 18px 3px 0; font-weight: 900; color: #15803d;">A+</td><td style="padding: 3px 0;">= ९१ ते १००</td></tr>
+                  <tr><td style="padding: 3px 18px 3px 0; font-weight: 900; color: #16a34a;">A</td><td style="padding: 3px 0;">= ८१ ते ९०</td></tr>
+                  <tr><td style="padding: 3px 18px 3px 0; font-weight: 900; color: #ca8a04;">B+</td><td style="padding: 3px 0;">= ७१ ते ८०</td></tr>
+                  <tr><td style="padding: 3px 18px 3px 0; font-weight: 900; color: #f97316;">B</td><td style="padding: 3px 0;">= ६१ ते ७०</td></tr>
+                  <tr><td style="padding: 3px 18px 3px 0; font-weight: 900; color: #ea580c;">C+</td><td style="padding: 3px 0;">= ५१ ते ६०</td></tr>
+                  <tr><td style="padding: 3px 18px 3px 0; font-weight: 900; color: #dc2626;">C</td><td style="padding: 3px 0;">= ५० पेक्षा कमी</td></tr>
                 </table>
               </div>
 
               <!-- Footer -->
-              <div style="margin-top: 40px; padding: 16px 24px; border-top: 2px solid #e2e8f0; display: flex; justify-content: space-between; align-items: flex-end;">
-                <div>
-                  <div style="font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; color: #94a3b8;">${isMr ? "हा अहवाल SMART LEARNING द्वारे तयार केला आहे." : "Report generated by SMART LEARNING."}</div>
-                </div>
+              <div style="margin-top: 30px; padding: 12px 24px; border-top: 2px solid #e2e8f0; display: flex; justify-content: flex-end; align-items: flex-end;">
                 <div style="display: flex; gap: 40px;">
                   <div style="text-align: center;">
-                    <div style="width: 140px; border-bottom: 1px solid #94a3b8; margin-bottom: 4px; height: 30px;"></div>
-                    <div style="font-size: 8px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">${isMr ? "मुख्याध्यापकाची सही" : "Headmaster's Signature"}</div>
-                  </div>
-                  <div style="text-align: center;">
-                    <div style="width: 140px; border-bottom: 1px solid #94a3b8; margin-bottom: 4px; height: 30px;"></div>
-                    <div style="font-size: 8px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">${isMr ? "शिक्षकाची सही" : "Teacher's Signature"}</div>
+                    <div style="font-size: 13px; font-weight: 900; color: #0f172a; text-transform: uppercase; margin-bottom: 4px; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 1px;"}">${isMr ? "मुख्याध्यापकाची सही" : "Headmaster's Signature"}</div>
+                    <div style="width: 200px; border-bottom: 2px solid #334155; margin-bottom: 25px; height: 0px;"></div>
                   </div>
                 </div>
               </div>
@@ -7118,7 +7154,7 @@ function TeacherSqaafPage() {
           renderContainer.innerHTML = "";
           const page = document.createElement("div");
           page.style.width = "100%";
-          page.style.padding = "40px"; // 40px margin
+          page.style.padding = "20px 24px"; // Compact margin to keep everything on 1 page
           page.style.boxSizing = "border-box";
           page.style.backgroundColor = "white";
           renderContainer.appendChild(page);
@@ -7208,8 +7244,14 @@ function TeacherSqaafPage() {
           const imgData = canvas.toDataURL("image/jpeg", 0.95);
           if (pageCount > 0) doc.addPage();
           const pdfWidth = 297;
-          const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-          doc.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight, undefined, "FAST");
+          let pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+          if (pdfHeight > 200) {
+            const fitWidth = (pdfWidth * 200) / pdfHeight;
+            const leftOffset = (pdfWidth - fitWidth) / 2;
+            doc.addImage(imgData, "JPEG", leftOffset, 2, fitWidth, 200, undefined, "FAST");
+          } else {
+            doc.addImage(imgData, "JPEG", 0, 2, pdfWidth, pdfHeight, undefined, "FAST");
+          }
           pageCount++;
         };
 
@@ -7298,32 +7340,43 @@ function TeacherSqaafPage() {
 
         if (summaryTable) {
           let spacing = document.createElement("div");
-          spacing.style.height = "40px";
+          spacing.style.height = "12px";
           currentPage.appendChild(spacing);
 
           summaryTable.style.width = "100%";
           summaryTable.style.borderCollapse = "collapse";
           summaryTable.style.fontFamily = "sans-serif";
-          summaryTable.style.fontSize = "14px";
+          summaryTable.style.fontSize = "12px";
 
           const sCells = summaryTable.querySelectorAll("td, th");
           sCells.forEach(td => {
-            (td as HTMLElement).style.padding = "12px";
+            (td as HTMLElement).style.padding = "6px 8px";
             (td as HTMLElement).style.border = "1px solid #94a3b8";
             (td as HTMLElement).style.color = "#0f172a";
           });
 
           const clonedSummary = summaryTable.cloneNode(true) as HTMLElement;
           currentPage.appendChild(clonedSummary);
-
-          if (renderContainer.offsetHeight > A4_HEIGHT_PX) {
-            currentPage.removeChild(clonedSummary);
-            currentPage.removeChild(spacing);
-            await saveCurrentPageToPdf();
-            currentPage = createNewPageContainer();
-            currentPage.appendChild(clonedSummary);
-          }
         }
+
+        // Add Headmaster Signature option strictly on the table page in PDF, with margin safety
+        const sigDiv = document.createElement("div");
+        sigDiv.style.marginTop = "8px";
+        sigDiv.style.paddingTop = "2px";
+        sigDiv.style.paddingBottom = "10px";
+        sigDiv.style.display = "flex";
+        sigDiv.style.justifyContent = "flex-end";
+        sigDiv.style.alignItems = "flex-end";
+        sigDiv.style.width = "100%";
+        sigDiv.innerHTML = `
+          <div style="text-align: center; display: inline-block;">
+            <div style="font-size: 13px; font-weight: 900; color: #0f172a; text-transform: uppercase; margin-bottom: 4px; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 0.5px;"}">
+              ${isMr ? "मुख्याध्यापकाची सही" : "Headmaster's Signature"}
+            </div>
+            <div style="width: 190px; border-bottom: 2px solid #0f172a; margin-bottom: 25px; height: 0px;"></div>
+          </div>
+        `;
+        currentPage.appendChild(sigDiv);
 
         await saveCurrentPageToPdf();
         document.body.removeChild(renderContainer);
@@ -7430,16 +7483,16 @@ function TeacherSqaafPage() {
 
             summaryRowsHtml += `
                 <tr style="text-align: center;">
-                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px;">${idx + 1}</td>
-                  <td style="border: 1px solid #cbd5e1; padding: 4px 5px; text-align: left; font-size: 9px; line-height: 1.3; word-wrap: break-word; overflow-wrap: break-word; word-break: normal;">${dom.nameMr}</td>
-                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; white-space: nowrap;">${dom.start} ते ${dom.end}</td>
-                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; word-wrap: break-word; overflow-wrap: break-word;">${naText}</td>
-                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; color: #1e1b4b;">${appCount}</td>
-                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; background-color: #fef2f2; color: #991b1b;">${selfL1 ? `${selfL1} × 1 = ${selfL1 * 1}` : "-"}</td>
-                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; background-color: #fff7ed; color: #c2410c;">${selfL2 ? `${selfL2} × 2 = ${selfL2 * 2}` : "-"}</td>
-                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; background-color: #fffbeb; color: #b45309;">${selfL3 ? `${selfL3} × 3 = ${selfL3 * 3}` : "-"}</td>
-                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; background-color: #f0fdf4; color: #166534;">${selfL4 ? `${selfL4} × 4 = ${selfL4 * 4}` : "-"}</td>
-                  <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 9px; font-weight: bold; color: #1e1b4b;">${selfObt}</td>
+                  <td style="border: 1px solid #cbd5e1; padding: 5px 3px; font-size: 11px; font-weight: bold;">${idx + 1}</td>
+                  <td style="border: 1px solid #cbd5e1; padding: 5px 6px; text-align: left; font-size: 11.5px; font-weight: bold; line-height: 1.3; word-wrap: break-word; overflow-wrap: break-word;">${dom.nameMr}</td>
+                  <td style="border: 1px solid #cbd5e1; padding: 5px 3px; font-size: 11px; font-weight: bold; white-space: nowrap;">${dom.start} ते ${dom.end}</td>
+                  <td style="border: 1px solid #cbd5e1; padding: 5px 3px; font-size: 11px; word-wrap: break-word; overflow-wrap: break-word;">${naText}</td>
+                  <td style="border: 1px solid #cbd5e1; padding: 5px 3px; font-size: 12px; font-weight: 900; color: #1e1b4b;">${appCount}</td>
+                  <td style="border: 1px solid #cbd5e1; padding: 5px 3px; font-size: 11.5px; font-weight: 900; background-color: #fef2f2; color: #991b1b;">${selfL1 ? `${selfL1} × 1 = ${selfL1 * 1}` : "-"}</td>
+                  <td style="border: 1px solid #cbd5e1; padding: 5px 3px; font-size: 11.5px; font-weight: 900; background-color: #fff7ed; color: #c2410c;">${selfL2 ? `${selfL2} × 2 = ${selfL2 * 2}` : "-"}</td>
+                  <td style="border: 1px solid #cbd5e1; padding: 5px 3px; font-size: 11.5px; font-weight: 900; background-color: #fffbeb; color: #b45309;">${selfL3 ? `${selfL3} × 3 = ${selfL3 * 3}` : "-"}</td>
+                  <td style="border: 1px solid #cbd5e1; padding: 5px 3px; font-size: 11.5px; font-weight: 900; background-color: #f0fdf4; color: #166534;">${selfL4 ? `${selfL4} × 4 = ${selfL4 * 4}` : "-"}</td>
+                  <td style="border: 1px solid #cbd5e1; padding: 5px 3px; font-size: 12.5px; font-weight: 900; color: #1e1b4b;">${selfObt}</td>
                 </tr>
             `;
           });
@@ -7456,16 +7509,16 @@ function TeacherSqaafPage() {
           const overallSelfPct = totalPossibleMarks > 0 ? Math.round((obtainedMarks_ / totalPossibleMarks) * 100) : 0;
 
           finalHtml = `
-            <div style="font-family: Arial, sans-serif; font-size: 10px; padding: 10px 15px; background: white; width: 100%; box-sizing: border-box;">
+            <div style="font-family: 'Segoe UI', 'Noto Sans Devanagari', Arial, sans-serif; font-size: 12px; padding: 12px 18px; background: white; width: 100%; box-sizing: border-box;">
               <!-- Premium Header Bar matching View -->
-              <div style="background-color: #fff7ed; padding: 8px 15px; margin-bottom: 12px; text-align: center; border: 1px solid #fed7aa; border-radius: 6px;">
-                <h2 style="font-size: 15px; font-weight: 900; margin: 0; color: #0f172a; letter-spacing: -0.3px;">SQAAF एकत्रित गुणनोंद तक्ता</h2>
-                <div style="font-size: 9px; color: #1e293b; font-weight: 800; margin-top: 1px; opacity: 0.85;">गट: पायाभूत (अंगणवाडी ते १ली २री / पूर्वतयारी ३री ते ५ वी / पूर्व माध्यमिक ६वी ते ८वी )</div>
+              <div style="background-color: #fff7ed; padding: 10px 18px; margin-bottom: 14px; text-align: center; border: 1.5px solid #fed7aa; border-radius: 8px;">
+                <h2 style="font-size: 18px; font-weight: 900; margin: 0; color: #0f172a; letter-spacing: -0.3px;">SQAAF एकत्रित गुणनोंद तक्ता</h2>
+                <div style="font-size: 11.5px; color: #1e293b; font-weight: 800; margin-top: 2px;">गट: पायाभूत (अंगणवाडी ते १ली २री / पूर्वतयारी ३री ते ५ वी / पूर्व माध्यमिक ६वी ते ८वी )</div>
               </div>
 
-              <div style="margin-bottom: 12px;">
-                <h3 style="font-size: 11px; font-weight: bold; margin: 0 0 5px 0; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 3px;">शाळेची माहिती</h3>
-                <table style="width: 100%; border-collapse: collapse; font-size: 10px; text-align: left; table-layout: fixed;">
+              <div style="margin-bottom: 14px;">
+                <h3 style="font-size: 13px; font-weight: 900; margin: 0 0 6px 0; color: #0f172a; border-bottom: 2px solid #cbd5e1; padding-bottom: 4px;">शाळेची माहिती</h3>
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left; table-layout: fixed;">
                   ${(() => {
                     const infoFields = [
                       { label: "शाळेचे नाव", val: schoolName },
@@ -7482,12 +7535,12 @@ function TeacherSqaafPage() {
                       const f1 = infoFields[i];
                       const f2 = infoFields[i+1];
                       rowsHtml += `<tr>
-                        <td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: bold; width: 15%; background-color: #f8fafc; word-wrap: break-word;">${f1.label}</td>
-                        <td style="border: 1px solid #cbd5e1; padding: 4px; width: 35%; word-wrap: break-word;">${f1.val}</td>
+                        <td style="border: 1px solid #cbd5e1; padding: 5px 8px; font-weight: 900; width: 15%; background-color: #f8fafc; word-wrap: break-word;">${f1.label}</td>
+                        <td style="border: 1px solid #cbd5e1; padding: 5px 8px; width: 35%; font-weight: bold; word-wrap: break-word;">${f1.val}</td>
                         ${f2 ? `
-                        <td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: bold; width: 15%; background-color: #f8fafc; word-wrap: break-word;">${f2.label}</td>
-                        <td style="border: 1px solid #cbd5e1; padding: 4px; width: 35%; word-wrap: break-word;">${f2.val}</td>
-                        ` : `<td style="border: 1px solid #cbd5e1; padding: 4px;" colspan="2"></td>`}
+                        <td style="border: 1px solid #cbd5e1; padding: 5px 8px; font-weight: 900; width: 15%; background-color: #f8fafc; word-wrap: break-word;">${f2.label}</td>
+                        <td style="border: 1px solid #cbd5e1; padding: 5px 8px; width: 35%; font-weight: bold; word-wrap: break-word;">${f2.val}</td>
+                        ` : `<td style="border: 1px solid #cbd5e1; padding: 5px 8px;" colspan="2"></td>`}
                       </tr>`;
                     }
                     return rowsHtml;
@@ -7495,72 +7548,72 @@ function TeacherSqaafPage() {
                 </table>
               </div>
 
-              <div style="margin-bottom: 12px;">
-                <h3 style="font-size: 11px; font-weight: bold; margin: 0 0 5px 0; color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 3px;">मूल्यांकन तपशील</h3>
-                <table style="width: 100%; border-collapse: collapse; font-size: 9px; table-layout: fixed; word-wrap: break-word;">
+              <div style="margin-bottom: 14px;">
+                <h3 style="font-size: 13px; font-weight: 900; margin: 0 0 6px 0; color: #0f172a; border-bottom: 2px solid #cbd5e1; padding-bottom: 4px;">मूल्यांकन तपशील</h3>
+                <table style="width: 100%; border-collapse: collapse; font-size: 11.5px; table-layout: fixed; word-wrap: break-word;">
                   <thead>
-                    <tr style="background-color: #f1f5f9; text-align: center;">
-                      <th style="border: 1px solid #cbd5e1; padding: 5px 3px; width: 4%;">अ. क्र.</th>
-                      <th style="border: 1px solid #cbd5e1; padding: 5px 3px; width: 28%; text-align: left;">क्षेत्राचे नाव</th>
-                      <th style="border: 1px solid #cbd5e1; padding: 5px 3px; width: 10%;">मानक क्र.</th>
-                      <th style="border: 1px solid #cbd5e1; padding: 5px 3px; width: 14%;">लागू नसलेली मानके</th>
-                      <th style="border: 1px solid #cbd5e1; padding: 5px 3px; width: 10%;">लागू मानक संख्या</th>
-                      <th style="border: 1px solid #cbd5e1; padding: 5px 3px; width: 7%;">स्तर १</th>
-                      <th style="border: 1px solid #cbd5e1; padding: 5px 3px; width: 7%;">स्तर २</th>
-                      <th style="border: 1px solid #cbd5e1; padding: 5px 3px; width: 7%;">स्तर ३</th>
-                      <th style="border: 1px solid #cbd5e1; padding: 5px 3px; width: 7%;">स्तर ४</th>
-                      <th style="border: 1px solid #cbd5e1; padding: 5px 3px; width: 6%;">एकूण गुण</th>
+                    <tr style="background-color: #f1f5f9; text-align: center; font-size: 12px;">
+                      <th style="border: 1px solid #cbd5e1; padding: 6px 4px; width: 4.5%; font-weight: 900;">अ. क्र.</th>
+                      <th style="border: 1px solid #cbd5e1; padding: 6px 6px; width: 27.5%; text-align: left; font-weight: 900;">क्षेत्राचे नाव</th>
+                      <th style="border: 1px solid #cbd5e1; padding: 6px 4px; width: 10%; font-weight: 900;">मानक क्र.</th>
+                      <th style="border: 1px solid #cbd5e1; padding: 6px 4px; width: 14%; font-weight: 900;">लागू नसलेली मानके</th>
+                      <th style="border: 1px solid #cbd5e1; padding: 6px 4px; width: 10%; font-weight: 900;">लागू मानक संख्या</th>
+                      <th style="border: 1px solid #cbd5e1; padding: 6px 4px; width: 7%; font-weight: 900;">स्तर १</th>
+                      <th style="border: 1px solid #cbd5e1; padding: 6px 4px; width: 7%; font-weight: 900;">स्तर २</th>
+                      <th style="border: 1px solid #cbd5e1; padding: 6px 4px; width: 7%; font-weight: 900;">स्तर ३</th>
+                      <th style="border: 1px solid #cbd5e1; padding: 6px 4px; width: 7%; font-weight: 900;">स्तर ४</th>
+                      <th style="border: 1px solid #cbd5e1; padding: 6px 4px; width: 6%; font-weight: 900;">एकूण गुण</th>
                     </tr>
                   </thead>
                   <tbody>
                     ${summaryRowsHtml}
-                    <tr style="background-color: #f8fafc; font-weight: bold; text-align: center;">
-                      <td style="border: 1px solid #cbd5e1; padding: 4px 3px;" colspan="3"></td>
-                      <td style="border: 1px solid #cbd5e1; padding: 4px 3px; text-align: right; font-size: 9px;">एकूण</td>
-                      <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 10px; text-align: center; color: #1e1b4b;">${totalApplicable}</td>
-                      <td style="border: 1px solid #cbd5e1; padding: 4px 3px;" colspan="4"></td>
-                      <td style="border: 1px solid #cbd5e1; padding: 4px 3px; font-size: 10px; text-align: center; color: #1e1b4b;">${obtainedMarks_}</td>
+                    <tr style="background-color: #f8fafc; font-weight: 900; text-align: center;">
+                      <td style="border: 1px solid #cbd5e1; padding: 5px 4px;" colspan="3"></td>
+                      <td style="border: 1px solid #cbd5e1; padding: 5px 6px; text-align: right; font-size: 12px; font-weight: 900;">एकूण</td>
+                      <td style="border: 1px solid #cbd5e1; padding: 5px 4px; font-size: 13px; text-align: center; color: #1e1b4b; font-weight: 900;">${totalApplicable}</td>
+                      <td style="border: 1px solid #cbd5e1; padding: 5px 4px;" colspan="4"></td>
+                      <td style="border: 1px solid #cbd5e1; padding: 5px 4px; font-size: 13px; text-align: center; color: #1e1b4b; font-weight: 900;">${obtainedMarks_}</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
 
-              <table style="width: 100%; border-collapse: collapse; margin-top: 10px; table-layout: fixed;">
+              <table style="width: 100%; border-collapse: collapse; margin-top: 12px; table-layout: fixed;">
                 <tr>
                   <td style="width: 48%; vertical-align: top; padding: 0;">
-                    <h3 style="font-size: 11px; font-weight: bold; margin: 0 0 4px 0; color: #0f172a;">श्रेणी तक्ता</h3>
-                    <table style="width: 100%; border-collapse: collapse; font-size: 9px; text-align: center;">
+                    <h3 style="font-size: 12.5px; font-weight: 900; margin: 0 0 6px 0; color: #0f172a;">श्रेणी तक्ता</h3>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 11.5px; text-align: center;">
                       <thead>
-                        <tr style="background-color: #f1f5f9;">
-                          <th style="border: 1px solid #cbd5e1; padding: 4px; width: 50%;">श्रेणी</th>
-                          <th style="border: 1px solid #cbd5e1; padding: 4px; width: 50%;">टक्केवारी</th>
+                        <tr style="background-color: #f1f5f9; font-weight: 900;">
+                          <th style="border: 1px solid #cbd5e1; padding: 5px; width: 50%;">श्रेणी</th>
+                          <th style="border: 1px solid #cbd5e1; padding: 5px; width: 50%;">टक्केवारी</th>
                         </tr>
                       </thead>
                       <tbody>
-                        <tr><td style="border: 1px solid #cbd5e1; padding: 3px; font-weight: bold; color: #15803d;">A+</td><td style="border: 1px solid #cbd5e1; padding: 3px;">९१ ते १००</td></tr>
-                        <tr><td style="border: 1px solid #cbd5e1; padding: 3px; font-weight: bold; color: #16a34a;">A</td><td style="border: 1px solid #cbd5e1; padding: 3px;">८१ ते ९०</td></tr>
-                        <tr><td style="border: 1px solid #cbd5e1; padding: 3px; font-weight: bold; color: #ca8a04;">B+</td><td style="border: 1px solid #cbd5e1; padding: 3px;">७१ ते ८०</td></tr>
-                        <tr><td style="border: 1px solid #cbd5e1; padding: 3px; font-weight: bold; color: #f97316;">B</td><td style="border: 1px solid #cbd5e1; padding: 3px;">६१ ते ७०</td></tr>
-                        <tr><td style="border: 1px solid #cbd5e1; padding: 3px; font-weight: bold; color: #ea580c;">C+</td><td style="border: 1px solid #cbd5e1; padding: 3px;">५१ ते ६०</td></tr>
-                        <tr><td style="border: 1px solid #cbd5e1; padding: 3px; font-weight: bold; color: #dc2626;">C</td><td style="border: 1px solid #cbd5e1; padding: 3px;">५० पेक्षा कमी</td></tr>
+                        <tr><td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: 900; color: #15803d;">A+</td><td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: bold;">९१ ते १००</td></tr>
+                        <tr><td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: 900; color: #16a34a;">A</td><td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: bold;">८१ ते ९०</td></tr>
+                        <tr><td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: 900; color: #ca8a04;">B+</td><td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: bold;">७१ ते ८०</td></tr>
+                        <tr><td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: 900; color: #f97316;">B</td><td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: bold;">६१ ते ७०</td></tr>
+                        <tr><td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: 900; color: #ea580c;">C+</td><td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: bold;">५१ ते ६०</td></tr>
+                        <tr><td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: 900; color: #dc2626;">C</td><td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: bold;">५० पेक्षा कमी</td></tr>
                       </tbody>
                     </table>
                   </td>
                   <td style="width: 4%;"></td>
                   <td style="width: 48%; vertical-align: top; padding: 0;">
-                    <h3 style="font-size: 11px; font-weight: bold; margin: 0 0 4px 0; color: #0f172a;">निकाल तपशील</h3>
-                    <div style="border: 1px solid #cbd5e1; padding: 10px 15px; background: #f8fafc; min-height: 100px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; gap: 6px;">
-                      <div style="font-size: 10px;">
-                        <span style="font-weight: bold; color: #475569;">एकूण शक्य गुण:</span>
-                        <span style="float: right; font-weight: bold; color: #0f172a;">${totalApplicable * 4}</span>
+                    <h3 style="font-size: 12.5px; font-weight: 900; margin: 0 0 6px 0; color: #0f172a;">निकाल तपशील</h3>
+                    <div style="border: 1.5px solid #cbd5e1; padding: 12px 18px; background: #f8fafc; border-radius: 8px; min-height: 110px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; gap: 8px;">
+                      <div style="font-size: 12px;">
+                        <span style="font-weight: 900; color: #475569;">एकूण शक्य गुण:</span>
+                        <span style="float: right; font-weight: 900; color: #0f172a; font-size: 13px;">${totalApplicable * 4}</span>
                       </div>
-                      <div style="font-size: 10px;">
-                        <span style="font-weight: bold; color: #475569;">शाळा प्राप्त गुण:</span>
-                        <span style="float: right; font-weight: bold; color: #0f172a;">${obtainedMarks_}</span>
+                      <div style="font-size: 12px;">
+                        <span style="font-weight: 900; color: #475569;">शाळा प्राप्त गुण:</span>
+                        <span style="float: right; font-weight: 900; color: #0f172a; font-size: 13px;">${obtainedMarks_}</span>
                       </div>
-                      <div style="border-top: 2px solid #e2e8f0; padding-top: 6px; margin-top: 2px; font-size: 11px;">
-                        <span style="font-weight: bold; color: #475569;">प्राप्त श्रेणी:</span>
-                        <span style="float: right; font-weight: bold; font-size: 15px; color: #16a34a;">${getGrade(overallSelfPct)}</span>
+                      <div style="border-top: 2px solid #e2e8f0; padding-top: 8px; margin-top: 2px; font-size: 12.5px;">
+                        <span style="font-weight: 900; color: #475569;">प्राप्त श्रेणी:</span>
+                        <span style="float: right; font-weight: 900; font-size: 17px; color: #16a34a;">${getGrade(overallSelfPct)}</span>
                       </div>
                     </div>
                   </td>
@@ -8123,7 +8176,7 @@ function TeacherSqaafPage() {
 
                   {/* Orange Detail Box */}
                   <div className="bg-[#ffaf66] rounded-[1.5rem] p-6 shadow-sm text-slate-900 font-extrabold text-[15px] leading-relaxed">
-                    {currentDetail[selectedLang].orangeDesc}
+                    {renderBoldStandardNumber(currentDetail[selectedLang].orangeDesc)}
                   </div>
 
                   {/* Options Section */}
@@ -8450,7 +8503,7 @@ function TeacherSqaafPage() {
                       if (fields.length === 0) return null;
 
                       return (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 text-slate-800 text-[13px] md:text-[15px] font-medium leading-relaxed uppercase tracking-wide border-t border-slate-900/10 pt-6">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 md:gap-6 text-slate-800 text-[13px] md:text-[15px] font-medium leading-relaxed uppercase tracking-wide border-t border-slate-900/10 pt-6">
                           {fields.map((f, idx) => (
                             <div key={idx}>
                               <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1 uppercase">
@@ -8808,7 +8861,7 @@ function TeacherSqaafPage() {
                         if (fields.length === 0) return null;
 
                         return (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 text-slate-800 text-[13px] md:text-[15px] font-medium leading-relaxed uppercase tracking-wide border-t border-slate-900/10 pt-6">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 md:gap-6 text-slate-800 text-[13px] md:text-[15px] font-medium leading-relaxed uppercase tracking-wide border-t border-slate-900/10 pt-6">
                             {fields.map((f, idx) => (
                               <div key={idx}>
                                 <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1 uppercase">
@@ -8827,15 +8880,15 @@ function TeacherSqaafPage() {
                   <div className="overflow-x-auto border border-slate-200 rounded-[2rem] bg-white shadow-md w-full">
                     <table className="min-w-full divide-y divide-slate-200 text-xs">
                       <thead>
-                        <tr className="bg-slate-900 text-white">
-                          <th className="px-3 py-4 text-center font-black border-r border-slate-700 w-[50px]">{selectedLang === "mr" ? "अ.क्र." : "Sr."}</th>
-                          <th className="px-3 py-4 text-left font-black border-r border-slate-700 w-[200px]">{selectedLang === "mr" ? "मानक" : "Standard"}</th>
-                          <th className="px-3 py-4 text-left font-black border-r border-slate-700 bg-red-950/20 text-red-900">{selectedLang === "mr" ? "स्तर १" : "Level 1"}</th>
-                          <th className="px-3 py-4 text-left font-black border-r border-slate-700 bg-orange-950/20 text-orange-900">{selectedLang === "mr" ? "स्तर २" : "Level 2"}</th>
-                          <th className="px-3 py-4 text-left font-black border-r border-slate-700 bg-yellow-950/20 text-yellow-900">{selectedLang === "mr" ? "स्तर ३" : "Level 3"}</th>
-                          <th className="px-3 py-4 text-left font-black border-r border-slate-700 bg-green-950/20 text-green-900">{selectedLang === "mr" ? "स्तर ४" : "Level 4"}</th>
-                          <th className="px-3 py-4 text-center font-black border-r border-slate-700 bg-purple-950/20 text-purple-900 w-[80px]">{selectedLang === "mr" ? "स्वमूल्यांकन" : "Self Eval"}</th>
-                          <th className="px-3 py-4 text-center bg-indigo-950/20 text-indigo-900 w-[80px]">{selectedLang === "mr" ? "बाह्यमूल्यांकन" : "Ext Eval"}</th>
+                        <tr className="bg-slate-200 text-slate-900 font-black">
+                          <th className="px-3 py-4 text-center font-black border-r border-slate-300 bg-slate-200 text-slate-950 text-xs sm:text-sm w-[50px]">{selectedLang === "mr" ? "अ.क्र." : "Sr."}</th>
+                          <th className="px-3 py-4 text-left font-black border-r border-slate-300 bg-slate-200 text-slate-950 text-xs sm:text-sm w-[200px]">{selectedLang === "mr" ? "मानक" : "Standard"}</th>
+                          <th className="px-3 py-4 text-left font-black border-r border-slate-300 bg-red-100 text-red-950 text-xs sm:text-sm">{selectedLang === "mr" ? "स्तर १" : "Level 1"}</th>
+                          <th className="px-3 py-4 text-left font-black border-r border-slate-300 bg-orange-100 text-orange-950 text-xs sm:text-sm">{selectedLang === "mr" ? "स्तर २" : "Level 2"}</th>
+                          <th className="px-3 py-4 text-left font-black border-r border-slate-300 bg-amber-100 text-amber-950 text-xs sm:text-sm">{selectedLang === "mr" ? "स्तर ३" : "Level 3"}</th>
+                          <th className="px-3 py-4 text-left font-black border-r border-slate-300 bg-emerald-100 text-emerald-950 text-xs sm:text-sm">{selectedLang === "mr" ? "स्तर ४" : "Level 4"}</th>
+                          <th className="px-3 py-4 text-center font-black border-r border-slate-300 bg-purple-100 text-purple-950 text-xs sm:text-sm w-[80px]">{selectedLang === "mr" ? "स्वमूल्यांकन" : "Self Eval"}</th>
+                          <th className="px-3 py-4 text-center font-black bg-indigo-100 text-indigo-950 text-xs sm:text-sm w-[80px]">{selectedLang === "mr" ? "बाह्यमूल्यांकन" : "Ext Eval"}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200 bg-white">
@@ -9060,6 +9113,16 @@ function TeacherSqaafPage() {
                         </tr>
                       </tbody>
                     </table>
+
+                    {/* Principal Signature Option under table */}
+                    <div className="flex justify-end pt-10 pb-8 px-4">
+                      <div className="text-center">
+                        <div className="text-sm font-black text-slate-900 uppercase tracking-wide mb-1">
+                          {selectedLang === "mr" ? "मुख्याध्यापकाची सही" : "Headmaster's Signature"}
+                        </div>
+                        <div className="w-60 border-b-2 border-slate-900 mb-8 h-0"></div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -9106,6 +9169,63 @@ function TeacherSqaafPage() {
                     {selectedLang === "mr" ? "शाळा प्रतिसाद अहवाल" : "School Responses Report"}
                   </h2>
                   <hr className="border-slate-900 mb-6" />
+
+                  {/* Read-only School details card matching screenshot 1 */}
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.1 }}
+                    className="bg-[#eef5cb] border border-slate-900 rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-8 space-y-6 shadow-sm w-full mb-8"
+                  >
+                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                      <div>
+                        <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1 uppercase">{t.infoSchoolName}</span>
+                        <h2 className="text-xl md:text-2xl font-bold text-slate-900 uppercase tracking-wide">
+                          {infoSchoolName || profile?.schoolName || ""}
+                        </h2>
+                      </div>
+
+                      <div className="flex items-center gap-3 self-start md:self-auto mt-2 md:mt-0">
+                        {(infoUdise || profile?.udise) && (
+                          <div className="inline-block bg-[#c4b5fd] text-slate-900 text-sm md:text-base font-bold px-5 py-2 rounded-xl border border-slate-900/10">
+                            {infoUdise || profile?.udise}
+                          </div>
+                        )}
+                        <button
+                          onClick={() => setView("info")}
+                          className="bg-slate-900 text-[#eef5cb] p-2.5 rounded-full shadow-md flex items-center justify-center hover:scale-110 transition-transform flex-shrink-0"
+                          title={selectedLang === "mr" ? "माहिती संपादित करा" : "Edit Information"}
+                        >
+                          <Edit className="size-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {(() => {
+                      const fields = [
+                        { label: t.infoHeadmaster, val: infoHeadmaster || profile?.fullName },
+                        { label: t.infoAddress, val: infoAddress || profile?.address },
+                        { label: t.infoCenterName, val: infoCenterName },
+                        { label: t.infoTaluka, val: infoTaluka },
+                        { label: t.infoDistrict, val: infoDistrict },
+                      ].filter((f) => f.val && f.val.trim() !== "");
+
+                      if (fields.length === 0) return null;
+
+                      return (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 md:gap-6 text-slate-800 text-[13px] md:text-[15px] font-medium leading-relaxed uppercase tracking-wide border-t border-slate-900/10 pt-6">
+                          {fields.map((f, idx) => (
+                            <div key={idx}>
+                              <span className="text-[10px] md:text-xs font-black text-slate-500 tracking-widest block mb-1 uppercase">
+                                {f.label}
+                              </span>
+                              <p className="font-bold text-slate-900">{f.val}</p>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </motion.div>
 
                   {/* Response Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

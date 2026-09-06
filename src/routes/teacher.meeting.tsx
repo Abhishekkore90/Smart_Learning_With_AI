@@ -280,6 +280,40 @@ const ALUMNI_MEETINGS = [
   { id: "sem2", name: "द्वितीय सत्र बैठक", english: "Second Semester" }
 ];
 
+// Helper to format any date string into dd/mm/yyyy format
+const formatDateToDDMMYYYY = (dateStr?: string | null, separator: string = "/"): string => {
+  if (!dateStr) return "";
+  const cleaned = String(dateStr).trim();
+  if (!cleaned) return "";
+
+  // Standard ISO format YYYY-MM-DD or YYYY/MM/DD
+  if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/.test(cleaned)) {
+    const [yyyy, mm, dd] = cleaned.split(/[-/]/);
+    return `${dd.padStart(2, "0")}${separator}${mm.padStart(2, "0")}${separator}${yyyy}`;
+  }
+
+  // Already separated by -, / or .
+  if (/^\d{1,2}[-/.]\d{1,2}[-/.]\d{4}$/.test(cleaned)) {
+    const parts = cleaned.split(/[-/.]/);
+    const p1 = parseInt(parts[0], 10);
+    const p2 = parseInt(parts[1], 10);
+    const yyyy = parts[2];
+
+    if (p1 > 12) {
+      // p1 is DD, p2 is MM
+      return `${parts[0].padStart(2, "0")}${separator}${parts[1].padStart(2, "0")}${separator}${yyyy}`;
+    }
+    if (p2 > 12) {
+      // p2 is DD, p1 is MM (was MM/DD/YYYY) -> swap to DD/MM/YYYY
+      return `${parts[1].padStart(2, "0")}${separator}${parts[0].padStart(2, "0")}${separator}${yyyy}`;
+    }
+    // If both <= 12, assume parts[0] is DD and parts[1] is MM
+    return `${parts[0].padStart(2, "0")}${separator}${parts[1].padStart(2, "0")}${separator}${yyyy}`;
+  }
+
+  return cleaned;
+};
+
 function TeacherMeetingPage() {
   const { user, profile, loading: authLoading } = useAuth();
   const { lang } = useLanguage();
@@ -479,7 +513,7 @@ function TeacherMeetingPage() {
   // Auto-generate introductory text if it hasn't been manually edited
   useEffect(() => {
     if (!isIntroEdited) {
-      const formattedDate = meetingDate ? meetingDate.split("-").reverse().join(".") : "________";
+      const formattedDate = meetingDate ? formatDateToDDMMYYYY(meetingDate, "/") : "________";
       const text = `आज दि. ${formattedDate} रोजी ${schoolName || "________"} येथे ${committeeName || selectedCommittee?.name || "________"} चे अध्यक्ष ${presidentName || formMembers.find((m: any) => m.role === "अध्यक्ष")?.name || "________"} यांच्या अध्यक्षतेखाली सभा घेण्यात आली. सदर सभेस खालील प्रमाणे सदस्य उपस्थित होते.`;
       setCustomIntroText(text);
     }
@@ -799,7 +833,7 @@ function TeacherMeetingPage() {
       setEditCommitteeName(selectedPastMeeting.committeeName || "");
 
       const formattedDate = selectedPastMeeting.date
-        ? selectedPastMeeting.date.split("-").reverse().join(".")
+        ? formatDateToDDMMYYYY(selectedPastMeeting.date, "/")
         : "________";
       const defaultIntro =
         selectedPastMeeting.introText ||
@@ -1285,7 +1319,7 @@ function TeacherMeetingPage() {
     setIsSubmitting(true);
     try {
       const formattedDate = meetingDate
-        ? meetingDate.split("-").reverse().join(".")
+        ? formatDateToDDMMYYYY(meetingDate, "/")
         : "________";
       const defaultIntroText = `आज दि. ${formattedDate} रोजी ${schoolName || "________"} येथे ${committeeName || selectedCommittee.name || "________"} चे अध्यक्ष ${presidentName || formMembers.find((m: any) => m.role === "अध्यक्ष")?.name || "" || "________"} यांच्या अध्यक्षतेखाली सभा घेण्यात आली. सदर सभेस खालील प्रमाणे सदस्य उपस्थित होते.`;
 
@@ -2454,7 +2488,7 @@ function TeacherMeetingPage() {
                                   {/* Introductory Paragraph styled like handwritten ledger */}
                                   <p className="register-header-text font-normal text-slate-800">
                                     {selectedPastMeeting.introText ||
-                                      `आज दि. ${selectedPastMeeting.date ? selectedPastMeeting.date.split("-").reverse().join(".") : "________"} रोजी ${selectedPastMeeting.schoolName || "________"} येथे ${selectedPastMeeting.committeeName || "________"} चे अध्यक्ष ${selectedPastMeeting.presidentName || "________"} यांच्या अध्यक्षतेखाली सभा घेण्यात आली. सदर सभेस खालील प्रमाणे सदस्य उपस्थित होते.`}
+                                      `आज दि. ${selectedPastMeeting.date ? formatDateToDDMMYYYY(selectedPastMeeting.date, "/") : "________"} रोजी ${selectedPastMeeting.schoolName || "________"} येथे ${selectedPastMeeting.committeeName || "________"} चे अध्यक्ष ${selectedPastMeeting.presidentName || "________"} यांच्या अध्यक्षतेखाली सभा घेण्यात आली. सदर सभेस खालील प्रमाणे सदस्य उपस्थित होते.`}
                                   </p>
 
                                   {/* Committee Members Present table with blank signature column */}
@@ -2594,7 +2628,7 @@ function TeacherMeetingPage() {
                                     <div className="space-y-3">
                                       <div className="flex items-center gap-2">
                                         <span className="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-100 rounded-lg text-[9px] font-black uppercase tracking-widest">
-                                          सभा दिनांक: {mt.date}
+                                          सभा दिनांक: {formatDateToDDMMYYYY(mt.date, "/") || "—"}
                                         </span>
                                         {mt.time && (
                                           <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
@@ -4274,7 +4308,7 @@ function TeacherMeetingPage() {
                               </div>
                               <div className="flex justify-between items-center pt-1">
                                 <div><span className="font-black">पत्र क्र. :</span> {invitationOutwardNo || "____________"}</div>
-                                <div><span className="font-black">दिनांक :</span> {invitationLetterDate ? invitationLetterDate.split("-").reverse().join("/") : "____/____/20____"}</div>
+                                <div><span className="font-black">दिनांक :</span> {invitationLetterDate ? formatDateToDDMMYYYY(invitationLetterDate, "/") : "____/____/20____"}</div>
                               </div>
                             </div>
 
@@ -4305,7 +4339,7 @@ function TeacherMeetingPage() {
                             <div className="border-2 border-slate-900 rounded-lg p-3 space-y-1.5 bg-slate-50/50">
                               <h2 className="text-sm font-black underline border-b border-slate-300 pb-1 text-slate-900">सभेचा तपशील</h2>
                               <div className="grid grid-cols-2 gap-2 text-sm font-bold">
-                                <div><span className="font-black">दिनांक :</span> {invitationDate ? invitationDate.split("-").reverse().join("/") : "__________________"}</div>
+                                <div><span className="font-black">दिनांक :</span> {invitationDate ? formatDateToDDMMYYYY(invitationDate, "/") : "__________________"}</div>
                                 <div><span className="font-black">वार :</span> {invitationDay || "__________________"}</div>
                                 <div><span className="font-black">वेळ :</span> {invitationTime || "__________________"}</div>
                                 <div><span className="font-black">स्थळ :</span> {invitationVenue || schoolName || "__________________"}</div>
