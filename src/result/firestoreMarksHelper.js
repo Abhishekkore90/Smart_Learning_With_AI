@@ -152,7 +152,7 @@ export const fetchStudentsForClass = async (selectedClass, medium, teacherId = n
           medium: d.medium,
           isSemiEnglish: d.isSemiEnglish,
           teacherId: d.teacherId || d.createdById,
-          division: d.division || "",
+          division: d.division || d.section || d.tukdi || d.tuka || d.div || d.classDivision || d.divisionName || d.studentInfo?.division || "",
           dob: d.dob || d.birthDate || "",
           caste: d.caste || d.category || "",
           gender: d.gender || d.sex || d.ling || d.genderType || d.studentGender || "",
@@ -183,6 +183,7 @@ export const fetchStudentsForClass = async (selectedClass, medium, teacherId = n
       const det = detailsMap.get(s.id) || {};
       const mergedStudent = {
         ...s,
+        division: det.division || det.section || det.tukdi || det.tuka || det.div || det.classDivision || det.divisionName || s.division || "",
         fatherName: det.fatherName || s.stdFather || s.fatherName || "",
         fatherOccupation: det.fatherOccupation || "",
         motherName: det.motherName || s.stdMother || s.motherName || "",

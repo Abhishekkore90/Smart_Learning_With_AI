@@ -137,7 +137,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
   const [selectedClass, setSelectedClass] = useState(initialClass || "1st");
   const [academicYear, setAcademicYear] = useState(initialYear || "2025-26");
   const [selectedSemester, setSelectedSemester] = useState(initialSemester || "sem2");
-  const [division, setDivision] = useState("1");
+  const [division, setDivision] = useState("");
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [selectedMedium, setSelectedMedium] = useState(() => {
@@ -268,6 +268,10 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
         }
         const mergedSettings = { ...(globalSettings || {}), ...classSettings };
 
+        const loadedDiv = mergedSettings.division || mergedSettings.section || mergedSettings.tukdi ||
+          localStorage.getItem("cce_selected_division") || localStorage.getItem("teacher_division") || localStorage.getItem("division") || "";
+        setDivision(loadedDiv);
+
         if (mergedSettings.schoolName || mergedSettings.udiseCode || mergedSettings.teacherName) {
           setSchoolData({
             schoolName: mergedSettings.schoolName ? `${mergedSettings.schoolName}${mergedSettings.address ? ` (${mergedSettings.address})` : ""}` : "",
@@ -311,39 +315,11 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
       } catch (e) { }
 
       // 2. Fetch Students for Selected Class
-      let loadedStudents = [];
       const currentMedium = localStorage.getItem("cce_selected_medium") || "marathi";
-
+      let loadedStudents = [];
       try {
-        const uQuery = query(collection(db, "users"), where("role", "==", "student"));
-        const uSnap = await getDocs(uQuery);
-        uSnap.forEach((docSnap) => {
-          const d = docSnap.data();
-          if (matchStudentClassAndMedium({ id: docSnap.id, ...d }, selectedClass, currentMedium, currentTeacherId)) {
-            loadedStudents.push({
-              id: docSnap.id,
-              name: d.fullName || d.name || d.studentName || "",
-              rollNo: String(d.rollNo || d.srNo || loadedStudents.length + 1),
-            });
-          }
-        });
+        loadedStudents = (await fetchStudentsForClass(selectedClass, currentMedium, currentTeacherId)) || [];
       } catch (e) { }
-
-      if (loadedStudents.length === 0) {
-        try {
-          const studentsSnap = await getDocs(collection(db, "students"));
-          studentsSnap.forEach((docSnap) => {
-            const d = docSnap.data();
-            if (matchStudentClassAndMedium({ id: docSnap.id, ...d }, selectedClass, currentMedium, currentTeacherId)) {
-              loadedStudents.push({
-                id: docSnap.id,
-                name: d.fullName || d.name || d.studentName || "",
-                rollNo: String(d.rollNo || d.srNo || loadedStudents.length + 1),
-              });
-            }
-          });
-        } catch (e) { }
-      }
 
       // Deduplicate students
       const uniqueMap = new Map();
@@ -792,7 +768,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
                   <div className="flex items-center justify-between text-xs font-black text-slate-800 bg-slate-100 p-2.5 px-3.5 rounded-lg border border-slate-300 mb-3">
                     <span>विद्यार्थ्याचे नाव - <b className="text-slate-900 font-black">{student.name}</b></span>
                     <span>इयत्ता - <b>{selectedClass}</b></span>
-                    <span>तुकडी - <b>{division}</b></span>
+                    <span>तुकडी - <b>{student.division || student.section || student.tukdi || division}</b></span>
                     <span>हजेरी क्र. <b>{student.rollNo}</b></span>
                     <span>{selectedSemester === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
                   </div>

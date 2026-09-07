@@ -87,14 +87,8 @@ const getMarathiClassName = (clsStr) => {
 };
 
 const formatDivision = (divVal) => {
-  if (!divVal) return "अ";
-  const str = String(divVal).trim().toUpperCase();
-  if (str === "A" || str === "अ" || str === "1") return "अ";
-  if (str === "B" || str === "2" || str === "ब") return "ब";
-  if (str === "C" || str === "3" || str === "K" || str === "क") return "क";
-  if (str === "D" || str === "4" || str === "ड") return "ड";
-  if (str.length > 0) return str;
-  return "अ";
+  if (divVal === undefined || divVal === null || String(divVal).trim() === "") return "";
+  return String(divVal).trim();
 };
 
 const isBoyStudent = (student) => {
@@ -205,7 +199,7 @@ const getStudentCasteCategory = (student) => {
 const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTerm = "sem2", initialMedium, onBack }) => {
   const [selectedClass, setSelectedClass] = useState(initialClass || "1st");
   const [academicYear, setAcademicYear] = useState(initialYear || "2025-26");
-  const [division, setDivision] = useState("1");
+  const [division, setDivision] = useState("");
   const [pageMode, setPageMode] = useState("2pages");
   const [showLayoutModal, setShowLayoutModal] = useState(true);
   const [selectedMedium, setSelectedMedium] = useState(() => {
@@ -1219,7 +1213,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
             <br />
             <div className="inline-block bg-white border border-slate-200 rounded-2xl px-10 py-4 shadow-xs">
               <h3 className="text-xl font-black text-slate-900">
-                इयत्ता : {getMarathiClassName(selectedClass)} ({selectedClass}) (तुकडी : {formatDivision(division)})
+                इयत्ता : {getMarathiClassName(selectedClass)} ({selectedClass}) {formatDivision(division) ? `(तुकडी : ${formatDivision(division)})` : ""}
               </h3>
             </div>
           </div>
@@ -2258,136 +2252,152 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
               </div>
 
               {/* ========================================================================= */}
-              {/* PAGE 2: जातनिहाय व विषयनिहाय एकूण तेरीज पत्रक                                */}
+              {/* PAGE 2: जातनिहाय व विषयनिहाय एकूण तेरीज पत्रक (अनेक पानांमध्ये विभागलेले)    */}
               {/* ========================================================================= */}
-              <div className="pdf-page bg-white p-6 border border-slate-200 rounded-3xl min-h-[285mm] overflow-hidden shadow-sm flex flex-col justify-between mb-4" style={{ pageBreakAfter: "always", breakAfter: "page" }}>
-                <div>
-                  <h2 className="text-xl font-black text-slate-900 text-center mb-4 tracking-tight">जातनिहाय व विषयनिहाय एकूण तेरीज पत्रक</h2>
-                  <div className="flex items-center justify-between text-xs font-bold text-slate-800 border-b border-slate-300 pb-2 mb-4">
-                    <span>शाळा: <b>{schoolData.schoolName || "जिल्हा परिषद शाळा धोंडेवाडी(पेड)ता.तासगाव जि.सांगली"}</b></span>
-                    <span>इयत्ता: <b>{selectedClass}</b></span>
-                    <span>तुकडी: <b>{division}</b></span>
-                    <span>{selectedTerm === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
-                    <span>सन: <b>{academicYear}</b></span>
-                  </div>
+              {(() => {
+                const SUBJECTS_PER_PAGE = 3;
+                const subjectChunks = [];
+                for (let i = 0; i < subjects.length; i += SUBJECTS_PER_PAGE) {
+                  subjectChunks.push(subjects.slice(i, i + SUBJECTS_PER_PAGE));
+                }
 
-                  <table className="w-full table-fixed border-collapse border border-amber-500 text-[11px] text-center font-medium">
-                    <thead>
-                      <tr className="bg-amber-100 text-slate-900 font-bold border-b border-amber-500">
-                        <th className="border border-amber-500 p-1 w-24 min-w-[80px]" rowSpan={2}>विषय</th>
-                        <th className="border border-amber-500 p-1 w-24 min-w-[80px]" rowSpan={2}>जात संवर्ग</th>
-                        <th className="border border-amber-500 p-0.5 text-center" colSpan={3}>संख्या</th>
-                        {GRADE_KEYS.map((g) => (
-                          <th key={g} className="border border-amber-500 p-0.5 text-center" colSpan={3}>{GRADE_LABELS[g]}</th>
-                        ))}
-                      </tr>
-                      <tr className="bg-amber-100 text-slate-900 font-bold border-b border-amber-500">
-                        <th className="border border-amber-500 p-0.5 text-[9px] text-center w-7 min-w-[24px]">मुले</th>
-                        <th className="border border-amber-500 p-0.5 text-[9px] text-center w-7 min-w-[24px]">मुली</th>
-                        <th className="border border-amber-500 p-0.5 text-[9px] text-center w-7 min-w-[24px]">एकूण</th>
-                        {GRADE_KEYS.map((g) => (
-                          <React.Fragment key={g}>
+                return subjectChunks.map((chunkSubjects, pageIdx) => (
+                  <div
+                    key={`caste_summary_page_${pageIdx}`}
+                    className="pdf-page bg-white p-6 border border-slate-200 rounded-3xl min-h-[285mm] overflow-hidden shadow-sm flex flex-col justify-between mb-4"
+                    style={{ pageBreakAfter: "always", breakAfter: "page" }}
+                  >
+                    <div>
+                      <h2 className="text-xl font-black text-slate-900 text-center mb-4 tracking-tight">
+                        जातनिहाय व विषयनिहाय एकूण तेरीज पत्रक {subjectChunks.length > 1 ? `(भाग ${pageIdx + 1})` : ""}
+                      </h2>
+                      <div className="flex items-center justify-between text-xs font-bold text-slate-800 border-b border-slate-300 pb-2 mb-4">
+                        <span>शाळा: <b>{schoolData.schoolName || "जिल्हा परिषद शाळा धोंडेवाडी(पेड)ता.तासगाव जि.सांगली"}</b></span>
+                        <span>इयत्ता: <b>{selectedClass}</b></span>
+                        <span>तुकडी: <b>{formatDivision(division)}</b></span>
+                        <span>{selectedTerm === "sem1" ? "प्रथम सत्र" : "द्वितीय सत्र"}</span>
+                        <span>सन: <b>{academicYear}</b></span>
+                      </div>
+
+                      <table className="w-full table-fixed border-collapse border border-amber-500 text-[11px] text-center font-medium">
+                        <thead>
+                          <tr className="bg-amber-100 text-slate-900 font-bold border-b border-amber-500">
+                            <th className="border border-amber-500 p-1 w-24 min-w-[80px]" rowSpan={2}>विषय</th>
+                            <th className="border border-amber-500 p-1 w-24 min-w-[80px]" rowSpan={2}>जात संवर्ग</th>
+                            <th className="border border-amber-500 p-0.5 text-center" colSpan={3}>संख्या</th>
+                            {GRADE_KEYS.map((g) => (
+                              <th key={g} className="border border-amber-500 p-0.5 text-center" colSpan={3}>{GRADE_LABELS[g]}</th>
+                            ))}
+                          </tr>
+                          <tr className="bg-amber-100 text-slate-900 font-bold border-b border-amber-500">
                             <th className="border border-amber-500 p-0.5 text-[9px] text-center w-7 min-w-[24px]">मुले</th>
                             <th className="border border-amber-500 p-0.5 text-[9px] text-center w-7 min-w-[24px]">मुली</th>
                             <th className="border border-amber-500 p-0.5 text-[9px] text-center w-7 min-w-[24px]">एकूण</th>
-                          </React.Fragment>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {subjects.map((sub) => {
-                        const categoryData = {};
-                        CASTE_CATEGORIES.forEach((c) => {
-                          categoryData[c.key] = {
-                            countBoys: 0, countGirls: 0, countTotal: 0,
-                            grades: { a1: { b: 0, g: 0, t: 0 }, a2: { b: 0, g: 0, t: 0 }, b1: { b: 0, g: 0, t: 0 }, b2: { b: 0, g: 0, t: 0 }, c1: { b: 0, g: 0, t: 0 }, c2: { b: 0, g: 0, t: 0 }, d: { b: 0, g: 0, t: 0 }, i1: { b: 0, g: 0, t: 0 }, i2: { b: 0, g: 0, t: 0 } }
-                          };
-                        });
-                        const totalCategoryData = {
-                          countBoys: 0, countGirls: 0, countTotal: 0,
-                          grades: { a1: { b: 0, g: 0, t: 0 }, a2: { b: 0, g: 0, t: 0 }, b1: { b: 0, g: 0, t: 0 }, b2: { b: 0, g: 0, t: 0 }, c1: { b: 0, g: 0, t: 0 }, c2: { b: 0, g: 0, t: 0 }, d: { b: 0, g: 0, t: 0 }, i1: { b: 0, g: 0, t: 0 }, i2: { b: 0, g: 0, t: 0 } }
-                        };
+                            {GRADE_KEYS.map((g) => (
+                              <React.Fragment key={g}>
+                                <th className="border border-amber-500 p-0.5 text-[9px] text-center w-7 min-w-[24px]">मुले</th>
+                                <th className="border border-amber-500 p-0.5 text-[9px] text-center w-7 min-w-[24px]">मुली</th>
+                                <th className="border border-amber-500 p-0.5 text-[9px] text-center w-7 min-w-[24px]">एकूण</th>
+                              </React.Fragment>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {chunkSubjects.map((sub) => {
+                            const categoryData = {};
+                            CASTE_CATEGORIES.forEach((c) => {
+                              categoryData[c.key] = {
+                                countBoys: 0, countGirls: 0, countTotal: 0,
+                                grades: { a1: { b: 0, g: 0, t: 0 }, a2: { b: 0, g: 0, t: 0 }, b1: { b: 0, g: 0, t: 0 }, b2: { b: 0, g: 0, t: 0 }, c1: { b: 0, g: 0, t: 0 }, c2: { b: 0, g: 0, t: 0 }, d: { b: 0, g: 0, t: 0 }, i1: { b: 0, g: 0, t: 0 }, i2: { b: 0, g: 0, t: 0 } }
+                              };
+                            });
+                            const totalCategoryData = {
+                              countBoys: 0, countGirls: 0, countTotal: 0,
+                              grades: { a1: { b: 0, g: 0, t: 0 }, a2: { b: 0, g: 0, t: 0 }, b1: { b: 0, g: 0, t: 0 }, b2: { b: 0, g: 0, t: 0 }, c1: { b: 0, g: 0, t: 0 }, c2: { b: 0, g: 0, t: 0 }, d: { b: 0, g: 0, t: 0 }, i1: { b: 0, g: 0, t: 0 }, i2: { b: 0, g: 0, t: 0 } }
+                            };
 
-                        students.forEach((std) => {
-                          const cKey = getStudentCasteCategory(std);
-                          const stats = getStudentSubjectStats(std, sub);
-                          const gKey = getGradeKeyFromScore(stats.grandTotal);
-                          const boy = isBoyStudent(std);
+                            students.forEach((std) => {
+                              const cKey = getStudentCasteCategory(std);
+                              const stats = getStudentSubjectStats(std, sub);
+                              const gKey = getGradeKeyFromScore(stats.grandTotal);
+                              const boy = isBoyStudent(std);
 
-                          if (categoryData[cKey]) {
-                            if (boy) {
-                              categoryData[cKey].countBoys++;
-                              categoryData[cKey].grades[gKey].b++;
-                              totalCategoryData.countBoys++;
-                              totalCategoryData.grades[gKey].b++;
-                            } else {
-                              categoryData[cKey].countGirls++;
-                              categoryData[cKey].grades[gKey].g++;
-                              totalCategoryData.countGirls++;
-                              totalCategoryData.grades[gKey].g++;
-                            }
-                            categoryData[cKey].countTotal++;
-                            categoryData[cKey].grades[gKey].t++;
-                            totalCategoryData.countTotal++;
-                            totalCategoryData.grades[gKey].t++;
-                          }
-                        });
+                              if (categoryData[cKey]) {
+                                if (boy) {
+                                  categoryData[cKey].countBoys++;
+                                  categoryData[cKey].grades[gKey].b++;
+                                  totalCategoryData.countBoys++;
+                                  totalCategoryData.grades[gKey].b++;
+                                } else {
+                                  categoryData[cKey].countGirls++;
+                                  categoryData[cKey].grades[gKey].g++;
+                                  totalCategoryData.countGirls++;
+                                  totalCategoryData.grades[gKey].g++;
+                                }
+                                categoryData[cKey].countTotal++;
+                                categoryData[cKey].grades[gKey].t++;
+                                totalCategoryData.countTotal++;
+                                totalCategoryData.grades[gKey].t++;
+                              }
+                            });
 
-                        return (
-                          <React.Fragment key={sub}>
-                            {CASTE_CATEGORIES.map((cat, cIdx) => {
-                              const rowData = categoryData[cat.key];
-                              return (
-                                <tr key={cat.key} className="border-b border-amber-300 hover:bg-amber-50/30">
-                                  {cIdx === 0 && (
-                                    <td rowSpan={6} className="border border-amber-500 p-1 font-bold text-slate-900 align-middle text-center bg-amber-50/50 w-24 text-[10px] leading-tight">{getSubjectDisplayName(sub)}</td>
-                                  )}
-                                  <td className="border border-amber-500 p-1 text-left font-bold text-slate-800 w-24">{cat.label}</td>
-                                  <td className="border border-amber-500 p-0.5 font-bold text-center w-7 min-w-[24px]">{rowData.countBoys}</td>
-                                  <td className="border border-amber-500 p-0.5 font-bold text-center w-7 min-w-[24px]">{rowData.countGirls}</td>
-                                  <td className="border border-amber-500 p-0.5 font-extrabold text-blue-800 text-center w-7 min-w-[24px]">{rowData.countTotal}</td>
+                            return (
+                              <React.Fragment key={sub}>
+                                {CASTE_CATEGORIES.map((cat, cIdx) => {
+                                  const rowData = categoryData[cat.key];
+                                  return (
+                                    <tr key={cat.key} className="border-b border-amber-300 hover:bg-amber-50/30">
+                                      {cIdx === 0 && (
+                                        <td rowSpan={6} className="border border-amber-500 p-1 font-bold text-slate-900 align-middle text-center bg-amber-50/50 w-24 text-[10px] leading-tight">{getSubjectDisplayName(sub)}</td>
+                                      )}
+                                      <td className="border border-amber-500 p-1 text-left font-bold text-slate-800 w-24">{cat.label}</td>
+                                      <td className="border border-amber-500 p-0.5 font-bold text-center w-7 min-w-[24px]">{rowData.countBoys}</td>
+                                      <td className="border border-amber-500 p-0.5 font-bold text-center w-7 min-w-[24px]">{rowData.countGirls}</td>
+                                      <td className="border border-amber-500 p-0.5 font-extrabold text-blue-800 text-center w-7 min-w-[24px]">{rowData.countTotal}</td>
+                                      {GRADE_KEYS.map((g) => (
+                                        <React.Fragment key={g}>
+                                          <td className="border border-amber-500 p-0.5 font-bold text-center w-7 min-w-[24px]">{rowData.grades[g].b}</td>
+                                          <td className="border border-amber-500 p-0.5 font-bold text-center w-7 min-w-[24px]">{rowData.grades[g].g}</td>
+                                          <td className="border border-amber-500 p-0.5 font-extrabold text-slate-900 text-center w-7 min-w-[24px]">{rowData.grades[g].t}</td>
+                                        </React.Fragment>
+                                      ))}
+                                    </tr>
+                                  );
+                                })}
+                                {/* Total Row for Subject */}
+                                <tr className="bg-amber-100/70 font-black border-b-2 border-amber-600">
+                                  <td className="border border-amber-500 p-1 text-left font-black text-slate-900 w-24">एकूण</td>
+                                  <td className="border border-amber-500 p-0.5 font-black text-center w-7 min-w-[24px]">{totalCategoryData.countBoys}</td>
+                                  <td className="border border-amber-500 p-0.5 font-black text-center w-7 min-w-[24px]">{totalCategoryData.countGirls}</td>
+                                  <td className="border border-amber-500 p-0.5 font-black text-blue-900 text-center w-7 min-w-[24px]">{totalCategoryData.countTotal}</td>
                                   {GRADE_KEYS.map((g) => (
                                     <React.Fragment key={g}>
-                                      <td className="border border-amber-500 p-0.5 font-bold text-center w-7 min-w-[24px]">{rowData.grades[g].b}</td>
-                                      <td className="border border-amber-500 p-0.5 font-bold text-center w-7 min-w-[24px]">{rowData.grades[g].g}</td>
-                                      <td className="border border-amber-500 p-0.5 font-extrabold text-slate-900 text-center w-7 min-w-[24px]">{rowData.grades[g].t}</td>
+                                      <td className="border border-amber-500 p-0.5 font-black text-center w-7 min-w-[24px]">{totalCategoryData.grades[g].b}</td>
+                                      <td className="border border-amber-500 p-0.5 font-black text-center w-7 min-w-[24px]">{totalCategoryData.grades[g].g}</td>
+                                      <td className="border border-amber-500 p-0.5 font-black text-slate-900 text-center w-7 min-w-[24px]">{totalCategoryData.grades[g].t}</td>
                                     </React.Fragment>
                                   ))}
                                 </tr>
-                              );
-                            })}
-                            {/* Total Row for Subject */}
-                            <tr className="bg-amber-100/70 font-black border-b-2 border-amber-600">
-                              <td className="border border-amber-500 p-1 text-left font-black text-slate-900 w-24">एकूण</td>
-                              <td className="border border-amber-500 p-0.5 font-black text-center w-7 min-w-[24px]">{totalCategoryData.countBoys}</td>
-                              <td className="border border-amber-500 p-0.5 font-black text-center w-7 min-w-[24px]">{totalCategoryData.countGirls}</td>
-                              <td className="border border-amber-500 p-0.5 font-black text-blue-900 text-center w-7 min-w-[24px]">{totalCategoryData.countTotal}</td>
-                              {GRADE_KEYS.map((g) => (
-                                <React.Fragment key={g}>
-                                  <td className="border border-amber-500 p-0.5 font-black text-center w-7 min-w-[24px]">{totalCategoryData.grades[g].b}</td>
-                                  <td className="border border-amber-500 p-0.5 font-black text-center w-7 min-w-[24px]">{totalCategoryData.grades[g].g}</td>
-                                  <td className="border border-amber-500 p-0.5 font-black text-slate-900 text-center w-7 min-w-[24px]">{totalCategoryData.grades[g].t}</td>
-                                </React.Fragment>
-                              ))}
-                            </tr>
-                          </React.Fragment>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                              </React.Fragment>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
 
-                <div className="flex items-center justify-between pt-6 border-t border-slate-200 mt-6 text-xs font-bold text-slate-800">
-                  <div className="text-center">
-                    <p className="font-extrabold">{schoolData.teacherName || "वर्गशिक्षक"}</p>
-                    <p className="text-[11px] text-slate-500 font-medium">वर्गशिक्षक</p>
+                    <div className="flex items-center justify-between pt-6 border-t border-slate-200 mt-6 text-xs font-bold text-slate-800">
+                      <div className="text-center">
+                        <p className="font-extrabold">{schoolData.teacherName || "वर्गशिक्षक"}</p>
+                        <p className="text-[11px] text-slate-500 font-medium">वर्गशिक्षक</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="font-extrabold">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
+                        <p className="text-[11px] text-slate-500 font-medium">मुख्याध्यापक</p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-center">
-                    <p className="font-extrabold">{schoolData.headmasterName || "मुख्याध्यापक"}</p>
-                    <p className="text-[11px] text-slate-500 font-medium">मुख्याध्यापक</p>
-                  </div>
-                </div>
-              </div>
+                ));
+              })()}
 
               {/* ========================================================================= */}
               {/* PAGE 3: सातत्यपूर्ण सर्वंकष मूल्यांकन: निकाल पत्रक (एकत्रित लँडस्केप टेबल)    */}

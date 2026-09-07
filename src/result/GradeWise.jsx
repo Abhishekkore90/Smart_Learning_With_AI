@@ -490,8 +490,8 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
         tb.style.minWidth = `${tableWidth}px`;
       });
       clone.querySelectorAll("th").forEach((th) => {
-        th.style.backgroundColor = "#0d47a1";
-        th.style.color = "#ffffff";
+        th.style.backgroundColor = "#bfdbfe";
+        th.style.color = "#0f172a";
         th.style.border = "1px solid #000000";
         th.style.verticalAlign = "middle";
       });
@@ -499,7 +499,7 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
         td.style.border = "1px solid #000000";
       });
       clone.querySelectorAll("th span").forEach((sp) => {
-        sp.style.color = "#ffffff";
+        sp.style.color = "#000000";
       });
 
       // Temporary offscreen container
@@ -706,10 +706,10 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
                   />
                 </div>
                 <div>
-                  <span>सत्र:</span> <span className="font-extrabold text-[#0d47a1]">{selectedTerm}</span>
+                  <span>सत्र:</span> <span className="font-extrabold text-[#1e40af]">{selectedTerm}</span>
                 </div>
                 <div>
-                  <span>सन:</span> <span className="font-extrabold text-[#0d47a1]">{academicYear}</span>
+                  <span>सन:</span> <span className="font-extrabold text-[#1e40af]">{academicYear}</span>
                 </div>
               </div>
             </div>
@@ -718,59 +718,59 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
             <table className="w-full border-collapse border-2 border-black text-center text-xs font-semibold text-slate-900 grade-matrix-table" style={{ tableLayout: "fixed" }}>
               <colgroup><col style={{ width: "35px" }} /><col style={{ width: "70px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "34px" }} /><col style={{ width: "38px" }} /><col style={{ width: "38px" }} /></colgroup>
               <thead>
-                <tr className="font-black text-white">
-                  <th className="border border-black p-1 bg-[#0d47a1] text-white font-black align-middle" style={{ backgroundColor: "#0d47a1", borderColor: "#000000", verticalAlign: "middle" }} rowSpan={3}>
-                    <span className="relative z-10 block text-center font-black text-white text-[13px]" style={{ position: "relative", zIndex: 10, color: "#ffffff" }}>अ. क्र.</span>
+                <tr className="font-black text-slate-900">
+                  <th className="border border-black p-1 bg-[#bfdbfe] text-slate-900 font-black align-middle" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000", verticalAlign: "middle" }} rowSpan={3}>
+                    <span className="relative z-10 block text-center font-black text-slate-900 text-[13px]" style={{ position: "relative", zIndex: 10, color: "#0f172a" }}>अ. क्र.</span>
                   </th>
-                  <th className="border border-black p-1 bg-[#0d47a1] text-white font-black align-middle" style={{ backgroundColor: "#0d47a1", borderColor: "#000000", verticalAlign: "middle" }} rowSpan={3}>
-                    <span className="relative z-10 block text-center font-black text-white text-[13px]" style={{ position: "relative", zIndex: 10, color: "#ffffff" }}>इयत्ता</span>
+                  <th className="border border-black p-1 bg-[#bfdbfe] text-slate-900 font-black align-middle" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000", verticalAlign: "middle" }} rowSpan={3}>
+                    <span className="relative z-10 block text-center font-black text-slate-900 text-[13px]" style={{ position: "relative", zIndex: 10, color: "#0f172a" }}>इयत्ता</span>
                   </th>
-                  <th className="border border-black p-1 bg-[#0d47a1] text-white font-black align-middle" style={{ backgroundColor: "#0d47a1", borderColor: "#000000", verticalAlign: "middle" }} colSpan={2} rowSpan={2}>
-                    <span className="relative z-10 block text-center font-black text-white text-[13px]" style={{ position: "relative", zIndex: 10, color: "#ffffff" }}>पट</span>
+                  <th className="border border-black p-1 bg-[#bfdbfe] text-slate-900 font-black align-middle" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000", verticalAlign: "middle" }} colSpan={2} rowSpan={2}>
+                    <span className="relative z-10 block text-center font-black text-slate-900 text-[13px]" style={{ position: "relative", zIndex: 10, color: "#0f172a" }}>पट</span>
                   </th>
-                  <th className="border border-black p-1 bg-[#0d47a1] text-white font-black align-middle" style={{ backgroundColor: "#0d47a1", borderColor: "#000000", verticalAlign: "middle" }} colSpan={18}>
-                    <span className="relative z-10 block text-center font-black text-white text-sm" style={{ position: "relative", zIndex: 10, color: "#ffffff" }}>वर्गवार श्रेणी</span>
+                  <th className="border border-black p-1 bg-[#bfdbfe] text-slate-900 font-black align-middle" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000", verticalAlign: "middle" }} colSpan={18}>
+                    <span className="relative z-10 block text-center font-black text-slate-900 text-sm" style={{ position: "relative", zIndex: 10, color: "#0f172a" }}>वर्गवार श्रेणी</span>
                   </th>
-                  <th className="border border-black p-1 bg-[#0d47a1] text-white font-black align-middle" style={{ backgroundColor: "#0d47a1", borderColor: "#000000", verticalAlign: "middle" }} colSpan={2} rowSpan={2}>
-                    <span className="relative z-10 block text-center font-black text-white text-[13px]" style={{ position: "relative", zIndex: 10, color: "#ffffff" }}>एकूण</span>
+                  <th className="border border-black p-1 bg-[#bfdbfe] text-slate-900 font-black align-middle" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000", verticalAlign: "middle" }} colSpan={2} rowSpan={2}>
+                    <span className="relative z-10 block text-center font-black text-slate-900 text-[13px]" style={{ position: "relative", zIndex: 10, color: "#0f172a" }}>एकूण</span>
                   </th>
                 </tr>
 
-                <tr className="font-black text-white text-xs">
-                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-black text-xs" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }} colSpan={2}>अ-1<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-100">(91 ते 100)</span></th>
-                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-black text-xs" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }} colSpan={2}>अ-2<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-100">(81 ते 90)</span></th>
-                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-black text-xs" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }} colSpan={2}>ब-1<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-100">(71 ते 80)</span></th>
-                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-black text-xs" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }} colSpan={2}>ब-2<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-100">(61 ते 70)</span></th>
-                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-black text-xs" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }} colSpan={2}>क-1<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-100">(51 ते 60)</span></th>
-                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-black text-xs" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }} colSpan={2}>क-2<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-100">(41 ते 50)</span></th>
-                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-black text-xs" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }} colSpan={2}>ड<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-100">(33 ते 40)</span></th>
-                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-black text-xs" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }} colSpan={2}>इ-1<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-100">(21 ते 32)</span></th>
-                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-black text-xs" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }} colSpan={2}>इ-2<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-100">(20 व कमी)</span></th>
+                <tr className="font-black text-slate-900 text-xs">
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-black text-xs" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }} colSpan={2}>अ-1<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-900">(91 ते 100)</span></th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-black text-xs" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }} colSpan={2}>अ-2<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-900">(81 ते 90)</span></th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-black text-xs" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }} colSpan={2}>ब-1<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-900">(71 ते 80)</span></th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-black text-xs" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }} colSpan={2}>ब-2<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-900">(61 ते 70)</span></th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-black text-xs" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }} colSpan={2}>क-1<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-900">(51 ते 60)</span></th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-black text-xs" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }} colSpan={2}>क-2<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-900">(41 ते 50)</span></th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-black text-xs" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }} colSpan={2}>ड<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-900">(33 ते 40)</span></th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-black text-xs" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }} colSpan={2}>इ-1<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-900">(21 ते 32)</span></th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-black text-xs" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }} colSpan={2}>इ-2<br /><span className="text-[9px] font-semibold tracking-tighter text-blue-900">(20 व कमी)</span></th>
                 </tr>
 
-                <tr className="font-black text-white text-[11px]">
-                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-extrabold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुले</th>
-                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-extrabold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुली</th>
-                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-extrabold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुले</th>
-                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-extrabold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुली</th>
-                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-extrabold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुले</th>
-                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-extrabold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुली</th>
-                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-extrabold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुले</th>
-                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-extrabold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुली</th>
-                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-extrabold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुले</th>
-                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-extrabold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुली</th>
-                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-extrabold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुले</th>
-                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-extrabold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुली</th>
-                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-extrabold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुले</th>
-                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-extrabold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुली</th>
-                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-extrabold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुले</th>
-                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-bold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुली</th>
-                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-bold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुले</th>
-                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-bold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुली</th>
-                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-bold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुले</th>
-                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-bold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुली</th>
-                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-bold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुले</th>
-                  <th className="border border-black py-1 px-0.5 bg-[#0d47a1] text-white font-bold" style={{ backgroundColor: "#0d47a1", borderColor: "#000000" }}>मुली</th>
+                <tr className="font-black text-slate-900 text-[11px]">
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-extrabold" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }}>मुले</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-extrabold" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }}>मुली</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-extrabold" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }}>मुले</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-extrabold" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }}>मुली</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-extrabold" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }}>मुले</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-extrabold" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }}>मुली</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-extrabold" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }}>मुले</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-extrabold" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }}>मुली</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-extrabold" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }}>मुले</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-extrabold" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }}>मुली</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-extrabold" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }}>मुले</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-extrabold" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }}>मुली</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-extrabold" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }}>मुले</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-extrabold" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }}>मुली</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-extrabold" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }}>मुले</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-bold" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }}>मुली</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-bold" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }}>मुले</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-bold" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }}>मुली</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-bold" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }}>मुले</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-bold" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }}>मुली</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-bold" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }}>मुले</th>
+                  <th className="border border-black py-1 px-0.5 bg-[#bfdbfe] text-slate-900 font-bold" style={{ backgroundColor: "#bfdbfe", borderColor: "#000000" }}>मुली</th>
                 </tr>
               </thead>
 
@@ -870,8 +870,8 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
                         ))}
 
                         {/* Row Total */}
-                        <td className="border border-black py-1.5 text-[13px] font-black text-[#0d47a1] bg-[#e3f2fd]">{rowTotalBoys}</td>
-                        <td className="border border-black py-1.5 text-[13px] font-black text-[#0d47a1] bg-[#e3f2fd]">{rowTotalGirls}</td>
+                        <td className="border border-black py-1.5 text-[13px] font-black text-[#1e40af] bg-[#e3f2fd]">{rowTotalBoys}</td>
+                        <td className="border border-black py-1.5 text-[13px] font-black text-[#1e40af] bg-[#e3f2fd]">{rowTotalGirls}</td>
                       </tr>
                     );
                   });
@@ -942,7 +942,7 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
       )}
 
       {/* Styles for Table Layout & Print */}
-      <style dangerouslySetInnerHTML={{ __html: "table.grade-matrix-table th { background-color: #0d47a1 !important; color: #ffffff !important; font-weight: 800 !important; } table.grade-matrix-table input[type=number]::-webkit-inner-spin-button, table.grade-matrix-table input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; } table.grade-matrix-table input[type=number] { -moz-appearance: textfield; } @media print { @page { size: A4 landscape; margin: 4mm; } body { background: white !important; color: black !important; } button, select { display: none !important; } input { border: none !important; background: transparent !important; } }" }} />
+      <style dangerouslySetInnerHTML={{ __html: "table.grade-matrix-table th { background-color: #bfdbfe !important; color: #0f172a !important; font-weight: 800 !important; } table.grade-matrix-table input[type=number]::-webkit-inner-spin-button, table.grade-matrix-table input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; } table.grade-matrix-table input[type=number] { -moz-appearance: textfield; } @media print { @page { size: A4 landscape; margin: 4mm; } body { background: white !important; color: black !important; } button, select { display: none !important; } input { border: none !important; background: transparent !important; } }" }} />
     </div>
   );
 }
