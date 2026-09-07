@@ -586,6 +586,35 @@ function TeacherMDMPage() {
               clonedDoc.head.appendChild(node.cloneNode(true));
             });
 
+            // Extract in-memory CSS rules from document.styleSheets for Vercel production deployment
+            try {
+              let inlineCss = '';
+              Array.from(document.styleSheets).forEach((sheet) => {
+                try {
+                  const rules = Array.from(sheet.cssRules || []).map((r) => r.cssText).join('\n');
+                  inlineCss += rules + '\n';
+                } catch (e) {
+                  // Ignore CORS restriction
+                }
+              });
+              if (inlineCss) {
+                const vercelCss = clonedDoc.createElement('style');
+                vercelCss.setAttribute('type', 'text/css');
+                vercelCss.textContent = inlineCss;
+                clonedDoc.head.appendChild(vercelCss);
+              }
+            } catch (e) {}
+
+            // Inject explicit print CSS overrides
+            const pdfStyle = clonedDoc.createElement('style');
+            pdfStyle.innerHTML = `
+              * { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; box-sizing: border-box !important; color: #000000 !important; }
+              table { border-collapse: collapse !important; border: 1px solid #000000 !important; width: 100% !important; background-color: #ffffff !important; }
+              th, td { border: 1px solid #000000 !important; color: #000000 !important; font-weight: 700 !important; vertical-align: middle !important; }
+              th { background-color: #e2e8f0 !important; font-weight: 900 !important; }
+            `;
+            clonedDoc.head.appendChild(pdfStyle);
+
             const targetEl = element || clonedDoc.querySelector(".print-page") || clonedDoc.body.firstElementChild;
             if (targetEl) {
               targetEl.style.width = isPortraitReport ? "100%" : `${exactContentWidth}px`;
@@ -606,6 +635,8 @@ function TeacherMDMPage() {
               cell.style.borderColor = "#000000";
               cell.style.borderStyle = "solid";
               cell.style.borderWidth = "1px";
+              cell.style.color = "#000000";
+              cell.style.fontWeight = "700";
             });
 
             const rowSpanCells = clonedDoc.querySelectorAll("th[rowspan], td[rowspan]");
@@ -1599,6 +1630,25 @@ function TeacherMDMPage() {
             styleNodes.forEach((node) => {
               clonedDoc.head.appendChild(node.cloneNode(true));
             });
+
+            // Extract in-memory CSS rules from document.styleSheets for Vercel production deployment
+            try {
+              let inlineCss = '';
+              Array.from(document.styleSheets).forEach((sheet) => {
+                try {
+                  const rules = Array.from(sheet.cssRules || []).map((r) => r.cssText).join('\n');
+                  inlineCss += rules + '\n';
+                } catch (e) {
+                  // Ignore CORS restriction on cross-origin stylesheets
+                }
+              });
+              if (inlineCss) {
+                const vercelCss = clonedDoc.createElement('style');
+                vercelCss.setAttribute('type', 'text/css');
+                vercelCss.textContent = inlineCss;
+                clonedDoc.head.appendChild(vercelCss);
+              }
+            } catch (e) {}
 
             // Inject bulletproof print CSS overrides to ensure consistent formatting every single time
             const pdfStyle = clonedDoc.createElement('style');

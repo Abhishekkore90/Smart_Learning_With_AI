@@ -747,8 +747,7 @@ const SubjectWiseResult = ({ initialClass = "1st", initialYear = "2025-26", init
       {/* -------------------- PRINT CONTAINER (CLASS-SPECIFIC OUTCOMES & USER SELECTED LEVELS) -------------------- */}
       <div ref={printRef} className="cce-pdf-container max-w-4xl mx-auto">
         {(() => {
-          const dataFilledStudents = students.filter(st => hasStudentFilledData(st, outcomesRatings, {}, {}, {}, {}));
-          const displayedStudents = dataFilledStudents.length > 0 ? dataFilledStudents : students;
+          const displayedStudents = students;
 
           return displayedStudents.map((student, sIdx) => {
           const activeSubjectSections = [

@@ -1466,43 +1466,54 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                           </tr>
                         </thead>
                         <tbody>
-                          {subjects.map((subName, sIdx) => {
-                            const sem1Grade = getSubjectGradeForTerm(student, subName, "sem1");
-                            return (
-                              <tr key={subName} className="h-[23.5px]">
-                                <td className="border-r border-b border-orange-300 border-b-orange-200 p-0.2 text-left font-bold text-slate-950 bg-orange-50/10 text-[9.5px] pl-1">
-                                  {subName}
-                                </td>
-                                <td className="border-r border-b border-orange-300 border-b-orange-200 p-0.2 font-black text-blue-950 text-[11px]">
-                                  {sem1Grade}
-                                </td>
-                                {sIdx === 0 && (
-                                  <td rowSpan={2} className="py-1 px-0.5 text-center align-top bg-orange-50/10 border-l border-b border-orange-200">
-                                    <span className="font-black text-orange-950 block text-center mb-0.5 text-[9.5px] leading-normal">विशेष प्रगती</span>
-                                    <p className="text-slate-950 leading-normal font-extrabold px-0.5 text-[8.5px] text-center line-clamp-2 pt-0.5">
-                                      {getFormattedRemark(student, "विशेष प्रगती", "sem1")}
-                                    </p>
+                          {(() => {
+                            const numSubjects = subjects.length || 6;
+                            const span1 = Math.max(1, Math.floor(numSubjects / 3));
+                            const span2 = Math.max(1, Math.floor((numSubjects - span1) / 2));
+                            const span3 = Math.max(1, numSubjects - span1 - span2);
+                            const idx1 = 0;
+                            const idx2 = span1;
+                            const idx3 = span1 + span2;
+                            const singlePageRowPx = Math.max(16, Math.floor(145 / numSubjects));
+
+                            return subjects.map((subName, sIdx) => {
+                              const sem1Grade = getSubjectGradeForTerm(student, subName, "sem1");
+                              return (
+                                <tr key={subName} style={{ height: `${singlePageRowPx}px` }}>
+                                  <td className="border-r border-b border-orange-300 border-b-orange-200 p-0.2 text-left font-bold text-slate-950 bg-orange-50/10 text-[9.5px] pl-1 align-middle truncate">
+                                    {subName}
                                   </td>
-                                )}
-                                {sIdx === 2 && (
-                                  <td rowSpan={2} className="py-1 px-0.5 text-center align-top bg-orange-50/10 border-l border-b border-orange-200">
-                                    <span className="font-black text-orange-950 block text-center mb-0.5 text-[9.5px] leading-normal">आवड / छंद</span>
-                                    <p className="text-slate-950 leading-normal font-extrabold px-0.5 text-[8.5px] text-center line-clamp-2 pt-0.5">
-                                      {getFormattedRemark(student, "आवड / छंद", "sem1")}
-                                    </p>
+                                  <td className="border-r border-b border-orange-300 border-b-orange-200 p-0.2 font-black text-blue-950 text-[11px] align-middle">
+                                    {sem1Grade}
                                   </td>
-                                )}
-                                {sIdx === 4 && (
-                                  <td rowSpan={2} className="py-1 px-0.5 text-center align-top bg-orange-50/10 border-l border-b border-orange-200">
-                                    <span className="font-black text-orange-950 block text-center mb-0.5 text-[9.5px] leading-normal">सुधारणा आवश्यक</span>
-                                    <p className="text-slate-950 leading-normal font-extrabold px-0.5 text-[8.5px] text-center line-clamp-2 pt-0.5">
-                                      {getFormattedRemark(student, "सुधारणा आवश्यक", "sem1")}
-                                    </p>
-                                  </td>
-                                )}
-                              </tr>
-                            );
-                          })}
+                                  {sIdx === idx1 && (
+                                    <td rowSpan={span1} className="py-1 px-0.5 text-center align-top bg-orange-50/10 border-l border-b border-orange-200">
+                                      <span className="font-black text-orange-950 block text-center mb-0.5 text-[9.5px] leading-normal">विशेष प्रगती</span>
+                                      <p className="text-slate-950 leading-normal font-extrabold px-0.5 text-[8.5px] text-center line-clamp-2 pt-0.5">
+                                        {getFormattedRemark(student, "विशेष प्रगती", "sem1")}
+                                      </p>
+                                    </td>
+                                  )}
+                                  {sIdx === idx2 && (
+                                    <td rowSpan={span2} className="py-1 px-0.5 text-center align-top bg-orange-50/10 border-l border-b border-orange-200">
+                                      <span className="font-black text-orange-950 block text-center mb-0.5 text-[9.5px] leading-normal">आवड / छंद</span>
+                                      <p className="text-slate-950 leading-normal font-extrabold px-0.5 text-[8.5px] text-center line-clamp-2 pt-0.5">
+                                        {getFormattedRemark(student, "आवड / छंद", "sem1")}
+                                      </p>
+                                    </td>
+                                  )}
+                                  {sIdx === idx3 && (
+                                    <td rowSpan={span3} className="py-1 px-0.5 text-center align-top bg-orange-50/10 border-l border-b border-orange-200">
+                                      <span className="font-black text-orange-950 block text-center mb-0.5 text-[9.5px] leading-normal">सुधारणा आवश्यक</span>
+                                      <p className="text-slate-950 leading-normal font-extrabold px-0.5 text-[8.5px] text-center line-clamp-2 pt-0.5">
+                                        {getFormattedRemark(student, "सुधारणा आवश्यक", "sem1")}
+                                      </p>
+                                    </td>
+                                  )}
+                                </tr>
+                              );
+                            });
+                          })()}
                         </tbody>
                       </table>
                     </div>
@@ -1526,43 +1537,54 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                           </tr>
                         </thead>
                         <tbody>
-                          {subjects.map((subName, sIdx) => {
-                            const sem2Grade = getSubjectGradeForTerm(student, subName, "sem2");
-                            return (
-                              <tr key={subName} className="h-[23.5px]">
-                                <td className="border-r border-b border-orange-300 border-b-orange-200 p-0.2 text-left font-bold text-slate-950 bg-orange-50/10 text-[9.5px] pl-1">
-                                  {subName}
-                                </td>
-                                <td className="border-r border-b border-orange-300 border-b-orange-200 p-0.2 font-black text-blue-950 text-[11px]">
-                                  {sem2Grade}
-                                </td>
-                                {sIdx === 0 && (
-                                  <td rowSpan={2} className="py-1 px-0.5 text-center align-top bg-orange-50/10 border-l border-b border-orange-200">
-                                    <span className="font-black text-orange-950 block text-center mb-0.5 text-[9.5px] leading-normal">विशेष प्रगती</span>
-                                    <p className="text-slate-950 leading-normal font-extrabold px-0.5 text-[8.5px] text-center line-clamp-2 pt-0.5">
-                                      {getFormattedRemark(student, "विशेष प्रगती", "sem2")}
-                                    </p>
+                          {(() => {
+                            const numSubjects = subjects.length || 6;
+                            const span1 = Math.max(1, Math.floor(numSubjects / 3));
+                            const span2 = Math.max(1, Math.floor((numSubjects - span1) / 2));
+                            const span3 = Math.max(1, numSubjects - span1 - span2);
+                            const idx1 = 0;
+                            const idx2 = span1;
+                            const idx3 = span1 + span2;
+                            const singlePageRowPx = Math.max(16, Math.floor(145 / numSubjects));
+
+                            return subjects.map((subName, sIdx) => {
+                              const sem2Grade = getSubjectGradeForTerm(student, subName, "sem2");
+                              return (
+                                <tr key={subName} style={{ height: `${singlePageRowPx}px` }}>
+                                  <td className="border-r border-b border-orange-300 border-b-orange-200 p-0.2 text-left font-bold text-slate-950 bg-orange-50/10 text-[9.5px] pl-1 align-middle truncate">
+                                    {subName}
                                   </td>
-                                )}
-                                {sIdx === 2 && (
-                                  <td rowSpan={2} className="py-1 px-0.5 text-center align-top bg-orange-50/10 border-l border-b border-orange-200">
-                                    <span className="font-black text-orange-950 block text-center mb-0.5 text-[9.5px] leading-normal">आवड / छंद</span>
-                                    <p className="text-slate-950 leading-normal font-extrabold px-0.5 text-[8.5px] text-center line-clamp-2 pt-0.5">
-                                      {getFormattedRemark(student, "आवड / छंद", "sem2")}
-                                    </p>
+                                  <td className="border-r border-b border-orange-300 border-b-orange-200 p-0.2 font-black text-blue-950 text-[11px] align-middle">
+                                    {sem2Grade}
                                   </td>
-                                )}
-                                {sIdx === 4 && (
-                                  <td rowSpan={2} className="py-1 px-0.5 text-center align-top bg-orange-50/10 border-l border-b border-orange-200">
-                                    <span className="font-black text-orange-950 block text-center mb-0.5 text-[9.5px] leading-normal">सुधारणा आवश्यक</span>
-                                    <p className="text-slate-950 leading-normal font-extrabold px-0.5 text-[8.5px] text-center line-clamp-2 pt-0.5">
-                                      {getFormattedRemark(student, "सुधारणा आवश्यक", "sem2")}
-                                    </p>
-                                  </td>
-                                )}
-                              </tr>
-                            );
-                          })}
+                                  {sIdx === idx1 && (
+                                    <td rowSpan={span1} className="py-1 px-0.5 text-center align-top bg-orange-50/10 border-l border-b border-orange-200">
+                                      <span className="font-black text-orange-950 block text-center mb-0.5 text-[9.5px] leading-normal">विशेष प्रगती</span>
+                                      <p className="text-slate-950 leading-normal font-extrabold px-0.5 text-[8.5px] text-center line-clamp-2 pt-0.5">
+                                        {getFormattedRemark(student, "विशेष प्रगती", "sem2")}
+                                      </p>
+                                    </td>
+                                  )}
+                                  {sIdx === idx2 && (
+                                    <td rowSpan={span2} className="py-1 px-0.5 text-center align-top bg-orange-50/10 border-l border-b border-orange-200">
+                                      <span className="font-black text-orange-950 block text-center mb-0.5 text-[9.5px] leading-normal">आवड / छंद</span>
+                                      <p className="text-slate-950 leading-normal font-extrabold px-0.5 text-[8.5px] text-center line-clamp-2 pt-0.5">
+                                        {getFormattedRemark(student, "आवड / छंद", "sem2")}
+                                      </p>
+                                    </td>
+                                  )}
+                                  {sIdx === idx3 && (
+                                    <td rowSpan={span3} className="py-1 px-0.5 text-center align-top bg-orange-50/10 border-l border-b border-orange-200">
+                                      <span className="font-black text-orange-950 block text-center mb-0.5 text-[9.5px] leading-normal">सुधारणा आवश्यक</span>
+                                      <p className="text-slate-950 leading-normal font-extrabold px-0.5 text-[8.5px] text-center line-clamp-2 pt-0.5">
+                                        {getFormattedRemark(student, "सुधारणा आवश्यक", "sem2")}
+                                      </p>
+                                    </td>
+                                  )}
+                                </tr>
+                              );
+                            });
+                          })()}
                         </tbody>
                       </table>
                     </div>
@@ -1777,43 +1799,54 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                             </tr>
                           </thead>
                           <tbody>
-                            {subjects.map((subName, sIdx) => {
-                              const sem1Grade = getSubjectGradeForTerm(student, subName, "sem1");
-                              return (
-                                <tr key={subName} className="h-[96px]">
-                                  <td className="border border-orange-300 py-2 px-1.5 text-left font-black text-slate-950 bg-orange-50/20 text-[13.5px] pl-2 align-middle">
-                                    {subName}
-                                  </td>
-                                  <td className="border border-orange-300 py-2 px-1 font-black text-blue-950 text-[15.5px] align-middle">
-                                    {sem1Grade}
-                                  </td>
-                                  {sIdx === 0 && (
-                                    <td rowSpan={2} className="border border-orange-300 p-2 text-center align-top bg-orange-50/10">
-                                      <span className="font-black text-orange-950 block text-center mb-1.5 text-[12.5px] leading-normal">विशेष प्रगती</span>
-                                      <p className="text-slate-950 leading-relaxed font-black px-1 text-[11.5px] text-center pt-1">
-                                        {getFormattedRemark(student, "विशेष प्रगती", "sem1")}
-                                      </p>
+                            {(() => {
+                              const numSubjects = subjects.length || 6;
+                              const span1 = Math.max(1, Math.floor(numSubjects / 3));
+                              const span2 = Math.max(1, Math.floor((numSubjects - span1) / 2));
+                              const span3 = Math.max(1, numSubjects - span1 - span2);
+                              const idx1 = 0;
+                              const idx2 = span1;
+                              const idx3 = span1 + span2;
+                              const twoPageRowPx = Math.max(36, Math.floor(510 / numSubjects));
+
+                              return subjects.map((subName, sIdx) => {
+                                const sem1Grade = getSubjectGradeForTerm(student, subName, "sem1");
+                                return (
+                                  <tr key={subName} style={{ height: `${twoPageRowPx}px` }}>
+                                    <td className="border border-orange-300 py-1 px-1.5 text-left font-black text-slate-950 bg-orange-50/20 text-[12.5px] pl-2 align-middle">
+                                      {subName}
                                     </td>
-                                  )}
-                                  {sIdx === 2 && (
-                                    <td rowSpan={2} className="border border-orange-300 p-2 text-center align-top bg-orange-50/10">
-                                      <span className="font-black text-orange-950 block text-center mb-1.5 text-[12.5px] leading-normal">आवड / छंद</span>
-                                      <p className="text-slate-950 leading-relaxed font-black px-1 text-[11.5px] text-center pt-1">
-                                        {getFormattedRemark(student, "आवड / छंद", "sem1")}
-                                      </p>
+                                    <td className="border border-orange-300 py-1 px-1 font-black text-blue-950 text-[14px] align-middle">
+                                      {sem1Grade}
                                     </td>
-                                  )}
-                                  {sIdx === 4 && (
-                                    <td rowSpan={2} className="border border-orange-300 p-2 text-center align-top bg-orange-50/10">
-                                      <span className="font-black text-orange-950 block text-center mb-1.5 text-[12.5px] leading-normal">सुधारणा आवश्यक</span>
-                                      <p className="text-slate-950 leading-relaxed font-black px-1 text-[11.5px] text-center pt-1">
-                                        {getFormattedRemark(student, "सुधारणा आवश्यक", "sem1")}
-                                      </p>
-                                    </td>
-                                  )}
-                                </tr>
-                              );
-                            })}
+                                    {sIdx === idx1 && (
+                                      <td rowSpan={span1} className="border border-orange-300 p-1 text-center align-top bg-orange-50/10">
+                                        <span className="font-black text-orange-950 block text-center mb-1 text-[12px] leading-normal">विशेष प्रगती</span>
+                                        <p className="text-slate-950 leading-relaxed font-black px-1 text-[11px] text-center pt-0.5 line-clamp-4">
+                                          {getFormattedRemark(student, "विशेष प्रगती", "sem1")}
+                                        </p>
+                                      </td>
+                                    )}
+                                    {sIdx === idx2 && (
+                                      <td rowSpan={span2} className="border border-orange-300 p-1 text-center align-top bg-orange-50/10">
+                                        <span className="font-black text-orange-950 block text-center mb-1 text-[12px] leading-normal">आवड / छंद</span>
+                                        <p className="text-slate-950 leading-relaxed font-black px-1 text-[11px] text-center pt-0.5 line-clamp-4">
+                                          {getFormattedRemark(student, "आवड / छंद", "sem1")}
+                                        </p>
+                                      </td>
+                                    )}
+                                    {sIdx === idx3 && (
+                                      <td rowSpan={span3} className="border border-orange-300 p-1 text-center align-top bg-orange-50/10">
+                                        <span className="font-black text-orange-950 block text-center mb-1 text-[12px] leading-normal">सुधारणा आवश्यक</span>
+                                        <p className="text-slate-950 leading-relaxed font-black px-1 text-[11px] text-center pt-0.5 line-clamp-4">
+                                          {getFormattedRemark(student, "सुधारणा आवश्यक", "sem1")}
+                                        </p>
+                                      </td>
+                                    )}
+                                  </tr>
+                                );
+                              });
+                            })()}
                           </tbody>
                         </table>
                       </div>
@@ -1860,43 +1893,54 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
                             </tr>
                           </thead>
                           <tbody>
-                            {subjects.map((subName, sIdx) => {
-                              const sem2Grade = getSubjectGradeForTerm(student, subName, "sem2");
-                              return (
-                                <tr key={subName} className="h-[96px]">
-                                  <td className="border border-orange-300 py-2 px-1.5 text-left font-black text-slate-950 bg-orange-50/20 text-[13.5px] pl-2 align-middle">
-                                    {subName}
-                                  </td>
-                                  <td className="border border-orange-300 py-2 px-1 font-black text-blue-950 text-[15.5px] align-middle">
-                                    {sem2Grade}
-                                  </td>
-                                  {sIdx === 0 && (
-                                    <td rowSpan={2} className="border border-orange-300 p-2 text-center align-top bg-orange-50/10">
-                                      <span className="font-black text-orange-950 block text-center mb-1.5 text-[12.5px] leading-normal">विशेष प्रगती</span>
-                                      <p className="text-slate-950 leading-relaxed font-black px-1 text-[11.5px] text-center pt-1">
-                                        {getFormattedRemark(student, "विशेष प्रगती", "sem2")}
-                                      </p>
+                            {(() => {
+                              const numSubjects = subjects.length || 6;
+                              const span1 = Math.max(1, Math.floor(numSubjects / 3));
+                              const span2 = Math.max(1, Math.floor((numSubjects - span1) / 2));
+                              const span3 = Math.max(1, numSubjects - span1 - span2);
+                              const idx1 = 0;
+                              const idx2 = span1;
+                              const idx3 = span1 + span2;
+                              const twoPageRowPx = Math.max(36, Math.floor(510 / numSubjects));
+
+                              return subjects.map((subName, sIdx) => {
+                                const sem2Grade = getSubjectGradeForTerm(student, subName, "sem2");
+                                return (
+                                  <tr key={subName} style={{ height: `${twoPageRowPx}px` }}>
+                                    <td className="border border-orange-300 py-1 px-1.5 text-left font-black text-slate-950 bg-orange-50/20 text-[12.5px] pl-2 align-middle">
+                                      {subName}
                                     </td>
-                                  )}
-                                  {sIdx === 2 && (
-                                    <td rowSpan={2} className="border border-orange-300 p-2 text-center align-top bg-orange-50/10">
-                                      <span className="font-black text-orange-950 block text-center mb-1.5 text-[12.5px] leading-normal">आवड / छंद</span>
-                                      <p className="text-slate-950 leading-relaxed font-black px-1 text-[11.5px] text-center pt-1">
-                                        {getFormattedRemark(student, "आवड / छंद", "sem2")}
-                                      </p>
+                                    <td className="border border-orange-300 py-1 px-1 font-black text-blue-950 text-[14px] align-middle">
+                                      {sem2Grade}
                                     </td>
-                                  )}
-                                  {sIdx === 4 && (
-                                    <td rowSpan={2} className="border border-orange-300 p-2 text-center align-top bg-orange-50/10">
-                                      <span className="font-black text-orange-950 block text-center mb-1.5 text-[12.5px] leading-normal">सुधारणा आवश्यक</span>
-                                      <p className="text-slate-950 leading-relaxed font-black px-1 text-[11.5px] text-center pt-1">
-                                        {getFormattedRemark(student, "सुधारणा आवश्यक", "sem2")}
-                                      </p>
-                                    </td>
-                                  )}
-                                </tr>
-                              );
-                            })}
+                                    {sIdx === idx1 && (
+                                      <td rowSpan={span1} className="border border-orange-300 p-1 text-center align-top bg-orange-50/10">
+                                        <span className="font-black text-orange-950 block text-center mb-1 text-[12px] leading-normal">विशेष प्रगती</span>
+                                        <p className="text-slate-950 leading-relaxed font-black px-1 text-[11px] text-center pt-0.5 line-clamp-4">
+                                          {getFormattedRemark(student, "विशेष प्रगती", "sem2")}
+                                        </p>
+                                      </td>
+                                    )}
+                                    {sIdx === idx2 && (
+                                      <td rowSpan={span2} className="border border-orange-300 p-1 text-center align-top bg-orange-50/10">
+                                        <span className="font-black text-orange-950 block text-center mb-1 text-[12px] leading-normal">आवड / छंद</span>
+                                        <p className="text-slate-950 leading-relaxed font-black px-1 text-[11px] text-center pt-0.5 line-clamp-4">
+                                          {getFormattedRemark(student, "आवड / छंद", "sem2")}
+                                        </p>
+                                      </td>
+                                    )}
+                                    {sIdx === idx3 && (
+                                      <td rowSpan={span3} className="border border-orange-300 p-1 text-center align-top bg-orange-50/10">
+                                        <span className="font-black text-orange-950 block text-center mb-1 text-[12px] leading-normal">सुधारणा आवश्यक</span>
+                                        <p className="text-slate-950 leading-relaxed font-black px-1 text-[11px] text-center pt-0.5 line-clamp-4">
+                                          {getFormattedRemark(student, "सुधारणा आवश्यक", "sem2")}
+                                        </p>
+                                      </td>
+                                    )}
+                                  </tr>
+                                );
+                              });
+                            })()}
                           </tbody>
                         </table>
                       </div>
