@@ -4635,9 +4635,9 @@ function TeacherSqafPage() {
 
   const [certUdise, setCertUdise] = useState(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("sqaf_cert_udise") || infoUdise || profile?.udise || "27350800701";
+      return localStorage.getItem("sqaf_cert_udise") || infoUdise || profile?.udise || "";
     }
-    return "27350800701";
+    return "";
   });
 
   const [certTitleEn, setCertTitleEn] = useState(() => {

@@ -1,5 +1,6 @@
 
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { ModulePaywall } from "@/components/teacher/ModulePaywall";
 import { TeacherHeader } from "@/components/teacher/TeacherHeader";
 import { TeacherSidebar } from "@/components/teacher/TeacherSidebar";
 import React, { useState, useEffect, useMemo } from "react";
@@ -7281,7 +7282,8 @@ function TeacherMDMPage() {
       <TeacherSidebar />
 
       <main className="lg:pl-0 pt-20 min-h-screen pb-20 relative z-10">
-        <PinGate sectionKey="mdm">
+        <ModulePaywall moduleId="mdm-register" defaultTitle="माध्यान्ह भोजन योजना नोंदवही (MDM Register)">
+          <PinGate sectionKey="mdm">
           <div className="p-2.5 sm:p-4 md:p-8 space-y-4 sm:space-y-6 w-full max-w-full overflow-x-hidden">
 
           {/* ===== MDM CATEGORY GROUPED NAVIGATION BAR ===== */}
@@ -16179,6 +16181,7 @@ function TeacherMDMPage() {
           )}
           </div>
         </PinGate>
+        </ModulePaywall>
       </main>
 
       {/* Low Stock Warning Modal */}

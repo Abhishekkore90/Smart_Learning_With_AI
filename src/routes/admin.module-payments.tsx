@@ -54,6 +54,9 @@ interface ModulePricing {
   description?: string;
   upiId?: string;
   qrImageUrl?: string;
+  perStudentPrice?: number;
+  monthlyPrice?: number;
+  yearlyPrice?: number;
 }
 
 interface TeacherPaymentRecord {
@@ -82,14 +85,18 @@ interface UniqueTeacher {
 }
 
 const DEFAULT_MODULES: { id: string; title: string; defaultPrice: number }[] = [
-  { id: "cce-result", title: "सातत्यपूर्ण सर्वंकष मूल्यांकन नोंदवही (CCE Evaluation)", defaultPrice: 199 },
-  { id: "mdm-register", title: "माध्यान्ह भोजन योजना नोंदवही (MDM Register)", defaultPrice: 149 },
-  { id: "meeting-register", title: "माता-पालक व शिक्षक सभा नोंदवही (Meeting Register)", defaultPrice: 99 },
-  { id: "sqaf-register", title: "शालेय गुणवत्ता आश्वासन व प्रमाणीकरण (SQAAF)", defaultPrice: 299 },
-  { id: "question-bank", title: "प्रश्नपेढी व्यवस्थापन (Question Bank Generator)", defaultPrice: 149 },
-  { id: "academic-planning", title: "वार्षिक व मासिक नियोजन (Academic Planning)", defaultPrice: 99 },
-  { id: "paripath", title: "दैनिक परिपाठ (Daily Assembly)", defaultPrice: 0 },
-  { id: "timetable", title: "वेळापत्रक व्यवस्थापन (School Timetable)", defaultPrice: 0 },
+  { id: "timetable", title: "१. वेळापत्रक", defaultPrice: 0 },
+  { id: "templates", title: "२. टेम्पलेट", defaultPrice: 149 },
+  { id: "special-day", title: "३. परिपाठ", defaultPrice: 299 },
+  { id: "meeting-register", title: "४. मासिक सभा", defaultPrice: 99 },
+  { id: "mdm-register", title: "५. माध्यान्ह भोजन", defaultPrice: 149 },
+  { id: "sqaf-register", title: "६. SQAAF मूल्यमापन", defaultPrice: 299 },
+  { id: "cce-result", title: "७. CCE निकाल", defaultPrice: 199 },
+  { id: "hpc-card", title: "८. Holistic Progress Card (HPC)", defaultPrice: 199 },
+  { id: "stats-teacher", title: "९. शिक्षक संचिका", defaultPrice: 99 },
+  { id: "annual-monthly-planning", title: "१०. वार्षिक नियोजन, मासिक नियोजन व प्रश्नपेढी", defaultPrice: 149 },
+  { id: "teaching-record", title: "११. टाचणवही", defaultPrice: 99 },
+  { id: "stats-student", title: "१२. विद्यार्थी संचिका", defaultPrice: 99 },
 ];
 
 function AdminModulePaymentsPage() {
@@ -123,7 +130,7 @@ function AdminModulePaymentsPage() {
         map[d.id] = d.data() as ModulePricing;
       });
 
-      // Fill defaults if missing
+      // Fill defaults if missing or update title
       DEFAULT_MODULES.forEach((mod) => {
         if (!map[mod.id]) {
           map[mod.id] = {
@@ -138,6 +145,8 @@ function AdminModulePaymentsPage() {
             ],
             validityDays: 365,
           };
+        } else {
+          map[mod.id].title = mod.title;
         }
       });
       setPricings(map);
@@ -202,6 +211,12 @@ function AdminModulePaymentsPage() {
     setSaving(true);
     try {
       await setDoc(doc(db, "cce_module_pricing", modId), item, { merge: true });
+      if (modId === "special-day") {
+        await setDoc(doc(db, "cce_module_pricing", "paripath"), { ...item, id: "paripath" }, { merge: true });
+      } else if (modId === "annual-monthly-planning") {
+        await setDoc(doc(db, "cce_module_pricing", "academic-planning"), { ...item, id: "academic-planning" }, { merge: true });
+        await setDoc(doc(db, "cce_module_pricing", "question-bank"), { ...item, id: "question-bank" }, { merge: true });
+      }
       toast.success(`'${item.title}' चे दर यशस्वीरित्या जतन झाले!`);
     } catch (err: any) {
       toast.error("जतन अयशस्वी: " + err.message);
@@ -214,6 +229,12 @@ function AdminModulePaymentsPage() {
     try {
       for (const [modId, item] of Object.entries(pricings)) {
         await setDoc(doc(db, "cce_module_pricing", modId), item, { merge: true });
+        if (modId === "special-day") {
+          await setDoc(doc(db, "cce_module_pricing", "paripath"), { ...item, id: "paripath" }, { merge: true });
+        } else if (modId === "annual-monthly-planning") {
+          await setDoc(doc(db, "cce_module_pricing", "academic-planning"), { ...item, id: "academic-planning" }, { merge: true });
+          await setDoc(doc(db, "cce_module_pricing", "question-bank"), { ...item, id: "question-bank" }, { merge: true });
+        }
       }
       toast.success("सर्व मॉड्यूल्सचे दर यशस्वीरित्या जतन झाले!");
     } catch (err: any) {
@@ -689,7 +710,7 @@ function AdminModulePaymentsPage() {
                             </>
                           )}
                         </span>
-                        <h4 className="text-sm font-black text-slate-900 mt-1.5 leading-snug">{item.title}</h4>
+                        <h4 className="text-sm font-black text-slate-900 mt-1.5 leading-snug">{mod.title || item.title}</h4>
                       </div>
 
                       {/* Toggle Paywall */}
@@ -705,37 +726,132 @@ function AdminModulePaymentsPage() {
                       </button>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 pt-2">
-                      <div>
-                        <label className="text-[11px] font-extrabold text-slate-600 block mb-1">दर (रु. मध्ये)</label>
-                        <div className="relative">
-                          <span className="absolute left-3.5 top-3 text-slate-400 font-bold text-sm">₹</span>
+                    {mod.id === "cce-result" ? (
+                      <div className="space-y-3 pt-2">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-[11px] font-extrabold text-slate-600 block mb-1">
+                              विद्यार्थी दर (₹ / विद्यार्थी)*
+                            </label>
+                            <div className="relative">
+                              <span className="absolute left-3.5 top-3 text-emerald-600 font-black text-sm">₹</span>
+                              <input
+                                type="number"
+                                min="1"
+                                value={item.perStudentPrice ?? 5}
+                                onChange={(e) => {
+                                  const val = parseInt(e.target.value) || 0;
+                                  setPricings((prev) => ({
+                                    ...prev,
+                                    [mod.id]: {
+                                      ...prev[mod.id],
+                                      perStudentPrice: val,
+                                      price: val, // Fallback sync
+                                    },
+                                  }));
+                                }}
+                                className="w-full pl-8 pr-4 py-2.5 bg-emerald-50/60 border border-emerald-300 focus:border-emerald-500 rounded-xl text-sm font-black text-emerald-950 outline-none"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="text-[11px] font-extrabold text-slate-600 block mb-1">शुल्क पद्धत</label>
+                            <div className="px-3 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 flex items-center gap-1">
+                              <span>प्रति विद्यार्थी शुल्क (Per Student)</span>
+                            </div>
+                          </div>
+                        </div>
+
+                      </div>
+                    ) : mod.id === "meeting-register" || mod.id === "mdm-register" ? (
+                      <div className="space-y-3 pt-2">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-[11px] font-extrabold text-slate-600 block mb-1">
+                              मासिक दर (₹ / महिना)*
+                            </label>
+                            <div className="relative">
+                              <span className="absolute left-3.5 top-3 text-amber-600 font-black text-sm">₹</span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={item.monthlyPrice ?? item.price ?? (mod.id === "mdm-register" ? 50 : 100)}
+                                onChange={(e) => {
+                                  const val = Math.max(0, parseInt(e.target.value) || 0);
+                                  setPricings((prev) => ({
+                                    ...prev,
+                                    [mod.id]: {
+                                      ...prev[mod.id],
+                                      monthlyPrice: val,
+                                      price: val,
+                                    },
+                                  }));
+                                }}
+                                className="w-full pl-8 pr-4 py-2.5 bg-amber-50/60 border border-amber-300 focus:border-amber-500 rounded-xl text-sm font-black text-amber-950 outline-none"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="text-[11px] font-extrabold text-slate-600 block mb-1">
+                              वार्षिक दर (₹ / संपूर्ण वर्ष)*
+                            </label>
+                            <div className="relative">
+                              <span className="absolute left-3.5 top-3 text-emerald-600 font-black text-sm">₹</span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={item.yearlyPrice ?? (mod.id === "mdm-register" ? 299 : 700)}
+                                onChange={(e) => {
+                                  const val = Math.max(0, parseInt(e.target.value) || 0);
+                                  setPricings((prev) => ({
+                                    ...prev,
+                                    [mod.id]: {
+                                      ...prev[mod.id],
+                                      yearlyPrice: val,
+                                    },
+                                  }));
+                                }}
+                                className="w-full pl-8 pr-4 py-2.5 bg-emerald-50/60 border border-emerald-300 focus:border-emerald-500 rounded-xl text-sm font-black text-emerald-950 outline-none"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-3 pt-2">
+                        <div>
+                          <label className="text-[11px] font-extrabold text-slate-600 block mb-1">दर (रु. मध्ये)</label>
+                          <div className="relative">
+                            <span className="absolute left-3.5 top-3 text-slate-400 font-bold text-sm">₹</span>
+                            <input
+                              type="number"
+                              min="0"
+                              value={item.price}
+                              onChange={(e) => handlePriceChange(mod.id, parseInt(e.target.value) || 0)}
+                              className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-sm font-extrabold text-slate-900 outline-none"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-[11px] font-extrabold text-slate-600 block mb-1">वैधता (दिवस)</label>
                           <input
                             type="number"
-                            min="0"
-                            value={item.price}
-                            onChange={(e) => handlePriceChange(mod.id, parseInt(e.target.value) || 0)}
-                            className="w-full pl-8 pr-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-sm font-extrabold text-slate-900 outline-none"
+                            min="1"
+                            value={item.validityDays || 365}
+                            onChange={(e) =>
+                              setPricings((prev) => ({
+                                ...prev,
+                                [mod.id]: { ...prev[mod.id], validityDays: parseInt(e.target.value) || 365 },
+                              }))
+                            }
+                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-sm font-extrabold text-slate-900 outline-none"
                           />
                         </div>
                       </div>
-
-                      <div>
-                        <label className="text-[11px] font-extrabold text-slate-600 block mb-1">वैधता (दिवस)</label>
-                        <input
-                          type="number"
-                          min="1"
-                          value={item.validityDays || 365}
-                          onChange={(e) =>
-                            setPricings((prev) => ({
-                              ...prev,
-                              [mod.id]: { ...prev[mod.id], validityDays: parseInt(e.target.value) || 365 },
-                            }))
-                          }
-                          className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-sm font-extrabold text-slate-900 outline-none"
-                        />
-                      </div>
-                    </div>
+                    )}
 
 
 

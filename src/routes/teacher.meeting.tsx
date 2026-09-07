@@ -1553,7 +1553,7 @@ function TeacherMeetingPage() {
 
       {/* Main Container */}
       <main className="lg:pl-0 pt-16 min-h-screen">
-        <ModulePaywall moduleId="meeting-register" defaultTitle="माता-पालक व शिक्षक सभा नोंदवही (Meeting Register)">
+        <ModulePaywall moduleId="meeting-register" defaultTitle="माता-पालक व शिक्षक सभा नोंदवही (Meeting Register)" selectedMonth={selectedMonth}>
           <PinGate sectionKey="meeting">
             <div className="p-4 md:p-8 space-y-8 max-w-full mx-auto print:p-0 print:pl-0">
               {/* Header section (Hidden on print) */}

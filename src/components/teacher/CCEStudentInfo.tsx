@@ -809,7 +809,7 @@ export function CCEStudentInfo({
         </div>
         <div className="space-y-2 pt-3 border-t border-slate-200">
           <p className="text-xs font-extrabold text-blue-900 flex items-center gap-1">👨 वडिलांची माहिती</p>
-          <FloatInput label="वडिलांचे नाव (Father Name)" value={currentDetails.fatherName} onChange={(v) => updateFn("fatherName", v)} placeholder="उदा. सचिन साळुंखे" />
+          <FloatInput label="वडिलांचे नाव (Father Name)" value={currentDetails.fatherName} onChange={(v) => updateFn("fatherName", v)} placeholder="उदा. वडिलांचे पूर्ण नाव" />
           <div className="grid grid-cols-2 gap-2">
             <FloatInput label="शिक्षण" value={currentDetails.fatherEducation} onChange={(v) => updateFn("fatherEducation", v)} placeholder="उदा. B.Com" />
             <FloatInput label="व्यवसाय" value={currentDetails.fatherOccupation} onChange={(v) => updateFn("fatherOccupation", v)} placeholder="उदा. शेतकरी / नोकरी" />
@@ -853,7 +853,7 @@ export function CCEStudentInfo({
               onChange={setNewName}
               required
               icon={User}
-              placeholder="उदा. समृद्धी सचिन साळुंखे पाटील"
+              placeholder="उदा. विद्यार्थ्याचे पूर्ण नाव"
             />
             <FloatInput
               label="हजेरी क्रमांक (Roll No.)"

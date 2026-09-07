@@ -30,6 +30,9 @@ interface ModulePaywallProps {
   moduleId: string;
   defaultTitle?: string;
   children: React.ReactNode;
+  totalStudentsCount?: number;
+  isPaidTab?: boolean;
+  selectedMonth?: string;
 }
 
 interface ModulePricing {
@@ -42,22 +45,65 @@ interface ModulePricing {
   description?: string;
   upiId?: string;
   qrImageUrl?: string;
+  perStudentPrice?: number;
+  monthlyPrice?: number;
+  yearlyPrice?: number;
 }
 
-export function ModulePaywall({ moduleId, defaultTitle, children }: ModulePaywallProps) {
+const MONTH_OPTIONS = [
+  { code: "06", label: "जून" },
+  { code: "07", label: "जुलै" },
+  { code: "08", label: "ऑगस्ट" },
+  { code: "09", label: "सप्टेंबर" },
+  { code: "10", label: "ऑक्टोबर" },
+  { code: "11", label: "नोव्हेंबर" },
+  { code: "12", label: "डिसेंबर" },
+  { code: "01", label: "जानेवारी" },
+  { code: "02", label: "फेब्रुवारी" },
+  { code: "03", label: "मार्च" },
+  { code: "04", label: "एप्रिल" },
+  { code: "05", label: "मे" },
+];
+
+const MONTH_NAMES_MAP: Record<string, string> = {
+  "06": "जून",
+  "07": "जुलै",
+  "08": "ऑगस्ट",
+  "09": "सप्टेंबर",
+  "10": "ऑक्टोबर",
+  "11": "नोव्हेंबर",
+  "12": "डिसेंबर",
+  "01": "जानेवारी",
+  "02": "फेब्रुवारी",
+  "03": "मार्च",
+  "04": "एप्रिल",
+  "05": "मे",
+};
+
+export function ModulePaywall({
+  moduleId,
+  defaultTitle,
+  children,
+  totalStudentsCount = 0,
+  isPaidTab = true,
+  selectedMonth,
+}: ModulePaywallProps) {
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
-  const [submittingUtr, setSubmittingUtr] = useState(false);
   const [pricing, setPricing] = useState<ModulePricing | null>(null);
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [paymentInfo, setPaymentInfo] = useState<any>(null);
-  
-  // Payment Mode Tab: "razorpay" (Card/NetBanking/Online/UPI) as DEFAULT for all users
-  const [paymentTab, setPaymentTab] = useState<"qr" | "razorpay">("razorpay");
-  
-  // Manual UTR submission state
-  const [utrNumber, setUtrNumber] = useState("");
-  const [copiedUpi, setCopiedUpi] = useState(false);
+
+  const [meetingPlan, setMeetingPlan] = useState<"monthly" | "yearly">("monthly");
+  const [targetMonth, setTargetMonth] = useState<string>(
+    selectedMonth || String(new Date().getMonth() + 1).padStart(2, "0")
+  );
+
+  useEffect(() => {
+    if (selectedMonth) {
+      setTargetMonth(selectedMonth);
+    }
+  }, [selectedMonth]);
 
   const { user, profile } = useAuth();
   const teacherId = getTeacherId(user, profile) || "teacher_guest";
@@ -168,7 +214,22 @@ export function ModulePaywall({ moduleId, defaultTitle, children }: ModulePaywal
                   data.moduleId === "ALL" || data.moduleId === moduleId;
 
                 if (matchesUser && matchesModule) {
-                  if (data.expiresAt) {
+                  if (isMonthlyOptionModule) {
+                    const cutoff = isMdmModule ? 299 : 700;
+                    const isFullYear =
+                      data.paymentType === "FULL_YEAR" ||
+                      data.amount >= cutoff ||
+                      (!data.unlockedMonth && !data.unlockedMonths && !data.paymentType);
+                    const activeMonthCode =
+                      selectedMonth || targetMonth || String(new Date().getMonth() + 1).padStart(2, "0");
+                    const unlockedList =
+                      data.unlockedMonths || (data.unlockedMonth ? [data.unlockedMonth] : []);
+
+                    if (isFullYear || unlockedList.includes(activeMonthCode)) {
+                      paid = true;
+                      paidData = data;
+                    }
+                  } else if (data.expiresAt) {
                     if (new Date(data.expiresAt) > new Date()) {
                       paid = true;
                       paidData = data;
@@ -204,17 +265,55 @@ export function ModulePaywall({ moduleId, defaultTitle, children }: ModulePaywal
     };
   }, [moduleId, teacherId, user, profile]);
 
+  // Compute dynamic price for CCE result (per-student) vs meeting/mdm register vs fixed module price
+  const isMdmModule = moduleId === "mdm-register";
+  const isMeetingModule = moduleId === "meeting-register";
+  const isMonthlyOptionModule = isMeetingModule || isMdmModule;
+
+  const defaultMonthly = isMdmModule ? 50 : 100;
+  const defaultYearly = isMdmModule ? 299 : 700;
+
+  const isPerStudentModule = moduleId === "cce-result" || (pricing && pricing.perStudentPrice !== undefined);
+  const perStudentRate = pricing?.perStudentPrice ?? 5;
+  const effectiveStudentsCount = totalStudentsCount > 0 ? totalStudentsCount : 1;
+  
+  const monthlyRate = pricing?.monthlyPrice ?? pricing?.price ?? defaultMonthly;
+  const yearlyRate = pricing?.yearlyPrice ?? defaultYearly;
+
+  let targetPrice = 149;
+  if (isPerStudentModule) {
+    targetPrice = Math.max(1, effectiveStudentsCount) * perStudentRate;
+  } else if (isMonthlyOptionModule) {
+    targetPrice = meetingPlan === "yearly" ? yearlyRate : monthlyRate;
+  } else {
+    targetPrice = pricing?.price || 149;
+  }
+
+  // If this tab is explicitly marked as FREE (e.g. School settings or Student Progress in CCE)
+  if (!isPaidTab) {
+    return <>{children}</>;
+  }
+
   // Handle Razorpay Online Gateway Checkout
   const handlePayNow = async () => {
-    if (!pricing || pricing.price <= 0) return;
+    if (!pricing || targetPrice <= 0) return;
     setPaying(true);
+
+    const handleFocus = () => {
+      setTimeout(() => {
+        setPaying(false);
+        window.removeEventListener("focus", handleFocus);
+      }, 1500);
+    };
+    window.addEventListener("focus", handleFocus);
+
     try {
       const teacherName = localStorage.getItem("teacher_name") || localStorage.getItem("user_name") || "शिक्षक";
       const teacherEmail = localStorage.getItem("teacher_email") || "";
       const teacherPhone = localStorage.getItem("teacher_phone") || "";
 
       await processRazorpayPayment({
-        amount: pricing.price,
+        amount: targetPrice,
         moduleId: pricing.id,
         moduleTitle: pricing.title || defaultTitle || moduleId,
         teacherName,
@@ -222,12 +321,26 @@ export function ModulePaywall({ moduleId, defaultTitle, children }: ModulePaywal
         teacherPhone,
         onSuccess: async (paymentId, orderId) => {
           try {
-            const paymentDocKey = `${teacherId}_${moduleId}`;
+            const paymentDocKey = isMonthlyOptionModule
+              ? meetingPlan === "yearly"
+                ? `${teacherId}_${moduleId}_FULL_YEAR`
+                : `${teacherId}_${moduleId}_MONTH_${targetMonth}`
+              : `${teacherId}_${moduleId}`;
+
             const validityDays = pricing.validityDays || 365;
             const paidAt = new Date();
-            const expiresAt = new Date();
-            expiresAt.setDate(paidAt.getDate() + validityDays);
+            let expiresAt = new Date();
 
+            if (moduleId === "special-day" || moduleId === "paripath" || moduleId === "daily-assembly" || (isMonthlyOptionModule && meetingPlan === "yearly")) {
+              // School Academic Year expiry: June 1st to May 31st of next year
+              const currentMonth = paidAt.getMonth();
+              const academicEndYear = currentMonth >= 5 ? paidAt.getFullYear() + 1 : paidAt.getFullYear();
+              expiresAt = new Date(academicEndYear, 4, 31, 23, 59, 59, 999);
+            } else {
+              expiresAt.setDate(paidAt.getDate() + validityDays);
+            }
+
+            const quota = totalStudentsCount > 0 ? totalStudentsCount : 1;
             const record = {
               id: paymentDocKey,
               teacherId,
@@ -235,14 +348,28 @@ export function ModulePaywall({ moduleId, defaultTitle, children }: ModulePaywal
               teacherEmail,
               teacherPhone,
               moduleId: pricing.id,
-              moduleTitle: pricing.title || defaultTitle || moduleId,
-              amount: pricing.price,
+              moduleTitle: isMonthlyOptionModule
+                ? meetingPlan === "yearly"
+                  ? `${pricing.title || defaultTitle || moduleId} (वार्षिक - संपूर्ण वर्ष)`
+                  : `${pricing.title || defaultTitle || moduleId} (मासिक - ${MONTH_NAMES_MAP[targetMonth] || targetMonth} महिना)`
+                : (pricing.title || defaultTitle || moduleId),
+              amount: targetPrice,
               paymentMethod: "RAZORPAY",
               razorpayPaymentId: paymentId,
               razorpayOrderId: orderId || "",
               status: "SUCCESS",
               paidAt: paidAt.toISOString(),
               expiresAt: expiresAt.toISOString(),
+              studentsCount: quota,
+              paidQuota: quota,
+              perStudentRate: isPerStudentModule ? perStudentRate : undefined,
+              paymentType: isMonthlyOptionModule ? (meetingPlan === "yearly" ? "FULL_YEAR" : "MONTHLY") : "FULL",
+              unlockedMonth: isMonthlyOptionModule && meetingPlan === "monthly" ? targetMonth : undefined,
+              unlockedMonths: isMonthlyOptionModule
+                ? meetingPlan === "yearly"
+                  ? ["06", "07", "08", "09", "10", "11", "12", "01", "02", "03", "04", "05"]
+                  : [targetMonth]
+                : undefined,
             };
 
             await setDoc(doc(db, "teacher_module_payments", paymentDocKey), record, { merge: true });
@@ -268,7 +395,8 @@ export function ModulePaywall({ moduleId, defaultTitle, children }: ModulePaywal
         },
         onError: (err) => {
           setPaying(false);
-          toast.error(typeof err === "string" ? err : "पेमेंट अयशस्वी झाले.");
+          const msg = typeof err === "string" ? err : "पेमेंट प्रक्रिया रद्द किंवा अयशस्वी झाली.";
+          toast.error(msg);
         },
       });
     } catch (err: any) {
@@ -277,70 +405,6 @@ export function ModulePaywall({ moduleId, defaultTitle, children }: ModulePaywal
     }
   };
 
-  // Handle UTR Reference Submission (when paying via UPI QR Scanner)
-  const handleSubmitUtr = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!utrNumber || utrNumber.trim().length < 6) {
-      toast.error("कृपया वैध 12 अंकी UTR / Transaction Reference Number टाका.");
-      return;
-    }
-
-    setSubmittingUtr(true);
-    try {
-      const teacherName = localStorage.getItem("teacher_name") || localStorage.getItem("user_name") || "शिक्षक";
-      const teacherEmail = localStorage.getItem("teacher_email") || "";
-      const teacherPhone = localStorage.getItem("teacher_phone") || "";
-      const paymentDocKey = `${teacherId}_${moduleId}`;
-      const validityDays = pricing?.validityDays || 365;
-      const paidAt = new Date();
-      const expiresAt = new Date();
-      expiresAt.setDate(paidAt.getDate() + validityDays);
-
-      const record = {
-        id: paymentDocKey,
-        teacherId,
-        teacherName,
-        teacherEmail,
-        teacherPhone,
-        moduleId: pricing?.id || moduleId,
-        moduleTitle: pricing?.title || defaultTitle || moduleId,
-        amount: pricing?.price || 0,
-        paymentMethod: "UPI_QR",
-        utrNumber: utrNumber.trim(),
-        razorpayPaymentId: `UTR_${utrNumber.trim()}`,
-        status: "SUCCESS", // Auto unlock on submission or instant verify
-        paidAt: paidAt.toISOString(),
-        expiresAt: expiresAt.toISOString(),
-      };
-
-      await setDoc(doc(db, "teacher_module_payments", paymentDocKey), record, { merge: true });
-
-      // Promote user to Teacher role upon purchasing any module
-      try {
-        if (teacherId && teacherId !== "teacher_guest") {
-          await setDoc(doc(db, "users", teacherId), { role: "teacher", is_teacher: true, isTeacher: true }, { merge: true });
-          await setDoc(doc(db, "teachers", teacherId), { role: "teacher", is_teacher: true, email: teacherEmail, fullName: teacherName }, { merge: true });
-        }
-      } catch (roleErr) {
-        console.warn("User role upgrade error:", roleErr);
-      }
-
-      setIsUnlocked(true);
-      setSubmittingUtr(false);
-      toast.success("UTR व्हॅलिडेट झाले! हे मॉड्यूल यशस्वीरित्या अनलॉक झाले आहे!");
-    } catch (err: any) {
-      console.error("UTR Submission error:", err);
-      toast.error("UTR जतन करताना अडचण आली: " + err.message);
-      setSubmittingUtr(false);
-    }
-  };
-
-  const copyUpiId = (id: string) => {
-    navigator.clipboard.writeText(id);
-    setCopiedUpi(true);
-    toast.success("UPI ID क्लिपबोर्डवर कॉपी झाला!");
-    setTimeout(() => setCopiedUpi(false), 3000);
-  };
 
   if (loading) {
     return (
@@ -351,15 +415,14 @@ export function ModulePaywall({ moduleId, defaultTitle, children }: ModulePaywal
     );
   }
 
-  // Free or Paywall disabled by Admin OR already unlocked by Teacher
-  const isFree = !pricing || !pricing.enabled || pricing.price <= 0;
-  if (isFree || isUnlocked) {
+  // Free or Paywall disabled by Admin OR already unlocked by Teacher OR non-paid tab
+  const isFree = !pricing || !pricing.enabled || targetPrice <= 0;
+  if (isFree || isUnlocked || !isPaidTab) {
     return <>{children}</>;
   }
 
   // Generate dynamic UPI QR URL if no custom image set
   const upiId = pricing?.upiId || "smartlearning@upi";
-  const targetPrice = pricing?.price || 149;
   const upiPayload = `upi://pay?pa=${upiId}&pn=${encodeURIComponent("Smart Learning AI")}&am=${targetPrice}&cu=INR&tn=${encodeURIComponent(pricing?.title || moduleId)}`;
   const qrCodeUrl = pricing?.qrImageUrl || `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(upiPayload)}`;
 
@@ -387,185 +450,170 @@ export function ModulePaywall({ moduleId, defaultTitle, children }: ModulePaywal
         {/* Main Content Area */}
         <div className="p-6 sm:p-10 relative z-10 space-y-8">
           
-          {/* Payment Method Selector Tabs */}
-          <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200 max-w-md mx-auto">
-            <button
-              onClick={() => setPaymentTab("razorpay")}
-              className={`flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                paymentTab === "razorpay"
-                  ? "bg-white text-purple-700 shadow-md border border-slate-200/80"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              <CreditCard className="size-4.5 text-purple-600" />
-              <span>Razorpay गेटवे (Instant Online)</span>
-            </button>
-
-            <button
-              onClick={() => setPaymentTab("qr")}
-              className={`flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                paymentTab === "qr"
-                  ? "bg-white text-blue-700 shadow-md border border-slate-200/80"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              <QrCode className="size-4.5 text-blue-600" />
-              <span>QR कोड स्कॅनर (Direct UPI)</span>
-            </button>
-          </div>
-
-          {/* TAB 1: DIRECT QR SCANNER (PROMINENT SCANNER CARD) */}
-          {paymentTab === "qr" && (
-            <div className="bg-gradient-to-br from-slate-50 to-blue-50/60 rounded-3xl p-6 sm:p-8 border border-blue-100 shadow-sm space-y-6">
-              <div className="text-center space-y-2">
-                <span className="inline-flex items-center gap-1.5 px-3.5 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-black uppercase tracking-wider">
-                  <Sparkles className="size-3.5 text-emerald-600" /> त्वरित UPI पेमेंट स्कॅनर
-                </span>
-                <h3 className="text-xl sm:text-2xl font-black text-slate-900">
-                  स्कॅन करा आणि ₹{targetPrice} भरा
-                </h3>
-                <p className="text-xs font-bold text-slate-500">
-                  Google Pay, PhonePe, Paytm, BHIM किंवा कोणत्याही UPI ॲपने स्कॅन करा
-                </p>
-              </div>
-
-              {/* QR Code Scanner Box */}
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-8 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-md">
-                <div className="relative group">
-                  <div className="w-56 h-56 p-3 bg-white rounded-2xl border-4 border-blue-600/20 shadow-xl flex items-center justify-center relative overflow-hidden">
-                    <img
-                      src={qrCodeUrl}
-                      alt="Payment UPI QR Code"
-                      className="w-full h-full object-contain rounded-xl"
-                    />
-                    {/* Scanner Overlay Line Effect */}
-                    <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent top-0 animate-pulse" />
-                  </div>
-                  <div className="text-center mt-2">
-                    <span className="text-[11px] font-extrabold text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-100 inline-block">
-                      ₹{targetPrice} (1 Year Validity)
+          {/* Per-Student Fee Breakdown Banner */}
+          {isPerStudentModule && (
+            <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-emerald-500/10 border-2 border-amber-200/80 p-5 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+              <div className="flex items-center gap-3.5">
+                <div className="size-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-black text-xl shadow-md shrink-0">
+                  ₹
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-black text-amber-800 uppercase tracking-wider bg-amber-100 px-2 py-0.5 rounded-full">
+                      CCE प्रति विद्यार्थी दर रचना
                     </span>
                   </div>
-                </div>
-
-                {/* UPI Details & Copy Box */}
-                <div className="space-y-4 max-w-xs text-center sm:text-left">
-                  <div className="space-y-1">
-                    <p className="text-xs font-black text-slate-400 uppercase tracking-wider">UPI ID:</p>
-                    <div className="flex items-center gap-2 bg-slate-100 p-2.5 rounded-xl border border-slate-200">
-                      <span className="font-mono font-black text-slate-800 text-sm truncate flex-1">
-                        {upiId}
-                      </span>
-                      <button
-                        onClick={() => copyUpiId(upiId)}
-                        className="p-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-lg transition-all cursor-pointer shrink-0"
-                        title="Copy UPI ID"
-                      >
-                        {copiedUpi ? <Check className="size-4" /> : <Copy className="size-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Payment Apps Badges */}
-                  <div className="space-y-1.5">
-                    <p className="text-[11px] font-bold text-slate-500">सपोर्टेड UPI ॲप्स:</p>
-                    <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap text-[11px] font-black text-slate-700">
-                      <span className="px-2.5 py-1 bg-blue-100/70 text-blue-800 rounded-lg border border-blue-200">
-                        Google Pay
-                      </span>
-                      <span className="px-2.5 py-1 bg-purple-100/70 text-purple-800 rounded-lg border border-purple-200">
-                        PhonePe
-                      </span>
-                      <span className="px-2.5 py-1 bg-sky-100/70 text-sky-800 rounded-lg border border-sky-200">
-                        Paytm
-                      </span>
-                      <span className="px-2.5 py-1 bg-orange-100/70 text-orange-800 rounded-lg border border-orange-200">
-                        BHIM
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Manual UTR Submit Form */}
-              <form onSubmit={handleSubmitUtr} className="bg-white p-5 rounded-2xl border border-slate-200 space-y-3">
-                <div className="flex items-center gap-2">
-                  <Smartphone className="size-5 text-blue-600 shrink-0" />
-                  <h4 className="text-xs sm:text-sm font-black text-slate-800">
-                    पेमेंट केल्यानंतर UTR / Transaction Ref No. येथे टाका:
+                  <h4 className="text-base sm:text-lg font-black text-slate-900 mt-1">
+                    ₹{perStudentRate} प्रति विद्यार्थी × {totalStudentsCount > 0 ? totalStudentsCount : 1} विद्यार्थी
                   </h4>
+                  <p className="text-xs text-slate-500 font-medium">
+                    {totalStudentsCount > 0
+                      ? `तुमच्या खात्यात एकूण ${totalStudentsCount} विद्यार्थी जोडलेले आहेत.`
+                      : "नुकतीच सुरुवात! (न्यूनतम १ विद्यार्थी दर)"}
+                  </p>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <input
-                    type="text"
-                    value={utrNumber}
-                    onChange={(e) => setUtrNumber(e.target.value)}
-                    placeholder="उदा. 12 अंकी UTR नंबर (Ref No)"
-                    className="flex-1 px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <button
-                    type="submit"
-                    disabled={submittingUtr}
-                    className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs sm:text-sm font-black rounded-xl shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
-                  >
-                    {submittingUtr ? (
-                      <Loader2 className="size-4 animate-spin" />
-                    ) : (
-                      <Send className="size-4" />
-                    )}
-                    <span>वेरीफाय करा</span>
-                  </button>
-                </div>
-                <p className="text-[11px] text-slate-500 font-medium">
-                  * स्कॅन करून भरणा केल्यानंतर युपीआय ॲप मधील 12 डिजिट Reference Number टाकून अनलॉक करा.
-                </p>
-              </form>
+              </div>
+
+              <div className="text-right bg-white px-5 py-3 rounded-2xl border border-amber-200/80 shadow-xs shrink-0 w-full sm:w-auto">
+                <span className="text-[11px] text-slate-500 font-extrabold block">एकूण देय रक्कम</span>
+                <span className="text-2xl font-black text-emerald-600">₹{targetPrice}</span>
+              </div>
             </div>
           )}
 
-          {/* TAB 2: RAZORPAY GATEWAY CHECKOUT */}
-          {paymentTab === "razorpay" && (
-            <div className="bg-gradient-to-br from-slate-50 to-purple-50/60 rounded-3xl p-6 sm:p-8 border border-purple-100 shadow-sm space-y-6">
-              <div className="text-center space-y-2">
-                <span className="inline-flex items-center gap-1.5 px-3.5 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-black uppercase tracking-wider">
-                  <ShieldCheck className="size-3.5 text-purple-600" /> Razorpay ऑनलाइन गेटवे
-                </span>
-                <h3 className="text-xl sm:text-2xl font-black text-slate-900">
-                  कार्ड / नेटबँकिंग / युपीआय द्वारे भरणा करा
-                </h3>
-                <p className="text-xs font-bold text-slate-500">
-                  Razorpay च्या 100% सुरक्षित पेमेंट गेटवेद्वारे त्वरित ॲक्सेस मिळवा
-                </p>
+          {/* Meeting / MDM Register Plan Selection Banner */}
+          {isMonthlyOptionModule && (
+            <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-purple-950 p-6 rounded-3xl border border-indigo-500/30 text-white space-y-4 shadow-xl">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-black uppercase tracking-wider text-amber-300 flex items-center gap-2">
+                  <Sparkles className="size-4 text-amber-400" /> प्लॅन व ॲक्सेस प्रकार निवडा (Choose Access Plan):
+                </h4>
               </div>
 
-              <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-md space-y-4 text-center">
-                <div className="text-3xl font-black text-purple-700">
-                  ₹{targetPrice} <span className="text-xs font-bold text-slate-500">/ 1 Year</span>
-                </div>
-                <p className="text-xs font-bold text-slate-600">
-                  सर्व डेबिट कार्ड्स, क्रेडिट कार्ड्स, नेटबँकिंग, व्हॉलेट आणि UPI पेमेंट पर्याय उपलब्ध.
-                </p>
-
-                <button
-                  onClick={handlePayNow}
-                  disabled={paying}
-                  className="w-full py-4 sm:py-5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 active:scale-98 text-white font-black text-base sm:text-lg rounded-2xl shadow-xl shadow-purple-500/25 flex items-center justify-center gap-3 transition-all cursor-pointer disabled:opacity-50"
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Option 1: Monthly (Admin configured price) */}
+                <div
+                  onClick={() => setMeetingPlan("monthly")}
+                  className={`p-5 rounded-2xl border-2 cursor-pointer transition-all ${
+                    meetingPlan === "monthly"
+                      ? "border-amber-400 bg-amber-500/20 text-white shadow-lg ring-2 ring-amber-400/40"
+                      : "border-slate-700 bg-slate-900/60 text-slate-300 hover:border-slate-500"
+                  }`}
                 >
-                  {paying ? (
-                    <>
-                      <Loader2 className="size-6 animate-spin" />
-                      <span>पेमेंट प्रक्रिया सुरू आहे...</span>
-                    </>
-                  ) : (
-                    <>
-                      <CreditCard className="size-6 text-amber-300" />
-                      <span>₹{targetPrice} देऊन आताच अनलॉक करा (Pay via Razorpay)</span>
-                    </>
-                  )}
-                </button>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-black text-sm text-amber-200">मासिक ॲक्सेस (१ महिना)</span>
+                    <span className="font-black text-amber-300 text-lg bg-amber-400/20 px-3 py-1 rounded-xl border border-amber-400/40">₹{monthlyRate}</span>
+                  </div>
+                  <p className="text-xs text-slate-300 font-medium leading-relaxed">
+                    निवडलेल्या १ महिन्यासाठी सर्व ७ समित्या आणि अहवाल पूर्णपणे अनलॉक करा.
+                  </p>
+                </div>
+
+                {/* Option 2: Full Year (Admin configured price) */}
+                <div
+                  onClick={() => setMeetingPlan("yearly")}
+                  className={`p-5 rounded-2xl border-2 cursor-pointer transition-all ${
+                    meetingPlan === "yearly"
+                      ? "border-emerald-400 bg-emerald-500/20 text-white shadow-lg ring-2 ring-emerald-400/40"
+                      : "border-slate-700 bg-slate-900/60 text-slate-300 hover:border-slate-500"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-black text-sm text-emerald-200">संपूर्ण वर्ष (वार्षिक)</span>
+                      <span className="text-[9px] font-black uppercase bg-emerald-400 text-slate-950 px-2 py-0.5 rounded-full">बेस्ट ऑफर</span>
+                    </div>
+                    <span className="font-black text-emerald-300 text-lg bg-emerald-400/20 px-3 py-1 rounded-xl border border-emerald-400/40">₹{yearlyRate}</span>
+                  </div>
+                  <p className="text-xs text-slate-300 font-medium leading-relaxed">
+                    संपूर्ण शैक्षणिक वर्षाचे (जून ते मे) सर्व १२ महिने व सर्व समित्या एकदम अनलॉक करा.
+                  </p>
+                </div>
               </div>
+
+              {meetingPlan === "monthly" && (
+                <div className="pt-2 flex flex-wrap items-center gap-3 bg-slate-900/80 p-3 rounded-xl border border-slate-700">
+                  <label className="text-xs font-bold text-amber-300">अनलॉक करायचा महिना निवडा:</label>
+                  <select
+                    value={targetMonth}
+                    onChange={(e) => setTargetMonth(e.target.value)}
+                    className="px-4 py-2 rounded-xl bg-slate-800 border border-slate-600 text-amber-300 font-black text-xs outline-none cursor-pointer focus:border-amber-400"
+                  >
+                    {MONTH_OPTIONS.map((m) => (
+                      <option key={m.code} value={m.code}>
+                        {m.label} ({m.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           )}
+
+          {/* SINGLE SECURE RAZORPAY PAYMENT CARD (Includes UPI QR, GPay, PhonePe, Cards, NetBanking) */}
+          <div className="bg-gradient-to-br from-slate-50 via-purple-50/50 to-indigo-50/60 rounded-3xl p-6 sm:p-10 border border-purple-100/80 shadow-md space-y-6">
+            <div className="text-center space-y-2">
+              <span className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-purple-100 text-purple-900 rounded-full text-xs font-black uppercase tracking-wider border border-purple-200">
+                <ShieldCheck className="size-4 text-purple-600" /> 100% सुरक्षित Razorpay पेमेंट
+              </span>
+              <h3 className="text-xl sm:text-2xl font-black text-slate-900">
+                QR कोड स्कॅन करा किंवा UPI / कार्ड द्वारे भरणा करा
+              </h3>
+              <p className="text-xs sm:text-sm font-bold text-slate-600 max-w-lg mx-auto">
+                खालील बटणावर क्लिक करा - Razorpay च्या सुरक्षित विंडोमध्ये GPay, PhonePe, Paytm QR स्कॅनर व इतर सर्व पर्याय उपलब्ध आहेत.
+              </p>
+            </div>
+
+            <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-lg space-y-6 text-center max-w-xl mx-auto">
+              <div className="space-y-1">
+                <span className="text-xs text-slate-400 font-extrabold uppercase tracking-wider">एकूण देय रक्कम</span>
+                <div className="text-3xl sm:text-4xl font-black text-purple-700">
+                  ₹{targetPrice}
+                </div>
+              </div>
+
+              {/* Supported Payment Options Badges */}
+              <div className="space-y-2 pt-1 border-t border-slate-100">
+                <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider">सपोर्टेड पेमेंट पर्याय:</p>
+                <div className="flex items-center justify-center gap-2 flex-wrap text-xs font-black text-slate-700">
+                  <span className="px-3 py-1.5 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200 flex items-center gap-1">
+                    <QrCode className="size-3.5 text-emerald-600" /> QR कोड स्कॅनर (GPay/PhonePe/Paytm)
+                  </span>
+                  <span className="px-3 py-1.5 bg-blue-50 text-blue-800 rounded-xl border border-blue-200">
+                    UPI ID
+                  </span>
+                  <span className="px-3 py-1.5 bg-purple-50 text-purple-800 rounded-xl border border-purple-200">
+                    डेबिट / क्रेडिट कार्ड
+                  </span>
+                  <span className="px-3 py-1.5 bg-indigo-50 text-indigo-800 rounded-xl border border-indigo-200">
+                    नेटबँकिंग
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={handlePayNow}
+                disabled={paying}
+                className="w-full py-4 sm:py-5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 active:scale-98 text-white font-black text-base sm:text-lg rounded-2xl shadow-xl shadow-purple-500/25 flex items-center justify-center gap-3 transition-all cursor-pointer disabled:opacity-50"
+              >
+                {paying ? (
+                  <>
+                    <Loader2 className="size-6 animate-spin" />
+                    <span>पेमेंट विंडो उघडत आहे...</span>
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="size-6 text-amber-300" />
+                    <span>₹{targetPrice} भरून आताच अनलॉक करा (Pay Now)</span>
+                  </>
+                )}
+              </button>
+
+              <p className="text-[11.5px] text-slate-500 font-bold">
+                🔒 पेमेंट यशस्वी होताच हे मॉड्यूल आपोआप अनलॉक होईल.
+              </p>
+            </div>
+          </div>
 
           {/* Features List */}
           <div className="space-y-4 pt-2">
