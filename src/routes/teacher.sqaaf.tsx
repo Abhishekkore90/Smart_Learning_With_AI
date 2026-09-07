@@ -957,6 +957,15 @@ export const toMarathiNumerals = (num: number): string => {
   return num.toString().split('').map(digit => marathiDigits[parseInt(digit)]).join('');
 };
 
+export const toMarathiYear = (yearStr?: string | null): string => {
+  if (!yearStr) return "";
+  const marathiDigits: Record<string, string> = {
+    '0': '०', '1': '१', '2': '२', '3': '३', '4': '४',
+    '5': '५', '6': '६', '7': '७', '8': '८', '9': '९'
+  };
+  return String(yearStr).replace(/\d/g, (d) => marathiDigits[d] || d);
+};
+
 export const getStandardDetail = (num: number) => {
   if (standardsDetailData[num]) {
     return standardsDetailData[num];
@@ -5870,14 +5879,15 @@ function TeacherSqaafPage() {
           गट: पायाभूत (अंगणवाडी ते १ली २री / पूर्वतयारी ३री ते ५ वी / पूर्व माध्यमिक ६वी ते ८वी )
         </div>
         
-        <div style="font-size: 11.5px; font-weight: bold; margin-bottom: 12px; line-height: 1.5;">
+        <div style="font-size: 11px; font-weight: bold; margin-bottom: 12px; line-height: 1.5; white-space: nowrap;">
           ${infoSchoolName ? `शाळेचे नाव: ${infoSchoolName} &nbsp;&nbsp;&nbsp;` : ""}
           ${infoUdise ? `U Dise No: ${infoUdise} &nbsp;&nbsp;&nbsp;` : ""}
           ${infoHeadmaster ? `मुख्याध्यापक: ${infoHeadmaster} &nbsp;&nbsp;&nbsp;` : ""}
           ${infoAddress ? `पत्ता: ${infoAddress} &nbsp;&nbsp;&nbsp;` : ""}
           ${infoCenterName ? `केंद्र: ${infoCenterName} &nbsp;&nbsp;&nbsp;` : ""}
           ${infoTaluka ? `तालुका: ${infoTaluka} &nbsp;&nbsp;&nbsp;` : ""}
-          ${infoDistrict ? `जिल्हा: ${infoDistrict}` : ""}
+          ${infoDistrict ? `जिल्हा: ${infoDistrict} &nbsp;&nbsp;&nbsp;` : ""}
+          ${academicYear ? `सन: ${toMarathiYear(academicYear)}` : ""}
         </div>
         
         <table style="width: 100%; border-collapse: collapse; border: 1px solid black; font-size: 11px; table-layout: fixed; word-wrap: break-word; word-break: break-word;">
@@ -6633,8 +6643,9 @@ function TeacherSqaafPage() {
               <div style="margin-top: 15px; padding: 6px 12px; page-break-inside: avoid; display: flex; justify-content: flex-end; align-items: flex-end;">
                 <div style="display: flex; gap: 30px;">
                   <div style="text-align: center;">
-                    <div style="font-size: 13px; font-weight: 900; color: #0f172a; text-transform: uppercase; margin-bottom: 4px; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 0.5px;"}">${isMr ? "मुख्याध्यापकाची सही" : "Headmaster's Signature"}</div>
-                    <div style="width: 200px; border-bottom: 2px solid #334155; margin-bottom: 25px; height: 0px;"></div>
+                    <div style="height: 70px;"></div>
+                    <div style="width: 200px; border-bottom: 2px solid #334155; margin-bottom: 6px; height: 0px;"></div>
+                    <div style="font-size: 13px; font-weight: 900; color: #0f172a; text-transform: uppercase; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 0.5px;"}">${isMr ? "मुख्याध्यापकाची सही" : "Headmaster's Signature"}</div>
                   </div>
                 </div>
               </div>
@@ -6920,6 +6931,10 @@ function TeacherSqaafPage() {
                   <div style="font-size: 12px; font-weight: 900; text-transform: uppercase; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 0.3px;"} color: #1e293b; margin-bottom: 3px; white-space: nowrap;">${isMr ? "जिल्हा" : "District"}</div>
                   <div style="font-size: 13.5px; font-weight: 900; color: #0f172a; text-transform: uppercase; white-space: nowrap;">${district}</div>
                 </div>` : ""}
+                ${academicYear ? `<div style="text-align: center;">
+                  <div style="font-size: 12px; font-weight: 900; text-transform: uppercase; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 0.3px;"} color: #1e293b; margin-bottom: 3px; white-space: nowrap;">${isMr ? "शैक्षणिक वर्ष" : "Academic Year"}</div>
+                  <div style="font-size: 13.5px; font-weight: 900; color: #0f172a; text-transform: uppercase; white-space: nowrap;">${toMarathiYear(academicYear)}</div>
+                </div>` : ""}
               </div>
             </div>
 
@@ -6970,8 +6985,8 @@ function TeacherSqaafPage() {
               </tbody>
             </table>
 
-            <!-- Summary Totals Chart -->
-            <div class="html2pdf__page-break" style="margin-top: 30px; padding-top: 10px;">
+            <!-- Summary Totals Chart - Always force new page -->
+            <div class="html2pdf__page-break" style="page-break-before: always !important; break-before: page !important; margin-top: 30px; padding-top: 10px;">
               <table style="width: 100%; table-layout: fixed; border-collapse: collapse; border: 1px solid black; font-size: 10px; font-family: 'Noto Sans Devanagari', Arial, sans-serif;">
                 <colgroup>
                   <col style="width: 55px;">
@@ -6995,15 +7010,15 @@ function TeacherSqaafPage() {
                     </th>
                   </tr>
                   <tr>
-                    <th colspan="13" style="border: 1px solid black; padding: 8px 6px; text-align: center; font-size: 12.5px; font-weight: bold; background-color: #f8fafc; line-height: 1.5;">
-                      ${schoolName ? `<span style="font-weight: 900;">शाळेचे नाव -</span> ${schoolName} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;` : ""}
-                      ${udise ? `<span style="font-weight: 900;">यू-डायस -</span> ${udise} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;` : ""}
-                      ${headmaster ? `<span style="font-weight: 900;">मुख्याध्यापक -</span> ${headmaster} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;` : ""}
-                      ${address ? `<span style="font-weight: 900;">पत्ता -</span> ${address} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;` : ""}
-                      ${centerName ? `<span style="font-weight: 900;">केंद्र -</span> ${centerName} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;` : ""}
-                      ${taluka ? `<span style="font-weight: 900;">ता.</span> ${taluka} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;` : ""}
-                      ${district ? `<span style="font-weight: 900;">जि.</span> ${district} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;` : ""}
-                      <span style="font-weight: 900;">सन -</span> २०२४ - २५
+                    <th colspan="13" style="border: 1px solid black; padding: 6px 4px; text-align: center; font-size: 10.5px; font-weight: bold; background-color: #f8fafc; line-height: 1.3; white-space: nowrap;">
+                      ${schoolName ? `<span style="font-weight: 900;">शाळेचे नाव -</span> ${schoolName} &nbsp;&nbsp;&nbsp;` : ""}
+                      ${udise ? `<span style="font-weight: 900;">यू-डायस -</span> ${udise} &nbsp;&nbsp;&nbsp;` : ""}
+                      ${headmaster ? `<span style="font-weight: 900;">मुख्याध्यापक -</span> ${headmaster} &nbsp;&nbsp;&nbsp;` : ""}
+                      ${address ? `<span style="font-weight: 900;">पत्ता -</span> ${address} &nbsp;&nbsp;&nbsp;` : ""}
+                      ${centerName ? `<span style="font-weight: 900;">केंद्र -</span> ${centerName} &nbsp;&nbsp;&nbsp;` : ""}
+                      ${taluka ? `<span style="font-weight: 900;">ता.</span> ${taluka} &nbsp;&nbsp;&nbsp;` : ""}
+                      ${district ? `<span style="font-weight: 900;">जि.</span> ${district} &nbsp;&nbsp;&nbsp;` : ""}
+                      <span style="font-weight: 900;">सन -</span> ${toMarathiYear(academicYear || "2024-25")}
                     </th>
                   </tr>
                   <tr>
@@ -7080,8 +7095,9 @@ function TeacherSqaafPage() {
               <div style="margin-top: 30px; padding: 12px 24px; border-top: 2px solid #e2e8f0; display: flex; justify-content: flex-end; align-items: flex-end;">
                 <div style="display: flex; gap: 40px;">
                   <div style="text-align: center;">
-                    <div style="font-size: 13px; font-weight: 900; color: #0f172a; text-transform: uppercase; margin-bottom: 4px; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 1px;"}">${isMr ? "मुख्याध्यापकाची सही" : "Headmaster's Signature"}</div>
-                    <div style="width: 200px; border-bottom: 2px solid #334155; margin-bottom: 25px; height: 0px;"></div>
+                    <div style="height: 70px;"></div>
+                    <div style="width: 200px; border-bottom: 2px solid #334155; margin-bottom: 6px; height: 0px;"></div>
+                    <div style="font-size: 13px; font-weight: 900; color: #0f172a; text-transform: uppercase; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 1px;"}">${isMr ? "मुख्याध्यापकाची सही" : "Headmaster's Signature"}</div>
                   </div>
                 </div>
               </div>
@@ -7339,9 +7355,8 @@ function TeacherSqaafPage() {
         }
 
         if (summaryTable) {
-          let spacing = document.createElement("div");
-          spacing.style.height = "12px";
-          currentPage.appendChild(spacing);
+          await saveCurrentPageToPdf();
+          currentPage = createNewPageContainer();
 
           summaryTable.style.width = "100%";
           summaryTable.style.borderCollapse = "collapse";
@@ -7370,10 +7385,11 @@ function TeacherSqaafPage() {
         sigDiv.style.width = "100%";
         sigDiv.innerHTML = `
           <div style="text-align: center; display: inline-block;">
-            <div style="font-size: 13px; font-weight: 900; color: #0f172a; text-transform: uppercase; margin-bottom: 4px; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 0.5px;"}">
+            <div style="height: 70px;"></div>
+            <div style="width: 190px; border-bottom: 2px solid #0f172a; margin-bottom: 6px; height: 0px;"></div>
+            <div style="font-size: 13px; font-weight: 900; color: #0f172a; text-transform: uppercase; ${isMr ? "letter-spacing: normal;" : "letter-spacing: 0.5px;"}">
               ${isMr ? "मुख्याध्यापकाची सही" : "Headmaster's Signature"}
             </div>
-            <div style="width: 190px; border-bottom: 2px solid #0f172a; margin-bottom: 25px; height: 0px;"></div>
           </div>
         `;
         currentPage.appendChild(sigDiv);
@@ -7509,16 +7525,16 @@ function TeacherSqaafPage() {
           const overallSelfPct = totalPossibleMarks > 0 ? Math.round((obtainedMarks_ / totalPossibleMarks) * 100) : 0;
 
           finalHtml = `
-            <div style="font-family: 'Segoe UI', 'Noto Sans Devanagari', Arial, sans-serif; font-size: 12px; padding: 12px 18px; background: white; width: 100%; box-sizing: border-box;">
+            <div style="font-family: 'Segoe UI', 'Noto Sans Devanagari', Arial, sans-serif; font-size: 11.5px; padding: 4px 10px; background: white; width: 100%; box-sizing: border-box;">
               <!-- Premium Header Bar matching View -->
-              <div style="background-color: #fff7ed; padding: 10px 18px; margin-bottom: 14px; text-align: center; border: 1.5px solid #fed7aa; border-radius: 8px;">
-                <h2 style="font-size: 18px; font-weight: 900; margin: 0; color: #0f172a; letter-spacing: -0.3px;">SQAAF एकत्रित गुणनोंद तक्ता</h2>
-                <div style="font-size: 11.5px; color: #1e293b; font-weight: 800; margin-top: 2px;">गट: पायाभूत (अंगणवाडी ते १ली २री / पूर्वतयारी ३री ते ५ वी / पूर्व माध्यमिक ६वी ते ८वी )</div>
+              <div style="background-color: #fff7ed; padding: 6px 14px; margin-bottom: 8px; text-align: center; border: 1.5px solid #fed7aa; border-radius: 8px;">
+                <h2 style="font-size: 16px; font-weight: 900; margin: 0; color: #0f172a; letter-spacing: -0.3px;">SQAAF एकत्रित गुणनोंद तक्ता</h2>
+                <div style="font-size: 10.5px; color: #1e293b; font-weight: 800; margin-top: 1px;">गट: पायाभूत (अंगणवाडी ते १ली २री / पूर्वतयारी ३री ते ५ वी / पूर्व माध्यमिक ६वी ते ८वी )</div>
               </div>
 
-              <div style="margin-bottom: 14px;">
-                <h3 style="font-size: 13px; font-weight: 900; margin: 0 0 6px 0; color: #0f172a; border-bottom: 2px solid #cbd5e1; padding-bottom: 4px;">शाळेची माहिती</h3>
-                <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left; table-layout: fixed;">
+              <div style="margin-bottom: 8px;">
+                <h3 style="font-size: 12px; font-weight: 900; margin: 0 0 4px 0; color: #0f172a; border-bottom: 1.5px solid #cbd5e1; padding-bottom: 2px;">शाळेची माहिती</h3>
+                <table style="width: 100%; border-collapse: collapse; font-size: 11px; text-align: left; table-layout: fixed;">
                   ${(() => {
                     const infoFields = [
                       { label: "शाळेचे नाव", val: schoolName },
@@ -7535,12 +7551,12 @@ function TeacherSqaafPage() {
                       const f1 = infoFields[i];
                       const f2 = infoFields[i+1];
                       rowsHtml += `<tr>
-                        <td style="border: 1px solid #cbd5e1; padding: 5px 8px; font-weight: 900; width: 15%; background-color: #f8fafc; word-wrap: break-word;">${f1.label}</td>
-                        <td style="border: 1px solid #cbd5e1; padding: 5px 8px; width: 35%; font-weight: bold; word-wrap: break-word;">${f1.val}</td>
+                        <td style="border: 1px solid #cbd5e1; padding: 3px 6px; font-weight: 900; width: 15%; background-color: #f8fafc; word-wrap: break-word;">${f1.label}</td>
+                        <td style="border: 1px solid #cbd5e1; padding: 3px 6px; width: 35%; font-weight: bold; word-wrap: break-word;">${f1.val}</td>
                         ${f2 ? `
-                        <td style="border: 1px solid #cbd5e1; padding: 5px 8px; font-weight: 900; width: 15%; background-color: #f8fafc; word-wrap: break-word;">${f2.label}</td>
-                        <td style="border: 1px solid #cbd5e1; padding: 5px 8px; width: 35%; font-weight: bold; word-wrap: break-word;">${f2.val}</td>
-                        ` : `<td style="border: 1px solid #cbd5e1; padding: 5px 8px;" colspan="2"></td>`}
+                        <td style="border: 1px solid #cbd5e1; padding: 3px 6px; font-weight: 900; width: 15%; background-color: #f8fafc; word-wrap: break-word;">${f2.label}</td>
+                        <td style="border: 1px solid #cbd5e1; padding: 3px 6px; width: 35%; font-weight: bold; word-wrap: break-word;">${f2.val}</td>
+                        ` : `<td style="border: 1px solid #cbd5e1; padding: 3px 6px;" colspan="2"></td>`}
                       </tr>`;
                     }
                     return rowsHtml;
@@ -7548,72 +7564,72 @@ function TeacherSqaafPage() {
                 </table>
               </div>
 
-              <div style="margin-bottom: 14px;">
-                <h3 style="font-size: 13px; font-weight: 900; margin: 0 0 6px 0; color: #0f172a; border-bottom: 2px solid #cbd5e1; padding-bottom: 4px;">मूल्यांकन तपशील</h3>
-                <table style="width: 100%; border-collapse: collapse; font-size: 11.5px; table-layout: fixed; word-wrap: break-word;">
+              <div style="margin-bottom: 8px;">
+                <h3 style="font-size: 12px; font-weight: 900; margin: 0 0 4px 0; color: #0f172a; border-bottom: 1.5px solid #cbd5e1; padding-bottom: 2px;">मूल्यांकन तपशील</h3>
+                <table style="width: 100%; border-collapse: collapse; font-size: 10.5px; table-layout: fixed; word-wrap: break-word;">
                   <thead>
-                    <tr style="background-color: #f1f5f9; text-align: center; font-size: 12px;">
-                      <th style="border: 1px solid #cbd5e1; padding: 6px 4px; width: 4.5%; font-weight: 900;">अ. क्र.</th>
-                      <th style="border: 1px solid #cbd5e1; padding: 6px 6px; width: 27.5%; text-align: left; font-weight: 900;">क्षेत्राचे नाव</th>
-                      <th style="border: 1px solid #cbd5e1; padding: 6px 4px; width: 10%; font-weight: 900;">मानक क्र.</th>
-                      <th style="border: 1px solid #cbd5e1; padding: 6px 4px; width: 14%; font-weight: 900;">लागू नसलेली मानके</th>
-                      <th style="border: 1px solid #cbd5e1; padding: 6px 4px; width: 10%; font-weight: 900;">लागू मानक संख्या</th>
-                      <th style="border: 1px solid #cbd5e1; padding: 6px 4px; width: 7%; font-weight: 900;">स्तर १</th>
-                      <th style="border: 1px solid #cbd5e1; padding: 6px 4px; width: 7%; font-weight: 900;">स्तर २</th>
-                      <th style="border: 1px solid #cbd5e1; padding: 6px 4px; width: 7%; font-weight: 900;">स्तर ३</th>
-                      <th style="border: 1px solid #cbd5e1; padding: 6px 4px; width: 7%; font-weight: 900;">स्तर ४</th>
-                      <th style="border: 1px solid #cbd5e1; padding: 6px 4px; width: 6%; font-weight: 900;">एकूण गुण</th>
+                    <tr style="background-color: #f1f5f9; text-align: center; font-size: 11px;">
+                      <th style="border: 1px solid #cbd5e1; padding: 4px 3px; width: 4.5%; font-weight: 900;">अ. क्र.</th>
+                      <th style="border: 1px solid #cbd5e1; padding: 4px 5px; width: 27.5%; text-align: left; font-weight: 900;">क्षेत्राचे नाव</th>
+                      <th style="border: 1px solid #cbd5e1; padding: 4px 3px; width: 10%; font-weight: 900;">मानक क्र.</th>
+                      <th style="border: 1px solid #cbd5e1; padding: 4px 3px; width: 14%; font-weight: 900;">लागू नसलेली मानके</th>
+                      <th style="border: 1px solid #cbd5e1; padding: 4px 3px; width: 10%; font-weight: 900;">लागू मानक संख्या</th>
+                      <th style="border: 1px solid #cbd5e1; padding: 4px 3px; width: 7%; font-weight: 900;">स्तर १</th>
+                      <th style="border: 1px solid #cbd5e1; padding: 4px 3px; width: 7%; font-weight: 900;">स्तर २</th>
+                      <th style="border: 1px solid #cbd5e1; padding: 4px 3px; width: 7%; font-weight: 900;">स्तर ३</th>
+                      <th style="border: 1px solid #cbd5e1; padding: 4px 3px; width: 7%; font-weight: 900;">स्तर ४</th>
+                      <th style="border: 1px solid #cbd5e1; padding: 4px 3px; width: 6%; font-weight: 900;">एकूण गुण</th>
                     </tr>
                   </thead>
                   <tbody>
                     ${summaryRowsHtml}
                     <tr style="background-color: #f8fafc; font-weight: 900; text-align: center;">
-                      <td style="border: 1px solid #cbd5e1; padding: 5px 4px;" colspan="3"></td>
-                      <td style="border: 1px solid #cbd5e1; padding: 5px 6px; text-align: right; font-size: 12px; font-weight: 900;">एकूण</td>
-                      <td style="border: 1px solid #cbd5e1; padding: 5px 4px; font-size: 13px; text-align: center; color: #1e1b4b; font-weight: 900;">${totalApplicable}</td>
-                      <td style="border: 1px solid #cbd5e1; padding: 5px 4px;" colspan="4"></td>
-                      <td style="border: 1px solid #cbd5e1; padding: 5px 4px; font-size: 13px; text-align: center; color: #1e1b4b; font-weight: 900;">${obtainedMarks_}</td>
+                      <td style="border: 1px solid #cbd5e1; padding: 3.5px 3px;" colspan="3"></td>
+                      <td style="border: 1px solid #cbd5e1; padding: 3.5px 5px; text-align: right; font-size: 11px; font-weight: 900;">एकूण</td>
+                      <td style="border: 1px solid #cbd5e1; padding: 3.5px 3px; font-size: 12px; text-align: center; color: #1e1b4b; font-weight: 900;">${totalApplicable}</td>
+                      <td style="border: 1px solid #cbd5e1; padding: 3.5px 3px;" colspan="4"></td>
+                      <td style="border: 1px solid #cbd5e1; padding: 3.5px 3px; font-size: 12px; text-align: center; color: #1e1b4b; font-weight: 900;">${obtainedMarks_}</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
 
-              <table style="width: 100%; border-collapse: collapse; margin-top: 12px; table-layout: fixed;">
+              <table style="width: 100%; border-collapse: collapse; margin-top: 6px; table-layout: fixed;">
                 <tr>
                   <td style="width: 48%; vertical-align: top; padding: 0;">
-                    <h3 style="font-size: 12.5px; font-weight: 900; margin: 0 0 6px 0; color: #0f172a;">श्रेणी तक्ता</h3>
-                    <table style="width: 100%; border-collapse: collapse; font-size: 11.5px; text-align: center;">
+                    <h3 style="font-size: 11.5px; font-weight: 900; margin: 0 0 4px 0; color: #0f172a;">श्रेणी तक्ता</h3>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 10.5px; text-align: center;">
                       <thead>
                         <tr style="background-color: #f1f5f9; font-weight: 900;">
-                          <th style="border: 1px solid #cbd5e1; padding: 5px; width: 50%;">श्रेणी</th>
-                          <th style="border: 1px solid #cbd5e1; padding: 5px; width: 50%;">टक्केवारी</th>
+                          <th style="border: 1px solid #cbd5e1; padding: 3px; width: 50%;">श्रेणी</th>
+                          <th style="border: 1px solid #cbd5e1; padding: 3px; width: 50%;">टक्केवारी</th>
                         </tr>
                       </thead>
                       <tbody>
-                        <tr><td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: 900; color: #15803d;">A+</td><td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: bold;">९१ ते १००</td></tr>
-                        <tr><td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: 900; color: #16a34a;">A</td><td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: bold;">८१ ते ९०</td></tr>
-                        <tr><td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: 900; color: #ca8a04;">B+</td><td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: bold;">७१ ते ८०</td></tr>
-                        <tr><td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: 900; color: #f97316;">B</td><td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: bold;">६१ ते ७०</td></tr>
-                        <tr><td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: 900; color: #ea580c;">C+</td><td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: bold;">५१ ते ६०</td></tr>
-                        <tr><td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: 900; color: #dc2626;">C</td><td style="border: 1px solid #cbd5e1; padding: 4px; font-weight: bold;">५० पेक्षा कमी</td></tr>
+                        <tr><td style="border: 1px solid #cbd5e1; padding: 2.5px; font-weight: 900; color: #15803d;">A+</td><td style="border: 1px solid #cbd5e1; padding: 2.5px; font-weight: bold;">९१ ते १००</td></tr>
+                        <tr><td style="border: 1px solid #cbd5e1; padding: 2.5px; font-weight: 900; color: #16a34a;">A</td><td style="border: 1px solid #cbd5e1; padding: 2.5px; font-weight: bold;">८१ ते ९०</td></tr>
+                        <tr><td style="border: 1px solid #cbd5e1; padding: 2.5px; font-weight: 900; color: #ca8a04;">B+</td><td style="border: 1px solid #cbd5e1; padding: 2.5px; font-weight: bold;">७१ ते ८०</td></tr>
+                        <tr><td style="border: 1px solid #cbd5e1; padding: 2.5px; font-weight: 900; color: #f97316;">B</td><td style="border: 1px solid #cbd5e1; padding: 2.5px; font-weight: bold;">६१ ते ७०</td></tr>
+                        <tr><td style="border: 1px solid #cbd5e1; padding: 2.5px; font-weight: 900; color: #ea580c;">C+</td><td style="border: 1px solid #cbd5e1; padding: 2.5px; font-weight: bold;">५१ ते ६०</td></tr>
+                        <tr><td style="border: 1px solid #cbd5e1; padding: 2.5px; font-weight: 900; color: #dc2626;">C</td><td style="border: 1px solid #cbd5e1; padding: 2.5px; font-weight: bold;">५० पेक्षा कमी</td></tr>
                       </tbody>
                     </table>
                   </td>
                   <td style="width: 4%;"></td>
                   <td style="width: 48%; vertical-align: top; padding: 0;">
-                    <h3 style="font-size: 12.5px; font-weight: 900; margin: 0 0 6px 0; color: #0f172a;">निकाल तपशील</h3>
-                    <div style="border: 1.5px solid #cbd5e1; padding: 12px 18px; background: #f8fafc; border-radius: 8px; min-height: 110px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; gap: 8px;">
-                      <div style="font-size: 12px;">
+                    <h3 style="font-size: 11.5px; font-weight: 900; margin: 0 0 4px 0; color: #0f172a;">निकाल तपशील</h3>
+                    <div style="border: 1.5px solid #cbd5e1; padding: 8px 14px; background: #f8fafc; border-radius: 8px; min-height: 85px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; gap: 4px;">
+                      <div style="font-size: 11px;">
                         <span style="font-weight: 900; color: #475569;">एकूण शक्य गुण:</span>
-                        <span style="float: right; font-weight: 900; color: #0f172a; font-size: 13px;">${totalApplicable * 4}</span>
+                        <span style="float: right; font-weight: 900; color: #0f172a; font-size: 12px;">${totalApplicable * 4}</span>
                       </div>
-                      <div style="font-size: 12px;">
+                      <div style="font-size: 11px;">
                         <span style="font-weight: 900; color: #475569;">शाळा प्राप्त गुण:</span>
-                        <span style="float: right; font-weight: 900; color: #0f172a; font-size: 13px;">${obtainedMarks_}</span>
+                        <span style="float: right; font-weight: 900; color: #0f172a; font-size: 12px;">${obtainedMarks_}</span>
                       </div>
-                      <div style="border-top: 2px solid #e2e8f0; padding-top: 8px; margin-top: 2px; font-size: 12.5px;">
+                      <div style="border-top: 1.5px solid #e2e8f0; padding-top: 4px; margin-top: 2px; font-size: 11.5px;">
                         <span style="font-weight: 900; color: #475569;">प्राप्त श्रेणी:</span>
-                        <span style="float: right; font-weight: 900; font-size: 17px; color: #16a34a;">${getGrade(overallSelfPct)}</span>
+                        <span style="float: right; font-weight: 900; font-size: 15px; color: #16a34a;">${getGrade(overallSelfPct)}</span>
                       </div>
                     </div>
                   </td>
@@ -7637,7 +7653,7 @@ function TeacherSqaafPage() {
           container.innerHTML = finalHtml;
           container.style.position = "static";
           container.style.width = "1040px";
-          container.style.padding = "12px 15px";
+          container.style.padding = "4px 8px";
           container.style.boxSizing = "border-box";
           container.style.backgroundColor = "white";
           
@@ -7645,7 +7661,7 @@ function TeacherSqaafPage() {
           document.body.appendChild(wrapper);
           
           const pdfOptions = {
-            margin: [8, 8, 8, 8],
+            margin: [4, 4, 4, 4],
             filename: `SQAAF_Summary_${schoolName.replace(/\s+/g, "_") || "School"}_${new Date().toISOString().slice(0, 10)}.pdf`,
             image: { type: "jpeg", quality: 0.95 },
             html2canvas: { 
@@ -7708,7 +7724,7 @@ function TeacherSqaafPage() {
             windowWidth: 1120
           },
           jsPDF: { unit: "mm", format: "a4", orientation: "landscape", compress: false },
-          pagebreak: { mode: ["css", "legacy"] },
+          pagebreak: { mode: ["css", "legacy"], before: ".html2pdf__page-break" },
         };
 
         if (action === "download") {
@@ -8692,6 +8708,15 @@ function TeacherSqaafPage() {
                       </button>
                     </div>
 
+                    {/* PDF Download Button */}
+                    <button
+                      onClick={() => handleDownloadPdf("table")}
+                      className="flex items-center gap-2 px-4 py-2.5 bg-[#1e1b4b] text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-colors shadow-sm"
+                    >
+                      <Download className="size-4 text-white" />
+                      <span>{selectedLang === "mr" ? "PDF डाऊनलोड" : "Download PDF"}</span>
+                    </button>
+
                     {/* Edit / Save Button */}
                     <button
                       onClick={() => {
@@ -9115,29 +9140,28 @@ function TeacherSqaafPage() {
                     </table>
 
                     {/* Principal Signature Option under table */}
-                    <div className="flex justify-end pt-10 pb-8 px-4">
+                    <div className="flex justify-end pt-6 pb-6 px-4">
                       <div className="text-center">
-                        <div className="text-sm font-black text-slate-900 uppercase tracking-wide mb-1">
+                        <div className="h-16"></div>
+                        <div className="w-60 border-b-2 border-slate-900 mb-1.5 h-0"></div>
+                        <div className="text-sm font-black text-slate-900 uppercase tracking-wide">
                           {selectedLang === "mr" ? "मुख्याध्यापकाची सही" : "Headmaster's Signature"}
                         </div>
-                        <div className="w-60 border-b-2 border-slate-900 mb-8 h-0"></div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-                {/* Fixed Save Button */}
-                <div className="absolute bottom-0 left-0 right-0 w-full bg-gradient-to-t from-white via-white to-white/0 z-20">
-                  <div className="max-w-full mx-auto w-full flex justify-end px-5 md:px-8 py-4">
-                    <button
-                      onClick={() => handleDownloadPdf("table")}
-                      className="bg-[#1e1b4b] text-white px-8 py-3.5 rounded-full text-sm font-bold hover:bg-slate-800 transition-all shadow-lg shadow-indigo-950/20 active:scale-95 flex items-center gap-2"
-                    >
-                      <Download className="size-4" />
-                      <span>{selectedLang === "mr" ? "डाऊनलोड करा" : "Download PDF"}</span>
-                    </button>
-                  </div>
+                {/* Fixed Floating Download Button */}
+                <div className="fixed bottom-6 right-6 z-50">
+                  <button
+                    onClick={() => handleDownloadPdf("table")}
+                    className="bg-[#1e1b4b] text-white px-6 py-3.5 rounded-full text-sm font-bold hover:bg-slate-800 transition-all shadow-xl shadow-indigo-950/30 active:scale-95 flex items-center gap-2 border border-white/20"
+                  >
+                    <Download className="size-4 text-amber-400" />
+                    <span>{selectedLang === "mr" ? "PDF डाऊनलोड" : "Download PDF"}</span>
+                  </button>
                 </div>
               </motion.div>
             ) : view === "responses" ? (
