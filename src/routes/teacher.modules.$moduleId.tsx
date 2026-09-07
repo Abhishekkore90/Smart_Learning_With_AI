@@ -1942,10 +1942,11 @@ function DailyAssemblyContent() {
       stateAnthem: defaultAssembly[1]?.content || "",
       pledge: defaultAssembly[2]?.content || "",
       preamble: defaultAssembly[3]?.content || "",
-      silentPasayadan: defaultAssembly[5]?.content || "",
       songTitle: defaultForm.songTitle || "समूहगीत / राष्ट्रगीत",
       patrioticSong: defaultForm.patrioticSong || "",
       ...dbFormData,
+      silentPasayadan: dbFormData?.silentPasayadan || dbFormData?.maun || defaultAssembly[5]?.content || DEFAULT_ASSEMBLY_ITEMS.mr[5].content,
+      silentPasayadanTitle: dbFormData?.silentPasayadanTitle || dbFormData?.pasaydanTitle || "पसायदान",
     };
     
     const parts = dateStr.split("-").map(Number);
@@ -2093,7 +2094,7 @@ function DailyAssemblyContent() {
 
       const songTitle = data.songTitle || (data.samuhgeet && data.samuhgeet.length <= 40 ? data.samuhgeet : "") || (data.deshbhaktigeet && data.deshbhaktigeet.length <= 40 ? data.deshbhaktigeet : "") || "";
       const songLyrics = data.patrioticSong || (data.samuhgeet && data.samuhgeet !== songTitle ? data.samuhgeet : "") || (data.deshbhaktigeet && data.deshbhaktigeet !== songTitle ? data.deshbhaktigeet : "") || "";
-      const maun = data.silentPasayadan || data.maun || assemblyItems[5]?.content || "";
+      const maun = data.silentPasayadan || data.maun || assemblyItems[5]?.content || DEFAULT_ASSEMBLY_ITEMS.mr[5].content;
 
       // Ensure web fonts are completely loaded before html2canvas capture
       if (document.fonts && document.fonts.ready) {
@@ -2705,7 +2706,7 @@ function DailyAssemblyContent() {
               title: 'मौन पसायदान',
               emoji: '✨',
               gradient: 'from-yellow-100/80 via-amber-50/60 to-orange-100/80',
-              content: formData.silentPasayadan || formData.maun || assemblyItems[5]?.content || "",
+              content: formData.silentPasayadan || formData.maun || assemblyItems[5]?.content || DEFAULT_ASSEMBLY_ITEMS.mr[5].content,
               isSetItem: true,
             },
             {

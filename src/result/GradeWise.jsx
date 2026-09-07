@@ -226,8 +226,7 @@ export default function GradeWise({ initialClass, initialYear, initialTerm, onBa
             const classSubjects = getDefaultSubjectsForClass(clsObj.id, currentMedium) || DEFAULT_MARATHI_SUBJECTS_MAP[clsObj.id] || DEFAULT_MARATHI_SUBJECTS_MAP["1st"];
             const totalMax = classSubjects.length * 100;
 
-            const dataFilledStudents = classStudents.filter(st => hasStudentFilledData(st, semMarks));
-            const activeStudents = dataFilledStudents.length > 0 ? dataFilledStudents : classStudents;
+            const activeStudents = classStudents;
 
             activeStudents.forEach((st) => {
               const gStr = String(st.gender || st.sex || st.ling || st.studentGender || st.genderType || "").toLowerCase().trim();

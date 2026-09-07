@@ -78,6 +78,25 @@ const isGirlStudent = (student) => {
   );
 };
 
+const getMarathiClassName = (clsStr) => {
+  if (!clsStr) return "पहिली";
+  const num = String(clsStr).match(/\d+/);
+  const n = num ? parseInt(num[0], 10) : 1;
+  const names = ["", "पहिली", "दुसरी", "तिसरी", "चौथी", "पांचवी", "सहावी", "सातवी", "आठवी", "नववी", "दहावी"];
+  return names[n] || `${n} वी`;
+};
+
+const formatDivision = (divVal) => {
+  if (!divVal) return "अ";
+  const str = String(divVal).trim().toUpperCase();
+  if (str === "A" || str === "अ" || str === "1") return "अ";
+  if (str === "B" || str === "2" || str === "ब") return "ब";
+  if (str === "C" || str === "3" || str === "K" || str === "क") return "क";
+  if (str === "D" || str === "4" || str === "ड") return "ड";
+  if (str.length > 0) return str;
+  return "अ";
+};
+
 const isBoyStudent = (student) => {
   if (!student) return false;
   if (isGirlStudent(student)) return false;
@@ -240,6 +259,8 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
   const [marksData, setMarksData] = useState({});
   const [remarksData, setRemarksData] = useState({});
   const [attendanceData, setAttendanceData] = useState({});
+  const [sem1MarksData, setSem1MarksData] = useState({});
+  const [sem2MarksData, setSem2MarksData] = useState({});
   const [totalWorkingDays, setTotalWorkingDays] = useState(0);
   const [weightageData, setWeightageData] = useState({});
   const [selectedTerm, setSelectedTerm] = useState(initialTerm || "sem2"); // "sem1" = प्रथम सत्र | "sem2" = द्वितीय सत्र
@@ -259,81 +280,157 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
 
       // 1. Fetch Global & Class Settings (from CCESettings / Bunny Storage / school_settings)
       try {
-        let globalSettings = null;
+        let schoolName = "";
+        let udise = "";
+        let teacherName = "";
+        let headmasterName = "";
+        let address = "";
+        let slogan = "✦ ज्ञान, संस्कार आणि प्रगतीसाठी ✦";
+        let schoolLogo = "";
+        let teacherSignature = "";
+        let headmasterSignature = "";
+        let customSubjects = null;
+        const uid = currentTeacherId;
+        const medKey = selectedMedium.toLowerCase().includes("semi") ? "semi" : "marathi";
 
-        // Try local storage cache (teacher-specific first, then generic)
+        // 1a. Check cce_settings collection FIRST
         try {
-          const cachedTeacher = localStorage.getItem(`cce_general_school_settings_${currentTeacherId}`);
-          const cachedGen = localStorage.getItem("cce_general_school_settings");
-          const cached = cachedTeacher || cachedGen;
-          if (cached) globalSettings = JSON.parse(cached);
-        } catch (e) {}
+          const cceDocIds = [
+            uid ? `${uid}_${selectedClass}_${medKey}_${academicYear}` : null,
+            uid ? `${uid}_${selectedClass}_${academicYear}` : null,
+            `${selectedClass}_${selectedMedium}_${academicYear}`,
+            `${selectedClass}_${medKey}_${academicYear}`,
+            docId,
+            "global",
+          ].filter(Boolean);
 
-        // Try Bunny Storage CDN
-        if (!globalSettings) {
-          try {
-            const { fetchJsonFromBunny } = await import("@/lib/bunnyStorage");
-            globalSettings = await fetchJsonFromBunny("cce_results/general_school_settings.json");
-          } catch (e) {}
-        }
-
-        // Try Firestore teacher-specific documents first, then global
-        if (!globalSettings) {
-          // Try ${teacherId}_general
-          try {
-            const teacherGenSnap = await getDoc(doc(db, "school_settings", `${currentTeacherId}_general`));
-            if (teacherGenSnap.exists()) globalSettings = teacherGenSnap.data();
-          } catch (e) {}
-        }
-        if (!globalSettings) {
-          // Try ${teacherId}
-          try {
-            const teacherSnap = await getDoc(doc(db, "school_settings", currentTeacherId));
-            if (teacherSnap.exists()) globalSettings = teacherSnap.data();
-          } catch (e) {}
-        }
-        if (!globalSettings) {
-          // Fallback: Try generic "general" doc
-          const generalSnap = await getDoc(doc(db, "school_settings", "general"));
-          if (generalSnap.exists()) globalSettings = generalSnap.data();
-        }
-
-        // Try Firestore class-specific document (teacher-isolated first, then generic)
-        let classSettings = {};
-        const classDocIdsToTry = [
-          `${currentTeacherId}_${selectedClass}_${academicYear}`,
-          `${currentTeacherId}_${selectedClass}_${selectedMedium}_${academicYear}`,
-          `${selectedClass}_${selectedMedium}_${academicYear}`,
-          docId,
-        ];
-        for (const cDocId of classDocIdsToTry) {
-          try {
-            const settingsSnap = await getDoc(doc(db, "cce_settings", cDocId));
-            if (settingsSnap.exists()) {
-              classSettings = settingsSnap.data();
-              break;
+          for (const cId of cceDocIds) {
+            const cRef = doc(db, "cce_settings", cId);
+            const cSnap = await getDoc(cRef);
+            if (cSnap.exists()) {
+              const data = cSnap.data();
+              if (!schoolName) schoolName = data.schoolName || data.school_name || "";
+              if (!udise) udise = data.udiseCode || data.udise || "";
+              if (!teacherName && data.teacherName) teacherName = data.teacherName;
+              if (!headmasterName && (data.principalName || data.headmasterName || data.hmName)) {
+                headmasterName = data.principalName || data.headmasterName || data.hmName;
+              }
+              if (!address) address = data.address || "";
+              if (data.slogan) slogan = data.slogan;
+              if (!schoolLogo) schoolLogo = data.schoolLogo || "";
+              if (!teacherSignature) teacherSignature = data.signatureUrl || data.teacherSignature || "";
+              if (!headmasterSignature) headmasterSignature = data.principalSignature || data.headmasterSignature || "";
+              if (!customSubjects && data.subjects && Array.isArray(data.subjects) && data.subjects.length > 0) {
+                customSubjects = data.subjects;
+              }
             }
-          } catch (e) {}
+          }
+        } catch (e) { }
+
+        // 1b. Check school_settings collection
+        try {
+          const settingsDocIds = [
+            uid ? `${uid}_general` : null,
+            uid ? uid : null,
+            "general",
+            "school_info",
+            "school_settings",
+          ].filter(Boolean);
+
+          for (const dId of settingsDocIds) {
+            const sRef = doc(db, "school_settings", dId);
+            const sSnap = await getDoc(sRef);
+            if (sSnap.exists()) {
+              const data = sSnap.data();
+              if (!schoolName) schoolName = data.schoolName || data.school_name || data.school || "";
+              if (!udise) udise = data.udiseCode || data.udise || data.udiseNo || "";
+              if (!teacherName && (data.teacherName || data.fullName || data.name)) teacherName = data.teacherName || data.fullName || data.name;
+              if (!headmasterName && (data.principalName || data.headmasterName || data.hmName)) {
+                headmasterName = data.principalName || data.headmasterName || data.hmName;
+              }
+              if (!address) address = data.address || "";
+              if (data.slogan) slogan = data.slogan;
+              if (!schoolLogo) schoolLogo = data.schoolLogo || "";
+              if (!teacherSignature) teacherSignature = data.signatureUrl || data.teacherSignature || "";
+              if (!headmasterSignature) headmasterSignature = data.principalSignature || data.headmasterSignature || "";
+            }
+          }
+        } catch (e) { }
+
+        // 1c. Check LocalStorage caches
+        const cacheKeys = [
+          uid ? `cce_general_school_settings_${uid}` : null,
+          "cce_general_school_settings",
+          "sqaaf_teacher_profile",
+          "teacher_profile",
+          "school_profile",
+          "user_profile",
+        ].filter(Boolean);
+
+        cacheKeys.forEach(k => {
+          try {
+            const val = localStorage.getItem(k);
+            if (val) {
+              const p = JSON.parse(val);
+              if (!schoolName && (p.schoolName || p.school_name)) schoolName = p.schoolName || p.school_name;
+              if (!udise && (p.udiseCode || p.udise)) udise = p.udiseCode || p.udise;
+              if (!teacherName && (p.teacherName || p.fullName || p.name)) teacherName = p.teacherName || p.fullName || p.name;
+              if (!headmasterName && (p.principalName || p.headmasterName || p.hmName)) {
+                headmasterName = p.principalName || p.headmasterName || p.hmName;
+              }
+            }
+          } catch (e) { }
+        });
+
+        // 1d. Fallback for teacherName, schoolName & udise: check logged-in teacher's profile/doc in teachers & users collections
+        if (uid && (!teacherName || !schoolName || !udise)) {
+          try {
+            const tSnap = await getDoc(doc(db, "teachers", uid));
+            if (tSnap.exists()) {
+              const data = tSnap.data();
+              if (!schoolName) schoolName = data.schoolName || data.school_name || "";
+              if (!udise) udise = data.udise || data.udiseCode || "";
+              if (!teacherName) teacherName = data.teacherName || data.fullName || data.name || "";
+            }
+            if (!teacherName || !schoolName) {
+              const uSnap = await getDoc(doc(db, "users", uid));
+              if (uSnap.exists()) {
+                const data = uSnap.data();
+                if (!schoolName) schoolName = data.schoolName || data.school_name || "";
+                if (!udise) udise = data.udise || data.udiseCode || "";
+                if (!teacherName) teacherName = data.teacherName || data.fullName || data.name || "";
+              }
+            }
+          } catch (e) { }
         }
 
-        const mergedSettings = { ...(globalSettings || {}), ...classSettings };
+        // 1e. Fallback for standalone LocalStorage keys if still missing
+        if (!schoolName) schoolName = localStorage.getItem("teacher_school_name") || localStorage.getItem("school_name") || localStorage.getItem("sqaf_cert_school_name") || "";
+        if (!udise) udise = localStorage.getItem("teacher_udise") || localStorage.getItem("udise") || localStorage.getItem("sqaf_cert_udise") || "";
+        if (!teacherName) teacherName = localStorage.getItem("teacher_name") || localStorage.getItem("user_name") || "";
+        if (!headmasterName) headmasterName = localStorage.getItem("teacher_principal_name") || "";
 
-        if (mergedSettings.schoolName || mergedSettings.udiseCode || mergedSettings.teacherName) {
-          setSchoolData({
-            schoolName: mergedSettings.schoolName ? `${mergedSettings.schoolName}${mergedSettings.address ? ` (${mergedSettings.address})` : ""}` : "",
-            udise: mergedSettings.udiseCode || mergedSettings.udise || "",
-            teacherName: mergedSettings.teacherName || "",
-            headmasterName: mergedSettings.principalName || mergedSettings.headmasterName || "",
-            slogan: mergedSettings.slogan || "✦ ज्ञान, संस्कार आणि प्रगतीसाठी ✦",
-            schoolLogo: mergedSettings.schoolLogo || "",
-            teacherSignature: mergedSettings.signatureUrl || "",
-            headmasterSignature: mergedSettings.principalSignature || "",
-          });
+        let divVal = division;
+        const storedDiv = localStorage.getItem("cce_selected_division") || localStorage.getItem("teacher_division") || localStorage.getItem("division");
+        if (storedDiv && storedDiv !== division) {
+          divVal = storedDiv;
+          setDivision(storedDiv);
         }
+
+        setSchoolData({
+          schoolName: schoolName ? `${schoolName}${address ? ` (${address})` : ""}` : "",
+          udise: udise || "",
+          teacherName: teacherName || "",
+          headmasterName: headmasterName || "",
+          slogan: slogan || "✦ ज्ञान, संस्कार आणि प्रगतीसाठी ✦",
+          schoolLogo: schoolLogo || "",
+          teacherSignature: teacherSignature || "",
+          headmasterSignature: headmasterSignature || "",
+        });
 
         let classSubjects = [];
-        if (mergedSettings.subjects && Array.isArray(mergedSettings.subjects) && mergedSettings.subjects.length > 0) {
-          classSubjects = mergedSettings.subjects;
+        if (customSubjects && Array.isArray(customSubjects) && customSubjects.length > 0) {
+          classSubjects = customSubjects;
         } else {
           classSubjects = getDefaultSubjectsForClass(selectedClass, selectedMedium);
         }
@@ -727,11 +824,14 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
     if (!printRef.current) return;
     setDownloading(true);
     toast.info("PDF तयार होत आहे, थेट डाऊनलोड सुरू झाली आहे...");
+    const container = printRef.current;
+
     try {
+      container.classList.add("cce-downloading-pdf");
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
       const { toJpeg } = await import("html-to-image");
       const { default: jsPDF } = await import("jspdf");
-
-      const container = printRef.current;
 
       if (document.fonts && document.fonts.ready) {
         try {
@@ -760,6 +860,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
       if (!pdfPages || pdfPages.length === 0) {
         toast.error("पेजेस सापडले नाहीत!");
         setDownloading(false);
+        container.classList.remove("cce-downloading-pdf");
         return;
       }
 
@@ -769,13 +870,25 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
         const pageEl = pdfPages[i];
         const isLandscape = pageEl.classList.contains("pdf-page-landscape") || pageEl.getAttribute("data-orientation") === "landscape";
 
+        const captureWidth = isLandscape
+          ? Math.max(pageEl.scrollWidth || 0, pageEl.offsetWidth || 0, 1123)
+          : 794;
+        const captureHeight = isLandscape
+          ? Math.max(pageEl.scrollHeight || 0, pageEl.offsetHeight || 0, 794)
+          : 1123;
+
         const dataUrl = await toJpeg(pageEl, {
-          quality: 0.72,
+          quality: 0.90,
           pixelRatio: 2,
           cacheBust: true,
           backgroundColor: "#ffffff",
+          width: captureWidth,
+          height: captureHeight,
           style: {
             overflow: "visible",
+            width: `${captureWidth}px`,
+            minWidth: `${captureWidth}px`,
+            maxWidth: isLandscape ? "none" : `${captureWidth}px`,
             scrollbarWidth: "none",
           },
         });
@@ -793,8 +906,8 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
 
         if (isLandscape) {
           // Page 3: Rotated Landscape Page with 100% natural proportional height!
-          const targetWidth = 297; // mm
-          const targetHeight = Number(((naturalHeight / naturalWidth) * targetWidth).toFixed(2));
+          const targetWidth = Math.max(297, Number(((naturalWidth / naturalHeight) * 210).toFixed(2))); // mm
+          const targetHeight = 210; // mm
 
           if (i === 0) {
             pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: [targetWidth, targetHeight], compress: true });
@@ -802,7 +915,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
             pdf.addPage([targetWidth, targetHeight], "landscape");
           }
 
-          pdf.addImage(dataUrl, "JPEG", 2.5, 2.5, targetWidth - 5, targetHeight - 5, undefined, "FAST");
+          pdf.addImage(dataUrl, "JPEG", 2, 2, targetWidth - 4, targetHeight - 4, undefined, "FAST");
         } else {
           // Pages 1 & 2: Standard Portrait A4 (210mm x 297mm)
           const targetWidth = 210; // mm
@@ -1048,6 +1161,30 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
 
       {/* -------------------- 11-PAGE PRINT CONTAINER (USING USER'S AUTHENTIC DATA) -------------------- */}
       <div ref={printRef} className="cce-pdf-container max-w-4xl mx-auto">
+        <style>{`
+          .cce-downloading-pdf .pdf-page:not(.pdf-page-landscape) {
+            box-shadow: none !important;
+            width: 100% !important;
+            min-width: 210mm !important;
+            max-width: 210mm !important;
+          }
+          .cce-downloading-pdf .pdf-page-landscape {
+            box-shadow: none !important;
+            min-width: 297mm !important;
+            width: max-content !important;
+            max-width: none !important;
+            overflow: visible !important;
+          }
+          .cce-downloading-pdf .pdf-page-landscape .overflow-x-auto {
+            overflow: visible !important;
+            width: max-content !important;
+            max-width: none !important;
+          }
+          .cce-downloading-pdf .pdf-page-landscape table {
+            width: max-content !important;
+            max-width: none !important;
+          }
+        `}</style>
         
         {/* -------------------- PAGE 1: COVER PAGE -------------------- */}
         <div className="pdf-page bg-white p-8 border border-slate-200 rounded-3xl relative overflow-hidden text-center flex flex-col justify-between h-[285mm] shadow-sm mb-4" style={{ pageBreakAfter: "always", breakAfter: "page" }}>
@@ -1081,7 +1218,9 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
             </div>
             <br />
             <div className="inline-block bg-white border border-slate-200 rounded-2xl px-10 py-4 shadow-xs">
-              <h3 className="text-xl font-black text-slate-900">इयत्ता : {selectedClass} (तुकडी {division})</h3>
+              <h3 className="text-xl font-black text-slate-900">
+                इयत्ता : {getMarathiClassName(selectedClass)} ({selectedClass}) (तुकडी : {formatDivision(division)})
+              </h3>
             </div>
           </div>
 
@@ -1163,8 +1302,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
 
         {/* -------------------- STUDENT PAGES -------------------- */}
         {(() => {
-          const dataFilledStudents = students.filter(st => hasStudentFilledData(st, marksData, sem1MarksData, sem2MarksData, attendanceData, remarksData));
-          const displayedStudents = dataFilledStudents.length > 0 ? dataFilledStudents : students;
+          const displayedStudents = students;
 
           return displayedStudents.map((student, sIdx) => {
             const studentId = student.id || student.name;
@@ -2266,38 +2404,38 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                   </div>
 
                   <div className="overflow-x-auto">
-                    <table className="w-full border-collapse border border-lime-600 text-xs text-center font-medium">
+                    <table className="w-full border-collapse border border-lime-600 text-center font-medium table-auto">
                       <thead>
                         <tr className="bg-lime-200 text-slate-900 font-extrabold border-b border-lime-600">
-                          <th className="border border-lime-600 p-0.5 w-6 min-w-[20px] text-[10px] leading-tight" rowSpan={3}>अ.क्र.</th>
-                          <th className="border border-lime-600 p-1 text-left min-w-[160px]" rowSpan={3}>विद्यार्थ्याचे नाव</th>
+                          <th className="border border-lime-600 p-0.5 w-5 text-[9px] leading-tight" rowSpan={3}>अ.क्र.</th>
+                          <th className="border border-lime-600 p-0.5 text-left text-[10px] min-w-[110px] max-w-[140px] truncate" rowSpan={3}>विद्यार्थ्याचे नाव</th>
                           {subjects.map((sub) => {
                             return (
-                              <th key={sub} className="border border-lime-600 p-1" colSpan={4}>
+                              <th key={sub} className="border border-lime-600 p-0.5 text-[9.5px] leading-tight" colSpan={4}>
                                 {sub}
                               </th>
                             );
                           })}
-                          <th className="border border-lime-600 p-0.5 text-[9px] w-10 min-w-[32px] leading-tight" rowSpan={3}>उपस्थिती</th>
-                          <th className="border border-lime-600 p-0.5 text-[9px] w-10 min-w-[32px] leading-tight" rowSpan={3}>एकूण गुण</th>
-                          <th className="border border-lime-600 p-0.5 text-[9px] w-12 min-w-[40px] leading-tight" rowSpan={3}>टक्केवारी</th>
-                          <th className="border border-lime-600 p-0.5 text-[9px] w-10 min-w-[32px] leading-tight" rowSpan={3}>अंतिम श्रेणी</th>
+                          <th className="border border-lime-600 p-0.5 text-[8.5px] w-7 leading-tight" rowSpan={3}>उपस्थिती</th>
+                          <th className="border border-lime-600 p-0.5 text-[8.5px] w-8 leading-tight" rowSpan={3}>एकूण गुण</th>
+                          <th className="border border-lime-600 p-0.5 text-[8.5px] w-9 leading-tight" rowSpan={3}>टक्केवारी</th>
+                          <th className="border border-lime-600 p-0.5 text-[8.5px] w-8 leading-tight" rowSpan={3}>अंतिम श्रेणी</th>
                         </tr>
                         <tr className="bg-lime-200 text-slate-900 font-extrabold border-b border-lime-600">
                           {subjects.map((sub) => {
                             const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
                             return isPractical ? (
                               <React.Fragment key={sub}>
-                                <th className="border border-lime-600 p-0.5 text-[10px] leading-tight font-bold" colSpan={2} rowSpan={2}>अ<br/><span className="text-[8px] font-normal">आकारिक</span></th>
-                                <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9" rowSpan={2}>एकूण</th>
-                                <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9" rowSpan={2}>श्रेणी</th>
+                                <th className="border border-lime-600 p-0.5 text-[9px] leading-tight font-bold" colSpan={2} rowSpan={2}>अ<br/><span className="text-[7px] font-normal">आकारिक</span></th>
+                                <th className="border border-lime-600 p-0.5 text-[9px] font-bold px-1" rowSpan={2}>एकूण</th>
+                                <th className="border border-lime-600 p-0.5 text-[9px] font-bold px-1" rowSpan={2}>श्रेणी</th>
                               </React.Fragment>
                             ) : (
                               <React.Fragment key={sub}>
-                                <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9">अ</th>
-                                <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9">ब</th>
-                                <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9" rowSpan={2}>एकूण</th>
-                                <th className="border border-lime-600 p-0.5 text-[10px] font-bold w-9" rowSpan={2}>श्रेणी</th>
+                                <th className="border border-lime-600 p-0.5 text-[9px] font-bold px-1">अ</th>
+                                <th className="border border-lime-600 p-0.5 text-[9px] font-bold px-1">ब</th>
+                                <th className="border border-lime-600 p-0.5 text-[9px] font-bold px-1" rowSpan={2}>एकूण</th>
+                                <th className="border border-lime-600 p-0.5 text-[9px] font-bold px-1" rowSpan={2}>श्रेणी</th>
                               </React.Fragment>
                             );
                           })}
@@ -2308,16 +2446,16 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                             if (isPractical) return null;
                             return (
                               <React.Fragment key={sub}>
-                                <th className="border border-lime-600 p-0.5 text-[8px] font-normal">आकारिक</th>
-                                <th className="border border-lime-600 p-0.5 text-[8px] font-normal">संकलित</th>
+                                <th className="border border-lime-600 p-0.5 text-[7px] font-normal">आकारिक</th>
+                                <th className="border border-lime-600 p-0.5 text-[7px] font-normal">संकलित</th>
                               </React.Fragment>
                             );
                           })}
                         </tr>
                         {/* Sub-Header Row: Max Marks (पैकी) */}
-                        <tr className="bg-lime-100 text-slate-900 font-black border-b border-lime-600 text-[10px]">
-                          <td className="border border-lime-600 p-0 w-6"></td>
-                          <td className="border border-lime-600 p-1 text-left font-black">पैकी</td>
+                        <tr className="bg-lime-100 text-slate-900 font-black border-b border-lime-600 text-[9px]">
+                          <td className="border border-lime-600 p-0 w-5"></td>
+                          <td className="border border-lime-600 p-0.5 text-left font-black">पैकी</td>
                           {subjects.map((sub) => {
                             const isPractical = sub.includes("कला") || sub.includes("कार्यानुभव") || sub.includes("शारीरिक");
                             const formMax = ["1st", "2nd", "1", "2"].includes(String(selectedClass)) ? "70" : ["3rd", "4th", "3", "4"].includes(String(selectedClass)) ? "60" : ["5th", "6th", "5", "6"].includes(String(selectedClass)) ? "50" : "40";
@@ -2325,22 +2463,22 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
 
                             return isPractical ? (
                               <React.Fragment key={sub}>
-                                <td className="border border-lime-600 p-1" colSpan={2}>100</td>
-                                <td className="border border-lime-600 p-1">100</td>
-                                <td className="border border-lime-600 p-1"></td>
+                                <td className="border border-lime-600 p-0.5" colSpan={2}>100</td>
+                                <td className="border border-lime-600 p-0.5">100</td>
+                                <td className="border border-lime-600 p-0.5"></td>
                               </React.Fragment>
                             ) : (
                               <React.Fragment key={sub}>
-                                <td className="border border-lime-600 p-1">{formMax}</td>
-                                <td className="border border-lime-600 p-1">{semMax}</td>
-                                <td className="border border-lime-600 p-1">100</td>
-                                <td className="border border-lime-600 p-1"></td>
+                                <td className="border border-lime-600 p-0.5">{formMax}</td>
+                                <td className="border border-lime-600 p-0.5">{semMax}</td>
+                                <td className="border border-lime-600 p-0.5">100</td>
+                                <td className="border border-lime-600 p-0.5"></td>
                               </React.Fragment>
                             );
                           })}
-                          <td className="border border-lime-600 p-0 text-[10px]">{totalWorkingDays > 0 ? totalWorkingDays : "-"}</td>
-                          <td className="border border-lime-600 p-0 text-[10px]">{subjects.length * 100}</td>
-                          <td className="border border-lime-600 p-0 text-[10px]">100%</td>
+                          <td className="border border-lime-600 p-0 text-[8.5px]">{totalWorkingDays > 0 ? totalWorkingDays : "-"}</td>
+                          <td className="border border-lime-600 p-0 text-[8.5px]">{subjects.length * 100}</td>
+                          <td className="border border-lime-600 p-0 text-[8.5px]">100%</td>
                           <td className="border border-lime-600 p-0"></td>
                         </tr>
                       </thead>
@@ -2358,30 +2496,30 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
                           const overallGrade = getGrade(pctVal);
 
                           return (
-                            <tr key={student.id} className="border-b border-lime-300 hover:bg-lime-50/40">
-                              <td className="border border-lime-600 p-0 font-bold w-6 text-center text-[10px]">{idx + 1}</td>
-                              <td className="border border-lime-600 p-1 text-left font-bold text-slate-900 text-xs whitespace-nowrap" title={student.name}>{student.name}</td>
+                            <tr key={student.id} className="border-b border-lime-300 hover:bg-lime-50/40 text-[9px]">
+                              <td className="border border-lime-600 p-0 font-bold w-5 text-center text-[8.5px]">{idx + 1}</td>
+                              <td className="border border-lime-600 p-0.5 text-left font-bold text-slate-900 text-[9.5px] min-w-[110px] max-w-[140px] truncate" title={student.name}>{student.name}</td>
                               {subjects.map((sub) => {
                                 const stats = getStudentSubjectStats(student, sub);
                                 return stats.isPracticalSub ? (
                                   <React.Fragment key={sub}>
-                                    <td className="border border-lime-600 p-1 font-bold" colSpan={2}>{stats.formTotal || "-"}</td>
-                                    <td className="border border-lime-600 p-1 font-extrabold text-blue-900">{stats.grandTotal || "-"}</td>
-                                    <td className="border border-lime-600 p-1 font-bold text-emerald-800">{stats.gradeStr}</td>
+                                    <td className="border border-lime-600 p-0.5 font-bold" colSpan={2}>{stats.formTotal || "-"}</td>
+                                    <td className="border border-lime-600 p-0.5 font-extrabold text-blue-900">{stats.grandTotal || "-"}</td>
+                                    <td className="border border-lime-600 p-0.5 font-bold text-emerald-800">{stats.gradeStr}</td>
                                   </React.Fragment>
                                 ) : (
                                   <React.Fragment key={sub}>
-                                    <td className="border border-lime-600 p-1 font-bold">{stats.formTotal || "-"}</td>
-                                    <td className="border border-lime-600 p-1 font-bold">{stats.semTotal || "-"}</td>
-                                    <td className="border border-lime-600 p-1 font-extrabold text-blue-900">{stats.grandTotal || "-"}</td>
-                                    <td className="border border-lime-600 p-1 font-bold text-emerald-800">{stats.gradeStr}</td>
+                                    <td className="border border-lime-600 p-0.5 font-bold">{stats.formTotal || "-"}</td>
+                                    <td className="border border-lime-600 p-0.5 font-bold">{stats.semTotal || "-"}</td>
+                                    <td className="border border-lime-600 p-0.5 font-extrabold text-blue-900">{stats.grandTotal || "-"}</td>
+                                    <td className="border border-lime-600 p-0.5 font-bold text-emerald-800">{stats.gradeStr}</td>
                                   </React.Fragment>
                                 );
                               })}
-                              <td className="border border-lime-600 p-0 font-bold text-[10px]">{attDays > 0 ? attDays : "-"}</td>
-                              <td className="border border-lime-600 p-0 font-black text-blue-900 text-[10px]">{grandObtainedTotal}</td>
-                              <td className="border border-lime-600 p-0 font-black text-blue-900 text-[9px]">{overallPct}</td>
-                              <td className="border border-lime-600 p-0 font-black text-emerald-900 text-[10px]">{overallGrade}</td>
+                              <td className="border border-lime-600 p-0 font-bold text-[8.5px]">{attDays > 0 ? attDays : "-"}</td>
+                              <td className="border border-lime-600 p-0 font-black text-blue-900 text-[8.5px]">{grandObtainedTotal}</td>
+                              <td className="border border-lime-600 p-0 font-black text-blue-900 text-[8px]">{overallPct}</td>
+                              <td className="border border-lime-600 p-0 font-black text-emerald-900 text-[8.5px]">{overallGrade}</td>
                             </tr>
                           );
                         })}

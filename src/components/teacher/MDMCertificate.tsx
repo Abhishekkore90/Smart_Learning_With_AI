@@ -456,24 +456,7 @@ export const MDMCertificate: React.FC<MDMCertificateProps> = ({
           </table>
         </div>
 
-        {/* Vegetable Usage Sub-table (भाजीपाला वापर तक्ता) */}
-        <div className="mt-4 flex justify-start">
-          <table className="border-collapse border border-black text-center text-xs font-sans" style={{ borderCollapse: 'collapse', border: '1px solid #000000' }}>
-            <thead>
-              <tr className="bg-slate-100 font-bold border-b border-black text-xs">
-                <th className="border border-black px-8 py-1 min-w-[120px]" style={{ border: '1px solid #000000' }}>तपशील</th>
-                <th className="border border-black px-8 py-1 min-w-[160px]" style={{ border: '1px solid #000000' }} colSpan={2}>वापर</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="border border-black px-8 py-1 font-bold" style={{ border: '1px solid #000000' }}>भाजीपाला</td>
-                <td className="border border-black px-8 py-1 font-bold" style={{ border: '1px solid #000000' }}>{toMarathiNumbers((vegUsageKg !== undefined ? vegUsageKg : subTab === "1-5" ? primaryBeneficiarySum * 0.050 : subTab === "6-8" ? upperBeneficiarySum * 0.075 : (primaryBeneficiarySum * 0.050) + (upperBeneficiarySum * 0.075)).toFixed(3))}</td>
-                <td className="border border-black px-4 py-1 font-medium" style={{ border: '1px solid #000000' }}>कि. ग्रॅ.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+
       </div>
 
       {/* Footer Signatures */}

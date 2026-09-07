@@ -144,7 +144,12 @@ function AssemblyBookAdmin() {
       const docRef = doc(db, "daily_paripath_archive", dateStr);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
-        setParipathData(docSnap.data());
+        const loadedData = docSnap.data();
+        setParipathData({
+          ...loadedData,
+          silentPasayadan: loadedData.silentPasayadan || loadedData.pasaydan || DEFAULT_ASSEMBLY_ITEMS.mr[5].content,
+          silentPasayadanTitle: loadedData.silentPasayadanTitle || loadedData.pasaydanTitle || "पसायदान",
+        });
         setIsSavedForDate(true);
       } else {
         const todayStr = getLocalDateString();
@@ -154,7 +159,11 @@ function AssemblyBookAdmin() {
           if (currentSnap.exists()) {
             const cData = currentSnap.data();
             if (cData.archivedDate === dateStr || cData.date === dateStr) {
-              setParipathData(cData);
+              setParipathData({
+                ...cData,
+                silentPasayadan: cData.silentPasayadan || cData.pasaydan || DEFAULT_ASSEMBLY_ITEMS.mr[5].content,
+                silentPasayadanTitle: cData.silentPasayadanTitle || cData.pasaydanTitle || "पसायदान",
+              });
               setIsSavedForDate(true);
               return;
             }
@@ -240,7 +249,7 @@ function AssemblyBookAdmin() {
     // --- PAGE 2: संविधान उद्देशिका, प्रार्थना, मौन पसायदान ---
     const preamble = data.preamble || data[`preamble_${adminLang}`] || assemblyItems[3]?.content || "";
     const prayer = data.prayer || data[`prayer_${adminLang}`] || assemblyItems[4]?.content || "";
-    const silentPasayadan = data.silentPasayadan || assemblyItems[5]?.content || "";
+    const silentPasayadan = data.silentPasayadan || assemblyItems[5]?.content || DEFAULT_ASSEMBLY_ITEMS.mr[5].content;
 
     const page2 = `
       <div style="page-break-after: always;">
@@ -434,9 +443,18 @@ function AssemblyBookAdmin() {
   const handleSaveParipath = async () => {
     setSavingParipath(true);
     try {
+      const pasayadanContent = paripathData.silentPasayadan || DEFAULT_ASSEMBLY_ITEMS.mr[5].content;
+      const pasayadanTitle = paripathData.silentPasayadanTitle || paripathData.pasaydanTitle || "पसायदान";
+      const updatedParipathData = {
+        ...paripathData,
+        silentPasayadan: pasayadanContent,
+        silentPasayadanTitle: pasayadanTitle,
+        pasaydanTitle: pasayadanTitle,
+      };
+
       // 1. Generate PDF Blob from form content
       toast.success("Generating Daily Paripath PDF... 📄");
-      const pdfBlob = await generateParipathPdfBlob(paripathData, selectedDate);
+      const pdfBlob = await generateParipathPdfBlob(updatedParipathData, selectedDate);
       const pdfFile = new File([pdfBlob], `paripath_${selectedDate}.pdf`, { type: "application/pdf" });
 
       // 2. Upload generated PDF directly to Bunny Storage
@@ -454,7 +472,7 @@ function AssemblyBookAdmin() {
       // 3. Save as "current" for live display if it is today
       const todayStr = getLocalDateString();
       const payload = {
-        ...paripathData,
+        ...updatedParipathData,
         bunnyPdfUrl,
         lastUpdated: new Date().toISOString(),
         archivedDate: selectedDate,
@@ -469,6 +487,7 @@ function AssemblyBookAdmin() {
       await setDoc(doc(db, "daily_paripath_archive", selectedDate), payload);
 
       setIsSavedForDate(true);
+      setParipathData(updatedParipathData);
       
       toast.success("Paripath data and PDF saved successfully! 🎉");
     } catch (err: any) {
@@ -1326,7 +1345,7 @@ function AssemblyBookAdmin() {
                     <input
                       type="text"
                       placeholder="उदा. पसायदान / आता विश्वात्मकें देवें"
-                      value={paripathData.silentPasayadanTitle || paripathData.pasaydanTitle || ''}
+                      value={paripathData.silentPasayadanTitle || paripathData.pasaydanTitle || 'पसायदान'}
                       onChange={(e) => setParipathData({ ...paripathData, silentPasayadanTitle: e.target.value, pasaydanTitle: e.target.value })}
                       className="w-full max-w-2xl mx-auto px-6 py-3.5 bg-amber-50/30 border border-amber-100 hover:border-amber-300 focus:bg-white rounded-2xl focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all text-center font-bold text-slate-800 text-base"
                     />
@@ -1338,9 +1357,7 @@ function AssemblyBookAdmin() {
                     <textarea
                       rows={10}
                       value={
-                        paripathData.silentPasayadan !== undefined
-                          ? paripathData.silentPasayadan
-                          : (paripathData.silentPasayadan || DEFAULT_ASSEMBLY_ITEMS[adminLang]?.[5]?.content || "")
+                        paripathData.silentPasayadan || DEFAULT_ASSEMBLY_ITEMS[adminLang]?.[5]?.content || DEFAULT_ASSEMBLY_ITEMS.mr[5].content
                       }
                       onChange={(e) => setParipathData({ ...paripathData, silentPasayadan: e.target.value })}
                       className="w-full px-6 py-5 bg-amber-50/30 border border-amber-100 hover:border-amber-300 focus:bg-white rounded-2xl focus:outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 transition-all resize-none text-center font-bold text-slate-800 leading-relaxed max-w-2xl mx-auto block"

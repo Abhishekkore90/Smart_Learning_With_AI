@@ -835,8 +835,7 @@ export default function AnnualResultRegister({ initialClass, initialYear, initia
 
             <tbody>
               {(() => {
-                const dataFilledStudents = students.filter(st => hasStudentFilledData(st, {}, sem1MarksData, sem2MarksData, attendanceData));
-                const displayedStudents = dataFilledStudents.length > 0 ? dataFilledStudents : students;
+                const displayedStudents = students;
 
                 return displayedStudents.map((st, idx) => {
                   let grandTotalObt = 0;
