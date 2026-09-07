@@ -591,17 +591,25 @@ export function MonthlyParipathRegister() {
           }
 
           const today = new Date();
+          const tomorrow = new Date(today);
+          tomorrow.setDate(today.getDate() + 1);
           const todayKey = getDateKey(today.getFullYear(), today.getMonth(), today.getDate());
+          const tomorrowKey = getDateKey(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate());
 
-          if (!data && currentAdminData) {
-            if (currentAdminData.archivedDate === dateKey || currentAdminData.date === dateKey) {
-              data = currentAdminData;
+          if (dateKey > tomorrowKey) {
+            // Restrict displaying admin pre-filled data for dates beyond tomorrow
+            data = null;
+          } else {
+            if (!data && currentAdminData) {
+              if (currentAdminData.archivedDate === dateKey || currentAdminData.date === dateKey) {
+                data = currentAdminData;
+              }
             }
-          }
 
-          if (dateKey === todayKey && currentAdminData && currentAdminData.lastUpdated) {
-            if ((currentAdminData.archivedDate === dateKey || currentAdminData.date === dateKey) && (!data || !data.lastUpdated || new Date(currentAdminData.lastUpdated) > new Date(data.lastUpdated))) {
-              data = currentAdminData;
+            if (dateKey === todayKey && currentAdminData && currentAdminData.lastUpdated) {
+              if ((currentAdminData.archivedDate === dateKey || currentAdminData.date === dateKey) && (!data || !data.lastUpdated || new Date(currentAdminData.lastUpdated) > new Date(data.lastUpdated))) {
+                data = currentAdminData;
+              }
             }
           }
 

@@ -610,8 +610,12 @@ function TeacherMDMPage() {
             pdfStyle.innerHTML = `
               * { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; box-sizing: border-box !important; color: #000000 !important; }
               table { border-collapse: collapse !important; border: 1px solid #000000 !important; width: 100% !important; background-color: #ffffff !important; }
-              th, td { border: 1px solid #000000 !important; color: #000000 !important; font-weight: 700 !important; vertical-align: middle !important; }
-              th { background-color: #e2e8f0 !important; font-weight: 900 !important; }
+              tbody tr { height: 38px !important; min-height: 38px !important; }
+              th, td { border: 1px solid #000000 !important; color: #000000 !important; font-weight: 800 !important; vertical-align: middle !important; font-size: 17.5px !important; line-height: 1.35 !important; padding: 6px 3px !important; }
+              th { background-color: #e2e8f0 !important; font-weight: 900 !important; font-size: 18.5px !important; }
+              h1 { font-size: 26px !important; font-weight: 900 !important; }
+              h2 { font-size: 20px !important; font-weight: 800 !important; }
+              p, span, div, label { color: #000000 !important; font-size: 16px !important; }
             `;
             clonedDoc.head.appendChild(pdfStyle);
 
@@ -1664,18 +1668,35 @@ function TeacherMDMPage() {
                 width: 100% !important;
                 background-color: #ffffff !important;
               }
+              tbody tr {
+                height: 38px !important;
+                min-height: 38px !important;
+              }
               th, td {
                 border: 1px solid #000000 !important;
                 color: #000000 !important;
-                font-weight: 700 !important;
+                font-weight: 800 !important;
                 vertical-align: middle !important;
+                font-size: 17.5px !important;
+                line-height: 1.35 !important;
+                padding: 6px 3px !important;
               }
               th {
                 background-color: #e2e8f0 !important;
                 font-weight: 900 !important;
+                font-size: 18.5px !important;
               }
-              p, h2, h3, span, div {
+              h1 {
+                font-size: 26px !important;
+                font-weight: 900 !important;
+              }
+              h2 {
+                font-size: 20px !important;
+                font-weight: 800 !important;
+              }
+              p, h3, span, div, label {
                 color: #000000 !important;
+                font-size: 16px !important;
               }
             `;
             clonedDoc.head.appendChild(pdfStyle);

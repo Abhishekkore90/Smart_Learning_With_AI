@@ -1759,6 +1759,12 @@ function DailyAssemblyContent() {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   };
 
+  const getTomorrowLocalDateString = (): string => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return getLocalDateString(d);
+  };
+
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const [dbFormData, setDbFormData] = useState<any>(null);
@@ -1776,8 +1782,22 @@ function DailyAssemblyContent() {
 
   // Set selectedDate on client only to avoid SSR hydration mismatch
   useEffect(() => {
-    setSelectedDate((prev) => prev || getLocalDateString());
+    setSelectedDate((prev) => {
+      const initial = prev || getLocalDateString();
+      const maxAllowed = getTomorrowLocalDateString();
+      return initial > maxAllowed ? maxAllowed : initial;
+    });
   }, []);
+
+  // Restrict selectedDate to max tomorrow (current day + next day) and all past dates
+  useEffect(() => {
+    if (!selectedDate) return;
+    const maxAllowed = getTomorrowLocalDateString();
+    if (selectedDate > maxAllowed) {
+      toast.error("आपण केवळ आज, उद्या आणि मागील तारखांचा परिपाठ पाहू शकता!");
+      setSelectedDate(maxAllowed);
+    }
+  }, [selectedDate]);
 
   // Sync active tab for Sunday / declared holiday
   useEffect(() => {
@@ -2475,7 +2495,17 @@ function DailyAssemblyContent() {
                 <input
                   type="date"
                   value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
+                  max={getTomorrowLocalDateString()}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const maxAllowed = getTomorrowLocalDateString();
+                    if (val && val > maxAllowed) {
+                      toast.error("आपण केवळ आज, उद्या आणि मागील तारखांचा परिपाठ पाहू शकता!");
+                      setSelectedDate(maxAllowed);
+                    } else {
+                      setSelectedDate(val);
+                    }
+                  }}
                   className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
                 />
               </div>

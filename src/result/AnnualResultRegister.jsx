@@ -539,8 +539,8 @@ export default function AnnualResultRegister({ initialClass, initialYear, initia
         tb.style.minWidth = `${tableWidth}px`;
       });
       clone.querySelectorAll("th").forEach((th) => {
-        th.style.backgroundColor = "#0d47a1";
-        th.style.color = "#ffffff";
+        th.style.backgroundColor = "#bfdbfe";
+        th.style.color = "#0f172a";
         th.style.border = "1px solid #000000";
         th.style.verticalAlign = "middle";
       });
@@ -742,20 +742,20 @@ export default function AnnualResultRegister({ initialClass, initialYear, initia
             </colgroup>
             <thead>
               {/* Row 1: Main Headers */}
-              <tr style={{ backgroundColor: "transparent", color: "#ffffff" }}>
+              <tr style={{ backgroundColor: "transparent", color: "#0f172a" }}>
                 <th
                   rowSpan={3}
-                  className="border border-black px-1 py-2 font-black align-middle text-white"
-                  style={{ width: "35px", borderColor: "#000000", backgroundColor: "#0d47a1", color: "#ffffff", verticalAlign: "middle" }}
+                  className="border border-black px-1 py-2 font-black align-middle text-slate-900"
+                  style={{ width: "35px", borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#0f172a", verticalAlign: "middle" }}
                 >
-                  <span className="relative z-10 block text-center font-black text-white text-[13px]" style={{ position: "relative", zIndex: 10, color: "#ffffff" }}>अ. क्र.</span>
+                  <span className="relative z-10 block text-center font-black text-slate-900 text-[13px]" style={{ position: "relative", zIndex: 10, color: "#0f172a" }}>अ. क्र.</span>
                 </th>
                 <th
                   rowSpan={3}
-                  className="border border-black px-2 py-2 font-black text-left align-middle text-white"
-                  style={{ width: "160px", borderColor: "#000000", backgroundColor: "#0d47a1", color: "#ffffff", verticalAlign: "middle" }}
+                  className="border border-black px-2 py-2 font-black text-left align-middle text-slate-900"
+                  style={{ width: "160px", borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#0f172a", verticalAlign: "middle" }}
                 >
-                  <span className="relative z-10 block font-black text-white text-[13px]" style={{ position: "relative", zIndex: 10, color: "#ffffff" }}>विद्यार्थ्याचे नाव</span>
+                  <span className="relative z-10 block font-black text-slate-900 text-[13px]" style={{ position: "relative", zIndex: 10, color: "#0f172a" }}>विद्यार्थ्याचे नाव</span>
                 </th>
 
                 {/* Dynamic Subject Headers - Equal width for all subjects */}
@@ -763,8 +763,8 @@ export default function AnnualResultRegister({ initialClass, initialYear, initia
                   <th
                     key={sIdx}
                     colSpan={4}
-                    className="border border-black px-0.5 py-1.5 font-black text-[13px] align-middle whitespace-normal break-words overflow-hidden leading-tight text-white"
-                    style={{ borderColor: "#000000", backgroundColor: "#0d47a1", color: "#ffffff", width: "144px" }}
+                    className="border border-black px-0.5 py-1.5 font-black text-[13px] align-middle whitespace-normal break-words overflow-hidden leading-tight text-slate-900"
+                    style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#0f172a", width: "144px" }}
                   >
                     {getSubjectDisplayLabel(sub)}
                   </th>
@@ -772,62 +772,62 @@ export default function AnnualResultRegister({ initialClass, initialYear, initia
 
                 <th
                   rowSpan={3}
-                  className="border border-black px-1 py-1 font-black align-middle text-white"
-                  style={{ borderColor: "#000000", backgroundColor: "#0d47a1", color: "#ffffff", width: "40px", verticalAlign: "middle" }}
+                  className="border border-black px-1 py-1 font-black align-middle text-slate-900"
+                  style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#0f172a", width: "40px", verticalAlign: "middle" }}
                 >
-                  <div className="writing-vertical text-[13px]" style={{ color: "#ffffff" }}>उपस्थिती</div>
+                  <div className="writing-vertical text-[13px]" style={{ color: "#0f172a" }}>उपस्थिती</div>
                 </th>
                 <th
                   rowSpan={3}
-                  className="border border-black px-1 py-1 font-black align-middle text-white"
-                  style={{ borderColor: "#000000", backgroundColor: "#0d47a1", color: "#ffffff", width: "40px", verticalAlign: "middle" }}
+                  className="border border-black px-1 py-1 font-black align-middle text-slate-900"
+                  style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#0f172a", width: "40px", verticalAlign: "middle" }}
                 >
-                  <div className="writing-vertical text-[13px]" style={{ color: "#ffffff" }}>एकूण</div>
+                  <div className="writing-vertical text-[13px]" style={{ color: "#0f172a" }}>एकूण</div>
                 </th>
                 <th
                   rowSpan={3}
-                  className="border border-black px-1 py-1 font-black align-middle text-white"
-                  style={{ borderColor: "#000000", backgroundColor: "#0d47a1", color: "#ffffff", width: "45px", verticalAlign: "middle" }}
+                  className="border border-black px-1 py-1 font-black align-middle text-slate-900"
+                  style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#0f172a", width: "45px", verticalAlign: "middle" }}
                 >
-                  <div className="writing-vertical text-[13px]" style={{ color: "#ffffff" }}>टक्केवारी</div>
+                  <div className="writing-vertical text-[13px]" style={{ color: "#0f172a" }}>टक्केवारी</div>
                 </th>
                 <th
                   rowSpan={3}
-                  className="border border-black px-1 py-1 font-black align-middle text-white"
-                  style={{ borderColor: "#000000", backgroundColor: "#0d47a1", color: "#ffffff", width: "40px", verticalAlign: "middle" }}
+                  className="border border-black px-1 py-1 font-black align-middle text-slate-900"
+                  style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#0f172a", width: "40px", verticalAlign: "middle" }}
                 >
-                  <div className="writing-vertical text-[13px]" style={{ color: "#ffffff" }}>श्रेणी</div>
+                  <div className="writing-vertical text-[13px]" style={{ color: "#0f172a" }}>श्रेणी</div>
                 </th>
               </tr>
 
               {/* Row 2: Sub Headers (Semester Breakdown) */}
-              <tr style={{ backgroundColor: "transparent", color: "#ffffff" }}>
+              <tr style={{ backgroundColor: "transparent", color: "#0f172a" }}>
                 {subjects.map((_, sIdx) => (
                   <React.Fragment key={sIdx}>
-                    <th className="border border-black p-0.5 font-extrabold align-middle text-[11px] text-white" style={{ borderColor: "#000000", backgroundColor: "#0d47a1", color: "#ffffff", width: "36px" }}>
-                      <div className="writing-vertical" style={{ color: "#ffffff" }}>प्रथम सत्र</div>
+                    <th className="border border-black p-0.5 font-extrabold align-middle text-[11px] text-slate-900" style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#0f172a", width: "36px" }}>
+                      <div className="writing-vertical" style={{ color: "#0f172a" }}>प्रथम सत्र</div>
                     </th>
-                    <th className="border border-black p-0.5 font-extrabold align-middle text-[11px] text-white" style={{ borderColor: "#000000", backgroundColor: "#0d47a1", color: "#ffffff", width: "36px" }}>
-                      <div className="writing-vertical" style={{ color: "#ffffff" }}>द्वितीय सत्र</div>
+                    <th className="border border-black p-0.5 font-extrabold align-middle text-[11px] text-slate-900" style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#0f172a", width: "36px" }}>
+                      <div className="writing-vertical" style={{ color: "#0f172a" }}>द्वितीय सत्र</div>
                     </th>
-                    <th className="border border-black p-0.5 font-extrabold align-middle text-[11px] text-white" style={{ borderColor: "#000000", backgroundColor: "#0d47a1", color: "#ffffff", width: "36px" }}>
-                      <div className="writing-vertical" style={{ color: "#ffffff" }}>एकूण</div>
+                    <th className="border border-black p-0.5 font-extrabold align-middle text-[11px] text-slate-900" style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#0f172a", width: "36px" }}>
+                      <div className="writing-vertical" style={{ color: "#0f172a" }}>एकूण</div>
                     </th>
-                    <th className="border border-black p-0.5 font-extrabold align-middle text-[11px] text-white" style={{ borderColor: "#000000", backgroundColor: "#0d47a1", color: "#ffffff", width: "36px" }}>
-                      <div className="writing-vertical" style={{ color: "#ffffff" }}>श्रेणी</div>
+                    <th className="border border-black p-0.5 font-extrabold align-middle text-[11px] text-slate-900" style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#0f172a", width: "36px" }}>
+                      <div className="writing-vertical" style={{ color: "#0f172a" }}>श्रेणी</div>
                     </th>
                   </React.Fragment>
                 ))}
               </tr>
 
               {/* Row 3: Max Marks Row (100, 100, 200, Grade) matching Image 2 */}
-              <tr style={{ backgroundColor: "transparent", color: "#ffffff" }}>
+              <tr style={{ backgroundColor: "transparent", color: "#0f172a" }}>
                 {subjects.map((_, sIdx) => (
                   <React.Fragment key={sIdx}>
-                    <th className="border border-black p-0.5 font-black text-[13px] align-middle text-white" style={{ borderColor: "#000000", backgroundColor: "#0d47a1", color: "#ffffff", width: "36px" }}>100</th>
-                    <th className="border border-black p-0.5 font-black text-[13px] align-middle text-white" style={{ borderColor: "#000000", backgroundColor: "#0d47a1", color: "#ffffff", width: "36px" }}>100</th>
-                    <th className="border border-black p-0.5 font-black text-[13px] align-middle text-white" style={{ borderColor: "#000000", backgroundColor: "#0d47a1", color: "#ffffff", width: "36px" }}>200</th>
-                    <th className="border border-black p-0.5 align-middle text-white" style={{ borderColor: "#000000", backgroundColor: "#0d47a1", color: "#ffffff", width: "36px" }}></th>
+                    <th className="border border-black p-0.5 font-black text-[13px] align-middle text-slate-900" style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#0f172a", width: "36px" }}>100</th>
+                    <th className="border border-black p-0.5 font-black text-[13px] align-middle text-slate-900" style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#0f172a", width: "36px" }}>100</th>
+                    <th className="border border-black p-0.5 font-black text-[13px] align-middle text-slate-900" style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#0f172a", width: "36px" }}>200</th>
+                    <th className="border border-black p-0.5 align-middle text-slate-900" style={{ borderColor: "#000000", backgroundColor: "#bfdbfe", color: "#0f172a", width: "36px" }}></th>
                   </React.Fragment>
                 ))}
               </tr>
@@ -874,10 +874,10 @@ export default function AnnualResultRegister({ initialClass, initialYear, initia
                         <td className="border border-black p-0.5 text-[13px] font-extrabold text-slate-950 text-center" style={{ borderColor: "#000000", width: "36px" }}>
                           {subRes.m2 > 0 ? subRes.m2 : "-"}
                         </td>
-                        <td className="border border-black p-0.5 text-[13px] font-black text-[#0d47a1] bg-blue-50/30 text-center" style={{ borderColor: "#000000", width: "36px" }}>
+                        <td className="border border-black p-0.5 text-[13px] font-black text-[#1e40af] bg-blue-50/30 text-center" style={{ borderColor: "#000000", width: "36px" }}>
                           {subRes.subTotal > 0 ? subRes.subTotal : "-"}
                         </td>
-                        <td className="border border-black p-0.5 text-[13px] font-black text-[#0d47a1] bg-blue-50/30 text-center" style={{ borderColor: "#000000", width: "36px" }}>
+                        <td className="border border-black p-0.5 text-[13px] font-black text-[#1e40af] bg-blue-50/30 text-center" style={{ borderColor: "#000000", width: "36px" }}>
                           {subRes.subGrade}
                         </td>
                       </React.Fragment>
@@ -887,10 +887,10 @@ export default function AnnualResultRegister({ initialClass, initialYear, initia
                     <td className="border border-black p-0.5 text-[13px] font-extrabold text-slate-950 text-center" style={{ borderColor: "#000000", width: "40px" }}>
                       {attendance}
                     </td>
-                    <td className="border border-black p-0.5 text-[13px] font-black text-[#0d47a1] bg-[#e3f2fd] text-center" style={{ borderColor: "#000000", width: "40px" }}>
+                    <td className="border border-black p-0.5 text-[13px] font-black text-[#1e40af] bg-[#e3f2fd] text-center" style={{ borderColor: "#000000", width: "40px" }}>
                       {grandTotalObt > 0 ? grandTotalObt : "-"}
                     </td>
-                    <td className="border border-black p-0.5 text-[13px] font-black text-[#0d47a1] bg-[#e3f2fd] text-center" style={{ borderColor: "#000000", width: "45px" }}>
+                    <td className="border border-black p-0.5 text-[13px] font-black text-[#1e40af] bg-[#e3f2fd] text-center" style={{ borderColor: "#000000", width: "45px" }}>
                       {overallPercent > 0 ? overallPercent.toFixed(2) : "-"}
                     </td>
                     <td className="border border-black p-0.5 text-[13px] font-black text-slate-950 bg-[#bbdefb] text-center" style={{ borderColor: "#000000", width: "40px" }}>
@@ -915,7 +915,7 @@ export default function AnnualResultRegister({ initialClass, initialYear, initia
           margin: 0 auto;
           padding: 6px 2px;
           height: 90px;
-          color: #ffffff !important;
+          color: #000000 !important;
         }
 
         @media print {
