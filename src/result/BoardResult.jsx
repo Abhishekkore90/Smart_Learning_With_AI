@@ -87,14 +87,8 @@ const getMarathiClassName = (clsStr) => {
 };
 
 const formatDivision = (divVal) => {
-  if (!divVal) return "अ";
-  const str = String(divVal).trim().toUpperCase();
-  if (str === "A" || str === "अ" || str === "1") return "अ";
-  if (str === "B" || str === "2" || str === "ब") return "ब";
-  if (str === "C" || str === "3" || str === "K" || str === "क") return "क";
-  if (str === "D" || str === "4" || str === "ड") return "ड";
-  if (str.length > 0) return str;
-  return "अ";
+  if (divVal === undefined || divVal === null || String(divVal).trim() === "") return "";
+  return String(divVal).trim();
 };
 
 const isBoyStudent = (student) => {
@@ -205,7 +199,7 @@ const getStudentCasteCategory = (student) => {
 const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTerm = "sem2", initialMedium, onBack }) => {
   const [selectedClass, setSelectedClass] = useState(initialClass || "1st");
   const [academicYear, setAcademicYear] = useState(initialYear || "2025-26");
-  const [division, setDivision] = useState("1");
+  const [division, setDivision] = useState("");
   const [pageMode, setPageMode] = useState("2pages");
   const [showLayoutModal, setShowLayoutModal] = useState(true);
   const [selectedMedium, setSelectedMedium] = useState(() => {
@@ -1219,7 +1213,7 @@ const BoardResult = ({ initialClass = "1st", initialYear = "2025-26", initialTer
             <br />
             <div className="inline-block bg-white border border-slate-200 rounded-2xl px-10 py-4 shadow-xs">
               <h3 className="text-xl font-black text-slate-900">
-                इयत्ता : {getMarathiClassName(selectedClass)} ({selectedClass}) (तुकडी : {formatDivision(division)})
+                इयत्ता : {getMarathiClassName(selectedClass)} ({selectedClass}) {formatDivision(division) ? `(तुकडी : ${formatDivision(division)})` : ""}
               </h3>
             </div>
           </div>

@@ -922,14 +922,13 @@ const ProgressSheet = ({ initialClass = "1st", initialYear = "2025-26", initialS
     return names[n] || `${n + 1} वी`;
   };
 
-  const formatDivision = (divVal) => {
-    if (!divVal) return "";
-    const str = String(divVal).trim().toUpperCase();
-    if (str === "A" || str === "अ") return "अ";
-    if (str === "B" || str === "2" || str === "ब") return "ब";
-    if (str === "C" || str === "3" || str === "K" || str === "क") return "क";
-    if (str === "D" || str === "4" || str === "ड") return "ड";
-    if (str.length > 0 && str !== "1" && str !== "NULL" && str !== "UNDEFINED") return str;
+  const formatDivision = (divVal, fallbackDiv) => {
+    if (divVal !== undefined && divVal !== null && String(divVal).trim() !== "" && String(divVal).trim() !== "null" && String(divVal).trim() !== "undefined") {
+      return String(divVal).trim();
+    }
+    if (fallbackDiv && fallbackDiv !== "सर्व" && String(fallbackDiv).trim() !== "" && String(fallbackDiv).trim() !== "null") {
+      return String(fallbackDiv).trim();
+    }
     return "";
   };
 
