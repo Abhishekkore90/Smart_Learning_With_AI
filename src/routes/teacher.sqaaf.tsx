@@ -5951,6 +5951,7 @@ function TeacherSqaafPage() {
 
     container.innerHTML = finalHtml;
     container.style.width = "793px";
+    container.style.margin = "0 auto";
     container.style.padding = "20px";
     container.style.boxSizing = "border-box";
     container.style.backgroundColor = "white";
@@ -5965,7 +5966,7 @@ function TeacherSqaafPage() {
         scale: 1.5, 
         useCORS: true, 
         logging: false,
-        windowWidth: 850
+        windowWidth: 793
       },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
     }).from(container);
@@ -7653,6 +7654,7 @@ function TeacherSqaafPage() {
           container.innerHTML = finalHtml;
           container.style.position = "static";
           container.style.width = "1040px";
+          container.style.margin = "0 auto";
           container.style.padding = "4px 8px";
           container.style.boxSizing = "border-box";
           container.style.backgroundColor = "white";
@@ -7661,14 +7663,14 @@ function TeacherSqaafPage() {
           document.body.appendChild(wrapper);
           
           const pdfOptions = {
-            margin: [4, 4, 4, 4],
+            margin: [4, 6, 4, 6],
             filename: `SQAAF_Summary_${schoolName.replace(/\s+/g, "_") || "School"}_${new Date().toISOString().slice(0, 10)}.pdf`,
             image: { type: "jpeg", quality: 0.95 },
             html2canvas: { 
               scale: 1.5, 
               useCORS: true, 
               logging: false,
-              windowWidth: 1120
+              windowWidth: 1040
             },
             jsPDF: { unit: "mm", format: "a4", orientation: "landscape", compress: false },
             pagebreak: { mode: ["css", "legacy"] },
@@ -7706,6 +7708,7 @@ function TeacherSqaafPage() {
         container.innerHTML = finalHtml;
         container.style.position = "static";
         container.style.width = "1040px";
+        container.style.margin = "0 auto";
         container.style.padding = "12px 15px";
         container.style.boxSizing = "border-box";
         container.style.backgroundColor = "white";
@@ -7721,7 +7724,7 @@ function TeacherSqaafPage() {
             scale: 1.5, 
             useCORS: true, 
             logging: false,
-            windowWidth: 1120
+            windowWidth: 1040
           },
           jsPDF: { unit: "mm", format: "a4", orientation: "landscape", compress: false },
           pagebreak: { mode: ["css", "legacy"], before: ".html2pdf__page-break" },

@@ -91,35 +91,35 @@ const MODULE_CARDS = [
     fallbackLabel: "५. मासिक सभा",
     to: "/teacher/meeting",
     icon: Users,
-    description: "विविध शालेय समित्यांचे मासिक अहवाल, इतिवृत्त आणि स्वाक्षरी नोंदणी.",
+    description: "या विभागात शाळा स्तरावरील सर्व समित्यांचे मासिक अहवाल व इतिवृत्त निमंत्रण पत्रासह उपलब्ध होईल यामध्ये शाळा व्यवस्थापन समिती, विद्यार्थी सुरक्षा व भौतिक सुविधा विकसन समिती, सखी सावित्री समिती, महिला तक्रार निवारण समिती, माजी विद्यार्थी संघ, आणि इको क्लब यांचा समावेश आहे.",
   },
   {
     labelKey: "mdm",
     fallbackLabel: "६. माध्यान्ह भोजन",
     to: "/teacher/mdm",
     icon: Utensils,
-    description: "माध्यान्ह भोजन (MDM) योजना मधील साहित्य साठा आणि नोंदणी.",
+    description: "या विभागात आपणास आरंभीची शिल्लक, आवक साहित्य आणि दैनंदिन नोंद भरल्यानंतर तांदूळ मागणी, धान्यादी मालाची मागणी, प्रमाणपत्र, मासिक अहवालामध्ये दैनंदिन तांदूळ खर्च नोंदवही भाग एक, पोषण आहार दैनंदिन नोंदी, मासिक तांदूळ अहवाल, मासिक साठा नोंदवही प्रपत्र ब, मासिक तांदूळ शिजवून दिल्याचे बिल, तसेच वार्षिक अहवालामध्ये तांदूळ उपयोगिता आणि धान्याची उपयोगिता आपणास उपलब्ध होणार आहे.",
   },
   {
     labelKey: "statsTeacher",
     fallbackLabel: "७. शिक्षक संचिका",
     to: "/teacher/stats-teacher",
     icon: FolderOpen,
-    description: "शिक्षकांची वैयक्तिक आणि व्यावसायिक माहिती संचिका.",
+    description: "या विभागात आपणास शिक्षक संचिका उपलब्ध करून देण्यात आलेली आहे आपण आपली सर्व माहिती त्यात भरून एडिट करून आपल्या नावासह व मुख्याध्यापकांच्या नावासह प्रिंट करून शिक्षक संचिका वापरू शकता.",
   },
   {
     labelKey: "statsStudent",
     fallbackLabel: "८. विद्यार्थी संचिका",
     to: "/teacher/stats-student",
     icon: Folder,
-    description: "विद्यार्थ्यांची वैयक्तिक, शैक्षणिक आणि प्रगती संचिका.",
+    description: "या विभागात आपणास विद्यार्थी संचिका उपलब्ध करून देण्यात आलेली आहे यात आपण विद्यार्थ्यांची सर्व माहिती भरून, एडिट करून, आपण ती संचिका शाळेचे नाव, शिक्षकाचे नाव व मुख्याध्यापकांच्या नावासह प्रिंट करून वापरू शकता.",
   },
   {
     labelKey: "sqaaf",
     fallbackLabel: "९. SQAAF मूल्यमापन",
     to: "/teacher/sqaaf",
     icon: ClipboardCheck,
-    description: "शालेय गुणवत्ता आश्वासन फ्रेमवर्क (SQAAF) स्वयं-मूल्यमापन.",
+    description: "या विभागात आपणास मानकांच्या स्तरानुसार प्रतिसाद नोंदवल्यानंतर प्रत्येक स्तरानुसार पुरावे निवडल्यानंतर आपणास स्वयं मूल्यांकन व बाह्य मूल्यांकन अहवाल, शाळा प्रतिसाद अहवाल व एकत्रित गुण अहवाल शाळेच्या श्रेणीसह उपलब्ध होईल. स्वयं मूल्यांकन व बाह्य मूल्यांकन अहवालामध्ये बाह्य मूल्यांकनाची सोयही उपलब्ध करून देण्यात आलेली आहे.",
   },
   {
     labelKey: "teachingRecord",
@@ -140,7 +140,7 @@ const MODULE_CARDS = [
     fallbackLabel: "१२. Holistic Progress Card (HPC)",
     to: "/teacher/hpc-card",
     icon: Sparkles,
-    description: "विद्यार्थ्यांचे समग्र व सर्वंकष प्रगती पत्रक (HPC Card) मूल्यमापन.",
+    description: "या विभागात आपणास तीनही स्तरातील इयत्ता पहिली ते आठवीपर्यंतचे एचपीसी कार्ड उपलब्ध आहेत. CCE रिजल्ट सेक्शन मध्ये भरलेली विद्यार्थ्यांची माहिती ऑटोमॅटिक या विभागांमध्ये येईल. त्यामुळे विद्यार्थ्यांची माहिती परत भरावी लागणार नाही.",
   },
 ];
 
@@ -187,7 +187,7 @@ function TeacherDashboard() {
                   >
                     <div
                       onClick={() => handleModuleAccess(item.to)}
-                      className="h-64 bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white rounded-[2.5rem] p-8 shadow-md hover:shadow-[0_20px_45px_rgba(139,92,246,0.3)] text-left flex flex-col justify-between transition-all border border-[#7c3aed]/30 relative overflow-hidden group cursor-pointer block w-full"
+                      className="min-h-[17rem] h-full bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white rounded-[2.5rem] p-8 shadow-md hover:shadow-[0_20px_45px_rgba(139,92,246,0.3)] text-left flex flex-col justify-between transition-all border border-[#7c3aed]/30 relative overflow-hidden group cursor-pointer block w-full"
                     >
                       {/* Watermark background icon */}
                       <div className="absolute right-[-10%] bottom-[-10%] opacity-10 group-hover:opacity-20 transition-opacity duration-300 pointer-events-none">
@@ -200,11 +200,11 @@ function TeacherDashboard() {
                       </div>
 
                       {/* Committee Name */}
-                      <div className="space-y-2">
+                      <div className="space-y-2 my-2">
                         <h3 className="text-xl font-black leading-tight tracking-tight pr-4">
                           {t[item.labelKey as keyof typeof t] || item.fallbackLabel}
                         </h3>
-                        <p className="text-[11px] text-violet-100/70 font-semibold line-clamp-2 leading-relaxed">
+                        <p className="text-[11.5px] text-violet-100/90 font-semibold leading-relaxed line-clamp-2 group-hover:line-clamp-none transition-all duration-300">
                           {item.description}
                         </p>
                       </div>
