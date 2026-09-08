@@ -276,16 +276,17 @@ function AdminModulePaymentsPage() {
 
     if (!isRealUser) return;
 
-    const id = u.uid || u.id || email;
-    if (id || email) {
-      const key = email || id;
-      teacherMap.set(key, {
-        teacherId: u.uid || u.id || email,
-        teacherName: u.displayName || u.name || u.teacherName || (email ? email.split("@")[0] : id),
-        teacherEmail: u.email || (id.includes("@") ? id : ""),
-        teacherPhone: phone,
-      });
-    }
+    const id = u.uid || u.id;
+    const name = u.displayName || u.name || u.teacherName || u.fullName || u.schoolName || (email ? email.split("@")[0] : id);
+    const teacherObj: UniqueTeacher = {
+      teacherId: id || email,
+      teacherName: name,
+      teacherEmail: u.email || (id && id.includes("@") ? id : ""),
+      teacherPhone: phone,
+    };
+
+    if (id) teacherMap.set(id, teacherObj);
+    if (email) teacherMap.set(email, teacherObj);
   });
 
   // 2. Enhance metadata for existing real users from access & payment logs (without creating fake users)
@@ -322,6 +323,10 @@ function AdminModulePaymentsPage() {
   });
 
   const filteredPayments = payments.filter((p) => {
+    // Exclude UPI QR payments as requested by admin
+    const isUpiQr = p.paymentMethod === "UPI_QR" || (typeof p.utrNumber === "string" && p.utrNumber.trim() !== "");
+    if (isUpiQr) return false;
+
     const term = searchTerm.toLowerCase();
     return (
       (p.teacherName || "").toLowerCase().includes(term) ||
@@ -331,7 +336,7 @@ function AdminModulePaymentsPage() {
     );
   });
 
-  const totalRevenue = payments.reduce((acc, p) => acc + (p.amount || 0), 0);
+  const totalRevenue = filteredPayments.reduce((acc, p) => acc + (p.amount || 0), 0);
 
   // Check if specific module is granted to a teacher
   const isModuleGranted = (tId: string, mId: string) => {
@@ -539,7 +544,7 @@ function AdminModulePaymentsPage() {
             }`}
           >
             <Users className="size-4" />
-            <span>पेमेंट इतिहास ({payments.length})</span>
+            <span>पेमेंट इतिहास ({filteredPayments.length})</span>
           </button>
         </div>
 
@@ -1077,13 +1082,31 @@ function AdminModulePaymentsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-800 font-semibold">
-                    {filteredPayments.map((p, idx) => (
-                      <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="p-3 font-bold text-slate-400">{idx + 1}</td>
-                        <td className="p-3">
-                          <p className="font-extrabold text-slate-900">{p.teacherName || "शिक्षक"}</p>
-                          <p className="text-[11px] text-slate-500 font-mono">{p.teacherPhone || p.teacherEmail || p.teacherId}</p>
-                        </td>
+                    {filteredPayments.map((p, idx) => {
+                      const realTeacher =
+                        teacherMap.get(p.teacherId) ||
+                        (p.teacherEmail ? teacherMap.get(p.teacherEmail.toLowerCase()) : undefined);
+
+                      const isRawUid = (str?: string) =>
+                        !str || str === "शिक्षक" || str.length > 20 || str.startsWith("Iun2h") || str.startsWith("J4P4") || str.startsWith("aFm9");
+
+                      const displayTeacherName =
+                        realTeacher?.teacherName && !isRawUid(realTeacher.teacherName)
+                          ? realTeacher.teacherName
+                          : p.teacherName && !isRawUid(p.teacherName)
+                          ? p.teacherName
+                          : realTeacher?.teacherEmail || p.teacherEmail || (p.teacherPhone ? `फोन: ${p.teacherPhone}` : "नोंदणीकृत शिक्षक");
+
+                      const displaySubText =
+                        p.teacherEmail || realTeacher?.teacherEmail || p.teacherPhone || realTeacher?.teacherPhone || p.teacherId;
+
+                      return (
+                        <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="p-3 font-bold text-slate-400">{idx + 1}</td>
+                          <td className="p-3">
+                            <p className="font-extrabold text-slate-900">{displayTeacherName}</p>
+                            <p className="text-[11px] text-slate-500 font-mono">{displaySubText}</p>
+                          </td>
                         <td className="p-3 font-bold text-blue-900">{p.moduleTitle || p.moduleId}</td>
                         <td className="p-3 font-black text-emerald-700">₹{p.amount}</td>
                         <td className="p-3">
@@ -1105,7 +1128,8 @@ function AdminModulePaymentsPage() {
                           </span>
                         </td>
                       </tr>
-                    ))}
+                    );
+                    })}
                   </tbody>
                 </table>
               </div>
