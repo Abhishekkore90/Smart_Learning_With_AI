@@ -39,9 +39,13 @@ import {
   RotateCcw,
   FileUp,
   School,
+  Lock,
+  CreditCard,
+  Loader2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { processRazorpayPayment } from "@/lib/razorpayService";
 import { getDefaultSubjectsForClass } from "@/data/cceSubjects";
 import { saveFileToIndexedDB, getFileFromIndexedDB } from "@/lib/indexedDbStorage";
 import { uploadFileWithProgress } from "@/lib/upload";
@@ -597,6 +601,194 @@ export function AcademicPlanningSystem({
   const [selectedMedium, setSelectedMedium] = useState<string>("marathi");
   const [selectedSubject, setSelectedSubject] = useState<string>("");
   const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>("2026-27");
+
+  // Medium & Class specific access control state
+  const [unlockedClassMediums, setUnlockedClassMediums] = useState<string[]>([]);
+  const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(false);
+  const [purchasingClass, setPurchasingClass] = useState<boolean>(false);
+
+  useEffect(() => {
+    // Super Admin check
+    if (
+      localStorage.getItem("is_super_admin") === "true" ||
+      sessionStorage.getItem("is_super_admin") === "true" ||
+      (user as any)?.role === "admin"
+    ) {
+      setIsSuperAdmin(true);
+      return;
+    }
+
+    const effectiveUserId = user?.uid || auth?.currentUser?.uid || "guest_teacher";
+    const userEmail = user?.email || localStorage.getItem("teacher_email") || "";
+    const userKeys = Array.from(new Set([effectiveUserId, userEmail].filter(Boolean)));
+
+    // Real-time listener for admin granted access
+    const unsubAccess = onSnapshot(collection(db, "teacher_module_access"), (snap) => {
+      const unlockedSet = new Set<string>();
+
+      snap.docs.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (data && data.status === "GRANTED") {
+          const matchesUser = userKeys.some(
+            (k) => k === data.teacherId || k === data.teacherEmail || (data.id && data.id.startsWith(k))
+          );
+          if (matchesUser) {
+            if (
+              data.moduleId === "ALL" ||
+              data.moduleId === "annual-monthly-planning" ||
+              data.moduleId === "academic-planning" ||
+              data.moduleId === "question-bank"
+            ) {
+              if (data.unlockedKey) unlockedSet.add(data.unlockedKey);
+              if (data.unlockedClass && data.unlockedMedium) {
+                unlockedSet.add(`${data.unlockedMedium}_${data.unlockedClass}`);
+              }
+              if (!data.unlockedClass && !data.unlockedMedium) {
+                CLASS_OPTIONS.forEach((c) => {
+                  MEDIUM_OPTIONS.forEach((m) => {
+                    unlockedSet.add(`${m.id}_${c.id}`);
+                  });
+                });
+              }
+            }
+            if (data.targetClassKey) unlockedSet.add(data.targetClassKey);
+          }
+        }
+      });
+
+      // Real-time listener for paid records
+      const unsubPay = onSnapshot(collection(db, "teacher_module_payments"), (paySnap) => {
+        paySnap.docs.forEach((docSnap) => {
+          const data = docSnap.data();
+          if (data && data.status === "SUCCESS") {
+            const matchesUser = userKeys.some(
+              (k) => k === data.teacherId || k === data.teacherEmail || (data.id && data.id.startsWith(k))
+            );
+            if (matchesUser) {
+              if (data.moduleId === "ALL" || (data.paymentType === "FULL_YEAR" && data.moduleId === "annual-monthly-planning")) {
+                CLASS_OPTIONS.forEach((c) => {
+                  MEDIUM_OPTIONS.forEach((m) => {
+                    unlockedSet.add(`${m.id}_${c.id}`);
+                  });
+                });
+              } else if (
+                data.moduleId === "annual-monthly-planning" ||
+                data.moduleId === "academic-planning" ||
+                data.moduleId === "question-bank"
+              ) {
+                if (data.unlockedKey) unlockedSet.add(data.unlockedKey);
+                if (data.targetClassKey) unlockedSet.add(data.targetClassKey);
+                if (data.unlockedClass && data.unlockedMedium) {
+                  unlockedSet.add(`${data.unlockedMedium}_${data.unlockedClass}`);
+                }
+              }
+            }
+          }
+        });
+
+        setUnlockedClassMediums(Array.from(unlockedSet));
+      });
+
+      return () => unsubPay();
+    });
+
+    return () => {
+      unsubAccess();
+    };
+  }, [user?.uid, user?.email]);
+
+  // Firestore listener for dynamic planning pricing set by Admin
+  const [planningPricing, setPlanningPricing] = useState<{ price: number; classPrices?: Record<string, number> }>({ price: 299 });
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "cce_module_pricing", "annual-monthly-planning"), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setPlanningPricing({
+          price: typeof data.price === "number" ? data.price : 299,
+          classPrices: data.classPrices || {},
+        });
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  const currentClassKey = `${selectedMedium}_${selectedClass}`;
+  const currentClassPrice = planningPricing.classPrices?.[currentClassKey] ?? planningPricing.price ?? 299;
+
+  const isCurrentClassUnlocked =
+    mode === "admin" ||
+    isSuperAdmin ||
+    unlockedClassMediums.includes(currentClassKey) ||
+    unlockedClassMediums.includes(`${selectedMedium}_ALL`) ||
+    unlockedClassMediums.includes(`ALL_${selectedClass}`) ||
+    unlockedClassMediums.includes("ALL");
+
+  const handleBuyClassAccess = async () => {
+    try {
+      setPurchasingClass(true);
+      const effectiveUserId = user?.uid || auth?.currentUser?.uid || "guest_teacher";
+      const teacherEmail = user?.email || localStorage.getItem("teacher_email") || "";
+      const teacherName = user?.displayName || schoolProfile.teacherName || "शिक्षक";
+
+      const className = CLASS_OPTIONS.find((c) => c.id === selectedClass)?.mr || selectedClass;
+      const mediumName = selectedMedium === "marathi" ? "मराठी माध्यम" : "सेमी-इंग्रजी";
+
+      await processRazorpayPayment({
+        amount: currentClassPrice,
+        moduleId: "annual-monthly-planning",
+        moduleTitle: `वार्षिक, मासिक नियोजन व प्रश्नपेढी (${className} - ${mediumName})`,
+        teacherName: teacherName,
+        teacherEmail: teacherEmail,
+        onSuccess: async (paymentId: string) => {
+          const docKey = `${effectiveUserId}_planning_${selectedMedium}_${selectedClass}`;
+          
+          await setDoc(doc(db, "teacher_module_payments", `${docKey}_${Date.now()}`), {
+            id: `${docKey}_${Date.now()}`,
+            teacherId: effectiveUserId,
+            teacherEmail: teacherEmail,
+            teacherName: teacherName,
+            moduleId: "annual-monthly-planning",
+            moduleTitle: `वार्षिक, मासिक नियोजन व प्रश्नपेढी (${className} - ${mediumName})`,
+            unlockedClass: selectedClass,
+            unlockedMedium: selectedMedium,
+            targetClassKey: currentClassKey,
+            unlockedKey: currentClassKey,
+            amount: currentClassPrice,
+            razorpayPaymentId: paymentId,
+            status: "SUCCESS",
+            paidAt: new Date().toISOString(),
+          });
+
+          await setDoc(doc(db, "teacher_module_access", docKey), {
+            id: docKey,
+            teacherId: effectiveUserId,
+            teacherEmail: teacherEmail,
+            teacherName: teacherName,
+            moduleId: "annual-monthly-planning",
+            moduleTitle: `वार्षिक, मासिक नियोजन व प्रश्नपेढी (${className} - ${mediumName})`,
+            unlockedClass: selectedClass,
+            unlockedMedium: selectedMedium,
+            targetClassKey: currentClassKey,
+            unlockedKey: currentClassKey,
+            status: "GRANTED",
+            grantedAt: new Date().toISOString(),
+          });
+
+          setUnlockedClassMediums((prev) => [...prev, currentClassKey]);
+          toast.success(`🎉 ${className} (${mediumName}) यशस्वीरित्या अनलॉक झाले!`);
+        },
+        onError: (err: any) => {
+          toast.error("पेमेंट अयशस्वी: " + (err.message || err));
+        },
+      });
+    } catch (err: any) {
+      console.error("Payment error:", err);
+      toast.error("पेमेंट प्रक्रिया सुरू करताना अडथळा: " + (err?.message || err));
+    } finally {
+      setPurchasingClass(false);
+    }
+  };
 
   // One-time School & Teacher Profile State for Planning Section
   const [schoolProfile, setSchoolProfile] = useState<UserSchoolProfile>({
@@ -1978,169 +2170,255 @@ export function AcademicPlanningSystem({
 
           {/* STEP 3: PLANNING TYPE SELECTION (ANNUAL PLANNING ALL SUBJECTS + MONTHLY/QB BY SUBJECT) */}
           {step === "type" && (
-            <motion.div
-              key="step-type"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              className="space-y-8"
-            >
-              <div className="text-center space-y-1">
-                <h2 className="text-2xl font-black text-slate-900">
-                  Select Planning Type / नियोजन प्रकार निवडा
-                </h2>
-                <p className="text-xs text-slate-500 font-semibold">
-                  माध्यम: <span className="font-bold text-indigo-600">{selectedMedium === "semi" ? "सेमी-इंग्रजी" : "मराठी"}</span> | इयत्ता: <span className="font-bold text-indigo-600">{selectedClass}</span> साठी नियोजन पर्याय:
-                </p>
-              </div>
+            !isCurrentClassUnlocked ? (
+              <motion.div
+                key="step-locked-type"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-[2.5rem] p-8 sm:p-12 border border-amber-500/30 shadow-2xl space-y-8 text-center max-w-3xl mx-auto my-4 relative overflow-hidden"
+              >
+                <div className="absolute top-0 right-0 size-72 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute bottom-0 left-0 size-72 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-full mx-auto">
-                {/* 1. Annual Planning Card (इयत्तानिहाय संपूर्ण वार्षिक नियोजन - Direct Class Action) */}
-                {(() => {
-                  const annualFile = getPlanningFile("annual", "all");
-                  return (
-                    <div className="bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 text-white rounded-[2.5rem] p-7 border border-indigo-500/30 shadow-xl flex flex-col justify-between gap-6 relative overflow-hidden group hover:shadow-2xl transition-all">
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div className="size-14 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center">
-                            <BookOpen className="size-7 text-amber-300" />
+                <div className="size-20 rounded-3xl bg-amber-500/20 border border-amber-400/40 text-amber-300 flex items-center justify-center mx-auto shadow-inner">
+                  <Lock className="size-10 text-amber-300" />
+                </div>
+
+                <div className="space-y-3">
+                  <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-400/20 border border-amber-400/30 text-amber-300 text-xs font-black uppercase tracking-wider">
+                    <Sparkles className="size-4" /> इयत्तानिहाय ॲक्सेस लॉक्ड
+                  </span>
+                  <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
+                    {CLASS_OPTIONS.find((c) => c.id === selectedClass)?.mr} ({selectedMedium === "semi" ? "सेमी-इंग्रजी" : "मराठी माध्यम"})
+                  </h2>
+                  <p className="text-slate-300 text-xs sm:text-sm font-medium max-w-xl mx-auto leading-relaxed">
+                    या इयत्तेचे सर्व विषयांचे संपूर्ण <strong>वार्षिक नियोजन</strong>, <strong>मासिक नियोजन</strong> व <strong>अद्ययावत प्रश्नपेढी</strong> अनलॉक करण्यासाठी ₹{currentClassPrice} पेमेंट करा.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left max-w-lg mx-auto bg-white/5 backdrop-blur-md p-5 rounded-2xl border border-white/10 text-xs font-semibold text-slate-200">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
+                    <span>१ ते १२ महिन्यांचे संपूर्ण मासिक नियोजन</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
+                    <span>सर्व विषयांचे आदर्श वार्षिक नियोजन</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
+                    <span>अद्ययावत प्रश्नपेढी व चाचणी संच</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
+                    <span>A4 HD PDF व ऑनलाईन व्ह्यू</span>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-white/10 space-y-4">
+                  <div className="flex items-center justify-center gap-3">
+                    <span className="text-slate-400 text-xs line-through font-bold">₹{Math.round(currentClassPrice * 1.6)}</span>
+                    <span className="text-3xl font-black text-amber-300">₹{currentClassPrice}</span>
+                    <span className="text-xs bg-emerald-500/20 text-emerald-300 px-3 py-1 rounded-full font-black border border-emerald-500/30">
+                      एकदाच फी (वार्षिक ॲक्सेस)
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={handleBuyClassAccess}
+                    disabled={purchasingClass}
+                    className="w-full sm:w-auto px-10 py-4 bg-gradient-to-r from-amber-500 via-amber-400 to-orange-500 hover:from-amber-400 hover:to-orange-400 active:scale-95 text-slate-950 font-black text-sm rounded-2xl shadow-xl shadow-amber-500/20 transition-all cursor-pointer flex items-center justify-center gap-3 mx-auto disabled:opacity-50"
+                  >
+                    {purchasingClass ? (
+                      <Loader2 className="size-5 animate-spin text-slate-950" />
+                    ) : (
+                      <CreditCard className="size-5 text-slate-950" />
+                    )}
+                    <span>
+                      {purchasingClass
+                        ? "पेमेंट प्रक्रिया सुरू आहे..."
+                        : `₹${currentClassPrice} भरून ${CLASS_OPTIONS.find((c) => c.id === selectedClass)?.mr} (${selectedMedium === "semi" ? "सेमी" : "मराठी"}) अनलॉक करा`}
+                    </span>
+                  </button>
+
+                  <div>
+                    <button
+                      onClick={() => setStep("class")}
+                      className="text-xs font-bold text-indigo-300 hover:text-white underline cursor-pointer"
+                    >
+                      ← दुसरी इयत्ता निवडा (Change Class)
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="step-type"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                className="space-y-8"
+              >
+                <div className="text-center space-y-1">
+                  <h2 className="text-2xl font-black text-slate-900">
+                    Select Planning Type / नियोजन प्रकार निवडा
+                  </h2>
+                  <p className="text-xs text-slate-500 font-semibold">
+                    माध्यम: <span className="font-bold text-indigo-600">{selectedMedium === "semi" ? "सेमी-इंग्रजी" : "मराठी"}</span> | इयत्ता: <span className="font-bold text-indigo-600">{selectedClass}</span> साठी नियोजन पर्याय:
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-full mx-auto">
+                  {/* 1. Annual Planning Card (इयत्तानिहाय संपूर्ण वार्षिक नियोजन - Direct Class Action) */}
+                  {(() => {
+                    const annualFile = getPlanningFile("annual", "all");
+                    return (
+                      <div className="bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 text-white rounded-[2.5rem] p-7 border border-indigo-500/30 shadow-xl flex flex-col justify-between gap-6 relative overflow-hidden group hover:shadow-2xl transition-all">
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div className="size-14 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center">
+                              <BookOpen className="size-7 text-amber-300" />
+                            </div>
+                            {annualFile ? (
+                              <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
+                                <CheckCircle2 className="size-3" /> Available
+                              </span>
+                            ) : (
+                              <span className="px-3 py-1 rounded-full bg-amber-400 text-slate-950 text-[10px] font-black uppercase tracking-wider">
+                                इयत्ता {selectedClass}
+                              </span>
+                            )}
                           </div>
-                          {annualFile ? (
-                            <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
-                              <CheckCircle2 className="size-3" /> Available
-                            </span>
-                          ) : (
-                            <span className="px-3 py-1 rounded-full bg-amber-400 text-slate-950 text-[10px] font-black uppercase tracking-wider">
-                              इयत्ता {selectedClass}
-                            </span>
+
+                          <div>
+                            <h3 className="text-2xl font-black">Annual Planning</h3>
+                            <p className="text-xs font-semibold text-indigo-100/90 mt-1">
+                              (वार्षिक नियोजन - इयत्ता {selectedClass})
+                            </p>
+                            <p className="text-xs text-slate-200 mt-3 leading-relaxed font-medium">
+                              {annualFile
+                                ? `फाईल: ${annualFile.fileName} (${annualFile.fileSize})`
+                                : `या इयत्तेसाठी (इयत्ता ${selectedClass}) वार्षिक नियोजन PDF उपलब्ध नाही.`}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="pt-3 border-t border-white/15">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (annualFile) handleViewFile(annualFile);
+                              else toast.error(`या इयत्तेसाठी (${selectedClass}) अद्याप वार्षिक नियोजनाची फाईल उपलब्ध नाही.`);
+                            }}
+                            className="w-full py-3.5 px-4 rounded-xl bg-white text-indigo-950 hover:bg-amber-300 text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md active:scale-95"
+                          >
+                            <Eye className="size-4 text-indigo-700" /> VIEW PDF
+                          </button>
+
+                          {/* Admin Upload / Replace Class File */}
+                          {mode === "admin" && (
+                            <button
+                              onClick={() => {
+                                setSelectedSubject("all");
+                                setUploadingType("annual");
+                                setUploadModalOpen(true);
+                              }}
+                              className="w-full py-2.5 px-3 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md mt-1"
+                            >
+                              <Upload className="size-4" />
+                              {annualFile ? `REPLACE ${selectedClass} ANNUAL PDF (बदला)` : `UPLOAD ${selectedClass} ANNUAL PDF (अपलोड)`}
+                            </button>
                           )}
                         </div>
+                      </div>
+                    );
+                  })()}
 
-                        <div>
-                          <h3 className="text-2xl font-black">Annual Planning</h3>
-                          <p className="text-xs font-semibold text-indigo-100/90 mt-1">
-                            (वार्षिक नियोजन - इयत्ता {selectedClass})
-                          </p>
-                          <p className="text-xs text-slate-200 mt-3 leading-relaxed font-medium">
-                            {annualFile
-                              ? `फाईल: ${annualFile.fileName} (${annualFile.fileSize})`
-                              : `या इयत्तेसाठी (इयत्ता ${selectedClass}) वार्षिक नियोजन PDF उपलब्ध नाही.`}
-                          </p>
+                  {/* 2. Monthly Planning Card (विषयनिहाय - Sub-selection) */}
+                  <div
+                    onClick={() => {
+                      setSelectedPlanningType("monthly");
+                      setStep("subject");
+                    }}
+                    className="bg-gradient-to-br from-teal-700 via-emerald-800 to-slate-900 text-white rounded-[2.5rem] p-7 border border-teal-500/30 shadow-xl flex flex-col justify-between gap-6 relative overflow-hidden group hover:shadow-2xl hover:scale-102 transition-all cursor-pointer"
+                  >
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="size-14 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center">
+                          <Calendar className="size-7 text-amber-300" />
                         </div>
+                        <span className="px-3 py-1 rounded-full bg-teal-400 text-slate-950 text-[10px] font-black uppercase tracking-wider">
+                          विषयनिहाय
+                        </span>
                       </div>
 
-                      <div className="pt-3 border-t border-white/15">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (annualFile) handleViewFile(annualFile);
-                            else toast.error(`या इयत्तेसाठी (${selectedClass}) अद्याप वार्षिक नियोजनाची फाईल उपलब्ध नाही.`);
-                          }}
-                          className="w-full py-3.5 px-4 rounded-xl bg-white text-indigo-950 hover:bg-amber-300 text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md active:scale-95"
-                        >
-                          <Eye className="size-4 text-indigo-700" /> VIEW PDF
-                        </button>
-
-                        {/* Admin Upload / Replace Class File */}
-                        {mode === "admin" && (
-                          <button
-                            onClick={() => {
-                              setSelectedSubject("all");
-                              setUploadingType("annual");
-                              setUploadModalOpen(true);
-                            }}
-                            className="w-full py-2.5 px-3 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md mt-1"
-                          >
-                            <Upload className="size-4" />
-                            {annualFile ? `REPLACE ${selectedClass} ANNUAL PDF (बदला)` : `UPLOAD ${selectedClass} ANNUAL PDF (अपलोड)`}
-                          </button>
-                        )}
+                      <div>
+                        <h3 className="text-2xl font-black">Monthly Planning</h3>
+                        <p className="text-xs font-semibold text-teal-100/90 mt-1">
+                          (मासिक नियोजन - विषयानुसार)
+                        </p>
+                        <p className="text-xs text-slate-200 mt-3 leading-relaxed">
+                          मराठी, गणित, इंग्रजी इत्यादी विषयानुसार मासिक घटक व पाठ नियोजनाची पत्रके पाहण्यासाठी
+                        </p>
                       </div>
                     </div>
-                  );
-                })()}
 
-                {/* 2. Monthly Planning Card (विषयनिहाय - Sub-selection) */}
-                <div
-                  onClick={() => {
-                    setSelectedPlanningType("monthly");
-                    setStep("subject");
-                  }}
-                  className="bg-gradient-to-br from-teal-700 via-emerald-800 to-slate-900 text-white rounded-[2.5rem] p-7 border border-teal-500/30 shadow-xl flex flex-col justify-between gap-6 relative overflow-hidden group hover:shadow-2xl hover:scale-102 transition-all cursor-pointer"
-                >
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="size-14 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center">
-                        <Calendar className="size-7 text-amber-300" />
-                      </div>
-                      <span className="px-3 py-1 rounded-full bg-teal-400 text-slate-950 text-[10px] font-black uppercase tracking-wider">
-                        विषयनिहाय
-                      </span>
-                    </div>
-
-                    <div>
-                      <h3 className="text-2xl font-black">Monthly Planning</h3>
-                      <p className="text-xs font-semibold text-teal-100/90 mt-1">
-                        (मासिक नियोजन - विषयानुसार)
-                      </p>
-                      <p className="text-xs text-slate-200 mt-3 leading-relaxed">
-                        मराठी, गणित, इंग्रजी इत्यादी विषयानुसार मासिक घटक व पाठ नियोजनाची पत्रके पाहण्यासाठी
-                      </p>
+                    <div className="pt-4 border-t border-white/15 flex items-center justify-between font-black text-xs text-amber-300 group-hover:text-white transition-colors">
+                      <span>विषय निवडा व नियोजन पहा</span>
+                      <span>→</span>
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t border-white/15 flex items-center justify-between font-black text-xs text-amber-300 group-hover:text-white transition-colors">
-                    <span>विषय निवडा व नियोजन पहा</span>
-                    <span>→</span>
+                  {/* 3. Question Bank Card (विषयनिहाय - Sub-selection) */}
+                  <div
+                    onClick={() => {
+                      setSelectedPlanningType("question_bank");
+                      setStep("subject");
+                    }}
+                    className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-950 text-white rounded-[2.5rem] p-7 border border-slate-700/50 shadow-xl flex flex-col justify-between gap-6 relative overflow-hidden group hover:shadow-2xl hover:scale-102 transition-all cursor-pointer"
+                  >
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="size-14 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center">
+                          <FolderOpen className="size-7 text-amber-300" />
+                        </div>
+                        <span className="px-3 py-1 rounded-full bg-purple-400 text-slate-950 text-[10px] font-black uppercase tracking-wider">
+                          विषयनिहाय
+                        </span>
+                      </div>
+
+                      <div>
+                        <h3 className="text-2xl font-black">Question Bank</h3>
+                        <p className="text-xs font-semibold text-slate-300 mt-1">
+                          (प्रश्नपेढी दालन)
+                        </p>
+                        <p className="text-xs text-slate-300 mt-3 leading-relaxed">
+                          सर्व विषयांचे घटकनिहाय प्रश्न संच व सराव प्रश्नपत्रिका पहा किंवा डाऊनलोड करा
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-white/15 flex items-center justify-between font-black text-xs text-amber-300 group-hover:text-white transition-colors">
+                      <span>विषय निवडा व प्रश्नपेढी पहा</span>
+                      <span>→</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* 3. Question Bank Card (विषयनिहाय - Sub-selection) */}
-                <div
-                  onClick={() => {
-                    setSelectedPlanningType("question_bank");
-                    setStep("subject");
-                  }}
-                  className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-950 text-white rounded-[2.5rem] p-7 border border-slate-700/50 shadow-xl flex flex-col justify-between gap-6 relative overflow-hidden group hover:shadow-2xl hover:scale-102 transition-all cursor-pointer"
-                >
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="size-14 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center">
-                        <FolderOpen className="size-7 text-amber-300" />
-                      </div>
-                      <span className="px-3 py-1 rounded-full bg-purple-400 text-slate-950 text-[10px] font-black uppercase tracking-wider">
-                        विषयनिहाय
-                      </span>
-                    </div>
-
-                    <div>
-                      <h3 className="text-2xl font-black">Question Bank</h3>
-                      <p className="text-xs font-semibold text-slate-300 mt-1">
-                        (प्रश्नपेढी दालन)
-                      </p>
-                      <p className="text-xs text-slate-300 mt-3 leading-relaxed">
-                        सर्व विषयांचे घटकनिहाय प्रश्न संच व सराव प्रश्नपत्रिका पहा किंवा डाऊनलोड करा
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="pt-4 border-t border-white/15 flex items-center justify-between font-black text-xs text-amber-300 group-hover:text-white transition-colors">
-                    <span>विषय निवडा व प्रश्नपेढी पहा</span>
-                    <span>→</span>
-                  </div>
+                <div className="flex justify-center pt-4">
+                  <button
+                    onClick={() => setStep("class")}
+                    className="px-6 py-2.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-xs"
+                  >
+                    <ChevronLeft className="size-4" /> मागे जा (Back to Class)
+                  </button>
                 </div>
-              </div>
-
-              <div className="flex justify-center pt-4">
-                <button
-                  onClick={() => setStep("class")}
-                  className="px-6 py-2.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-xs"
-                >
-                  <ChevronLeft className="size-4" /> मागे जा (Back to Class)
-                </button>
-              </div>
-            </motion.div>
+              </motion.div>
+            )
           )}
+
+
 
           {/* STEP 4: SUBJECT SELECTION & FILE ACTIONS FOR CHOSEN PLANNING TYPE */}
           {step === "subject" && (
@@ -2473,7 +2751,9 @@ export function AcademicPlanningSystem({
             {/* Modal Preview Body */}
             <div className="flex-1 p-2 sm:p-4 overflow-hidden bg-slate-950/80 flex flex-col items-center justify-center relative">
               <div className="w-full h-full min-h-0 flex-1 relative rounded-2xl overflow-y-auto bg-white shadow-2xl flex flex-col p-4">
-                <PlanningTableRenderer record={viewModalFile as any} fileUrl={viewModalFile.fileUrl} mode={mode} />
+                {viewModalFile && (
+                  <PlanningTableRenderer record={viewModalFile as any} fileUrl={viewModalFile.fileUrl} mode={mode} />
+                )}
               </div>
             </div>
           </motion.div>

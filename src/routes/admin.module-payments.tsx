@@ -57,6 +57,7 @@ interface ModulePricing {
   perStudentPrice?: number;
   monthlyPrice?: number;
   yearlyPrice?: number;
+  classPrices?: Record<string, number>;
 }
 
 interface TeacherPaymentRecord {
@@ -246,9 +247,31 @@ function AdminModulePaymentsPage() {
   // Compile list of unique real teachers & users from Firestore users collection
   const teacherMap = new Map<string, UniqueTeacher>();
 
-  // 1. Add ALL real registered users from Firestore users collection (teacher & user roles)
+  // 1. Add ONLY real registered users from Firestore users collection (excluding CCE students & dummy entries)
   usersTeachers.forEach((u) => {
+    // Exclude student accounts added in CCE or having student role/IDs/teacherId
+    const isStudent =
+      u.role === "student" ||
+      u.isStudent === true ||
+      !!u.teacherId ||
+      (typeof u.id === "string" && u.id.startsWith("student_")) ||
+      (typeof u.uid === "string" && u.uid.startsWith("student_"));
+
+    if (isStudent) return;
+
     const email = (u.email || "").trim().toLowerCase();
+    const phone = (u.phone || u.phoneNumber || u.mobile || "").trim();
+
+    // Verify it's a genuine registered account from Firebase (must have valid email/phone or explicit teacher role)
+    const isRealUser =
+      (email !== "" && email.includes("@")) ||
+      phone !== "" ||
+      u.role === "teacher" ||
+      u.is_teacher === true ||
+      u.isTeacher === true;
+
+    if (!isRealUser) return;
+
     const id = u.uid || u.id || email;
     if (id || email) {
       const key = email || id;
@@ -256,7 +279,7 @@ function AdminModulePaymentsPage() {
         teacherId: u.uid || u.id || email,
         teacherName: u.displayName || u.name || u.teacherName || (email ? email.split("@")[0] : id),
         teacherEmail: u.email || (id.includes("@") ? id : ""),
-        teacherPhone: u.phone || u.phoneNumber || u.mobile || "",
+        teacherPhone: phone,
       });
     }
   });
@@ -815,6 +838,141 @@ function AdminModulePaymentsPage() {
                                 }}
                                 className="w-full pl-8 pr-4 py-2.5 bg-emerald-50/60 border border-emerald-300 focus:border-emerald-500 rounded-xl text-sm font-black text-emerald-950 outline-none"
                               />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : mod.id === "annual-monthly-planning" ? (
+                      <div className="space-y-4 pt-2">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-[11px] font-extrabold text-slate-600 block mb-1">
+                              मूलभूत दर (₹ / इयत्ता)*
+                            </label>
+                            <div className="relative">
+                              <span className="absolute left-3.5 top-3 text-indigo-600 font-black text-sm">₹</span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={item.price}
+                                onChange={(e) => handlePriceChange(mod.id, parseInt(e.target.value) || 0)}
+                                className="w-full pl-8 pr-4 py-2.5 bg-indigo-50/60 border border-indigo-300 focus:border-indigo-500 rounded-xl text-sm font-black text-indigo-950 outline-none"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="text-[11px] font-extrabold text-slate-600 block mb-1">वैधता (दिवस)</label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={item.validityDays || 365}
+                              onChange={(e) =>
+                                setPricings((prev) => ({
+                                  ...prev,
+                                  [mod.id]: { ...prev[mod.id], validityDays: parseInt(e.target.value) || 365 },
+                                }))
+                              }
+                              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-500 rounded-xl text-sm font-extrabold text-slate-900 outline-none"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Class & Medium Specific Price Customizer */}
+                        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h5 className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                              <Sliders className="size-3.5 text-indigo-600" />
+                              इयत्ता व माध्यमनिहाय स्वतंत्र दर (Class & Medium Pricing Matrix)
+                            </h5>
+                            <span className="text-[10px] font-bold text-slate-500">
+                              (प्रत्येक इयत्तेचा वेगळा दर ठेऊ शकता)
+                            </span>
+                          </div>
+
+                          <div className="space-y-3 pt-1">
+                            {/* Marathi Medium Classes */}
+                            <div className="space-y-1.5">
+                              <span className="text-[11px] font-black text-emerald-700 block">
+                                📘 मराठी माध्यम (Marathi Medium):
+                              </span>
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                {["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"].map((clsId) => {
+                                  const key = `marathi_${clsId}`;
+                                  const classPrice = item.classPrices?.[key] ?? item.price ?? 299;
+                                  return (
+                                    <div key={key} className="bg-white p-2 rounded-xl border border-slate-200">
+                                      <label className="text-[10px] font-black text-slate-600 block">
+                                        इयत्ता {clsId === "1st" ? "१ ली" : clsId === "2nd" ? "२ री" : clsId === "3rd" ? "३ री" : clsId === "4th" ? "४ थी" : clsId === "5th" ? "५ वी" : clsId === "6th" ? "६ वी" : clsId === "7th" ? "७ वी" : "८ वी"}
+                                      </label>
+                                      <div className="relative mt-1">
+                                        <span className="absolute left-2 top-1.5 text-xs font-bold text-slate-400">₹</span>
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          value={classPrice}
+                                          onChange={(e) => {
+                                            const val = parseInt(e.target.value) || 0;
+                                            setPricings((prev) => ({
+                                              ...prev,
+                                              [mod.id]: {
+                                                ...prev[mod.id],
+                                                classPrices: {
+                                                  ...(prev[mod.id]?.classPrices || {}),
+                                                  [key]: val,
+                                                },
+                                              },
+                                            }));
+                                          }}
+                                          className="w-full pl-5 pr-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-black text-slate-900 outline-none focus:border-indigo-500"
+                                        />
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            {/* Semi Medium Classes */}
+                            <div className="space-y-1.5 pt-1">
+                              <span className="text-[11px] font-black text-indigo-700 block">
+                                📙 सेमी-इंग्रजी माध्यम (Semi-English Medium):
+                              </span>
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                {["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"].map((clsId) => {
+                                  const key = `semi_${clsId}`;
+                                  const classPrice = item.classPrices?.[key] ?? item.price ?? 299;
+                                  return (
+                                    <div key={key} className="bg-white p-2 rounded-xl border border-slate-200">
+                                      <label className="text-[10px] font-black text-slate-600 block">
+                                        इयत्ता {clsId === "1st" ? "१ ली" : clsId === "2nd" ? "२ री" : clsId === "3rd" ? "३ री" : clsId === "4th" ? "४ थी" : clsId === "5th" ? "५ वी" : clsId === "6th" ? "६ वी" : clsId === "7th" ? "७ वी" : "८ वी"}
+                                      </label>
+                                      <div className="relative mt-1">
+                                        <span className="absolute left-2 top-1.5 text-xs font-bold text-slate-400">₹</span>
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          value={classPrice}
+                                          onChange={(e) => {
+                                            const val = parseInt(e.target.value) || 0;
+                                            setPricings((prev) => ({
+                                              ...prev,
+                                              [mod.id]: {
+                                                ...prev[mod.id],
+                                                classPrices: {
+                                                  ...(prev[mod.id]?.classPrices || {}),
+                                                  [key]: val,
+                                                },
+                                              },
+                                            }));
+                                          }}
+                                          className="w-full pl-5 pr-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-black text-slate-900 outline-none focus:border-indigo-500"
+                                        />
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
                             </div>
                           </div>
                         </div>
