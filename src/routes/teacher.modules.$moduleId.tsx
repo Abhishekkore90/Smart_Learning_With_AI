@@ -310,7 +310,7 @@ function ModulePage() {
       )}
 
       <main className={`flex-1 lg:pl-0 px-2 sm:px-4 md:px-6 py-4 md:py-6 max-w-full ${moduleId === 'daily-assembly' || moduleId === 'special-day' ? 'pt-4' : 'pt-24'} mx-auto w-full relative z-10`}>
-        <ModulePaywall moduleId={moduleId} defaultTitle={config.m} isPaidTab={moduleId !== "special-day" && moduleId !== "daily-assembly" && moduleId !== "paripath" && moduleId !== "annual-monthly-planning"}>
+        <ModulePaywall moduleId={moduleId} defaultTitle={config.m} isPaidTab={moduleId !== "special-day" && moduleId !== "daily-assembly" && moduleId !== "paripath" && moduleId !== "annual-monthly-planning" && moduleId !== "teaching-record" && moduleId !== "teaching-record-notebook"}>
           <PinGate sectionKey="planning" enabled={moduleId === "annual-monthly-planning"}>
           <motion.div
             initial={{ opacity: 0, y: 30 }}

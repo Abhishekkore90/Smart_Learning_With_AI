@@ -95,9 +95,9 @@ const DEFAULT_MODULES: { id: string; title: string; defaultPrice: number }[] = [
   { id: "cce-result", title: "७. CCE निकाल", defaultPrice: 199 },
   { id: "hpc-card", title: "८. Holistic Progress Card (HPC)", defaultPrice: 199 },
   { id: "stats-teacher", title: "९. शिक्षक संचिका", defaultPrice: 99 },
-  { id: "annual-monthly-planning", title: "१०. वार्षिक नियोजन, मासिक नियोजन व प्रश्नपेढी", defaultPrice: 149 },
-  { id: "teaching-record", title: "११. टाचणवही", defaultPrice: 99 },
-  { id: "stats-student", title: "१२. विद्यार्थी संचिका", defaultPrice: 99 },
+  { id: "stats-student", title: "१०. विद्यार्थी संचिका", defaultPrice: 99 },
+  { id: "annual-monthly-planning", title: "११. वार्षिक नियोजन, मासिक नियोजन व प्रश्नपेढी", defaultPrice: 149 },
+  { id: "teaching-record", title: "१२. टाचणवही", defaultPrice: 99 },
 ];
 
 function AdminModulePaymentsPage() {
@@ -217,6 +217,8 @@ function AdminModulePaymentsPage() {
       } else if (modId === "annual-monthly-planning") {
         await setDoc(doc(db, "cce_module_pricing", "academic-planning"), { ...item, id: "academic-planning" }, { merge: true });
         await setDoc(doc(db, "cce_module_pricing", "question-bank"), { ...item, id: "question-bank" }, { merge: true });
+      } else if (modId === "teaching-record") {
+        await setDoc(doc(db, "cce_module_pricing", "teaching-record-notebook"), { ...item, id: "teaching-record-notebook" }, { merge: true });
       }
       toast.success(`'${item.title}' चे दर यशस्वीरित्या जतन झाले!`);
     } catch (err: any) {
@@ -235,6 +237,8 @@ function AdminModulePaymentsPage() {
         } else if (modId === "annual-monthly-planning") {
           await setDoc(doc(db, "cce_module_pricing", "academic-planning"), { ...item, id: "academic-planning" }, { merge: true });
           await setDoc(doc(db, "cce_module_pricing", "question-bank"), { ...item, id: "question-bank" }, { merge: true });
+        } else if (modId === "teaching-record") {
+          await setDoc(doc(db, "cce_module_pricing", "teaching-record-notebook"), { ...item, id: "teaching-record-notebook" }, { merge: true });
         }
       }
       toast.success("सर्व मॉड्यूल्सचे दर यशस्वीरित्या जतन झाले!");
@@ -842,7 +846,7 @@ function AdminModulePaymentsPage() {
                           </div>
                         </div>
                       </div>
-                    ) : mod.id === "annual-monthly-planning" ? (
+                    ) : (mod.id === "annual-monthly-planning" || mod.id === "teaching-record") ? (
                       <div className="space-y-4 pt-2">
                         <div className="grid grid-cols-2 gap-3">
                           <div>

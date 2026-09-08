@@ -23,7 +23,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { showToast as toast } from "@/lib/custom-toast";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, doc, setDoc, getDoc } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, getDoc, onSnapshot, query, where } from "firebase/firestore";
 import { PinGate } from "@/components/teacher/PinGate";
 import { useAuth } from "@/hooks/use-auth";
 import { useDiaryProcessing } from "@/contexts/DiaryProcessingContext";
@@ -31,6 +31,8 @@ import { useAuthenticatedPdf } from "@/lib/bunny-auth-pdf";
 import { TeacherTodayDiary } from "@/components/teacher/TeacherTodayDiary";
 import { DocumentLivePreview } from "@/components/DocumentLivePreview";
 import { uploadFileWithProgress } from "@/lib/upload";
+import { processRazorpayPayment } from "@/lib/razorpayService";
+import { Lock, CreditCard, RefreshCw } from "lucide-react";
 
 export const Route = createFileRoute("/teacher/teaching-record")({
   head: () => ({
@@ -91,6 +93,181 @@ function TeachingRecordPage() {
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+  // Class & Medium level access control & pricing state for Teaching Record
+  const [unlockedClassMediums, setUnlockedClassMediums] = useState<string[]>([]);
+  const [purchasingClass, setPurchasingClass] = useState(false);
+  const [teachingPricing, setTeachingPricing] = useState<{ price: number; classPrices?: Record<string, number> }>({ price: 299 });
+
+  const isSuperAdmin =
+    (user?.email || "").toLowerCase().trim() === "abhishekkore90@gmail.com" ||
+    (user?.email || "").toLowerCase().trim() === "admin@gmail.com";
+
+  // Firestore listener for teaching record pricing
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "cce_module_pricing", "teaching-record"), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setTeachingPricing({
+          price: typeof data.price === "number" ? data.price : 299,
+          classPrices: data.classPrices || {},
+        });
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  // Firestore listener for teacher module access & payments
+  useEffect(() => {
+    const effectiveUserId = user?.uid || (user?.email || "").toLowerCase().trim();
+    const teacherEmail = (user?.email || profile?.email || "").toLowerCase().trim();
+    if (!effectiveUserId && !teacherEmail) return;
+
+    const unlockedSet = new Set<string>();
+
+    const qAccess = query(
+      collection(db, "teacher_module_access"),
+      where("status", "==", "GRANTED")
+    );
+
+    const unsubAccess = onSnapshot(qAccess, (snap) => {
+      snap.docs.forEach((d) => {
+        const data = d.data();
+        const matchesTeacher =
+          (data.teacherId && data.teacherId === effectiveUserId) ||
+          (data.teacherEmail && data.teacherEmail.toLowerCase() === teacherEmail);
+
+        if (matchesTeacher) {
+          if (data.moduleId === "ALL") {
+            unlockedSet.add("ALL");
+          } else if (data.moduleId === "teaching-record" || data.moduleId === "teaching-record-notebook") {
+            if (data.unlockedKey) unlockedSet.add(data.unlockedKey);
+            if (data.targetClassKey) unlockedSet.add(data.targetClassKey);
+            if (data.unlockedClass && data.unlockedMedium) {
+              unlockedSet.add(`${data.unlockedMedium}_${data.unlockedClass}`);
+            }
+          }
+        }
+      });
+
+      const qPay = query(
+        collection(db, "teacher_module_payments"),
+        where("status", "==", "SUCCESS")
+      );
+
+      const unsubPay = onSnapshot(qPay, (snapPay) => {
+        snapPay.docs.forEach((d) => {
+          const data = d.data();
+          const matchesTeacher =
+            (data.teacherId && data.teacherId === effectiveUserId) ||
+            (data.teacherEmail && data.teacherEmail.toLowerCase() === teacherEmail);
+
+          if (matchesTeacher) {
+            if (data.moduleId === "ALL") {
+              unlockedSet.add("ALL");
+            } else if (data.moduleId === "teaching-record" || data.moduleId === "teaching-record-notebook") {
+              if (data.unlockedKey) unlockedSet.add(data.unlockedKey);
+              if (data.targetClassKey) unlockedSet.add(data.targetClassKey);
+              if (data.unlockedClass && data.unlockedMedium) {
+                unlockedSet.add(`${data.unlockedMedium}_${data.unlockedClass}`);
+              }
+            }
+          }
+        });
+
+        setUnlockedClassMediums(Array.from(unlockedSet));
+      });
+
+      return () => unsubPay();
+    });
+
+    return () => unsubAccess();
+  }, [user?.uid, user?.email]);
+
+  const normMedium = selectedMedium === "Semi English" || selectedMedium === "semi" ? "semi" : "marathi";
+  const normClassMap: Record<string, string> = {
+    "Class 1": "1st", "Class 2": "2nd", "Class 3": "3rd", "Class 4": "4th",
+    "Class 5": "5th", "Class 6": "6th", "Class 7": "7th", "Class 8": "8th",
+  };
+  const normClass = normClassMap[selectedClass || ""] || (selectedClass || "").toLowerCase();
+  const currentClassKey = `${normMedium}_${normClass}`;
+
+  const currentClassPrice = teachingPricing.classPrices?.[currentClassKey] ?? teachingPricing.price ?? 299;
+
+  const isCurrentClassUnlocked =
+    !selectedClass ||
+    !selectedMedium ||
+    isSuperAdmin ||
+    unlockedClassMediums.includes(currentClassKey) ||
+    unlockedClassMediums.includes(`${normMedium}_ALL`) ||
+    unlockedClassMediums.includes(`ALL_${normClass}`) ||
+    unlockedClassMediums.includes("ALL");
+
+  const handleBuyClassAccess = async () => {
+    try {
+      setPurchasingClass(true);
+      const effectiveUserId = user?.uid || "guest_teacher";
+      const teacherEmail = user?.email || localStorage.getItem("teacher_email") || "";
+      const teacherName = user?.displayName || schoolProfile.teacherName || "शिक्षक";
+
+      const className = DIARY_CLASSES.find((c) => c.id === selectedClass)?.mr || selectedClass;
+      const mediumName = normMedium === "marathi" ? "मराठी माध्यम" : "सेमी-इंग्रजी";
+
+      await processRazorpayPayment({
+        amount: currentClassPrice,
+        moduleId: "teaching-record",
+        moduleTitle: `दैनिक अध्यापन टाचणवही (${className} - ${mediumName})`,
+        teacherName: teacherName,
+        teacherEmail: teacherEmail,
+        onSuccess: async (paymentId: string) => {
+          const docKey = `${effectiveUserId}_teaching_${normMedium}_${normClass}`;
+
+          await setDoc(doc(db, "teacher_module_payments", `${docKey}_${Date.now()}`), {
+            id: `${docKey}_${Date.now()}`,
+            teacherId: effectiveUserId,
+            teacherEmail: teacherEmail,
+            teacherName: teacherName,
+            moduleId: "teaching-record",
+            moduleTitle: `दैनिक अध्यापन टाचणवही (${className} - ${mediumName})`,
+            unlockedClass: normClass,
+            unlockedMedium: normMedium,
+            targetClassKey: currentClassKey,
+            unlockedKey: currentClassKey,
+            amount: currentClassPrice,
+            razorpayPaymentId: paymentId,
+            status: "SUCCESS",
+            paidAt: new Date().toISOString(),
+          });
+
+          await setDoc(doc(db, "teacher_module_access", docKey), {
+            id: docKey,
+            teacherId: effectiveUserId,
+            teacherEmail: teacherEmail,
+            teacherName: teacherName,
+            moduleId: "teaching-record",
+            moduleTitle: `दैनिक अध्यापन टाचणवही (${className} - ${mediumName})`,
+            unlockedClass: normClass,
+            unlockedMedium: normMedium,
+            targetClassKey: currentClassKey,
+            unlockedKey: currentClassKey,
+            status: "GRANTED",
+            grantedAt: new Date().toISOString(),
+          });
+
+          setUnlockedClassMediums((prev) => [...prev, currentClassKey]);
+          toast.success(`🎉 ${className} (${mediumName}) टाचणवही यशस्वीरित्या अनलॉक झाली!`);
+        },
+        onError: (err: any) => {
+          toast.error("पेमेंट अयशस्वी: " + (err.message || err));
+        },
+      });
+    } catch (err: any) {
+      console.error("Payment error:", err);
+      toast.error("पेमेंट प्रक्रिया सुरू करताना अडथळा: " + (err?.message || err));
+    } finally {
+      setPurchasingClass(false);
+    }
+  };
 
   const handleBack = () => {
     if (selectedWeek) {
@@ -539,7 +716,7 @@ function TeachingRecordPage() {
       </div>
 
       <main className="w-full pt-16 min-h-screen print:pl-0 print:pt-0 pb-24">
-        <ModulePaywall moduleId="teaching-record" defaultTitle="दैनिक अध्यापन टाचणवही (Teaching Diary)">
+        <ModulePaywall moduleId="teaching-record" defaultTitle="दैनिक अध्यापन टाचणवही (Teaching Diary)" isPaidTab={false}>
           <PinGate sectionKey="teaching_record">
           <div className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto w-full space-y-6 print:p-0 print:max-w-full">
             {/* Top Navigation Bar with Back Button, Tabs & Breadcrumbs */}
@@ -577,7 +754,7 @@ function TeachingRecordPage() {
                   <span>🏫 यू-डायस व शाळा माहिती (UDISE & School Info)</span>
                 </button>
 
-                {monthFilteredRecords.length > 0 ? (
+                {isCurrentClassUnlocked && monthFilteredRecords.length > 0 ? (
                   <button
                     type="button"
                     onClick={() => {
@@ -903,77 +1080,166 @@ function TeachingRecordPage() {
                     </motion.div>
                   )}
 
-                  {/* Step 3: Select Month */}
-                  {selectedMedium && selectedClass && selectedYear && !selectedMonth && (
-                    <motion.div
-                      key="month-selection"
-                      initial={{ opacity: 0, y: 15 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -15 }}
-                      className="space-y-8"
-                    >
-                      <div className="text-center space-y-2 pt-2">
-                        <h2 className="text-3xl font-black text-slate-900 tracking-tight italic">Select Month / महिना निवडा</h2>
-                        <p className="text-xs font-bold text-slate-500">
-                          निवडलेले माध्यम: <span className="text-orange-600 font-black">{selectedMedium === "Marathi" ? "मराठी माध्यम" : "सेमी इंग्रजी"}</span> • इयत्ता: <span className="text-purple-600 font-black">{selectedClass}</span> • वर्ष: <span className="text-teal-600 font-black">{selectedYear}</span>
-                        </p>
-                      </div>
+                  {/* Step 3: Select Month & Main View (Locked per Class + Medium) */}
+                  {selectedMedium && selectedClass && (
+                    !isCurrentClassUnlocked ? (
+                      <motion.div
+                        key="step-locked-teaching"
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -15 }}
+                        className="bg-gradient-to-br from-slate-900 via-orange-950 to-slate-900 text-white rounded-[2.5rem] p-8 sm:p-12 border border-orange-500/30 shadow-2xl space-y-8 text-center max-w-3xl mx-auto my-4 relative overflow-hidden"
+                      >
+                        <div className="absolute top-0 right-0 size-72 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
+                        <div className="absolute bottom-0 left-0 size-72 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 max-w-4xl mx-auto w-full">
-                        {months.map((m) => (
-                          <motion.button
-                            key={m.id}
-                            whileHover={{ scale: 1.03 }}
-                            whileTap={{ scale: 0.97 }}
-                            onClick={() => {
-                              setSelectedMonth(m.id);
-                              setSelectedWeek("Week 1");
-                              const updatedDate = new Date(selectedDate);
-                              updatedDate.setFullYear(selectedYear);
-                              updatedDate.setMonth(parseInt(m.id, 10) - 1);
-                              setSelectedDate(updatedDate);
-                            }}
-                            className="group relative p-6 rounded-2xl border-2 text-center transition-all duration-500 cursor-pointer overflow-hidden bg-pink-50/40 border-pink-100 hover:border-pink-300 hover:bg-pink-100/30 text-slate-800 flex flex-col items-center gap-2 shadow-sm"
+                        <div className="size-20 rounded-3xl bg-orange-500/20 border border-orange-400/40 text-amber-300 flex items-center justify-center mx-auto shadow-inner">
+                          <Lock className="size-10 text-amber-300" />
+                        </div>
+
+                        <div className="space-y-3">
+                          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-orange-400/20 border border-orange-400/30 text-amber-300 text-xs font-black uppercase tracking-wider">
+                            <Sparkles className="size-4" /> इयत्तानिहाय टाचणवही ॲक्सेस लॉक्ड
+                          </span>
+                          <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
+                            {DIARY_CLASSES.find((c) => c.id === selectedClass)?.mr} ({normMedium === "semi" ? "सेमी-इंग्रजी" : "मराठी माध्यम"})
+                          </h2>
+                          <p className="text-slate-300 text-xs sm:text-sm font-medium max-w-xl mx-auto leading-relaxed">
+                            या इयत्तेची संपूर्ण <strong>दैनिक अध्यापन टाचणवही (Teaching Diary)</strong>, सर्व महिने व आठवड्यांचे पाठ टाचण अनलॉक करण्यासाठी ₹{currentClassPrice} पेमेंट करा.
+                          </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left max-w-lg mx-auto bg-white/5 backdrop-blur-md p-5 rounded-2xl border border-white/10 text-xs font-semibold text-slate-200">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
+                            <span>१२ महिन्यांचे दैनिक व साप्ताहिक अध्यापन टाचण</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
+                            <span>सुटसुटीत A4 PDF जनरेशन व प्रिंट पर्याय</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
+                            <span>UDISE व शाळा माहिती ऑटो-इंटेग्रेशन</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="size-4 text-emerald-400 shrink-0" />
+                            <span>अमर्याद व्ह्यू, एडिट व ऑनलाईन ॲक्सेस</span>
+                          </div>
+                        </div>
+
+                        <div className="pt-4 border-t border-white/10 space-y-4">
+                          <div className="flex items-center justify-center gap-3">
+                            <span className="text-slate-400 text-xs line-through font-bold">₹{Math.round(currentClassPrice * 1.6)}</span>
+                            <span className="text-3xl font-black text-amber-300">₹{currentClassPrice}</span>
+                            <span className="text-xs bg-emerald-500/20 text-emerald-300 px-3 py-1 rounded-full font-black border border-emerald-500/30">
+                              एकदाच फी (वार्षिक ॲक्सेस)
+                            </span>
+                          </div>
+
+                          <button
+                            onClick={handleBuyClassAccess}
+                            disabled={purchasingClass}
+                            className="w-full sm:w-auto px-10 py-4 bg-gradient-to-r from-orange-500 via-amber-400 to-amber-500 hover:from-orange-400 hover:to-amber-400 active:scale-95 text-slate-950 font-black text-sm rounded-2xl shadow-xl shadow-orange-500/20 transition-all cursor-pointer flex items-center justify-center gap-3 mx-auto disabled:opacity-50"
                           >
-                            <div className="size-10 bg-pink-200/50 rounded-xl flex items-center justify-center border border-pink-200 group-hover:scale-110 transition-transform">
-                              <Calendar className="size-5 text-pink-600" />
-                            </div>
-                            <div className="space-y-0.5">
-                              <h3 className="text-base font-black leading-tight tracking-tight text-slate-800">{m.mr}</h3>
-                              <p className="text-[10px] text-pink-500 font-bold uppercase tracking-wider">{m.name}</p>
-                            </div>
-                          </motion.button>
-                        ))}
-                      </div>
+                            {purchasingClass ? (
+                              <Loader2 className="size-5 animate-spin text-slate-950" />
+                            ) : (
+                              <CreditCard className="size-5 text-slate-950" />
+                            )}
+                            <span>
+                              {purchasingClass
+                                ? "पेमेंट प्रक्रिया सुरू आहे..."
+                                : `₹${currentClassPrice} भरून ${DIARY_CLASSES.find((c) => c.id === selectedClass)?.mr} (${normMedium === "semi" ? "सेमी" : "मराठी"}) अनलॉक करा`}
+                            </span>
+                          </button>
 
-                      <div className="flex justify-center pt-2">
-                        <button
-                          onClick={() => setSelectedClass(null)}
-                          className="flex items-center gap-2 px-5 py-2.5 text-orange-600 hover:text-orange-900 bg-white hover:bg-orange-50 border border-orange-200 rounded-2xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-sm"
-                        >
-                          <ArrowLeft className="size-4" /> मागे या (Back to Class)
-                        </button>
-                      </div>
-                    </motion.div>
-                  )}
+                          <div>
+                            <button
+                              onClick={() => setSelectedClass(null)}
+                              className="text-xs font-bold text-orange-300 hover:text-white underline cursor-pointer"
+                            >
+                              ← दुसरी इयत्ता निवडा (Change Class)
+                            </button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ) : (
+                      <>
+                        {/* Step 3: Select Month */}
+                        {!selectedMonth && (
+                          <motion.div
+                            key="month-selection"
+                            initial={{ opacity: 0, y: 15 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -15 }}
+                            className="space-y-8"
+                          >
+                            <div className="text-center space-y-2 pt-2">
+                              <h2 className="text-3xl font-black text-slate-900 tracking-tight italic">Select Month / महिना निवडा</h2>
+                              <p className="text-xs font-bold text-slate-500">
+                                निवडलेले माध्यम: <span className="text-orange-600 font-black">{selectedMedium === "Marathi" ? "मराठी माध्यम" : "सेमी इंग्रजी"}</span> • इयत्ता: <span className="text-purple-600 font-black">{selectedClass}</span> • वर्ष: <span className="text-teal-600 font-black">{selectedYear}</span>
+                              </p>
+                            </div>
 
-                  {/* Step 5: Main View */}
-                  {selectedClass && selectedMedium && selectedYear && selectedMonth && (
-                    <motion.div
-                      key="diary-content"
-                      initial={{ opacity: 0, scale: 0.98 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.98 }}
-                      className="max-w-5xl mx-auto w-full space-y-6"
-                    >
-                      <TeacherTodayDiary
-                        selectedClass={selectedClass}
-                        selectedMedium={selectedMedium}
-                        selectedMonth={selectedMonth}
-                        onBack={handleBack}
-                        schoolProfile={schoolProfile}
-                      />
-                    </motion.div>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 max-w-4xl mx-auto w-full">
+                              {months.map((m) => (
+                                <motion.button
+                                  key={m.id}
+                                  whileHover={{ scale: 1.03 }}
+                                  whileTap={{ scale: 0.97 }}
+                                  onClick={() => {
+                                    setSelectedMonth(m.id);
+                                    setSelectedWeek("Week 1");
+                                    const updatedDate = new Date(selectedDate);
+                                    updatedDate.setFullYear(selectedYear);
+                                    updatedDate.setMonth(parseInt(m.id, 10) - 1);
+                                    setSelectedDate(updatedDate);
+                                  }}
+                                  className="group relative p-6 rounded-2xl border-2 text-center transition-all duration-500 cursor-pointer overflow-hidden bg-pink-50/40 border-pink-100 hover:border-pink-300 hover:bg-pink-100/30 text-slate-800 flex flex-col items-center gap-2 shadow-sm"
+                                >
+                                  <div className="size-10 bg-pink-200/50 rounded-xl flex items-center justify-center border border-pink-200 group-hover:scale-110 transition-transform">
+                                    <Calendar className="size-5 text-pink-600" />
+                                  </div>
+                                  <div className="space-y-0.5">
+                                    <h3 className="text-base font-black leading-tight tracking-tight text-slate-800">{m.mr}</h3>
+                                    <p className="text-[10px] text-pink-500 font-bold uppercase tracking-wider">{m.name}</p>
+                                  </div>
+                                </motion.button>
+                              ))}
+                            </div>
+
+                            <div className="flex justify-center pt-2">
+                              <button
+                                onClick={() => setSelectedClass(null)}
+                                className="flex items-center gap-2 px-5 py-2.5 text-orange-600 hover:text-orange-900 bg-white hover:bg-orange-50 border border-orange-200 rounded-2xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-sm"
+                              >
+                                <ArrowLeft className="size-4" /> मागे या (Back to Class)
+                              </button>
+                            </div>
+                          </motion.div>
+                        )}
+
+                        {/* Step 5: Main View */}
+                        {selectedMonth && (
+                          <motion.div
+                            key="diary-content"
+                            initial={{ opacity: 0, scale: 0.98 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.98 }}
+                            className="max-w-5xl mx-auto w-full space-y-6"
+                          >
+                            <TeacherTodayDiary
+                              selectedClass={selectedClass}
+                              selectedMedium={selectedMedium}
+                              selectedMonth={selectedMonth}
+                              onBack={handleBack}
+                              schoolProfile={schoolProfile}
+                            />
+                          </motion.div>
+                        )}
+                      </>
+                    )
                   )}
                 </>
               )}
