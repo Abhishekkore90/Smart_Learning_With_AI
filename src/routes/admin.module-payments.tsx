@@ -250,6 +250,7 @@ function AdminModulePaymentsPage() {
 
   // Compile list of unique real teachers & users from Firestore users collection
   const teacherMap = new Map<string, UniqueTeacher>();
+  const uniqueTeachersMap = new Map<string, UniqueTeacher>();
 
   // 1. Add ONLY real registered users from Firestore users collection (excluding CCE students & dummy entries)
   usersTeachers.forEach((u) => {
@@ -277,6 +278,9 @@ function AdminModulePaymentsPage() {
     if (!isRealUser) return;
 
     const id = u.uid || u.id;
+    const uniqueKey = (email || id || "").toLowerCase().trim();
+    if (!uniqueKey || uniqueTeachersMap.has(uniqueKey)) return;
+
     const name = u.displayName || u.name || u.teacherName || u.fullName || u.schoolName || (email ? email.split("@")[0] : id);
     const teacherObj: UniqueTeacher = {
       teacherId: id || email,
@@ -285,6 +289,7 @@ function AdminModulePaymentsPage() {
       teacherPhone: phone,
     };
 
+    uniqueTeachersMap.set(uniqueKey, teacherObj);
     if (id) teacherMap.set(id, teacherObj);
     if (email) teacherMap.set(email, teacherObj);
   });
@@ -310,7 +315,7 @@ function AdminModulePaymentsPage() {
     }
   });
 
-  const allTeachers = Array.from(teacherMap.values());
+  const allTeachers = Array.from(uniqueTeachersMap.values());
 
   const filteredTeachers = allTeachers.filter((t) => {
     const term = accessSearchTerm.toLowerCase();
